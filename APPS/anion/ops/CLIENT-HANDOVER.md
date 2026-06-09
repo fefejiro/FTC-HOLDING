@@ -13,10 +13,12 @@
 
 ## Current Handover Gate
 
-As of 2026-06-09, production is reachable and Cloudflare Worker provider settings for Supabase, Daily, and Stripe are present. The public browser auth-config blocker is fixed in production.
+As of 2026-06-09, production is reachable and Cloudflare Worker provider setting names for Supabase, Daily, and Stripe are present. The public browser auth-config blocker is fixed in production.
 
 Handover is still blocked by evidence, not provider inventory:
 
+- `SUPABASE_SERVICE_ROLE_KEY` must be replaced with the valid Supabase `service_role` key for project `aaaextkrfoqomzmjjkxe`; the current Worker secret value returned `Invalid API key` during fixture repair.
+- Production parent/tutor/student domain fixture rows must be repaired after the service-role key is corrected.
 - Authenticated parent visibility and parent call-denial evidence.
 - Authenticated tutor Daily join, leave, and rejoin evidence.
 - Authenticated student Daily join, leave, and rejoin evidence.
@@ -29,7 +31,7 @@ Run this gate before any client handover claim:
 ANION_BASE_URL=https://anion.unalabs.cloud npm run prod:doctor
 ```
 
-Expected current result: pass.
+Expected current result: blocked until the runtime blocker codes are resolved. This is intentional; `prod:doctor` fails closed when `/api/status` reports handover blockers.
 
 Run strict production verification:
 

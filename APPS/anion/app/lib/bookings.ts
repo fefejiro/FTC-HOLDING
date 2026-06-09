@@ -304,7 +304,7 @@ export async function listParentLinkedStudents(): Promise<ParentLinkedStudent[]>
     .single();
 
   if (parentError || !parent) {
-    throw new Error('Parent account not found for current user.');
+    return [];
   }
 
   const { data: links, error: linksError } = await supabase
@@ -474,7 +474,7 @@ export async function listStudentAcceptedBookings(): Promise<StudentLessonCard[]
     .single();
 
   if (studentError || !student) {
-    throw new Error('Student account not found for current user.');
+    return [];
   }
 
   const { data: bookings, error: bookingsError } = await supabase

@@ -216,7 +216,14 @@ export async function listClassroomPosts(limit = 50): Promise<ClassroomPost[]> {
 
   const supabase = await createServerClient();
 
-  const actor = await getCurrentClassroomActor(supabase);
+  let actor;
+  try {
+    actor = await getCurrentClassroomActor(supabase);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('account not found')) return [];
+    throw error;
+  }
 
   let visibleStudentIds: string[] = [];
   if (actor.role === 'student' && actor.student) {
@@ -275,7 +282,14 @@ export async function listTutorClassroomStudents(): Promise<TutorClassroomStuden
   if (isLocalDemoEnabled()) return localDemoTutorClassroomStudents;
 
   const supabase = await createServerClient();
-  const actor = await getCurrentClassroomActor(supabase);
+  let actor;
+  try {
+    actor = await getCurrentClassroomActor(supabase);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('Tutor account not found')) return [];
+    throw error;
+  }
 
   if (actor.role !== 'tutor' || !actor.tutor) {
     throw new Error('Only tutor accounts can target classroom students.');

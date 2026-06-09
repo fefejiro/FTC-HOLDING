@@ -87,6 +87,8 @@ If any role fails, Phase 1 is FAIL and blocker owner must be assigned.
 | BOOKING_SCHEMA_DRIFT_STUDENT_ID_MISSING | Production schema drift | Ops/DB | No | fixed in-session | `public.bookings.student_id` column + index added in production; accepted booking `63404ecd-6b16-4466-bb15-745208cab970` updated with student assignment |
 | PROVIDER_SECRETS_MISSING | External runtime config | Client/Ops | No | fixed in-session | 2026-06-08 `prod:doctor` confirms Cloudflare Worker `anion-web` has Supabase, Daily, and Stripe provider secrets. |
 | SUPABASE_PUBLIC_BUNDLE_PLACEHOLDER | Build/runtime config | Web/Ops | No | 0.2.15 | 2026-06-09 fixed in production. `verify:prod` reports lazy auth chunk `placeholder=no`, `prodUrl=yes`, and callback sanity redirects on `anion.unalabs.cloud`. |
+| SUPABASE_SERVICE_ROLE_INVALID | External runtime config | Client/Ops | Yes | pending client secret update | 2026-06-09 one-time token-protected fixture repair endpoint returned `Invalid API key` when using Worker `SUPABASE_SERVICE_ROLE_KEY`; the secret name exists but the value is not a valid service role key for project `aaaextkrfoqomzmjjkxe`. |
+| PHASE1_DOMAIN_FIXTURE_MISSING | Production data fixture | Ops/DB | Yes | pending service-role repair | 2026-06-09 password-session evidence proved test auth users can sign in, but parent/tutor/student dashboard routes exposed missing domain rows (`parents`, `tutors`, `students`, links/booking). Parent call denial passed once session cookie was set. |
 | EVIDENCE_RUNNER_WEAK_ASSERTIONS | Tooling defect | Web/Ops | No | working tree | 2026-06-08 evidence runner hardened to fail closed on sign-in, assert dashboard surfaces, capture direct Daily token proof, prove concurrent tutor/student join, and write JSON plus Markdown reports. |
 
 ## Phase 1 Verdict
@@ -94,7 +96,7 @@ If any role fails, Phase 1 is FAIL and blocker owner must be assigned.
 - Verdict: [ ] PASS [x] FAIL
 - Date: 2026-06-09
 - Decider: anion-live-classroom (execution), anion-qa-release (pending review)
-- Summary: Local Daily classroom implementation, API contract tests, and local video tests are green. Production health/status are reachable, provider secrets are present, callback routing is production-domain safe, and the public browser-config placeholder blocker is fixed. Phase 1 remains FAIL only because authenticated production evidence for parent visibility/denial plus tutor/student lesson access, Daily join, leave/rejoin, and concurrent join has not yet passed.
+- Summary: Local Daily classroom implementation, API contract tests, and local video tests are green. Production health/status are reachable, callback routing is production-domain safe, and the public browser-config placeholder blocker is fixed. Phase 1 remains FAIL because the Worker service-role secret is invalid and the production test users are missing parent/tutor/student domain fixture rows. Password-session evidence proved auth routing works and parent Daily denial returns `403 LESSON_ACCESS_DENIED`; tutor/student Daily join remains blocked by fixture assignment.
 
 ## Same-day Truth Alignment Required
 

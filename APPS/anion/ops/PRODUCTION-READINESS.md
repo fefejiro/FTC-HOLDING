@@ -16,7 +16,7 @@ Current machine-checkable gate:
 npm run prod:doctor
 ```
 
-2026-06-09 result: `prod:doctor` passes production health/status and Cloudflare Worker provider-secret inventory for Supabase, Daily, and Stripe. Strict `verify:prod` passes with `placeholder=no` for the lazy auth chunk and production callback redirects to `https://anion.unalabs.cloud`. Production handover remains blocked only on authenticated role evidence, Stripe billing evidence, and legal signoff.
+2026-06-09 result: `prod:doctor` passes production health/status and Cloudflare Worker provider-secret inventory for Supabase, Daily, and Stripe. Strict `verify:prod` passes with `placeholder=no` for the lazy auth chunk and production callback redirects to `https://anion.unalabs.cloud`. A one-time production fixture repair attempt proved the configured `SUPABASE_SERVICE_ROLE_KEY` value is invalid, so production handover remains blocked on service-role correction, authenticated role evidence, Stripe billing evidence, and legal signoff.
 
 ---
 
@@ -66,6 +66,7 @@ All third-party credentials must be configured before deployment. **No deploymen
 | SB1 | `NEXT_PUBLIC_SUPABASE_URL` is set | `npx wrangler secret put NEXT_PUBLIC_SUPABASE_URL --name anion-web` (value: `https://aaaextkrfoqomzmjjkxe.supabase.co`) | ☐ |
 | SB2 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` is set | `npx wrangler secret put NEXT_PUBLIC_SUPABASE_ANON_KEY --name anion-web` (value: from [Supabase → Settings → API → anon/public key](https://supabase.com/dashboard/project/aaaextkrfoqomzmjjkxe/settings/api)) | ☐ |
 | SB3 | `SUPABASE_SERVICE_ROLE_KEY` is set | `npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY --name anion-web` (value: from [Supabase → Settings → API → service_role key](https://supabase.com/dashboard/project/aaaextkrfoqomzmjjkxe/settings/api)) | ☐ |
+| SB3b | `SUPABASE_SERVICE_ROLE_KEY` is valid for project `aaaextkrfoqomzmjjkxe` | Service-role admin/API call succeeds without `Invalid API key` | FAIL 2026-06-09 - secret name exists but value is invalid |
 | SB3a | Production Worker serves real public Supabase config to browser auth chunks | `npm run build:worker` passes browser bundle guard; `verify:prod` reports `placeholder=no` for lazy auth chunk | PASS 2026-06-09 |
 | SB4 | Production domain added to Supabase Auth allow-list | [Supabase → Auth → URL Configuration](https://supabase.com/dashboard/project/aaaextkrfoqomzmjjkxe/auth/url-configuration) | ☐ |
 | SB5 | Redirect URL `https://[domain]/auth/callback` is in the allow-list | Same as above | ☐ |

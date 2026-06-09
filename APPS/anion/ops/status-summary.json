@@ -1,10 +1,10 @@
 {
   "project": "anion",
   "name": "Anion Class App",
-  "updatedAt": "2026-06-09T12:00:00.000Z",
+  "updatedAt": "2026-06-09T17:15:00.000Z",
   "overall": "red",
   "stage": "phase1-call-closure-pending-auth-evidence",
-  "summary": "Production runtime is live, Cloudflare Worker provider secrets for Supabase, Daily, and Stripe are present, and local check/test/e2e gates pass. The public Supabase browser-bundle placeholder blocker is fixed in production; strict verify:prod now reports placeholder=no for the lazy auth chunk. Phase 1 remains non-green until authenticated parent/tutor/student evidence, Stripe billing evidence, and Privacy/Terms legal signoff are completed.",
+  "summary": "Production runtime is live and public browser auth config is fixed, but Phase 1 evidence found that the Worker SUPABASE_SERVICE_ROLE_KEY is invalid and the production test users are missing parent/tutor/student domain fixture rows. Authenticated routes no longer rely on local placeholders, but Phase 1 and billing evidence remain blocked until the correct service role key is set and the fixture is repaired. Privacy/Terms legal signoff also remains open.",
   "metrics": [
     {
       "label": "Docs",
@@ -27,7 +27,7 @@
     {
       "label": "Live Runtime",
       "value": "live-verified-phase1-open",
-      "detail": "Production health/status/auth-callback probes pass, public browser auth config is production-safe, and worker deployment is current; authenticated role journeys are pending evidence runs.",
+      "detail": "Production health/status/auth-callback probes pass and public browser auth config is production-safe. Authenticated role journeys are blocked by invalid service-role secret plus missing parent/tutor/student domain fixture rows.",
       "status": "yellow"
     },
     {
@@ -76,12 +76,12 @@
     {
       "name": "Production readiness",
       "status": "yellow",
-      "detail": "prod:doctor passes provider-secret inventory and strict verify:prod passes with public bundle placeholder=no. Phase 1 authenticated call evidence and Stripe billing evidence are still open, so production handover remains non-green."
+      "detail": "prod:doctor confirms secret names exist and strict verify:prod passes with public bundle placeholder=no. One-time fixture repair proved SUPABASE_SERVICE_ROLE_KEY is invalid, so authenticated Phase 1 and Stripe billing evidence remain blocked."
     },
     {
       "name": "Phase 1 call closure",
       "status": "red",
-      "detail": "Runtime callback hardening and public browser config are deployed. Authenticated parent/tutor/student join and leave/rejoin evidence is still pending until confirmed role test credentials are used in the production evidence runner."
+      "detail": "Runtime callback hardening and public browser config are deployed. Password-based evidence proved test auth users can sign in, but dashboard/domain fixture rows are missing and cannot be repaired until SUPABASE_SERVICE_ROLE_KEY is corrected."
     }
   ],
   "connections": [
@@ -103,8 +103,8 @@
     "terms": "APPS/anion/docs/TERMS.md"
   },
   "nextActions": [
-    "Confirm Supabase Auth allow-list includes https://anion.unalabs.cloud/auth/callback and current production domain entries.",
-    "Provision and confirm production parent/tutor/student role test credentials, then execute authenticated Phase 1 lesson journeys.",
+    "Replace Cloudflare Worker SUPABASE_SERVICE_ROLE_KEY with the real Supabase service_role key for project aaaextkrfoqomzmjjkxe.",
+    "Repair production parent/tutor/student domain fixture rows and accepted booking 63404ecd-6b16-4466-bb15-745208cab970, then execute authenticated Phase 1 lesson journeys.",
     "Capture parent/tutor/student join and leave/rejoin evidence in ops/PHASE1-CALL-PRODUCTION-CLOSURE.md and flip verdict only after all role paths pass.",
     "Keep npm run build:worker bundle guard and CHECK_STRIPE_WEBHOOK=1 CHECK_DAILY_ROOM_SMOKE=1 EXPECTED_DAILY_ERROR_CODE=AUTO npm run verify:prod green before each handover claim.",
     "Complete PRODUCTION-READINESS.md remaining external checklist rows for authenticated Supabase allow-list confirmation, billing evidence, and role journey evidence.",

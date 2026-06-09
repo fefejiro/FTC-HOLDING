@@ -32,6 +32,12 @@ const requiredSecretGroups = [
 ];
 
 const checks = [];
+const statusBlockers = new Set([
+  'supabase_service_role_invalid',
+  'phase1_domain_fixture_missing',
+  'confirmed_phase1_test_credentials',
+  'supabase_auth_allow_list',
+]);
 
 function record(name, ok, detail, severity = 'info') {
   checks.push({ name, ok, detail, severity });
@@ -93,6 +99,14 @@ async function checkProductionHttp() {
     const status = await fetchJson('/api/status');
     const phase = typeof status.body?.phase === 'string' ? status.body.phase : '(missing phase)';
     record('Production /api/status', status.response.status === 200 && status.body?.ok === true, `HTTP ${status.response.status}, phase=${phase}, attempts=${status.attempts}`);
+    const externalConfig = Array.isArray(status.body?.blockers?.externalConfig)
+      ? status.body.blockers.externalConfig.filter((blocker) => statusBlockers.has(blocker))
+      : [];
+    if (externalConfig.length > 0) {
+      record('Runtime handover blockers', false, externalConfig.join(', '), 'blocker');
+    } else {
+      record('Runtime handover blockers', true, 'none reported by /api/status');
+    }
   } catch (error) {
     record('Production /api/status', false, describeFetchError(error), 'blocker');
   }
@@ -155,7 +169,7 @@ async function main() {
 
   if (blockers.length > 0) {
     console.log('\nProduction is reachable, but Anion is not handover-green yet.');
-    console.log('Next required action: set the missing Cloudflare secrets, then run authenticated parent/tutor/student role evidence.');
+    console.log('Next required action: resolve the blocker codes above, then run authenticated parent/tutor/student role evidence.');
     process.exit(1);
   }
 

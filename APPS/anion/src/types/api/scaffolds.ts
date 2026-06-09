@@ -96,6 +96,8 @@ export type PlatformStatusResponse = {
       'daily_api_key' |
       'supabase_auth_allow_list' |
       'supabase_public_bundle_placeholder' |
+      'supabase_service_role_invalid' |
+      'phase1_domain_fixture_missing' |
       'confirmed_phase1_test_credentials'
     >;
     legal: Array<'privacy_policy_signoff' | 'terms_signoff'>;

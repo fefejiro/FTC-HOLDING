@@ -6,11 +6,11 @@ export async function GET() {
     ok: true,
     service: 'anion-web',
     phase: 'phase1-call-closure-pending-production-evidence',
-    release: '0.2.15',
+    release: '0.2.16',
     runtime: {
       web: 'live',
       health: 'ok',
-      authAndRoles: 'ready',
+      authAndRoles: 'blocked-invalid-credentials',
       bookings: 'implemented-not-auth-verified',
       billing: 'ready-with-external-keys',
       liveClassroom: 'ready-with-external-keys',
@@ -19,6 +19,8 @@ export async function GET() {
     blockers: {
       externalConfig: [
         'supabase_auth_allow_list',
+        'supabase_service_role_invalid',
+        'phase1_domain_fixture_missing',
         'confirmed_phase1_test_credentials',
       ],
       legal: ['privacy_policy_signoff', 'terms_signoff'],
