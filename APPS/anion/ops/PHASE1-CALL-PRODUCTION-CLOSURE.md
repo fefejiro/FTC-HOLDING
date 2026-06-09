@@ -71,7 +71,7 @@ If any role fails, Phase 1 is FAIL and blocker owner must be assigned.
 
 | Role | Booking ID | Lesson Route | Token/Room Result | Join Result | Leave/Rejoin Result | Request IDs | Timestamp | Notes |
 |---|---|---|---|---|---|---|---|---|
-| Parent visibility | 63404ecd-6b16-4466-bb15-745208cab970 | denied/redirected to `/parent` | `403 LESSON_ACCESS_DENIED` | n/a | n/a | n/a | 2026-06-09 | PASS in `test-results/phase1-password-evidence-2026-06-09T18-26-44-522Z/phase1-password-evidence.md`; parent dashboard and call denial verified. |
+| Parent visibility | 63404ecd-6b16-4466-bb15-745208cab970 | denied/redirected to `/parent` | `403 LESSON_ACCESS_DENIED` | n/a | n/a | n/a | 2026-06-09 | PASS in `ops/evidence/phase1-password-evidence-2026-06-09T1835Z/phase1-password-evidence.md`; parent dashboard and call denial verified. |
 | Tutor | 63404ecd-6b16-4466-bb15-745208cab970 | `/lesson/63404ecd-6b16-4466-bb15-745208cab970` renders lesson context | `200`, room `anion-63404ecd-6b16-4466-bb15-745208cab970`, token present | blocked by evidence-machine access to `https://c.daily.co` | blocked | n/a | 2026-06-09 | Daily API token proof passes after Daily plan fallback; hosted Daily call UI assets reset/time out from this machine, so iframe join is not yet proven. |
 | Student | 63404ecd-6b16-4466-bb15-745208cab970 | `/lesson/63404ecd-6b16-4466-bb15-745208cab970` renders lesson context | `200`, room `anion-63404ecd-6b16-4466-bb15-745208cab970`, token present | blocked by evidence-machine access to `https://c.daily.co` | blocked | n/a | 2026-06-09 | Daily API token proof passes after Daily plan fallback; hosted Daily call UI assets reset/time out from this machine, so iframe join is not yet proven. |
 
