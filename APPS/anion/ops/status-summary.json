@@ -1,10 +1,10 @@
 {
   "project": "anion",
   "name": "Anion Class App",
-  "updatedAt": "2026-06-09T17:15:00.000Z",
+  "updatedAt": "2026-06-09T18:35:00.000Z",
   "overall": "red",
   "stage": "phase1-call-closure-pending-auth-evidence",
-  "summary": "Production runtime is live and public browser auth config is fixed, but Phase 1 evidence found that the Worker SUPABASE_SERVICE_ROLE_KEY is invalid and the production test users are missing parent/tutor/student domain fixture rows. Authenticated routes no longer rely on local placeholders, but Phase 1 and billing evidence remain blocked until the correct service role key is set and the fixture is repaired. Privacy/Terms legal signoff also remains open.",
+  "summary": "Production runtime is live. Parent/tutor/student auth, domain roles, linked student, accepted booking, dashboards, parent call denial, and tutor/student Daily token issuance are verified. Handover is still not green because the Worker SUPABASE_SERVICE_ROLE_KEY remains invalid for Stripe/webhook subscription sync, Daily's hosted call UI CDN is unreachable from the current evidence machine, and Privacy/Terms legal signoff remains open.",
   "metrics": [
     {
       "label": "Docs",
@@ -14,8 +14,8 @@
     },
     {
       "label": "Web Lane",
-      "value": "deployed-and-verified-pending-role-journey-evidence",
-      "detail": "Core milestones are deployed and runtime probes pass in production; authenticated role journey evidence remains pending.",
+      "value": "deployed-role-journeys-partial",
+      "detail": "Core milestones are deployed. Authenticated role dashboards, parent denial, and tutor/student Daily token issuance pass in production; Daily iframe join is blocked by c.daily.co network reachability from the evidence machine.",
       "status": "yellow"
     },
     {
@@ -26,8 +26,8 @@
     },
     {
       "label": "Live Runtime",
-      "value": "live-verified-phase1-open",
-      "detail": "Production health/status/auth-callback probes pass and public browser auth config is production-safe. Authenticated role journeys are blocked by invalid service-role secret plus missing parent/tutor/student domain fixture rows.",
+      "value": "live-verified-phase1-partial",
+      "detail": "Production health/status/auth-callback probes pass and public browser auth config is production-safe. Domain fixture rows and accepted booking are repaired; Daily token API passes; Daily call UI CDN and Stripe subscription sync remain blocked.",
       "status": "yellow"
     },
     {
@@ -76,12 +76,12 @@
     {
       "name": "Production readiness",
       "status": "yellow",
-      "detail": "prod:doctor confirms secret names exist and strict verify:prod passes with public bundle placeholder=no. One-time fixture repair proved SUPABASE_SERVICE_ROLE_KEY is invalid, so authenticated Phase 1 and Stripe billing evidence remain blocked."
+      "detail": "prod:doctor confirms secret names exist. SUPABASE_SERVICE_ROLE_KEY is still invalid, so Stripe billing/webhook subscription-state evidence remains blocked. Daily call UI assets from c.daily.co are unreachable from the current evidence machine."
     },
     {
       "name": "Phase 1 call closure",
       "status": "red",
-      "detail": "Runtime callback hardening and public browser config are deployed. Password-based evidence proved test auth users can sign in, but dashboard/domain fixture rows are missing and cannot be repaired until SUPABASE_SERVICE_ROLE_KEY is corrected."
+      "detail": "Password-based production evidence proves parent/tutor/student dashboards, linked booking visibility, parent Daily denial, and tutor/student Daily token issuance. Full iframe join/leave/rejoin remains blocked by c.daily.co network reachability from the evidence machine."
     }
   ],
   "connections": [
@@ -104,8 +104,8 @@
   },
   "nextActions": [
     "Replace Cloudflare Worker SUPABASE_SERVICE_ROLE_KEY with the real Supabase service_role key for project aaaextkrfoqomzmjjkxe.",
-    "Repair production parent/tutor/student domain fixture rows and accepted booking 63404ecd-6b16-4466-bb15-745208cab970, then execute authenticated Phase 1 lesson journeys.",
-    "Capture parent/tutor/student join and leave/rejoin evidence in ops/PHASE1-CALL-PRODUCTION-CLOSURE.md and flip verdict only after all role paths pass.",
+    "Use a network/browser that can load https://c.daily.co to capture tutor/student iframe join, leave, and rejoin evidence.",
+    "Capture parent/tutor/student join and leave/rejoin evidence in ops/PHASE1-CALL-PRODUCTION-CLOSURE.md and flip verdict only after iframe role paths pass.",
     "Keep npm run build:worker bundle guard and CHECK_STRIPE_WEBHOOK=1 CHECK_DAILY_ROOM_SMOKE=1 EXPECTED_DAILY_ERROR_CODE=AUTO npm run verify:prod green before each handover claim.",
     "Complete PRODUCTION-READINESS.md remaining external checklist rows for authenticated Supabase allow-list confirmation, billing evidence, and role journey evidence.",
     "Run npm run billing:evidence after Stripe provider settings are available and store the generated JSON/Markdown report.",

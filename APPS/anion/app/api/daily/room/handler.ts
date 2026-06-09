@@ -32,6 +32,14 @@ type DailyRoomHandlerDeps = {
   logger: typeof logger;
 };
 
+function getDailyErrorStatus(error: unknown): number | null {
+  if (error instanceof DailyApiError) return error.status;
+  if (error && typeof error === 'object' && 'status' in error && typeof error.status === 'number') {
+    return error.status;
+  }
+  return null;
+}
+
 function validatePayload(body: unknown): string[] {
   const errors: string[] = [];
   const payload = body as Partial<DailyRoomTokenRequest> | null;
@@ -169,21 +177,52 @@ export function createDailyRoomPostHandler(overrides: Partial<DailyRoomHandlerDe
         const existing = await deps.dailyFetch(`/rooms/${roomName}`, 'GET');
         roomUrl = String(existing.url);
       } catch (error) {
-        if (!(error instanceof DailyApiError) || error.status !== 404) {
+        if (getDailyErrorStatus(error) !== 404) {
           throw error;
         }
 
-        const newRoom = await deps.dailyFetch('/rooms', 'POST', {
-          name: roomName,
-          privacy: 'private',
-          properties: {
-            enable_recording: 'cloud',
-            max_participants: 10,
-            start_video_off: false,
-            start_audio_off: false,
-            exp: Math.floor(deps.now() / 1000) + 60 * 60 * 3,
-          },
-        });
+        const roomProperties = {
+          enable_recording: 'cloud',
+          max_participants: 10,
+          start_video_off: false,
+          start_audio_off: false,
+          exp: Math.floor(deps.now() / 1000) + 60 * 60 * 3,
+        };
+
+        let newRoom: Record<string, unknown>;
+        try {
+          newRoom = await deps.dailyFetch('/rooms', 'POST', {
+            name: roomName,
+            privacy: 'private',
+            properties: roomProperties,
+          });
+        } catch (error) {
+          const recordingUnsupported =
+            error instanceof Error &&
+            getDailyErrorStatus(error) === 400 &&
+            error.message.toLowerCase().includes('enable_recording');
+
+          if (!recordingUnsupported) {
+            throw error;
+          }
+
+          deps.logger.warn({
+            route,
+            requestId,
+            userId: user.profileId,
+            code: 'DAILY_RECORDING_UNSUPPORTED',
+            latencyMs: deps.now() - start,
+          });
+
+          newRoom = await deps.dailyFetch('/rooms', 'POST', {
+            name: roomName,
+            privacy: 'private',
+            properties: {
+              ...roomProperties,
+              enable_recording: undefined,
+            },
+          });
+        }
         roomUrl = String(newRoom.url);
       }
 

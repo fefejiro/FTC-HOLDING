@@ -158,6 +158,42 @@ test('daily room returns room URL and token for authorized tutor', async () => {
   assert.equal(body.expiresAt, '2026-05-26T15:00:00.000Z');
 });
 
+test('daily room retries without cloud recording when Daily plan rejects recording', async () => {
+  const calls: Array<{ path: string; method: string; body?: unknown }> = [];
+  const response = await createHandler({
+    dailyFetch: async (path, method, body) => {
+      calls.push({ path, method, body });
+      if (path.startsWith('/rooms/') && method === 'GET') {
+        throw new (class extends Error {
+          status = 404;
+          constructor() {
+            super('Daily API GET /rooms/anion-booking-1 failed 404');
+            this.name = 'DailyApiError';
+          }
+        })();
+      }
+      if (path === '/rooms' && method === 'POST' && calls.filter((call) => call.path === '/rooms').length === 1) {
+        throw new (class extends Error {
+          status = 400;
+          constructor() {
+            super("Daily API POST /rooms failed 400: property 'enable_recording' cannot be set to that value with your current plan");
+            this.name = 'DailyApiError';
+          }
+        })();
+      }
+      if (path === '/rooms' && method === 'POST') {
+        return { url: 'https://anion.daily.co/anion-booking-1' };
+      }
+      return { token: 'daily-token' };
+    },
+  })(dailyRequest({ bookingId: 'booking-1', participantRole: 'tutor' }));
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.ok, true);
+  assert.equal(calls.filter((call) => call.path === '/rooms').length, 2);
+});
+
 test('daily room returns room URL and token for authorized student', async () => {
   const response = await createHandler({
     getCurrentUser: async () => ({ ...baseUser, role: 'student', displayName: 'Student One' }),

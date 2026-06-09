@@ -51,10 +51,10 @@ Server-side auth resolution in `app/lib/auth/getCurrentUser.ts`:
 - App Router route skeleton established
 - OpenNext and Wrangler deployment contract added
 - Supabase migrations folder initialized and applied
-- M1-M5 core implementation exists in code, but authenticated production closure is still pending evidence
-- Current Phase 1 execution status: FAIL until parent/tutor/student production evidence is captured
+- M1-M5 core implementation exists in code, and authenticated production closure is partially proven
+- Current Phase 1 execution status: FAIL until Daily iframe join/leave/rejoin and Stripe subscription-state evidence are captured
 - Live classroom rule: assigned tutor and student join the Daily room; parent has booking visibility but does not join the call unless future product requirements change
-- Runtime status endpoint is now aligned: live `/api/status` reports live runtime with pending Phase 1 closure evidence
+- Runtime status endpoint is now aligned: live `/api/status` reports ready auth/bookings, Daily token API readiness, and the remaining non-green blockers
 - Governance rule: do not mark overall green while critical items in `ops/PRODUCTION-READINESS.md` remain open
 
 ## Commands
@@ -217,6 +217,7 @@ npm run test:local-video
 ```
 
 This proves parent denial plus tutor/student local video join, leave, and rejoin.
-Production Daily provider settings are configured, but handover still requires
-authenticated production evidence for parent visibility/denial and tutor/student
-Daily join, leave, and rejoin.
+Production Daily provider settings are configured. Parent visibility/denial and
+tutor/student Daily room-token evidence pass in production. Handover still
+requires iframe join, leave, and rejoin proof from a browser/network that can
+load Daily hosted call UI assets from `https://c.daily.co`.

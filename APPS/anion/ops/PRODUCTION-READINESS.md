@@ -16,7 +16,7 @@ Current machine-checkable gate:
 npm run prod:doctor
 ```
 
-2026-06-09 result: `prod:doctor` passes production health/status and Cloudflare Worker provider-secret inventory for Supabase, Daily, and Stripe. Strict `verify:prod` passes with `placeholder=no` for the lazy auth chunk and production callback redirects to `https://anion.unalabs.cloud`. A one-time production fixture repair attempt proved the configured `SUPABASE_SERVICE_ROLE_KEY` value is invalid, so production handover remains blocked on service-role correction, authenticated role evidence, Stripe billing evidence, and legal signoff.
+2026-06-09 result: production health/status and Cloudflare Worker provider-secret inventory are reachable for Supabase, Daily, and Stripe. Strict verification has passed for public browser config, auth callback, webhook signature gate, and CSRF-protected Daily smoke. Parent/tutor/student production fixture rows and non-recursive RLS are repaired; parent dashboard/denial and tutor/student Daily token issuance are verified. Handover remains blocked on service-role correction for Stripe/webhook subscription sync, Daily hosted call UI reachability from the evidence browser, full tutor/student join-leave-rejoin proof, and legal signoff.
 
 ---
 
@@ -58,6 +58,8 @@ All third-party credentials must be configured before deployment. **No deploymen
 | D2 | `DAILY_API_KEY` is set | Cloudflare Workers env vars (secret) | ☐ |
 | D3 | `DAILY_DOMAIN` is set to `yourcompany.daily.co` | Cloudflare Workers env vars | PASS 2026-06-08 |
 | D4 | Test room creation contract is protected and configured | `CHECK_DAILY_ROOM_SMOKE=1 EXPECTED_DAILY_ERROR_CODE=AUTO npm run verify:prod` returns a configured auth/CSRF gate, not provider-missing | PASS 2026-06-09 |
+| D5 | Assigned tutor/student receive production Daily room token | Password-session evidence calls `/api/daily/room` for accepted booking | PASS 2026-06-09 |
+| D6 | Daily hosted call UI loads in evidence browser | Evidence browser can load `https://c.daily.co` assets and reach Connected state | FAIL 2026-06-09 - `c.daily.co` timed out/reset from this machine |
 
 ### 2C — Supabase
 
@@ -70,8 +72,8 @@ All third-party credentials must be configured before deployment. **No deploymen
 | SB3a | Production Worker serves real public Supabase config to browser auth chunks | `npm run build:worker` passes browser bundle guard; `verify:prod` reports `placeholder=no` for lazy auth chunk | PASS 2026-06-09 |
 | SB4 | Production domain added to Supabase Auth allow-list | [Supabase → Auth → URL Configuration](https://supabase.com/dashboard/project/aaaextkrfoqomzmjjkxe/auth/url-configuration) | ☐ |
 | SB5 | Redirect URL `https://[domain]/auth/callback` is in the allow-list | Same as above | ☐ |
-| SB6 | All current migrations applied to live database (currently 17) | Check `supabase/migrations/` vs applied | ☐ |
-| SB7 | RLS policies verified: profiles, bookings, subscriptions, user_roles | Run `SELECT * FROM pg_policies` | ☐ |
+| SB6 | All current migrations applied to live database (currently 18) | Check `supabase/migrations/` vs applied | PASS 2026-06-09 - production DB patched through `20260609_000018_non_recursive_role_rls.sql` |
+| SB7 | RLS policies verified: profiles, bookings, subscriptions, user_roles | Run `SELECT * FROM pg_policies` | PASS 2026-06-09 for Phase 1 role evidence; profile recursion fixed |
 
 ### 2D — Cloudflare
 
@@ -100,7 +102,7 @@ All third-party credentials must be configured before deployment. **No deploymen
 | 3.9 | Stripe checkout session initiated | Redirects to Stripe-hosted checkout page | |
 | 3.10 | Billing portal accessible for active subscriber | Redirects to Stripe billing portal | |
 | 3.11 | Tutor booking request accepts/declines | Status updates in DB | |
-| 3.12 | Daily.co room created for accepted booking | Assigned tutor/student receive room URL and token; parent direct access denied | Local API/UI contract green 2026-05-26; production authenticated evidence pending |
+| 3.12 | Daily.co room created for accepted booking | Assigned tutor/student receive room URL and token; parent direct access denied | PASS for token/room/parent denial 2026-06-09; iframe join blocked by `c.daily.co` reachability |
 | 3.13 | 404 page renders for unknown routes | Custom not-found page | |
 
 ---

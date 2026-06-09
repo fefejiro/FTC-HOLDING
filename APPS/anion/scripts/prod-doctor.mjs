@@ -34,6 +34,8 @@ const requiredSecretGroups = [
 const checks = [];
 const statusBlockers = new Set([
   'supabase_service_role_invalid',
+  'stripe_subscription_state_unverified',
+  'daily_call_ui_cdn_unreachable',
   'phase1_domain_fixture_missing',
   'confirmed_phase1_test_credentials',
   'supabase_auth_allow_list',
