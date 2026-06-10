@@ -1,0 +1,79 @@
+{
+  "generatedAt": "2026-06-10T16:19:27.263Z",
+  "baseUrl": "https://capsigma-growth-desk.pages.dev",
+  "sessionBeforeAuth": false,
+  "sessionAfterAuth": true,
+  "configured": {
+    "database": true,
+    "openai": true,
+    "sendgrid": true,
+    "fromEmail": "fejiro.efiuvwere@gmail.com",
+    "dailySendLimit": 25
+  },
+  "importedLeadId": "lead_capsigma-internal-smoke-2026-06-10t16-19-21-154z-fejiro-efiuvwere-capsigma-smoke",
+  "importedCount": 1,
+  "rejectedCount": 0,
+  "draftCreated": true,
+  "draftId": "draft_b5879ba3-0cb3-4179-a29e-1f79c0fe93f4",
+  "approved": true,
+  "sendStatus": "sent",
+  "preview": false,
+  "sendId": "send_31136513-d2ce-410f-831b-2a341cddd6f1",
+  "activityCount": 20,
+  "latestActivity": [
+    {
+      "id": "act_4767e004-9b9c-45c1-8580-098a840e9304",
+      "leadId": "lead_capsigma-internal-smoke-2026-06-10t16-19-21-154z-fejiro-efiuvwere-capsigma-smoke",
+      "type": "send_sent",
+      "label": "Email sent to CapSigma Internal Smoke 2026-06-10T16-19-21-154Z",
+      "metadata": {
+        "sendId": "send_31136513-d2ce-410f-831b-2a341cddd6f1",
+        "providerMessageId": "tpV7DVNpS76eFppoGE54xQ"
+      },
+      "createdAt": "2026-06-10T16:19:27.444Z"
+    },
+    {
+      "id": "act_080191ae-17bb-4882-bb7b-7e9658ff3c48",
+      "leadId": "lead_capsigma-internal-smoke-2026-06-10t16-19-21-154z-fejiro-efiuvwere-capsigma-smoke",
+      "type": "lead_update",
+      "label": "CapSigma Internal Smoke 2026-06-10T16-19-21-154Z updated to approved",
+      "metadata": {
+        "status": "approved",
+        "replyType": ""
+      },
+      "createdAt": "2026-06-10T16:19:26.579Z"
+    },
+    {
+      "id": "act_a4ff105d-9db7-4e5b-98ec-7c8ec58a8555",
+      "leadId": "lead_capsigma-internal-smoke-2026-06-10t16-19-21-154z-fejiro-efiuvwere-capsigma-smoke",
+      "type": "draft_created",
+      "label": "Draft created for CapSigma Internal Smoke 2026-06-10T16-19-21-154Z",
+      "metadata": {
+        "draftId": "draft_b5879ba3-0cb3-4179-a29e-1f79c0fe93f4",
+        "model": "gpt-4o-mini"
+      },
+      "createdAt": "2026-06-10T16:19:26.250Z"
+    },
+    {
+      "id": "act_15057643-e9c2-4fcb-83cc-73bce2190020",
+      "leadId": "",
+      "type": "lead_import",
+      "label": "Imported 1 lead",
+      "metadata": {
+        "rejected": 0
+      },
+      "createdAt": "2026-06-10T16:19:22.255Z"
+    },
+    {
+      "id": "act_adb9f7f8-9a2b-487c-b6d4-f85d47f81c18",
+      "leadId": "lead_capsigma-internal-smoke-2026-06-10t16-13-59-873z-fejiro-efiuvwere-capsigma-smoke",
+      "type": "send_failed",
+      "label": "Send failed for CapSigma Internal Smoke 2026-06-10T16-13-59-873Z",
+      "metadata": {
+        "sendId": "send_70af196a-7d29-402f-a975-470b5b7ff788",
+        "status": 403
+      },
+      "createdAt": "2026-06-10T16:14:05.729Z"
+    }
+  ]
+}

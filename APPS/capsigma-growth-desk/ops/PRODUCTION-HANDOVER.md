@@ -1,10 +1,10 @@
 # CapSigma Growth Desk Production Handover
 
-Status: production deployed in preview-send mode.
+Status: production deployed with verified SendGrid sending.
 
 Production URL: https://capsigma-growth-desk.pages.dev
 
-Latest smoke evidence: `ops/PRODUCTION-SMOKE-2026-06-10T15-56-16-083Z.json`
+Latest smoke evidence: `ops/PRODUCTION-SMOKE-2026-06-10T16-19-21-154Z.json`
 
 ## What This Is
 
@@ -27,8 +27,8 @@ Internal workflow name: CapSigma Outreach Agent.
 - [x] Cloudflare D1 database created and real database_id added to wrangler.toml.
 - [x] Cloudflare Pages secrets configured for auth, OpenAI, model, and sender identity.
 - [x] Remote D1 migration applied.
-- [ ] SendGrid API key configured.
-- [ ] Verified sender/domain configured in SendGrid.
+- [x] SendGrid API key configured.
+- [x] Verified sender configured in SendGrid.
 - [x] Production smoke test completed with one internal test lead.
 - [ ] Client-provided real lead source connected or imported.
 
@@ -58,10 +58,12 @@ DAILY_SEND_LIMIT
 
 Current Cloudflare production secret state:
 
-- Present: `ADMIN_PASSWORD`, `AUTH_SECRET`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `SENDGRID_FROM_EMAIL`, `SENDGRID_FROM_NAME`, `DAILY_SEND_LIMIT`
-- Missing: `SENDGRID_API_KEY`
+- Present: `ADMIN_PASSWORD`, `AUTH_SECRET`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL`, `SENDGRID_FROM_NAME`, `DAILY_SEND_LIMIT`
+- Missing: none for current production smoke.
 
-`SENDGRID_API_KEY` may be omitted for preview-only QA, but production handover is not complete until real SendGrid delivery is verified.
+Current verified sender: `fejiro.efiuvwere@gmail.com`
+
+Recommended final client upgrade: authenticate a CapSigma-owned domain/sender before sustained cold outreach.
 
 ## Setup Commands
 
@@ -87,6 +89,14 @@ npx wrangler pages secret put DAILY_SEND_LIMIT --project-name capsigma-growth-de
 npm run deploy
 ```
 
+Safer SendGrid key upload:
+
+```powershell
+Set-Content -LiteralPath .local\sendgrid-api-key.txt -Value "<paste SendGrid API key>" -NoNewline
+npm run sendgrid:set-secret
+npm run prod:doctor
+```
+
 ## Smoke Test
 
 1. Open production URL.
@@ -106,16 +116,17 @@ npm run deploy
 - Auth after login: true
 - D1 configured: true
 - OpenAI configured: true
-- SendGrid configured: false
+- SendGrid configured: true
+- From email: `fejiro.efiuvwere@gmail.com`
 - Daily send limit: 25
 - Imported internal test lead: true
 - Draft created through OpenAI: true
 - Draft approved: true
-- Send result: `preview`
-- Evidence events recorded: lead import, draft created, lead approved, preview saved
+- Send result: `sent`
+- Evidence events recorded: lead import, draft created, lead approved, send sent
 - Daily send limit guardrail: default 25 real sends/day
 
-This proves the production workflow is live through preview proof. It does not prove real email delivery because `SENDGRID_API_KEY` is not configured yet.
+This proves the production workflow is live through real SendGrid delivery proof.
 
 Repeatable commands:
 

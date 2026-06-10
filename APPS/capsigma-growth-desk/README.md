@@ -53,6 +53,12 @@ npx wrangler pages secret put SENDGRID_FROM_NAME --project-name capsigma-growth-
 npx wrangler pages secret put DAILY_SEND_LIMIT --project-name capsigma-growth-desk
 ```
 
+To avoid printing the SendGrid key, you can also save it locally to `.local/sendgrid-api-key.txt` and run:
+
+```bash
+npm run sendgrid:set-secret
+```
+
 ### Deploy
 
 ```bash
@@ -76,4 +82,6 @@ npm run deploy
 - The app no longer ships with fake production leads.
 - If `SENDGRID_API_KEY` is missing, sends are recorded as preview proof only.
 - Production handover is not complete until D1, secrets, SendGrid sender verification, and a real internal smoke test pass.
+- Current production sender is a verified Single Sender: `fejiro.efiuvwere@gmail.com`.
+- Before sustained client outreach, authenticate a CapSigma-owned sender/domain for better trust and deliverability.
 - See `ops/PRODUCTION-HANDOVER.md` for the full checklist.
