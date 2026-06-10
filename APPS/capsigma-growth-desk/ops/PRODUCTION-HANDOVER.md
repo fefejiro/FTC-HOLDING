@@ -6,6 +6,8 @@ Production URL: https://capsigma-growth-desk.pages.dev
 
 Latest smoke evidence: `ops/PRODUCTION-SMOKE-2026-06-10T16-19-21-154Z.json`
 
+Latest full live outreach proof: `ops/LIVE-E2E-HARRIS-HEALTH-CORRECTED-2026-06-10T17-16-56Z.json`
+
 ## What This Is
 
 CapSigma Growth Desk is an operator-controlled outreach desk for real lead import, AI-assisted draft generation, human approval, SendGrid delivery, and durable proof logging.
@@ -127,6 +129,22 @@ npm run prod:doctor
 - Daily send limit guardrail: default 25 real sends/day
 
 This proves the production workflow is live through real SendGrid delivery proof.
+
+## 2026-06-10 Full Live Outreach Test
+
+- Target researched: Harris Health System
+- Test recipient override: `fejiro.efiuvwere@gmail.com`
+- Lead imported: true
+- Public-source fit score: 94
+- AI draft generated: true
+- Placeholder scan passed: true
+- Human approval gate passed: true
+- Send result: `sent`
+- Provider message id: `oUnpzWdHR36VdykQVErZXA`
+- Evidence events recorded: lead import, draft created, lead approved, send sent
+- Report: `ops/LIVE-E2E-HARRIS-HEALTH-CORRECTED-2026-06-10T17-16-56Z.json`
+
+Note: this test used operator-curated public-source research as the lead input. Autonomous web scraping/import should be added before promising unattended prospect discovery.
 
 Repeatable commands:
 

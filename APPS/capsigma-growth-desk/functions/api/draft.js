@@ -2,7 +2,13 @@ import { requireAuth } from '../_lib/auth.js'
 import { addActivity, getDb, getLead, newId, nowIso } from '../_lib/db.js'
 import { json, methodNotAllowed, readJson } from '../_lib/json.js'
 
-const systemPrompt = `You write concise business development outreach for CapSigma, a data operations company. CapSigma's positioning: Your data, our discipline. Services include forms and records digitization, operational and transaction processing, data cleansing and enrichment, non-clinical administrative support, and financial transaction processing. Differentiators: disciplined process design, versioned delivery guides, accuracy targets, HIPAA-aligned controls when relevant, West Africa delivery capacity with GMT/WAT overlap, and a no-cost pilot entry point. Write as Niyi Olumide, PMP, CSM. Be direct, useful, specific, and human. Do not fabricate a relationship, do not imply a prior conversation, and do not overpromise.`
+const signature = `Best regards,
+
+Niyi Olumide, PMP, CSM
+General Manager, CapSigma`
+
+const systemPrompt = `You write concise business development outreach for CapSigma, a data operations company. CapSigma's positioning: Your data, our discipline. Services include forms and records digitization, operational and transaction processing, data cleansing and enrichment, non-clinical administrative support, and financial transaction processing. Differentiators: disciplined process design, versioned delivery guides, accuracy targets, HIPAA-aligned controls when relevant, West Africa delivery capacity with GMT/WAT overlap, and a no-cost pilot entry point. Write as Niyi Olumide, PMP, CSM. Be direct, useful, specific, and human. Do not fabricate a relationship, do not imply a prior conversation, and do not overpromise. Use plain ASCII punctuation. Never include bracketed placeholders. End with this exact signature:
+${signature}`
 
 function leadPrompt(lead, notes = '') {
   return `Create a cold outreach email for this prospect.
@@ -28,7 +34,28 @@ function parseDraft(text, company) {
     ? subjectMatch[1].trim()
     : `CapSigma pilot for ${company}`
   const body = clean.replace(/^Subject:\s*.+\n*/i, '').trim()
-  return { subject, body: body || clean }
+  return { subject, body: cleanDraftBody(body || clean) }
+}
+
+function cleanDraftBody(text) {
+  let body = String(text || '')
+    .replace(/[’‘]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/[–—]/g, '-')
+    .replace(/\[[^\]]*(contact|email|phone|name|title|information)[^\]]*\]/gi, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+
+  if (!body.includes('Niyi Olumide')) {
+    body = `${body}\n\n${signature}`
+  }
+
+  body = body.replace(
+    /Best regards,\s*\n+\s*Niyi Olumide, PMP, CSM\s*\n+\s*CapSigma\s*$/i,
+    signature,
+  )
+
+  return body
 }
 
 export async function onRequest(context) {
