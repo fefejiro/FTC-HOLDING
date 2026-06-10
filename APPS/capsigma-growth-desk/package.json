@@ -9,6 +9,8 @@
     "preview": "vite preview",
     "test": "node --test tests/*.test.js",
     "check": "npm run test && npm run build",
+    "prod:doctor": "node scripts/prod-doctor.mjs",
+    "prod:smoke": "node scripts/prod-smoke.mjs",
     "db:migrate:local": "npx wrangler d1 migrations apply capsigma-growth-desk --local",
     "db:migrate:remote": "npx wrangler d1 migrations apply capsigma-growth-desk --remote",
     "deploy": "npm run build && npx wrangler pages deploy dist --project-name capsigma-growth-desk --branch main --commit-dirty=true"

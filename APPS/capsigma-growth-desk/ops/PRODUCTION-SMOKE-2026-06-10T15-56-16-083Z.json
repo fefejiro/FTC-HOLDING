@@ -1,0 +1,77 @@
+{
+  "generatedAt": "2026-06-10T15:56:22.096Z",
+  "baseUrl": "https://capsigma-growth-desk.pages.dev",
+  "sessionBeforeAuth": false,
+  "sessionAfterAuth": true,
+  "configured": {
+    "database": true,
+    "openai": true,
+    "sendgrid": false,
+    "fromEmail": "outreach@capsigma.com",
+    "dailySendLimit": 25
+  },
+  "importedLeadId": "lead_capsigma-internal-smoke-2026-06-10t15-56-16-083z-fejiro-efiuvwere-capsigma-smoke",
+  "importedCount": 1,
+  "rejectedCount": 0,
+  "draftCreated": true,
+  "draftId": "draft_bd984b36-0644-48f0-84f4-1b25d172c92c",
+  "approved": true,
+  "sendStatus": "preview",
+  "preview": true,
+  "sendId": "send_33bb980d-433e-40a7-86df-3b2483024801",
+  "activityCount": 8,
+  "latestActivity": [
+    {
+      "id": "act_4a1df80f-ddc0-41d9-9f4a-09dd438ba8db",
+      "leadId": "lead_capsigma-internal-smoke-2026-06-10t15-56-16-083z-fejiro-efiuvwere-capsigma-smoke",
+      "type": "send_preview",
+      "label": "Preview saved for CapSigma Internal Smoke 2026-06-10T15-56-16-083Z",
+      "metadata": {
+        "sendId": "send_33bb980d-433e-40a7-86df-3b2483024801"
+      },
+      "createdAt": "2026-06-10T15:56:22.510Z"
+    },
+    {
+      "id": "act_ea1eedbb-b611-40fa-8803-a77a7aea91fa",
+      "leadId": "lead_capsigma-internal-smoke-2026-06-10t15-56-16-083z-fejiro-efiuvwere-capsigma-smoke",
+      "type": "lead_update",
+      "label": "CapSigma Internal Smoke 2026-06-10T15-56-16-083Z updated to approved",
+      "metadata": {
+        "status": "approved",
+        "replyType": ""
+      },
+      "createdAt": "2026-06-10T15:56:21.983Z"
+    },
+    {
+      "id": "act_7af26cd3-30dd-4ce5-bb3d-f4aa388bbf47",
+      "leadId": "lead_capsigma-internal-smoke-2026-06-10t15-56-16-083z-fejiro-efiuvwere-capsigma-smoke",
+      "type": "draft_created",
+      "label": "Draft created for CapSigma Internal Smoke 2026-06-10T15-56-16-083Z",
+      "metadata": {
+        "draftId": "draft_bd984b36-0644-48f0-84f4-1b25d172c92c",
+        "model": "gpt-4o-mini"
+      },
+      "createdAt": "2026-06-10T15:56:21.779Z"
+    },
+    {
+      "id": "act_1f278b9b-8fbd-4309-aac3-cca366597c0e",
+      "leadId": "",
+      "type": "lead_import",
+      "label": "Imported 1 lead",
+      "metadata": {
+        "rejected": 0
+      },
+      "createdAt": "2026-06-10T15:56:17.453Z"
+    },
+    {
+      "id": "act_521fc706-10b9-401f-b271-4f79ea131652",
+      "leadId": "lead_capsigma-internal-smoke-test-fejiro-efiuvwere-capsigma-smoke-gmail-com",
+      "type": "send_preview",
+      "label": "Preview saved for CapSigma Internal Smoke Test",
+      "metadata": {
+        "sendId": "send_1813a0fe-da92-4fee-aca1-bcf4c879c89a"
+      },
+      "createdAt": "2026-06-10T15:43:58.003Z"
+    }
+  ]
+}

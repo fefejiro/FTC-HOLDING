@@ -4,7 +4,7 @@ Status: production deployed in preview-send mode.
 
 Production URL: https://capsigma-growth-desk.pages.dev
 
-Latest smoke evidence: `ops/PRODUCTION-SMOKE-2026-06-10.json`
+Latest smoke evidence: `ops/PRODUCTION-SMOKE-2026-06-10T15-56-16-083Z.json`
 
 ## What This Is
 
@@ -53,11 +53,12 @@ OPENAI_MODEL
 SENDGRID_API_KEY
 SENDGRID_FROM_EMAIL
 SENDGRID_FROM_NAME
+DAILY_SEND_LIMIT
 ```
 
 Current Cloudflare production secret state:
 
-- Present: `ADMIN_PASSWORD`, `AUTH_SECRET`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `SENDGRID_FROM_EMAIL`, `SENDGRID_FROM_NAME`
+- Present: `ADMIN_PASSWORD`, `AUTH_SECRET`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `SENDGRID_FROM_EMAIL`, `SENDGRID_FROM_NAME`, `DAILY_SEND_LIMIT`
 - Missing: `SENDGRID_API_KEY`
 
 `SENDGRID_API_KEY` may be omitted for preview-only QA, but production handover is not complete until real SendGrid delivery is verified.
@@ -82,6 +83,7 @@ npx wrangler pages secret put OPENAI_MODEL --project-name capsigma-growth-desk
 npx wrangler pages secret put SENDGRID_API_KEY --project-name capsigma-growth-desk
 npx wrangler pages secret put SENDGRID_FROM_EMAIL --project-name capsigma-growth-desk
 npx wrangler pages secret put SENDGRID_FROM_NAME --project-name capsigma-growth-desk
+npx wrangler pages secret put DAILY_SEND_LIMIT --project-name capsigma-growth-desk
 npm run deploy
 ```
 
@@ -105,13 +107,22 @@ npm run deploy
 - D1 configured: true
 - OpenAI configured: true
 - SendGrid configured: false
+- Daily send limit: 25
 - Imported internal test lead: true
 - Draft created through OpenAI: true
 - Draft approved: true
 - Send result: `preview`
 - Evidence events recorded: lead import, draft created, lead approved, preview saved
+- Daily send limit guardrail: default 25 real sends/day
 
 This proves the production workflow is live through preview proof. It does not prove real email delivery because `SENDGRID_API_KEY` is not configured yet.
+
+Repeatable commands:
+
+```powershell
+npm run prod:doctor
+npm run prod:smoke
+```
 
 ## Data Policy
 

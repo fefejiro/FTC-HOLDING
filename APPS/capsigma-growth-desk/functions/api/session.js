@@ -11,6 +11,7 @@ export async function onRequestGet({ request, env }) {
       openai: Boolean(env.OPENAI_API_KEY),
       sendgrid: Boolean(env.SENDGRID_API_KEY),
       fromEmail: env.SENDGRID_FROM_EMAIL || '',
+      dailySendLimit: Number.parseInt(env.DAILY_SEND_LIMIT || '25', 10),
     },
   })
 }

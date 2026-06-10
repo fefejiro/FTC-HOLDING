@@ -113,6 +113,27 @@ export async function onRequest(context) {
     })
   }
 
+  const dailyLimit = Number.parseInt(env.DAILY_SEND_LIMIT || '25', 10)
+  if (dailyLimit > 0) {
+    const startOfDay = new Date()
+    startOfDay.setUTCHours(0, 0, 0, 0)
+    const sentToday = await db
+      .prepare(
+        `SELECT COUNT(*) AS count
+         FROM send_events
+         WHERE status = 'sent' AND created_at >= ?`,
+      )
+      .bind(startOfDay.toISOString())
+      .first()
+
+    if (Number(sentToday?.count || 0) >= dailyLimit) {
+      return json(
+        { error: `Daily send limit reached (${dailyLimit}).` },
+        { status: 429 },
+      )
+    }
+  }
+
   const sendResponse = await fetch('https://api.sendgrid.com/v3/mail/send', {
     method: 'POST',
     headers: {

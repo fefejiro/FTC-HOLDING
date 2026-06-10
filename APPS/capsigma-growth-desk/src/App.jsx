@@ -370,6 +370,51 @@ export default function App() {
     }
   }
 
+  async function updateLeadStatus(status, replyType = undefined) {
+    if (!selectedLead) return
+    setBusy(status)
+    setError('')
+    setNotice('')
+    try {
+      await api(`/api/leads/${selectedLead.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status, replyType }),
+      })
+      setNotice(`Lead marked as ${statusLabels[status] || status}.`)
+      await loadData()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy('')
+    }
+  }
+
+  async function suppressSelectedLead() {
+    if (!selectedLead?.email) {
+      setError('Selected lead has no email to suppress.')
+      return
+    }
+    setBusy('suppress')
+    setError('')
+    setNotice('')
+    try {
+      await api('/api/suppressions', {
+        method: 'POST',
+        body: JSON.stringify({
+          leadId: selectedLead.id,
+          email: selectedLead.email,
+          reason: 'manual operator suppression',
+        }),
+      })
+      setNotice('Lead suppressed and marked do not contact.')
+      await loadData()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy('')
+    }
+  }
+
   if (!session?.authenticated) {
     return (
       <main style={{ minHeight: '100vh', background: palette.bg, color: palette.text, display: 'grid', placeItems: 'center', padding: 24 }}>
@@ -528,6 +573,9 @@ export default function App() {
                   <div>Email: {selectedLead.email || '-'}</div>
                   <div>Contact: {selectedLead.contactName || selectedLead.contactTitle || '-'}</div>
                   <div>Status: {statusLabels[selectedLead.status] || selectedLead.status}</div>
+                  <div>Last drafted: {formatTime(selectedLead.lastDraftedAt)}</div>
+                  <div>Last sent: {formatTime(selectedLead.lastSentAt)}</div>
+                  <div>Last reply: {formatTime(selectedLead.lastReplyAt)}</div>
                   {selectedLead.sourceUrl && (
                     <a href={selectedLead.sourceUrl} target="_blank" rel="noreferrer" style={{ color: palette.blue }}>
                       Source
@@ -538,6 +586,23 @@ export default function App() {
                   </Field>
                   <Button onClick={generateDraft} disabled={busy === 'draft'}>
                     {busy === 'draft' ? 'Generating...' : 'Generate draft'}
+                  </Button>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <Button variant="secondary" onClick={() => updateLeadStatus('qualified')} disabled={busy === 'qualified'}>
+                      Qualify
+                    </Button>
+                    <Button variant="secondary" onClick={() => updateLeadStatus('not_fit')} disabled={busy === 'not_fit'}>
+                      Not fit
+                    </Button>
+                    <Button variant="secondary" onClick={() => updateLeadStatus('replied', 'human')} disabled={busy === 'replied'}>
+                      Human reply
+                    </Button>
+                    <Button variant="secondary" onClick={() => updateLeadStatus('replied', 'auto')} disabled={busy === 'replied'}>
+                      Auto reply
+                    </Button>
+                  </div>
+                  <Button variant="danger" onClick={suppressSelectedLead} disabled={busy === 'suppress' || !selectedLead.email}>
+                    Suppress
                   </Button>
                 </div>
               ) : (

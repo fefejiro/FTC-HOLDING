@@ -8,6 +8,7 @@ Required local keys:
 - OPENAI_MODEL
 - SENDGRID_FROM_EMAIL
 - SENDGRID_FROM_NAME
+- DAILY_SEND_LIMIT
 
 Optional local key:
 - SENDGRID_API_KEY

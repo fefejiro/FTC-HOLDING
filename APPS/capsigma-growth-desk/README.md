@@ -50,6 +50,7 @@ npx wrangler pages secret put OPENAI_MODEL --project-name capsigma-growth-desk
 npx wrangler pages secret put SENDGRID_API_KEY --project-name capsigma-growth-desk
 npx wrangler pages secret put SENDGRID_FROM_EMAIL --project-name capsigma-growth-desk
 npx wrangler pages secret put SENDGRID_FROM_NAME --project-name capsigma-growth-desk
+npx wrangler pages secret put DAILY_SEND_LIMIT --project-name capsigma-growth-desk
 ```
 
 ### Deploy
@@ -67,6 +68,7 @@ npm run deploy
 - Human approval before send
 - SendGrid delivery with preview/sent/failed proof events
 - Placeholder email blocking
+- Daily send limit guardrail
 - Industry intelligence playbook
 
 ## Notes

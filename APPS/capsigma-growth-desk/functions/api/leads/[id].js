@@ -27,7 +27,11 @@ async function handlePatch({ request, env, params }) {
   const current = await getLead(db, params.id)
   if (!current) return json({ error: 'Lead not found' }, { status: 404 })
 
-  const status = body.status ? String(body.status) : current.status
+  const status = body.status
+    ? String(body.status)
+    : body.replyType !== undefined
+      ? 'replied'
+      : current.status
   if (!ALLOWED_STATUSES.has(status)) {
     return json({ error: `Invalid status: ${status}` }, { status: 400 })
   }
@@ -36,22 +40,24 @@ async function handlePatch({ request, env, params }) {
     body.draftSubject !== undefined ? String(body.draftSubject) : current.draft_subject
   const draftBody = body.draftBody !== undefined ? String(body.draftBody) : current.draft_body
   const replyType = body.replyType !== undefined ? String(body.replyType) : current.reply_type
+  const lastReplyAt =
+    body.replyType !== undefined ? nowIso() : current.last_reply_at
   const now = nowIso()
 
   await db
     .prepare(
       `UPDATE leads
-       SET status = ?, draft_subject = ?, draft_body = ?, reply_type = ?, updated_at = ?
+       SET status = ?, draft_subject = ?, draft_body = ?, reply_type = ?, last_reply_at = ?, updated_at = ?
        WHERE id = ?`,
     )
-    .bind(status, draftSubject, draftBody, replyType, now, params.id)
+    .bind(status, draftSubject, draftBody, replyType, lastReplyAt, now, params.id)
     .run()
 
   await addActivity(db, {
     leadId: params.id,
     type: 'lead_update',
     label: `${current.company} updated to ${status}`,
-    metadata: { status },
+    metadata: { status, replyType },
   })
 
   return json({ ok: true })
