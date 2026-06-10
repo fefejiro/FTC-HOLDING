@@ -1,0 +1,1 @@
+ALTER TABLE send_events ADD COLUMN body TEXT DEFAULT '';

@@ -199,6 +199,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('Pipeline')
   const [leads, setLeads] = useState([])
   const [activity, setActivity] = useState([])
+  const [sends, setSends] = useState([])
   const [selectedLeadId, setSelectedLeadId] = useState('')
   const [csvText, setCsvText] = useState('')
   const [notes, setNotes] = useState('')
@@ -252,6 +253,8 @@ export default function App() {
     ])
     setLeads(leadData.leads || [])
     setActivity(activityData.activity || [])
+    const sendData = await api('/api/sends')
+    setSends(sendData.sends || [])
     if (!selectedLeadId && leadData.leads?.length) {
       setSelectedLeadId(leadData.leads[0].id)
     }
@@ -470,7 +473,7 @@ export default function App() {
         </header>
 
         <nav style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {['Pipeline', 'Outreach', 'Import', 'Intelligence', 'Evidence'].map((tab) => (
+          {['Pipeline', 'Outreach', 'Sent Review', 'Import', 'Intelligence', 'Evidence'].map((tab) => (
             <Button
               key={tab}
               variant={activeTab === tab ? 'primary' : 'secondary'}
@@ -569,7 +572,7 @@ export default function App() {
                     </select>
                   </Field>
                   <div><strong>{selectedLead.company}</strong></div>
-                  <div style={{ color: palette.muted }}>{selectedLead.reason || 'No fit reason provided.'}</div>
+                  <div style={{ color: palette.muted, lineHeight: 1.6 }}>{selectedLead.reason || 'No background provided.'}</div>
                   <div>Email: {selectedLead.email || '-'}</div>
                   <div>Contact: {selectedLead.contactName || selectedLead.contactTitle || '-'}</div>
                   <div>Status: {statusLabels[selectedLead.status] || selectedLead.status}</div>
@@ -632,6 +635,52 @@ export default function App() {
                 </div>
               </div>
             </Card>
+          </section>
+        )}
+
+        {activeTab === 'Sent Review' && (
+          <section style={{ display: 'grid', gap: 14 }}>
+            {sends.map((send) => (
+              <Card key={send.id}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 360px) 1fr', gap: 18 }}>
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    <div style={{ color: send.status === 'sent' ? palette.green : send.status === 'failed' ? palette.red : palette.gold, fontWeight: 800 }}>
+                      {send.status.toUpperCase()}
+                    </div>
+                    <h2 style={{ margin: 0, fontSize: 20 }}>{send.company || 'Unknown lead'}</h2>
+                    <div>To: {send.toEmail}</div>
+                    <div>Contact: {send.contactName || send.contactTitle || '-'}</div>
+                    <div>Fit: {send.fitScore || 0}</div>
+                    <div>Sent: {formatTime(send.createdAt)}</div>
+                    <div>Provider id: {send.providerMessageId || '-'}</div>
+                    {send.sourceUrl && (
+                      <a href={send.sourceUrl} target="_blank" rel="noreferrer" style={{ color: palette.blue }}>
+                        Source
+                      </a>
+                    )}
+                  </div>
+                  <div style={{ display: 'grid', gap: 12 }}>
+                    <div>
+                      <div style={{ color: palette.muted, marginBottom: 6 }}>Background</div>
+                      <div style={{ lineHeight: 1.6 }}>{send.reason || 'No background recorded.'}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: palette.muted, marginBottom: 6 }}>Subject</div>
+                      <div style={{ fontWeight: 800 }}>{send.subject}</div>
+                    </div>
+                    <pre style={{ whiteSpace: 'pre-wrap', margin: 0, lineHeight: 1.55, background: '#0D0F16', border: `1px solid ${palette.line}`, borderRadius: 8, padding: 14 }}>
+                      {send.body || 'No sent body recorded for this older send.'}
+                    </pre>
+                    {send.error && <div style={{ color: palette.red }}>{send.error}</div>}
+                  </div>
+                </div>
+              </Card>
+            ))}
+            {!sends.length && (
+              <Card>
+                <div style={{ color: palette.muted }}>No send events yet.</div>
+              </Card>
+            )}
           </section>
         )}
 

@@ -16,15 +16,16 @@ async function recordSendEvent(db, event) {
   await db
     .prepare(
       `INSERT INTO send_events (
-        id, lead_id, to_email, subject, status, provider,
+        id, lead_id, to_email, subject, body, status, provider,
         provider_message_id, error, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       event.id,
       event.leadId,
       event.toEmail,
       event.subject,
+      event.body || '',
       event.status,
       event.provider,
       event.providerMessageId || '',
@@ -88,6 +89,7 @@ export async function onRequest(context) {
       leadId,
       toEmail: lead.email,
       subject: lead.draft_subject,
+      body: emailBody,
       status: 'preview',
       provider: 'sendgrid',
       createdAt,
@@ -162,6 +164,7 @@ export async function onRequest(context) {
       leadId,
       toEmail: lead.email,
       subject: lead.draft_subject,
+      body: emailBody,
       status: 'failed',
       provider: 'sendgrid',
       error: `${sendResponse.status} ${responseText}`,
@@ -185,6 +188,7 @@ export async function onRequest(context) {
     leadId,
     toEmail: lead.email,
     subject: lead.draft_subject,
+    body: emailBody,
     status: 'sent',
     provider: 'sendgrid',
     providerMessageId,

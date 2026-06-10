@@ -8,6 +8,8 @@ Latest smoke evidence: `ops/PRODUCTION-SMOKE-2026-06-10T16-19-21-154Z.json`
 
 Latest full live outreach proof: `ops/LIVE-E2E-HARRIS-HEALTH-CORRECTED-2026-06-10T17-16-56Z.json`
 
+Latest actual external outreach proof: `ops/LIVE-E2E-HARRIS-HEALTH-ACTUAL-2026-06-10T17-37-48Z.json`
+
 ## What This Is
 
 CapSigma Growth Desk is an operator-controlled outreach desk for real lead import, AI-assisted draft generation, human approval, SendGrid delivery, and durable proof logging.
@@ -145,6 +147,18 @@ This proves the production workflow is live through real SendGrid delivery proof
 - Report: `ops/LIVE-E2E-HARRIS-HEALTH-CORRECTED-2026-06-10T17-16-56Z.json`
 
 Note: this test used operator-curated public-source research as the lead input. Autonomous web scraping/import should be added before promising unattended prospect discovery.
+
+## 2026-06-10 Actual External Harris Send
+
+- Target: Harris Health System
+- Recipient: `Victoria.Nikitin@harrishealth.org`
+- Contact: Victoria Nikitin, MBA, CPA, FHFMA - Executive Vice President and Chief Financial Officer
+- Fit score: 94
+- Subject: `Enhancing Revenue Cycle and Eligibility Workflows`
+- Send result: `sent`
+- Provider message id: `DJmp-svrSZewc8NNPWwNLg`
+- Sent Review tab: available in app with full sent body, background, source, provider id, and proof status.
+- Report: `ops/LIVE-E2E-HARRIS-HEALTH-ACTUAL-2026-06-10T17-37-48Z.json`
 
 Repeatable commands:
 

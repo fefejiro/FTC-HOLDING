@@ -1,0 +1,166 @@
+﻿{
+    "generatedAt":  "2026-06-10T13:37:55.3177631-04:00",
+    "baseUrl":  "https://capsigma-growth-desk.pages.dev",
+    "testType":  "actual-external-harris-health-outreach",
+    "sessionBeforeAuth":  false,
+    "sessionAfterAuth":  true,
+    "configured":  {
+                       "database":  true,
+                       "openai":  true,
+                       "sendgrid":  true,
+                       "fromEmail":  "fejiro.efiuvwere@gmail.com",
+                       "dailySendLimit":  25
+                   },
+    "sourceTarget":  "Harris Health System",
+    "actualRecipient":  "Victoria.Nikitin@harrishealth.org",
+    "whoToReachOutTo":  {
+                            "primary":  "Victoria Nikitin, MBA, CPA, FHFMA - Executive Vice President and Chief Financial Officer",
+                            "secondaryPersona":  "Patient access / revenue cycle operations leader for follow-up if CFO routes internally",
+                            "rationale":  "CFO role and Harris public finance/strategy materials align with revenue-cycle optimization, denials, collections, eligibility, and operational-capacity concerns."
+                        },
+    "scrapedInfo":  [
+                        {
+                            "source":  "Harris Health leadership page",
+                            "finding":  "Victoria Nikitin is Executive Vice President and Chief Financial Officer and has finance, data analytics, reimbursement, and Medicaid waiver priority background.",
+                            "url":  "https://www.harrishealth.org/about-us-hh/leadership/Pages/victoria-nikitin.aspx"
+                        },
+                        {
+                            "source":  "Harris Health patient eligibility page",
+                            "finding":  "Financial Assistance eligibility uses online, mail, expedited, and drop-off workflows with proof documents and processing windows.",
+                            "url":  "https://www.harrishealth.org/access-care/patient-eligibility"
+                        },
+                        {
+                            "source":  "Harris Health patient information page",
+                            "finding":  "Eligibility connects to appointment access through published call center workflows.",
+                            "url":  "https://www.harrishealth.org/access-care/patient-information"
+                        },
+                        {
+                            "source":  "Harris Health RHP/1115 published material",
+                            "finding":  "Published Harris materials list Victoria.Nikitin@harrishealth.org as a contact address.",
+                            "url":  "https://www.harrishealth.org/1115/Pages/Region%203%20Resources/Providers%20and%20Projects/DY1-6%20RHP%20Plan/RHP%203%20Plan%20Organization.xlsx"
+                        }
+                    ],
+    "importedLeadId":  "lead_harris-health-system-victoria-nikitin-harrishealth-org",
+    "importedCount":  1,
+    "rejectedCount":  0,
+    "fitScore":  94,
+    "draftCreated":  true,
+    "draftId":  "draft_d9e30895-3c64-4391-8f9a-c6ff1a1969e4",
+    "draftSubject":  "Enhancing Revenue Cycle and Eligibility Workflows",
+    "draftBody":  "Dear Victoria,\n\nI hope this message finds you well. I am reaching out to introduce CapSigma and explore how we can support Harris Health System in optimizing your financial assistance eligibility workflows and enhancing your revenue cycle.\n\nOur disciplined approach to data operations includes forms and records digitization, data cleansing, and operational support tailored for healthcare organizations. Given your focus on revenue-cycle optimization and reducing denials, I believe our services can help streamline your eligibility processes, particularly around online applications and document intake.\n\nWe offer a no-cost pilot to demonstrate our capabilities in improving your eligibility-document intake and access workflows. This could be a valuable opportunity to assess how we can contribute to your goals of enhanced collections and operational capacity.\n\nI would welcome the chance to discuss this further at your convenience.\n\nBest regards,\n\nNiyi Olumide, PMP, CSM  \nGeneral Manager, CapSigma",
+    "placeholderScanPassed":  true,
+    "approved":  true,
+    "sendStatus":  "sent",
+    "preview":  false,
+    "sendId":  "send_f3583ac8-45ff-41cb-9dd0-31d0880b5f3e",
+    "providerMessageId":  "DJmp-svrSZewc8NNPWwNLg",
+    "sentReviewAvailableInApp":  true,
+    "sentReview":  {
+                       "id":  "send_f3583ac8-45ff-41cb-9dd0-31d0880b5f3e",
+                       "leadId":  "lead_harris-health-system-victoria-nikitin-harrishealth-org",
+                       "toEmail":  "victoria.nikitin@harrishealth.org",
+                       "subject":  "Enhancing Revenue Cycle and Eligibility Workflows",
+                       "body":  "Dear Victoria,\n\nI hope this message finds you well. I am reaching out to introduce CapSigma and explore how we can support Harris Health System in optimizing your financial assistance eligibility workflows and enhancing your revenue cycle.\n\nOur disciplined approach to data operations includes forms and records digitization, data cleansing, and operational support tailored for healthcare organizations. Given your focus on revenue-cycle optimization and reducing denials, I believe our services can help streamline your eligibility processes, particularly around online applications and document intake.\n\nWe offer a no-cost pilot to demonstrate our capabilities in improving your eligibility-document intake and access workflows. This could be a valuable opportunity to assess how we can contribute to your goals of enhanced collections and operational capacity.\n\nI would welcome the chance to discuss this further at your convenience.\n\nBest regards,\n\nNiyi Olumide, PMP, CSM  \nGeneral Manager, CapSigma\n\n--\nCapSigma\nYou received this business outreach because your role may relate to data operations, records, or processing workflows.\nTo opt out, reply with \"unsubscribe\" or contact fejiro.efiuvwere@gmail.com.",
+                       "status":  "sent",
+                       "provider":  "sendgrid",
+                       "providerMessageId":  "DJmp-svrSZewc8NNPWwNLg",
+                       "error":  "",
+                       "createdAt":  "2026-06-10T17:37:54.541Z",
+                       "company":  "Harris Health System",
+                       "industry":  "Healthcare / public safety-net health system",
+                       "fitScore":  94,
+                       "reason":  "Harris Health public materials show a strong CapSigma fit: financial assistance eligibility uses online applications, document upload, mail, expedited, and drop-off workflows; appointment access is linked to eligibility; leadership identifies Victoria Nikitin as EVP/CFO; published planning/finance materials point to revenue-cycle optimization, reduced denials, enhanced collections, and operational capacity optimization.",
+                       "contactName":  "Victoria Nikitin, MBA, CPA, FHFMA",
+                       "contactTitle":  "Executive Vice President and Chief Financial Officer",
+                       "sourceUrl":  "https://www.harrishealth.org/about-us-hh/leadership/Pages/victoria-nikitin.aspx",
+                       "source":  "Official Harris Health leadership page and Harris Health published board/1115 materials."
+                   },
+    "latestActivity":  [
+                           {
+                               "id":  "act_3b51fc50-f047-46ae-bd09-1cff17060d53",
+                               "leadId":  "lead_harris-health-system-victoria-nikitin-harrishealth-org",
+                               "type":  "send_sent",
+                               "label":  "Email sent to Harris Health System",
+                               "metadata":  {
+                                                "sendId":  "send_f3583ac8-45ff-41cb-9dd0-31d0880b5f3e",
+                                                "providerMessageId":  "DJmp-svrSZewc8NNPWwNLg"
+                                            },
+                               "createdAt":  "2026-06-10T17:37:54.931Z"
+                           },
+                           {
+                               "id":  "act_40df315b-2533-4fa8-8a17-16b089d8ddfc",
+                               "leadId":  "lead_harris-health-system-victoria-nikitin-harrishealth-org",
+                               "type":  "lead_update",
+                               "label":  "Harris Health System updated to approved",
+                               "metadata":  {
+                                                "status":  "approved",
+                                                "replyType":  ""
+                                            },
+                               "createdAt":  "2026-06-10T17:37:54.288Z"
+                           },
+                           {
+                               "id":  "act_a5ccbd81-79f8-4110-b359-9316cbe3cf71",
+                               "leadId":  "lead_harris-health-system-victoria-nikitin-harrishealth-org",
+                               "type":  "draft_created",
+                               "label":  "Draft created for Harris Health System",
+                               "metadata":  {
+                                                "draftId":  "draft_d9e30895-3c64-4391-8f9a-c6ff1a1969e4",
+                                                "model":  "gpt-4o-mini"
+                                            },
+                               "createdAt":  "2026-06-10T17:37:54.019Z"
+                           },
+                           {
+                               "id":  "act_ad2eaf68-7407-4a55-8e54-20b6567346bb",
+                               "leadId":  "",
+                               "type":  "lead_import",
+                               "label":  "Imported 1 lead",
+                               "metadata":  {
+                                                "rejected":  0
+                                            },
+                               "createdAt":  "2026-06-10T17:37:49.238Z"
+                           },
+                           {
+                               "id":  "act_27b19121-7890-444c-b05d-d272cfdf2533",
+                               "leadId":  "lead_harris-health-system-live-proof-2026-06-10t17-16-56z-fejiro-efiuvwere-gmail-com",
+                               "type":  "send_sent",
+                               "label":  "Email sent to Harris Health System Live Proof 2026-06-10T17-16-56Z",
+                               "metadata":  {
+                                                "sendId":  "send_95e0bf1e-d061-440d-92f1-225fe38d3a52",
+                                                "providerMessageId":  "oUnpzWdHR36VdykQVErZXA"
+                                            },
+                               "createdAt":  "2026-06-10T17:17:03.440Z"
+                           },
+                           {
+                               "id":  "act_5ded0124-5327-4a01-89ff-883b7283a696",
+                               "leadId":  "lead_harris-health-system-live-proof-2026-06-10t17-16-56z-fejiro-efiuvwere-gmail-com",
+                               "type":  "lead_update",
+                               "label":  "Harris Health System Live Proof 2026-06-10T17-16-56Z updated to approved",
+                               "metadata":  {
+                                                "status":  "approved",
+                                                "replyType":  ""
+                                            },
+                               "createdAt":  "2026-06-10T17:17:02.723Z"
+                           },
+                           {
+                               "id":  "act_ffdfb8f6-6db6-4891-9aad-e23ac36c475d",
+                               "leadId":  "lead_harris-health-system-live-proof-2026-06-10t17-16-56z-fejiro-efiuvwere-gmail-com",
+                               "type":  "draft_created",
+                               "label":  "Draft created for Harris Health System Live Proof 2026-06-10T17-16-56Z",
+                               "metadata":  {
+                                                "draftId":  "draft_dc565a41-98eb-4bf3-bffb-688611dbdff7",
+                                                "model":  "gpt-4o-mini"
+                                            },
+                               "createdAt":  "2026-06-10T17:17:02.209Z"
+                           },
+                           {
+                               "id":  "act_980378b2-011b-45c4-9eaa-517602aab7fc",
+                               "leadId":  "",
+                               "type":  "lead_import",
+                               "label":  "Imported 1 lead",
+                               "metadata":  {
+                                                "rejected":  0
+                                            },
+                               "createdAt":  "2026-06-10T17:16:57.735Z"
+                           }
+                       ]
+}

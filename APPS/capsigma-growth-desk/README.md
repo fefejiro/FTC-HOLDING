@@ -73,6 +73,7 @@ npm run deploy
 - Server-owned OpenAI drafting route
 - Human approval before send
 - SendGrid delivery with preview/sent/failed proof events
+- Sent Review tab showing delivered body, provider id, lead background, and source link
 - Placeholder email blocking
 - Daily send limit guardrail
 - Industry intelligence playbook
