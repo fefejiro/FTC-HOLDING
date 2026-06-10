@@ -1,0 +1,8 @@
+name = "capsigma-growth-desk"
+compatibility_date = "2026-06-08"
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "CAPSIGMA_DB"
+database_name = "capsigma-growth-desk"
+database_id = "92753898-35f4-4871-8bad-e10455a93c42"

@@ -1,0 +1,13 @@
+Copy this file to `.dev.vars` for local Pages Functions testing.
+Use real local-only values in `.dev.vars`; never commit that file.
+
+Required local keys:
+- ADMIN_PASSWORD
+- AUTH_SECRET
+- OPENAI_API_KEY
+- OPENAI_MODEL
+- SENDGRID_FROM_EMAIL
+- SENDGRID_FROM_NAME
+
+Optional local key:
+- SENDGRID_API_KEY
