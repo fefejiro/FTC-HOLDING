@@ -44,6 +44,8 @@
     "qa:portfolio:e2e:strict": "node scripts/run-portfolio-e2e.mjs",
     "qa:portfolio:sync": "npm run qa:portfolio:e2e && npm run status:unalabs:sync",
     "qa:garden:provision": "node scripts/garden-portal-qa-provision.mjs",
+    "garden:nightly": "powershell -ExecutionPolicy Bypass -File scripts/run-garden-nightly-release.ps1",
+    "garden:nightly:register": "powershell -ExecutionPolicy Bypass -File scripts/register-garden-nightly-task.ps1 -Force",
     "status:saywetin:sync": "node scripts/update-saywetin-status.mjs",
     "howitworks:videos": "node scripts/set-howitworks-videos.mjs",
     "verify:peacepad:prod": "powershell -ExecutionPolicy Bypass -File scripts/verify-peacepad-prod.ps1",
