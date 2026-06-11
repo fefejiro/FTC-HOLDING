@@ -46,7 +46,7 @@ $settings = New-ScheduledTaskSettingsSet `
     -ExecutionTimeLimit (New-TimeSpan -Hours 2)
 
 $user = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-$principal = New-ScheduledTaskPrincipal -UserId $user -LogonType Interactive -RunLevel LeastPrivilege
+$principal = New-ScheduledTaskPrincipal -UserId $user -LogonType Interactive -RunLevel Limited
 $description = "Runs Garden Cleaners local CI gates, Cloudflare Pages deploy, and live smoke checks without GitHub Actions."
 
 $existing = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
