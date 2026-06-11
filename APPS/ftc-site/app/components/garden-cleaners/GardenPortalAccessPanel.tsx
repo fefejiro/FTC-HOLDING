@@ -632,7 +632,12 @@ export default function GardenPortalAccessPanel() {
     });
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo }
+      options: {
+        redirectTo,
+        queryParams: {
+          prompt: "select_account"
+        }
+      }
     });
   }
 

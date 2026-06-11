@@ -46,7 +46,12 @@ export default function LoginClient() {
       });
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo }
+        options: {
+          redirectTo,
+          queryParams: {
+            prompt: "select_account"
+          }
+        }
       });
 
       if (oauthError) {
