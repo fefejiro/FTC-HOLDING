@@ -27,12 +27,16 @@ function createAdminClient() {
   });
 }
 
+function getAdminAuth(admin: ReturnType<typeof createAdminClient>) {
+  return admin.auth as any;
+}
+
 async function resolveCallerEmail(req: NextRequest): Promise<string | null> {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) return null;
   const token = authHeader.slice(7);
   const admin = createAdminClient();
-  const { data, error } = await admin.auth.getUser(token);
+  const { data, error } = await getAdminAuth(admin).getUser(token);
   if (error || !data.user) return null;
   return (data.user.email || "").trim().toLowerCase();
 }
@@ -169,7 +173,7 @@ export async function POST(req: NextRequest) {
 
     // Invite the user via Supabase Auth
     const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL || "https://gardencleaners.ca"}/garden-cleaners/portal#portal-access`;
-    const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
+    const { data: inviteData, error: inviteError } = await getAdminAuth(admin).admin.inviteUserByEmail(email, {
       redirectTo,
       data: { display_name: displayName, garden_role: role },
     });
@@ -312,15 +316,15 @@ export async function PUT(req: NextRequest) {
     const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL || "https://gardencleaners.ca"}/garden-cleaners/portal#portal-access`;
 
     // Find existing auth user by email
-    const { data: listData, error: listError } = await admin.auth.admin.listUsers();
+    const { data: listData, error: listError } = await getAdminAuth(admin).admin.listUsers();
     if (listError) {
       return NextResponse.json({ ok: false, error: listError.message }, { status: 500 });
     }
-    const existingUser = listData.users.find((u) => (u.email || "").toLowerCase() === email);
+    const existingUser = listData.users.find((u: { email?: string | null }) => (u.email || "").toLowerCase() === email);
 
     if (existingUser) {
       // Send password reset
-      const { error: resetError } = await admin.auth.admin.generateLink({
+      const { error: resetError } = await getAdminAuth(admin).admin.generateLink({
         type: "recovery",
         email,
         options: { redirectTo },
@@ -331,7 +335,7 @@ export async function PUT(req: NextRequest) {
       await writeAuditLog(admin, caller.email, "reset_password", email, existingUser.id);
     } else {
       // Send fresh invite
-      const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo });
+      const { data: inviteData, error: inviteError } = await getAdminAuth(admin).admin.inviteUserByEmail(email, { redirectTo });
       if (inviteError) {
         return NextResponse.json({ ok: false, error: inviteError.message }, { status: 400 });
       }

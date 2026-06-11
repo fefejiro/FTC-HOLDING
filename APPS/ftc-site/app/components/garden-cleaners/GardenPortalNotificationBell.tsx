@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import getSupabase from "../../../lib/supabase";
+import getSupabase, { loadRuntimeSupabaseConfig } from "../../../lib/supabase";
 
 type PortalNotification = {
   id: string;
@@ -43,6 +43,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
 }
 
 async function fetchWithAuth(url: string, options: RequestInit = {}) {
+  await loadRuntimeSupabaseConfig();
   const supabase = getSupabase();
   const { data: sessionData } = await supabase.auth.getSession();
   const accessToken = sessionData.session?.access_token;

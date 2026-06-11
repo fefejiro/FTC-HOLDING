@@ -32,6 +32,7 @@ const OG_PUBLIC_PATHS = new Set([
 ]);
 
 const ROLE_ROUTE_PATTERN = /^\/(?:garden-cleaners\/)?(?:customer|worker|cleaner|staff|admin|operator|dashboard|jobs|bookings|status|login)(?:\/|$)/;
+const PUBLIC_AUTH_CONFIG_PATH = "/api/public-auth-config";
 
 const PROPERTY_TYPES = new Set(["House", "Condo / Apartment", "Office", "Retail / Commercial", "Vacant unit", "Other"]);
 const SERVICE_OPTIONS = new Set([
@@ -209,6 +210,52 @@ function getSupabaseConfig(env) {
     return null;
   }
   return { supabaseUrl, supabaseKey };
+}
+
+function getPublicAuthConfigPayload(env) {
+  const config = getSupabaseConfig(env);
+  if (!config) {
+    return null;
+  }
+
+  return {
+    supabaseUrl: config.supabaseUrl,
+    supabaseAnonKey: config.supabaseKey
+  };
+}
+
+function handlePublicAuthConfig(env) {
+  const config = getPublicAuthConfigPayload(env);
+  return json({
+    ok: Boolean(config),
+    configured: Boolean(config),
+    config
+  }, config ? 200 : 503);
+}
+
+function scriptSafeJson(data) {
+  return JSON.stringify(data).replace(/</g, "\\u003c");
+}
+
+function withRuntimeAuthConfig(response, env) {
+  const config = getPublicAuthConfigPayload(env);
+  if (!config) {
+    return response;
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("text/html")) {
+    return response;
+  }
+
+  const script = `<script>window.__FTC_PUBLIC_AUTH_CONFIG__=${scriptSafeJson(config)};</script>`;
+  return new HTMLRewriter()
+    .on("head", {
+      element(element) {
+        element.append(script, { html: true });
+      }
+    })
+    .transform(response);
 }
 
 function getSupabaseServiceConfig(env) {
@@ -986,6 +1033,9 @@ function withGardenHeaders(response) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === PUBLIC_AUTH_CONFIG_PATH) {
+      return handlePublicAuthConfig(env);
+    }
     if (url.pathname === "/api/garden-cleaners-quote") {
       return handleGardenQuotesApi(request, env);
     }
@@ -1030,7 +1080,7 @@ export default {
           return env.ASSETS.fetch(new Request(ogUrl.toString(), request));
         }
       }
-      return env.ASSETS.fetch(request);
+      return withRuntimeAuthConfig(await env.ASSETS.fetch(request), env);
     }
 
     const normalized = normalizePath(url.pathname);
@@ -1045,6 +1095,6 @@ export default {
 
     const assetUrl = new URL(request.url);
     assetUrl.pathname = assetPath;
-    return withGardenHeaders(await env.ASSETS.fetch(new Request(assetUrl.toString(), request)));
+    return withRuntimeAuthConfig(withGardenHeaders(await env.ASSETS.fetch(new Request(assetUrl.toString(), request))), env);
   }
 };

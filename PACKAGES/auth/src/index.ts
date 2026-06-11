@@ -1,9 +1,30 @@
 
 import { createBrowserClient, SupabaseClient } from '@ftc/supabase';
-import type { Session, User } from '@supabase/supabase-js';
+import type { AuthSession as Session, AuthUser as User } from '@supabase/supabase-js';
+
+type AuthSurface = {
+  resetPasswordForEmail(email: string, options?: { redirectTo?: string }): Promise<unknown>;
+  updateUser(attributes: { password?: string }): Promise<unknown>;
+  getUser(): Promise<{ data: { user: User | null } }>;
+  signInWithPassword(credentials: { email: string; password: string }): Promise<unknown>;
+  signInWithOAuth(options: {
+    provider: 'google';
+    options?: {
+      redirectTo?: string;
+      queryParams?: Record<string, string>;
+    };
+  }): Promise<unknown>;
+  signOut(): Promise<unknown>;
+  getSession(): Promise<{ data: { session: Session | null } }>;
+  onAuthStateChange(handler: (event: string, session: Session | null) => void): unknown;
+};
 
 function getClient(): SupabaseClient {
   return createBrowserClient();
+}
+
+function getAuth(): AuthSurface {
+  return getClient().auth as unknown as AuthSurface;
 }
 
 /**
@@ -29,24 +50,21 @@ export function authRedirectTo(path: string, origin?: string): string {
  * Send a password reset email for the given address.
  */
 export async function resetPasswordForEmail(email: string, redirectTo?: string) {
-  const client = getClient();
-  return client.auth.resetPasswordForEmail(email, redirectTo ? { redirectTo } : undefined);
+  return getAuth().resetPasswordForEmail(email, redirectTo ? { redirectTo } : undefined);
 }
 
 /**
  * Update the current user's password.
  */
 export async function updatePassword(newPassword: string) {
-  const client = getClient();
-  return client.auth.updateUser({ password: newPassword });
+  return getAuth().updateUser({ password: newPassword });
 }
 
 /**
  * Get the current user (if any).
  */
 export async function getUser(): Promise<User | null> {
-  const client = getClient();
-  const { data } = await client.auth.getUser();
+  const { data } = await getAuth().getUser();
   return data.user || null;
 }
 
@@ -63,13 +81,11 @@ export function isAdminRole(role?: string | null): boolean {
 }
 
 export async function signInWithPassword(email: string, password: string) {
-  const client = getClient();
-  return client.auth.signInWithPassword({ email, password });
+  return getAuth().signInWithPassword({ email, password });
 }
 
 export async function signInWithGoogle(redirectTo?: string) {
-  const client = getClient();
-  return client.auth.signInWithOAuth({
+  return getAuth().signInWithOAuth({
     provider: 'google',
     options: {
       ...(redirectTo ? { redirectTo } : {}),
@@ -79,19 +95,16 @@ export async function signInWithGoogle(redirectTo?: string) {
 }
 
 export async function signOut() {
-  const client = getClient();
-  return client.auth.signOut();
+  return getAuth().signOut();
 }
 
 export async function getSession(): Promise<Session | null> {
-  const client = getClient();
-  const { data } = await client.auth.getSession();
+  const { data } = await getAuth().getSession();
   return data.session;
 }
 
 export function onAuthStateChange(handler: (event: string, session: Session | null) => void) {
-  const client = getClient();
-  return client.auth.onAuthStateChange(handler);
+  return getAuth().onAuthStateChange(handler);
 }
 
 export function requireUser(session: Session | null) {

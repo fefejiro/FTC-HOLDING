@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import getSupabase from "@/lib/supabase";
+import getSupabase, { loadRuntimeSupabaseConfig } from "@/lib/supabase";
 import { getAdminDashboardUrl, getPostLoginDestination } from "@/lib/authDestinations";
 import { resolveProductContext } from "@/lib/productAuth";
 
@@ -119,6 +119,10 @@ export default function AuthCallbackClient() {
 
     const bootstrap = async () => {
       try {
+        const configured = await loadRuntimeSupabaseConfig();
+        if (!configured) {
+          throw new Error("Public Supabase URL is required. Set NEXT_PUBLIC_SUPABASE_URL.");
+        }
         const supabase = getSupabase();
         const authClient = supabase.auth as any;
 

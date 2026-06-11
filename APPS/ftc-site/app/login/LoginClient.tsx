@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import getSupabase from "../../lib/supabase";
+import getSupabase, { loadRuntimeSupabaseConfig } from "../../lib/supabase";
 import { getAdminDashboardUrl } from "../../lib/authDestinations";
 import { buildProductCallbackUrl, resolveProductContext } from "../../lib/productAuth";
 import { isGardenPortalAuthConfigured } from "../../lib/gardenPortalAuth";
@@ -14,19 +14,33 @@ export default function LoginClient() {
   const [runtimeSearch, setRuntimeSearch] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>("");
-  const isAuthConfigured = isGardenPortalAuthConfigured();
+  const [isAuthConfigured, setIsAuthConfigured] = useState(() => isGardenPortalAuthConfigured());
 
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
+    let active = true;
 
     setRuntimeHost(window.location.host);
     setRuntimeSearch(window.location.search);
+    void loadRuntimeSupabaseConfig().then((configured) => {
+      if (active) {
+        setIsAuthConfigured(configured);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   async function handleGoogleSignIn() {
-    if (!isAuthConfigured || pending) return;
+    if (pending) return;
+
+    const configured = isAuthConfigured || await loadRuntimeSupabaseConfig();
+    setIsAuthConfigured(configured);
+    if (!configured) return;
 
     setPending(true);
     setError("");

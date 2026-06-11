@@ -4,7 +4,7 @@ import { type FormEvent, useEffect, useMemo, useState } from "react";
 import type { GardenPortalUserRole } from "../../../lib/gardenContracts";
 import { isGardenPortalAuthConfigured } from "../../../lib/gardenPortalAuth";
 import { buildProductCallbackUrl, resolveProductRole } from "../../../lib/productAuth";
-import getSupabase from "../../../lib/supabase";
+import getSupabase, { loadRuntimeSupabaseConfig } from "../../../lib/supabase";
 
 // Types for admin user management
 type AdminUserRecord = {
@@ -132,7 +132,7 @@ async function resolveRoleFromProfile(email: string, authUserId: string | null):
 }
 
 export default function GardenPortalAccessPanel() {
-  const portalAuthConfigured = isGardenPortalAuthConfigured();
+  const [portalAuthConfigured, setPortalAuthConfigured] = useState(() => isGardenPortalAuthConfigured());
   const [authState, setAuthState] = useState<AuthState>("loading");
   const [userEmail, setUserEmail] = useState<string>("");
   const [role, setRole] = useState<GardenPortalUserRole | null>(null);
@@ -187,6 +187,18 @@ export default function GardenPortalAccessPanel() {
         : role === "admin"
           ? "admin"
           : "";
+
+  useEffect(() => {
+    let mounted = true;
+    void loadRuntimeSupabaseConfig().then((configured) => {
+      if (mounted) {
+        setPortalAuthConfigured(configured);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Filtered jobs for staff/admin
   const visibleJobs = useMemo(() => {
@@ -351,7 +363,7 @@ export default function GardenPortalAccessPanel() {
       await loadSessionAndData();
       try {
         const supabase = getSupabase();
-        const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+        const { data } = supabase.auth.onAuthStateChange((_event: string, nextSession: { user?: { email?: string } } | null) => {
           void loadSessionAndData(nextSession?.user?.email || undefined);
         });
         unsubscribe = () => {

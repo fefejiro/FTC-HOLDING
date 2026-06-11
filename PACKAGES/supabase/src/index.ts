@@ -3,7 +3,9 @@ import { createClient, SupabaseClient as BaseClient } from '@supabase/supabase-j
 // placeholder for db type
 export type Database = any;
 
-export type SupabaseClient = BaseClient<Database>;
+export type SupabaseClient = BaseClient<Database> & {
+  auth: any;
+};
 
 type GlobalWithSupabaseClient = typeof globalThis & {
   __ftcSupabaseBrowserClient?: SupabaseClient;
@@ -77,7 +79,7 @@ export function createBrowserClient(): SupabaseClient {
   }
 
   const { url, key } = getPublicSupabaseEnv();
-  const client = createClient<Database>(url, key);
+  const client = createClient<Database>(url, key) as SupabaseClient;
   runtime.__ftcSupabaseBrowserClient = client;
   return client;
 }
@@ -109,7 +111,7 @@ export function createServerClient(
   if (Object.keys(headers).length > 0) {
     opts.global = { headers };
   }
-  return createClient<Database>(url, key, opts);
+  return createClient<Database>(url, key, opts) as SupabaseClient;
 }
 
 export default {
