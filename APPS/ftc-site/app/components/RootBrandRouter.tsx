@@ -50,7 +50,7 @@ export default function RootBrandRouter({ children }: { children: ReactNode }) {
   const gardenThemeClass = PRODUCT_AUTH_CONFIG.garden.themeBodyClass;
 
   function isGardenAuthPath(pathname: string): boolean {
-    return pathname === '/auth/callback' || pathname.startsWith('/auth/callback/');
+    return pathname === '/login' || pathname === '/auth/callback' || pathname.startsWith('/auth/callback/');
   }
 
   useEffect(() => {
