@@ -882,7 +882,12 @@ export default function GardenPortalAccessPanel() {
     });
     await authClient.signInWithOAuth({
       provider: "google",
-      options: { redirectTo }
+      options: {
+        redirectTo,
+        queryParams: {
+          prompt: "select_account"
+        }
+      }
     });
   }
 

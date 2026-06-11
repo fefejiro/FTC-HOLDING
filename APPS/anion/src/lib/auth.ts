@@ -50,19 +50,6 @@ function getAuthCallbackUrl(): string | undefined {
   return `${normalizedBase}/auth/callback`;
 }
 
-export async function sendMagicLink(email: string) {
-  if (!authEnabled()) {
-    throw new Error('Supabase auth is not configured for this environment.');
-  }
-
-  const emailRedirectTo = getAuthCallbackUrl();
-
-  return createBrowserClient().auth.signInWithOtp({
-    email,
-    options: emailRedirectTo ? { emailRedirectTo } : undefined,
-  });
-}
-
 export async function signInWithGoogle() {
   if (!authEnabled()) {
     throw new Error('Supabase auth is not configured for this environment.');

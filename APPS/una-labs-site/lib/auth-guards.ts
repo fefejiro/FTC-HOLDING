@@ -1,7 +1,14 @@
 import { isAdminRole } from '@ftc/auth';
-import type { Session } from '@supabase/supabase-js';
 
-const FALLBACK_ADMIN_EMAILS = ['mike.fejiro@gmail.com', 'fejiro.efiuvwere@gmail.com'];
+type SessionLike = {
+  user?: {
+    email?: string | null;
+    app_metadata?: Record<string, unknown> | null;
+    user_metadata?: Record<string, unknown> | null;
+  } | null;
+} | null;
+
+const FALLBACK_ADMIN_EMAILS = ['uby400@gmail.com', 'mike.fejiro@gmail.com', 'fejiro.efiuvwere@gmail.com'];
 
 function getAllowedAdminEmails(): Set<string> {
   const configured = (process.env.NEXT_PUBLIC_UNALABS_ADMIN_EMAILS || '')
@@ -13,7 +20,7 @@ function getAllowedAdminEmails(): Set<string> {
   return new Set(resolved);
 }
 
-export function hasAdminAccess(session: Session | null): boolean {
+export function hasAdminAccess(session: SessionLike): boolean {
   const user = session?.user;
   if (!user) return false;
 

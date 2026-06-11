@@ -68,8 +68,8 @@ test.describe('Public routes', () => {
     await page.goto('/login');
     await expect(page.locator('h1')).toContainText('Sign in');
     await expect(page.getByRole('button', { name: /Continue with Google/i })).toBeVisible();
-    await expect(page.getByLabel(/Email address/i)).toBeVisible();
-    await expect(page.getByRole('button', { name: /Email me a secure link/i })).toBeVisible();
+    await expect(page.getByLabel(/Email address/i)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /Email me a secure link/i })).toHaveCount(0);
   });
 
   test('pricing page renders all three plan cards', async ({ page }) => {

@@ -18,7 +18,7 @@ test.describe("Garden portal smoke", () => {
     await expect(page.getByText(/operations lane/i)).toBeVisible();
 
     await expect(page.getByRole("link", { name: /request regional quote/i }).first()).toBeVisible();
-    await expect(page.getByRole("link", { name: /contact operations/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /contact operations/i }).first()).toBeVisible();
   });
 
   test("region card routes to quote with region query", async ({ page }) => {

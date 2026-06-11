@@ -47,7 +47,12 @@ export default function LoginClient() {
       });
       const { error: oauthError } = await authClient.signInWithOAuth({
         provider: "google",
-        options: { redirectTo }
+        options: {
+          redirectTo,
+          queryParams: {
+            prompt: "select_account"
+          }
+        }
       });
 
       if (oauthError) {

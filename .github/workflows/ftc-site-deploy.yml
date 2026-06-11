@@ -7,6 +7,10 @@ on:
       - 'APPS/ftc-site/**'
       - 'PACKAGES/**'
       - '.github/workflows/ftc-site-deploy.yml'
+  schedule:
+    # 8pm Eastern during daylight time = 00:00 UTC next day.
+    - cron: '0 0 * * *'
+  workflow_dispatch: {}
 
 concurrency:
   group: ftc-site-deploy-${{ github.ref }}
@@ -31,12 +35,25 @@ jobs:
       - name: Install workspace dependencies
         run: npm ci
 
+      - name: Verify auth environment
+        working-directory: APPS/ftc-site
+        run: |
+          node -e "for (const key of ['NEXT_PUBLIC_SITE_URL','NEXT_PUBLIC_SUPABASE_URL','NEXT_PUBLIC_SUPABASE_ANON_KEY']) { if (!process.env[key]) { console.error(key + ' is required for configured Google login builds.'); process.exitCode = 1; } } if (!process.env.SUPABASE_SERVICE_ROLE_KEY) { console.warn('SUPABASE_SERVICE_ROLE_KEY is not set; admin/service-role APIs may remain unavailable.'); }"
+        env:
+          NEXT_PUBLIC_SITE_URL: https://unalabs.cloud
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || secrets.SUPABASE_URL || secrets.UNALABS_SUPABASE_URL || secrets.ANION_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY || secrets.UNALABS_SUPABASE_ANON_KEY || secrets.ANION_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.UNALABS_SUPABASE_SERVICE_ROLE_KEY || secrets.ANION_SUPABASE_SERVICE_ROLE_KEY }}
+
       - name: Build ftc-site
         working-directory: APPS/ftc-site
         run: npm run build
         env:
           NEXT_PUBLIC_SITE_URL: https://unalabs.cloud
           NEXT_PUBLIC_OG_TRADES_SITE_URL: https://www.ogtradesacademy.com
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || secrets.SUPABASE_URL || secrets.UNALABS_SUPABASE_URL || secrets.ANION_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY || secrets.UNALABS_SUPABASE_ANON_KEY || secrets.ANION_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.UNALABS_SUPABASE_SERVICE_ROLE_KEY || secrets.ANION_SUPABASE_SERVICE_ROLE_KEY }}
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3

@@ -32,17 +32,7 @@ function AuthCallbackClient() {
         const client = createBrowserClient();
 
         const code = searchParams.get('code');
-        const tokenHash = searchParams.get('token_hash');
-        const typeParam = searchParams.get('type') ?? 'magiclink';
-        const authClient = client.auth as {
-          exchangeCodeForSession?: (value: string) => Promise<{ error: Error | null }>;
-          verifyOtp: (value: {
-            token_hash: string;
-            type: Parameters<typeof client.auth.verifyOtp>[0]['type'];
-          }) => Promise<{ error: Error | null }>;
-          setSession: (value: { access_token: string; refresh_token: string }) => Promise<{ error: Error | null }>;
-          getSession: typeof client.auth.getSession;
-        };
+        const authClient = client.auth as any;
 
         if (code) {
           if (!authClient.exchangeCodeForSession) {
@@ -50,12 +40,6 @@ function AuthCallbackClient() {
           }
           const { error: exchangeError } = await authClient.exchangeCodeForSession(code);
           if (exchangeError) throw exchangeError;
-        } else if (tokenHash) {
-          const { error: verifyError } = await authClient.verifyOtp({
-            token_hash: tokenHash,
-            type: typeParam as Parameters<typeof client.auth.verifyOtp>[0]['type'],
-          });
-          if (verifyError) throw verifyError;
         } else {
           const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
           const accessToken = hash.get('access_token');

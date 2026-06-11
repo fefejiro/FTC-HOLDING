@@ -35,12 +35,12 @@ test.describe('Background Customization Feature', () => {
 });
 
 test.describe('Password Management Feature', () => {
-  test('login uses OAuth and magic link without password fields', async ({ page }) => {
+  test('login uses Google OAuth without password or magic-link fields', async ({ page }) => {
     await page.goto('/login');
 
     await expect(page.getByRole('button', { name: /Continue with Google/i })).toBeVisible();
-    await expect(page.getByLabel(/Email address/i)).toBeVisible();
-    await expect(page.getByRole('button', { name: /Email me a secure link/i })).toBeVisible();
+    await expect(page.getByLabel(/Email address/i)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /Email me a secure link/i })).toHaveCount(0);
     await expect(page.locator('input[type="password"]')).toHaveCount(0);
     await expect(page.getByRole('link', { name: /forgot password|reset password/i })).toHaveCount(0);
   });

@@ -2,26 +2,11 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-type State = 'idle' | 'google-loading' | 'magic-loading' | 'sent' | 'error';
+type State = 'idle' | 'google-loading' | 'error';
 
 export default function LoginPage() {
   const [state, setState] = useState<State>('idle');
-  const [email, setEmail] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-
-  async function handleMagicLinkSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setState('magic-loading');
-    setErrorMessage('');
-
-    try {
-      await import('../../../src/lib/auth').then((mod) => mod.sendMagicLink(email.trim()));
-      setState('sent');
-    } catch (err: any) {
-      setState('error');
-      setErrorMessage(err?.message || 'Could not send sign-in link.');
-    }
-  }
 
   async function handleGoogleSignIn() {
     setState('google-loading');
@@ -83,24 +68,9 @@ export default function LoginPage() {
           Sign in to Anion
         </h2>
         <p className="body-sm secondary" style={{ marginBottom: 'var(--spacing-6)' }}>
-          Use Google or a secure email link. No password is required.
+          Use your Google account to access your classroom, dashboard, and role workspace. No
+          password is required.
         </p>
-
-        {state === 'sent' && (
-          <p
-            role="status"
-            style={{
-              color: 'var(--success)',
-              fontSize: '14px',
-              margin: '0 0 var(--spacing-4) 0',
-              background: 'rgba(22, 163, 74, 0.1)',
-              borderRadius: '8px',
-              padding: '10px 12px',
-            }}
-          >
-            Sign-in link sent. Check your inbox for {email}.
-          </p>
-        )}
 
         {state === 'error' && (
           <p
@@ -123,34 +93,10 @@ export default function LoginPage() {
           className="btn-primary"
           style={{ width: '100%', marginBottom: 'var(--spacing-4)' }}
           onClick={handleGoogleSignIn}
-          disabled={state === 'google-loading' || state === 'magic-loading'}
+          disabled={state === 'google-loading'}
         >
           {state === 'google-loading' ? 'Signing in...' : 'Continue with Google'}
         </button>
-
-        <form onSubmit={handleMagicLinkSubmit} style={{ marginBottom: 'var(--spacing-5)' }}>
-          <label htmlFor="email">Email address</label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="name@school.com"
-            required
-            disabled={state === 'google-loading' || state === 'magic-loading'}
-            style={{ marginBottom: 'var(--spacing-3)' }}
-          />
-          <button
-            type="submit"
-            className="btn-secondary"
-            style={{ width: '100%' }}
-            disabled={state === 'google-loading' || state === 'magic-loading'}
-          >
-            {state === 'magic-loading' ? 'Sending...' : 'Email me a secure link'}
-          </button>
-        </form>
 
         <p className="body-sm secondary" style={{ textAlign: 'center', margin: 0 }}>
           <Link href="/" style={{ color: 'var(--brand-teal)', fontWeight: '600' }}>

@@ -788,12 +788,13 @@ export function DashboardClient() {
         ]);
 
         const client = createBrowserClient();
-        const authSubscription = client.auth.onAuthStateChange(async (event, authSession) => {
+        const authClient = client.auth as any;
+        const authSubscription = authClient.onAuthStateChange(async (event: string, authSession: { user?: { email?: string } } | null) => {
           if (cancelled) return;
 
           if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && authSession?.user) {
             try {
-              await loadForSession(authSession);
+              await loadForSession({ user: authSession.user });
             } catch (error) {
               if (!cancelled) {
                 setState({
@@ -809,7 +810,8 @@ export function DashboardClient() {
         const session = await getSession();
         if (session?.user) {
           await loadForSession(session);
-          if (!cancelled) setState({ phase: 'unauthenticated' });
+        } else if (!cancelled) {
+          setState({ phase: 'unauthenticated' });
         }
       } catch (error) {
         if (!cancelled) {

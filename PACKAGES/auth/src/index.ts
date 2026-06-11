@@ -74,7 +74,12 @@ export async function signInWithGoogle(redirectTo?: string) {
   const auth = getAuthClient();
   return auth.signInWithOAuth({
     provider: 'google',
-    options: redirectTo ? { redirectTo } : undefined,
+    options: {
+      ...(redirectTo ? { redirectTo } : {}),
+      queryParams: {
+        prompt: 'select_account',
+      },
+    },
   });
 }
 
