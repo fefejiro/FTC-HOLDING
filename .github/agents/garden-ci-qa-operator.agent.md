@@ -63,22 +63,27 @@ Start with these files before proposing or editing anything:
    - Use placeholders only for CI shape checks.
    - Use real GitHub secrets only for credentialed QA.
 
-3. Build gate
+3. Garden worker contract gate
+   - `npm --prefix APPS/ftc-site run garden:worker-contract`
+   - Verify client message writes survive photo-storage failure.
+   - Verify Supabase Storage object uploads use the expected method when storage is available.
+
+4. Build gate
    - `npm --prefix APPS/ftc-site run build`
    - Keep Cloudflare Pages deploy out of this operator.
 
-4. Anonymous public and portal Playwright gate
+5. Anonymous public and portal Playwright gate
    - `npx playwright test tests/garden-cleaners-public.spec.ts tests/garden-portal.spec.ts --grep-invert "quote form accepts a valid lead"`
    - Verify public IA, Garden-branded routing, custom-domain host behavior, portal CTAs, and region quote routing.
    - Keep service-backed quote persistence out of anonymous smoke unless it is promoted to an explicit separate gate.
 
-5. Credentialed role gate
+6. Credentialed role gate
    - `npx playwright test tests/garden-portal-credentialed.spec.ts`
    - Run only when `GARDEN_QA_AUTH_MODE=password` and QA secrets are configured.
    - Report skipped as skipped, not verified.
    - Do not treat this legacy password spec as Google OAuth verification.
 
-6. Read-only production smoke gate
+7. Read-only production smoke gate
    - `npm --prefix APPS/ftc-site run garden:smoke:prod`
    - `node APPS/ftc-site/scripts/qa-garden-auth-callback.mjs`
    - Manual dispatch only unless the user explicitly asks for scheduled production checks.

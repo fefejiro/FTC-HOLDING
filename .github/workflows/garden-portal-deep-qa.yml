@@ -113,6 +113,9 @@ jobs:
       - name: Verify Garden portal environment contract
         run: npm --prefix "$FTC_SITE_DIR" run portal:env:check
 
+      - name: Run Garden worker contract
+        run: npm --prefix "$FTC_SITE_DIR" run garden:worker-contract
+
       - name: Build ftc-site Garden bundle
         run: npm --prefix "$FTC_SITE_DIR" run build
 
@@ -123,6 +126,7 @@ jobs:
             echo "## Garden build and environment gate"
             echo ""
             echo "- Environment contract: portal required variables were present for this CI run."
+            echo "- Worker contract: client message write survives photo-storage failure and validates Storage upload method."
             echo "- Build: ftc-site Next.js build completed before any deploy step."
             echo "- Deployment: not part of this workflow."
           } >> "$GITHUB_STEP_SUMMARY"

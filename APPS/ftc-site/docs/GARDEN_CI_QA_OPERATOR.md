@@ -28,12 +28,15 @@ Commands:
 ```powershell
 npm ci
 npm --prefix APPS/ftc-site run portal:env:check
+npm --prefix APPS/ftc-site run garden:worker-contract
 npm --prefix APPS/ftc-site run build
 ```
 
 Coverage:
 
 - Required Garden portal environment variable names are present for the run.
+- Garden client message writes survive photo-storage failure.
+- Supabase Storage object uploads use the expected method when storage is available.
 - The ftc-site build succeeds with Garden routes and worker packaging in scope.
 - No Cloudflare Pages deploy is performed.
 
@@ -121,6 +124,7 @@ From the repository root:
 ```powershell
 npm ci
 npm --prefix APPS/ftc-site run portal:env:check
+npm --prefix APPS/ftc-site run garden:worker-contract
 npm --prefix APPS/ftc-site run build
 cd APPS/ftc-site
 npx playwright install chromium
