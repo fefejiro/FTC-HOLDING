@@ -112,6 +112,6 @@ npm run deploy
 - Current production sender is a verified Single Sender: `fejiro.efiuvwere@gmail.com`.
 - Current reply-to/contact address is `sales@capsigma.com`.
 - Current proof-copy CC should include `fejiro.efiuvwere@gmail.com`.
-- Before sustained client outreach, verify `sales@capsigma.com` in SendGrid or authenticate the CapSigma domain for better trust and deliverability.
+- SendGrid authenticated domain for `capsigma.com` has been created; add the DNS records in `ops/SENDGRID-DNS-RECORDS-2026-06-11.md` before sustained client outreach.
 - Latest Gmail delivery check confirmed receipt but showed Gmail spam placement for the current Gmail-sender test path.
 - See `ops/PRODUCTION-HANDOVER.md` for the full checklist.

@@ -1,0 +1,18 @@
+﻿{
+    "id":  31406421,
+    "valid":  false,
+    "validation_results":  {
+                               "mail_cname":  {
+                                                  "valid":  false,
+                                                  "reason":  "Expected CNAME for \"em.capsigma.com\" to match \"u109069880.wl131.sendgrid.net\"."
+                                              },
+                               "dkim1":  {
+                                             "valid":  false,
+                                             "reason":  "Expected CNAME for \"s1._domainkey.capsigma.com\" to match \"s1.domainkey.u109069880.wl131.sendgrid.net\"."
+                                         },
+                               "dkim2":  {
+                                             "valid":  false,
+                                             "reason":  "Expected CNAME for \"s2._domainkey.capsigma.com\" to match \"s2.domainkey.u109069880.wl131.sendgrid.net\"."
+                                         }
+                           }
+}

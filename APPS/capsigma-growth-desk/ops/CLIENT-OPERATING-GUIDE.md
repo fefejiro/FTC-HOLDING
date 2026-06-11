@@ -1,6 +1,7 @@
 # CapSigma Growth Desk Client Operating Guide
 
-Status: turnkey single-operator outreach desk, with deliverability hardening still required before broad volume.
+Status: turnkey single-operator outreach desk, with SendGrid domain DNS records
+still required before broad volume.
 
 ## What To Call It
 
@@ -40,7 +41,8 @@ in SendGrid. The preferred final setup is:
 - Proof-copy CC: `fejiro.efiuvwere@gmail.com`
 
 That final setup requires `sales@capsigma.com` verification or SendGrid domain
-authentication first.
+authentication first. The SendGrid authenticated domain has been created for
+`capsigma.com`, but the DNS records still need to be added at the DNS host.
 
 ## Operator Workflow
 
@@ -97,10 +99,12 @@ controlled by sender trust, domain reputation, SPF, DKIM, DMARC, content, and
 recipient mailbox filtering.
 
 The latest Gmail check confirmed receipt but showed spam placement for the
-current Gmail-sender test path. Before broad outreach, finish one of these:
+current Gmail-sender test path. Before broad outreach, finish this:
 
-- Verify `sales@capsigma.com` as a SendGrid Single Sender, or
-- Authenticate the CapSigma domain in SendGrid with SPF/DKIM records.
+- Add the SendGrid DNS records in `ops/SENDGRID-DNS-RECORDS-2026-06-11.md`.
+- Validate SendGrid domain authentication.
+- Switch production From to `sales@capsigma.com`.
+- Rerun recipient and Gmail placement tests.
 
 SendGrid references:
 
@@ -120,10 +124,12 @@ Green:
 - Reply-To and footer contact routed to `sales@capsigma.com`
 - Fejiro proof-copy CC support
 - Sent Review proof
+- SendGrid authenticated domain created for `capsigma.com`
 
 Yellow:
 
 - Gmail spam placement until sender/domain authentication improves trust
+- SendGrid DNS records pending at the `capsigma.com` DNS host
 - Manual reply tracking
 - Single-operator access only
 - Manual lead import/research workflow

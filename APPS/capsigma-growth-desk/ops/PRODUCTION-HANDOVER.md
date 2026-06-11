@@ -1,6 +1,7 @@
 # CapSigma Growth Desk Production Handover
 
-Status: production deployed with verified SendGrid sending.
+Status: production deployed with verified SendGrid sending; SendGrid domain
+authentication created and pending DNS records before broad outreach.
 
 Production URL: https://capsigma-growth-desk.pages.dev
 
@@ -26,6 +27,12 @@ Latest recipient delivery proof: `ops/RECIPIENT-TEST-2026-06-11T17-04-35-361Z.js
 
 Latest Gmail delivery check: `ops/GMAIL-DELIVERY-CHECK-2026-06-11.md`
 
+Latest SendGrid domain-auth evidence:
+
+- `ops/SENDGRID-DOMAIN-AUTH-2026-06-11T17-26-42Z.json`
+- `ops/SENDGRID-DOMAIN-VALIDATION-2026-06-11T17-29-28Z.json`
+- `ops/SENDGRID-DNS-RECORDS-2026-06-11.md`
+
 ## What This Is
 
 CapSigma Growth Desk is an operator-controlled outreach desk for real lead import, AI-assisted draft generation, human approval, SendGrid delivery, and durable proof logging.
@@ -50,6 +57,11 @@ Internal workflow name: CapSigma Outreach Agent.
 - [x] SendGrid API key configured.
 - [x] Verified sender configured in SendGrid.
 - [x] Production smoke test completed with one internal test lead.
+- [x] SendGrid authenticated domain created for `capsigma.com`.
+- [ ] SendGrid DNS records added at the `capsigma.com` DNS host.
+- [ ] SendGrid domain authentication validated.
+- [ ] Production From switched to `sales@capsigma.com`.
+- [ ] Gmail placement rechecked after domain authentication.
 - [ ] Client-provided real lead source connected or imported.
 
 ## Required Cloudflare Bindings
@@ -88,11 +100,18 @@ Current verified sender: `fejiro.efiuvwere@gmail.com`
 Current reply-to/contact address: `sales@capsigma.com`
 Current proof-copy CC address: `fejiro.efiuvwere@gmail.com`
 Pending preferred sender: `sales@capsigma.com` as the visible `From` address.
+Pending authenticated domain id: `31406421`
 
 Recommended final client upgrade: verify the `sales@capsigma.com` Single Sender
 request in SendGrid, or authenticate the CapSigma domain in SendGrid, before
 sustained cold outreach. Until then, SendGrid sends from the verified Gmail
 sender and routes replies/unsubscribe contact to `sales@capsigma.com`.
+
+DNS records required for final deliverability are documented in:
+
+```text
+ops/SENDGRID-DNS-RECORDS-2026-06-11.md
+```
 
 ## Setup Commands
 
@@ -215,6 +234,7 @@ Repeatable commands:
 npm run prod:doctor
 npm run prod:smoke
 npm run prod:test-recipients
+npm run sendgrid:domain-status
 ```
 
 ## 2026-06-11 Recipient Delivery Test

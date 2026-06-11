@@ -1,0 +1,35 @@
+﻿{
+    "id":  31406421,
+    "user_id":  109069880,
+    "subdomain":  "em",
+    "domain":  "capsigma.com",
+    "username":  "unified_acct_USbf51b8c90596a9746f3bb26e51f21b2e",
+    "ips":  [
+
+            ],
+    "custom_spf":  false,
+    "default":  true,
+    "legacy":  false,
+    "automatic_security":  true,
+    "valid":  false,
+    "dns":  {
+                "mail_cname":  {
+                                   "valid":  false,
+                                   "type":  "cname",
+                                   "host":  "em.capsigma.com",
+                                   "data":  "u109069880.wl131.sendgrid.net"
+                               },
+                "dkim1":  {
+                              "valid":  false,
+                              "type":  "cname",
+                              "host":  "s1._domainkey.capsigma.com",
+                              "data":  "s1.domainkey.u109069880.wl131.sendgrid.net"
+                          },
+                "dkim2":  {
+                              "valid":  false,
+                              "type":  "cname",
+                              "host":  "s2._domainkey.capsigma.com",
+                              "data":  "s2.domainkey.u109069880.wl131.sendgrid.net"
+                          }
+            }
+}
