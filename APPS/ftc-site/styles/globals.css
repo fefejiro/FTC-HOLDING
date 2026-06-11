@@ -15625,6 +15625,103 @@ footer {
 .garden-quote-form-shell,
 .garden-testimonial-card { padding: 24px; }
 
+.garden-work-card {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid rgba(23, 61, 49, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 22px rgba(23, 61, 49, 0.07);
+}
+
+.garden-work-card h4,
+.garden-work-card p {
+  margin: 0;
+}
+
+.garden-work-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.garden-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(31, 122, 97, 0.1);
+  color: #165945;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.garden-compact-field,
+.garden-message-box label,
+.garden-file-field {
+  display: grid;
+  gap: 6px;
+}
+
+.garden-compact-field span,
+.garden-message-box span,
+.garden-file-field span {
+  color: #173d31;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.garden-compact-field select,
+.garden-message-box textarea,
+.garden-file-field input {
+  width: 100%;
+  border: 1px solid rgba(23, 61, 49, 0.16);
+  border-radius: 8px;
+  background: #f7fbf8;
+  color: #20332d;
+}
+
+.garden-compact-field select {
+  min-height: 44px;
+  padding: 8px 10px;
+}
+
+.garden-message-box {
+  display: grid;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.garden-message-box textarea {
+  min-height: 118px;
+  padding: 12px;
+  resize: vertical;
+}
+
+.garden-file-field input {
+  padding: 10px;
+}
+
+.garden-job-detail-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.garden-empty-state {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 20px;
+  border: 1px dashed rgba(23, 61, 49, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
 .garden-quote-mark { font-size: 2rem; line-height: 1; color: #1a7b62; }
 
 .garden-testimonial-meta {
@@ -15727,6 +15824,12 @@ footer {
   .garden-quote-step-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+  .garden-work-card__head {
+    flex-direction: column;
+  }
+  .garden-status-pill {
+    align-self: flex-start;
   }
   .garden-quote-step-actions .btn {
     width: 100%;

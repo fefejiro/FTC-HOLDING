@@ -48,18 +48,32 @@ type JobRecord = {
   created_at?: string;
   updated_at?: string;
   staff_profile_id?: string;
+  staff_name?: string | null;
+  staff_email?: string | null;
 };
 type QuoteRecord = {
   id: string;
+  name?: string;
   email: string;
+  phone?: string;
   address?: string;
   city?: string;
   region?: string;
   service_type?: string;
   service_frequency?: string;
   property_type?: string;
+  preferred_date?: string;
+  preferred_time?: string;
+  message?: string;
   status?: string;
   created_at?: string;
+};
+
+type ClientAttachmentPayload = {
+  name: string;
+  type: string;
+  size: number;
+  dataUrl: string;
 };
 
 type AuthState = "loading" | "authenticated" | "unauthenticated" | "unavailable";
@@ -75,6 +89,62 @@ function normalizePortalEmail(email: string): string {
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message || fallback : fallback;
+}
+
+function getFriendlyPortalError(error: unknown, fallback: string): string {
+  const rawMessage = getErrorMessage(error, fallback);
+  if (
+    /row-level security|violates|policy|relation|supabase|foreign key|duplicate key|quote_id|staff_profile_id/i.test(rawMessage)
+  ) {
+    return fallback;
+  }
+  return rawMessage;
+}
+
+function titleCaseStatus(status?: string): string {
+  const normalized = String(status || "pending").replace(/_/g, " ").trim();
+  return normalized.replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function shortRecordId(id?: string): string {
+  return id ? id.slice(0, 8).toUpperCase() : "NEW";
+}
+
+function formatPortalDate(value?: string): string {
+  if (!value) return "Not set yet";
+  try {
+    return new Date(value).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
+  } catch {
+    return "Not set yet";
+  }
+}
+
+function formatAddress(record: Pick<JobRecord, "address" | "city" | "region">): string {
+  return [record.address, record.city, record.region].filter(Boolean).join(", ") || "Address to be confirmed";
+}
+
+function getServiceTitle(record: Pick<JobRecord, "service_type" | "property_type">): string {
+  return [record.service_type || "Cleaning service", record.property_type].filter(Boolean).join(" - ");
+}
+
+function getMapsUrl(address: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+}
+
+function fileToAttachment(file: File): Promise<ClientAttachmentPayload> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      resolve({
+        name: file.name,
+        type: file.type || "image/jpeg",
+        size: file.size,
+        dataUrl: String(reader.result || "")
+      });
+    };
+    reader.onerror = () => reject(new Error("Unable to read photo"));
+    reader.readAsDataURL(file);
+  });
 }
 
 function resolveRole(email: string): GardenPortalUserRole {
@@ -149,10 +219,15 @@ export default function GardenPortalAccessPanel() {
   const [queueRegion, setQueueRegion] = useState<"all" | RegionTag>("all");
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
+  const [clientDrafts, setClientDrafts] = useState<Record<string, string>>({});
+  const [clientFilesByJobId, setClientFilesByJobId] = useState<Record<string, File[]>>({});
+  const [pendingClientMessageJobId, setPendingClientMessageJobId] = useState<string>("");
+  const [shareMessage, setShareMessage] = useState<string>("");
 
   // Admin: user management tab
   const [adminTab, setAdminTab] = useState<"jobs" | "users">("jobs");
   const [adminUsers, setAdminUsers] = useState<AdminUserRecord[]>([]);
+  const [staffUsers, setStaffUsers] = useState<AdminUserRecord[]>([]);
   const [adminUsersTotal, setAdminUsersTotal] = useState<number>(0);
   const [adminUsersPage, setAdminUsersPage] = useState<number>(1);
   const [adminUsersSearch, setAdminUsersSearch] = useState<string>("");
@@ -181,9 +256,9 @@ export default function GardenPortalAccessPanel() {
   const isCustomer = role === "client";
   const signedInRoleLabel =
     role === "client"
-      ? "client (customer lane)"
+      ? "client"
       : role === "staff"
-        ? "staff"
+        ? "cleaner"
         : role === "admin"
           ? "admin"
           : "";
@@ -231,6 +306,93 @@ export default function GardenPortalAccessPanel() {
     if (!isCustomer) return [];
     return jobs;
   }, [jobs, isCustomer]);
+  const customerJobCount = customerJobs.length;
+
+  useEffect(() => {
+    if (!isCustomer || typeof window === "undefined") return;
+    setClientDrafts((current) => {
+      const next = { ...current };
+      customerJobs.forEach((job) => {
+        if (next[job.id] === undefined) {
+          next[job.id] = window.localStorage.getItem(`garden-client-draft-${job.id}`) || "";
+        }
+      });
+      return next;
+    });
+  }, [customerJobs, isCustomer]);
+
+  function updateClientDraft(jobId: string, value: string) {
+    setClientDrafts((current) => ({ ...current, [jobId]: value }));
+  }
+
+  function saveClientDraft(jobId: string) {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(`garden-client-draft-${jobId}`, clientDrafts[jobId] || "");
+    }
+    setQueueMessage("Draft saved.");
+  }
+
+  function handleClientFileChange(jobId: string, files: FileList | null) {
+    const selected = Array.from(files || []).filter((file) => file.type.startsWith("image/")).slice(0, 3);
+    const accepted = selected.filter((file) => file.size <= 2 * 1024 * 1024);
+    setClientFilesByJobId((current) => ({ ...current, [jobId]: accepted }));
+    if (selected.length !== accepted.length) {
+      setQueueMessage("Please choose photos under 2 MB each.");
+    }
+  }
+
+  async function shareJobLocation(job: JobRecord) {
+    const address = formatAddress(job);
+    const shareText = `${getServiceTitle(job)} at ${address}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Garden Cleaners visit", text: shareText, url: getMapsUrl(address) });
+        setShareMessage("Location shared.");
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(`${shareText} ${getMapsUrl(address)}`);
+        setShareMessage("Location copied.");
+      }
+    } catch {
+      setShareMessage("");
+    }
+  }
+
+  async function sendClientJobMessage(jobId: string) {
+    const body = (clientDrafts[jobId] || "").trim();
+    const files = clientFilesByJobId[jobId] || [];
+    if (!body && files.length === 0) {
+      setQueueMessage("Write a short update or attach a photo first.");
+      return;
+    }
+
+    setPendingClientMessageJobId(jobId);
+    setQueueMessage("");
+    try {
+      const attachments = await Promise.all(files.map(fileToAttachment));
+      const res = await fetchWithAuth("/api/garden-cleaners-job-note", {
+        method: "POST",
+        body: JSON.stringify({
+          job_id: jobId,
+          body: body || "Photo update",
+          visibility: "customer_visible",
+          attachments
+        })
+      }).then((r) => r.json());
+
+      if (!res.ok) throw new Error(res.error || "Unable to send message");
+
+      setClientDrafts((current) => ({ ...current, [jobId]: "" }));
+      setClientFilesByJobId((current) => ({ ...current, [jobId]: [] }));
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem(`garden-client-draft-${jobId}`);
+      }
+      setQueueMessage("Message sent to Garden Cleaners.");
+    } catch (error: unknown) {
+      setQueueMessage(getFriendlyPortalError(error, "I could not send that message yet. Please try again."));
+    } finally {
+      setPendingClientMessageJobId("");
+    }
+  }
 
   // (Obsolete: queueCounts/regionCounts, now handled by jobs/quotes filtering and UI)
 
@@ -257,14 +419,17 @@ export default function GardenPortalAccessPanel() {
     setLoadError("");
     try {
       if (nextRole === "admin") {
-        // Admin: fetch all jobs and all quotes
-        const [jobsRes, quotesRes] = await Promise.all([
+        const [jobsRes, quotesRes, staffRes] = await Promise.all([
           fetchWithAuth("/api/garden-cleaners-job").then(r => r.json()),
-          fetchWithAuth("/api/garden-cleaners-quote").then(r => r.json()).catch(() => ({ ok: false, quotes: [] }))
+          fetchWithAuth("/api/garden-cleaners-quote").then(r => r.json()).catch(() => ({ ok: false, quotes: [] })),
+          fetchWithAuth("/api/garden-cleaners-admin-users?role=staff&status=active&per_page=100")
+            .then(r => r.json())
+            .catch(() => ({ ok: false, users: [] }))
         ]);
         if (!jobsRes.ok) throw new Error(jobsRes.error || "Failed to load jobs");
         setJobs(jobsRes.jobs || []);
         setQuotes(quotesRes.quotes || []);
+        setStaffUsers(staffRes.users || []);
       } else if (nextRole === "staff") {
         // Staff: fetch assigned jobs
         const jobsRes = await fetchWithAuth("/api/garden-cleaners-my-jobs").then(r => r.json());
@@ -279,7 +444,7 @@ export default function GardenPortalAccessPanel() {
         setQuotes([]);
       }
     } catch (error: unknown) {
-      setLoadError(getErrorMessage(error, "Failed to load portal data"));
+      setLoadError(getFriendlyPortalError(error, "We could not load the portal right now. Please refresh and try again."));
       setJobs([]);
       setQuotes([]);
     } finally {
@@ -392,7 +557,7 @@ export default function GardenPortalAccessPanel() {
       setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, status: nextStatus } : j)));
       setQueueMessage(`Job status updated to ${nextStatus}`);
     } catch (error: unknown) {
-      setQueueMessage(getErrorMessage(error, "Unable to update job status"));
+      setQueueMessage(getFriendlyPortalError(error, "I could not update that job yet. Please refresh and try again."));
     } finally {
       setPendingStatusProjectId("");
     }
@@ -413,7 +578,7 @@ export default function GardenPortalAccessPanel() {
       setQueueMessage("Quote converted to job");
       await loadPortalData("admin");
     } catch (error: unknown) {
-      setQueueMessage(getErrorMessage(error, "Unable to convert quote"));
+      setQueueMessage(getFriendlyPortalError(error, "I could not create the job yet. Please approve the quote first, then try again."));
     } finally {
       setPendingQuoteActionId("");
     }
@@ -438,7 +603,7 @@ export default function GardenPortalAccessPanel() {
       );
       setQueueMessage(status === "approved" ? "Quote approved" : "Quote rejected");
     } catch (error: unknown) {
-      setQueueMessage(getErrorMessage(error, "Unable to update quote status"));
+      setQueueMessage(getFriendlyPortalError(error, "I could not save that quote update yet. Please refresh and try again."));
     } finally {
       setPendingQuoteActionId("");
     }
@@ -457,7 +622,7 @@ export default function GardenPortalAccessPanel() {
       setQueueMessage("Staff assigned to job");
       await loadPortalData("admin");
     } catch (error: unknown) {
-      setQueueMessage(getErrorMessage(error, "Unable to assign staff"));
+      setQueueMessage(getFriendlyPortalError(error, "I could not assign that cleaner yet. Please refresh and try again."));
     }
   }
 
@@ -657,15 +822,16 @@ export default function GardenPortalAccessPanel() {
     <section className="section garden-section" id="portal-access" tabIndex={-1}>
       <div className="section-heading">
         <p className="eyebrow">Portal access</p>
-        <h1>Regional service coverage, client intake, and operations routing</h1>
+        <h1>Garden Cleaners portal</h1>
         <p>
-          {isAdmin && "Admin: manage all jobs, convert quotes, assign staff."}
-          {isStaff && "Staff: view and update assigned jobs."}
-          {isCustomer && "Customer: view your job status."}
-          {!isAdmin && !isStaff && !isCustomer && "Client lane and operations lane access are available from this portal entry."}
+          {isAdmin && "Manage quotes, jobs, cleaners, and customer updates from one place."}
+          {isStaff && "View assigned cleaning visits and update the work as it moves."}
+          {isCustomer && "Track your cleaning visit, message the team, and keep the service details in one place."}
+          {!isAdmin && !isStaff && !isCustomer && "Sign in with Google to open your Garden Cleaners dashboard."}
         </p>
       </div>
 
+      {authState !== "authenticated" ? (
       <article className="card garden-proof-card" style={{ marginBottom: 16 }}>
         <p className="garden-panel-kicker">Regional portal</p>
         <h3 style={{ marginTop: 0 }}>Need quote help before sign-in?</h3>
@@ -720,10 +886,11 @@ export default function GardenPortalAccessPanel() {
           ))}
         </div>
       </article>
+      ) : null}
 
       <div className="garden-split-grid">
         <article className="card garden-split-card">
-          <p className="garden-panel-kicker">Session state</p>
+          <p className="garden-panel-kicker">Signed in</p>
           <h2>
             {authState === "loading" && "Checking portal session..."}
             {authState === "unauthenticated" && "Sign in required"}
@@ -759,31 +926,33 @@ export default function GardenPortalAccessPanel() {
           ) : null}
         </article>
         <article className="card garden-split-card">
-          <p className="garden-panel-kicker">Lane visibility</p>
+          <p className="garden-panel-kicker">Dashboard</p>
           <h2>
             {authState === "loading" && "Checking access..."}
             {authState === "unauthenticated" && "Sign in to view your dashboard."}
-            {authState === "authenticated" && role && `Role: ${role.charAt(0).toUpperCase() + role.slice(1)}`}
+            {authState === "authenticated" && isAdmin && "Admin workspace"}
+            {authState === "authenticated" && isStaff && "Cleaner workspace"}
+            {authState === "authenticated" && isCustomer && "Client workspace"}
             {authState === "unavailable" && "Access temporarily disabled"}
           </h2>
           {authState === "authenticated" && isAdmin ? (
             <p className="muted">
-              You can manage Jobs &amp; Quotes, assign staff, and maintain portal users from the tabs below.
+              Review quote requests, create jobs, and assign cleaners from the sections below.
             </p>
           ) : null}
           {authState === "authenticated" && isStaff ? (
             <p className="muted">
-              You can view assigned jobs and update progress status from the queue below.
+              Your assigned work appears below with quick status updates.
             </p>
           ) : null}
           {authState === "authenticated" && isCustomer ? (
             <p className="muted">
-              You can track your service status and recent job records in your customer lane.
+              Your cleaning visit details, messages, and location tools are ready below.
             </p>
           ) : null}
           {authState === "authenticated" ? (
             <p className="muted" style={{ marginTop: 8 }}>
-              Visible records: {isAdmin ? `${jobs.length} jobs, ${quotes.length} quotes` : `${visibleJobs.length} jobs`}
+              {isAdmin ? `${jobs.length} jobs, ${quotes.length} quotes` : isStaff ? `${visibleJobs.length} jobs` : `${customerJobCount} jobs`}
             </p>
           ) : null}
           {loadError && authState === "authenticated" ? <p>{loadError}</p> : null}
@@ -843,48 +1012,62 @@ export default function GardenPortalAccessPanel() {
           {/* Admin: Quotes to convert */}
           {isAdmin && adminTab === "jobs" && quotes.length > 0 && (
             <article className="card garden-proof-card">
-              <h3>Quotes to Convert</h3>
-              <ul>
-                {quotes.map((q) => (
-                  <li key={q.id}>
-                    <div>
-                      Email: {q.email} | {q.address} {q.city} | {q.service_type} | {q.property_type}
-                    </div>
-                    <div>
-                      <strong>Status:</strong> {String(q.status || "new")}
-                    </div>
-                    <div className="hero-actions" style={{ marginTop: 8 }}>
-                      <button
-                        className="btn btn-secondary"
-                        onClick={() => updateQuoteStatus(q.id, "approved")}
-                        disabled={pendingQuoteActionId === q.id || String(q.status || "new") === "converted"}
-                      >
-                        {String(q.status || "new") === "approved" ? "Approved" : "Approve"}
-                      </button>
-                      <button
-                        className="btn btn-secondary"
-                        onClick={() => updateQuoteStatus(q.id, "rejected")}
-                        disabled={pendingQuoteActionId === q.id || String(q.status || "new") === "converted"}
-                      >
-                        {String(q.status || "new") === "rejected" ? "Rejected" : "Reject"}
-                      </button>
-                      <button
-                        className="btn btn-secondary"
-                        onClick={() => convertQuoteToJob(q.id)}
-                        disabled={pendingQuoteActionId === q.id || String(q.status || "new") !== "approved"}
-                      >
-                        Convert to Job
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              <h3>Quote requests</h3>
+              <div className="cards-grid cards-grid-2">
+                {quotes.map((q) => {
+                  const quoteStatus = String(q.status || "new").toLowerCase();
+                  const isConverted = quoteStatus === "converted";
+                  const isPending = pendingQuoteActionId === q.id;
+                  return (
+                    <article key={q.id} className="garden-work-card">
+                      <div className="garden-work-card__head">
+                        <div>
+                          <p className="garden-panel-kicker">Request {shortRecordId(q.id)}</p>
+                          <h4>{getServiceTitle(q)}</h4>
+                        </div>
+                        <span className="garden-status-pill">{titleCaseStatus(quoteStatus)}</span>
+                      </div>
+                      <p><strong>Client:</strong> {q.name || q.email}</p>
+                      <p><strong>Email:</strong> {q.email}</p>
+                      <p><strong>Address:</strong> {formatAddress(q)}</p>
+                      <p><strong>Preferred visit:</strong> {[formatPortalDate(q.preferred_date), q.preferred_time].filter(Boolean).join(" ")}</p>
+                      {q.message ? <p><strong>Notes:</strong> {q.message}</p> : null}
+                      <div className="hero-actions" style={{ marginTop: 12 }}>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => updateQuoteStatus(q.id, "approved")}
+                          disabled={isPending || isConverted}
+                        >
+                          {quoteStatus === "approved" ? "Approved" : "Approve"}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => updateQuoteStatus(q.id, "rejected")}
+                          disabled={isPending || isConverted}
+                        >
+                          {quoteStatus === "rejected" ? "Rejected" : "Reject"}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          onClick={() => convertQuoteToJob(q.id)}
+                          disabled={isPending || quoteStatus !== "approved"}
+                        >
+                          Create job
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
             </article>
           )}
           {/* Admin/Staff: Job queue */}
           {(isAdmin || isStaff) && (!isAdmin || adminTab === "jobs") && (
             <article className="card garden-proof-card">
-              <h3>Job Queue</h3>
+              <h3>Jobs</h3>
               <div className="intake-form-grid">
                 <label>
                   <span>Status filter</span>
@@ -915,25 +1098,44 @@ export default function GardenPortalAccessPanel() {
               </div>
               <div className="cards-grid cards-grid-3">
                 {visibleJobs.length ? visibleJobs.map((job) => (
-                  <article key={job.id} className="card garden-proof-card">
-                    <h4>Job: {job.id}</h4>
-                    <p><strong>Status:</strong> {job.status}</p>
+                  <article key={job.id} className="garden-work-card">
+                    <div className="garden-work-card__head">
+                      <div>
+                        <p className="garden-panel-kicker">Job {shortRecordId(job.id)}</p>
+                        <h4>{getServiceTitle(job)}</h4>
+                      </div>
+                      <span className="garden-status-pill">{titleCaseStatus(job.status)}</span>
+                    </div>
                     <p><strong>Customer:</strong> {job.customer_email}</p>
-                    <p><strong>Address:</strong> {job.address} {job.city}</p>
-                    <p><strong>Type:</strong> {job.service_type} {job.property_type}</p>
-                    <p><strong>Created:</strong> {job.created_at ? new Date(job.created_at).toLocaleDateString("en-CA") : "unknown"}</p>
+                    <p><strong>Address:</strong> {formatAddress(job)}</p>
+                    <p><strong>Cleaner:</strong> {job.staff_name || job.staff_email || "Not assigned yet"}</p>
+                    <p><strong>Created:</strong> {formatPortalDate(job.created_at)}</p>
                     {/* Admin: assign staff */}
                     {isAdmin && (
-                      <div>
-                        <input type="text" placeholder="Staff Profile ID" onBlur={(e) => assignStaffToJob(job.id, e.target.value)} />
-                        <span className="note">(Enter staff profile ID and blur to assign)</span>
-                      </div>
+                      <label className="garden-compact-field">
+                        <span>Cleaner</span>
+                        <select
+                          value={job.staff_profile_id || ""}
+                          onChange={(event) => {
+                            const nextStaffId = event.currentTarget.value;
+                            if (nextStaffId) void assignStaffToJob(job.id, nextStaffId);
+                          }}
+                          disabled={staffUsers.length === 0}
+                        >
+                          <option value="">{staffUsers.length === 0 ? "No cleaners loaded" : "Choose cleaner"}</option>
+                          {staffUsers.map((staff) => (
+                            <option key={staff.id} value={staff.id}>
+                              {staff.display_name || staff.email}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                     )}
                     {/* Staff: update status */}
                     {isStaff && (
                       <div className="hero-actions">
-                        <button className="btn btn-secondary" onClick={() => updateJobStatus(job.id, "in_progress")}>Mark In Progress</button>
-                        <button className="btn btn-secondary" onClick={() => updateJobStatus(job.id, "completed")}>Mark Completed</button>
+                        <button type="button" className="btn btn-secondary" onClick={() => updateJobStatus(job.id, "in_progress")}>Mark in progress</button>
+                        <button type="button" className="btn btn-secondary" onClick={() => updateJobStatus(job.id, "completed")}>Mark completed</button>
                       </div>
                     )}
                   </article>
@@ -1213,17 +1415,82 @@ export default function GardenPortalAccessPanel() {
           {/* Customer: Own jobs/status */}
           {isCustomer && (
             <article className="card garden-proof-card">
-              <h3>Your Jobs</h3>
+              <h3>Your cleaning workspace</h3>
+              <p className="muted">See who is coming, where the visit is happening, and send updates before the cleaner arrives.</p>
+              {shareMessage ? <p>{shareMessage}</p> : null}
               <div className="cards-grid cards-grid-2">
-                {customerJobs.length ? customerJobs.map((job) => (
-                  <article key={job.id} className="card garden-proof-card">
-                    <h4>Job: {job.id}</h4>
-                    <p><strong>Status:</strong> {job.status}</p>
-                    <p><strong>Address:</strong> {job.address} {job.city}</p>
-                    <p><strong>Type:</strong> {job.service_type} {job.property_type}</p>
-                    <p><strong>Created:</strong> {job.created_at ? new Date(job.created_at).toLocaleDateString("en-CA") : "unknown"}</p>
-                  </article>
-                )) : <div>No jobs found for your account.</div>}
+                {customerJobs.length ? customerJobs.map((job) => {
+                  const address = formatAddress(job);
+                  const selectedFiles = clientFilesByJobId[job.id] || [];
+                  const draft = clientDrafts[job.id] || "";
+                  const isSending = pendingClientMessageJobId === job.id;
+                  return (
+                    <article key={job.id} className="garden-work-card garden-work-card--client">
+                      <div className="garden-work-card__head">
+                        <div>
+                          <p className="garden-panel-kicker">Job {shortRecordId(job.id)}</p>
+                          <h4>{getServiceTitle(job)}</h4>
+                        </div>
+                        <span className="garden-status-pill">{titleCaseStatus(job.status)}</span>
+                      </div>
+
+                      <div className="garden-job-detail-grid">
+                        <p><strong>Cleaner:</strong> {job.staff_name || job.staff_email || "Being assigned"}</p>
+                        <p><strong>Arrival:</strong> {job.status === "assigned" ? "Being scheduled" : "Not scheduled yet"}</p>
+                        <p><strong>ETA:</strong> Updates will appear here before arrival.</p>
+                        <p><strong>Address:</strong> {address}</p>
+                        <p><strong>Created:</strong> {formatPortalDate(job.created_at)}</p>
+                      </div>
+
+                      <div className="hero-actions">
+                        <a className="btn btn-secondary" href={getMapsUrl(address)} target="_blank" rel="noreferrer">
+                          Open map
+                        </a>
+                        <button type="button" className="btn btn-secondary" onClick={() => void shareJobLocation(job)}>
+                          Share location
+                        </button>
+                      </div>
+
+                      <div className="garden-message-box">
+                        <label>
+                          <span>Message for Garden Cleaners</span>
+                          <textarea
+                            value={draft}
+                            onChange={(event) => updateClientDraft(job.id, event.currentTarget.value)}
+                            placeholder="Tell us what changed, what needs extra attention, or where the cleaner should enter."
+                            rows={5}
+                          />
+                        </label>
+                        <label className="garden-file-field">
+                          <span>Photos</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={(event) => handleClientFileChange(job.id, event.currentTarget.files)}
+                          />
+                        </label>
+                        {selectedFiles.length > 0 ? (
+                          <p className="muted">{selectedFiles.length} photo{selectedFiles.length === 1 ? "" : "s"} selected.</p>
+                        ) : null}
+                        <div className="hero-actions">
+                          <button type="button" className="btn btn-secondary" onClick={() => saveClientDraft(job.id)}>
+                            Save draft
+                          </button>
+                          <button type="button" className="btn btn-primary" onClick={() => void sendClientJobMessage(job.id)} disabled={isSending}>
+                            {isSending ? "Sending..." : "Send update"}
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                }) : (
+                  <div className="garden-empty-state">
+                    <h4>No active job yet</h4>
+                    <p className="muted">When Garden Cleaners assigns a visit to this email, the job, cleaner, and address will appear here.</p>
+                    <a className="btn btn-primary" href="/garden-cleaners/quote">Request a cleaning quote</a>
+                  </div>
+                )}
               </div>
             </article>
           )}

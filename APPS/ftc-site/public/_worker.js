@@ -423,6 +423,137 @@ async function writeAuditLog(env, actorEmail, action, targetEmail, targetUserId,
   });
 }
 
+const GARDEN_ATTACHMENT_BUCKET = "garden-cleaners-job-attachments";
+const GARDEN_MAX_ATTACHMENT_BYTES = 2 * 1024 * 1024;
+const GARDEN_MAX_ATTACHMENTS = 3;
+
+function sanitizeGardenAttachmentName(name) {
+  const cleaned = normalizeText(name || "photo.jpg")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  return cleaned || "photo.jpg";
+}
+
+function parseGardenDataUrl(dataUrl) {
+  const match = String(dataUrl || "").match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) {
+    throw new Error("Invalid attachment data.");
+  }
+  const contentType = match[1].toLowerCase();
+  if (!contentType.startsWith("image/")) {
+    throw new Error("Only image attachments are supported.");
+  }
+  const binary = atob(match[2]);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  if (bytes.byteLength > GARDEN_MAX_ATTACHMENT_BYTES) {
+    throw new Error("Attachment is too large.");
+  }
+  return { contentType, bytes };
+}
+
+async function ensureGardenAttachmentBucket(env) {
+  const config = getSupabaseServiceConfig(env);
+  if (!config) {
+    throw new Error("Attachment storage is not configured.");
+  }
+
+  const headers = {
+    "apikey": config.serviceRoleKey,
+    "authorization": `Bearer ${config.serviceRoleKey}`,
+    "content-type": "application/json"
+  };
+
+  const bucketResponse = await fetch(`${config.supabaseUrl}/storage/v1/bucket/${GARDEN_ATTACHMENT_BUCKET}`, {
+    headers
+  });
+  if (bucketResponse.ok) {
+    return config;
+  }
+  if (bucketResponse.status !== 404) {
+    throw new Error("Attachment storage is unavailable.");
+  }
+
+  const createResponse = await fetch(`${config.supabaseUrl}/storage/v1/bucket`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ id: GARDEN_ATTACHMENT_BUCKET, name: GARDEN_ATTACHMENT_BUCKET, public: false })
+  });
+  if (!createResponse.ok && createResponse.status !== 400) {
+    throw new Error("Unable to prepare attachment storage.");
+  }
+  return config;
+}
+
+async function uploadGardenAttachments(env, jobId, attachments) {
+  const files = Array.isArray(attachments) ? attachments.slice(0, GARDEN_MAX_ATTACHMENTS) : [];
+  if (!files.length) {
+    return [];
+  }
+
+  const config = await ensureGardenAttachmentBucket(env);
+  const uploaded = [];
+
+  for (let index = 0; index < files.length; index += 1) {
+    const file = files[index] || {};
+    const { contentType, bytes } = parseGardenDataUrl(file.dataUrl);
+    const name = sanitizeGardenAttachmentName(file.name);
+    const stamp = `${Date.now()}-${index}`;
+    const path = `${jobId}/${stamp}-${name}`;
+    const response = await fetch(`${config.supabaseUrl}/storage/v1/object/${GARDEN_ATTACHMENT_BUCKET}/${path}`, {
+      method: "PUT",
+      headers: {
+        "apikey": config.serviceRoleKey,
+        "authorization": `Bearer ${config.serviceRoleKey}`,
+        "content-type": contentType,
+        "x-upsert": "false"
+      },
+      body: bytes
+    });
+    if (!response.ok) {
+      throw new Error("Unable to upload attachment.");
+    }
+    uploaded.push({
+      name,
+      type: contentType,
+      size: bytes.byteLength,
+      bucket: GARDEN_ATTACHMENT_BUCKET,
+      path
+    });
+  }
+
+  return uploaded;
+}
+
+async function enrichGardenJobs(env, jobs) {
+  const rows = Array.isArray(jobs) ? jobs : [];
+  const staffIds = Array.from(new Set(rows.map((job) => normalizeText(job?.staff_profile_id)).filter(Boolean)));
+  if (!staffIds.length) {
+    return rows.map((job) => ({ ...job, staff_name: null, staff_email: null }));
+  }
+
+  const profileResult = await supabaseAdminRest(
+    env,
+    `rest/v1/garden_cleaners_profiles?select=id,email,display_name&id=in.(${staffIds.map(encodeURIComponent).join(",")})`
+  );
+  if (profileResult instanceof Response) {
+    return rows;
+  }
+
+  const profiles = new Map((profileResult.data || []).map((profile) => [String(profile.id), profile]));
+  return rows.map((job) => {
+    const profile = profiles.get(String(job.staff_profile_id || ""));
+    return {
+      ...job,
+      staff_name: profile?.display_name || null,
+      staff_email: profile?.email || null
+    };
+  });
+}
+
 async function persistGardenQuote(quoteRecord, env) {
   const config = getSupabaseConfig(env);
   if (!config) {
@@ -502,7 +633,7 @@ async function handleGardenJobs(request, env) {
     if (caller instanceof Response) return caller;
     const result = await supabaseAdminRest(env, "rest/v1/garden_cleaners_jobs?select=*&order=created_at.desc");
     if (result instanceof Response) return result;
-    return json({ ok: true, jobs: result.data || [] });
+    return json({ ok: true, jobs: await enrichGardenJobs(env, result.data || []) });
   }
 
   if (request.method !== "POST") {
@@ -523,6 +654,23 @@ async function handleGardenJobs(request, env) {
   const quote = Array.isArray(quoteResult.data) ? quoteResult.data[0] : null;
   if (!quote) {
     return json({ ok: false, error: "Quote not found." }, 404);
+  }
+  const currentQuoteStatus = normalizeText(quote.status || "new").toLowerCase();
+  if (currentQuoteStatus === "converted") {
+    return json({ ok: false, error: "This quote is already a job." }, 409);
+  }
+  if (currentQuoteStatus !== "approved") {
+    return json({ ok: false, error: "Approve this quote before creating the job." }, 409);
+  }
+
+  const existingJobResult = await supabaseAdminRest(
+    env,
+    `rest/v1/garden_cleaners_jobs?select=id&quote_id=eq.${encodeURIComponent(quoteId)}&limit=1`
+  );
+  if (existingJobResult instanceof Response) return existingJobResult;
+  const existingJob = Array.isArray(existingJobResult.data) ? existingJobResult.data[0] : null;
+  if (existingJob?.id) {
+    return json({ ok: false, error: "This quote already has a job." }, 409);
   }
 
   const now = new Date().toISOString();
@@ -546,7 +694,20 @@ async function handleGardenJobs(request, env) {
     prefer: "return=representation"
   });
   if (insertResult instanceof Response) return insertResult;
-  return json({ ok: true, job: Array.isArray(insertResult.data) ? insertResult.data[0] : null });
+  const insertedJob = Array.isArray(insertResult.data) ? insertResult.data[0] : null;
+  const quoteUpdateResult = await supabaseAdminRest(env, `rest/v1/garden_cleaners_quotes?id=eq.${encodeURIComponent(quoteId)}`, {
+    method: "PATCH",
+    body: { status: "converted", updated_at: now },
+    prefer: "return=minimal"
+  });
+  if (quoteUpdateResult instanceof Response) {
+    return json({ ok: false, error: "Job was created, but the quote still needs to be refreshed.", job_id: insertedJob?.id || null }, 500);
+  }
+  await writeAuditLog(env, caller.email, "quote_converted_to_job", normalizeEmail(quote.email || "") || null, null, {
+    quote_id: quoteId,
+    job_id: insertedJob?.id || null
+  });
+  return json({ ok: true, job: insertedJob });
 }
 
 async function handleGardenMyJobs(request, env) {
@@ -559,7 +720,7 @@ async function handleGardenMyJobs(request, env) {
   if (caller.role === "admin") {
     const result = await supabaseAdminRest(env, "rest/v1/garden_cleaners_jobs?select=*&order=created_at.desc");
     if (result instanceof Response) return result;
-    return json({ ok: true, jobs: result.data || [] });
+    return json({ ok: true, jobs: await enrichGardenJobs(env, result.data || []) });
   }
 
   if (caller.role === "staff") {
@@ -569,12 +730,12 @@ async function handleGardenMyJobs(request, env) {
     }
     const result = await supabaseAdminRest(env, `rest/v1/garden_cleaners_jobs?select=*&staff_profile_id=eq.${encodeURIComponent(staffProfileId)}&order=created_at.desc`);
     if (result instanceof Response) return result;
-    return json({ ok: true, jobs: result.data || [] });
+    return json({ ok: true, jobs: await enrichGardenJobs(env, result.data || []) });
   }
 
   const result = await supabaseAdminRest(env, `rest/v1/garden_cleaners_jobs?select=*&customer_email=eq.${encodeURIComponent(caller.email)}&order=created_at.desc`);
   if (result instanceof Response) return result;
-  return json({ ok: true, jobs: result.data || [] });
+  return json({ ok: true, jobs: await enrichGardenJobs(env, result.data || []) });
 }
 
 async function handleGardenJobAssign(request, env) {
@@ -590,12 +751,32 @@ async function handleGardenJobAssign(request, env) {
     return json({ ok: false, error: "job_id and staff_profile_id are required." }, 400);
   }
   const now = new Date().toISOString();
-  const result = await supabaseAdminRest(env, "rest/v1/garden_cleaners_job_assignments", {
+  const staffResult = await supabaseAdminRest(
+    env,
+    `rest/v1/garden_cleaners_profiles?select=id,email,display_name,role,is_active&id=eq.${encodeURIComponent(staffProfileId)}&limit=1`
+  );
+  if (staffResult instanceof Response) return staffResult;
+  const staff = Array.isArray(staffResult.data) ? staffResult.data[0] : null;
+  if (!staff || staff.role !== "staff" || staff.is_active !== true) {
+    return json({ ok: false, error: "Choose an active cleaner." }, 400);
+  }
+
+  const updateJobResult = await supabaseAdminRest(env, `rest/v1/garden_cleaners_jobs?id=eq.${encodeURIComponent(jobId)}`, {
+    method: "PATCH",
+    body: { staff_profile_id: staffProfileId, status: "assigned", status_updated_at: now, updated_at: now },
+    prefer: "return=minimal"
+  });
+  if (updateJobResult instanceof Response) return updateJobResult;
+
+  await supabaseAdminRest(env, "rest/v1/garden_cleaners_job_assignments", {
     method: "POST",
     body: [{ job_id: jobId, staff_profile_id: staffProfileId, assigned_at: now, status: "assigned", status_updated_at: now }],
     prefer: "return=minimal"
   });
-  if (result instanceof Response) return result;
+  await writeAuditLog(env, caller.email, "job_assigned", staff.email || null, null, {
+    job_id: jobId,
+    staff_profile_id: staffProfileId
+  });
   return json({ ok: true });
 }
 
@@ -648,12 +829,26 @@ async function handleGardenQuoteStatus(request, env) {
   if (!quoteId || !["approved", "rejected"].includes(status)) {
     return json({ ok: false, error: "quote_id and valid status are required." }, 400);
   }
+  const quoteResult = await supabaseAdminRest(env, `rest/v1/garden_cleaners_quotes?select=id,email,status&id=eq.${encodeURIComponent(quoteId)}&limit=1`);
+  if (quoteResult instanceof Response) return quoteResult;
+  const quote = Array.isArray(quoteResult.data) ? quoteResult.data[0] : null;
+  if (!quote) {
+    return json({ ok: false, error: "Quote not found." }, 404);
+  }
+  if (normalizeText(quote.status || "new").toLowerCase() === "converted") {
+    return json({ ok: false, error: "This quote is already a job." }, 409);
+  }
   const result = await supabaseAdminRest(env, `rest/v1/garden_cleaners_quotes?id=eq.${encodeURIComponent(quoteId)}`, {
     method: "PATCH",
     body: { status, updated_at: new Date().toISOString() },
     prefer: "return=minimal"
   });
   if (result instanceof Response) return result;
+  await writeAuditLog(env, caller.email, status === "approved" ? "quote_approved" : "quote_rejected", normalizeEmail(quote.email || "") || null, null, {
+    quote_id: quoteId,
+    previous_status: quote.status || "new",
+    next_status: status
+  });
   return json({ ok: true });
 }
 
@@ -704,13 +899,14 @@ async function handleGardenJobNote(request, env) {
     return json({ ok: false, error: "Method not allowed." }, 405);
   }
 
-  const caller = await requireAdmin(request, env);
+  const caller = await requireCaller(request, env);
   if (caller instanceof Response) return caller;
 
   const payload = await request.json().catch(() => null);
   const jobId = normalizeText(payload?.job_id);
   const noteBody = normalizeText(payload?.body);
   const visibility = normalizeText(payload?.visibility || "internal").toLowerCase();
+  const attachments = Array.isArray(payload?.attachments) ? payload.attachments : [];
 
   if (!jobId) {
     return json({ ok: false, error: "job_id is required" }, 400);
@@ -724,7 +920,7 @@ async function handleGardenJobNote(request, env) {
 
   const jobResult = await supabaseAdminRest(
     env,
-    `rest/v1/garden_cleaners_jobs?select=id,customer_email&id=eq.${encodeURIComponent(jobId)}&limit=1`
+    `rest/v1/garden_cleaners_jobs?select=id,customer_email,staff_profile_id&id=eq.${encodeURIComponent(jobId)}&limit=1`
   );
   if (jobResult instanceof Response) return jobResult;
   const job = Array.isArray(jobResult.data) ? jobResult.data[0] : null;
@@ -732,7 +928,35 @@ async function handleGardenJobNote(request, env) {
     return json({ ok: false, error: "Job not found" }, 404);
   }
 
-  const action = visibility === "customer_visible" ? "job_customer_comment_added" : "job_internal_note_added";
+  const staffProfileId = normalizeText(caller.profile?.id || "");
+  const ownsJob = normalizeEmail(job.customer_email || "") === caller.email;
+  const assignedToJob = staffProfileId && String(job.staff_profile_id || "") === staffProfileId;
+  if (caller.role === "client" && !ownsJob) {
+    return forbidden("You can only message your own job.");
+  }
+  if (caller.role === "staff" && !assignedToJob) {
+    return forbidden("You can only message assigned jobs.");
+  }
+  if (!["admin", "staff", "client"].includes(caller.role)) {
+    return forbidden();
+  }
+
+  let uploadedAttachments = [];
+  try {
+    uploadedAttachments = await uploadGardenAttachments(env, jobId, attachments);
+  } catch (error) {
+    console.warn("garden_cleaners_attachment_upload_failed", JSON.stringify({
+      message: error instanceof Error ? error.message : "unknown"
+    }));
+    return json({ ok: false, error: "Photo upload failed. Please try again with smaller images." }, 500);
+  }
+
+  const action =
+    caller.role === "client"
+      ? "client_job_message_added"
+      : visibility === "customer_visible"
+      ? "job_customer_comment_added"
+      : "job_internal_note_added";
   const insertResult = await supabaseAdminRest(env, "rest/v1/garden_cleaners_audit_log", {
     method: "POST",
     body: [{
@@ -742,7 +966,8 @@ async function handleGardenJobNote(request, env) {
       details: {
         job_id: jobId,
         body: noteBody,
-        visibility
+        visibility: caller.role === "client" ? "customer_visible" : visibility,
+        attachments: uploadedAttachments
       }
     }],
     prefer: "return=minimal"

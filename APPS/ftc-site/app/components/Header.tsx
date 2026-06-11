@@ -12,6 +12,7 @@ import {
 } from "../../lib/gardenCleaners";
 import { getOgTradesBrandedPath, getOgTradesNavLinks, isOgTradesCustomHost, ogTradesAcademyConfig } from "../../lib/ogTradesAcademy";
 import { polarAnchorConfig } from "../../lib/polarAnchor";
+import getSupabase, { loadRuntimeSupabaseConfig } from "../../lib/supabase";
 import GardenBrandMark from "./garden-cleaners/GardenBrandMark";
 import OgTradesBrandMark from "./og-trades/OgTradesBrandMark";
 import PolarBrandMark from "./polar-anchor/PolarBrandMark";
@@ -57,6 +58,7 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [runtimeHost, setRuntimeHost] = useState(initialHost.toLowerCase());
+  const [gardenPortalSignedIn, setGardenPortalSignedIn] = useState(false);
   const isGardenHost = isGardenCleanersCustomHost(runtimeHost);
   const isGardenSite = (pathname?.startsWith("/garden-cleaners") ?? false) || isGardenHost;
   const isOgTradesHost = isOgTradesCustomHost(runtimeHost);
@@ -64,6 +66,10 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
   const isPolarSite = pathname?.startsWith("/polar-anchor") ?? false;
   const isDefaultUnaSite = !isGardenSite && !isOgTradesSite && !isPolarSite;
   const gardenPortalHref = getGardenCleanersPortalUrl("#portal-access");
+  const gardenPortalLabel = gardenPortalSignedIn ? "Portal" : "Sign In";
+  const gardenPortalAriaLabel = gardenPortalSignedIn
+    ? "Open Garden Cleaners portal"
+    : "Sign in to Garden Cleaners portal";
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -75,6 +81,49 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
   useEffect(() => {
     setIsOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    let mounted = true;
+    let unsubscribe: (() => void) | null = null;
+
+    if (!isGardenSite) {
+      setGardenPortalSignedIn(false);
+      return () => {
+        mounted = false;
+      };
+    }
+
+    async function syncGardenPortalSession() {
+      const configured = await loadRuntimeSupabaseConfig();
+      if (!mounted || !configured) {
+        if (mounted) setGardenPortalSignedIn(false);
+        return;
+      }
+
+      try {
+        const supabase = getSupabase();
+        const { data } = await supabase.auth.getSession();
+        if (mounted) {
+          setGardenPortalSignedIn(Boolean(data.session?.user?.email));
+        }
+        const authListener = supabase.auth.onAuthStateChange((_event: string, session: { user?: { email?: string | null } } | null) => {
+          if (mounted) {
+            setGardenPortalSignedIn(Boolean(session?.user?.email));
+          }
+        });
+        unsubscribe = () => authListener.data.subscription.unsubscribe();
+      } catch {
+        if (mounted) setGardenPortalSignedIn(false);
+      }
+    }
+
+    void syncGardenPortalSession();
+
+    return () => {
+      mounted = false;
+      if (unsubscribe) unsubscribe();
+    };
+  }, [isGardenSite]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -199,9 +248,9 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
                   href={gardenPortalHref}
                   prefetch={false}
                   className="garden-portal-login-cta"
-                  aria-label="Sign In to client portal"
+                  aria-label={gardenPortalAriaLabel}
                 >
-                  Sign In
+                  {gardenPortalLabel}
                 </Link>,
                 <Link
                   key={link.href}
@@ -282,10 +331,10 @@ export default function Header({ initialHost = "" }: { initialHost?: string }) {
                       href={gardenPortalHref}
                       prefetch={false}
                       className="mobile-panel-link garden-portal-login-cta"
-                      aria-label="Portal Login"
+                      aria-label={gardenPortalAriaLabel}
                       onClick={closeMenu}
                     >
-                      Portal Login
+                      {gardenPortalLabel}
                     </Link>,
                     <Link
                       key={link.href}

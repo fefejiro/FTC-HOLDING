@@ -3,6 +3,10 @@ import { expect, test } from "@playwright/test";
 
 const baseUrl = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3001";
 const url = (path: string) => new URL(path, baseUrl).toString();
+const hasQuotePersistenceEnv = Boolean(
+  (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL) &&
+    (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY)
+);
 
 const gardenRoutes = [
   { path: "/garden-cleaners", heading: /Professional Cleaning Services You Can Trust in Oshawa/i, hasMedia: true },
@@ -10,7 +14,7 @@ const gardenRoutes = [
   { path: "/garden-cleaners/services", heading: /Cleaning Services/i, hasMedia: true },
   { path: "/garden-cleaners/quote", heading: /Tell us what needs cleaning/i, hasMedia: true },
   { path: "/garden-cleaners/contact", heading: /Contact Garden Cleaners/i, hasMedia: true },
-  { path: "/garden-cleaners/portal", heading: /Regional service coverage, client intake, and operations routing/i, hasMedia: false }
+  { path: "/garden-cleaners/portal", heading: /Garden Cleaners portal/i, hasMedia: false }
 ] as const;
 
 test.describe("Garden Cleaners public QA", () => {
@@ -71,6 +75,8 @@ test.describe("Garden Cleaners public QA", () => {
   });
 
   test("quote form accepts a valid lead", async ({ page }) => {
+    test.skip(!hasQuotePersistenceEnv, "Supabase public env is required for quote persistence QA.");
+
     await page.goto(url("/garden-cleaners/quote"));
 
     await page.getByLabel("Full Name").fill("Garden QA Tester");

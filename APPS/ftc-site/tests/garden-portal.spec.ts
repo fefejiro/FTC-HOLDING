@@ -11,9 +11,9 @@ test.describe("Garden portal smoke", () => {
   test("public portal loads with key lanes and CTAs", async ({ page }) => {
     await page.goto(url("/garden-cleaners/portal"), { waitUntil: "domcontentloaded" });
 
-    await expect(page.getByRole("heading", { level: 1, name: /regional service coverage/i })).toBeVisible();
-    await expect(page.getByText(/client lane/i)).toBeVisible();
-    await expect(page.getByText(/operations lane/i)).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /garden cleaners portal/i })).toBeVisible();
+    await expect(page.getByText(/sign in with google/i)).toBeVisible();
+    await expect(page.getByText("Regional portal", { exact: true })).toBeVisible();
 
     await expect(page.getByRole("link", { name: /request regional quote/i }).first()).toBeVisible();
     await expect(page.getByRole("link", { name: /contact operations/i }).first()).toBeVisible();
