@@ -27,6 +27,28 @@ npm run check
 
 This app deploys as a Cloudflare Pages site with Pages Functions, D1, OpenAI, and SendGrid.
 
+Current production URL:
+
+```text
+https://capsigma-growth-desk.pages.dev
+```
+
+Preferred client URL, pending DNS:
+
+```text
+https://growth.capsigma.com
+```
+
+To activate the preferred URL, add this DNS record wherever `capsigma.com` DNS
+is managed:
+
+```text
+Type: CNAME
+Host: growth
+Value: capsigma-growth-desk.pages.dev
+TTL: default or 300
+```
+
 ### Create D1
 
 ```bash
@@ -50,6 +72,8 @@ npx wrangler pages secret put OPENAI_MODEL --project-name capsigma-growth-desk
 npx wrangler pages secret put SENDGRID_API_KEY --project-name capsigma-growth-desk
 npx wrangler pages secret put SENDGRID_FROM_EMAIL --project-name capsigma-growth-desk
 npx wrangler pages secret put SENDGRID_FROM_NAME --project-name capsigma-growth-desk
+npx wrangler pages secret put SENDGRID_REPLY_TO_EMAIL --project-name capsigma-growth-desk
+npx wrangler pages secret put SENDGRID_REPLY_TO_NAME --project-name capsigma-growth-desk
 npx wrangler pages secret put DAILY_SEND_LIMIT --project-name capsigma-growth-desk
 ```
 
@@ -84,5 +108,7 @@ npm run deploy
 - If `SENDGRID_API_KEY` is missing, sends are recorded as preview proof only.
 - Production handover is not complete until D1, secrets, SendGrid sender verification, and a real internal smoke test pass.
 - Current production sender is a verified Single Sender: `fejiro.efiuvwere@gmail.com`.
-- Before sustained client outreach, authenticate a CapSigma-owned sender/domain for better trust and deliverability.
+- Current reply-to/contact address is `sales@capsigma.com`.
+- Before sustained client outreach, verify `sales@capsigma.com` in SendGrid or authenticate the CapSigma domain for better trust and deliverability.
+- Latest Gmail delivery check confirmed receipt but showed Gmail spam placement for the current Gmail-sender test path.
 - See `ops/PRODUCTION-HANDOVER.md` for the full checklist.

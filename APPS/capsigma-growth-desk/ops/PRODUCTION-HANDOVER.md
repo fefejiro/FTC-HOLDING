@@ -4,11 +4,27 @@ Status: production deployed with verified SendGrid sending.
 
 Production URL: https://capsigma-growth-desk.pages.dev
 
+Preferred client URL: https://growth.capsigma.com
+
+Custom domain status: added to Cloudflare Pages and pending DNS. `capsigma.com`
+currently uses Google nameservers, so add this DNS record at the DNS host:
+
+```text
+Type: CNAME
+Host: growth
+Value: capsigma-growth-desk.pages.dev
+TTL: default or 300
+```
+
 Latest smoke evidence: `ops/PRODUCTION-SMOKE-2026-06-10T16-19-21-154Z.json`
 
 Latest full live outreach proof: `ops/LIVE-E2E-HARRIS-HEALTH-CORRECTED-2026-06-10T17-16-56Z.json`
 
 Latest actual external outreach proof: `ops/LIVE-E2E-HARRIS-HEALTH-ACTUAL-2026-06-10T17-37-48Z.json`
+
+Latest recipient delivery proof: `ops/RECIPIENT-TEST-2026-06-11T16-35-57-928Z.json`
+
+Latest Gmail delivery check: `ops/GMAIL-DELIVERY-CHECK-2026-06-11.md`
 
 ## What This Is
 
@@ -57,17 +73,24 @@ OPENAI_MODEL
 SENDGRID_API_KEY
 SENDGRID_FROM_EMAIL
 SENDGRID_FROM_NAME
+SENDGRID_REPLY_TO_EMAIL
+SENDGRID_REPLY_TO_NAME
 DAILY_SEND_LIMIT
 ```
 
 Current Cloudflare production secret state:
 
-- Present: `ADMIN_PASSWORD`, `AUTH_SECRET`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL`, `SENDGRID_FROM_NAME`, `DAILY_SEND_LIMIT`
+- Present: `ADMIN_PASSWORD`, `AUTH_SECRET`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL`, `SENDGRID_FROM_NAME`, `SENDGRID_REPLY_TO_EMAIL`, `SENDGRID_REPLY_TO_NAME`, `DAILY_SEND_LIMIT`
 - Missing: none for current production smoke.
 
 Current verified sender: `fejiro.efiuvwere@gmail.com`
+Current reply-to/contact address: `sales@capsigma.com`
+Pending preferred sender: `sales@capsigma.com` as the visible `From` address.
 
-Recommended final client upgrade: authenticate a CapSigma-owned domain/sender before sustained cold outreach.
+Recommended final client upgrade: verify the `sales@capsigma.com` Single Sender
+request in SendGrid, or authenticate the CapSigma domain in SendGrid, before
+sustained cold outreach. Until then, SendGrid sends from the verified Gmail
+sender and routes replies/unsubscribe contact to `sales@capsigma.com`.
 
 ## Setup Commands
 
@@ -89,6 +112,8 @@ npx wrangler pages secret put OPENAI_MODEL --project-name capsigma-growth-desk
 npx wrangler pages secret put SENDGRID_API_KEY --project-name capsigma-growth-desk
 npx wrangler pages secret put SENDGRID_FROM_EMAIL --project-name capsigma-growth-desk
 npx wrangler pages secret put SENDGRID_FROM_NAME --project-name capsigma-growth-desk
+npx wrangler pages secret put SENDGRID_REPLY_TO_EMAIL --project-name capsigma-growth-desk
+npx wrangler pages secret put SENDGRID_REPLY_TO_NAME --project-name capsigma-growth-desk
 npx wrangler pages secret put DAILY_SEND_LIMIT --project-name capsigma-growth-desk
 npm run deploy
 ```
@@ -165,7 +190,31 @@ Repeatable commands:
 ```powershell
 npm run prod:doctor
 npm run prod:smoke
+npm run prod:test-recipients
 ```
+
+## 2026-06-11 Recipient Delivery Test
+
+- Base URL: `https://capsigma-growth-desk.pages.dev`
+- D1 configured: true
+- OpenAI configured: true
+- SendGrid configured: true
+- From email: `fejiro.efiuvwere@gmail.com`
+- Reply-to/contact email: `sales@capsigma.com`
+- Daily send limit: 25
+- Recipient 1: `sales@capsigma.com`
+- Recipient 1 result: `sent`
+- Recipient 1 provider message id: `4q9Ug1cXTj-GpAgKTH7Pqg`
+- Recipient 2: `fejiro.efiuvwere@gmail.com`
+- Recipient 2 result: `sent`
+- Recipient 2 provider message id: `ONJqccXlSUy8HmAVaWyb6w`
+- Sent Review verified: both sent bodies are stored with provider proof and a
+  footer contact address of `sales@capsigma.com`.
+- Gmail mailbox check: Fejiro received the message, but Gmail labeled the
+  current Gmail-sender test messages as spam. This is a deliverability warning
+  and should be resolved with SendGrid sender/domain authentication before
+  broad client outreach.
+- Report: `ops/RECIPIENT-TEST-2026-06-11T16-35-57-928Z.json`
 
 ## Data Policy
 

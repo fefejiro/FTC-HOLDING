@@ -75,13 +75,15 @@ export async function onRequest(context) {
 
   const sendgridApiKey = env.SENDGRID_API_KEY
   const sendgridFromEmail = env.SENDGRID_FROM_EMAIL || ''
+  const sendgridReplyToEmail = env.SENDGRID_REPLY_TO_EMAIL || sendgridFromEmail
+  const sendgridReplyToName = env.SENDGRID_REPLY_TO_NAME || env.SENDGRID_FROM_NAME || 'CapSigma'
   if (!sendgridFromEmail) {
     return json({ error: 'SENDGRID_FROM_EMAIL is not configured' }, { status: 500 })
   }
 
   const sendId = newId('send')
   const createdAt = nowIso()
-  const emailBody = addComplianceFooter(lead.draft_body, sendgridFromEmail)
+  const emailBody = addComplianceFooter(lead.draft_body, sendgridReplyToEmail)
 
   if (!sendgridApiKey) {
     await recordSendEvent(db, {
@@ -151,6 +153,10 @@ export async function onRequest(context) {
       from: {
         email: sendgridFromEmail,
         name: env.SENDGRID_FROM_NAME || 'CapSigma',
+      },
+      reply_to: {
+        email: sendgridReplyToEmail,
+        name: sendgridReplyToName,
       },
       subject: lead.draft_subject,
       content: [{ type: 'text/plain', value: emailBody }],
