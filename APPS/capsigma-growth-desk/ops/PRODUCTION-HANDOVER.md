@@ -1,7 +1,9 @@
 # CapSigma Growth Desk Production Handover
 
-Status: production deployed with verified SendGrid sending; SendGrid domain
-authentication created and pending DNS records before broad outreach.
+Status: production deployed with verified SendGrid sending. No-DNS client
+handover is available after the client verifies `sales@capsigma.com` in
+SendGrid. SendGrid domain authentication is created as an optional stronger
+deliverability upgrade and is pending DNS records.
 
 Production URL: https://capsigma-growth-desk.pages.dev
 
@@ -33,6 +35,10 @@ Latest SendGrid domain-auth evidence:
 - `ops/SENDGRID-DOMAIN-VALIDATION-2026-06-11T17-29-28Z.json`
 - `ops/SENDGRID-DNS-RECORDS-2026-06-11.md`
 
+No-DNS handover guide:
+
+- `ops/NO-DNS-CLIENT-HANDOVER.md`
+
 ## What This Is
 
 CapSigma Growth Desk is an operator-controlled outreach desk for real lead import, AI-assisted draft generation, human approval, SendGrid delivery, and durable proof logging.
@@ -57,11 +63,13 @@ Internal workflow name: CapSigma Outreach Agent.
 - [x] SendGrid API key configured.
 - [x] Verified sender configured in SendGrid.
 - [x] Production smoke test completed with one internal test lead.
+- [x] No-DNS client handover path documented.
 - [x] SendGrid authenticated domain created for `capsigma.com`.
-- [ ] SendGrid DNS records added at the `capsigma.com` DNS host.
-- [ ] SendGrid domain authentication validated.
+- [ ] Client clicks the SendGrid verification email for `sales@capsigma.com`.
 - [ ] Production From switched to `sales@capsigma.com`.
-- [ ] Gmail placement rechecked after domain authentication.
+- [ ] Recipient/Gmail placement rechecked after `sales@capsigma.com` verification.
+- [ ] Optional: SendGrid DNS records added at the `capsigma.com` DNS host.
+- [ ] Optional: SendGrid domain authentication validated.
 - [ ] Client-provided real lead source connected or imported.
 
 ## Required Cloudflare Bindings
@@ -102,12 +110,13 @@ Current proof-copy CC address: `fejiro.efiuvwere@gmail.com`
 Pending preferred sender: `sales@capsigma.com` as the visible `From` address.
 Pending authenticated domain id: `31406421`
 
-Recommended final client upgrade: verify the `sales@capsigma.com` Single Sender
-request in SendGrid, or authenticate the CapSigma domain in SendGrid, before
-sustained cold outreach. Until then, SendGrid sends from the verified Gmail
-sender and routes replies/unsubscribe contact to `sales@capsigma.com`.
+Recommended no-DNS handover path: client verifies the `sales@capsigma.com`
+Single Sender request in SendGrid by clicking the verification email. After
+that, production can switch the visible From address to `sales@capsigma.com`.
+Until then, SendGrid sends from the verified Gmail sender and routes
+replies/unsubscribe contact to `sales@capsigma.com`.
 
-DNS records required for final deliverability are documented in:
+Optional DNS records for stronger domain authentication are documented in:
 
 ```text
 ops/SENDGRID-DNS-RECORDS-2026-06-11.md
@@ -180,6 +189,12 @@ self-serve SaaS. A client can use it by receiving the production URL, admin
 password, CSV template, and operating rules. For multiple client companies,
 create a separate Cloudflare Pages project, D1 database, SendGrid sender/domain,
 and admin password per client so data and proof ledgers stay isolated.
+
+If the client does not want to involve DNS, use the no-DNS handover path in:
+
+```text
+ops/NO-DNS-CLIENT-HANDOVER.md
+```
 
 ## 2026-06-10 Production Smoke Result
 

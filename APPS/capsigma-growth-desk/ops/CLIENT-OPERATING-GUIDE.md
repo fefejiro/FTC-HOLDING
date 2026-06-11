@@ -1,7 +1,8 @@
 # CapSigma Growth Desk Client Operating Guide
 
-Status: turnkey single-operator outreach desk, with SendGrid domain DNS records
-still required before broad volume.
+Status: turnkey single-operator outreach desk. No-DNS handover is available via
+SendGrid Single Sender verification; DNS/domain authentication is an optional
+deliverability upgrade.
 
 ## What To Call It
 
@@ -40,9 +41,13 @@ in SendGrid. The preferred final setup is:
 - Footer contact: `sales@capsigma.com`
 - Proof-copy CC: `fejiro.efiuvwere@gmail.com`
 
-That final setup requires `sales@capsigma.com` verification or SendGrid domain
-authentication first. The SendGrid authenticated domain has been created for
-`capsigma.com`, but the DNS records still need to be added at the DNS host.
+That final setup requires `sales@capsigma.com` verification in SendGrid. This
+can be done without DNS by having the client click the SendGrid verification
+email sent to `sales@capsigma.com`.
+
+The stronger optional upgrade is SendGrid domain authentication for
+`capsigma.com`. That requires DNS records, but it is not required for a basic
+client handover.
 
 ## Operator Workflow
 
@@ -99,7 +104,15 @@ controlled by sender trust, domain reputation, SPF, DKIM, DMARC, content, and
 recipient mailbox filtering.
 
 The latest Gmail check confirmed receipt but showed spam placement for the
-current Gmail-sender test path. Before broad outreach, finish this:
+current Gmail-sender test path.
+
+No-DNS handover path:
+
+- Client verifies `sales@capsigma.com` in SendGrid by clicking the verification email.
+- Production From is switched to `sales@capsigma.com`.
+- Operator reruns recipient tests and reviews delivery placement.
+
+Optional stronger upgrade:
 
 - Add the SendGrid DNS records in `ops/SENDGRID-DNS-RECORDS-2026-06-11.md`.
 - Validate SendGrid domain authentication.
@@ -124,17 +137,19 @@ Green:
 - Reply-To and footer contact routed to `sales@capsigma.com`
 - Fejiro proof-copy CC support
 - Sent Review proof
-- SendGrid authenticated domain created for `capsigma.com`
+- No-DNS handover path documented in `ops/NO-DNS-CLIENT-HANDOVER.md`
+- SendGrid authenticated domain created for `capsigma.com` as optional upgrade
 
 Yellow:
 
-- Gmail spam placement until sender/domain authentication improves trust
-- SendGrid DNS records pending at the `capsigma.com` DNS host
+- Gmail spam placement until sender verification/domain authentication improves trust
+- `sales@capsigma.com` still needs the client to click the SendGrid verification email
+- SendGrid DNS records pending at the `capsigma.com` DNS host for optional stronger authentication
 - Manual reply tracking
 - Single-operator access only
 - Manual lead import/research workflow
 
 Red for scale:
 
-- Do not run broad cold outreach until sender/domain authentication is complete.
+- Do not run broad cold outreach until `sales@capsigma.com` is verified at minimum.
 - Do not sell this as multi-client SaaS until tenant isolation and per-client roles exist.
