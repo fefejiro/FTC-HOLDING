@@ -7,6 +7,7 @@ import {
   normalizeLead,
   validateLead,
 } from '../functions/_lib/validation.js'
+import { buildCcRecipients, parseEmailList } from '../functions/api/send-email.js'
 
 test('normalizes a real lead without requiring demo data', () => {
   const lead = normalizeLead({
@@ -44,5 +45,21 @@ test('rejects invalid lead shape', () => {
     'company is required',
     'email must be valid',
     'fit score must be between 0 and 100',
+  ])
+})
+
+test('builds proof-copy CC recipients without duplicating the target recipient', () => {
+  const ccEmails = parseEmailList('fejiro.efiuvwere@gmail.com, sales@capsigma.com, fejiro.efiuvwere@gmail.com')
+
+  assert.deepEqual(ccEmails, [
+    'fejiro.efiuvwere@gmail.com',
+    'sales@capsigma.com',
+    'fejiro.efiuvwere@gmail.com',
+  ])
+  assert.deepEqual(buildCcRecipients(ccEmails, 'sales@capsigma.com'), [
+    { email: 'fejiro.efiuvwere@gmail.com' },
+  ])
+  assert.deepEqual(buildCcRecipients(ccEmails, 'fejiro.efiuvwere@gmail.com'), [
+    { email: 'sales@capsigma.com' },
   ])
 })

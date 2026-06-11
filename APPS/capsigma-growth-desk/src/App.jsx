@@ -467,6 +467,15 @@ export default function App() {
             <span style={{ color: session.configured?.sendgrid ? palette.green : palette.gold }}>
               SendGrid {session.configured?.sendgrid ? 'ready' : 'preview'}
             </span>
+            {session.configured?.fromEmail && (
+              <span style={{ color: palette.muted }}>From {session.configured.fromEmail}</span>
+            )}
+            {session.configured?.replyToEmail && (
+              <span style={{ color: palette.muted }}>Reply-To {session.configured.replyToEmail}</span>
+            )}
+            {session.configured?.ccEmails?.length > 0 && (
+              <span style={{ color: palette.muted }}>CC {session.configured.ccEmails.join(', ')}</span>
+            )}
             <Button variant="secondary" onClick={loadData}>Refresh</Button>
             <Button variant="secondary" onClick={logout}>Logout</Button>
           </div>

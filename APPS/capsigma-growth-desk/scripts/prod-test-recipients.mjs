@@ -52,6 +52,10 @@ async function main() {
   if (!login.ok) throw new Error(`Login failed: ${login.status}`)
   const cookie = cookieFrom(login)
   const session = await request('/api/session', {}, cookie)
+  const configuredCcEmails = session.configured.ccEmails || []
+  if (!configuredCcEmails.includes('fejiro.efiuvwere@gmail.com')) {
+    throw new Error('SENDGRID_CC_EMAILS must include fejiro.efiuvwere@gmail.com for proof-copy testing.')
+  }
 
   const stamp = new Date().toISOString().replace(/[:.]/g, '-')
   const results = []
@@ -105,6 +109,7 @@ async function main() {
       status: sent.status,
       providerMessageId: sent.providerMessageId,
       preview: sent.preview,
+      cc: sent.cc || [],
     })
   }
 
@@ -121,6 +126,12 @@ async function main() {
     }
     if (!proof.body.includes('contact sales@capsigma.com')) {
       throw new Error(`Sales reply/contact footer missing in Sent Review for ${result.recipient}`)
+    }
+    if (result.recipient === 'fejiro.efiuvwere@gmail.com' && result.cc.includes('fejiro.efiuvwere@gmail.com')) {
+      throw new Error(`Duplicate Fejiro CC was not removed for ${result.recipient}`)
+    }
+    if (result.recipient !== 'fejiro.efiuvwere@gmail.com' && !result.cc.includes('fejiro.efiuvwere@gmail.com')) {
+      throw new Error(`Fejiro proof-copy CC missing for ${result.recipient}`)
     }
   }
 

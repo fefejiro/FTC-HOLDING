@@ -74,6 +74,7 @@ npx wrangler pages secret put SENDGRID_FROM_EMAIL --project-name capsigma-growth
 npx wrangler pages secret put SENDGRID_FROM_NAME --project-name capsigma-growth-desk
 npx wrangler pages secret put SENDGRID_REPLY_TO_EMAIL --project-name capsigma-growth-desk
 npx wrangler pages secret put SENDGRID_REPLY_TO_NAME --project-name capsigma-growth-desk
+npx wrangler pages secret put SENDGRID_CC_EMAILS --project-name capsigma-growth-desk
 npx wrangler pages secret put DAILY_SEND_LIMIT --project-name capsigma-growth-desk
 ```
 
@@ -97,6 +98,7 @@ npm run deploy
 - Server-owned OpenAI drafting route
 - Human approval before send
 - SendGrid delivery with preview/sent/failed proof events
+- Optional proof-copy CC recipients on each sent email
 - Sent Review tab showing delivered body, provider id, lead background, and source link
 - Placeholder email blocking
 - Daily send limit guardrail
@@ -109,6 +111,7 @@ npm run deploy
 - Production handover is not complete until D1, secrets, SendGrid sender verification, and a real internal smoke test pass.
 - Current production sender is a verified Single Sender: `fejiro.efiuvwere@gmail.com`.
 - Current reply-to/contact address is `sales@capsigma.com`.
+- Current proof-copy CC should include `fejiro.efiuvwere@gmail.com`.
 - Before sustained client outreach, verify `sales@capsigma.com` in SendGrid or authenticate the CapSigma domain for better trust and deliverability.
 - Latest Gmail delivery check confirmed receipt but showed Gmail spam placement for the current Gmail-sender test path.
 - See `ops/PRODUCTION-HANDOVER.md` for the full checklist.

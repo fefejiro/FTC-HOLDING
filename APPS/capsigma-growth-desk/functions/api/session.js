@@ -12,6 +12,10 @@ export async function onRequestGet({ request, env }) {
       sendgrid: Boolean(env.SENDGRID_API_KEY),
       fromEmail: env.SENDGRID_FROM_EMAIL || '',
       replyToEmail: env.SENDGRID_REPLY_TO_EMAIL || env.SENDGRID_FROM_EMAIL || '',
+      ccEmails: String(env.SENDGRID_CC_EMAILS || '')
+        .split(',')
+        .map((email) => email.trim())
+        .filter(Boolean),
       dailySendLimit: Number.parseInt(env.DAILY_SEND_LIMIT || '25', 10),
     },
   })

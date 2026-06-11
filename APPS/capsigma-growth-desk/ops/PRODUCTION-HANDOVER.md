@@ -22,7 +22,7 @@ Latest full live outreach proof: `ops/LIVE-E2E-HARRIS-HEALTH-CORRECTED-2026-06-1
 
 Latest actual external outreach proof: `ops/LIVE-E2E-HARRIS-HEALTH-ACTUAL-2026-06-10T17-37-48Z.json`
 
-Latest recipient delivery proof: `ops/RECIPIENT-TEST-2026-06-11T16-35-57-928Z.json`
+Latest recipient delivery proof: `ops/RECIPIENT-TEST-2026-06-11T17-04-35-361Z.json`
 
 Latest Gmail delivery check: `ops/GMAIL-DELIVERY-CHECK-2026-06-11.md`
 
@@ -75,16 +75,18 @@ SENDGRID_FROM_EMAIL
 SENDGRID_FROM_NAME
 SENDGRID_REPLY_TO_EMAIL
 SENDGRID_REPLY_TO_NAME
+SENDGRID_CC_EMAILS
 DAILY_SEND_LIMIT
 ```
 
 Current Cloudflare production secret state:
 
-- Present: `ADMIN_PASSWORD`, `AUTH_SECRET`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL`, `SENDGRID_FROM_NAME`, `SENDGRID_REPLY_TO_EMAIL`, `SENDGRID_REPLY_TO_NAME`, `DAILY_SEND_LIMIT`
+- Present: `ADMIN_PASSWORD`, `AUTH_SECRET`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL`, `SENDGRID_FROM_NAME`, `SENDGRID_REPLY_TO_EMAIL`, `SENDGRID_REPLY_TO_NAME`, `SENDGRID_CC_EMAILS`, `DAILY_SEND_LIMIT`
 - Missing: none for current production smoke.
 
 Current verified sender: `fejiro.efiuvwere@gmail.com`
 Current reply-to/contact address: `sales@capsigma.com`
+Current proof-copy CC address: `fejiro.efiuvwere@gmail.com`
 Pending preferred sender: `sales@capsigma.com` as the visible `From` address.
 
 Recommended final client upgrade: verify the `sales@capsigma.com` Single Sender
@@ -114,6 +116,7 @@ npx wrangler pages secret put SENDGRID_FROM_EMAIL --project-name capsigma-growth
 npx wrangler pages secret put SENDGRID_FROM_NAME --project-name capsigma-growth-desk
 npx wrangler pages secret put SENDGRID_REPLY_TO_EMAIL --project-name capsigma-growth-desk
 npx wrangler pages secret put SENDGRID_REPLY_TO_NAME --project-name capsigma-growth-desk
+npx wrangler pages secret put SENDGRID_CC_EMAILS --project-name capsigma-growth-desk
 npx wrangler pages secret put DAILY_SEND_LIMIT --project-name capsigma-growth-desk
 npm run deploy
 ```
@@ -137,6 +140,27 @@ npm run prod:doctor
 7. Send approved email.
 8. Confirm Evidence tab records draft and send proof.
 9. Confirm SendGrid activity shows delivery attempt.
+
+## Client Operator Workflow
+
+1. Open the production URL.
+2. Sign in with the admin password.
+3. Import a CSV of real, verified prospects. The desk should not invent leads.
+4. Confirm each prospect has a real company, source, business reason, contact,
+   and email address.
+5. Generate the outreach draft.
+6. Review and edit the subject/body.
+7. Approve the draft.
+8. Send the approved email.
+9. Confirm the Sent Review tab shows the exact sent body, SendGrid provider id,
+   prospect background, source link, and proof-copy CC routing.
+10. Mark replies manually until an inbound reply webhook is added.
+
+For client use, this is currently a single-operator agent/app, not a multi-tenant
+self-serve SaaS. A client can use it by receiving the production URL, admin
+password, CSV template, and operating rules. For multiple client companies,
+create a separate Cloudflare Pages project, D1 database, SendGrid sender/domain,
+and admin password per client so data and proof ledgers stay isolated.
 
 ## 2026-06-10 Production Smoke Result
 
@@ -201,20 +225,24 @@ npm run prod:test-recipients
 - SendGrid configured: true
 - From email: `fejiro.efiuvwere@gmail.com`
 - Reply-to/contact email: `sales@capsigma.com`
+- Proof-copy CC email: `fejiro.efiuvwere@gmail.com`
 - Daily send limit: 25
 - Recipient 1: `sales@capsigma.com`
 - Recipient 1 result: `sent`
-- Recipient 1 provider message id: `4q9Ug1cXTj-GpAgKTH7Pqg`
+- Recipient 1 provider message id: `V69LWW5XR2WmEcll2VTjMA`
+- Recipient 1 CC: `fejiro.efiuvwere@gmail.com`
 - Recipient 2: `fejiro.efiuvwere@gmail.com`
 - Recipient 2 result: `sent`
-- Recipient 2 provider message id: `ONJqccXlSUy8HmAVaWyb6w`
+- Recipient 2 provider message id: `g8Ol3awGSwiX7S7_sWyz1A`
+- Recipient 2 CC: none, because duplicate Fejiro CC is removed when Fejiro is
+  the direct recipient.
 - Sent Review verified: both sent bodies are stored with provider proof and a
   footer contact address of `sales@capsigma.com`.
 - Gmail mailbox check: Fejiro received the message, but Gmail labeled the
   current Gmail-sender test messages as spam. This is a deliverability warning
   and should be resolved with SendGrid sender/domain authentication before
   broad client outreach.
-- Report: `ops/RECIPIENT-TEST-2026-06-11T16-35-57-928Z.json`
+- Report: `ops/RECIPIENT-TEST-2026-06-11T17-04-35-361Z.json`
 
 ## Data Policy
 

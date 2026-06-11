@@ -12,6 +12,25 @@ You received this business outreach because your role may relate to data operati
 To opt out, reply with "unsubscribe" or contact ${fromEmail}.`
 }
 
+export function parseEmailList(value) {
+  return String(value || '')
+    .split(',')
+    .map((email) => email.trim())
+    .filter(Boolean)
+}
+
+export function buildCcRecipients(ccEmails, toEmail) {
+  const seen = new Set([String(toEmail || '').toLowerCase()])
+  return ccEmails
+    .filter((email) => {
+      const normalized = email.toLowerCase()
+      if (seen.has(normalized)) return false
+      seen.add(normalized)
+      return true
+    })
+    .map((email) => ({ email }))
+}
+
 async function recordSendEvent(db, event) {
   await db
     .prepare(
@@ -77,6 +96,7 @@ export async function onRequest(context) {
   const sendgridFromEmail = env.SENDGRID_FROM_EMAIL || ''
   const sendgridReplyToEmail = env.SENDGRID_REPLY_TO_EMAIL || sendgridFromEmail
   const sendgridReplyToName = env.SENDGRID_REPLY_TO_NAME || env.SENDGRID_FROM_NAME || 'CapSigma'
+  const ccRecipients = buildCcRecipients(parseEmailList(env.SENDGRID_CC_EMAILS), lead.email)
   if (!sendgridFromEmail) {
     return json({ error: 'SENDGRID_FROM_EMAIL is not configured' }, { status: 500 })
   }
@@ -148,6 +168,7 @@ export async function onRequest(context) {
       personalizations: [
         {
           to: [{ email: lead.email, name: lead.contact_name || lead.contact_title }],
+          ...(ccRecipients.length ? { cc: ccRecipients } : {}),
         },
       ],
       from: {
@@ -212,7 +233,7 @@ export async function onRequest(context) {
     leadId,
     type: 'send_sent',
     label: `Email sent to ${lead.company}`,
-    metadata: { sendId, providerMessageId },
+    metadata: { sendId, providerMessageId, cc: ccRecipients.map((recipient) => recipient.email) },
   })
 
   return json({
@@ -220,6 +241,7 @@ export async function onRequest(context) {
     preview: false,
     status: 'sent',
     providerMessageId,
+    cc: ccRecipients.map((recipient) => recipient.email),
     message: 'Email sent via SendGrid and recorded as proof.',
   })
 }
