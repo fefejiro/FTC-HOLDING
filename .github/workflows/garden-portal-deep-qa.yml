@@ -1,0 +1,315 @@
+name: Garden Portal Deep QA
+
+on:
+  pull_request:
+    paths:
+      - 'APPS/ftc-site/app/garden-cleaners/**'
+      - 'APPS/ftc-site/app/api/garden-cleaners-*/**'
+      - 'APPS/ftc-site/app/auth/**'
+      - 'APPS/ftc-site/app/components/garden-cleaners/**'
+      - 'APPS/ftc-site/functions/**'
+      - 'APPS/ftc-site/lib/garden*.ts'
+      - 'APPS/ftc-site/lib/garden*.tsx'
+      - 'APPS/ftc-site/middleware.ts'
+      - 'APPS/ftc-site/next.config.js'
+      - 'APPS/ftc-site/package.json'
+      - 'APPS/ftc-site/playwright.config.ts'
+      - 'APPS/ftc-site/public/_worker.js'
+      - 'APPS/ftc-site/public/garden-portal-sw.js'
+      - 'APPS/ftc-site/public/images/garden-cleaners/**'
+      - 'APPS/ftc-site/scripts/qa-garden-auth-callback.mjs'
+      - 'APPS/ftc-site/scripts/smoke-garden-prod.mjs'
+      - 'APPS/ftc-site/scripts/smoke-prod.mjs'
+      - 'APPS/ftc-site/scripts/verify-garden-portal-env.mjs'
+      - 'APPS/ftc-site/scripts/supabase/garden-cleaners/**'
+      - 'APPS/ftc-site/tests/garden*.spec.ts'
+      - 'APPS/ftc-site/docs/*GARDEN*'
+      - 'APPS/ftc-site/docs/garden-*'
+      - 'APPS/ftc-site/docs/QA-CREDENTIALS.md'
+      - 'PACKAGES/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/agents/garden-ci-qa-operator.agent.md'
+      - '.github/workflows/garden-portal-deep-qa.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'APPS/ftc-site/app/garden-cleaners/**'
+      - 'APPS/ftc-site/app/api/garden-cleaners-*/**'
+      - 'APPS/ftc-site/app/auth/**'
+      - 'APPS/ftc-site/app/components/garden-cleaners/**'
+      - 'APPS/ftc-site/functions/**'
+      - 'APPS/ftc-site/lib/garden*.ts'
+      - 'APPS/ftc-site/lib/garden*.tsx'
+      - 'APPS/ftc-site/middleware.ts'
+      - 'APPS/ftc-site/next.config.js'
+      - 'APPS/ftc-site/package.json'
+      - 'APPS/ftc-site/playwright.config.ts'
+      - 'APPS/ftc-site/public/_worker.js'
+      - 'APPS/ftc-site/public/garden-portal-sw.js'
+      - 'APPS/ftc-site/public/images/garden-cleaners/**'
+      - 'APPS/ftc-site/scripts/qa-garden-auth-callback.mjs'
+      - 'APPS/ftc-site/scripts/smoke-garden-prod.mjs'
+      - 'APPS/ftc-site/scripts/smoke-prod.mjs'
+      - 'APPS/ftc-site/scripts/verify-garden-portal-env.mjs'
+      - 'APPS/ftc-site/scripts/supabase/garden-cleaners/**'
+      - 'APPS/ftc-site/tests/garden*.spec.ts'
+      - 'APPS/ftc-site/docs/*GARDEN*'
+      - 'APPS/ftc-site/docs/garden-*'
+      - 'APPS/ftc-site/docs/QA-CREDENTIALS.md'
+      - 'PACKAGES/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/agents/garden-ci-qa-operator.agent.md'
+      - '.github/workflows/garden-portal-deep-qa.yml'
+  workflow_dispatch:
+    inputs:
+      production_smoke:
+        description: Run read-only production Garden route and auth-callback smoke checks
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: garden-portal-deep-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FTC_SITE_DIR: APPS/ftc-site
+
+jobs:
+  build-and-env:
+    name: Env contract + build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+    env:
+      NEXT_PUBLIC_SITE_URL: https://gardencleaners.ca
+      NEXT_PUBLIC_OG_TRADES_SITE_URL: https://www.ogtradesacademy.com
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || secrets.SUPABASE_URL || secrets.UNALABS_SUPABASE_URL || secrets.ANION_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY || secrets.UNALABS_SUPABASE_ANON_KEY || secrets.ANION_SUPABASE_ANON_KEY || 'placeholder-anon-key-for-ci' }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.UNALABS_SUPABASE_SERVICE_ROLE_KEY || secrets.ANION_SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-role-key-for-ci' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Verify Garden portal environment contract
+        run: npm --prefix "$FTC_SITE_DIR" run portal:env:check
+
+      - name: Build ftc-site Garden bundle
+        run: npm --prefix "$FTC_SITE_DIR" run build
+
+      - name: Summarize build gate
+        if: always()
+        run: |
+          {
+            echo "## Garden build and environment gate"
+            echo ""
+            echo "- Environment contract: portal required variables were present for this CI run."
+            echo "- Build: ftc-site Next.js build completed before any deploy step."
+            echo "- Deployment: not part of this workflow."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  anonymous-playwright:
+    name: Anonymous public + portal Playwright
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    env:
+      NEXT_PUBLIC_SITE_URL: http://localhost:3001
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key-for-ci
+      SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key-for-ci
+      CI: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: ${{ env.FTC_SITE_DIR }}
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Garden public and portal smoke specs
+        working-directory: ${{ env.FTC_SITE_DIR }}
+        run: npx playwright test tests/garden-cleaners-public.spec.ts tests/garden-portal.spec.ts --grep-invert "quote form accepts a valid lead" --reporter=line
+
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: garden-anonymous-playwright
+          path: |
+            APPS/ftc-site/playwright-report
+            APPS/ftc-site/test-results
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Summarize anonymous QA gate
+        if: always()
+        run: |
+          {
+            echo "## Garden anonymous Playwright gate"
+            echo ""
+            echo "- Public routes: Garden branding, headings, media, nav, mobile quote routing, and custom-domain host behavior."
+            echo "- Portal smoke: public portal load, CTA visibility, and Oshawa region quote routing."
+            echo "- Quote persistence: intentionally excluded from this anonymous smoke gate."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  credentialed-portal:
+    name: Credentialed portal role QA
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Detect credentialed QA configuration
+        id: credentialed
+        env:
+          GARDEN_QA_AUTH_MODE: ${{ vars.GARDEN_QA_AUTH_MODE || secrets.GARDEN_QA_AUTH_MODE }}
+          GARDEN_QA_PASSWORD: ${{ secrets.GARDEN_QA_PASSWORD }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || secrets.SUPABASE_URL || secrets.UNALABS_SUPABASE_URL || secrets.ANION_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY || secrets.UNALABS_SUPABASE_ANON_KEY || secrets.ANION_SUPABASE_ANON_KEY }}
+        run: |
+          if [[ "$GARDEN_QA_AUTH_MODE" == "password" && -n "$GARDEN_QA_PASSWORD" && -n "$NEXT_PUBLIC_SUPABASE_URL" && -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ]]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "Credentialed Garden QA secrets detected."
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping credentialed Garden QA because the legacy password spec requires GARDEN_QA_AUTH_MODE=password, GARDEN_QA_PASSWORD, and Supabase public env secrets."
+          fi
+
+      - name: Install workspace dependencies
+        if: steps.credentialed.outputs.run == 'true'
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        if: steps.credentialed.outputs.run == 'true'
+        working-directory: ${{ env.FTC_SITE_DIR }}
+        run: npx playwright install --with-deps chromium
+
+      - name: Run credentialed Garden role specs
+        if: steps.credentialed.outputs.run == 'true'
+        working-directory: ${{ env.FTC_SITE_DIR }}
+        env:
+          NEXT_PUBLIC_SITE_URL: http://localhost:3001
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || secrets.SUPABASE_URL || secrets.UNALABS_SUPABASE_URL || secrets.ANION_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY || secrets.UNALABS_SUPABASE_ANON_KEY || secrets.ANION_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.UNALABS_SUPABASE_SERVICE_ROLE_KEY || secrets.ANION_SUPABASE_SERVICE_ROLE_KEY }}
+          GARDEN_QA_AUTH_MODE: password
+          GARDEN_QA_ADMIN_EMAIL: ${{ secrets.GARDEN_QA_ADMIN_EMAIL || 'hello@unalabs.cloud' }}
+          GARDEN_QA_STAFF_EMAIL: ${{ secrets.GARDEN_QA_STAFF_EMAIL || 'garden.staff.qa@gardencleaners.ca' }}
+          GARDEN_QA_CUSTOMER_EMAIL: ${{ secrets.GARDEN_QA_CUSTOMER_EMAIL || 'garden.customer.qa@unalabs.cloud' }}
+          GARDEN_QA_PASSWORD: ${{ secrets.GARDEN_QA_PASSWORD }}
+          CI: true
+        run: npx playwright test tests/garden-portal-credentialed.spec.ts --reporter=line
+
+      - name: Upload credentialed Playwright artifacts
+        if: always() && steps.credentialed.outputs.run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: garden-credentialed-playwright
+          path: |
+            APPS/ftc-site/playwright-report
+            APPS/ftc-site/test-results
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Summarize credentialed QA gate
+        if: always()
+        run: |
+          {
+            echo "## Garden credentialed portal gate"
+            echo ""
+            if [[ "${{ steps.credentialed.outputs.run }}" == "true" ]]; then
+              echo "- Status: ran credentialed customer, staff, and admin role specs."
+            else
+              echo "- Status: skipped."
+              echo "- Reason: requires GARDEN_QA_AUTH_MODE=password, GARDEN_QA_PASSWORD, and Supabase public env secrets."
+              echo "- Google OAuth role QA remains unverified until a CI-safe Google-auth strategy is added."
+            fi
+            echo "- Deployment: not part of this workflow."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  production-readonly-smoke:
+    name: Manual read-only production smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.production_smoke == 'true' }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      UNALABS_SMOKE_PAGES_URL: https://ftc-site-pages.pages.dev
+      UNALABS_SMOKE_GARDEN_URL: https://gardencleaners.ca
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: ${{ env.FTC_SITE_DIR }}
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Garden production route smoke
+        run: npm --prefix "$FTC_SITE_DIR" run garden:smoke:prod
+
+      - name: Run Garden auth callback smoke
+        working-directory: ${{ env.FTC_SITE_DIR }}
+        run: node scripts/qa-garden-auth-callback.mjs
+
+      - name: Summarize production smoke gate
+        if: always()
+        run: |
+          {
+            echo "## Garden read-only production smoke"
+            echo ""
+            echo "- Route smoke: gardencleaners.ca and Garden Pages route checks."
+            echo "- Auth callback smoke: verifies no global crash and fallback CTA navigation."
+            echo "- Deployment: not part of this workflow."
+          } >> "$GITHUB_STEP_SUMMARY"

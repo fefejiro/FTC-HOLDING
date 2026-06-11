@@ -13,7 +13,8 @@ async function run() {
     if (m.type() === "error") errors.push(`console: ${m.text()}`);
   });
 
-  await page.goto(callbackUrl, { waitUntil: "networkidle", timeout: 60000 });
+  await page.goto(callbackUrl, { waitUntil: "domcontentloaded", timeout: 60000 });
+  await page.locator("body").waitFor({ state: "visible", timeout: 15000 });
 
   const body = await page.locator("body").innerText();
   const hasGlobalCrash = /An unexpected error occurred|SOMETHING WENT WRONG/i.test(body);
@@ -34,7 +35,8 @@ async function run() {
   await page.waitForTimeout(1200);
   const afterPrimary = page.url();
 
-  await page.goto(callbackUrl, { waitUntil: "networkidle", timeout: 60000 });
+  await page.goto(callbackUrl, { waitUntil: "domcontentloaded", timeout: 60000 });
+  await page.locator("body").waitFor({ state: "visible", timeout: 15000 });
   const secondaryLinkAfterReload = page.getByRole("link", { name: secondaryLabel }).first();
   await secondaryLinkAfterReload.click({ force: true });
   await page.waitForTimeout(1200);
@@ -55,15 +57,13 @@ async function run() {
   console.log(JSON.stringify(result, null, 2));
   await browser.close();
 
-  const primaryNavigated =
-    (primaryHref === "/portal#portal-access" && /\/portal#portal-access$/i.test(afterPrimary)) ||
-    (primaryHref?.includes("/portal#admin") && /\/portal#admin$/i.test(afterPrimary));
+  const gardenPortalPattern = /gardencleaners\.ca\/(?:garden-cleaners\/)?portal#(?:admin|portal-access|customer|staff)$/i;
+  const primaryHrefOk = typeof primaryHref === "string" && gardenPortalPattern.test(primaryHref);
+  const secondaryHrefOk = typeof secondaryHref === "string" && gardenPortalPattern.test(secondaryHref);
+  const primaryNavigated = gardenPortalPattern.test(afterPrimary);
+  const secondaryNavigated = gardenPortalPattern.test(afterSecondary);
 
-  const secondaryNavigated =
-    (secondaryHref === "/" && /gardencleaners\.ca\/$/i.test(afterSecondary)) ||
-    (secondaryHref?.includes("/portal#portal-access") && /\/portal#portal-access$/i.test(afterSecondary));
-
-  if (hasGlobalCrash || !primaryNavigated || !secondaryNavigated) {
+  if (hasGlobalCrash || !primaryHrefOk || !secondaryHrefOk || !primaryNavigated || !secondaryNavigated) {
     process.exitCode = 1;
   }
 }

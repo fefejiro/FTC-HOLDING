@@ -3,7 +3,8 @@ import { expect, test, type Page } from "@playwright/test";
 const baseUrl = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3001";
 const url = (path: string) => new URL(path, baseUrl).toString();
 
-const qaPassword = process.env.GARDEN_QA_PASSWORD;
+const qaAuthMode = process.env.GARDEN_QA_AUTH_MODE;
+const qaPassword = qaAuthMode === "password" ? process.env.GARDEN_QA_PASSWORD : "";
 
 const accounts = {
   customer: process.env.GARDEN_QA_CUSTOMER_EMAIL || "garden.customer.qa@unalabs.cloud",
@@ -12,7 +13,10 @@ const accounts = {
 };
 
 test.describe("Garden portal credentialed QA", () => {
-  test.skip(!qaPassword, "GARDEN_QA_PASSWORD is required for credentialed portal QA.");
+  test.skip(
+    !qaPassword,
+    "GARDEN_QA_AUTH_MODE=password and GARDEN_QA_PASSWORD are required for legacy password-based portal QA."
+  );
 
   async function signIn(page: Page, email: string) {
     await page.goto(url("/garden-cleaners/portal"), { waitUntil: "domcontentloaded" });

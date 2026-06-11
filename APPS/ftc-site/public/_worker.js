@@ -504,7 +504,7 @@ async function uploadGardenAttachments(env, jobId, attachments) {
     const stamp = `${Date.now()}-${index}`;
     const path = `${jobId}/${stamp}-${name}`;
     const response = await fetch(`${config.supabaseUrl}/storage/v1/object/${GARDEN_ATTACHMENT_BUCKET}/${path}`, {
-      method: "PUT",
+      method: "POST",
       headers: {
         "apikey": config.serviceRoleKey,
         "authorization": `Bearer ${config.serviceRoleKey}`,
@@ -526,6 +526,16 @@ async function uploadGardenAttachments(env, jobId, attachments) {
   }
 
   return uploaded;
+}
+
+function summarizeGardenAttachments(attachments, status) {
+  const files = Array.isArray(attachments) ? attachments.slice(0, GARDEN_MAX_ATTACHMENTS) : [];
+  return files.map((file) => ({
+    name: sanitizeGardenAttachmentName(file?.name || "photo.jpg"),
+    type: normalizeText(file?.type || "image/*") || "image/*",
+    size: Number(file?.size || 0),
+    storage_status: status
+  }));
 }
 
 async function enrichGardenJobs(env, jobs) {
@@ -942,13 +952,15 @@ async function handleGardenJobNote(request, env) {
   }
 
   let uploadedAttachments = [];
+  let attachmentWarning = "";
   try {
     uploadedAttachments = await uploadGardenAttachments(env, jobId, attachments);
   } catch (error) {
     console.warn("garden_cleaners_attachment_upload_failed", JSON.stringify({
       message: error instanceof Error ? error.message : "unknown"
     }));
-    return json({ ok: false, error: "Photo upload failed. Please try again with smaller images." }, 500);
+    uploadedAttachments = summarizeGardenAttachments(attachments, "upload_pending");
+    attachmentWarning = "Message sent. Photos could not be uploaded yet, so their file names were attached for follow-up.";
   }
 
   const action =
@@ -973,7 +985,7 @@ async function handleGardenJobNote(request, env) {
     prefer: "return=minimal"
   });
   if (insertResult instanceof Response) return insertResult;
-  return json({ ok: true });
+  return json({ ok: true, warning: attachmentWarning || undefined });
 }
 
 async function handleGardenJobProgressNote(request, env) {

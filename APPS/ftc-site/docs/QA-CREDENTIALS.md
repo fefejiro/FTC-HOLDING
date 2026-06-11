@@ -21,6 +21,7 @@ Add these to your `.env.local` (see `.env.example`):
 GARDEN_QA_ADMIN_EMAIL=hello@unalabs.cloud
 GARDEN_QA_STAFF_EMAIL=garden.staff.qa@gardencleaners.ca
 GARDEN_QA_CUSTOMER_EMAIL=garden.customer.qa@unalabs.cloud
+GARDEN_QA_AUTH_MODE=password
 GARDEN_QA_PASSWORD=your-local-qa-password
 
 # Optional for Una Labs admin E2E
@@ -53,6 +54,7 @@ on conflict (email) do update set role = 'customer';
 
 ## Running Credentialed E2E Tests
 1. Ensure all required env vars are set in `.env.local`.
+   - `GARDEN_QA_AUTH_MODE=password` is required because this spec is legacy password-based QA, not Google OAuth QA.
 2. Run:
    - `npm run build`
    - `npm run lint`

@@ -11,6 +11,8 @@
     "lint": "next lint",
     "pipeline:update": "node scripts/update-pipeline-stage.mjs",
     "portal:env:check": "node scripts/verify-garden-portal-env.mjs",
+    "garden:worker-contract": "node scripts/qa-garden-worker-contract.mjs",
+    "garden:smoke:prod": "node scripts/smoke-garden-prod.mjs",
     "test:e2e": "playwright test",
     "smoke:prod": "node scripts/smoke-prod.mjs",
     "test": "npm run test:e2e",

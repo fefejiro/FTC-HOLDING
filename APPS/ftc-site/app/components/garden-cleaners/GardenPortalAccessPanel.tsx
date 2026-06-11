@@ -386,7 +386,7 @@ export default function GardenPortalAccessPanel() {
       if (typeof window !== "undefined") {
         window.localStorage.removeItem(`garden-client-draft-${jobId}`);
       }
-      setQueueMessage("Message sent to Garden Cleaners.");
+      setQueueMessage(res.warning || "Message sent to Garden Cleaners.");
     } catch (error: unknown) {
       setQueueMessage(getFriendlyPortalError(error, "I could not send that message yet. Please try again."));
     } finally {
