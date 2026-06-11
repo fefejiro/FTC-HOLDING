@@ -31,7 +31,7 @@ const OG_PUBLIC_PATHS = new Set([
   "/contact"
 ]);
 
-const ROLE_ROUTE_PATTERN = /^\/(?:garden-cleaners\/)?(?:customer|worker|cleaner|staff|admin|operator|dashboard|jobs|bookings|status|login)(?:\/|$)/;
+const ROLE_ROUTE_PATTERN = /^\/(?:garden-cleaners\/)?(?:customer|worker|cleaner|staff|admin|operator|dashboard|jobs|bookings|status)(?:\/|$)/;
 const PUBLIC_AUTH_CONFIG_PATH = "/api/public-auth-config";
 
 const PROPERTY_TYPES = new Set(["House", "Condo / Apartment", "Office", "Retail / Commercial", "Vacant unit", "Other"]);
@@ -1090,7 +1090,7 @@ export default {
 
     const assetPath = gardenAssetPath(normalized);
     if (!assetPath) {
-      return withGardenHeaders(await env.ASSETS.fetch(request));
+      return withRuntimeAuthConfig(withGardenHeaders(await env.ASSETS.fetch(request)), env);
     }
 
     const assetUrl = new URL(request.url);
