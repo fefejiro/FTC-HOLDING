@@ -10,6 +10,8 @@ const PAGES_URL =
   process.env.UNALABS_SMOKE_PAGES_URL ||
   process.env.FTC_SMOKE_PAGES_URL ||
   "";
+const RETRIES = Number.parseInt(process.env.GARDEN_SMOKE_RETRIES || "4", 10);
+const RETRY_DELAY_MS = Number.parseInt(process.env.GARDEN_SMOKE_RETRY_DELAY_MS || "5000", 10);
 
 const gardenChecks = [
   { url: `${GARDEN_URL}/`, expectedStatus: [200] },
@@ -34,14 +36,35 @@ async function request(url, method = "HEAD") {
   });
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function checkRoute(check) {
-  let response = await request(check.url, "HEAD");
-  if (response.status === 405) {
-    response = await request(check.url, "GET");
+  let lastStatus = "REQUEST_FAILED";
+  for (let attempt = 0; attempt <= RETRIES; attempt += 1) {
+    try {
+      let response = await request(check.url, "HEAD");
+      if (response.status === 405) {
+        response = await request(check.url, "GET");
+      }
+      lastStatus = response.status;
+      const ok = check.expectedStatus.includes(response.status);
+      if (ok) {
+        console.log(`PASS ${check.url} -> ${response.status}`);
+        return true;
+      }
+    } catch (error) {
+      lastStatus = error instanceof Error ? error.message : "REQUEST_FAILED";
+    }
+
+    if (attempt < RETRIES) {
+      await sleep(RETRY_DELAY_MS);
+    }
   }
-  const ok = check.expectedStatus.includes(response.status);
-  console.log(`${ok ? "PASS" : "FAIL"} ${check.url} -> ${response.status}`);
-  return ok;
+
+  console.log(`FAIL ${check.url} -> ${lastStatus}`);
+  return false;
 }
 
 async function run() {
