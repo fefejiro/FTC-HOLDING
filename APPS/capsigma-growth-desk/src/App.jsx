@@ -205,6 +205,7 @@ export default function App() {
   const [sends, setSends] = useState([])
   const [prospectRuns, setProspectRuns] = useState([])
   const [replies, setReplies] = useState([])
+  const [mailboxStatus, setMailboxStatus] = useState(null)
   const [selectedLeadId, setSelectedLeadId] = useState('')
   const [csvText, setCsvText] = useState('')
   const [notes, setNotes] = useState('')
@@ -256,16 +257,18 @@ export default function App() {
   }
 
   async function loadData() {
-    const [leadData, activityData, runData, replyData] = await Promise.all([
+    const [leadData, activityData, runData, replyData, mailboxData] = await Promise.all([
       api('/api/leads'),
       api('/api/activity'),
       api('/api/prospect-runs').catch(() => ({ runs: [] })),
       api('/api/replies?attention=1').catch(() => ({ replies: [] })),
+      api('/api/mailbox/gmail/status').catch(() => null),
     ])
     setLeads(leadData.leads || [])
     setActivity(activityData.activity || [])
     setProspectRuns(runData.runs || [])
     setReplies(replyData.replies || [])
+    setMailboxStatus(mailboxData)
     const sendData = await api('/api/sends')
     setSends(sendData.sends || [])
     if (!selectedLeadId && leadData.leads?.length) {
@@ -343,6 +346,40 @@ export default function App() {
       setNotice(`Prospect run imported ${result.imported?.length || 0} prospect(s). Rejected ${result.rejected?.length || 0}.`)
       await loadData()
       setActiveTab('Review Queue')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy('')
+    }
+  }
+
+  async function connectGmail() {
+    setBusy('gmail-connect')
+    setError('')
+    setNotice('')
+    try {
+      const result = await api('/api/mailbox/gmail/start', {
+        method: 'POST',
+        body: '{}',
+      })
+      window.location.href = result.authUrl
+    } catch (err) {
+      setError(err.message)
+      setBusy('')
+    }
+  }
+
+  async function syncGmailReplies() {
+    setBusy('gmail-sync')
+    setError('')
+    setNotice('')
+    try {
+      const result = await api('/api/mailbox/gmail/sync', {
+        method: 'POST',
+        body: '{}',
+      })
+      setNotice(`Gmail sync checked ${result.checked} message(s), imported ${result.imported.length}, duplicates ${result.duplicates.length}.`)
+      await loadData()
     } catch (err) {
       setError(err.message)
     } finally {
@@ -565,6 +602,9 @@ export default function App() {
             </span>
             <span style={{ color: session.configured?.sendgrid ? palette.green : palette.gold }}>
               SendGrid {session.configured?.sendgrid ? 'ready' : 'preview'}
+            </span>
+            <span style={{ color: session.configured?.gmailConnected ? palette.green : session.configured?.gmail ? palette.gold : palette.red }}>
+              Gmail {session.configured?.gmailConnected ? session.configured.gmailEmail : session.configured?.gmail ? 'ready' : 'missing'}
             </span>
             {session.configured?.fromEmail && (
               <span style={{ color: palette.muted }}>From {session.configured.fromEmail}</span>
@@ -882,6 +922,28 @@ export default function App() {
 
         {activeTab === 'Replies' && (
           <section style={{ display: 'grid', gap: 14 }}>
+            <Card>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: 20 }}>Mailbox reply monitor</h2>
+                  <div style={{ color: palette.muted, marginTop: 6, lineHeight: 1.6 }}>
+                    {mailboxStatus?.connected
+                      ? `Connected to ${mailboxStatus.email}. Last sync: ${formatTime(mailboxStatus.lastSyncAt)}.`
+                      : mailboxStatus?.configured
+                        ? `Gmail OAuth is configured. Connect Fejiro Gmail to start automatic reply sync. Redirect URI: ${mailboxStatus.redirectUri}`
+                        : 'Gmail OAuth is not configured yet. Add Google OAuth secrets and a token encryption key.'}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <Button variant="secondary" onClick={connectGmail} disabled={busy === 'gmail-connect' || !mailboxStatus?.configured}>
+                    {busy === 'gmail-connect' ? 'Connecting...' : mailboxStatus?.connected ? 'Reconnect Gmail' : 'Connect Gmail'}
+                  </Button>
+                  <Button onClick={syncGmailReplies} disabled={busy === 'gmail-sync' || !mailboxStatus?.connected}>
+                    {busy === 'gmail-sync' ? 'Syncing...' : 'Sync replies'}
+                  </Button>
+                </div>
+              </div>
+            </Card>
             {replies.map((reply) => (
               <Card key={reply.id}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 340px) 1fr', gap: 18 }}>

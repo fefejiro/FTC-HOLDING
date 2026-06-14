@@ -11,6 +11,8 @@ import {
   scanDraftQuality,
   validateLead,
 } from '../functions/_lib/validation.js'
+import { decryptSecret, encryptSecret } from '../functions/_lib/crypto.js'
+import { messageToReply, parseEmailAddress } from '../functions/_lib/gmail.js'
 import { classifyReply } from '../functions/_lib/replies.js'
 import { buildCcRecipients, parseEmailList, resolveRecipients } from '../functions/api/send-email.js'
 
@@ -138,4 +140,35 @@ test('reply classifier flags positive replies for human attention', () => {
 
   assert.equal(reply.classification, 'positive')
   assert.equal(reply.needsHuman, true)
+})
+
+test('encrypts and decrypts mailbox secrets', async () => {
+  const encrypted = await encryptSecret('refresh-token-value', 'local-test-secret')
+  assert.notEqual(encrypted, 'refresh-token-value')
+  assert.equal(await decryptSecret(encrypted, 'local-test-secret'), 'refresh-token-value')
+})
+
+test('parses Gmail sender headers into reply records', () => {
+  assert.deepEqual(parseEmailAddress('"Jane Doe" <jane@example.com>'), {
+    name: 'Jane Doe',
+    email: 'jane@example.com',
+  })
+
+  const reply = messageToReply({
+    id: 'gmail_msg_1',
+    threadId: 'thread_1',
+    snippet: 'This looks interesting. Can we book time?',
+    payload: {
+      headers: [
+        { name: 'From', value: '"Jane Doe" <jane@example.com>' },
+        { name: 'Subject', value: 'Re: CapSigma pilot' },
+        { name: 'Date', value: 'Fri, 12 Jun 2026 10:00:00 -0400' },
+      ],
+    },
+  })
+
+  assert.equal(reply.provider, 'gmail')
+  assert.equal(reply.messageId, 'gmail_msg_1')
+  assert.equal(reply.fromEmail, 'jane@example.com')
+  assert.equal(reply.subject, 'Re: CapSigma pilot')
 })

@@ -78,6 +78,11 @@ npx wrangler pages secret put SENDGRID_CC_EMAILS --project-name capsigma-growth-
 npx wrangler pages secret put OUTBOUND_RECIPIENT_OVERRIDE --project-name capsigma-growth-desk
 npx wrangler pages secret put AUTO_SEND_MIN_FIT_SCORE --project-name capsigma-growth-desk
 npx wrangler pages secret put OPENAI_PROSPECT_MODEL --project-name capsigma-growth-desk
+npx wrangler pages secret put GMAIL_CLIENT_ID --project-name capsigma-growth-desk
+npx wrangler pages secret put GMAIL_CLIENT_SECRET --project-name capsigma-growth-desk
+npx wrangler pages secret put GMAIL_REDIRECT_URI --project-name capsigma-growth-desk
+npx wrangler pages secret put TOKEN_ENCRYPTION_KEY --project-name capsigma-growth-desk
+npx wrangler pages secret put REPLY_SYNC_TOKEN --project-name capsigma-growth-desk
 npx wrangler pages secret put DAILY_SEND_LIMIT --project-name capsigma-growth-desk
 ```
 
@@ -93,6 +98,19 @@ npm run sendgrid:set-secret
 npm run deploy
 ```
 
+If Google rejects the production Gmail callback with `redirect_uri_mismatch`, use
+the existing Job Reply Agent Gmail token or the local loopback connector instead:
+
+```bash
+npm run gmail:import-job-token
+npm run gmail:connect-local
+npm run prod:sync-replies
+```
+
+The import command reuses the already-approved local Gmail grant when it is still
+valid. The local connector uses the already-authorized local Gmail OAuth
+callback, then imports the encrypted mailbox token into production.
+
 ## What Is Included
 
 - Admin login with signed HttpOnly session cookie
@@ -105,7 +123,7 @@ npm run deploy
 - SendGrid delivery with needs_review/sandbox_sent/live_sent/failed proof events
 - Optional proof-copy CC recipients on each sent email
 - Sent Review tab showing delivered body, provider id, source link, intended recipient, and actual recipient
-- Reply attention queue for synced replies that need human action
+- Gmail reply monitor with encrypted token storage and a reply attention queue for synced replies that need human action
 - Placeholder email blocking
 - Daily send limit guardrail
 - Industry intelligence playbook
@@ -123,5 +141,6 @@ npm run deploy
 - No-DNS handover is available once the client verifies `hello@capsigma.com` in SendGrid; see `ops/NO-DNS-CLIENT-HANDOVER.md`.
 - SendGrid authenticated domain for `capsigma.com` has been created as an optional stronger upgrade; DNS records are in `ops/SENDGRID-DNS-RECORDS-2026-06-11.md`.
 - Latest Gmail delivery check confirmed receipt but showed Gmail spam placement for the current Gmail-sender test path.
+- Gmail production OAuth callback currently needs Google Console allow-listing; use `npm run gmail:connect-local` for the no-console local connector path.
 - See `ops/AUTO-OUTREACH-SANDBOX.md` for the current test-to-live workflow.
 - See `ops/PRODUCTION-HANDOVER.md` for the full checklist.

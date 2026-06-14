@@ -30,6 +30,10 @@ Latest recipient delivery proof: `ops/RECIPIENT-TEST-2026-06-11T17-04-35-361Z.js
 
 Latest Gmail delivery check: `ops/GMAIL-DELIVERY-CHECK-2026-06-11.md`
 
+Latest Gmail reply monitor evidence:
+
+- `ops/GMAIL-REPLY-MONITOR-2026-06-14.md`
+
 Latest SendGrid domain-auth evidence:
 
 - `ops/SENDGRID-DOMAIN-AUTH-2026-06-11T17-26-42Z.json`
@@ -68,6 +72,9 @@ Internal workflow name: CapSigma Outreach Agent.
 - [x] SendGrid API key configured.
 - [x] Verified sender configured in SendGrid.
 - [x] Production smoke test completed with one internal test lead.
+- [x] Gmail reply monitor routes added with encrypted mailbox token storage.
+- [x] Existing Job Reply Agent Gmail token import command added.
+- [x] Local loopback Gmail connector added for the current Google redirect allow-list mismatch.
 - [x] No-DNS client handover path documented.
 - [x] SendGrid authenticated domain created for `capsigma.com`.
 - [ ] Client clicks the SendGrid verification email for `hello@capsigma.com`.
@@ -106,11 +113,16 @@ SENDGRID_CC_EMAILS
 OUTBOUND_RECIPIENT_OVERRIDE
 AUTO_SEND_MIN_FIT_SCORE
 DAILY_SEND_LIMIT
+GMAIL_CLIENT_ID
+GMAIL_CLIENT_SECRET
+GMAIL_REDIRECT_URI
+TOKEN_ENCRYPTION_KEY
+REPLY_SYNC_TOKEN
 ```
 
 Current Cloudflare production secret state:
 
-- Present: `ADMIN_PASSWORD`, `AUTH_SECRET`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_PROSPECT_MODEL`, `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL`, `SENDGRID_FROM_NAME`, `SENDGRID_REPLY_TO_EMAIL`, `SENDGRID_REPLY_TO_NAME`, `SENDGRID_CC_EMAILS`, `OUTBOUND_RECIPIENT_OVERRIDE`, `AUTO_SEND_MIN_FIT_SCORE`, `DAILY_SEND_LIMIT`
+- Present: `ADMIN_PASSWORD`, `AUTH_SECRET`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_PROSPECT_MODEL`, `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL`, `SENDGRID_FROM_NAME`, `SENDGRID_REPLY_TO_EMAIL`, `SENDGRID_REPLY_TO_NAME`, `SENDGRID_CC_EMAILS`, `OUTBOUND_RECIPIENT_OVERRIDE`, `AUTO_SEND_MIN_FIT_SCORE`, `DAILY_SEND_LIMIT`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REDIRECT_URI`, `TOKEN_ENCRYPTION_KEY`, `REPLY_SYNC_TOKEN`
 - Missing: none for current production smoke.
 
 Current verified sender: `fejiro.efiuvwere@gmail.com`
@@ -159,6 +171,11 @@ npx wrangler pages secret put SENDGRID_REPLY_TO_NAME --project-name capsigma-gro
 npx wrangler pages secret put SENDGRID_CC_EMAILS --project-name capsigma-growth-desk
 npx wrangler pages secret put OUTBOUND_RECIPIENT_OVERRIDE --project-name capsigma-growth-desk
 npx wrangler pages secret put AUTO_SEND_MIN_FIT_SCORE --project-name capsigma-growth-desk
+npx wrangler pages secret put GMAIL_CLIENT_ID --project-name capsigma-growth-desk
+npx wrangler pages secret put GMAIL_CLIENT_SECRET --project-name capsigma-growth-desk
+npx wrangler pages secret put GMAIL_REDIRECT_URI --project-name capsigma-growth-desk
+npx wrangler pages secret put TOKEN_ENCRYPTION_KEY --project-name capsigma-growth-desk
+npx wrangler pages secret put REPLY_SYNC_TOKEN --project-name capsigma-growth-desk
 npx wrangler pages secret put DAILY_SEND_LIMIT --project-name capsigma-growth-desk
 npm run deploy
 ```
@@ -263,6 +280,10 @@ Repeatable commands:
 npm run prod:doctor
 npm run prod:smoke
 npm run prod:test-recipients
+npm run gmail:import-job-token
+npm run gmail:connect-local
+npm run prod:sync-replies
+npm run prod:doctor
 npm run sendgrid:domain-status
 ```
 
@@ -301,7 +322,8 @@ LinkedIn Sales Navigator export, or another approved vendor/source.
 
 ## Known Limitations
 
-- Reply tracking has an ingestion/classification ledger; full Outlook OAuth polling is not yet implemented.
+- Gmail reply monitoring is implemented for the sandbox mailbox through encrypted token storage. The production OAuth callback still needs Google Console redirect allow-listing; until then, use `npm run gmail:connect-local`.
+- Outlook OAuth polling is not implemented.
 - No multi-user roles yet; the current release is single-operator admin access.
 - Compliance is basic transactional-provider outbound compliance, not a full cold-email compliance suite.
 - Rate limiting should be added before broad campaign volume.

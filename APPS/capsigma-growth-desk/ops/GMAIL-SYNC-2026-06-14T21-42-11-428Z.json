@@ -1,0 +1,73 @@
+{
+  "status": 200,
+  "baseUrl": "https://capsigma-growth-desk.pages.dev",
+  "provider": "gmail",
+  "email": "fejiro.efiuvwere@gmail.com",
+  "query": "in:inbox newer_than:14d",
+  "checked": 10,
+  "imported": [
+    {
+      "id": "reply_f08976e4-6969-4ab3-ab15-d95b62d7e275",
+      "classification": "needs_human",
+      "needsHuman": true,
+      "match": null
+    },
+    {
+      "id": "reply_6a9c60b2-2daa-47f7-a3e6-daba5cb29e17",
+      "classification": "needs_human",
+      "needsHuman": true,
+      "match": null
+    },
+    {
+      "id": "reply_2541a63a-1c68-41df-974e-cba121213cad",
+      "classification": "needs_human",
+      "needsHuman": true,
+      "match": null
+    },
+    {
+      "id": "reply_b5642933-df12-4bb7-940f-5b3c46abffa9",
+      "classification": "needs_human",
+      "needsHuman": true,
+      "match": null
+    },
+    {
+      "id": "reply_8b58f3c5-3493-4175-a9d8-69a6327ce91f",
+      "classification": "needs_human",
+      "needsHuman": true,
+      "match": null
+    },
+    {
+      "id": "reply_a9f393fb-2789-4830-bd62-bf3f0aed20de",
+      "classification": "needs_human",
+      "needsHuman": true,
+      "match": null
+    },
+    {
+      "id": "reply_93cc3a3f-250d-4d5f-83c3-529c45ccf0ff",
+      "classification": "needs_human",
+      "needsHuman": true,
+      "match": null
+    },
+    {
+      "id": "reply_13516e54-533f-42b0-8370-85ab45edda6a",
+      "classification": "needs_human",
+      "needsHuman": true,
+      "match": null
+    },
+    {
+      "id": "reply_ebbd8099-332a-4a5b-9452-c999bde0acce",
+      "classification": "needs_human",
+      "needsHuman": true,
+      "match": null
+    },
+    {
+      "id": "reply_fd205864-45c5-4804-ba90-b439253d1a75",
+      "classification": "needs_human",
+      "needsHuman": true,
+      "match": null
+    }
+  ],
+  "duplicates": [],
+  "rejected": [],
+  "syncedAt": "2026-06-14T21:42:11.519Z"
+}

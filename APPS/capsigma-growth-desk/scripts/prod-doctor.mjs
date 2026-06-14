@@ -18,6 +18,10 @@ async function main() {
   if (data.configured?.sandboxMode && !data.configured?.recipientOverride) {
     failures.push('Sandbox mode is enabled without a recipient override.')
   }
+  if (!data.configured?.gmail) warnings.push('Gmail OAuth is not configured; reply sync is manual ingestion only.')
+  if (data.configured?.gmail && !data.configured?.gmailConnected) {
+    warnings.push('Gmail OAuth is configured but no mailbox is connected yet.')
+  }
   if (!data.configured?.sendgrid) {
     const message = 'SENDGRID_API_KEY is not configured; production is preview-send only.'
     if (requireSendGrid) failures.push(message)
