@@ -11,26 +11,29 @@ That means the client only needs to verify the mailbox that will send outreach,
 such as:
 
 ```text
-sales@capsigma.com
+hello@capsigma.com
 ```
 
 No DNS records are required for this mode.
 
 ## What The Client Must Do Once
 
-1. Open the SendGrid verification email sent to `sales@capsigma.com`.
+1. Open the SendGrid verification email sent to `hello@capsigma.com`.
 2. Click the verification link.
 3. Tell the operator/dev team it is verified.
 
 After that, production can be switched to:
 
 ```text
-SENDGRID_FROM_EMAIL=sales@capsigma.com
+SENDGRID_FROM_EMAIL=hello@capsigma.com
 SENDGRID_FROM_NAME=CapSigma
-SENDGRID_REPLY_TO_EMAIL=sales@capsigma.com
-SENDGRID_REPLY_TO_NAME=CapSigma Sales
+SENDGRID_REPLY_TO_EMAIL=hello@capsigma.com
+SENDGRID_REPLY_TO_NAME=CapSigma
 SENDGRID_CC_EMAILS=fejiro.efiuvwere@gmail.com
 ```
+
+Also remove `OUTBOUND_RECIPIENT_OVERRIDE` after sandbox approval so live emails
+go to the intended prospect recipients.
 
 Then run:
 
@@ -43,7 +46,8 @@ npm run prod:test-recipients
 
 - Production URL
 - Admin password
-- CSV template
+- Prospect Builder
+- Optional CSV template
 - Operating guide
 - Evidence/proof tabs inside the app
 - Daily send limit
@@ -53,15 +57,13 @@ npm run prod:test-recipients
 ## How The Client Uses It
 
 1. Sign in.
-2. Import a CSV of verified prospects.
-3. Select a prospect.
-4. Generate draft.
-5. Review the subject and body.
-6. Approve the draft.
-7. Send.
-8. Check Sent Review for the exact email body, provider id, background, and source.
-9. Watch `sales@capsigma.com` for replies.
-10. Mark replies manually in the app.
+2. Run Prospect Builder with a target industry/query.
+3. Review source-backed prospects.
+4. Swipe right/click send for eligible matches.
+5. Swipe left/click edit for prospects needing review.
+6. Check Sent Review for exact body, provider id, background, source,
+   intended recipient, and actual recipient.
+7. Watch the Replies tab for human-attention replies.
 
 ## CSV Template
 
@@ -77,15 +79,15 @@ Green:
 - The app sends real email through SendGrid.
 - The app records provider proof.
 - The operator can review the sent body later.
-- Replies go to `sales@capsigma.com`.
+- Replies go to `hello@capsigma.com`.
 - Fejiro can receive proof-copy CC.
 
 Yellow:
 
 - Inbox placement is not guaranteed by any app.
 - Single Sender is easier than DNS, but weaker than full domain authentication.
-- Replies are tracked manually for now.
-- Lead research/import is still operator-controlled.
+- Reply sync/classification is available, with full Outlook polling still a follow-up.
+- Public prospect research depends on OpenAI web search availability.
 
 Optional later upgrade:
 
@@ -95,9 +97,9 @@ Optional later upgrade:
 
 This no-DNS handover is acceptable when:
 
-- `sales@capsigma.com` is verified in SendGrid.
+- `hello@capsigma.com` is verified in SendGrid.
 - `prod:doctor` passes.
 - `prod:test-recipients` sends successfully.
-- A test email to `sales@capsigma.com` records provider proof.
+- A test email to `hello@capsigma.com` records provider proof.
 - Fejiro receives proof-copy CC.
 - The client understands inbox placement depends on sender reputation and mailbox filtering.

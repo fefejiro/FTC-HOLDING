@@ -57,12 +57,13 @@ async function main() {
         company: `CapSigma Internal Smoke ${stamp}`,
         industry: 'Technology and SaaS',
         fitScore: 91,
-        reason: 'Internal QA lead to verify import, AI draft, approval gate, and proof logging.',
+        reason: 'Internal QA lead to verify import, AI draft, auto-send eligibility, admin processing fit, and proof logging.',
         contactName: 'Fejiro QA',
         contactTitle: 'Internal QA Owner',
         email: leadEmail,
         sourceUrl: baseUrl,
         source: 'production smoke test',
+        serviceLane: 'admin_processing',
       },
     ],
   }
@@ -76,15 +77,6 @@ async function main() {
   const draft = await request('/api/draft', {
     method: 'POST',
     body: JSON.stringify({ leadId, notes: 'Internal smoke test. Keep the tone short and safe.' }),
-  }, cookie)
-
-  const approved = await request(`/api/leads/${leadId}`, {
-    method: 'PATCH',
-    body: JSON.stringify({
-      status: 'approved',
-      draftSubject: draft.data.draftSubject,
-      draftBody: draft.data.draftBody,
-    }),
   }, cookie)
 
   const sent = await request('/api/send-email', {
@@ -104,9 +96,11 @@ async function main() {
     rejectedCount: imported.data.rejected.length,
     draftCreated: Boolean(draft.data.draftId),
     draftId: draft.data.draftId,
-    approved: Boolean(approved.data.ok),
     sendStatus: sent.data.status,
     preview: sent.data.preview,
+    sandbox: sent.data.sandbox,
+    intendedRecipient: sent.data.intendedRecipient,
+    actualRecipient: sent.data.actualRecipient,
     sendId: sent.data.sendId,
     activityCount: activity.data.activity.length,
     latestActivity: activity.data.activity.slice(0, 5),

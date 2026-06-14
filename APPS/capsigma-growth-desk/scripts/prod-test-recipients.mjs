@@ -8,7 +8,7 @@ const recipients = (process.env.CAPSIGMA_TEST_RECIPIENTS || '')
   .filter(Boolean)
 
 if (!recipients.length) {
-  recipients.push('sales@capsigma.com', 'fejiro.efiuvwere@gmail.com')
+  recipients.push('fejiro.efiuvwere@gmail.com')
 }
 
 const handoffPath = path.join(process.cwd(), '.local', 'capsigma-secrets-handoff.txt')
@@ -67,13 +67,14 @@ async function main() {
           company: `CapSigma Recipient Test ${recipient} ${stamp}`,
           industry: 'Internal delivery QA',
           fitScore: 100,
-          reason: `Internal production delivery test for ${recipient}. This verifies SendGrid delivery, reply-to routing, D1 proof logging, and Sent Review visibility.`,
-          contactName: recipient,
-          contactTitle: 'Delivery QA recipient',
-          email: recipient,
-          sourceUrl: baseUrl,
-          source: 'production recipient delivery test',
-        },
+        reason: `Internal production delivery test for ${recipient}. This verifies SendGrid delivery, reply-to routing, admin processing fit, D1 proof logging, and Sent Review visibility.`,
+        contactName: recipient,
+        contactTitle: 'Delivery QA recipient',
+        email: recipient,
+        sourceUrl: baseUrl,
+        source: 'production recipient delivery test',
+        serviceLane: 'admin_processing',
+      },
       ],
     }
 
@@ -86,15 +87,7 @@ async function main() {
       method: 'POST',
       body: JSON.stringify({
         leadId,
-        notes: `Internal CapSigma delivery test to ${recipient}. Keep short. State that reply-to should route to sales@capsigma.com.`,
-      }),
-    }, cookie)
-    await request(`/api/leads/${leadId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        status: 'approved',
-        draftSubject: `CapSigma delivery test for ${recipient}`,
-        draftBody: `Hello,\n\nThis is a CapSigma production delivery test for ${recipient}.\n\nIt verifies that the Growth Desk can send through SendGrid, store the sent body, and show provider proof in Sent Review.\n\nReplies should route to sales@capsigma.com.\n\nBest regards,\n\nNiyi Olumide, PMP, CSM\nGeneral Manager, CapSigma`,
+        notes: `Internal CapSigma delivery test to ${recipient}. Keep short. State that reply-to should route to hello@capsigma.com when live mode is enabled.`,
       }),
     }, cookie)
     const sent = await request('/api/send-email', {
@@ -109,6 +102,9 @@ async function main() {
       status: sent.status,
       providerMessageId: sent.providerMessageId,
       preview: sent.preview,
+      sandbox: sent.sandbox,
+      intendedRecipient: sent.intendedRecipient,
+      actualRecipient: sent.actualRecipient,
       cc: sent.cc || [],
     })
   }
@@ -116,7 +112,7 @@ async function main() {
   const sends = await request('/api/sends', {}, cookie)
   const proofBySendId = new Map(sends.sends.map((send) => [send.id, send]))
   for (const result of results) {
-    if (result.status !== 'sent' || result.preview) {
+    if (!['sent', 'sandbox_sent', 'live_sent'].includes(result.status) || result.preview) {
       throw new Error(`Recipient ${result.recipient} was not sent: ${JSON.stringify(result)}`)
     }
     const proof = proofBySendId.get(result.sendId)
@@ -124,13 +120,16 @@ async function main() {
     if (!proof.providerMessageId) {
       throw new Error(`Provider message id missing in Sent Review for ${result.recipient}`)
     }
-    if (!proof.body.includes('contact sales@capsigma.com')) {
-      throw new Error(`Sales reply/contact footer missing in Sent Review for ${result.recipient}`)
+    if (!proof.intendedRecipient || !proof.actualRecipient) {
+      throw new Error(`Intended/actual recipient proof missing for ${result.recipient}`)
     }
-    if (result.recipient === 'fejiro.efiuvwere@gmail.com' && result.cc.includes('fejiro.efiuvwere@gmail.com')) {
+    if (!proof.body.includes('contact ')) {
+      throw new Error(`Reply/contact footer missing in Sent Review for ${result.recipient}`)
+    }
+    if (result.actualRecipient === 'fejiro.efiuvwere@gmail.com' && result.cc.includes('fejiro.efiuvwere@gmail.com')) {
       throw new Error(`Duplicate Fejiro CC was not removed for ${result.recipient}`)
     }
-    if (result.recipient !== 'fejiro.efiuvwere@gmail.com' && !result.cc.includes('fejiro.efiuvwere@gmail.com')) {
+    if (result.actualRecipient !== 'fejiro.efiuvwere@gmail.com' && !result.cc.includes('fejiro.efiuvwere@gmail.com')) {
       throw new Error(`Fejiro proof-copy CC missing for ${result.recipient}`)
     }
   }

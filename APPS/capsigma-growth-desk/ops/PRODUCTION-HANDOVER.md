@@ -1,9 +1,10 @@
 # CapSigma Growth Desk Production Handover
 
-Status: production deployed with verified SendGrid sending. No-DNS client
-handover is available after the client verifies `sales@capsigma.com` in
-SendGrid. SendGrid domain authentication is created as an optional stronger
-deliverability upgrade and is pending DNS records.
+Status: production deployed with verified SendGrid sending. Current operating
+mode is Fejiro sandbox auto-outreach: real prospect context, real SendGrid
+delivery, actual delivery to `fejiro.efiuvwere@gmail.com`, and intended
+recipient preserved in proof. No-DNS live handover is available after the client
+verifies `hello@capsigma.com` in SendGrid.
 
 Production URL: https://capsigma-growth-desk.pages.dev
 
@@ -41,7 +42,9 @@ No-DNS handover guide:
 
 ## What This Is
 
-CapSigma Growth Desk is an operator-controlled outreach desk for real lead import, AI-assisted draft generation, human approval, SendGrid delivery, and durable proof logging.
+CapSigma Growth Desk is an operator-controlled outreach desk for source-backed
+prospect discovery, AI-assisted draft generation, eligibility-gated auto-send,
+SendGrid delivery, reply attention, and durable proof logging.
 
 Internal workflow name: CapSigma Outreach Agent.
 
@@ -51,10 +54,12 @@ Internal workflow name: CapSigma Outreach Agent.
 - [x] Admin login boundary.
 - [x] Server-side D1 persistence model.
 - [x] Real lead CSV import.
+- [x] Source-backed Prospect Builder.
 - [x] Server-owned OpenAI drafting prompt.
-- [x] Human approval before send.
+- [x] Eligibility-gated auto-send for matching prospects.
+- [x] Fejiro sandbox recipient override.
 - [x] Placeholder email blocking.
-- [x] SendGrid preview/sent/failed proof events.
+- [x] SendGrid needs_review/sandbox_sent/live_sent/failed proof events.
 - [x] Local unit validation.
 - [x] Production client build.
 - [x] Cloudflare D1 database created and real database_id added to wrangler.toml.
@@ -65,9 +70,10 @@ Internal workflow name: CapSigma Outreach Agent.
 - [x] Production smoke test completed with one internal test lead.
 - [x] No-DNS client handover path documented.
 - [x] SendGrid authenticated domain created for `capsigma.com`.
-- [ ] Client clicks the SendGrid verification email for `sales@capsigma.com`.
-- [ ] Production From switched to `sales@capsigma.com`.
-- [ ] Recipient/Gmail placement rechecked after `sales@capsigma.com` verification.
+- [ ] Client clicks the SendGrid verification email for `hello@capsigma.com`.
+- [ ] Production From/Reply-To switched to `hello@capsigma.com`.
+- [ ] `OUTBOUND_RECIPIENT_OVERRIDE` removed after sandbox approval.
+- [ ] Recipient/Gmail placement rechecked after `hello@capsigma.com` verification.
 - [ ] Optional: SendGrid DNS records added at the `capsigma.com` DNS host.
 - [ ] Optional: SendGrid domain authentication validated.
 - [ ] Client-provided real lead source connected or imported.
@@ -90,31 +96,36 @@ ADMIN_PASSWORD
 AUTH_SECRET
 OPENAI_API_KEY
 OPENAI_MODEL
+OPENAI_PROSPECT_MODEL
 SENDGRID_API_KEY
 SENDGRID_FROM_EMAIL
 SENDGRID_FROM_NAME
 SENDGRID_REPLY_TO_EMAIL
 SENDGRID_REPLY_TO_NAME
 SENDGRID_CC_EMAILS
+OUTBOUND_RECIPIENT_OVERRIDE
+AUTO_SEND_MIN_FIT_SCORE
 DAILY_SEND_LIMIT
 ```
 
 Current Cloudflare production secret state:
 
-- Present: `ADMIN_PASSWORD`, `AUTH_SECRET`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL`, `SENDGRID_FROM_NAME`, `SENDGRID_REPLY_TO_EMAIL`, `SENDGRID_REPLY_TO_NAME`, `SENDGRID_CC_EMAILS`, `DAILY_SEND_LIMIT`
+- Present: `ADMIN_PASSWORD`, `AUTH_SECRET`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_PROSPECT_MODEL`, `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL`, `SENDGRID_FROM_NAME`, `SENDGRID_REPLY_TO_EMAIL`, `SENDGRID_REPLY_TO_NAME`, `SENDGRID_CC_EMAILS`, `OUTBOUND_RECIPIENT_OVERRIDE`, `AUTO_SEND_MIN_FIT_SCORE`, `DAILY_SEND_LIMIT`
 - Missing: none for current production smoke.
 
 Current verified sender: `fejiro.efiuvwere@gmail.com`
-Current reply-to/contact address: `sales@capsigma.com`
+Current reply-to/contact address: `fejiro.efiuvwere@gmail.com`
+Current actual recipient override: `fejiro.efiuvwere@gmail.com`
 Current proof-copy CC address: `fejiro.efiuvwere@gmail.com`
-Pending preferred sender: `sales@capsigma.com` as the visible `From` address.
+Pending preferred sender: `hello@capsigma.com` as the visible `From` address.
 Pending authenticated domain id: `31406421`
 
-Recommended no-DNS handover path: client verifies the `sales@capsigma.com`
+Recommended no-DNS handover path: client verifies the `hello@capsigma.com`
 Single Sender request in SendGrid by clicking the verification email. After
-that, production can switch the visible From address to `sales@capsigma.com`.
-Until then, SendGrid sends from the verified Gmail sender and routes
-replies/unsubscribe contact to `sales@capsigma.com`.
+that, production can switch the visible From/Reply-To address to
+`hello@capsigma.com` and remove `OUTBOUND_RECIPIENT_OVERRIDE`. Until then,
+SendGrid sends from the verified Gmail sender and routes all actual sandbox
+delivery to Fejiro while preserving intended recipients in proof.
 
 Optional DNS records for stronger domain authentication are documented in:
 
@@ -139,12 +150,15 @@ npx wrangler pages secret put ADMIN_PASSWORD --project-name capsigma-growth-desk
 npx wrangler pages secret put AUTH_SECRET --project-name capsigma-growth-desk
 npx wrangler pages secret put OPENAI_API_KEY --project-name capsigma-growth-desk
 npx wrangler pages secret put OPENAI_MODEL --project-name capsigma-growth-desk
+npx wrangler pages secret put OPENAI_PROSPECT_MODEL --project-name capsigma-growth-desk
 npx wrangler pages secret put SENDGRID_API_KEY --project-name capsigma-growth-desk
 npx wrangler pages secret put SENDGRID_FROM_EMAIL --project-name capsigma-growth-desk
 npx wrangler pages secret put SENDGRID_FROM_NAME --project-name capsigma-growth-desk
 npx wrangler pages secret put SENDGRID_REPLY_TO_EMAIL --project-name capsigma-growth-desk
 npx wrangler pages secret put SENDGRID_REPLY_TO_NAME --project-name capsigma-growth-desk
 npx wrangler pages secret put SENDGRID_CC_EMAILS --project-name capsigma-growth-desk
+npx wrangler pages secret put OUTBOUND_RECIPIENT_OVERRIDE --project-name capsigma-growth-desk
+npx wrangler pages secret put AUTO_SEND_MIN_FIT_SCORE --project-name capsigma-growth-desk
 npx wrangler pages secret put DAILY_SEND_LIMIT --project-name capsigma-growth-desk
 npm run deploy
 ```
@@ -162,27 +176,27 @@ npm run prod:doctor
 1. Open production URL.
 2. Login with `ADMIN_PASSWORD`.
 3. Confirm status chips show D1 and OpenAI ready.
-4. Import one internal test lead with a real owned test email address.
+4. Import one internal test lead with a real owned test email address or run Prospect Builder.
 5. Generate draft.
-6. Edit and approve draft.
-7. Send approved email.
+6. Send eligible prospect through sandbox mode.
 8. Confirm Evidence tab records draft and send proof.
-9. Confirm SendGrid activity shows delivery attempt.
+9. Confirm Sent Review shows intended recipient and actual Fejiro recipient.
+10. Confirm SendGrid activity shows delivery attempt.
 
 ## Client Operator Workflow
 
 1. Open the production URL.
 2. Sign in with the admin password.
-3. Import a CSV of real, verified prospects. The desk should not invent leads.
+3. Run Prospect Builder or import a CSV of real, verified prospects.
 4. Confirm each prospect has a real company, source, business reason, contact,
    and email address.
-5. Generate the outreach draft.
-6. Review and edit the subject/body.
-7. Approve the draft.
-8. Send the approved email.
-9. Confirm the Sent Review tab shows the exact sent body, SendGrid provider id,
-   prospect background, source link, and proof-copy CC routing.
-10. Mark replies manually until an inbound reply webhook is added.
+5. Use Review Queue.
+6. Swipe right/click send for eligible matches.
+7. Swipe left/click edit for prospects that need review.
+8. Confirm the Sent Review tab shows exact sent body, SendGrid provider id,
+   prospect background, source link, intended recipient, actual recipient, and
+   proof-copy CC routing.
+9. Use Replies for human-attention messages after reply sync/import.
 
 For client use, this is currently a single-operator agent/app, not a multi-tenant
 self-serve SaaS. A client can use it by receiving the production URL, admin
@@ -281,11 +295,13 @@ npm run sendgrid:domain-status
 
 ## Data Policy
 
-The app does not invent production leads. Lead rows must come from a real source such as client CSV, manual research, CRM export, Apollo, LinkedIn Sales Navigator export, or another approved vendor/source.
+The app must not invent production leads. Prospects must come from public
+source-backed web research, client CSV, manual research, CRM export, Apollo,
+LinkedIn Sales Navigator export, or another approved vendor/source.
 
 ## Known Limitations
 
-- Reply tracking is manual/status-based for now; inbound email webhook is not implemented.
+- Reply tracking has an ingestion/classification ledger; full Outlook OAuth polling is not yet implemented.
 - No multi-user roles yet; the current release is single-operator admin access.
 - Compliance is basic transactional-provider outbound compliance, not a full cold-email compliance suite.
 - Rate limiting should be added before broad campaign volume.

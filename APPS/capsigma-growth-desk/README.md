@@ -1,6 +1,6 @@
 # CapSigma Growth Desk
 
-Operator-controlled growth desk for CapSigma lead import, AI-assisted outreach drafting, human approval, SendGrid sending, and durable proof logging on Cloudflare Pages Functions + D1.
+Operator-controlled growth desk for CapSigma prospect discovery, AI-assisted outreach drafting, eligibility-gated auto-send, SendGrid delivery, reply attention, and durable proof logging on Cloudflare Pages Functions + D1.
 
 Internal workflow name: **CapSigma Outreach Agent**.
 
@@ -75,6 +75,9 @@ npx wrangler pages secret put SENDGRID_FROM_NAME --project-name capsigma-growth-
 npx wrangler pages secret put SENDGRID_REPLY_TO_EMAIL --project-name capsigma-growth-desk
 npx wrangler pages secret put SENDGRID_REPLY_TO_NAME --project-name capsigma-growth-desk
 npx wrangler pages secret put SENDGRID_CC_EMAILS --project-name capsigma-growth-desk
+npx wrangler pages secret put OUTBOUND_RECIPIENT_OVERRIDE --project-name capsigma-growth-desk
+npx wrangler pages secret put AUTO_SEND_MIN_FIT_SCORE --project-name capsigma-growth-desk
+npx wrangler pages secret put OPENAI_PROSPECT_MODEL --project-name capsigma-growth-desk
 npx wrangler pages secret put DAILY_SEND_LIMIT --project-name capsigma-growth-desk
 ```
 
@@ -93,13 +96,16 @@ npm run deploy
 ## What Is Included
 
 - Admin login with signed HttpOnly session cookie
+- Source-backed Prospect Builder for public web research
 - CSV import for real leads
 - D1-backed lead pipeline and proof ledger
 - Server-owned OpenAI drafting route
-- Human approval before send
-- SendGrid delivery with preview/sent/failed proof events
+- Eligibility-gated auto-send for matching prospects
+- Fejiro sandbox recipient override before live CapSigma sending
+- SendGrid delivery with needs_review/sandbox_sent/live_sent/failed proof events
 - Optional proof-copy CC recipients on each sent email
-- Sent Review tab showing delivered body, provider id, lead background, and source link
+- Sent Review tab showing delivered body, provider id, source link, intended recipient, and actual recipient
+- Reply attention queue for synced replies that need human action
 - Placeholder email blocking
 - Daily send limit guardrail
 - Industry intelligence playbook
@@ -109,10 +115,13 @@ npm run deploy
 - The app no longer ships with fake production leads.
 - If `SENDGRID_API_KEY` is missing, sends are recorded as preview proof only.
 - Production handover is not complete until D1, secrets, SendGrid sender verification, and a real internal smoke test pass.
-- Current production sender is a verified Single Sender: `fejiro.efiuvwere@gmail.com`.
-- Current reply-to/contact address is `sales@capsigma.com`.
+- Current sandbox sender/reply/contact address is `fejiro.efiuvwere@gmail.com`.
+- Current sandbox actual recipient override is `fejiro.efiuvwere@gmail.com`.
+- Intended prospect recipients are still preserved in Sent Review proof.
 - Current proof-copy CC should include `fejiro.efiuvwere@gmail.com`.
-- No-DNS handover is available once the client verifies `sales@capsigma.com` in SendGrid; see `ops/NO-DNS-CLIENT-HANDOVER.md`.
+- Live handover switches From/Reply-To to `hello@capsigma.com` after Mike confirms sandbox quality.
+- No-DNS handover is available once the client verifies `hello@capsigma.com` in SendGrid; see `ops/NO-DNS-CLIENT-HANDOVER.md`.
 - SendGrid authenticated domain for `capsigma.com` has been created as an optional stronger upgrade; DNS records are in `ops/SENDGRID-DNS-RECORDS-2026-06-11.md`.
 - Latest Gmail delivery check confirmed receipt but showed Gmail spam placement for the current Gmail-sender test path.
+- See `ops/AUTO-OUTREACH-SANDBOX.md` for the current test-to-live workflow.
 - See `ops/PRODUCTION-HANDOVER.md` for the full checklist.

@@ -5,6 +5,25 @@ const PLACEHOLDER_EMAIL_PATTERNS = [
   /example\./i,
 ]
 
+const SERVICE_LANE_KEYWORDS = [
+  ['admin_processing', ['admin processing', 'administrative support', 'back office', 'back-office', 'operations support']],
+  ['forms_records_digitization', ['forms', 'records', 'digitization', 'document intake', 'document processing']],
+  ['data_cleanup', ['data cleanup', 'data cleansing', 'data enrichment', 'crm cleanup', 'data quality']],
+  ['transaction_processing', ['transaction processing', 'invoice', 'ap ', 'ar ', 'reconciliation', 'payment processing']],
+  ['non_clinical_support', ['non-clinical', 'referral', 'insurance verification', 'scheduling records']],
+  ['back_office_operations', ['workflow', 'processing workflows', 'operational processing', 'operations data']],
+]
+
+const FORBIDDEN_DRAFT_PATTERNS = [
+  { pattern: /\b(e+)?u+m+\b/i, reason: 'Draft contains filler text.' },
+  { pattern: /\beem+\b/i, reason: 'Draft contains filler text.' },
+  { pattern: /[\u2013\u2014]/, reason: 'Draft contains non-ASCII dash punctuation.' },
+  { pattern: /--+/, reason: 'Draft contains repeated dash filler.' },
+  { pattern: /__+/, reason: 'Draft contains repeated underscore filler.' },
+  { pattern: /\[[^\]]+\]/, reason: 'Draft contains bracketed placeholder text.' },
+  { pattern: /\b(your|insert|placeholder)\s+(name|email|phone|contact|company)\b/i, reason: 'Draft contains placeholder language.' },
+]
+
 export function slugify(value) {
   return String(value || '')
     .toLowerCase()
@@ -23,6 +42,13 @@ export function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim())
 }
 
+export function normalizeFitScore(value) {
+  const parsed = Number.parseFloat(String(value ?? '').trim())
+  if (!Number.isFinite(parsed) || parsed <= 0) return 0
+  const scaled = parsed <= 10 ? parsed * 10 : parsed
+  return Math.round(scaled)
+}
+
 export function normalizeLead(input = {}) {
   const company = String(input.company || '').trim()
   const contactTitle = String(input.contactTitle || input.contact_title || input.contact || '').trim()
@@ -34,13 +60,20 @@ export function normalizeLead(input = {}) {
     id: String(input.id || `lead_${slugify(idSeed)}`).slice(0, 96),
     company,
     industry: String(input.industry || '').trim(),
-    fit_score: Number.parseInt(input.fitScore || input.fit_score || 0, 10) || 0,
+    fit_score: normalizeFitScore(input.fitScore || input.fit_score || 0),
     reason: String(input.reason || '').trim(),
     contact_name: String(input.contactName || input.contact_name || '').trim(),
     contact_title: contactTitle,
     email,
     source_url: sourceUrl,
     source: String(input.source || '').trim(),
+    service_lane: String(input.serviceLane || input.service_lane || '').trim(),
+    research_summary: String(input.researchSummary || input.research_summary || '').trim(),
+    evidence_json: typeof input.evidenceJson === 'string'
+      ? input.evidenceJson
+      : JSON.stringify(input.evidence || input.evidence_json || {}),
+    review_status: String(input.reviewStatus || input.review_status || '').trim(),
+    discovery_run_id: String(input.discoveryRunId || input.discovery_run_id || '').trim(),
     status: String(input.status || 'new').trim() || 'new',
   }
 }
@@ -55,12 +88,76 @@ export function validateLead(lead) {
   return errors
 }
 
+export function sanitizeOutreachText(text) {
+  return String(text || '')
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2013\u2014]/g, '-')
+    .replace(/--+/g, '-')
+    .replace(/__+/g, '')
+    .replace(/\b(e+)?u+m+\b/gi, '')
+    .replace(/\beem+\b/gi, '')
+    .replace(/\[[^\]]*(contact|email|phone|name|title|information|company)[^\]]*\]/gi, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+export function scanDraftQuality(subject = '', body = '') {
+  const text = `${subject}\n${body}`
+  const issues = FORBIDDEN_DRAFT_PATTERNS
+    .filter(({ pattern }) => pattern.test(text))
+    .map(({ reason }) => reason)
+  return {
+    ok: issues.length === 0,
+    issues: [...new Set(issues)],
+  }
+}
+
+export function inferServiceLane(lead = {}) {
+  const explicit = String(lead.service_lane || lead.serviceLane || '').trim()
+  if (explicit) return explicit
+
+  const haystack = [
+    lead.industry,
+    lead.reason,
+    lead.research_summary,
+    lead.source,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  for (const [lane, keywords] of SERVICE_LANE_KEYWORDS) {
+    if (keywords.some((keyword) => haystack.includes(keyword))) return lane
+  }
+
+  return ''
+}
+
 export function canSendLead(lead) {
   if (!lead?.email) return { ok: false, reason: 'Lead has no email address.' }
   if (!isValidEmail(lead.email)) return { ok: false, reason: 'Lead email is invalid.' }
   if (isPlaceholderEmail(lead.email)) {
     return { ok: false, reason: 'Lead email appears to be a placeholder.' }
   }
-  if (!lead.draft_body) return { ok: false, reason: 'Lead has no approved draft.' }
+  if (!lead.draft_body) return { ok: false, reason: 'Lead has no draft.' }
+  const draftQuality = scanDraftQuality(lead.draft_subject || '', lead.draft_body)
+  if (!draftQuality.ok) return { ok: false, reason: draftQuality.issues.join(' ') }
   return { ok: true, reason: '' }
+}
+
+export function canAutoSendLead(lead, { suppressed = false, minFitScore = 60 } = {}) {
+  const base = canSendLead(lead)
+  if (!base.ok) return base
+  if (suppressed) return { ok: false, reason: 'Recipient is suppressed.' }
+  if (!lead.source_url) return { ok: false, reason: 'Lead has no public source URL.' }
+  if ((Number.parseInt(lead.fit_score || lead.fitScore || 0, 10) || 0) < minFitScore) {
+    return { ok: false, reason: `Fit score is below ${minFitScore}.` }
+  }
+  const lane = inferServiceLane(lead)
+  if (!lane) {
+    return { ok: false, reason: 'Lead does not match a CapSigma service lane.' }
+  }
+  return { ok: true, reason: '', serviceLane: lane }
 }

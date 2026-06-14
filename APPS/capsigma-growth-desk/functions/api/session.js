@@ -12,6 +12,9 @@ export async function onRequestGet({ request, env }) {
       sendgrid: Boolean(env.SENDGRID_API_KEY),
       fromEmail: env.SENDGRID_FROM_EMAIL || '',
       replyToEmail: env.SENDGRID_REPLY_TO_EMAIL || env.SENDGRID_FROM_EMAIL || '',
+      recipientOverride: env.OUTBOUND_RECIPIENT_OVERRIDE || '',
+      sandboxMode: Boolean(env.OUTBOUND_RECIPIENT_OVERRIDE),
+      autoSendMinFitScore: Number.parseInt(env.AUTO_SEND_MIN_FIT_SCORE || '60', 10),
       ccEmails: String(env.SENDGRID_CC_EMAILS || '')
         .split(',')
         .map((email) => email.trim())

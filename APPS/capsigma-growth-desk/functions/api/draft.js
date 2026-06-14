@@ -1,13 +1,14 @@
 import { requireAuth } from '../_lib/auth.js'
 import { addActivity, getDb, getLead, newId, nowIso } from '../_lib/db.js'
 import { json, methodNotAllowed, readJson } from '../_lib/json.js'
+import { sanitizeOutreachText, scanDraftQuality } from '../_lib/validation.js'
 
 const signature = `Best regards,
 
 Niyi Olumide, PMP, CSM
 General Manager, CapSigma`
 
-const systemPrompt = `You write concise business development outreach for CapSigma, a data operations company. CapSigma's positioning: Your data, our discipline. Services include forms and records digitization, operational and transaction processing, data cleansing and enrichment, non-clinical administrative support, and financial transaction processing. Differentiators: disciplined process design, versioned delivery guides, accuracy targets, HIPAA-aligned controls when relevant, West Africa delivery capacity with GMT/WAT overlap, and a no-cost pilot entry point. Write as Niyi Olumide, PMP, CSM. Be direct, useful, specific, and human. Do not fabricate a relationship, do not imply a prior conversation, and do not overpromise. Use plain ASCII punctuation. Never include bracketed placeholders. End with this exact signature:
+const systemPrompt = `You write concise business development outreach for CapSigma, a data operations company. CapSigma's positioning: Your data, our discipline. Services include forms and records digitization, operational and transaction processing, data cleansing and enrichment, non-clinical administrative support, and financial transaction processing. Differentiators: disciplined process design, versioned delivery guides, accuracy targets, HIPAA-aligned controls when relevant, West Africa delivery capacity with GMT/WAT overlap, and a no-cost pilot entry point. Write as Niyi Olumide, PMP, CSM. Be direct, useful, specific, and human. Do not fabricate a relationship, do not imply a prior conversation, and do not overpromise. Use plain ASCII punctuation. Do not use em dashes, repeated dashes, underscores, filler words like umm or eem, or bracketed placeholders. End with this exact signature:
 ${signature}`
 
 function leadPrompt(lead, notes = '') {
@@ -19,6 +20,8 @@ Contact name: ${lead.contact_name || 'Unknown'}
 Contact title: ${lead.contact_title || 'Unknown'}
 Known problem / fit reason: ${lead.reason || 'Operational data quality and processing needs'}
 Source URL: ${lead.source_url || 'Not provided'}
+Service lane: ${lead.service_lane || 'Infer from the fit reason'}
+Research summary: ${lead.research_summary || 'None'}
 Operator notes: ${notes || 'None'}
 
 Return exactly:
@@ -28,23 +31,17 @@ Subject: <short subject>
 }
 
 function parseDraft(text, company) {
-  const clean = String(text || '').trim()
+  const clean = sanitizeOutreachText(text)
   const subjectMatch = clean.match(/^Subject:\s*(.+)$/im)
-  const subject = subjectMatch
-    ? subjectMatch[1].trim()
-    : `CapSigma pilot for ${company}`
+  const subject = sanitizeOutreachText(
+    subjectMatch ? subjectMatch[1].trim() : `CapSigma pilot for ${company}`,
+  )
   const body = clean.replace(/^Subject:\s*.+\n*/i, '').trim()
   return { subject, body: cleanDraftBody(body || clean) }
 }
 
 function cleanDraftBody(text) {
-  let body = String(text || '')
-    .replace(/[’‘]/g, "'")
-    .replace(/[“”]/g, '"')
-    .replace(/[–—]/g, '-')
-    .replace(/\[[^\]]*(contact|email|phone|name|title|information)[^\]]*\]/gi, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
+  let body = sanitizeOutreachText(text)
 
   if (!body.includes('Niyi Olumide')) {
     body = `${body}\n\n${signature}`
@@ -55,7 +52,7 @@ function cleanDraftBody(text) {
     signature,
   )
 
-  return body
+  return sanitizeOutreachText(body)
 }
 
 export async function onRequest(context) {
@@ -109,6 +106,14 @@ export async function onRequest(context) {
 
   const content = data?.choices?.[0]?.message?.content || ''
   const draft = parseDraft(content, lead.company)
+  const quality = scanDraftQuality(draft.subject, draft.body)
+  if (!quality.ok) {
+    return json(
+      { error: 'Generated draft failed quality checks', issues: quality.issues },
+      { status: 422 },
+    )
+  }
+
   const now = nowIso()
   const draftId = newId('draft')
 

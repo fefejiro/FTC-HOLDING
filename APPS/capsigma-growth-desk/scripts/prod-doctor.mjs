@@ -15,6 +15,9 @@ async function main() {
   if (!data.configured?.database) failures.push('CAPSIGMA_DB is not configured.')
   if (!data.configured?.openai) failures.push('OPENAI_API_KEY is not configured.')
   if (!data.configured?.fromEmail) failures.push('SENDGRID_FROM_EMAIL is not configured.')
+  if (data.configured?.sandboxMode && !data.configured?.recipientOverride) {
+    failures.push('Sandbox mode is enabled without a recipient override.')
+  }
   if (!data.configured?.sendgrid) {
     const message = 'SENDGRID_API_KEY is not configured; production is preview-send only.'
     if (requireSendGrid) failures.push(message)

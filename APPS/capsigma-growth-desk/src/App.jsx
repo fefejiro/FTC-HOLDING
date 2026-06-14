@@ -39,8 +39,11 @@ const statusLabels = {
   qualified: 'Qualified',
   drafted: 'Drafted',
   approved: 'Approved',
+  needs_review: 'Needs review',
   preview_ready: 'Preview proof',
   sent: 'Sent',
+  sandbox_sent: 'Sandbox sent',
+  live_sent: 'Live sent',
   replied: 'Replied',
   not_fit: 'Not fit',
   do_not_contact: 'Do not contact',
@@ -200,11 +203,16 @@ export default function App() {
   const [leads, setLeads] = useState([])
   const [activity, setActivity] = useState([])
   const [sends, setSends] = useState([])
+  const [prospectRuns, setProspectRuns] = useState([])
+  const [replies, setReplies] = useState([])
   const [selectedLeadId, setSelectedLeadId] = useState('')
   const [csvText, setCsvText] = useState('')
   const [notes, setNotes] = useState('')
   const [draftSubject, setDraftSubject] = useState('')
   const [draftBody, setDraftBody] = useState('')
+  const [prospectQuery, setProspectQuery] = useState('Find healthcare, real estate, logistics, and finance companies with records, data cleanup, transaction processing, or back-office workflow needs')
+  const [prospectIndustries, setProspectIndustries] = useState('Healthcare, Real Estate, Logistics, Financial Services, Retail')
+  const [prospectLimit, setProspectLimit] = useState(5)
   const [busy, setBusy] = useState('')
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
@@ -218,11 +226,12 @@ export default function App() {
     () => [
       { label: 'Leads', value: leads.length },
       { label: 'Drafted', value: metricValue(leads, 'drafted') },
-      { label: 'Approved', value: metricValue(leads, 'approved') },
-      { label: 'Sent', value: metricValue(leads, 'sent') },
-      { label: 'Replies', value: leads.filter((lead) => lead.replyType).length },
+      { label: 'Sandbox sent', value: metricValue(leads, 'sandbox_sent') },
+      { label: 'Live sent', value: metricValue(leads, 'live_sent') + metricValue(leads, 'sent') },
+      { label: 'Needs review', value: metricValue(leads, 'needs_review') },
+      { label: 'Human replies', value: replies.filter((reply) => reply.needsHuman).length },
     ],
-    [leads],
+    [leads, replies],
   )
 
   useEffect(() => {
@@ -247,12 +256,16 @@ export default function App() {
   }
 
   async function loadData() {
-    const [leadData, activityData] = await Promise.all([
+    const [leadData, activityData, runData, replyData] = await Promise.all([
       api('/api/leads'),
       api('/api/activity'),
+      api('/api/prospect-runs').catch(() => ({ runs: [] })),
+      api('/api/replies?attention=1').catch(() => ({ replies: [] })),
     ])
     setLeads(leadData.leads || [])
     setActivity(activityData.activity || [])
+    setProspectRuns(runData.runs || [])
+    setReplies(replyData.replies || [])
     const sendData = await api('/api/sends')
     setSends(sendData.sends || [])
     if (!selectedLeadId && leadData.leads?.length) {
@@ -310,6 +323,33 @@ export default function App() {
     }
   }
 
+  async function runProspectDiscovery() {
+    if (!prospectQuery.trim()) {
+      setError('Enter a prospect research query first.')
+      return
+    }
+    setBusy('prospect')
+    setError('')
+    setNotice('')
+    try {
+      const result = await api('/api/prospect-runs', {
+        method: 'POST',
+        body: JSON.stringify({
+          query: prospectQuery,
+          industries: prospectIndustries,
+          maxResults: prospectLimit,
+        }),
+      })
+      setNotice(`Prospect run imported ${result.imported?.length || 0} prospect(s). Rejected ${result.rejected?.length || 0}.`)
+      await loadData()
+      setActiveTab('Review Queue')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy('')
+    }
+  }
+
   async function generateDraft() {
     if (!selectedLead) return
     setBusy('draft')
@@ -360,11 +400,70 @@ export default function App() {
     setError('')
     setNotice('')
     try {
+      await api(`/api/leads/${selectedLead.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          status: selectedLead.status,
+          draftSubject,
+          draftBody,
+        }),
+      })
       const result = await api('/api/send-email', {
         method: 'POST',
         body: JSON.stringify({ leadId: selectedLead.id }),
       })
-      setNotice(result.preview ? 'Preview proof recorded. Configure SendGrid to deliver.' : 'Email sent and proof recorded.')
+      setNotice(result.sandbox
+        ? `Sandbox email sent to ${result.actualRecipient}; intended recipient ${result.intendedRecipient}.`
+        : result.preview
+          ? 'Proof recorded. Configure SendGrid to deliver.'
+          : 'Email sent and proof recorded.')
+      await loadData()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy('')
+    }
+  }
+
+  async function autoSendLead(lead) {
+    if (!lead) return
+    setBusy(`auto-${lead.id}`)
+    setError('')
+    setNotice('')
+    try {
+      if (!lead.draftBody) {
+        await api('/api/draft', {
+          method: 'POST',
+          body: JSON.stringify({ leadId: lead.id, notes: 'Auto-outreach candidate. Keep direct, specific, and human.' }),
+        })
+      }
+      const result = await api('/api/send-email', {
+        method: 'POST',
+        body: JSON.stringify({ leadId: lead.id }),
+      })
+      setNotice(result.sandbox
+        ? `Sandbox email sent to ${result.actualRecipient}; intended recipient ${result.intendedRecipient}.`
+        : `Live email sent to ${result.actualRecipient}.`)
+      await loadData()
+    } catch (err) {
+      setError(err.message)
+      await loadData().catch(() => {})
+    } finally {
+      setBusy('')
+    }
+  }
+
+  async function markNeedsEdit(lead) {
+    if (!lead) return
+    setBusy(`edit-${lead.id}`)
+    setError('')
+    setNotice('')
+    try {
+      await api(`/api/leads/${lead.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'needs_review' }),
+      })
+      setNotice(`${lead.company} moved to review/edit.`)
       await loadData()
     } catch (err) {
       setError(err.message)
@@ -476,13 +575,16 @@ export default function App() {
             {session.configured?.ccEmails?.length > 0 && (
               <span style={{ color: palette.muted }}>CC {session.configured.ccEmails.join(', ')}</span>
             )}
+            {session.configured?.sandboxMode && (
+              <span style={{ color: palette.gold }}>Sandbox to {session.configured.recipientOverride}</span>
+            )}
             <Button variant="secondary" onClick={loadData}>Refresh</Button>
             <Button variant="secondary" onClick={logout}>Logout</Button>
           </div>
         </header>
 
         <nav style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {['Pipeline', 'Outreach', 'Sent Review', 'Import', 'Intelligence', 'Evidence'].map((tab) => (
+          {['Pipeline', 'Prospect Builder', 'Review Queue', 'Outreach', 'Sent Review', 'Replies', 'Import', 'Intelligence', 'Evidence'].map((tab) => (
             <Button
               key={tab}
               variant={activeTab === tab ? 'primary' : 'secondary'}
@@ -563,6 +665,89 @@ export default function App() {
           </Card>
         )}
 
+        {activeTab === 'Prospect Builder' && (
+          <section style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 520px) 1fr', gap: 18 }}>
+            <Card>
+              <h2 style={{ marginTop: 0, fontSize: 20 }}>Build source-backed prospects</h2>
+              <p style={{ color: palette.muted, lineHeight: 1.6 }}>
+                Research public sources, save prospects with evidence, and route valid matches into the auto-outreach queue.
+              </p>
+              <div style={{ display: 'grid', gap: 14 }}>
+                <Field label="Research query">
+                  <textarea value={prospectQuery} onChange={(event) => setProspectQuery(event.target.value)} rows={5} style={inputStyle} />
+                </Field>
+                <Field label="Industries">
+                  <input value={prospectIndustries} onChange={(event) => setProspectIndustries(event.target.value)} style={inputStyle} />
+                </Field>
+                <Field label="Maximum prospects">
+                  <input type="number" min="1" max="10" value={prospectLimit} onChange={(event) => setProspectLimit(event.target.value)} style={inputStyle} />
+                </Field>
+                <Button onClick={runProspectDiscovery} disabled={busy === 'prospect'}>
+                  {busy === 'prospect' ? 'Researching...' : 'Find prospects'}
+                </Button>
+              </div>
+            </Card>
+            <Card>
+              <h2 style={{ marginTop: 0, fontSize: 20 }}>Recent research runs</h2>
+              <div style={{ display: 'grid', gap: 12 }}>
+                {prospectRuns.map((run) => (
+                  <div key={run.id} style={{ borderTop: `1px solid ${palette.line}`, paddingTop: 12 }}>
+                    <div style={{ fontWeight: 800 }}>{run.query}</div>
+                    <div style={{ color: palette.muted, lineHeight: 1.6 }}>{run.summary || 'No summary recorded.'}</div>
+                    <div style={{ color: palette.muted, fontSize: 13 }}>
+                      Imported {run.importedCount} | Rejected {run.rejectedCount} | {formatTime(run.createdAt)}
+                    </div>
+                  </div>
+                ))}
+                {!prospectRuns.length && <div style={{ color: palette.muted }}>No prospect runs yet.</div>}
+              </div>
+            </Card>
+          </section>
+        )}
+
+        {activeTab === 'Review Queue' && (
+          <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 14 }}>
+            {leads
+              .filter((lead) => !['sandbox_sent', 'live_sent', 'sent', 'do_not_contact', 'not_fit'].includes(lead.status))
+              .map((lead) => (
+                <Card key={lead.id}>
+                  <div style={{ display: 'grid', gap: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                      <h2 style={{ margin: 0, fontSize: 19 }}>{lead.company}</h2>
+                      <span style={{ color: lead.fitScore >= 60 ? palette.green : palette.gold, fontWeight: 800 }}>
+                        {lead.fitScore}
+                      </span>
+                    </div>
+                    <div style={{ color: palette.muted }}>{lead.industry || 'Unknown industry'}</div>
+                    <div>{lead.contactName || lead.contactTitle || 'Contact not named'}</div>
+                    <div style={{ color: palette.muted }}>{lead.email || 'No public email yet'}</div>
+                    <div style={{ color: palette.muted, lineHeight: 1.6 }}>{lead.reason || lead.researchSummary || 'No background recorded.'}</div>
+                    {lead.serviceLane && <div>Lane: {lead.serviceLane}</div>}
+                    {lead.reviewStatus && <div style={{ color: palette.gold }}>{lead.reviewStatus}</div>}
+                    {lead.sourceUrl && (
+                      <a href={lead.sourceUrl} target="_blank" rel="noreferrer" style={{ color: palette.blue }}>
+                        Source/background
+                      </a>
+                    )}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      <Button variant="secondary" onClick={() => markNeedsEdit(lead)} disabled={busy === `edit-${lead.id}`}>
+                        Swipe left: edit
+                      </Button>
+                      <Button onClick={() => autoSendLead(lead)} disabled={busy === `auto-${lead.id}`}>
+                        {busy === `auto-${lead.id}` ? 'Working...' : 'Swipe right: send'}
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            {!leads.filter((lead) => !['sandbox_sent', 'live_sent', 'sent', 'do_not_contact', 'not_fit'].includes(lead.status)).length && (
+              <Card>
+                <div style={{ color: palette.muted }}>No prospects waiting in the review queue.</div>
+              </Card>
+            )}
+          </section>
+        )}
+
         {activeTab === 'Outreach' && (
           <section style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 380px) 1fr', gap: 18 }}>
             <Card>
@@ -623,7 +808,7 @@ export default function App() {
             </Card>
 
             <Card>
-              <h2 style={{ marginTop: 0, fontSize: 20 }}>Review and approve</h2>
+              <h2 style={{ marginTop: 0, fontSize: 20 }}>Draft and send</h2>
               <div style={{ display: 'grid', gap: 14 }}>
                 <Field label="Subject">
                   <input value={draftSubject} onChange={(event) => setDraftSubject(event.target.value)} style={inputStyle} />
@@ -635,12 +820,12 @@ export default function App() {
                   <Button variant="secondary" onClick={approveDraft} disabled={!selectedLead || !draftSubject || !draftBody || busy === 'approve'}>
                     {busy === 'approve' ? 'Approving...' : 'Approve draft'}
                   </Button>
-                  <Button onClick={sendEmail} disabled={!selectedLead || selectedLead.status !== 'approved' || busy === 'send'}>
-                    {busy === 'send' ? 'Sending...' : 'Send approved email'}
+                  <Button onClick={sendEmail} disabled={!selectedLead || !draftSubject || !draftBody || busy === 'send'}>
+                    {busy === 'send' ? 'Sending...' : 'Send if eligible'}
                   </Button>
                 </div>
                 <div style={{ color: palette.muted, lineHeight: 1.6 }}>
-                  Sending is blocked until the draft is approved. Placeholder emails and suppressed recipients are blocked server-side.
+                  Eligible prospects can send without manual approval. Placeholder emails, suppressed recipients, missing sources, low fit, and bad drafts are blocked server-side.
                 </div>
               </div>
             </Card>
@@ -653,11 +838,13 @@ export default function App() {
               <Card key={send.id}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 360px) 1fr', gap: 18 }}>
                   <div style={{ display: 'grid', gap: 10 }}>
-                    <div style={{ color: send.status === 'sent' ? palette.green : send.status === 'failed' ? palette.red : palette.gold, fontWeight: 800 }}>
+                    <div style={{ color: ['sent', 'sandbox_sent', 'live_sent'].includes(send.status) ? palette.green : send.status === 'failed' ? palette.red : palette.gold, fontWeight: 800 }}>
                       {send.status.toUpperCase()}
                     </div>
                     <h2 style={{ margin: 0, fontSize: 20 }}>{send.company || 'Unknown lead'}</h2>
-                    <div>To: {send.toEmail}</div>
+                    <div>Actual recipient: {send.actualRecipient || send.toEmail}</div>
+                    <div>Intended recipient: {send.intendedRecipient || send.toEmail}</div>
+                    {send.sandbox && <div style={{ color: palette.gold }}>Sandbox proof delivery</div>}
                     <div>Contact: {send.contactName || send.contactTitle || '-'}</div>
                     <div>Fit: {send.fitScore || 0}</div>
                     <div>Sent: {formatTime(send.createdAt)}</div>
@@ -688,6 +875,41 @@ export default function App() {
             {!sends.length && (
               <Card>
                 <div style={{ color: palette.muted }}>No send events yet.</div>
+              </Card>
+            )}
+          </section>
+        )}
+
+        {activeTab === 'Replies' && (
+          <section style={{ display: 'grid', gap: 14 }}>
+            {replies.map((reply) => (
+              <Card key={reply.id}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 340px) 1fr', gap: 18 }}>
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    <div style={{ color: reply.needsHuman ? palette.gold : palette.muted, fontWeight: 800 }}>
+                      {reply.classification || 'reply'}
+                    </div>
+                    <h2 style={{ margin: 0, fontSize: 20 }}>{reply.company || reply.fromEmail}</h2>
+                    <div>From: {reply.fromName || reply.fromEmail}</div>
+                    <div>Received: {formatTime(reply.receivedAt || reply.createdAt)}</div>
+                    {reply.sourceUrl && (
+                      <a href={reply.sourceUrl} target="_blank" rel="noreferrer" style={{ color: palette.blue }}>
+                        Source/background
+                      </a>
+                    )}
+                  </div>
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    <div style={{ fontWeight: 800 }}>{reply.subject || '(no subject)'}</div>
+                    <pre style={{ whiteSpace: 'pre-wrap', margin: 0, lineHeight: 1.55, background: '#0D0F16', border: `1px solid ${palette.line}`, borderRadius: 8, padding: 14 }}>
+                      {reply.body || 'No body captured.'}
+                    </pre>
+                  </div>
+                </div>
+              </Card>
+            ))}
+            {!replies.length && (
+              <Card>
+                <div style={{ color: palette.muted }}>No human-attention replies yet.</div>
               </Card>
             )}
           </section>

@@ -15,6 +15,11 @@ function mapLead(row) {
     email: row.email,
     sourceUrl: row.source_url,
     source: row.source,
+    serviceLane: row.service_lane,
+    researchSummary: row.research_summary,
+    evidenceJson: row.evidence_json,
+    reviewStatus: row.review_status,
+    discoveryRunId: row.discovery_run_id,
     status: row.status,
     draftSubject: row.draft_subject,
     draftBody: row.draft_body,
@@ -65,8 +70,9 @@ export async function onRequest({ request, env }) {
       .prepare(
         `INSERT INTO leads (
           id, company, industry, fit_score, reason, contact_name, contact_title,
-          email, source_url, source, status, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          email, source_url, source, service_lane, research_summary, evidence_json,
+          review_status, discovery_run_id, status, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           company = excluded.company,
           industry = excluded.industry,
@@ -77,6 +83,11 @@ export async function onRequest({ request, env }) {
           email = excluded.email,
           source_url = excluded.source_url,
           source = excluded.source,
+          service_lane = excluded.service_lane,
+          research_summary = excluded.research_summary,
+          evidence_json = excluded.evidence_json,
+          review_status = excluded.review_status,
+          discovery_run_id = excluded.discovery_run_id,
           updated_at = excluded.updated_at`,
       )
       .bind(
@@ -90,6 +101,11 @@ export async function onRequest({ request, env }) {
         lead.email,
         lead.source_url,
         lead.source,
+        lead.service_lane,
+        lead.research_summary,
+        lead.evidence_json,
+        lead.review_status,
+        lead.discovery_run_id,
         lead.status,
         now,
         now,
