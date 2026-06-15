@@ -1,0 +1,66 @@
+{
+  "generatedAt": "2026-06-15T16:11:34.736Z",
+  "baseUrl": "https://capsigma-growth-desk.pages.dev",
+  "mode": "production_sandbox",
+  "query": "Canadian healthcare records management back office operations public contact email",
+  "configured": {
+    "database": true,
+    "openai": true,
+    "sendgrid": true,
+    "gmailConnected": true,
+    "fromEmail": "fejiro.efiuvwere@gmail.com",
+    "replyToEmail": "fejiro.efiuvwere@gmail.com",
+    "recipientOverride": "fejiro.efiuvwere@gmail.com",
+    "sandboxMode": true,
+    "autoSendMinFitScore": 60,
+    "dailySendLimit": 25
+  },
+  "prospectRun": {
+    "runId": "prospect_run_38540885-bdb6-4315-a010-fc9b15741564",
+    "importedCount": 3,
+    "rejectedCount": 0,
+    "selectedLeadId": "lead_simon-fraser-university-archives-and-records-management-shamin-malmas-sfu-ca",
+    "company": "Simon Fraser University Archives and Records Management",
+    "industry": "Education/Records Management",
+    "fitScore": 85,
+    "serviceLane": "records management, data operations",
+    "intendedRecipient": "shamin_malmas@sfu.ca",
+    "sourceUrl": "https://www.sfu.ca/archives/contact.html",
+    "reason": "University's archives department handles extensive records management, aligning with CapSigma's services.",
+    "researchSummary": "The Records Management Archivist at Simon Fraser University oversees records management, making them a suitable contact for CapSigma's services."
+  },
+  "draft": {
+    "draftId": "draft_36f754af-918b-4756-bd30-7fc52ec2c37c",
+    "subject": "Streamlining Your Records Management Process",
+    "qualityIssues": []
+  },
+  "send": {
+    "sendId": "send_ed3b28d8-8a51-4699-9364-ad5059feb5e8",
+    "status": "sandbox_sent",
+    "providerMessageId": "144N9sjYStKLesOHPFC61Q",
+    "intendedRecipient": "shamin_malmas@sfu.ca",
+    "actualRecipient": "fejiro.efiuvwere@gmail.com",
+    "sandbox": true,
+    "preview": false,
+    "cc": []
+  },
+  "sentReview": {
+    "present": true,
+    "providerMessageId": "144N9sjYStKLesOHPFC61Q",
+    "sourceUrl": "https://www.sfu.ca/archives/contact.html",
+    "subject": "Streamlining Your Records Management Process",
+    "bodyLength": 1157
+  },
+  "gmailSync": {
+    "status": 200,
+    "checked": 10,
+    "imported": 0,
+    "duplicates": 10,
+    "rejected": 0,
+    "syncedAt": "2026-06-15T16:11:35.041Z"
+  },
+  "dashboard": {
+    "humanAttentionReplies": 50,
+    "recentActivityCount": 50
+  }
+}

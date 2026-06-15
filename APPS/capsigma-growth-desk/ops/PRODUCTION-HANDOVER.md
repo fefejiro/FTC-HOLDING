@@ -28,6 +28,10 @@ Latest actual external outreach proof: `ops/LIVE-E2E-HARRIS-HEALTH-ACTUAL-2026-0
 
 Latest recipient delivery proof: `ops/RECIPIENT-TEST-2026-06-11T17-04-35-361Z.json`
 
+Latest production sandbox E2E proof: `ops/PRODUCTION-E2E-SANDBOX-2026-06-15T16-11-34-738Z.json`
+
+Latest production sandbox recipient proof: `ops/RECIPIENT-TEST-2026-06-15T16-57-42-504Z.json`
+
 Latest Gmail delivery check: `ops/GMAIL-DELIVERY-CHECK-2026-06-11.md`
 
 Latest Gmail reply monitor evidence:
@@ -84,6 +88,12 @@ Internal workflow name: CapSigma Outreach Agent.
 - [x] GitHub Actions scheduled reply sync added; activates after merge to `main`.
 - [x] No-DNS client handover path documented.
 - [x] SendGrid authenticated domain created for `capsigma.com`.
+- [x] Production sandbox E2E completed with source-backed prospect discovery,
+      AI draft, sandbox SendGrid send, Sent Review proof, and Gmail reply sync.
+- [x] Recipient proof completed for `sales@capsigma.com` and
+      `fejiro.efiuvwere@gmail.com` in Fejiro sandbox mode.
+- [x] Draft quality guard blocks HIPAA wording outside healthcare/medical
+      prospect context.
 - [ ] Client clicks the SendGrid verification email for `hello@capsigma.com`.
 - [ ] Production From/Reply-To switched to `hello@capsigma.com`.
 - [ ] `OUTBOUND_RECIPIENT_OVERRIDE` removed after sandbox approval.
@@ -327,6 +337,39 @@ npm run sendgrid:domain-status
   and should be resolved with SendGrid sender/domain authentication before
   broad client outreach.
 - Report: `ops/RECIPIENT-TEST-2026-06-11T17-04-35-361Z.json`
+
+## 2026-06-15 Production Sandbox E2E
+
+- Base URL: `https://capsigma-growth-desk.pages.dev`
+- Production mode: Fejiro sandbox auto-outreach
+- Prospect Builder query: Canadian healthcare records management back-office
+  public contact search
+- Imported prospects: 3
+- Selected source-backed prospect: Simon Fraser University Archives and Records
+  Management
+- Fit score: 85
+- Public source: `https://www.sfu.ca/archives/contact.html`
+- Intended recipient: `shamin_malmas@sfu.ca`
+- Actual recipient: `fejiro.efiuvwere@gmail.com`
+- Send status: `sandbox_sent`
+- SendGrid provider message id: `144N9sjYStKLesOHPFC61Q`
+- Sent Review proof: present with source URL, provider id, subject, and body
+- Gmail reply sync: passed, checked 10 messages
+- Draft quality: passed; healthcare-only compliance language guard active
+- Report: `ops/PRODUCTION-E2E-SANDBOX-2026-06-15T16-11-34-738Z.json`
+
+## 2026-06-15 Recipient Routing Test
+
+- Base URL: `https://capsigma-growth-desk.pages.dev`
+- Recipients tested: `sales@capsigma.com`, `fejiro.efiuvwere@gmail.com`
+- `sales@capsigma.com` send status: `sandbox_sent`
+- `sales@capsigma.com` provider message id: `eTRGYBLjSPqIvDCVHcMaTg`
+- `sales@capsigma.com` intended recipient: `sales@capsigma.com`
+- `sales@capsigma.com` actual recipient: `fejiro.efiuvwere@gmail.com`
+- `fejiro.efiuvwere@gmail.com` send status: `sandbox_sent`
+- `fejiro.efiuvwere@gmail.com` provider message id: `aZmYE7dBQ7iOL8HYOuVGUw`
+- Sent Review sample contains only sends created by the current run.
+- Report: `ops/RECIPIENT-TEST-2026-06-15T16-57-42-504Z.json`
 
 ## Data Policy
 

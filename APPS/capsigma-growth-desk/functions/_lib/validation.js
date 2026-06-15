@@ -24,6 +24,21 @@ const FORBIDDEN_DRAFT_PATTERNS = [
   { pattern: /\b(your|insert|placeholder)\s+(name|email|phone|contact|company)\b/i, reason: 'Draft contains placeholder language.' },
 ]
 
+const HEALTHCARE_CONTEXT_PATTERNS = [
+  /\bhealth(care)?\b/i,
+  /\bmedical\b/i,
+  /\bclinical\b/i,
+  /\bnon[-\s]?clinical\b/i,
+  /\bpatient(s)?\b/i,
+  /\bhospital(s)?\b/i,
+  /\bclinic(s)?\b/i,
+  /\bphysician(s)?\b/i,
+  /\bpharma(ceutical)?\b/i,
+  /\brevenue cycle\b/i,
+  /\binsurance verification\b/i,
+  /\bhipaa\b/i,
+]
+
 export function slugify(value) {
   return String(value || '')
     .toLowerCase()
@@ -114,6 +129,37 @@ export function scanDraftQuality(subject = '', body = '') {
   }
 }
 
+export function isHealthcareContext(lead = {}) {
+  const text = [
+    lead.company,
+    lead.industry,
+    lead.reason,
+    lead.contact_title,
+    lead.service_lane || lead.serviceLane,
+    lead.research_summary || lead.researchSummary,
+    lead.source,
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  return HEALTHCARE_CONTEXT_PATTERNS.some((pattern) => pattern.test(text))
+}
+
+export function scanDraftQualityForLead(lead = {}, subject = '', body = '') {
+  const base = scanDraftQuality(subject, body)
+  const issues = [...base.issues]
+  const text = `${subject}\n${body}`
+
+  if (/\bHIPAA\b/i.test(text) && !isHealthcareContext(lead)) {
+    issues.push('Draft mentions HIPAA outside a healthcare or medical context.')
+  }
+
+  return {
+    ok: issues.length === 0,
+    issues: [...new Set(issues)],
+  }
+}
+
 export function inferServiceLane(lead = {}) {
   const explicit = String(lead.service_lane || lead.serviceLane || '').trim()
   if (explicit) return explicit
@@ -142,7 +188,7 @@ export function canSendLead(lead) {
     return { ok: false, reason: 'Lead email appears to be a placeholder.' }
   }
   if (!lead.draft_body) return { ok: false, reason: 'Lead has no draft.' }
-  const draftQuality = scanDraftQuality(lead.draft_subject || '', lead.draft_body)
+  const draftQuality = scanDraftQualityForLead(lead, lead.draft_subject || '', lead.draft_body)
   if (!draftQuality.ok) return { ok: false, reason: draftQuality.issues.join(' ') }
   return { ok: true, reason: '' }
 }

@@ -1,0 +1,101 @@
+{
+  "generatedAt": "2026-06-15T16:57:49.670Z",
+  "baseUrl": "https://capsigma-growth-desk.pages.dev",
+  "configured": {
+    "database": true,
+    "openai": true,
+    "sendgrid": true,
+    "gmail": true,
+    "gmailConnected": true,
+    "gmailEmail": "fejiro.efiuvwere@gmail.com",
+    "fromEmail": "fejiro.efiuvwere@gmail.com",
+    "replyToEmail": "fejiro.efiuvwere@gmail.com",
+    "recipientOverride": "fejiro.efiuvwere@gmail.com",
+    "sandboxMode": true,
+    "autoSendMinFitScore": 60,
+    "ccEmails": [
+      "fejiro.efiuvwere@gmail.com"
+    ],
+    "dailySendLimit": 25
+  },
+  "recipients": [
+    "sales@capsigma.com",
+    "fejiro.efiuvwere@gmail.com"
+  ],
+  "results": [
+    {
+      "recipient": "sales@capsigma.com",
+      "leadId": "lead_capsigma-recipient-test-sales-capsigma-com-2026-06-15t16-57-42-504z-sales-capsig",
+      "draftId": "draft_0a511c09-27b0-4cb6-8dae-05a8bd5c7f34",
+      "sendId": "send_3bcbfe45-9b7e-40c9-8b14-7e3d73efba17",
+      "status": "sandbox_sent",
+      "providerMessageId": "eTRGYBLjSPqIvDCVHcMaTg",
+      "preview": false,
+      "sandbox": true,
+      "intendedRecipient": "sales@capsigma.com",
+      "actualRecipient": "fejiro.efiuvwere@gmail.com",
+      "cc": []
+    },
+    {
+      "recipient": "fejiro.efiuvwere@gmail.com",
+      "leadId": "lead_capsigma-recipient-test-fejiro-efiuvwere-gmail-com-2026-06-15t16-57-42-504z-feji",
+      "draftId": "draft_099008be-2faa-4701-b6f7-2adf2dafe320",
+      "sendId": "send_3f86a935-2874-452a-9d53-7883a48bd545",
+      "status": "sandbox_sent",
+      "providerMessageId": "aZmYE7dBQ7iOL8HYOuVGUw",
+      "preview": false,
+      "sandbox": true,
+      "intendedRecipient": "fejiro.efiuvwere@gmail.com",
+      "actualRecipient": "fejiro.efiuvwere@gmail.com",
+      "cc": []
+    }
+  ],
+  "sentReviewSample": [
+    {
+      "id": "send_3bcbfe45-9b7e-40c9-8b14-7e3d73efba17",
+      "leadId": "lead_capsigma-recipient-test-sales-capsigma-com-2026-06-15t16-57-42-504z-sales-capsig",
+      "toEmail": "fejiro.efiuvwere@gmail.com",
+      "intendedRecipient": "sales@capsigma.com",
+      "actualRecipient": "fejiro.efiuvwere@gmail.com",
+      "subject": "Internal Delivery QA Test",
+      "body": "Hello,\n\nThis is a quick note regarding the internal production delivery test for sales@capsigma.com. Please ensure that the reply-to routing is set to hello@capsigma.com when live mode is enabled. This will help us verify SendGrid delivery, admin processing fit, and maintain visibility for D1 proof logging and Sent Review.\n\nThank you for your attention to this matter.\n\nBest regards,\n\nNiyi Olumide, PMP, CSM \nGeneral Manager, CapSigma\n\nCapSigma\nYou received this business outreach because your role may relate to data operations, records, or processing workflows.\nTo opt out, reply with \"unsubscribe\" or contact fejiro.efiuvwere@gmail.com.",
+      "status": "sandbox_sent",
+      "provider": "sendgrid",
+      "providerMessageId": "eTRGYBLjSPqIvDCVHcMaTg",
+      "sandbox": true,
+      "error": "",
+      "createdAt": "2026-06-15T16:57:46.378Z",
+      "company": "CapSigma Recipient Test sales@capsigma.com 2026-06-15T16-57-42-504Z",
+      "industry": "Internal delivery QA",
+      "fitScore": 100,
+      "reason": "Internal production delivery test for sales@capsigma.com. This verifies SendGrid delivery, reply-to routing, admin processing fit, D1 proof logging, and Sent Review visibility.",
+      "contactName": "sales@capsigma.com",
+      "contactTitle": "Delivery QA recipient",
+      "sourceUrl": "https://capsigma-growth-desk.pages.dev",
+      "source": "production recipient delivery test"
+    },
+    {
+      "id": "send_3f86a935-2874-452a-9d53-7883a48bd545",
+      "leadId": "lead_capsigma-recipient-test-fejiro-efiuvwere-gmail-com-2026-06-15t16-57-42-504z-feji",
+      "toEmail": "fejiro.efiuvwere@gmail.com",
+      "intendedRecipient": "fejiro.efiuvwere@gmail.com",
+      "actualRecipient": "fejiro.efiuvwere@gmail.com",
+      "subject": "Internal Delivery QA Test",
+      "body": "Hi Fejiro,\n\nI hope this message finds you well. As part of our internal delivery QA process, we are conducting a test to verify SendGrid delivery, reply-to routing, admin processing fit, D1 proof logging, and Sent Review visibility.\n\nPlease note that when live mode is enabled, the reply-to should route to hello@capsigma.com. \n\nIf you have any questions or need further assistance, feel free to reach out.\n\nBest regards,\n\nNiyi Olumide, PMP, CSM \nGeneral Manager, CapSigma\n\nCapSigma\nYou received this business outreach because your role may relate to data operations, records, or processing workflows.\nTo opt out, reply with \"unsubscribe\" or contact fejiro.efiuvwere@gmail.com.",
+      "status": "sandbox_sent",
+      "provider": "sendgrid",
+      "providerMessageId": "aZmYE7dBQ7iOL8HYOuVGUw",
+      "sandbox": true,
+      "error": "",
+      "createdAt": "2026-06-15T16:57:49.701Z",
+      "company": "CapSigma Recipient Test fejiro.efiuvwere@gmail.com 2026-06-15T16-57-42-504Z",
+      "industry": "Internal delivery QA",
+      "fitScore": 100,
+      "reason": "Internal production delivery test for fejiro.efiuvwere@gmail.com. This verifies SendGrid delivery, reply-to routing, admin processing fit, D1 proof logging, and Sent Review visibility.",
+      "contactName": "fejiro.efiuvwere@gmail.com",
+      "contactTitle": "Delivery QA recipient",
+      "sourceUrl": "https://capsigma-growth-desk.pages.dev",
+      "source": "production recipient delivery test"
+    }
+  ]
+}

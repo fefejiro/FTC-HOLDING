@@ -54,8 +54,13 @@ inbox until Mike approves quality and the client verifies `hello@capsigma.com`.
   merge to `main`.
 - Local scheduled reports now write under `.local/reply-sync-reports/` so the
   repo does not get dirtied every 30 minutes.
-- `npm run check` passes.
+- `npm run check` passes with 14/14 tests.
 - `npm run prod:doctor` passes with no warnings.
+- Production sandbox E2E passed against the live URL after deploy.
+- Recipient routing proof passed for `sales@capsigma.com` and
+  `fejiro.efiuvwere@gmail.com`.
+- Draft quality now blocks HIPAA wording outside healthcare/medical prospect
+  context.
 
 ## Yellow
 
@@ -115,6 +120,8 @@ Acceptance for live handover:
 
 ## Latest Evidence
 
+- `ops/PRODUCTION-E2E-SANDBOX-2026-06-15T16-11-34-738Z.json`
+- `ops/RECIPIENT-TEST-2026-06-15T16-57-42-504Z.json`
 - `ops/AUTO-OUTREACH-EVIDENCE-2026-06-14.md`
 - `ops/GMAIL-REPLY-MONITOR-2026-06-14.md`
 - `ops/SCHEDULED-REPLY-SYNC-2026-06-14.md`

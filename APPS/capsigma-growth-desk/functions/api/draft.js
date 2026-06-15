@@ -1,14 +1,14 @@
 import { requireAuth } from '../_lib/auth.js'
 import { addActivity, getDb, getLead, newId, nowIso } from '../_lib/db.js'
 import { json, methodNotAllowed, readJson } from '../_lib/json.js'
-import { sanitizeOutreachText, scanDraftQuality } from '../_lib/validation.js'
+import { sanitizeOutreachText, scanDraftQualityForLead } from '../_lib/validation.js'
 
 const signature = `Best regards,
 
 Niyi Olumide, PMP, CSM
 General Manager, CapSigma`
 
-const systemPrompt = `You write concise business development outreach for CapSigma, a data operations company. CapSigma's positioning: Your data, our discipline. Services include forms and records digitization, operational and transaction processing, data cleansing and enrichment, non-clinical administrative support, and financial transaction processing. Differentiators: disciplined process design, versioned delivery guides, accuracy targets, HIPAA-aligned controls when relevant, West Africa delivery capacity with GMT/WAT overlap, and a no-cost pilot entry point. Write as Niyi Olumide, PMP, CSM. Be direct, useful, specific, and human. Do not fabricate a relationship, do not imply a prior conversation, and do not overpromise. Use plain ASCII punctuation. Do not use em dashes, repeated dashes, underscores, filler words like umm or eem, or bracketed placeholders. End with this exact signature:
+const systemPrompt = `You write concise business development outreach for CapSigma, a data operations company. CapSigma's positioning: Your data, our discipline. Services include forms and records digitization, operational and transaction processing, data cleansing and enrichment, non-clinical administrative support, and financial transaction processing. Differentiators: disciplined process design, versioned delivery guides, accuracy targets, sector-appropriate privacy-aware controls, West Africa delivery capacity with GMT/WAT overlap, and a no-cost pilot entry point. Mention HIPAA or healthcare compliance only for healthcare, medical, clinical, hospital, patient, or insurance-verification prospects where it is directly relevant. For all other prospects, use sector-neutral language such as privacy-aware controls, auditability, accuracy, and documented processing. Write as Niyi Olumide, PMP, CSM. Be direct, useful, specific, and human. Do not fabricate a relationship, do not imply a prior conversation, and do not overpromise. Use plain ASCII punctuation. Do not use em dashes, repeated dashes, underscores, filler words like umm or eem, or bracketed placeholders. End with this exact signature:
 ${signature}`
 
 function leadPrompt(lead, notes = '') {
@@ -106,7 +106,7 @@ export async function onRequest(context) {
 
   const content = data?.choices?.[0]?.message?.content || ''
   const draft = parseDraft(content, lead.company)
-  const quality = scanDraftQuality(draft.subject, draft.body)
+  const quality = scanDraftQualityForLead(lead, draft.subject, draft.body)
   if (!quality.ok) {
     return json(
       { error: 'Generated draft failed quality checks', issues: quality.issues },

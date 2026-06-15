@@ -4,11 +4,13 @@ import assert from 'node:assert/strict'
 import {
   canAutoSendLead,
   canSendLead,
+  isHealthcareContext,
   isPlaceholderEmail,
   normalizeFitScore,
   normalizeLead,
   sanitizeOutreachText,
   scanDraftQuality,
+  scanDraftQualityForLead,
   validateLead,
 } from '../functions/_lib/validation.js'
 import { decryptSecret, encryptSecret } from '../functions/_lib/crypto.js'
@@ -130,6 +132,39 @@ test('draft sanitizer and scanner block awkward filler and punctuation artifacts
   const scan = scanDraftQuality('Hello --', 'This has an em dash — and eem filler.')
   assert.equal(scan.ok, false)
   assert.ok(scan.issues.length >= 1)
+})
+
+test('draft quality blocks healthcare compliance claims outside healthcare context', () => {
+  const educationLead = {
+    company: 'Simon Fraser University Archives and Records Management',
+    industry: 'Education',
+    reason: 'Records digitization and information management workflows.',
+    service_lane: 'forms_records_digitization',
+  }
+  const healthcareLead = {
+    company: 'Harris Health System',
+    industry: 'Healthcare',
+    reason: 'Patient records and revenue cycle administrative support.',
+    service_lane: 'non_clinical_support',
+  }
+
+  assert.equal(isHealthcareContext(educationLead), false)
+  assert.equal(isHealthcareContext(healthcareLead), true)
+
+  const blocked = scanDraftQualityForLead(
+    educationLead,
+    'Records processing pilot',
+    'CapSigma can support records workflows with HIPAA-aligned controls.',
+  )
+  assert.equal(blocked.ok, false)
+  assert.match(blocked.issues.join(' '), /HIPAA outside/)
+
+  const allowed = scanDraftQualityForLead(
+    healthcareLead,
+    'Revenue cycle support pilot',
+    'CapSigma can support patient records workflows with HIPAA-aligned controls.',
+  )
+  assert.equal(allowed.ok, true)
 })
 
 test('reply classifier flags positive replies for human attention', () => {
