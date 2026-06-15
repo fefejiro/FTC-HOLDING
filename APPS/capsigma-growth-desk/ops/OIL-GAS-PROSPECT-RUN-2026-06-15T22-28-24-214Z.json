@@ -1,0 +1,100 @@
+{
+  "generatedAt": "2026-06-15T22:28:24.212Z",
+  "baseUrl": "https://capsigma-growth-desk.pages.dev",
+  "query": "oil and gas only",
+  "industries": [
+    "oil and gas only"
+  ],
+  "status": 200,
+  "runId": "prospect_run_7b51b919-9b28-4ecc-bb67-647ab6035e9a",
+  "summary": "Identified seven oil and gas companies that could benefit from CapSigma's back-office operations services.",
+  "importedCount": 7,
+  "rejectedCount": 0,
+  "imported": [
+    {
+      "company": "QOP Energy",
+      "industry": "Oil & Gas",
+      "fitScore": 85,
+      "email": "",
+      "status": "needs_review",
+      "reviewStatus": "Missing public email; review before outreach.",
+      "sourceUrl": "https://qopenergy.com/",
+      "serviceLane": "back-office operations",
+      "reason": "Specializes in operations support and recruitment for the oil and gas sector, indicating a need for back-office operational services.",
+      "researchSummary": "QOP Energy offers operations support and recruitment services tailored to the oil and gas industry, suggesting potential interest in back-office operational assistance."
+    },
+    {
+      "company": "EAG Inc.",
+      "industry": "Oil & Gas",
+      "fitScore": 90,
+      "email": "",
+      "status": "needs_review",
+      "reviewStatus": "Missing public email; review before outreach.",
+      "sourceUrl": "https://eaginc.com/back-office-outsourcing/",
+      "serviceLane": "back-office operations",
+      "reason": "Provides comprehensive back-office outsourcing services, including accounting, land administration, and volumetric accounting, aligning with CapSigma's service offerings.",
+      "researchSummary": "EAG Inc. specializes in back-office outsourcing for the oil and gas industry, offering services that complement CapSigma's offerings."
+    },
+    {
+      "company": "Lighthouse Midstream Services",
+      "industry": "Oil & Gas",
+      "fitScore": 80,
+      "email": "",
+      "status": "needs_review",
+      "reviewStatus": "Missing public email; review before outreach.",
+      "sourceUrl": "https://www.lighthouseserv.com/",
+      "serviceLane": "back-office operations",
+      "reason": "Offers back-office commercial functions, operations, and other midstream supporting roles, indicating a need for administrative processing and back-office support.",
+      "researchSummary": "Lighthouse Midstream Services provides comprehensive back-office support, including contract administration and customer support, aligning with CapSigma's service offerings."
+    },
+    {
+      "company": "ExTex Division Order Services, LLC",
+      "industry": "Oil & Gas",
+      "fitScore": 85,
+      "email": "",
+      "status": "needs_review",
+      "reviewStatus": "Missing public email; review before outreach.",
+      "sourceUrl": "https://www.extexllc.com/services/",
+      "serviceLane": "back-office operations",
+      "reason": "Specializes in back-office administration for oil and gas purchasers, including division order services and revenue accounting, aligning with CapSigma's service offerings.",
+      "researchSummary": "ExTex offers outsourced back-office support services, including division order management and revenue accounting, complementing CapSigma's services."
+    },
+    {
+      "company": "Energy OnRamp",
+      "industry": "Oil & Gas",
+      "fitScore": 80,
+      "email": "info@energyonramp.com",
+      "status": "qualified",
+      "reviewStatus": "",
+      "sourceUrl": "https://energyonramp.com/outsource-services.html",
+      "serviceLane": "back-office operations",
+      "reason": "Provides outsourcing services for back-office functions in the oil and gas industry, including accounts payable, accounts receivable, and joint interest billing, aligning with CapSigma's service offerings.",
+      "researchSummary": "Energy OnRamp offers comprehensive outsourcing services for back-office functions in the oil and gas sector, complementing CapSigma's offerings."
+    },
+    {
+      "company": "Korfshore",
+      "industry": "Oil & Gas",
+      "fitScore": 75,
+      "email": "",
+      "status": "needs_review",
+      "reviewStatus": "Missing public email; review before outreach.",
+      "sourceUrl": "https://korfshore.com/oil-gas/",
+      "serviceLane": "back-office operations",
+      "reason": "Specializes in building and managing remote teams and offers Business Process Outsourcing (BPO) solutions tailored to the oil and gas industry, indicating a need for back-office support services.",
+      "researchSummary": "Korfshore provides remote team management and BPO solutions tailored to the oil and gas industry, suggesting potential interest in back-office support services."
+    },
+    {
+      "company": "Pedernales Petroleum",
+      "industry": "Oil & Gas",
+      "fitScore": 70,
+      "email": "",
+      "status": "needs_review",
+      "reviewStatus": "Missing public email; review before outreach.",
+      "sourceUrl": "https://pedernalespetroleum.com/contract-operations",
+      "serviceLane": "back-office operations",
+      "reason": "Provides contract operating services, including back-office operator services, indicating a need for administrative processing and back-office support.",
+      "researchSummary": "Pedernales Petroleum offers contract operating services, including back-office operator services, aligning with CapSigma's service offerings."
+    }
+  ],
+  "rejected": []
+}

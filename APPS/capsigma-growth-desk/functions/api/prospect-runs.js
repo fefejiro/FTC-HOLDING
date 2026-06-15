@@ -31,6 +31,7 @@ function parseJsonText(text) {
 }
 
 function prospectPrompt({ query, industries, maxResults }) {
+  const targetIndustries = industries || 'healthcare, real estate, energy, financial services, logistics, retail, technology'
   return `Find source-backed CapSigma outreach prospects.
 
 CapSigma services:
@@ -42,14 +43,18 @@ CapSigma services:
 - back-office operations
 
 Target query: ${query}
-Target industries: ${industries || 'healthcare, real estate, energy, financial services, logistics, retail, technology'}
+Target industries: ${targetIndustries}
 Maximum prospects: ${maxResults}
 
 Rules:
 - Use public web sources only.
+- Treat the target industries as a hard filter. Do not return prospects outside the target industries.
+- If the query or target industries say "only", return only that industry and do not substitute adjacent industries.
 - Do not invent email addresses.
-- Include an email only when the source publicly lists it.
+- Include an email only when the source publicly lists a valid email address.
+- If no public email is listed, leave "email" as an empty string. Do not write "not publicly available", "n/a", or placeholder email text.
 - Each prospect must include a sourceUrl.
+- Keep reason, researchSummary, sourceQuote, and whyReachOut concise so the JSON is complete.
 - fitScore must be an integer from 0 to 100. For good matches, use 60 to 95, not a 1 to 10 scale.
 - Prefer operational leaders, administration, revenue operations, records, finance operations, back-office, data operations, or contact mailboxes.
 - Return JSON only.
@@ -78,6 +83,67 @@ JSON shape:
     }
   ]
 }`
+}
+
+export function cleanProspectEmail(value = '') {
+  const email = String(value || '').trim()
+  if (!email) return ''
+  if (/^(not\s+publicly\s+available|not\s+available|unavailable|unknown|none|null|n\/a|na)$/i.test(email)) {
+    return ''
+  }
+  return email
+}
+
+function textForProspect(prospect = {}) {
+  return [
+    prospect.company,
+    prospect.industry,
+    prospect.reason,
+    prospect.contactTitle,
+    prospect.serviceLane,
+    prospect.researchSummary,
+    prospect.sourceUrl,
+    prospect.source,
+    prospect.evidence?.sourceTitle,
+    prospect.evidence?.sourceQuote,
+    prospect.evidence?.whyReachOut,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+}
+
+export function strictTarget(query, industries) {
+  const text = `${query || ''} ${industries || ''}`.toLowerCase()
+  if (/\boil\s*(and|&)?\s*gas\b|\bpetroleum\b|\bupstream\b|\bmidstream\b|\bdownstream\b|\blng\b/.test(text)) {
+    return {
+      label: 'oil and gas',
+      patterns: [
+        /\boil\s*(and|&)?\s*gas\b/i,
+        /\bpetroleum\b/i,
+        /\bnatural gas\b/i,
+        /\bupstream\b/i,
+        /\bmidstream\b/i,
+        /\bdownstream\b/i,
+        /\bpipeline(s)?\b/i,
+        /\bdrilling\b/i,
+        /\brefiner(y|ies|ing)\b/i,
+        /\bpetrochemical(s)?\b/i,
+        /\bhydrocarbon(s)?\b/i,
+        /\blng\b/i,
+        /\bexploration\b/i,
+      ],
+    }
+  }
+  return null
+}
+
+export function validateTargetIndustry(prospect, target) {
+  if (!target) return []
+  const text = textForProspect(prospect)
+  return target.patterns.some((pattern) => pattern.test(text))
+    ? []
+    : [`Prospect does not match target industry: ${target.label}`]
 }
 
 async function insertRun(db, run) {
@@ -199,6 +265,7 @@ async function handlePost({ request, env }) {
   const industries = Array.isArray(body.industries)
     ? body.industries.join(', ')
     : String(body.industries || '').trim()
+  const target = strictTarget(query, industries)
   const model = env.OPENAI_PROSPECT_MODEL || 'gpt-4.1-mini'
 
   const response = await fetch('https://api.openai.com/v1/responses', {
@@ -212,6 +279,7 @@ async function handlePost({ request, env }) {
       tools: [{ type: 'web_search', search_context_size: 'low' }],
       tool_choice: 'required',
       input: prospectPrompt({ query, industries, maxResults }),
+      max_output_tokens: 5000,
       temperature: 0.2,
     }),
   })
@@ -236,16 +304,19 @@ async function handlePost({ request, env }) {
   const rejected = []
 
   for (const prospect of parsed.prospects.slice(0, maxResults)) {
+    const email = cleanProspectEmail(prospect.email)
     const lead = normalizeLead({
       ...prospect,
+      email,
       discoveryRunId: runId,
-      status: prospect.email ? 'qualified' : 'needs_review',
-      reviewStatus: prospect.email ? '' : 'Missing public email; review before outreach.',
+      status: email ? 'qualified' : 'needs_review',
+      reviewStatus: email ? '' : 'Missing public email; review before outreach.',
       source: prospect.source || 'public web research',
       evidence: prospect.evidence || {},
     })
     const errors = validateLead(lead)
     if (!lead.source_url) errors.push('sourceUrl is required for prospect research')
+    errors.push(...validateTargetIndustry(prospect, target))
     if (errors.length) {
       rejected.push({ prospect, errors })
       continue
