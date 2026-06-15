@@ -33,6 +33,7 @@ Latest Gmail delivery check: `ops/GMAIL-DELIVERY-CHECK-2026-06-11.md`
 Latest Gmail reply monitor evidence:
 
 - `ops/GMAIL-REPLY-MONITOR-2026-06-14.md`
+- `ops/SCHEDULED-REPLY-SYNC-2026-06-14.md`
 
 Latest SendGrid domain-auth evidence:
 
@@ -75,6 +76,7 @@ Internal workflow name: CapSigma Outreach Agent.
 - [x] Gmail reply monitor routes added with encrypted mailbox token storage.
 - [x] Existing Job Reply Agent Gmail token import command added.
 - [x] Local loopback Gmail connector added for the current Google redirect allow-list mismatch.
+- [x] GitHub Actions scheduled reply sync added.
 - [x] No-DNS client handover path documented.
 - [x] SendGrid authenticated domain created for `capsigma.com`.
 - [ ] Client clicks the SendGrid verification email for `hello@capsigma.com`.
@@ -120,9 +122,16 @@ TOKEN_ENCRYPTION_KEY
 REPLY_SYNC_TOKEN
 ```
 
+GitHub Actions secrets:
+
+```text
+CAPSIGMA_REPLY_SYNC_TOKEN
+```
+
 Current Cloudflare production secret state:
 
-- Present: `ADMIN_PASSWORD`, `AUTH_SECRET`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_PROSPECT_MODEL`, `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL`, `SENDGRID_FROM_NAME`, `SENDGRID_REPLY_TO_EMAIL`, `SENDGRID_REPLY_TO_NAME`, `SENDGRID_CC_EMAILS`, `OUTBOUND_RECIPIENT_OVERRIDE`, `AUTO_SEND_MIN_FIT_SCORE`, `DAILY_SEND_LIMIT`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REDIRECT_URI`, `TOKEN_ENCRYPTION_KEY`, `REPLY_SYNC_TOKEN`
+- Cloudflare present: `ADMIN_PASSWORD`, `AUTH_SECRET`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_PROSPECT_MODEL`, `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL`, `SENDGRID_FROM_NAME`, `SENDGRID_REPLY_TO_EMAIL`, `SENDGRID_REPLY_TO_NAME`, `SENDGRID_CC_EMAILS`, `OUTBOUND_RECIPIENT_OVERRIDE`, `AUTO_SEND_MIN_FIT_SCORE`, `DAILY_SEND_LIMIT`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REDIRECT_URI`, `TOKEN_ENCRYPTION_KEY`, `REPLY_SYNC_TOKEN`
+- GitHub present: `CAPSIGMA_REPLY_SYNC_TOKEN`
 - Missing: none for current production smoke.
 
 Current verified sender: `fejiro.efiuvwere@gmail.com`

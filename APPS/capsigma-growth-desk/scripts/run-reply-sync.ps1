@@ -1,0 +1,24 @@
+param(
+  [string]$ProjectDir = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+)
+
+$ErrorActionPreference = 'Stop'
+
+$logDir = Join-Path $ProjectDir '.local\reply-sync-logs'
+New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+
+$stamp = Get-Date -Format 'yyyy-MM-ddTHH-mm-ss'
+$logPath = Join-Path $logDir "reply-sync-$stamp.log"
+
+Push-Location $ProjectDir
+try {
+  "[$(Get-Date -Format o)] Starting CapSigma reply sync" | Out-File -FilePath $logPath -Encoding utf8
+  $output = npm run prod:sync-replies 2>&1 | Out-String
+  $output | Out-File -FilePath $logPath -Append -Encoding utf8
+  "[$(Get-Date -Format o)] Reply sync complete" | Out-File -FilePath $logPath -Append -Encoding utf8
+} catch {
+  "[$(Get-Date -Format o)] Reply sync failed: $($_.Exception.Message)" | Out-File -FilePath $logPath -Append -Encoding utf8
+  throw
+} finally {
+  Pop-Location
+}

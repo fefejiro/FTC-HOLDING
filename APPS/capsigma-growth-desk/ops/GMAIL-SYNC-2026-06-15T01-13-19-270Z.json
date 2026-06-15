@@ -1,0 +1,83 @@
+{
+  "status": 200,
+  "baseUrl": "https://capsigma-growth-desk.pages.dev",
+  "provider": "gmail",
+  "email": "fejiro.efiuvwere@gmail.com",
+  "query": "in:inbox newer_than:14d",
+  "checked": 10,
+  "imported": [
+    {
+      "id": "reply_1bab6143-40da-4a5e-9799-b88e6654fe68",
+      "classification": "needs_human",
+      "needsHuman": true,
+      "match": null
+    }
+  ],
+  "duplicates": [
+    {
+      "id": "reply_f2f51bb7-07d8-48d7-8d41-114fc3e6005b",
+      "duplicate": true,
+      "classification": "duplicate",
+      "needsHuman": false,
+      "match": null
+    },
+    {
+      "id": "reply_92fe28c4-228e-4ca9-9a5c-8584449c30b0",
+      "duplicate": true,
+      "classification": "duplicate",
+      "needsHuman": false,
+      "match": null
+    },
+    {
+      "id": "reply_1cd63236-cfd0-4785-abf4-d9561abb105c",
+      "duplicate": true,
+      "classification": "duplicate",
+      "needsHuman": false,
+      "match": null
+    },
+    {
+      "id": "reply_f08976e4-6969-4ab3-ab15-d95b62d7e275",
+      "duplicate": true,
+      "classification": "duplicate",
+      "needsHuman": false,
+      "match": null
+    },
+    {
+      "id": "reply_6a9c60b2-2daa-47f7-a3e6-daba5cb29e17",
+      "duplicate": true,
+      "classification": "duplicate",
+      "needsHuman": false,
+      "match": null
+    },
+    {
+      "id": "reply_2541a63a-1c68-41df-974e-cba121213cad",
+      "duplicate": true,
+      "classification": "duplicate",
+      "needsHuman": false,
+      "match": null
+    },
+    {
+      "id": "reply_b5642933-df12-4bb7-940f-5b3c46abffa9",
+      "duplicate": true,
+      "classification": "duplicate",
+      "needsHuman": false,
+      "match": null
+    },
+    {
+      "id": "reply_8b58f3c5-3493-4175-a9d8-69a6327ce91f",
+      "duplicate": true,
+      "classification": "duplicate",
+      "needsHuman": false,
+      "match": null
+    },
+    {
+      "id": "reply_a9f393fb-2789-4830-bd62-bf3f0aed20de",
+      "duplicate": true,
+      "classification": "duplicate",
+      "needsHuman": false,
+      "match": null
+    }
+  ],
+  "rejected": [],
+  "syncedAt": "2026-06-15T01:13:19.424Z"
+}

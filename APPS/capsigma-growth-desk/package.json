@@ -15,6 +15,7 @@
     "gmail:connect-local": "node scripts/connect-gmail-local.mjs",
     "gmail:import-job-token": "node scripts/import-job-agent-gmail-token.mjs",
     "prod:sync-replies": "node scripts/prod-sync-replies.mjs",
+    "schedule:reply-sync:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/register-reply-sync-task.ps1",
     "sendgrid:domain-status": "node scripts/sendgrid-domain-status.mjs",
     "sendgrid:set-secret": "node scripts/set-sendgrid-secret.mjs",
     "db:migrate:local": "npx wrangler d1 migrations apply capsigma-growth-desk --local",

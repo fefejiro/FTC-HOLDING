@@ -105,6 +105,7 @@ the existing Job Reply Agent Gmail token or the local loopback connector instead
 npm run gmail:import-job-token
 npm run gmail:connect-local
 npm run prod:sync-replies
+npm run schedule:reply-sync:windows
 ```
 
 The import command reuses the already-approved local Gmail grant when it is still
@@ -124,6 +125,7 @@ callback, then imports the encrypted mailbox token into production.
 - Optional proof-copy CC recipients on each sent email
 - Sent Review tab showing delivered body, provider id, source link, intended recipient, and actual recipient
 - Gmail reply monitor with encrypted token storage and a reply attention queue for synced replies that need human action
+- GitHub Actions reply-sync schedule and Windows Task Scheduler registration for mailbox monitoring
 - Placeholder email blocking
 - Daily send limit guardrail
 - Industry intelligence playbook
@@ -142,5 +144,6 @@ callback, then imports the encrypted mailbox token into production.
 - SendGrid authenticated domain for `capsigma.com` has been created as an optional stronger upgrade; DNS records are in `ops/SENDGRID-DNS-RECORDS-2026-06-11.md`.
 - Latest Gmail delivery check confirmed receipt but showed Gmail spam placement for the current Gmail-sender test path.
 - Gmail production OAuth callback currently needs Google Console allow-listing; use `npm run gmail:connect-local` for the no-console local connector path.
+- Scheduled reply sync uses `.github/workflows/capsigma-reply-sync.yml` and requires the GitHub secret `CAPSIGMA_REPLY_SYNC_TOKEN`.
 - See `ops/AUTO-OUTREACH-SANDBOX.md` for the current test-to-live workflow.
 - See `ops/PRODUCTION-HANDOVER.md` for the full checklist.

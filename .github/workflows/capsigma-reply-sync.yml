@@ -1,0 +1,38 @@
+name: CapSigma Reply Sync
+
+on:
+  schedule:
+    # Every 30 minutes during weekday business hours in Eastern time.
+    - cron: "*/30 13-23 * * 1-5"
+  workflow_dispatch: {}
+
+jobs:
+  sync-replies:
+    name: Sync Gmail replies
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Sync production mailbox
+        env:
+          CAPSIGMA_REPLY_SYNC_TOKEN: ${{ secrets.CAPSIGMA_REPLY_SYNC_TOKEN }}
+          CAPSIGMA_BASE_URL: https://capsigma-growth-desk.pages.dev
+        run: |
+          if [ -z "$CAPSIGMA_REPLY_SYNC_TOKEN" ]; then
+            echo "CAPSIGMA_REPLY_SYNC_TOKEN is missing."
+            exit 1
+          fi
+
+          curl --fail-with-body \
+            --request POST \
+            --header "X-Capsigma-Sync-Token: $CAPSIGMA_REPLY_SYNC_TOKEN" \
+            --header "Content-Type: application/json" \
+            "$CAPSIGMA_BASE_URL/api/mailbox/gmail/sync?maxResults=10" \
+            --output capsigma-reply-sync.json
+
+          cat capsigma-reply-sync.json
+
+      - name: Upload sync proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: capsigma-reply-sync
+          path: capsigma-reply-sync.json
