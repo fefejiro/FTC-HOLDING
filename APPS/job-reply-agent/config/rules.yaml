@@ -76,6 +76,12 @@ scraper:
   indeed:
     enabled: true
     keywords:
+      - Houston technical program manager
+      - Houston IT project manager
+      - Houston business systems manager
+      - Houston ERP project manager
+      - Houston implementation manager
+      - Houston service delivery manager
       - enterprise architect
       - technical program manager
       - business systems analyst

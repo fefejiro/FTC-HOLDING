@@ -316,8 +316,13 @@ export async function scrapeDiceFresh(searchQuery: string, maxJobs: number = 50)
 export async function scrapeIndeed(searchQuery: string, maxJobs: number = 50): Promise<ScrapedJob[]> {
   try {
     return await withScraperPage("indeed", async (page) => {
-      const searchUrl = `https://ca.indeed.com/jobs?q=${encodeURIComponent(searchQuery)}&l=Toronto%2C+Ontario&sc=0kf%3Aattr%28DSQF7%29%3B&sort=date`;
-      logger.info({ searchUrl }, "Scraping Indeed (Canada)...");
+      const host = process.env.JOB_AGENT_INDEED_HOST || "ca.indeed.com";
+      const location = process.env.JOB_AGENT_INDEED_LOCATION || "Toronto, Ontario";
+      const remoteFilter = process.env.JOB_AGENT_INDEED_REMOTE_FILTER ?? "0kf%3Aattr%28DSQF7%29%3B";
+      const locationQuery = encodeURIComponent(location);
+      const filterQuery = remoteFilter ? `&sc=${remoteFilter}` : "";
+      const searchUrl = `https://${host}/jobs?q=${encodeURIComponent(searchQuery)}&l=${locationQuery}${filterQuery}&sort=date`;
+      logger.info({ searchUrl, location, host }, "Scraping Indeed...");
       await page.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: SCRAPER_TIMEOUT_MS });
       await page.waitForTimeout(4000);
 
