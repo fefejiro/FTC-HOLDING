@@ -66,10 +66,12 @@ async function main() {
     method: 'POST',
   }, cookie)
 
-  fs.mkdirSync(path.join(process.cwd(), 'ops'), { recursive: true })
+  const reportDir = process.env.CAPSIGMA_SYNC_REPORT_DIR
+    ? path.resolve(process.env.CAPSIGMA_SYNC_REPORT_DIR)
+    : path.join(process.cwd(), 'ops')
+  fs.mkdirSync(reportDir, { recursive: true })
   const reportPath = path.join(
-    process.cwd(),
-    'ops',
+    reportDir,
     `GMAIL-SYNC-${new Date().toISOString().replace(/[:.]/g, '-')}.json`,
   )
   fs.writeFileSync(reportPath, JSON.stringify({ status, baseUrl, ...data }, null, 2))

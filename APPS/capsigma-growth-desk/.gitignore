@@ -6,3 +6,4 @@ dist/
 .env
 .env.*
 !.env.example
+ops/GMAIL-SYNC-*.json
