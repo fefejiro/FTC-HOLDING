@@ -32,6 +32,8 @@ Latest production sandbox E2E proof: `ops/PRODUCTION-E2E-SANDBOX-2026-06-15T16-1
 
 Latest production sandbox recipient proof: `ops/RECIPIENT-TEST-2026-06-15T16-57-42-504Z.json`
 
+Latest emailed operator outreach report: `ops/CAPSIGMA-OUTREACH-EMAIL-REPORT-2026-06-15T17-28-47-549Z.md`
+
 Latest Gmail delivery check: `ops/GMAIL-DELIVERY-CHECK-2026-06-11.md`
 
 Latest Gmail reply monitor evidence:
@@ -94,6 +96,9 @@ Internal workflow name: CapSigma Outreach Agent.
       `fejiro.efiuvwere@gmail.com` in Fejiro sandbox mode.
 - [x] Draft quality guard blocks HIPAA wording outside healthcare/medical
       prospect context.
+- [x] Operator outreach report emails clients, intended recipients, actual
+      recipients, email bodies, provider proof, source links, replies, and
+      follow-up guidance to Fejiro.
 - [ ] Client clicks the SendGrid verification email for `hello@capsigma.com`.
 - [ ] Production From/Reply-To switched to `hello@capsigma.com`.
 - [ ] `OUTBOUND_RECIPIENT_OVERRIDE` removed after sandbox approval.
@@ -309,6 +314,7 @@ npm run gmail:connect-local
 npm run prod:sync-replies
 npm run prod:doctor
 npm run sendgrid:domain-status
+npm run prod:email-report
 ```
 
 ## 2026-06-11 Recipient Delivery Test
@@ -370,6 +376,19 @@ npm run sendgrid:domain-status
 - `fejiro.efiuvwere@gmail.com` provider message id: `aZmYE7dBQ7iOL8HYOuVGUw`
 - Sent Review sample contains only sends created by the current run.
 - Report: `ops/RECIPIENT-TEST-2026-06-15T16-57-42-504Z.json`
+
+## 2026-06-15 Emailed Outreach Report
+
+- Recipient: `fejiro.efiuvwere@gmail.com`
+- Gmail label applied: `CAPSIGMA/Growth Desk`
+- Send status: `sent`
+- Provider message id: `FeakiMyoSPqAsHK0bs1G-g`
+- Included actual prospect outreach sends: 6
+- Included CapSigma-linked human-attention replies: 1
+- Reply needing attention: Record Solutions positive reply
+- Internal QA and smoke sends are filtered out of the operator report.
+- Report JSON: `ops/CAPSIGMA-OUTREACH-EMAIL-REPORT-2026-06-15T17-28-47-549Z.json`
+- Report Markdown: `ops/CAPSIGMA-OUTREACH-EMAIL-REPORT-2026-06-15T17-28-47-549Z.md`
 
 ## Data Policy
 

@@ -59,6 +59,8 @@ inbox until Mike approves quality and the client verifies `hello@capsigma.com`.
 - Production sandbox E2E passed against the live URL after deploy.
 - Recipient routing proof passed for `sales@capsigma.com` and
   `fejiro.efiuvwere@gmail.com`.
+- Outreach email report is available through `npm run prod:email-report` and
+  sends a client/prospect/body/follow-up digest to Fejiro.
 - Draft quality now blocks HIPAA wording outside healthcare/medical prospect
   context.
 
@@ -117,11 +119,14 @@ Acceptance for live handover:
 4. Let eligible matches auto-send in sandbox or live mode.
 5. Review Sent Review for body, source, provider id, and recipient proof.
 6. Review Replies for human-attention messages.
+7. Run `npm run prod:email-report` to email an operator digest to Fejiro.
 
 ## Latest Evidence
 
 - `ops/PRODUCTION-E2E-SANDBOX-2026-06-15T16-11-34-738Z.json`
 - `ops/RECIPIENT-TEST-2026-06-15T16-57-42-504Z.json`
+- `ops/CAPSIGMA-OUTREACH-EMAIL-REPORT-2026-06-15T17-28-47-549Z.json`
+- `ops/CAPSIGMA-OUTREACH-EMAIL-REPORT-2026-06-15T17-28-47-549Z.md`
 - `ops/AUTO-OUTREACH-EVIDENCE-2026-06-14.md`
 - `ops/GMAIL-REPLY-MONITOR-2026-06-14.md`
 - `ops/SCHEDULED-REPLY-SYNC-2026-06-14.md`

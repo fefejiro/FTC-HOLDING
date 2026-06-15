@@ -11,6 +11,7 @@
     "check": "npm run test && npm run build",
     "prod:doctor": "node scripts/prod-doctor.mjs",
     "prod:e2e:sandbox": "node scripts/prod-e2e-sandbox.mjs",
+    "prod:email-report": "node scripts/prod-email-report.mjs",
     "prod:smoke": "node scripts/prod-smoke.mjs",
     "prod:test-recipients": "node scripts/prod-test-recipients.mjs",
     "gmail:connect-local": "node scripts/connect-gmail-local.mjs",
