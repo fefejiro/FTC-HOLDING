@@ -1,0 +1,75 @@
+{
+  "checkedAt": "2026-06-15T23:04:57.412Z",
+  "baseUrl": "https://capsigma-growth-desk.pages.dev",
+  "query": "find accounting and business services firms within 500 miles of 77077 with an annual revenue of $5M",
+  "submittedIndustries": "Healthcare, Real Estate, Logistics, Financial Services, Retail",
+  "persistedTargetIndustries": "accounting and business services",
+  "expectedLocationTarget": "Houston / Gulf Coast region",
+  "status": 207,
+  "runId": "prospect_run_c749f72e-10a4-40c6-99f7-36433c9e8370",
+  "importedCount": 2,
+  "rejectedCount": 4,
+  "summary": "Identified six accounting and business services firms within 500 miles of 77077 with annual revenues of $5M, suitable for CapSigma's outreach.",
+  "imported": [
+    {
+      "company": "Cooper CPA Group",
+      "industry": "Accounting and Business Services",
+      "fitScore": 85,
+      "status": "needs_review",
+      "reviewStatus": "Missing public email; review before outreach.",
+      "emailPresent": false,
+      "sourceUrl": "https://www.coopercpagroup.com/",
+      "serviceLane": "admin processing, data cleanup and enrichment, back-office operations",
+      "reason": "Provides comprehensive accounting and consulting services, including tax preparation, QuickBooks consulting, and business valuation, suitable for small to mid-sized businesses.",
+      "researchSummary": "Cooper CPA Group offers a range of services that can benefit small to mid-sized businesses, aligning with CapSigma's service offerings."
+    },
+    {
+      "company": "Askew CPA Consulting Firm, LLC",
+      "industry": "Accounting and Business Services",
+      "fitScore": 75,
+      "status": "qualified",
+      "reviewStatus": "",
+      "emailPresent": true,
+      "sourceUrl": "https://www.askewcpaconsulting.com/",
+      "serviceLane": "admin processing, data cleanup and enrichment, back-office operations",
+      "reason": "A full-service CPA and accounting firm serving small business owners across multiple states, specializing in businesses generating $100K to $5M in annual revenue.",
+      "researchSummary": "Askew CPA Consulting Firm, LLC focuses on small businesses with revenues up to $5M, aligning with CapSigma's target market."
+    }
+  ],
+  "rejected": [
+    {
+      "company": "CBarrow CPA & Advisory",
+      "industry": "Accounting and Business Services",
+      "sourceUrl": "https://www.cbarrowcpaadvisory.com/",
+      "errors": [
+        "Prospect does not show source-backed location fit: Houston / Gulf Coast region"
+      ]
+    },
+    {
+      "company": "Gohlke & Company PC",
+      "industry": "Accounting and Business Services",
+      "sourceUrl": "https://gcocpa.cpa/",
+      "errors": [
+        "Prospect does not show source-backed location fit: Houston / Gulf Coast region"
+      ]
+    },
+    {
+      "company": "GBH CPAs, PC",
+      "industry": "Accounting and Business Services",
+      "sourceUrl": "https://www.gbhcpas.com/",
+      "errors": [
+        "Prospect does not show source-backed location fit: Houston / Gulf Coast region"
+      ]
+    },
+    {
+      "company": "ValuGenius",
+      "industry": "Accounting and Business Services",
+      "sourceUrl": "https://valugenius.com/",
+      "errors": [
+        "Prospect does not show source-backed location fit: Houston / Gulf Coast region"
+      ]
+    }
+  ],
+  "sandboxMode": true,
+  "recipientOverridePresent": true
+}

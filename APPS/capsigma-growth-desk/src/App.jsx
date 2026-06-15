@@ -34,6 +34,10 @@ const industries = [
 const csvExample = `company,industry,fitScore,reason,contactName,contactTitle,email,sourceUrl,source
 Acme Health,Healthcare,88,Referral records are handled across disconnected intake teams,Jordan Lee,VP Revenue Operations,jordan.lee@example.com,https://example.com,manual research`
 
+const defaultProspectQuery =
+  'Find healthcare, real estate, logistics, and finance companies with records, data cleanup, transaction processing, or back-office workflow needs'
+const defaultProspectIndustries = 'Healthcare, Real Estate, Logistics, Financial Services, Retail'
+
 const statusLabels = {
   new: 'New',
   qualified: 'Qualified',
@@ -74,6 +78,32 @@ function formatTime(value) {
 
 function metricValue(leads, status) {
   return leads.filter((lead) => lead.status === status).length
+}
+
+function inferProspectIndustries(query = '') {
+  const text = String(query || '').toLowerCase()
+  if (/\boil\s*(and|&)?\s*gas\b|\bpetroleum\b|\bupstream\b|\bmidstream\b|\bdownstream\b|\blng\b/.test(text)) {
+    return 'Oil and Gas'
+  }
+  if (/\b(accounting|bookkeeping|cpa|tax|payroll|audit|business services|professional services|outsourced accounting|fractional cfo|controller services|accounts payable|accounts receivable|ap\/ar|finance operations)\b/.test(text)) {
+    return 'Accounting, Business Services, Professional Services'
+  }
+  if (/\bhealthcare|medical|clinic|hospital|patient|records management\b/.test(text)) {
+    return 'Healthcare'
+  }
+  if (/\breal estate|property|brokerage|lease|tenant\b/.test(text)) {
+    return 'Real Estate'
+  }
+  if (/\blogistics|warehouse|transport|freight|shipment|supply chain\b/.test(text)) {
+    return 'Logistics'
+  }
+  if (/\bretail|store|ecommerce|e-commerce|merchandising\b/.test(text)) {
+    return 'Retail'
+  }
+  if (/\bfinance|financial services|bank|credit union|insurance\b/.test(text)) {
+    return 'Financial Services'
+  }
+  return ''
 }
 
 function parseCsv(text) {
@@ -211,12 +241,13 @@ export default function App() {
   const [notes, setNotes] = useState('')
   const [draftSubject, setDraftSubject] = useState('')
   const [draftBody, setDraftBody] = useState('')
-  const [prospectQuery, setProspectQuery] = useState('Find healthcare, real estate, logistics, and finance companies with records, data cleanup, transaction processing, or back-office workflow needs')
-  const [prospectIndustries, setProspectIndustries] = useState('Healthcare, Real Estate, Logistics, Financial Services, Retail')
+  const [prospectQuery, setProspectQuery] = useState(defaultProspectQuery)
+  const [prospectIndustries, setProspectIndustries] = useState(defaultProspectIndustries)
   const [prospectLimit, setProspectLimit] = useState(5)
   const [busy, setBusy] = useState('')
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
+  const detectedProspectIndustries = inferProspectIndustries(prospectQuery)
 
   const selectedLead = useMemo(
     () => leads.find((lead) => lead.id === selectedLeadId) || leads[0] || null,
@@ -331,6 +362,10 @@ export default function App() {
       setError('Enter a prospect research query first.')
       return
     }
+    const effectiveIndustries = detectedProspectIndustries || prospectIndustries
+    if (detectedProspectIndustries && detectedProspectIndustries !== prospectIndustries) {
+      setProspectIndustries(detectedProspectIndustries)
+    }
     setBusy('prospect')
     setError('')
     setNotice('')
@@ -339,7 +374,7 @@ export default function App() {
         method: 'POST',
         body: JSON.stringify({
           query: prospectQuery,
-          industries: prospectIndustries,
+          industries: effectiveIndustries,
           maxResults: prospectLimit,
         }),
       })
@@ -350,6 +385,18 @@ export default function App() {
       setError(err.message)
     } finally {
       setBusy('')
+    }
+  }
+
+  function updateProspectQuery(value) {
+    const currentIndustries = prospectIndustries.trim().toLowerCase()
+    const nextIndustries = inferProspectIndustries(value)
+    setProspectQuery(value)
+    if (
+      nextIndustries &&
+      (!currentIndustries || currentIndustries === defaultProspectIndustries.toLowerCase())
+    ) {
+      setProspectIndustries(nextIndustries)
     }
   }
 
@@ -714,10 +761,15 @@ export default function App() {
               </p>
               <div style={{ display: 'grid', gap: 14 }}>
                 <Field label="Research query">
-                  <textarea value={prospectQuery} onChange={(event) => setProspectQuery(event.target.value)} rows={5} style={inputStyle} />
+                  <textarea value={prospectQuery} onChange={(event) => updateProspectQuery(event.target.value)} rows={5} style={inputStyle} />
                 </Field>
                 <Field label="Industries">
                   <input value={prospectIndustries} onChange={(event) => setProspectIndustries(event.target.value)} style={inputStyle} />
+                  {detectedProspectIndustries && (
+                    <div style={{ color: palette.gold, fontSize: 13, marginTop: 8, lineHeight: 1.5 }}>
+                      Detected target: {detectedProspectIndustries}. The run will use this target for source-backed filtering.
+                    </div>
+                  )}
                 </Field>
                 <Field label="Maximum prospects">
                   <input type="number" min="1" max="10" value={prospectLimit} onChange={(event) => setProspectLimit(event.target.value)} style={inputStyle} />

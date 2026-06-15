@@ -54,7 +54,7 @@ inbox until Mike approves quality and the client verifies `hello@capsigma.com`.
   merge to `main`.
 - Local scheduled reports now write under `.local/reply-sync-reports/` so the
   repo does not get dirtied every 30 minutes.
-- `npm run check` passes with 14/14 tests.
+- `npm run check` passes with 26/26 tests.
 - `npm run prod:doctor` passes with no warnings.
 - Production sandbox E2E passed against the live URL after deploy.
 - Recipient routing proof passed for `sales@capsigma.com` and
@@ -64,6 +64,15 @@ inbox until Mike approves quality and the client verifies `hello@capsigma.com`.
 - Prospect Builder now enforces strict oil-and-gas-only targeting when requested;
   the latest production run imported 7 oil-and-gas prospects and 0 off-target
   prospects.
+- Prospect Builder now infers the target lane from the query when the industries
+  field is stale. A production test submitted accounting/business-services query
+  text with stale healthcare/logistics industries and persisted the effective
+  target as `accounting and business services`.
+- Prospect Builder now rejects weak reference/directory source URLs such as
+  Wikipedia, LinkedIn, Crunchbase, ZoomInfo, and similar non-official pages.
+- Prospect Builder now applies a Houston/Gulf Coast location proof gate when the
+  query references `77077` or Houston. The latest production accounting run
+  imported 2 prospects and rejected 4 prospects for missing location proof.
 - Draft quality now blocks HIPAA wording outside healthcare/medical prospect
   context.
 
@@ -131,6 +140,7 @@ Acceptance for live handover:
 - `ops/CAPSIGMA-OUTREACH-EMAIL-REPORT-2026-06-15T17-28-47-549Z.json`
 - `ops/CAPSIGMA-OUTREACH-EMAIL-REPORT-2026-06-15T17-28-47-549Z.md`
 - `ops/OIL-GAS-PROSPECT-RUN-2026-06-15T22-28-24-214Z.json`
+- `ops/ACCOUNTING-BUSINESS-HOUSTON-PROSPECT-RUN-2026-06-15T23-04-57-413Z.json`
 - `ops/AUTO-OUTREACH-EVIDENCE-2026-06-14.md`
 - `ops/GMAIL-REPLY-MONITOR-2026-06-14.md`
 - `ops/SCHEDULED-REPLY-SYNC-2026-06-14.md`
