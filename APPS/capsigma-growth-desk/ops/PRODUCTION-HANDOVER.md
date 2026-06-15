@@ -35,6 +35,10 @@ Latest Gmail reply monitor evidence:
 - `ops/GMAIL-REPLY-MONITOR-2026-06-14.md`
 - `ops/SCHEDULED-REPLY-SYNC-2026-06-14.md`
 
+Latest turnkey status:
+
+- `ops/TURNKEY-HANDOVER-STATUS-2026-06-15.md`
+
 Latest SendGrid domain-auth evidence:
 
 - `ops/SENDGRID-DOMAIN-AUTH-2026-06-11T17-26-42Z.json`

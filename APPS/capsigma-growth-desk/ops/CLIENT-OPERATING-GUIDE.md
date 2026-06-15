@@ -147,6 +147,8 @@ Green:
 - Sent Review proof
 - Intended vs actual recipient proof
 - Reply attention ledger
+- Gmail reply monitoring connected to Fejiro sandbox mailbox
+- Windows scheduled reply sync every 30 minutes
 - No-DNS handover path documented in `ops/NO-DNS-CLIENT-HANDOVER.md`
 - SendGrid authenticated domain created for `capsigma.com` as optional upgrade
 
@@ -155,7 +157,7 @@ Yellow:
 - Gmail spam placement until sender verification/domain authentication improves trust
 - `hello@capsigma.com` still needs the client to click the SendGrid verification email
 - SendGrid DNS records pending at the `capsigma.com` DNS host for optional stronger authentication
-- Reply sync is currently ingestion/classification based; full Outlook OAuth polling is still a follow-up
+- Outlook OAuth polling is still a follow-up; Gmail reply monitoring is implemented
 - Single-operator access only
 - Public prospect research depends on OpenAI web search availability
 
