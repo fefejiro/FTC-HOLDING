@@ -1,6 +1,6 @@
 # Scheduled Reply Sync - 2026-06-14
 
-Status: implemented.
+Status: implemented locally, cloud-ready after merge to `main`.
 
 ## Cloud Schedule
 
@@ -17,6 +17,10 @@ Every 30 minutes, Monday to Friday, during Eastern business hours.
 ```
 
 Manual run is also available from GitHub Actions through `workflow_dispatch`.
+
+Activation note: GitHub only schedules or dispatches a workflow after the
+workflow file exists on the repository default branch. This workflow is committed
+on the current branch and becomes cloud-active after merge to `main`.
 
 ## What It Does
 
@@ -62,6 +66,14 @@ Local logs are written under:
 ```
 
 The `.local` folder is ignored by git.
+
+Current local status:
+
+```text
+Task: CapSigmaGrowthDeskReplySync
+State: Ready
+Last task result: 0
+```
 
 ## Secret Handling
 

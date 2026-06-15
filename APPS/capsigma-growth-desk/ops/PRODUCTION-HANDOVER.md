@@ -76,7 +76,8 @@ Internal workflow name: CapSigma Outreach Agent.
 - [x] Gmail reply monitor routes added with encrypted mailbox token storage.
 - [x] Existing Job Reply Agent Gmail token import command added.
 - [x] Local loopback Gmail connector added for the current Google redirect allow-list mismatch.
-- [x] GitHub Actions scheduled reply sync added.
+- [x] Local Windows scheduled reply sync registered and verified.
+- [x] GitHub Actions scheduled reply sync added; activates after merge to `main`.
 - [x] No-DNS client handover path documented.
 - [x] SendGrid authenticated domain created for `capsigma.com`.
 - [ ] Client clicks the SendGrid verification email for `hello@capsigma.com`.
