@@ -1,0 +1,99 @@
+{
+  "generatedAt": "2026-06-16T00:58:01.614Z",
+  "baseUrl": "https://capsigma-growth-desk.pages.dev",
+  "sessionBeforeAuth": false,
+  "sessionAfterAuth": true,
+  "configured": {
+    "database": true,
+    "openai": true,
+    "sendgrid": true,
+    "gmail": true,
+    "gmailConnected": true,
+    "gmailEmail": "fejiro.efiuvwere@gmail.com",
+    "fromEmail": "fejiro.efiuvwere@gmail.com",
+    "replyToEmail": "fejiro.efiuvwere@gmail.com",
+    "recipientOverride": "fejiro.efiuvwere@gmail.com",
+    "sandboxMode": true,
+    "autoSendMinFitScore": 60,
+    "ccEmails": [
+      "fejiro.efiuvwere@gmail.com"
+    ],
+    "dailySendLimit": 25
+  },
+  "importedLeadId": "lead_capsigma-internal-smoke-2026-06-16t00-57-56-591z-fejiro-efiuvwere-capsigma-smoke",
+  "importedCount": 1,
+  "rejectedCount": 0,
+  "draftCreated": true,
+  "draftId": "draft_4e3ecb8e-b55e-484a-851c-37257b409b4b",
+  "sendStatus": "sandbox_sent",
+  "preview": false,
+  "sandbox": true,
+  "intendedRecipient": "fejiro.efiuvwere+capsigma-smoke-1781571476592@gmail.com",
+  "actualRecipient": "fejiro.efiuvwere@gmail.com",
+  "sendId": "send_b73cb350-c5b5-42e5-aa83-6f9d887321e6",
+  "activityCount": 50,
+  "latestActivity": [
+    {
+      "id": "act_7231a1eb-0a16-427b-b645-4322ea842fde",
+      "leadId": "lead_capsigma-internal-smoke-2026-06-16t00-57-56-591z-fejiro-efiuvwere-capsigma-smoke",
+      "type": "send_sandbox_sent",
+      "label": "Sandbox email sent for CapSigma Internal Smoke 2026-06-16T00-57-56-591Z",
+      "metadata": {
+        "sendId": "send_b73cb350-c5b5-42e5-aa83-6f9d887321e6",
+        "providerMessageId": "GNz1ZoKmSZGu7j53SQ-jfA",
+        "intendedRecipient": "fejiro.efiuvwere+capsigma-smoke-1781571476592@gmail.com",
+        "actualRecipient": "fejiro.efiuvwere@gmail.com",
+        "cc": [],
+        "serviceLane": "admin_processing"
+      },
+      "createdAt": "2026-06-16T00:58:01.148Z"
+    },
+    {
+      "id": "act_466dc287-d9d3-4660-bab6-a0771bd979ae",
+      "leadId": "lead_capsigma-internal-smoke-2026-06-16t00-57-56-591z-fejiro-efiuvwere-capsigma-smoke",
+      "type": "draft_created",
+      "label": "Draft created for CapSigma Internal Smoke 2026-06-16T00-57-56-591Z",
+      "metadata": {
+        "draftId": "draft_4e3ecb8e-b55e-484a-851c-37257b409b4b",
+        "model": "gpt-4o-mini"
+      },
+      "createdAt": "2026-06-16T00:58:00.725Z"
+    },
+    {
+      "id": "act_f130d21c-b941-4bb5-b8af-0272936c8be2",
+      "leadId": "",
+      "type": "lead_import",
+      "label": "Imported 1 lead",
+      "metadata": {
+        "rejected": 0
+      },
+      "createdAt": "2026-06-16T00:57:56.806Z"
+    },
+    {
+      "id": "act_9b955716-cfcf-4d61-8823-20d0815ca593",
+      "leadId": "lead_capsigma-internal-smoke-2026-06-16t00-56-07-462z-fejiro-efiuvwere-capsigma-smoke",
+      "type": "send_sandbox_sent",
+      "label": "Sandbox email sent for CapSigma Internal Smoke 2026-06-16T00-56-07-462Z",
+      "metadata": {
+        "sendId": "send_8b12d259-b39f-4502-a4d0-09e7e0f9b580",
+        "providerMessageId": "1QS-_zR9QWaG9rB4kS6gcQ",
+        "intendedRecipient": "fejiro.efiuvwere+capsigma-smoke-1781571367463@gmail.com",
+        "actualRecipient": "fejiro.efiuvwere@gmail.com",
+        "cc": [],
+        "serviceLane": "admin_processing"
+      },
+      "createdAt": "2026-06-16T00:56:12.523Z"
+    },
+    {
+      "id": "act_e5db8210-4f89-4383-bdb4-5bc6decef996",
+      "leadId": "lead_capsigma-internal-smoke-2026-06-16t00-56-07-462z-fejiro-efiuvwere-capsigma-smoke",
+      "type": "draft_created",
+      "label": "Draft created for CapSigma Internal Smoke 2026-06-16T00-56-07-462Z",
+      "metadata": {
+        "draftId": "draft_ebb6298e-9ce9-4ebd-b0db-5ccaf0a5754d",
+        "model": "gpt-4o-mini"
+      },
+      "createdAt": "2026-06-16T00:56:11.941Z"
+    }
+  ]
+}

@@ -33,6 +33,8 @@
     "doctor": "node -v && npm -v && (test -d APPS && echo APPS ok)",
     "postinstall": "node scripts/cf-pages-postinstall.mjs",
     "audit:secrets": "node scripts/audit-secrets.cjs",
+    "health:audit": "node scripts/ftc-health-audit.mjs",
+    "health:audit:deep": "node scripts/ftc-health-audit.mjs --deep-local --no-fail",
     "inbox:flush": "node scripts/flush-inbox.mjs",
     "ci:seed": "node scripts/seed-continuous-improvement.mjs",
     "ci:seed:dry": "node -e \"process.env.DRY_RUN='1';require('child_process').execSync('node scripts/seed-continuous-improvement.mjs',{stdio:'inherit'})\"",
