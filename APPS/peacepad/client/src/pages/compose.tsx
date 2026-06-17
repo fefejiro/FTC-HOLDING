@@ -53,6 +53,7 @@ export default function ComposePage() {
   const [analysis, setAnalysis] = useState<PreviewResponse | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [guestSessionNotice, setGuestSessionNotice] = useState<string | null>(null);
   const [isPreparingGuest, setIsPreparingGuest] = useState(false);
   const [messageCopied, setMessageCopied] = useState(false);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
@@ -70,10 +71,12 @@ export default function ComposePage() {
     }
 
     setIsPreparingGuest(true);
+    setGuestSessionNotice(null);
     ensureGuestSession()
       .catch((error) => {
         if (!cancelled) {
-          setAnalysisError(error instanceof Error ? error.message : "PeacePad could not start a guest session.");
+          console.warn("[Compose] Guest session unavailable; continuing in local draft mode.", error);
+          setGuestSessionNotice("Cloud sync is offline right now. You can still draft, refine manually, and copy your message.");
         }
       })
       .finally(() => {
@@ -264,6 +267,12 @@ export default function ComposePage() {
             {analysisError ? (
               <div className="rounded-2xl border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-900 dark:border-red-900 dark:bg-red-950/20 dark:text-red-100">
                 {analysisError}
+              </div>
+            ) : null}
+
+            {guestSessionNotice ? (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-100">
+                {guestSessionNotice}
               </div>
             ) : null}
 

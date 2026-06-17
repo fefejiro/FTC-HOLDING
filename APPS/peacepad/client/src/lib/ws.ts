@@ -46,7 +46,7 @@ function hardenWebSocketUrl(url: string): string {
     parsed.protocol = "wss:";
     parsed.hostname = "api.peacepad.ca";
     parsed.port = "";
-    console.warn("[WebSocket] Rewrote signaling host to api.peacepad.ca", {
+    console.warn("[WebSocket] Rewrote signaling host to recovered PeacePad API", {
       originalUrl: url,
       rewrittenUrl: parsed.toString(),
     });
