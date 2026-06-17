@@ -94,7 +94,7 @@ export async function fetchCurrentUserSnapshot(
       });
       setLastAuthBootstrapIssue({
         kind: "error",
-        message: "PeacePad could not restore your session. You can keep going and retry anytime.",
+        message: "PeacePad cloud sync is offline right now. You can keep drafting and retry sign-in anytime.",
       });
       return null;
     }
@@ -110,7 +110,7 @@ export async function fetchCurrentUserSnapshot(
       });
       setLastAuthBootstrapIssue({
         kind: "error",
-        message: "PeacePad could not confirm your session. You can keep going and retry anytime.",
+        message: "PeacePad cloud sync is offline right now. You can keep drafting and retry sign-in anytime.",
       });
       return null;
     }
@@ -133,7 +133,7 @@ export async function fetchCurrentUserSnapshot(
       });
       setLastAuthBootstrapIssue({
         kind: "timeout",
-        message: "PeacePad took too long to restore your session. You can continue and retry sign-in later.",
+        message: "PeacePad cloud sync is taking too long. You can keep drafting and retry sign-in later.",
       });
       return null;
     }
@@ -145,7 +145,7 @@ export async function fetchCurrentUserSnapshot(
     });
     setLastAuthBootstrapIssue({
       kind: "error",
-      message: "PeacePad hit a startup connection problem. You can continue and retry anytime.",
+      message: "PeacePad cloud sync is offline right now. You can keep drafting and retry anytime.",
     });
     return null;
   } finally {

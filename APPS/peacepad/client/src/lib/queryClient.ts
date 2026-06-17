@@ -45,7 +45,7 @@ function resolveRuntimeApiBaseUrl() {
  * Single source of truth for API base URL resolution.
  * - Uses VITE_API_BASE_URL when configured
  * - Defaults to window.location.origin for web
- * - Falls back to api.peacepad.ca only on native Capacitor builds
+ * - Falls back to the recovered Railway API only on native Capacitor builds
  */
 export function getApiBaseUrl(): string {
   return resolveRuntimeApiBaseUrl().baseUrl;
@@ -105,7 +105,7 @@ function maybeWarnPlatformFallback(requestUrl: string, response: Response): void
   }
 
   warnedPlatformFallbackRequests.add(warningKey);
-  console.warn("[API] Platform fallback response detected while using api.peacepad.ca base URL.", {
+  console.warn("[API] Platform fallback response detected while using the PeacePad API base URL.", {
     requestUrl: targetUrl,
     responseUrl: response.url,
     status: response.status,
