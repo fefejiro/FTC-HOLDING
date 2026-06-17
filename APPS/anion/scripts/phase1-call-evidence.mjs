@@ -8,11 +8,17 @@ import { chromium } from 'playwright';
 const baseUrl = (process.env.ANION_BASE_URL || 'https://anion.unalabs.cloud').replace(/\/+$/, '');
 const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/+$/, '');
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const bookingId = process.env.ANION_PHASE1_BOOKING_ID || '';
+const defaultPhase1BookingId = '63404ecd-6b16-4466-bb15-745208cab970';
+const bookingId = process.env.ANION_PHASE1_BOOKING_ID || defaultPhase1BookingId;
 const outputDir =
   process.env.ANION_EVIDENCE_DIR ||
   path.join(process.cwd(), 'test-results', `phase1-call-${new Date().toISOString().replace(/[:.]/g, '-')}`);
+const storageStateDir = process.env.ANION_EVIDENCE_STORAGE_DIR || path.join(process.cwd(), 'test-results', 'phase1-auth-states');
+const chromeProfileDir = process.env.ANION_EVIDENCE_CHROME_PROFILE_DIR || path.join(process.cwd(), 'test-results', 'phase1-chrome-profiles');
 const postClassroomEvidence = process.env.ANION_EVIDENCE_POST_CLASSROOM === '1';
+const authMode = (process.env.ANION_PHASE1_AUTH_MODE || (serviceRoleKey ? 'service-role' : 'manual')).toLowerCase();
+const useChromeProfiles = process.env.ANION_EVIDENCE_USE_CHROME_PROFILES === '1';
+const browserChannel = process.env.ANION_EVIDENCE_BROWSER_CHANNEL || 'chrome';
 
 const roleInputs = {
   parent: process.env.ANION_PARENT_EMAIL || '',
@@ -28,9 +34,24 @@ const expectedPaths = {
   admin: '/admin',
 };
 
+const storageStatePaths = {
+  parent: process.env.ANION_PARENT_STORAGE_STATE || path.join(storageStateDir, 'parent.json'),
+  tutor: process.env.ANION_TUTOR_STORAGE_STATE || path.join(storageStateDir, 'tutor.json'),
+  student: process.env.ANION_STUDENT_STORAGE_STATE || path.join(storageStateDir, 'student.json'),
+  admin: process.env.ANION_ADMIN_STORAGE_STATE || path.join(storageStateDir, 'admin.json'),
+};
+
+const chromeProfilePaths = {
+  parent: process.env.ANION_PARENT_CHROME_PROFILE || path.join(chromeProfileDir, 'parent'),
+  tutor: process.env.ANION_TUTOR_CHROME_PROFILE || path.join(chromeProfileDir, 'tutor'),
+  student: process.env.ANION_STUDENT_CHROME_PROFILE || path.join(chromeProfileDir, 'student'),
+  admin: process.env.ANION_ADMIN_CHROME_PROFILE || path.join(chromeProfileDir, 'admin'),
+};
+
 const results = [];
 const screenshots = [];
 let booking = null;
+let browserHeadless = true;
 
 function record(role, check, ok, detail = '') {
   results.push({ role, check, ok, detail });
@@ -78,6 +99,17 @@ async function supabaseRest(pathname, init = {}) {
 }
 
 async function loadBooking() {
+  if (authMode === 'manual' && (!supabaseUrl || !serviceRoleKey)) {
+    booking = { id: bookingId, subject: null, status: 'unknown' };
+    record(
+      'system',
+      'booking fixture loaded',
+      true,
+      `skipped Supabase lookup in manual auth mode; route/API checks will verify booking ${bookingId}`,
+    );
+    return;
+  }
+
   const rows = await supabaseRest(
     `/rest/v1/bookings?select=id,subject,status,parent_id,tutor_id,student_id,requested_start_at,duration_minutes&id=eq.${encodeURIComponent(bookingId)}&limit=1`,
   );
@@ -114,10 +146,23 @@ async function generateMagicLink(email) {
   if (!response.ok || !body?.action_link) {
     throw new Error(`Could not generate magic link for ${email}: HTTP ${response.status} ${JSON.stringify(body)}`);
   }
-  return String(body.action_link);
+  if (body.hashed_token && body.verification_type) {
+    const callback = new URL(`${baseUrl}/auth/callback`);
+    callback.searchParams.set('token_hash', String(body.hashed_token));
+    callback.searchParams.set('type', String(body.verification_type));
+    return callback.toString();
+  }
+
+  const link = new URL(String(body.action_link));
+  link.searchParams.set('redirect_to', `${baseUrl}/auth/callback`);
+  return link.toString();
 }
 
 async function signInRole(browser, role, email) {
+  if (authMode === 'manual') {
+    return signInManualRole(browser, role);
+  }
+
   const context = await browser.newContext({
     baseURL: baseUrl,
     permissions: ['camera', 'microphone'],
@@ -133,6 +178,73 @@ async function signInRole(browser, role, email) {
   const pathOk = new URL(page.url()).pathname === expectedPath;
   await screenshot(page, `${role}-signed-in`);
   record(role, 'sign-in routed to role dashboard', pathOk, page.url());
+
+  if (!pathOk) {
+    throw new Error(`${role} sign-in did not land on ${expectedPath}; current URL is ${page.url()}`);
+  }
+
+  return { context, page };
+}
+
+async function signInManualRole(browser, role) {
+  if (useChromeProfiles && fs.existsSync(chromeProfilePaths[role])) {
+    const context = await chromium.launchPersistentContext(chromeProfilePaths[role], {
+      channel: browserChannel,
+      headless: browserHeadless,
+      baseURL: baseUrl,
+      permissions: ['camera', 'microphone'],
+      args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'],
+    });
+    const page = context.pages()[0] ?? await context.newPage();
+    const expectedPath = expectedPaths[role];
+    await page.goto('/dashboard', { waitUntil: 'networkidle' });
+    const pathOk = new URL(page.url()).pathname === expectedPath;
+    await context.storageState({ path: storageStatePaths[role] });
+    await screenshot(page, `${role}-signed-in`);
+    record(role, 'sign-in routed to role dashboard', pathOk, `${page.url()} (manual chrome-profile auth)`);
+
+    if (!pathOk) {
+      await context.close();
+      throw new Error(`${role} Chrome profile did not land on ${expectedPath}; current URL is ${page.url()}`);
+    }
+
+    return { context, page };
+  }
+
+  fs.mkdirSync(storageStateDir, { recursive: true });
+  const storageState = storageStatePaths[role];
+  fs.mkdirSync(path.dirname(storageState), { recursive: true });
+  const hasStoredSession = fs.existsSync(storageState);
+  const context = await browser.newContext({
+    baseURL: baseUrl,
+    permissions: ['camera', 'microphone'],
+    ...(hasStoredSession ? { storageState } : {}),
+  });
+  const page = await context.newPage();
+  const expectedPath = expectedPaths[role];
+
+  await page.goto('/dashboard', { waitUntil: 'networkidle' });
+  let pathOk = new URL(page.url()).pathname === expectedPath;
+
+  if (!pathOk) {
+    if (browserHeadless) {
+      await context.close();
+      throw new Error(
+        `${role} manual auth requires an existing storage state at ${storageState} or ANION_EVIDENCE_HEADED=1 for interactive Google sign-in.`,
+      );
+    }
+
+    console.log(`\nManual auth required: sign in as ${role}${roleInputs[role] ? ` (${roleInputs[role]})` : ''}.`);
+    console.log(`Expected landing path: ${expectedPath}`);
+    console.log(`Storage state will be saved to: ${storageState}\n`);
+    await page.goto('/login', { waitUntil: 'networkidle' });
+    await page.waitForURL((url) => url.pathname === expectedPath, { timeout: 10 * 60 * 1000 });
+    pathOk = true;
+  }
+
+  await context.storageState({ path: storageState });
+  await screenshot(page, `${role}-signed-in`);
+  record(role, 'sign-in routed to role dashboard', pathOk, `${page.url()} (manual ${hasStoredSession ? 'stored-session' : 'interactive'} auth)`);
 
   if (!pathOk) {
     throw new Error(`${role} sign-in did not land on ${expectedPath}; current URL is ${page.url()}`);
@@ -183,6 +295,37 @@ async function directDailyTokenCheck(page, role) {
     apiResult.status === 200 && apiResult.ok && apiResult.roomName === `anion-${bookingId}`,
     `HTTP ${apiResult.status}, room=${apiResult.roomName ?? '(none)'}, tokenPresent=${apiResult.tokenPresent || apiResult.localMode}`,
   );
+}
+
+async function verifyVideoSurface(page, role) {
+  const surface = page.locator('[data-testid="daily-custom-call-room"], [data-testid="local-demo-video-room"]').first();
+  await surface.waitFor({ state: 'visible', timeout: 30_000 });
+
+  const localVideo = page.locator('[data-testid="daily-local-video"], [data-testid="local-demo-self-video"]').first();
+  await localVideo.waitFor({ state: 'visible', timeout: 30_000 });
+
+  const surfaceId = await surface.getAttribute('data-testid').catch(() => '(unknown)');
+  record(role, 'video surface visible', true, surfaceId ?? '(unknown)');
+}
+
+async function verifyBackgroundControls(page, role) {
+  const surface = page.locator('[data-testid="daily-custom-call-room"], [data-testid="local-demo-video-room"]').first();
+  const checks = [
+    ['background-option-soft-blur', 'Soft blur active', 'soft-blur'],
+    ['background-option-strong-blur', 'Strong blur active', 'strong-blur'],
+    ['background-option-none', 'Background off', 'none'],
+  ];
+
+  for (const [testId, expectedStatus, expectedMode] of checks) {
+    await page.getByTestId(testId).click();
+    await page.waitForFunction(
+      (expected) => document.querySelector('[data-testid="background-status"]')?.textContent?.includes(expected),
+      expectedStatus,
+      { timeout: 20_000 },
+    );
+    const mode = await surface.getAttribute('data-background-mode').catch(() => null);
+    record(role, `background ${expectedMode}`, mode === expectedMode, `status=${expectedStatus}, mode=${mode ?? '(missing)'}`);
+  }
 }
 
 async function parentEvidence(browser) {
@@ -254,6 +397,7 @@ async function participantEvidence(browser, role) {
     await directDailyTokenCheck(page, role);
 
     await page.goto(`/lesson/${bookingId}`, { waitUntil: 'networkidle' });
+    await ensureLessonJoinAttempt(page);
     await page.waitForSelector('[data-testid="lesson-call-status"]', { timeout: 30_000 });
     await page.waitForFunction(
       () => document.querySelector('[data-testid="lesson-call-status"]')?.textContent?.includes('Connected'),
@@ -263,6 +407,8 @@ async function participantEvidence(browser, role) {
     await screenshot(page, `${role}-lesson-connected`);
     await expectTexts(page, role, ['Live Classroom', 'Lesson Context', 'Classroom Timeline']);
     record(role, 'daily join connected', true, page.url());
+    await verifyVideoSurface(page, role);
+    await verifyBackgroundControls(page, role);
 
     await page.getByTestId('leave-lesson-button').click();
     await page.waitForSelector('[data-testid="rejoin-lesson-button"]', { timeout: 15_000 });
@@ -294,6 +440,10 @@ async function concurrentJoinEvidence(browser) {
       student.page.goto(`/lesson/${bookingId}`, { waitUntil: 'networkidle' }),
     ]);
     await Promise.all([
+      ensureLessonJoinAttempt(tutor.page),
+      ensureLessonJoinAttempt(student.page),
+    ]);
+    await Promise.all([
       tutor.page.waitForFunction(
         () => document.querySelector('[data-testid="lesson-call-status"]')?.textContent?.includes('Connected'),
         null,
@@ -318,6 +468,17 @@ async function concurrentJoinEvidence(browser) {
   }
 }
 
+async function ensureLessonJoinAttempt(page) {
+  await page
+    .waitForSelector('[data-testid="lesson-call-status"], [data-testid="rejoin-lesson-button"]', { timeout: 10_000 })
+    .catch(() => {});
+  const rejoinButton = page.getByTestId('rejoin-lesson-button').first();
+  if ((await rejoinButton.count().catch(() => 0)) > 0 && await rejoinButton.isVisible().catch(() => false)) {
+    await rejoinButton.click();
+    await page.waitForLoadState('networkidle').catch(() => {});
+  }
+}
+
 async function adminEvidence(browser) {
   if (!roleInputs.admin) {
     record('admin', 'dashboard evidence', true, 'skipped; set ANION_ADMIN_EMAIL to include admin proof');
@@ -337,6 +498,7 @@ async function adminEvidence(browser) {
 function writeReports() {
   const report = {
     baseUrl,
+    authMode,
     booking,
     bookingId,
     generatedAt: new Date().toISOString(),
@@ -373,19 +535,32 @@ function writeReports() {
 }
 
 async function main() {
-  requireEnv('NEXT_PUBLIC_SUPABASE_URL', supabaseUrl);
-  requireEnv('SUPABASE_SERVICE_ROLE_KEY', serviceRoleKey);
+  if (!['service-role', 'manual'].includes(authMode)) {
+    throw new Error(`ANION_PHASE1_AUTH_MODE must be "service-role" or "manual"; received "${authMode}".`);
+  }
+
   requireEnv('ANION_PHASE1_BOOKING_ID', bookingId);
-  requireEnv('ANION_PARENT_EMAIL', roleInputs.parent);
-  requireEnv('ANION_TUTOR_EMAIL', roleInputs.tutor);
-  requireEnv('ANION_STUDENT_EMAIL', roleInputs.student);
+
+  if (authMode === 'service-role') {
+    requireEnv('NEXT_PUBLIC_SUPABASE_URL', supabaseUrl);
+    requireEnv('SUPABASE_SERVICE_ROLE_KEY', serviceRoleKey);
+    requireEnv('ANION_PARENT_EMAIL', roleInputs.parent);
+    requireEnv('ANION_TUTOR_EMAIL', roleInputs.tutor);
+    requireEnv('ANION_STUDENT_EMAIL', roleInputs.student);
+  }
 
   fs.mkdirSync(outputDir, { recursive: true });
   console.log(`Evidence output: ${outputDir}`);
+  console.log(`Auth mode: ${authMode}`);
   await loadBooking();
 
+  const manualStorageReady =
+    authMode !== 'manual' ||
+    ['parent', 'tutor', 'student'].every((role) => fs.existsSync(storageStatePaths[role]));
+  browserHeadless = process.env.ANION_EVIDENCE_HEADED === '1' || (authMode === 'manual' && !manualStorageReady) ? false : true;
+
   const browser = await chromium.launch({
-    headless: process.env.ANION_EVIDENCE_HEADED === '1' ? false : true,
+    headless: browserHeadless,
     args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'],
   });
 

@@ -36,6 +36,8 @@ const statusBlockers = new Set([
   'supabase_service_role_invalid',
   'stripe_subscription_state_unverified',
   'daily_call_ui_cdn_unreachable',
+  'phase1_authenticated_video_evidence_pending',
+  'whiteboard_production_evidence_pending',
   'phase1_domain_fixture_missing',
   'confirmed_phase1_test_credentials',
   'supabase_auth_allow_list',
@@ -172,6 +174,7 @@ async function main() {
   if (blockers.length > 0) {
     console.log('\nProduction is reachable, but Anion is not handover-green yet.');
     console.log('Next required action: resolve the blocker codes above, then run authenticated parent/tutor/student role evidence.');
+    console.log('If service-role secrets are not available, use: npm run phase1:evidence:manual');
     process.exit(1);
   }
 

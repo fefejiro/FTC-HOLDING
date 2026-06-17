@@ -11,7 +11,7 @@ Primary production delivery lane for Anion.
 
 ## Authentication
 
-Anion uses **Google OAuth** as the primary authentication method via Supabase, with a secure email magic-link fallback for handoff and QA accounts. There are no Anion-managed passwords.
+Anion uses **Google OAuth** as the user-facing authentication method via Supabase. There are no Anion-managed passwords, and the public login page does not expose magic-link fields.
 
 1. Users click "Continue with Google" on the login page (`/login`)
 2. They're redirected to the Supabase OAuth endpoint
@@ -37,7 +37,6 @@ The `/auth/callback` route is the hardened entry point that exchanges OAuth code
 
 Authentication helpers live in `src/lib/auth.ts`:
 - `signInWithGoogle()` - Initiates OAuth flow
-- `signInWithMagicLink()` - Sends a secure email link for fallback sign-in
 - `loadSession()` - Gets current auth session
 - `logout()` - Signs out user
 
@@ -52,9 +51,9 @@ Server-side auth resolution in `app/lib/auth/getCurrentUser.ts`:
 - OpenNext and Wrangler deployment contract added
 - Supabase migrations folder initialized and applied
 - M1-M5 core implementation exists in code, and authenticated production closure is partially proven
-- Current Phase 1 execution status: FAIL until Daily iframe join/leave/rejoin and Stripe subscription-state evidence are captured
+- Current Phase 1 execution status: FAIL until authenticated Daily video join/leave/rejoin and Stripe subscription-state evidence are captured
 - Live classroom rule: assigned tutor and student join the Daily room; parent has booking visibility but does not join the call unless future product requirements change
-- Runtime status endpoint is now aligned: live `/api/status` reports ready auth/bookings, Daily token API readiness, and the remaining non-green blockers
+- Runtime status endpoint is now aligned: live `/api/status` reports ready auth/bookings, first-party Daily call UI readiness, and the remaining non-green blockers
 - Governance rule: do not mark overall green while critical items in `ops/PRODUCTION-READINESS.md` remain open
 
 ## Commands
@@ -67,7 +66,9 @@ Server-side auth resolution in `app/lib/auth/getCurrentUser.ts`:
 - npm run ci:check
 - npm run preflight:prod
 - npm run prod:doctor
+- npm run phase1:provision-google-qa
 - npm run phase1:evidence
+- npm run phase1:evidence:manual
 - npm run billing:evidence
 - npm run verify:prod
 - npm run perf:baseline
@@ -83,7 +84,7 @@ Server-side auth resolution in `app/lib/auth/getCurrentUser.ts`:
 Smoke tests live in `tests/smoke.spec.ts` and cover:
 - `GET /api/health` - service liveness
 - `POST /api/daily/room` - malformed requests return `400`, unauthenticated valid-shaped requests return `401`
-- `/login` - sign-in form renders correctly (Google auth button and secure email link fallback visible)
+- `/login` - sign-in form renders correctly with Google auth and no password or magic-link fields
 - `/pricing` - all three plan cards visible
 
 ### Google OAuth tests (Playwright)
@@ -168,10 +169,43 @@ npm run phase1:evidence
 
 This creates a timestamped screenshot/report folder under `test-results/` and
 only passes after parent booking visibility/denial plus tutor/student dashboard,
-token, join, leave, rejoin, and concurrent-join evidence are proven. Set
+token, visible video surface, background switching, join, leave, rejoin, and concurrent-join evidence are proven. Set
 `ANION_ADMIN_EMAIL` to include admin dashboard evidence, and set
 `ANION_EVIDENCE_POST_CLASSROOM=1` only when a controlled test classroom post is
 acceptable.
+
+For dedicated Google QA accounts, first have the parent, tutor, and student
+accounts sign in once with Google. Then provision the role/domain fixture:
+
+```powershell
+$env:ANION_PARENT_EMAIL="parent-qa@example.com"
+$env:ANION_TUTOR_EMAIL="tutor-qa@example.com"
+$env:ANION_STUDENT_EMAIL="student-qa@example.com"
+npm run phase1:provision-google-qa
+```
+
+The command validates that each account has a Google identity, upserts
+`profiles`, `user_roles`, `parents`, `students`, `tutors`, and
+`parent_student_links`, then creates an accepted `Anion Phase 1 QA Live
+Classroom` booking. Use the returned booking ID as `ANION_PHASE1_BOOKING_ID`
+for the evidence run.
+
+If the service-role key is not available, run the manual Google-auth evidence
+mode instead:
+
+```powershell
+npm run phase1:evidence:manual
+```
+
+This opens headed browser contexts for parent, tutor, and student sign-in,
+saves reusable storage states under `test-results/phase1-auth-states/`, then
+runs the same strict video checks. Later reruns can use the saved sessions in
+headless mode with:
+
+```powershell
+$env:ANION_PHASE1_AUTH_MODE="manual"
+node ./scripts/phase1-call-evidence.mjs
+```
 
 After Stripe test-mode provider settings are present, run the billing evidence
 gate:
@@ -218,6 +252,7 @@ npm run test:local-video
 
 This proves parent denial plus tutor/student local video join, leave, and rejoin.
 Production Daily provider settings are configured. Parent visibility/denial and
-tutor/student Daily room-token evidence pass in production. Handover still
-requires iframe join, leave, and rejoin proof from a browser/network that can
-load Daily hosted call UI assets from `https://c.daily.co`.
+tutor/student Daily room-token evidence pass in production. The lesson room now
+uses Anion's first-party Daily call UI instead of the hosted Daily prebuilt UI;
+handover still requires authenticated tutor/student video join, background,
+leave, and rejoin proof from `npm run phase1:evidence`.

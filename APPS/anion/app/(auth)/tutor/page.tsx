@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '../../lib/auth/getCurrentUser';
-import { listTutorBookings, setBookingStatus } from '../../lib/bookings';
+import { getClassReminderStatus, listTutorBookings, setBookingStatus } from '../../lib/bookings';
 import { createClassroomPost, listClassroomPosts, listTutorClassroomStudents } from '../../lib/classroom';
 
 type TutorPageProps = {
@@ -27,7 +27,7 @@ const assignmentTemplates = [
 ] as const;
 
 export default async function TutorPage({ searchParams }: TutorPageProps) {
-  const user = await getCurrentUser();
+  const user = await getCurrentUser({ preferredRole: 'tutor' });
   if (!user) redirect('/login');
   if (user.role !== 'tutor') redirect('/dashboard');
 
@@ -244,9 +244,34 @@ export default async function TutorPage({ searchParams }: TutorPageProps) {
           {bookings.length === 0 ? (
             <p className="muted">No bookings assigned yet.</p>
           ) : (
-            bookings.map((booking) => (
+            bookings.map((booking) => {
+              const reminder = booking.status === 'accepted'
+                ? getClassReminderStatus({
+                    requestedStartAt: booking.requested_start_at,
+                    durationMinutes: booking.duration_minutes,
+                  })
+                : null;
+
+              return (
               <article key={booking.id} className="surface card" style={{ boxShadow: 'none' }}>
-                <p style={{ margin: 0, fontWeight: 600 }}>{booking.subject}</p>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                  <p style={{ margin: 0, fontWeight: 600 }}>{booking.subject}</p>
+                  {reminder ? (
+                    <span
+                      style={{
+                        borderRadius: 999,
+                        padding: '4px 8px',
+                        background: reminder.state === 'join-open' ? '#dcfce7' : reminder.state === 'due-soon' ? '#fef3c7' : '#e0f2fe',
+                        color: reminder.state === 'join-open' ? '#166534' : reminder.state === 'due-soon' ? '#92400e' : '#075985',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {reminder.label}
+                    </span>
+                  ) : null}
+                </div>
                 <p className="muted" style={{ margin: '6px 0 0' }}>
                   {new Date(booking.requested_start_at).toLocaleString()} • {booking.duration_minutes} mins
                 </p>
@@ -259,6 +284,12 @@ export default async function TutorPage({ searchParams }: TutorPageProps) {
                 {booking.notes ? (
                   <p className="muted" style={{ margin: '6px 0 0' }}>
                     Notes: {booking.notes}
+                  </p>
+                ) : null}
+                {reminder ? (
+                  <p className="muted" style={{ margin: '6px 0 0' }}>
+                    {reminder.message}
+                    {reminder.nextReminderLabel ? ` Next reminder: ${reminder.nextReminderLabel}.` : ''}
                   </p>
                 ) : null}
 
@@ -322,7 +353,8 @@ export default async function TutorPage({ searchParams }: TutorPageProps) {
                   ) : null}
                 </div>
               </article>
-            ))
+              );
+            })
           )}
         </div>
       </section>

@@ -9,7 +9,7 @@ type ParentPageProps = {
 };
 
 export default async function ParentPage({ searchParams }: ParentPageProps) {
-  const user = await getCurrentUser();
+  const user = await getCurrentUser({ preferredRole: 'parent' });
   if (!user) redirect('/login');
   if (user.role !== 'parent') redirect('/dashboard');
 
@@ -73,10 +73,34 @@ export default async function ParentPage({ searchParams }: ParentPageProps) {
           </p>
         ) : null}
 
+        {linkedStudents.length === 0 ? (
+          <div
+            className="surface card"
+            data-testid="parent-no-linked-students"
+            style={{ boxShadow: 'none', marginTop: 16, borderColor: '#fde68a', background: '#fffbeb' }}
+          >
+            <p style={{ margin: 0, fontWeight: 700, color: '#78350f' }}>A student must be linked before booking.</p>
+            <p className="muted" style={{ margin: '6px 0 0', color: '#92400e' }}>
+              Ask an admin to link a student to this parent account, then refresh this page.
+            </p>
+            {user.roles.includes('admin') ? (
+              <a href="/admin" style={{ display: 'inline-block', marginTop: 10, color: 'var(--brand)', fontWeight: 700 }}>
+                Open admin dashboard
+              </a>
+            ) : null}
+          </div>
+        ) : null}
+
         <form action={createBookingAction} className="grid" style={{ marginTop: 16 }}>
           <label className="grid" style={{ gap: 6 }}>
             <span className="muted">Student</span>
-            <select name="studentId" required style={{ padding: 10, borderRadius: 10, border: '1px solid #dbe3f0' }}>
+            <select
+              name="studentId"
+              required
+              disabled={linkedStudents.length === 0}
+              data-testid="parent-student-select"
+              style={{ padding: 10, borderRadius: 10, border: '1px solid #dbe3f0' }}
+            >
               <option value="">Select student</option>
               {linkedStudents.map((student) => (
                 <option key={student.id} value={student.id}>
@@ -147,6 +171,8 @@ export default async function ParentPage({ searchParams }: ParentPageProps) {
 
           <button
             type="submit"
+            disabled={linkedStudents.length === 0}
+            data-testid="parent-submit-booking"
             style={{
               background: 'var(--brand)',
               color: '#fff',
@@ -154,7 +180,8 @@ export default async function ParentPage({ searchParams }: ParentPageProps) {
               borderRadius: 10,
               padding: '10px 14px',
               width: 'fit-content',
-              cursor: 'pointer',
+              cursor: linkedStudents.length === 0 ? 'not-allowed' : 'pointer',
+              opacity: linkedStudents.length === 0 ? 0.6 : 1,
             }}
           >
             Submit Booking

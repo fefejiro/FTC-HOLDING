@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, code: 'INVALID_BILLING_CHECKOUT_REQUEST', message: 'Malformed billing checkout payload.', validationErrors, requestId }, { status: 400 });
   }
 
-  const user = await getCurrentUser();
+  const user = await getCurrentUser({ preferredRole: 'parent' });
   if (!user) {
     logger.warn({ route, requestId, code: 'UNAUTHENTICATED', latencyMs: Date.now() - start });
     return NextResponse.json({ ok: false, code: 'UNAUTHENTICATED', requestId }, { status: 401 });

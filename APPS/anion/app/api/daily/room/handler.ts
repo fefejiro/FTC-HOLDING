@@ -4,7 +4,7 @@ import { validateCsrfRequest } from '@/app/lib/security/csrf';
 import { enforceRateLimit } from '@/app/lib/security/rate-limit';
 import { logger } from '@/app/lib/logger';
 import { getOrCreateRequestId } from '@/app/lib/request-id';
-import { resolveLessonParticipantRoleForUser } from '@/app/lib/bookings';
+import { getLessonJoinWindowStatusForBooking, resolveLessonParticipantRoleForUser } from '@/app/lib/bookings';
 import { isLocalDemoEnabled } from '@/app/lib/local-demo';
 import type { CurrentUser } from '@/app/lib/auth/getCurrentUser';
 import type { DailyRoomTokenRequest } from '@/src/types/api/scaffolds';
@@ -22,10 +22,11 @@ class DailyApiError extends Error {
 }
 
 type DailyRoomHandlerDeps = {
-  getCurrentUser: () => Promise<CurrentUser | null>;
+  getCurrentUser: typeof getCurrentUser;
   validateCsrfRequest: typeof validateCsrfRequest;
   enforceRateLimit: typeof enforceRateLimit;
   resolveLessonParticipantRoleForUser: typeof resolveLessonParticipantRoleForUser;
+  getLessonJoinWindowStatusForBooking: typeof getLessonJoinWindowStatusForBooking;
   dailyFetch: DailyFetch;
   env: NodeJS.ProcessEnv;
   now: () => number;
@@ -82,6 +83,7 @@ export function createDailyRoomPostHandler(overrides: Partial<DailyRoomHandlerDe
     validateCsrfRequest,
     enforceRateLimit,
     resolveLessonParticipantRoleForUser,
+    getLessonJoinWindowStatusForBooking,
     dailyFetch,
     env: process.env,
     now: Date.now,
@@ -118,7 +120,8 @@ export function createDailyRoomPostHandler(overrides: Partial<DailyRoomHandlerDe
       return NextResponse.json({ ok: false, code: 'INVALID_DAILY_ROOM_REQUEST', validationErrors, requestId }, { status: 400 });
     }
 
-    const user = await deps.getCurrentUser();
+    const payload = body as DailyRoomTokenRequest;
+    const user = await deps.getCurrentUser({ preferredRole: payload.participantRole });
     if (!user) {
       deps.logger.warn({ route, requestId, code: 'UNAUTHENTICATED', latencyMs: deps.now() - start });
       return NextResponse.json({ ok: false, code: 'UNAUTHENTICATED', requestId }, { status: 401 });
@@ -130,7 +133,6 @@ export function createDailyRoomPostHandler(overrides: Partial<DailyRoomHandlerDe
       return NextResponse.json({ ok: false, code: 'LESSON_ACCESS_DENIED', message, requestId }, { status: 403 });
     }
 
-    const payload = body as DailyRoomTokenRequest;
     let participantRole: 'student' | 'tutor';
     try {
       participantRole = await deps.resolveLessonParticipantRoleForUser({
@@ -146,6 +148,24 @@ export function createDailyRoomPostHandler(overrides: Partial<DailyRoomHandlerDe
 
     if (participantRole !== payload.participantRole) {
       const message = 'Requested participant role does not match your lesson access.';
+      deps.logger.warn({ route, requestId, userId: user.profileId, code: 'LESSON_ACCESS_DENIED', message, latencyMs: deps.now() - start });
+      return NextResponse.json({ ok: false, code: 'LESSON_ACCESS_DENIED', message, requestId }, { status: 403 });
+    }
+
+    try {
+      const joinWindow = await deps.getLessonJoinWindowStatusForBooking({
+        bookingId: payload.bookingId,
+        nowMs: deps.now(),
+      });
+      if (!joinWindow.ok) {
+        deps.logger.warn({ route, requestId, userId: user.profileId, code: joinWindow.code, latencyMs: deps.now() - start });
+        return NextResponse.json(
+          { ok: false, code: joinWindow.code, message: joinWindow.message, requestId },
+          { status: 403 },
+        );
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Class time is not available yet.';
       deps.logger.warn({ route, requestId, userId: user.profileId, code: 'LESSON_ACCESS_DENIED', message, latencyMs: deps.now() - start });
       return NextResponse.json({ ok: false, code: 'LESSON_ACCESS_DENIED', message, requestId }, { status: 403 });
     }
@@ -183,7 +203,7 @@ export function createDailyRoomPostHandler(overrides: Partial<DailyRoomHandlerDe
 
         const roomProperties = {
           enable_recording: 'cloud',
-          max_participants: 10,
+          max_participants: 2,
           start_video_off: false,
           start_audio_off: false,
           exp: Math.floor(deps.now() / 1000) + 60 * 60 * 3,

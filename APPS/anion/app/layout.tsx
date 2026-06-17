@@ -4,6 +4,7 @@ import './globals.css';
 import PublicRuntimeConfig from './components/PublicRuntimeConfig';
 import SwRegister from './components/SwRegister';
 import CookieConsentBanner from './components/CookieConsentBanner';
+import SignOutButton from './components/SignOutButton';
 import { getCurrentUser } from './lib/auth/getCurrentUser';
 
 export const viewport: Viewport = {
@@ -44,7 +45,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <Link href="/tutors" style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)', textDecoration: 'none' }}>Find Tutors</Link>
               <Link href="/pricing" style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)', textDecoration: 'none' }}>Pricing</Link>
               {user ? (
-                <Link href="/dashboard" style={{ fontSize: '14px', fontWeight: '600', color: 'white', backgroundColor: 'var(--brand-teal)', padding: '8px 16px', borderRadius: '6px', textDecoration: 'none' }}>Dashboard</Link>
+                <>
+                  <Link href="/dashboard" style={{ fontSize: '14px', fontWeight: '600', color: 'white', backgroundColor: 'var(--brand-teal)', padding: '8px 16px', borderRadius: '6px', textDecoration: 'none' }}>Dashboard</Link>
+                  <SignOutButton />
+                </>
               ) : (
                 <Link href="/login" style={{ fontSize: '14px', fontWeight: '600', color: 'var(--brand-teal)', textDecoration: 'none' }}>Sign in</Link>
               )}

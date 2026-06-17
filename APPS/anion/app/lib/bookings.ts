@@ -63,6 +63,96 @@ export type BookingDisplayDetail = {
   tutor_name: string | null;
 };
 
+export type ClassReminderStatus = {
+  state: 'upcoming' | 'due-soon' | 'join-open' | 'ended' | 'unscheduled';
+  label: string;
+  message: string;
+  minutesUntilStart: number | null;
+  nextReminderLabel: string | null;
+};
+
+const CLASS_REMINDER_CHECKPOINTS = [
+  { minutesBeforeStart: 24 * 60, label: '24 hours before class' },
+  { minutesBeforeStart: 60, label: '1 hour before class' },
+  { minutesBeforeStart: 10, label: '10 minutes before class' },
+];
+
+function pluralizeMinutes(minutes: number) {
+  return `${minutes} minute${minutes === 1 ? '' : 's'}`;
+}
+
+function formatTimeUntilStart(minutesUntilStart: number) {
+  if (minutesUntilStart >= 24 * 60) {
+    const days = Math.floor(minutesUntilStart / (24 * 60));
+    return `${days} day${days === 1 ? '' : 's'}`;
+  }
+
+  if (minutesUntilStart >= 60) {
+    const hours = Math.floor(minutesUntilStart / 60);
+    const minutes = minutesUntilStart % 60;
+    return minutes > 0
+      ? `${hours} hour${hours === 1 ? '' : 's'} ${pluralizeMinutes(minutes)}`
+      : `${hours} hour${hours === 1 ? '' : 's'}`;
+  }
+
+  return pluralizeMinutes(Math.max(0, minutesUntilStart));
+}
+
+export function getClassReminderStatus(input: {
+  requestedStartAt: string;
+  durationMinutes: number;
+  nowMs?: number;
+}): ClassReminderStatus {
+  const startMs = new Date(input.requestedStartAt).getTime();
+  if (!Number.isFinite(startMs)) {
+    return {
+      state: 'unscheduled',
+      label: 'Schedule pending',
+      message: 'Class time is not available yet.',
+      minutesUntilStart: null,
+      nextReminderLabel: null,
+    };
+  }
+
+  const nowMs = input.nowMs ?? Date.now();
+  const minutesUntilStart = Math.ceil((startMs - nowMs) / 60_000);
+  const endMs = startMs + input.durationMinutes * 60_000 + 15 * 60_000;
+
+  if (nowMs > endMs) {
+    return {
+      state: 'ended',
+      label: 'Class ended',
+      message: 'This class window has closed.',
+      minutesUntilStart,
+      nextReminderLabel: null,
+    };
+  }
+
+  if (minutesUntilStart <= 10) {
+    return {
+      state: 'join-open',
+      label: 'Join window open',
+      message: minutesUntilStart <= 0
+        ? 'Class is starting now. Tutor and student can join the lesson room.'
+        : `Class starts in ${formatTimeUntilStart(minutesUntilStart)}. Tutor and student can join now.`,
+      minutesUntilStart,
+      nextReminderLabel: null,
+    };
+  }
+
+  const nextReminder = CLASS_REMINDER_CHECKPOINTS
+    .find((checkpoint) => minutesUntilStart > checkpoint.minutesBeforeStart);
+
+  const dueSoon = minutesUntilStart <= 60;
+  return {
+    state: dueSoon ? 'due-soon' : 'upcoming',
+    label: dueSoon ? 'Reminder due soon' : 'Scheduled',
+    message: `Class starts in ${formatTimeUntilStart(minutesUntilStart)}.`,
+    minutesUntilStart,
+    nextReminderLabel: nextReminder?.label ?? '10 minutes before class',
+  };
+}
+
 type StudentProfileRow = {
   id: string;
   profile_id: string;
@@ -265,10 +355,22 @@ export async function listParentBookings(): Promise<BookingRow[]> {
   if (isLocalDemoEnabled()) return [localDemoBooking];
 
   const supabase = await createServerClient();
+  const profileId = await getProfileIdForAuthUser(supabase);
+
+  const { data: parent, error: parentError } = await supabase
+    .from('parents')
+    .select('id')
+    .eq('profile_id', profileId)
+    .single();
+
+  if (parentError || !parent) {
+    return [];
+  }
 
   const { data, error } = await supabase
     .from('bookings')
     .select('id, parent_id, tutor_id, student_id, subject, requested_start_at, duration_minutes, notes, status, created_at')
+    .eq('parent_id', parent.id)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -336,10 +438,22 @@ export async function listTutorBookings(): Promise<BookingRow[]> {
   if (isLocalDemoEnabled()) return [localDemoBooking];
 
   const supabase = await createServerClient();
+  const profileId = await getProfileIdForAuthUser(supabase);
+
+  const { data: tutor, error: tutorError } = await supabase
+    .from('tutors')
+    .select('id')
+    .eq('profile_id', profileId)
+    .single();
+
+  if (tutorError || !tutor) {
+    return [];
+  }
 
   const { data, error } = await supabase
     .from('bookings')
     .select('id, parent_id, tutor_id, student_id, subject, requested_start_at, duration_minutes, notes, status, created_at')
+    .eq('tutor_id', tutor.id)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -481,6 +595,7 @@ export async function listStudentAcceptedBookings(): Promise<StudentLessonCard[]
     .from('bookings')
     .select('id, tutor_id, student_id, subject, requested_start_at, duration_minutes, status')
     .eq('status', 'accepted')
+    .eq('student_id', student.id)
     .order('requested_start_at', { ascending: true })
     .limit(20);
 
@@ -585,6 +700,71 @@ export async function resolveLessonParticipantRoleForUser(input: {
   throw new Error('You are not allowed to access this lesson.');
 }
 
+export function getLessonJoinWindowStatus(input: {
+  requestedStartAt: string;
+  durationMinutes: number;
+  nowMs: number;
+}): { ok: true } | { ok: false; code: 'CLASS_NOT_OPEN' | 'CLASS_ENDED'; message: string } {
+  const start = new Date(input.requestedStartAt).getTime();
+  if (!Number.isFinite(start)) {
+    return {
+      ok: false,
+      code: 'CLASS_NOT_OPEN',
+      message: 'Class time is not available yet.',
+    };
+  }
+
+  const opensAt = start - 10 * 60_000;
+  const closesAt = start + input.durationMinutes * 60_000 + 15 * 60_000;
+
+  if (input.nowMs < opensAt) {
+    return {
+      ok: false,
+      code: 'CLASS_NOT_OPEN',
+      message: 'Class is not open yet. You can join 10 minutes before the scheduled start.',
+    };
+  }
+
+  if (input.nowMs > closesAt) {
+    return {
+      ok: false,
+      code: 'CLASS_ENDED',
+      message: 'Class has ended. This room is no longer open.',
+    };
+  }
+
+  return { ok: true };
+}
+
+export async function getLessonJoinWindowStatusForBooking(input: {
+  bookingId: string;
+  nowMs: number;
+}): Promise<ReturnType<typeof getLessonJoinWindowStatus>> {
+  if (isLocalDemoEnabled()) return { ok: true };
+
+  const supabase = await createServerClient();
+
+  const { data: booking, error } = await supabase
+    .from('bookings')
+    .select('requested_start_at, duration_minutes, status')
+    .eq('id', input.bookingId)
+    .single();
+
+  if (error || !booking) {
+    throw new Error('Booking not found.');
+  }
+
+  if (booking.status !== 'accepted') {
+    throw new Error('Lesson room is only available for accepted bookings.');
+  }
+
+  return getLessonJoinWindowStatus({
+    requestedStartAt: String(booking.requested_start_at),
+    durationMinutes: Number(booking.duration_minutes),
+    nowMs: input.nowMs,
+  });
+}
+
 export async function createBookingRequest(input: {
   tutorId: string;
   studentId: string;
@@ -622,6 +802,24 @@ export async function createBookingRequest(input: {
 
   if (!link) {
     throw new Error('Selected student is not linked to this parent account.');
+  }
+
+  const { data: duplicateRows, error: duplicateError } = await supabase
+    .from('bookings')
+    .select('id')
+    .eq('parent_id', parent.id)
+    .eq('tutor_id', input.tutorId)
+    .eq('student_id', input.studentId)
+    .eq('requested_start_at', input.requestedStartAt)
+    .eq('status', 'pending')
+    .limit(1);
+
+  if (duplicateError) {
+    throw new Error(duplicateError.message);
+  }
+
+  if ((duplicateRows ?? []).length > 0) {
+    throw new Error('A pending request already exists for this student, tutor, and time.');
   }
 
   const { error } = await supabase.from('bookings').insert({

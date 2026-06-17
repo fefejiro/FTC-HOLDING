@@ -13,7 +13,7 @@ type LessonPageProps = {
 export default async function LessonSessionPage({ params }: LessonPageProps) {
   const { sessionId } = await params;
 
-  const user = await getCurrentUser();
+  const user = await getCurrentUser({ preferredRole: ['tutor', 'student'] });
   if (!user) redirect('/login');
 
   if (user.role !== 'tutor' && user.role !== 'student') {
@@ -46,6 +46,7 @@ export default async function LessonSessionPage({ params }: LessonPageProps) {
     <LessonRoom
       sessionId={sessionId}
       userId={user.authUserId}
+      profileId={user.profileId}
       participantRole={participantRole}
       displayName={user.displayName}
       lessonTitle={bookingDetail.subject}

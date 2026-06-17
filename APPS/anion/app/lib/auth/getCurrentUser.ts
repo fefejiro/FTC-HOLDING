@@ -1,8 +1,9 @@
 import { createServerClient } from '../supabase/server';
 import { redirect } from 'next/navigation';
 import { getLocalDemoCurrentUser, isLocalDemoEnabled } from '../local-demo';
+import { resolveActiveRole, type AppRole } from './roles';
 
-export type AppRole = 'student' | 'parent' | 'tutor' | 'admin';
+export type { AppRole };
 
 export type CurrentUser = {
   authUserId: string;
@@ -10,6 +11,11 @@ export type CurrentUser = {
   profileId: string;
   displayName: string;
   role: AppRole;
+  roles: AppRole[];
+};
+
+export type GetCurrentUserOptions = {
+  preferredRole?: AppRole | AppRole[];
 };
 
 /**
@@ -18,11 +24,14 @@ export type CurrentUser = {
  *
  * Does NOT redirect — callers decide what to do on null.
  */
-export async function getCurrentUser(): Promise<CurrentUser | null> {
+export async function getCurrentUser(options: GetCurrentUserOptions = {}): Promise<CurrentUser | null> {
   try {
     if (isLocalDemoEnabled()) {
       const localDemoUser = await getLocalDemoCurrentUser();
-      if (localDemoUser) return localDemoUser;
+      if (localDemoUser) {
+        const roles = [localDemoUser.role];
+        return { ...localDemoUser, roles, role: resolveActiveRole(roles, options.preferredRole) };
+      }
     }
 
     const supabase = await createServerClient();
@@ -46,15 +55,18 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       return null;
     }
 
-    let { data: roleRow } = await supabase
+    const { data: roleRows } = await supabase
       .from('user_roles')
       .select('role')
       .eq('profile_id', profile.id)
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .single();
+      .order('created_at', { ascending: true });
 
-    const role: AppRole = (roleRow?.role as AppRole) ?? 'parent';
+    const allowedRoles: AppRole[] = ['student', 'parent', 'tutor', 'admin'];
+    const roles = ((roleRows ?? []) as Array<{ role: AppRole }>)
+      .map((row) => row.role)
+      .filter((role): role is AppRole => allowedRoles.includes(role));
+    const resolvedRoles: AppRole[] = roles.length > 0 ? roles : ['parent'];
+    const role = resolveActiveRole(resolvedRoles, options.preferredRole);
 
     return {
       authUserId: user.id,
@@ -62,6 +74,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       profileId: profile.id,
       displayName: profile.display_name,
       role,
+      roles: resolvedRoles,
     };
   } catch (error) {
     const dynamicServerUsage =

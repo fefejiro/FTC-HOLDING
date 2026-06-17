@@ -6,19 +6,18 @@
 > This file stays focused on production handover prerequisites, setup context,
 > and client-facing truth.
 
-**Version:** 0.2.17
-**Updated:** 2026-06-09
+**Version:** 0.2.19
+**Updated:** 2026-06-14
 **Production URL:** https://anion.unalabs.cloud
 **Milestones:** M1 Auth, M2 Bookings, M3 Stripe Billing, M4 Daily Live Classroom, M5 Admin Dashboard
 
 ## Current Handover Gate
 
-As of 2026-06-09, production is reachable and Cloudflare Worker provider setting names for Supabase, Daily, and Stripe are present. The public browser auth-config blocker is fixed in production. Parent/tutor/student role fixtures and the accepted evidence booking are repaired in production.
+As of 2026-06-14, production is reachable and Cloudflare Worker provider setting names for Supabase, Daily, and Stripe are present. The public browser auth-config blocker is fixed in production. Parent/tutor/student role fixtures and the accepted evidence booking are repaired in production. The Worker `SUPABASE_SERVICE_ROLE_KEY` has been replaced with the valid project service_role key and validated against Supabase REST.
 
 Handover is still blocked by evidence, not provider inventory:
 
-- `SUPABASE_SERVICE_ROLE_KEY` must be replaced with the valid Supabase `service_role` key for project `aaaextkrfoqomzmjjkxe`; the current Worker secret value returned `Invalid API key`, so Stripe webhook subscription sync cannot be proven.
-- Daily hosted call UI assets at `https://c.daily.co` timed out/reset from the current evidence machine; tutor/student room-token proof passes, but iframe join/leave/rejoin still needs a browser/network that can load Daily's hosted call UI.
+- Tutor/student room-token proof passes, and the lesson room now uses Anion's first-party Daily call UI instead of Daily's hosted prebuilt iframe. Full authenticated video join, background switching, leave, and rejoin evidence still needs to be captured with `npm run phase1:evidence`.
 - Stripe test checkout, signed webhook, subscription sync, and billing portal evidence.
 - Privacy/Terms legal signoff.
 
@@ -62,12 +61,18 @@ $env:ANION_STUDENT_EMAIL="..."
 npm run phase1:evidence
 ```
 
+If the valid service-role key is not available to the runner, use the manual Google-auth evidence path:
+
+```powershell
+npm run phase1:evidence:manual
+```
+
 Required proof:
 
 - Parent can see the accepted booking.
 - Parent cannot join the Daily room. Current status: PASS by password-session evidence.
-- Tutor can join, leave, and rejoin. Current status: token/room API PASS; iframe join blocked by `c.daily.co` reachability.
-- Student can join, leave, and rejoin. Current status: token/room API PASS; iframe join blocked by `c.daily.co` reachability.
+- Tutor can join, switch background, leave, and rejoin. Current status: token/room API PASS; full custom video UI evidence pending.
+- Student can join, switch background, leave, and rejoin. Current status: token/room API PASS; full custom video UI evidence pending.
 - Tutor and student can join the same booking concurrently.
 - Tutor writing board, student learning feed, and role dashboards are screenshot-captured.
 
@@ -97,13 +102,13 @@ Required proof:
 
 | Milestone | Feature | Status |
 |-----------|---------|--------|
-| M1 | Google OAuth, magic-link auth, route guards, role redirects | Done |
+| M1 | Google OAuth, route guards, role redirects | Done |
 | M1 DB | RLS policies for profiles and user_roles | Applied to live DB |
 | M2 | Booking request flow: parent creates, tutor accepts/declines | Done |
 | M2 DB | Bookings table and RLS | Applied to live DB |
 | M3 | Stripe checkout, billing portal, webhook subscription sync | Implemented; evidence pending |
 | M3 DB | Subscriptions table and RLS | Applied to live DB |
-| M4 | Daily.co live classroom: room creation, tutor/student video call, join/rejoin | Implemented; token evidence passes; hosted call UI evidence blocked by `c.daily.co` reachability from current machine |
+| M4 | Daily.co live classroom: room creation, tutor/student video call, join/rejoin | Implemented; token evidence passes; first-party call UI deployed pending authenticated evidence |
 | M5 | Admin dashboard with live Supabase metrics | Done |
 
 ## Provider Setup Summary
@@ -121,7 +126,7 @@ Required proof:
 - Daily domain is configured.
 - Non-destructive production smoke verifies the route is configured and protected.
 - Production parent denial and tutor/student room-token evidence pass.
-- Final proof still requires authenticated tutor/student iframe join, leave, and rejoin evidence from a network/browser that can load `https://c.daily.co`.
+- Final proof still requires authenticated tutor/student video join, background, leave, and rejoin evidence.
 
 ### Stripe
 
@@ -141,7 +146,7 @@ Required proof:
 
 ## User Journey
 
-1. Parent signs in via `/login` using Google OAuth or secure email link.
+1. Parent signs in via `/login` using Google OAuth.
 2. Parent chooses a plan on `/pricing` and completes Stripe checkout.
 3. Parent books a session on `/parent`.
 4. Tutor accepts the session.
@@ -151,7 +156,7 @@ Required proof:
 
 ## Known Limitations
 
-- Background customization is not implemented.
+- Background blur controls are implemented in the lesson room; saved presets are not implemented.
 - Phase 1 production call evidence is not yet captured with confirmed role accounts.
 - Stripe billing evidence is not yet captured end to end in test mode.
 - Privacy and Terms pages are placeholders pending legal signoff.

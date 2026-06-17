@@ -2,14 +2,14 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '../../lib/auth/getCurrentUser';
 import { createClassroomPost, listClassroomPosts } from '../../lib/classroom';
-import { listStudentAcceptedBookings } from '../../lib/bookings';
+import { getClassReminderStatus, listStudentAcceptedBookings } from '../../lib/bookings';
 
 type StudentPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export default async function StudentPage({ searchParams }: StudentPageProps) {
-  const user = await getCurrentUser();
+  const user = await getCurrentUser({ preferredRole: 'student' });
   if (!user) redirect('/login');
   if (user.role !== 'student') redirect('/dashboard');
 
@@ -110,9 +110,30 @@ export default async function StudentPage({ searchParams }: StudentPageProps) {
           <p className="muted">No accepted lessons yet. Your teacher will confirm soon.</p>
         ) : (
           <div className="grid" style={{ gap: 10 }}>
-            {lessons.map((lesson) => (
+            {lessons.map((lesson) => {
+              const reminder = getClassReminderStatus({
+                requestedStartAt: lesson.requested_start_at,
+                durationMinutes: lesson.duration_minutes,
+              });
+
+              return (
               <article key={lesson.id} className="surface card" style={{ boxShadow: 'none' }}>
-                <p style={{ margin: 0, fontWeight: 600 }}>{lesson.subject}</p>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                  <p style={{ margin: 0, fontWeight: 600 }}>{lesson.subject}</p>
+                  <span
+                    style={{
+                      borderRadius: 999,
+                      padding: '4px 8px',
+                      background: reminder.state === 'join-open' ? '#dcfce7' : reminder.state === 'due-soon' ? '#fef3c7' : '#e0f2fe',
+                      color: reminder.state === 'join-open' ? '#166534' : reminder.state === 'due-soon' ? '#92400e' : '#075985',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {reminder.label}
+                  </span>
+                </div>
                 <p className="muted" style={{ margin: '6px 0 0' }}>
                   {new Date(lesson.requested_start_at).toLocaleString()} • {lesson.duration_minutes} mins
                 </p>
@@ -121,6 +142,10 @@ export default async function StudentPage({ searchParams }: StudentPageProps) {
                 </p>
                 <p className="muted" style={{ margin: '6px 0 0' }}>
                   Booking scope: {lesson.student_id ? `Assigned to you` : 'Legacy family booking'}
+                </p>
+                <p className="muted" style={{ margin: '6px 0 0' }}>
+                  {reminder.message}
+                  {reminder.nextReminderLabel ? ` Next reminder: ${reminder.nextReminderLabel}.` : ''}
                 </p>
                 <a
                   href={`/lesson/${lesson.id}`}
@@ -140,7 +165,8 @@ export default async function StudentPage({ searchParams }: StudentPageProps) {
                   Join Lesson
                 </a>
               </article>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

@@ -55,7 +55,7 @@ export async function signInWithGoogle() {
     throw new Error('Supabase auth is not configured for this environment.');
   }
   const redirectTo = getAuthCallbackUrl();
-  return createBrowserClient().auth.signInWithOAuth({
+  const { data, error } = await createBrowserClient().auth.signInWithOAuth({
     provider: 'google',
     options: redirectTo
       ? {
@@ -66,6 +66,12 @@ export async function signInWithGoogle() {
         }
       : undefined,
   });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
 }
 
 export async function logout() {

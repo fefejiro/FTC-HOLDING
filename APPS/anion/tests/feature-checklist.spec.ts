@@ -13,14 +13,14 @@ test.describe('Video Call Feature', () => {
   test('local demo video room loads and displays video elements', async ({ page }) => {
     await page.goto('/api/local-demo/sign-in?role=tutor&next=/lesson/demo-accepted-lesson');
 
-    const videoRoom = page.getByTestId('local-demo-video-room');
+    const videoRoom = page.getByTestId('daily-custom-call-room');
     await expect(videoRoom).toBeVisible({ timeout: 30_000 });
 
-    const selfVideo = page.getByTestId('local-demo-self-video');
+    const selfVideo = page.getByTestId('daily-local-video');
     await expect(selfVideo).toBeVisible();
   });
 
-  test('production Daily iframe evidence requires authenticated role accounts', async () => {
+  test('production Daily video evidence requires authenticated role accounts', async () => {
     test.skip(true, 'Use npm run phase1:evidence with confirmed role accounts for production Daily proof.');
   });
 });

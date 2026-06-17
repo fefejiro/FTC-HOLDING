@@ -90,6 +90,7 @@ export type PlatformStatusResponse = {
     liveClassroom:
       | 'ready-with-external-keys'
       | 'daily-token-api-ready-call-ui-network-blocked'
+      | 'custom-call-ui-ready-production-evidence-pending'
       | 'implemented-not-auth-verified'
       | 'local-contract-green-production-evidence-pending';
     opsAndQa: 'ready' | 'blocked-phase1-fail';
@@ -102,6 +103,8 @@ export type PlatformStatusResponse = {
       'supabase_public_bundle_placeholder' |
       'supabase_service_role_invalid' |
       'daily_call_ui_cdn_unreachable' |
+      'phase1_authenticated_video_evidence_pending' |
+      'whiteboard_production_evidence_pending' |
       'stripe_subscription_state_unverified' |
       'phase1_domain_fixture_missing' |
       'confirmed_phase1_test_credentials'

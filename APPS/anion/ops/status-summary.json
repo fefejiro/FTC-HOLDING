@@ -1,10 +1,10 @@
 {
   "project": "anion",
   "name": "Anion Class App",
-  "updatedAt": "2026-06-09T18:35:00.000Z",
+  "updatedAt": "2026-06-16T00:00:00.000Z",
   "overall": "red",
   "stage": "phase1-call-closure-pending-auth-evidence",
-  "summary": "Production runtime is live. Parent/tutor/student auth, domain roles, linked student, accepted booking, dashboards, parent call denial, and tutor/student Daily token issuance are verified. Handover is still not green because the Worker SUPABASE_SERVICE_ROLE_KEY remains invalid for Stripe/webhook subscription sync, Daily's hosted call UI CDN is unreachable from the current evidence machine, and Privacy/Terms legal signoff remains open.",
+  "summary": "Production runtime is live on Worker version 46b60191-b129-4165-a6d4-c4260199e906. Parent/tutor/student auth, domain roles, linked student, accepted booking, dashboards, parent call denial, and tutor/student Daily token issuance were previously verified. The lesson room now uses Anion's first-party Daily call UI with background controls, two-person Daily room creation, join-window enforcement, and a deployed booking-scoped whiteboard canvas. The recurring class plan and whiteboard schemas were applied directly to production Supabase through migration 020, but Supabase migration history still needs cleanup because older local migration filenames use duplicate date prefixes. Handover is still not green because production has zero Google-auth users, so authenticated video join/background/leave/rejoin evidence, whiteboard sync/reload evidence, Stripe subscription-state evidence, and Privacy/Terms legal signoff remain open.",
   "metrics": [
     {
       "label": "Docs",
@@ -15,19 +15,19 @@
     {
       "label": "Web Lane",
       "value": "deployed-role-journeys-partial",
-      "detail": "Core milestones are deployed. Authenticated role dashboards, parent denial, and tutor/student Daily token issuance pass in production; Daily iframe join is blocked by c.daily.co network reachability from the evidence machine.",
+      "detail": "Core milestones are deployed. Authenticated role dashboards, parent denial, and tutor/student Daily token issuance pass in production; custom Daily video UI evidence still needs an authenticated role run.",
       "status": "yellow"
     },
     {
       "label": "Database",
-      "value": "17-migrations-applied",
-      "detail": "All seventeen migrations applied to live Supabase project (foundation, auth-rls, bookings, subscriptions, security hardening, webhook events, classroom posts, student booking access, parent-student link RLS, parent linked-student visibility, booking student assignment, related profile visibility, tutor assigned-student visibility, parent-name visibility for related users, tutor-name visibility for families, classroom post student scoping, classroom post parent and admin timeline access).",
-      "status": "green"
+      "value": "schema-through-020-applied-history-needs-repair",
+      "detail": "Recurring class plan and whiteboard schemas are applied in live Supabase. Supabase migration history is not clean because older Anion migration filenames use duplicate date prefixes; repair before relying on supabase db push.",
+      "status": "yellow"
     },
     {
       "label": "Live Runtime",
       "value": "live-verified-phase1-partial",
-      "detail": "Production health/status/auth-callback probes pass and public browser auth config is production-safe. Domain fixture rows and accepted booking are repaired; Daily token API passes; Daily call UI CDN and Stripe subscription sync remain blocked.",
+      "detail": "Production health/status/auth-callback probes pass and public browser auth config is production-safe. Domain fixture rows and accepted booking are repaired; Worker version 46b60191-b129-4165-a6d4-c4260199e906 is live; authenticated Google evidence and Stripe subscription-state evidence remain blocked.",
       "status": "yellow"
     },
     {
@@ -76,12 +76,27 @@
     {
       "name": "Production readiness",
       "status": "yellow",
-      "detail": "prod:doctor confirms secret names exist. SUPABASE_SERVICE_ROLE_KEY is still invalid, so Stripe billing/webhook subscription-state evidence remains blocked. Daily call UI assets from c.daily.co are unreachable from the current evidence machine."
+      "detail": "prod:doctor confirms required secret names exist. Deployed release 0.2.20 reports authenticated video evidence, whiteboard production evidence, and Stripe subscription-state evidence as runtime blockers."
     },
     {
       "name": "Phase 1 call closure",
       "status": "red",
-      "detail": "Password-based production evidence proves parent/tutor/student dashboards, linked booking visibility, parent Daily denial, and tutor/student Daily token issuance. Full iframe join/leave/rejoin remains blocked by c.daily.co network reachability from the evidence machine."
+      "detail": "Password-based production evidence proves parent/tutor/student dashboards, linked booking visibility, parent Daily denial, and tutor/student Daily token issuance. PR2 deployed hardening now limits newly created Daily rooms to two participants and blocks joins outside the scheduled window. Full custom video join/background/leave/rejoin evidence is blocked until real Google-auth role users exist."
+    },
+    {
+      "name": "One-on-one classroom hardening",
+      "status": "yellow",
+      "detail": "PR2 is deployed: assigned tutor/student token access, 10-minute pre-class join opening, class end plus 15-minute close window, and two-participant Daily room creation. Authenticated role proof remains pending."
+    },
+    {
+      "name": "Whiteboard MVP",
+      "status": "yellow",
+      "detail": "PR3 is deployed: whiteboard_events schema, lesson-room canvas, pen, eraser, clear board, persisted event replay, and Supabase realtime insert sync. Authenticated tutor/student sync plus reload-restore proof remains pending."
+    },
+    {
+      "name": "Recurring class plans",
+      "status": "yellow",
+      "detail": "PR1 schema and code are deployed: class_plans migration, admin creation form, 8-week accepted booking generation, Africa/Lagos time conversion, and tutor/student buffer conflict checks. Real-role recurring-plan verification remains pending."
     }
   ],
   "connections": [
@@ -89,7 +104,7 @@
       "name": "Supabase",
       "status": "green",
       "url": "https://aaaextkrfoqomzmjjkxe.supabase.co",
-      "detail": "Live project, all migrations applied."
+      "detail": "Live project. Schema is applied through recurring class plans and whiteboard events; Supabase migration history cleanup is still recommended."
     }
   ],
   "logs": {
@@ -103,9 +118,12 @@
     "terms": "APPS/anion/docs/TERMS.md"
   },
   "nextActions": [
-    "Replace Cloudflare Worker SUPABASE_SERVICE_ROLE_KEY with the real Supabase service_role key for project aaaextkrfoqomzmjjkxe.",
-    "Use a network/browser that can load https://c.daily.co to capture tutor/student iframe join, leave, and rejoin evidence.",
-    "Capture parent/tutor/student join and leave/rejoin evidence in ops/PHASE1-CALL-PRODUCTION-CLOSURE.md and flip verdict only after iframe role paths pass.",
+    "Have dedicated parent, tutor, and student accounts complete real Google OAuth sign-in once on https://anion.unalabs.cloud/login; production currently has zero Google-auth users.",
+    "Use npm run phase1:provision-google-qa after the dedicated parent/tutor/student Google QA accounts have signed in once, then set ANION_PHASE1_BOOKING_ID to the generated accepted booking.",
+    "Verify one admin-created recurring plan against real parent/student/tutor rows and confirm generated bookings across parent, tutor, and student dashboards.",
+    "Verify tutor/student whiteboard sync and reload-restore behavior on one accepted booking.",
+    "Run npm run phase1:evidence with valid service-role and role-account env vars, or npm run phase1:evidence:manual with real Google-auth sessions, to capture tutor/student custom video join, background switching, leave, and rejoin evidence.",
+    "Capture parent/tutor/student join and leave/rejoin evidence in ops/PHASE1-CALL-PRODUCTION-CLOSURE.md and flip verdict only after authenticated role paths pass.",
     "Keep npm run build:worker bundle guard and CHECK_STRIPE_WEBHOOK=1 CHECK_DAILY_ROOM_SMOKE=1 EXPECTED_DAILY_ERROR_CODE=AUTO npm run verify:prod green before each handover claim.",
     "Complete PRODUCTION-READINESS.md remaining external checklist rows for authenticated Supabase allow-list confirmation, billing evidence, and role journey evidence.",
     "Run npm run billing:evidence after Stripe provider settings are available and store the generated JSON/Markdown report.",

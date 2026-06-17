@@ -1,7 +1,7 @@
 # Anion Class App — Production Readiness Checklist
 
 **Version:** 1.0  
-**Last Updated:** 2026-06-09
+**Last Updated:** 2026-06-17
 **Run before:** Every production deployment or client handover
 
 Fill in **Pass**, **Fail**, or **N/A** for each item. Any **Fail** must be resolved before proceeding.
@@ -16,7 +16,11 @@ Current machine-checkable gate:
 npm run prod:doctor
 ```
 
-2026-06-09 result: production health/status and Cloudflare Worker provider-secret inventory are reachable for Supabase, Daily, and Stripe. Strict verification has passed for public browser config, auth callback, webhook signature gate, and CSRF-protected Daily smoke. Parent/tutor/student production fixture rows and non-recursive RLS are repaired; parent dashboard/denial and tutor/student Daily token issuance are verified. Handover remains blocked on service-role correction for Stripe/webhook subscription sync, Daily hosted call UI reachability from the evidence browser, full tutor/student join-leave-rejoin proof, and legal signoff.
+2026-06-16 result: production health/status and Cloudflare Worker provider-secret inventory are reachable for Supabase, Daily, and Stripe. Strict verification passed for public browser config, auth callback, webhook signature gate, and CSRF-protected Daily smoke after Worker version `46b60191-b129-4165-a6d4-c4260199e906` deployed. The recurring class plan and whiteboard schemas were applied directly with `supabase db query --linked` because the historical migration table is not aligned with Anion's local migration filenames. Handover remains blocked on real Google-auth parent/tutor/student evidence, full tutor/student join-background-leave-rejoin proof, whiteboard sync/reload proof, Stripe subscription-state evidence, and legal signoff.
+
+2026-06-17 update: Google OAuth handoff from `https://anion.unalabs.cloud/login` reaches Google Accounts successfully. A production gap was found where Supabase Auth users existed but missing `profiles` rows caused Anion to treat them as unauthenticated. `/auth/callback` now provisions a default profile, parent role, and parent row after successful OAuth. Existing `fejiro.efiuvwere@gmail.com` and `peacepad@peacepad.ca` auth users were backfilled with profiles and parent rows. Worker version `475abf62-81ae-4460-8ce5-70f658521ade` is live. Handover remains blocked on dedicated parent/tutor/student role evidence, whiteboard sync/reload proof, Stripe subscription-state evidence, and legal signoff.
+
+2026-06-17 late update: Phase 1 production role fixture now uses three Google-auth users: `fejiro.efiuvwere@gmail.com` as parent, `peacepad@peacepad.ca` as tutor, and `justsayemma112@gmail.com` as student. Accepted booking `e3b85332-a29b-4b4d-8b83-ef8c12e96cde` was created for evidence. Service-role evidence now proves parent dashboard, tutor dashboard, student dashboard, accepted booking visibility, parent lesson denial, and assigned tutor/student Daily token issuance. The video journey still fails because the rendered lesson remains in the "Session ended / Rejoin lesson" state during automation and never reaches the `Connected` status. Worker version `36eca01c-c5a6-425e-8b81-8aeebc172c0b` is live with callback token-hash support and explicit rejoin-state reset. Handover remains blocked on live tutor/student connected video proof, whiteboard sync/reload proof, Stripe subscription-state evidence, and legal signoff.
 
 ---
 
@@ -59,7 +63,8 @@ All third-party credentials must be configured before deployment. **No deploymen
 | D3 | `DAILY_DOMAIN` is set to `yourcompany.daily.co` | Cloudflare Workers env vars | PASS 2026-06-08 |
 | D4 | Test room creation contract is protected and configured | `CHECK_DAILY_ROOM_SMOKE=1 EXPECTED_DAILY_ERROR_CODE=AUTO npm run verify:prod` returns a configured auth/CSRF gate, not provider-missing | PASS 2026-06-09 |
 | D5 | Assigned tutor/student receive production Daily room token | Password-session evidence calls `/api/daily/room` for accepted booking | PASS 2026-06-09 |
-| D6 | Daily hosted call UI loads in evidence browser | Evidence browser can load `https://c.daily.co` assets and reach Connected state | FAIL 2026-06-09 - `c.daily.co` timed out/reset from this machine |
+| D6 | Anion Daily call UI loads in evidence browser | `npm run phase1:evidence` captures visible local video, background switching, join, leave, and rejoin for tutor and student | BLOCKED 2026-06-17 - Google auth users now exist and app-profile provisioning is fixed, but dedicated parent/tutor/student role evidence still has to be captured |
+| D7 | Whiteboard sync/reload evidence passes | Authenticated tutor/student draw, realtime sync, reload restored board | PENDING - schema and UI deployed; requires real Google-auth role sessions |
 
 ### 2C — Supabase
 
@@ -67,12 +72,12 @@ All third-party credentials must be configured before deployment. **No deploymen
 |---|-------|----------------|-------|
 | SB1 | `NEXT_PUBLIC_SUPABASE_URL` is set | `npx wrangler secret put NEXT_PUBLIC_SUPABASE_URL --name anion-web` (value: `https://aaaextkrfoqomzmjjkxe.supabase.co`) | ☐ |
 | SB2 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` is set | `npx wrangler secret put NEXT_PUBLIC_SUPABASE_ANON_KEY --name anion-web` (value: from [Supabase → Settings → API → anon/public key](https://supabase.com/dashboard/project/aaaextkrfoqomzmjjkxe/settings/api)) | ☐ |
-| SB3 | `SUPABASE_SERVICE_ROLE_KEY` is set | `npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY --name anion-web` (value: from [Supabase → Settings → API → service_role key](https://supabase.com/dashboard/project/aaaextkrfoqomzmjjkxe/settings/api)) | ☐ |
-| SB3b | `SUPABASE_SERVICE_ROLE_KEY` is valid for project `aaaextkrfoqomzmjjkxe` | Service-role admin/API call succeeds without `Invalid API key` | FAIL 2026-06-09 - secret name exists but value is invalid |
+| SB3 | `SUPABASE_SERVICE_ROLE_KEY` is set | `npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY --name anion-web` (value: from [Supabase -> Settings -> API -> service_role key](https://supabase.com/dashboard/project/aaaextkrfoqomzmjjkxe/settings/api)) | PASS 2026-06-14 - refreshed through Supabase CLI and Wrangler |
+| SB3b | `SUPABASE_SERVICE_ROLE_KEY` is valid for project `aaaextkrfoqomzmjjkxe` | Service-role admin/API call succeeds without `Invalid API key` | PASS 2026-06-14 - Supabase REST returned HTTP 200 before upload |
 | SB3a | Production Worker serves real public Supabase config to browser auth chunks | `npm run build:worker` passes browser bundle guard; `verify:prod` reports `placeholder=no` for lazy auth chunk | PASS 2026-06-09 |
-| SB4 | Production domain added to Supabase Auth allow-list | [Supabase → Auth → URL Configuration](https://supabase.com/dashboard/project/aaaextkrfoqomzmjjkxe/auth/url-configuration) | ☐ |
-| SB5 | Redirect URL `https://[domain]/auth/callback` is in the allow-list | Same as above | ☐ |
-| SB6 | All current migrations applied to live database (currently 18) | Check `supabase/migrations/` vs applied | PASS 2026-06-09 - production DB patched through `20260609_000018_non_recursive_role_rls.sql` |
+| SB4 | Production domain added to Supabase Auth allow-list | [Supabase → Auth → URL Configuration](https://supabase.com/dashboard/project/aaaextkrfoqomzmjjkxe/auth/url-configuration) | PENDING - mitigated 2026-06-15 by deployed `unalabs.cloud` edge redirect; dashboard/PAT correction still required |
+| SB5 | Redirect URL `https://[domain]/auth/callback` is in the allow-list | Same as above | PENDING - `https://anion.unalabs.cloud/auth/callback` is app-generated and bridge-verified, but Supabase allow-list must be confirmed directly |
+| SB6 | All current schemas applied to live database (currently through 020) | Check `class_plans`, booking recurring columns, and `whiteboard_events` exist | PASS 2026-06-16 - `20260616_000019_recurring_class_plans.sql` and `20260616_000020_whiteboard_events_mvp.sql` applied with `supabase db query --linked`; migration history still needs cleanup/repair because old local filenames use duplicate date prefixes |
 | SB7 | RLS policies verified: profiles, bookings, subscriptions, user_roles | Run `SELECT * FROM pg_policies` | PASS 2026-06-09 for Phase 1 role evidence; profile recursion fixed |
 
 ### 2D — Cloudflare
@@ -82,7 +87,7 @@ All third-party credentials must be configured before deployment. **No deploymen
 | CF1 | Custom domain configured and DNS propagated | [Cloudflare → Pages → Custom domains](https://dash.cloudflare.com) | ☐ |
 | CF2 | SSL/TLS set to Full (Strict) | Cloudflare → SSL/TLS | ☐ |
 | CF3 | All env vars and secrets set in Workers environment | Cloudflare → Workers → Settings → Variables | ☐ |
-| CF4 | Worker deployment succeeds: `npm run deploy:worker` | Deployment log shows success | ✅ 2026-05-21 — Version e5f96805-0b41-41f9-b37e-554c7f2ea676 live |
+| CF4 | Worker deployment succeeds: `npm run deploy:worker` | Deployment log shows success | PASS 2026-06-16 - Version `46b60191-b129-4165-a6d4-c4260199e906` live |
 | CF5 | `/api/health` returns `{"ok":true}` | `curl https://anion.unalabs.cloud/api/health` | ✅ 2026-05-21 — Verified 200 |
 
 ---
@@ -94,7 +99,7 @@ All third-party credentials must be configured before deployment. **No deploymen
 | 3.1 | `GET https://[domain]/api/health` | `200 { "ok": true }` | ✅ `https://anion.unalabs.cloud/api/health` returns 200 (2026-05-20) |
 | 3.2 | `GET https://[domain]/api/status` | `200` with status map | ✅ 2026-05-21 — Verified 200 via `npm run verify:prod` |
 | 3.3 | Homepage loads without error | Page renders, no console errors | ✅ 2026-05-21 — Included in post-deploy smoke pass |
-| 3.4 | Magic-link sign-in flow completes | Session established, redirects to role dashboard | |
+| 3.4 | Google OAuth sign-in flow completes | Session established, redirects to role dashboard | PARTIAL 2026-06-17 - Google handoff reaches Google Accounts and auth users are profile-provisioned; full role-dashboard evidence still pending |
 | 3.5 | Parent role redirected to `/parent` | Correct dashboard shown | |
 | 3.6 | Tutor role redirected to `/tutor` | Correct dashboard shown | |
 | 3.7 | Admin role can access `/admin` | Metrics visible | |
@@ -102,7 +107,7 @@ All third-party credentials must be configured before deployment. **No deploymen
 | 3.9 | Stripe checkout session initiated | Redirects to Stripe-hosted checkout page | |
 | 3.10 | Billing portal accessible for active subscriber | Redirects to Stripe billing portal | |
 | 3.11 | Tutor booking request accepts/declines | Status updates in DB | |
-| 3.12 | Daily.co room created for accepted booking | Assigned tutor/student receive room URL and token; parent direct access denied | PASS for token/room/parent denial 2026-06-09; iframe join blocked by `c.daily.co` reachability |
+| 3.12 | Daily.co room created for accepted booking | Assigned tutor/student receive room URL and token; parent direct access denied | PASS for token/room/parent denial 2026-06-09; custom video join/background/leave/rejoin evidence pending |
 | 3.13 | 404 page renders for unknown routes | Custom not-found page | |
 
 ---

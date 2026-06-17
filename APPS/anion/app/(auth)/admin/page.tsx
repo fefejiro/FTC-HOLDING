@@ -2,7 +2,8 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '@/app/lib/auth/getCurrentUser';
 import { createServerClient } from '@/app/lib/supabase/server';
-import { listAdminRecentBookings } from '@/app/lib/bookings';
+import { listAdminRecentBookings, setBookingStatus } from '@/app/lib/bookings';
+import { createRecurringClassPlan, listClassPlanFormOptions } from '@/app/lib/scheduling';
 
 type MetricCardProps = { label: string; value: string | number; sub?: string };
 function MetricCard({ label, value, sub }: MetricCardProps) {
@@ -67,13 +68,17 @@ type ParentStudentLinkRow = { parent_id: string; student_id: string; created_at:
 type RecentProfile = { id: string; display_name: string | null; created_at: string };
 
 export default async function AdminPage({ searchParams }: AdminPageProps) {
-  const user = await getCurrentUser();
+  const user = await getCurrentUser({ preferredRole: 'admin' });
   if (!user) redirect('/login');
   if (user.role !== 'admin') redirect('/dashboard');
 
   const params = (await searchParams) ?? {};
   const linkError = typeof params.linkError === 'string' ? params.linkError : null;
   const linkSuccess = typeof params.linkSuccess === 'string' ? params.linkSuccess : null;
+  const bookingError = typeof params.bookingError === 'string' ? params.bookingError : null;
+  const bookingSuccess = typeof params.bookingSuccess === 'string' ? params.bookingSuccess : null;
+  const classPlanError = typeof params.classPlanError === 'string' ? params.classPlanError : null;
+  const classPlanSuccess = typeof params.classPlanSuccess === 'string' ? params.classPlanSuccess : null;
 
   const supabase = await createServerClient();
 
@@ -85,6 +90,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     { count: bookingCount },
     { count: pendingCount },
     { count: acceptedCount },
+    { count: recurringCount },
     { count: subCount },
     { count: activeSubCount },
     { data: recentProfiles },
@@ -92,6 +98,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     { data: studentRows },
     { data: linkRows },
     recentBookings,
+    classPlanOptions,
   ] = await Promise.all([
     supabase.from('profiles').select('*', { count: 'exact', head: true }),
     supabase.from('parents').select('*', { count: 'exact', head: true }),
@@ -100,6 +107,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     supabase.from('bookings').select('*', { count: 'exact', head: true }),
     supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
     supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('status', 'accepted'),
+    supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('booking_kind', 'recurring'),
     supabase.from('subscriptions').select('*', { count: 'exact', head: true }),
     supabase.from('subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'active'),
     supabase
@@ -111,6 +119,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     supabase.from('students').select('id, profile_id, grade_level').order('created_at', { ascending: true }),
     supabase.from('parent_student_links').select('parent_id, student_id, created_at').order('created_at', { ascending: false }),
     listAdminRecentBookings(),
+    listClassPlanFormOptions(),
   ]);
 
   const parentList = (parentRows ?? []) as ParentRow[];
@@ -204,6 +213,77 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     redirect('/admin?linkSuccess=Parent-student%20link%20removed');
   }
 
+  async function updateBookingStatusAction(formData: FormData) {
+    'use server';
+
+    const bookingId = String(formData.get('bookingId') ?? '');
+    const status = String(formData.get('status') ?? '');
+
+    if (!bookingId || (status !== 'accepted' && status !== 'declined')) {
+      redirect('/admin?bookingError=Invalid%20booking%20action');
+    }
+
+    try {
+      await setBookingStatus({ bookingId, status });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update booking';
+      redirect(`/admin?bookingError=${encodeURIComponent(message)}`);
+    }
+
+    revalidatePath('/admin');
+    revalidatePath('/parent');
+    revalidatePath('/tutor');
+    revalidatePath('/student');
+    redirect(`/admin?bookingSuccess=Booking%20${status}`);
+  }
+
+  async function createClassPlanAction(formData: FormData) {
+    'use server';
+
+    const parentId = String(formData.get('parentId') ?? '');
+    const studentId = String(formData.get('studentId') ?? '');
+    const tutorId = String(formData.get('tutorId') ?? '');
+    const subject = String(formData.get('subject') ?? '');
+    const startTime = String(formData.get('startTime') ?? '');
+    const startDate = String(formData.get('startDate') ?? '');
+    const endDate = String(formData.get('endDate') ?? '');
+    const durationMinutes = Number.parseInt(String(formData.get('durationMinutes') ?? '50'), 10);
+    const bufferMinutes = Number.parseInt(String(formData.get('bufferMinutes') ?? '10'), 10);
+    const daysOfWeek = formData
+      .getAll('daysOfWeek')
+      .map((value) => Number.parseInt(String(value), 10))
+      .filter((value) => Number.isInteger(value));
+
+    if (!parentId || !studentId || !tutorId || !subject || !startTime || !startDate || daysOfWeek.length === 0) {
+      redirect('/admin?classPlanError=Parent%2C%20student%2C%20tutor%2C%20subject%2C%20day%2C%20time%2C%20and%20start%20date%20are%20required');
+    }
+
+    try {
+      const result = await createRecurringClassPlan({
+        parentId,
+        studentId,
+        tutorId,
+        subject,
+        timezone: 'Africa/Lagos',
+        daysOfWeek,
+        startTime,
+        startDate,
+        endDate: endDate || null,
+        durationMinutes,
+        bufferMinutes,
+      });
+
+      revalidatePath('/admin');
+      revalidatePath('/parent');
+      revalidatePath('/tutor');
+      revalidatePath('/student');
+      redirect(`/admin?classPlanSuccess=${encodeURIComponent(`Recurring plan created. Generated ${result.generatedCount} accepted classes.`)}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create recurring class plan';
+      redirect(`/admin?classPlanError=${encodeURIComponent(message)}`);
+    }
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32, padding: 8 }}>
       <div>
@@ -236,14 +316,22 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           <MetricCard label="Total Bookings" value={bookingCount ?? 0} />
           <MetricCard label="Pending" value={pendingCount ?? 0} />
           <MetricCard label="Accepted" value={acceptedCount ?? 0} />
+          <MetricCard label="Recurring" value={recurringCount ?? 0} />
         </div>
+
+        {bookingError ? (
+          <p style={{ color: '#b91c1c', margin: '0 0 10px' }}>{bookingError}</p>
+        ) : null}
+        {bookingSuccess ? (
+          <p style={{ color: '#166534', margin: '0 0 10px' }}>{bookingSuccess}</p>
+        ) : null}
 
         {recentBookings && recentBookings.length > 0 && (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, background: '#fff', borderRadius: 10, border: '1px solid #e2e8f0' }}>
               <thead>
                 <tr style={{ background: '#f8fafc' }}>
-                  {['Subject', 'Student', 'Parent', 'Tutor', 'Date', 'Duration', 'Status'].map((h) => (
+                  {['Subject', 'Student', 'Parent', 'Tutor', 'Date', 'Duration', 'Status', 'Action'].map((h) => (
                     <th key={h} style={{ padding: '10px 14px', textAlign: 'left', color: '#64748b', fontWeight: 600, fontSize: 12 }}>{h}</th>
                   ))}
                 </tr>
@@ -258,12 +346,195 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                     <td style={{ padding: '10px 14px', color: '#64748b' }}>{new Date(b.requested_start_at).toLocaleDateString()}</td>
                     <td style={{ padding: '10px 14px', color: '#64748b' }}>{b.duration_minutes} min</td>
                     <td style={{ padding: '10px 14px' }}><StatusBadge status={b.status} /></td>
+                    <td style={{ padding: '10px 14px' }}>
+                      {b.status === 'pending' ? (
+                        <form action={updateBookingStatusAction} style={{ display: 'flex', gap: 8 }}>
+                          <input type="hidden" name="bookingId" value={b.id} />
+                          <button
+                            type="submit"
+                            name="status"
+                            value="accepted"
+                            style={{
+                              background: '#0f766e',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: 8,
+                              padding: '7px 10px',
+                              cursor: 'pointer',
+                              fontWeight: 600,
+                            }}
+                          >
+                            Accept
+                          </button>
+                          <button
+                            type="submit"
+                            name="status"
+                            value="declined"
+                            style={{
+                              background: '#fff',
+                              color: '#b91c1c',
+                              border: '1px solid #fecaca',
+                              borderRadius: 8,
+                              padding: '7px 10px',
+                              cursor: 'pointer',
+                              fontWeight: 600,
+                            }}
+                          >
+                            Decline
+                          </button>
+                        </form>
+                      ) : (
+                        <span style={{ color: '#94a3b8' }}>No action needed</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
+      </section>
+
+      <section>
+        <h2 style={{ fontSize: 14, fontWeight: 700, color: '#334155', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          Recurring Class Plans
+        </h2>
+
+        {classPlanError ? (
+          <p style={{ color: '#b91c1c', margin: '0 0 10px' }}>{classPlanError}</p>
+        ) : null}
+        {classPlanSuccess ? (
+          <p style={{ color: '#166534', margin: '0 0 10px' }}>{classPlanSuccess}</p>
+        ) : null}
+
+        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16 }}>
+          <form action={createClassPlanAction} style={{ display: 'grid', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span style={{ color: '#64748b', fontSize: 13, fontWeight: 600 }}>Parent</span>
+                <select name="parentId" required style={{ padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }}>
+                  <option value="">Select parent</option>
+                  {classPlanOptions.parents.map((parent) => (
+                    <option key={parent.id} value={parent.id}>
+                      {parent.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span style={{ color: '#64748b', fontSize: 13, fontWeight: 600 }}>Student</span>
+                <select name="studentId" required style={{ padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }}>
+                  <option value="">Select student</option>
+                  {classPlanOptions.students.map((student) => (
+                    <option key={student.id} value={student.id}>
+                      {student.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span style={{ color: '#64748b', fontSize: 13, fontWeight: 600 }}>Tutor</span>
+                <select name="tutorId" required style={{ padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }}>
+                  <option value="">Select tutor</option>
+                  {classPlanOptions.tutors.map((tutor) => (
+                    <option key={tutor.id} value={tutor.id}>
+                      {tutor.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 2fr) repeat(2, minmax(120px, 1fr))', gap: 10 }}>
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span style={{ color: '#64748b', fontSize: 13, fontWeight: 600 }}>Subject</span>
+                <input name="subject" required placeholder="English" style={{ padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+              </label>
+
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span style={{ color: '#64748b', fontSize: 13, fontWeight: 600 }}>Start time</span>
+                <input name="startTime" type="time" required defaultValue="21:00" style={{ padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+              </label>
+
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span style={{ color: '#64748b', fontSize: 13, fontWeight: 600 }}>Timezone</span>
+                <input value="Africa/Lagos" readOnly style={{ padding: 10, borderRadius: 8, border: '1px solid #cbd5e1', background: '#f8fafc' }} />
+              </label>
+            </div>
+
+            <fieldset style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 12 }}>
+              <legend style={{ color: '#64748b', fontSize: 13, fontWeight: 600, padding: '0 6px' }}>Days</legend>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {[
+                  ['0', 'Sun'],
+                  ['1', 'Mon'],
+                  ['2', 'Tue'],
+                  ['3', 'Wed'],
+                  ['4', 'Thu'],
+                  ['5', 'Fri'],
+                  ['6', 'Sat'],
+                ].map(([value, label]) => (
+                  <label
+                    key={value}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      border: '1px solid #cbd5e1',
+                      borderRadius: 999,
+                      padding: '7px 10px',
+                      color: '#334155',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <input type="checkbox" name="daysOfWeek" value={value} />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span style={{ color: '#64748b', fontSize: 13, fontWeight: 600 }}>Start date</span>
+                <input name="startDate" type="date" required style={{ padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+              </label>
+
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span style={{ color: '#64748b', fontSize: 13, fontWeight: 600 }}>End date</span>
+                <input name="endDate" type="date" style={{ padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+              </label>
+
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span style={{ color: '#64748b', fontSize: 13, fontWeight: 600 }}>Duration</span>
+                <input name="durationMinutes" type="number" min={30} max={240} defaultValue={50} required style={{ padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+              </label>
+
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span style={{ color: '#64748b', fontSize: 13, fontWeight: 600 }}>Buffer</span>
+                <input name="bufferMinutes" type="number" min={0} max={120} defaultValue={10} required style={{ padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+              </label>
+            </div>
+
+            <button
+              type="submit"
+              style={{
+                background: '#0f766e',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 8,
+                padding: '10px 14px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                width: 'fit-content',
+              }}
+            >
+              Create recurring plan
+            </button>
+          </form>
+        </div>
       </section>
 
       {/* Subscriptions */}

@@ -11,6 +11,7 @@ const baseUser: CurrentUser = {
   profileId: 'profile-1',
   displayName: 'Tutor One',
   role: 'tutor',
+  roles: ['tutor'],
 };
 
 const quietLogger = {
@@ -45,6 +46,7 @@ function createHandler(overrides: HandlerOverrides = {}) {
       driver: 'memory',
     }),
     resolveLessonParticipantRoleForUser: async () => 'tutor',
+    getLessonJoinWindowStatusForBooking: async () => ({ ok: true }),
     dailyFetch: async (path) => {
       if (path.startsWith('/rooms/')) {
         return { url: 'https://anion.daily.co/anion-booking-1' };
@@ -106,6 +108,36 @@ test('daily room rejects participant role mismatch with 403', async () => {
   assert.equal(response.status, 403);
   assert.equal(body.ok, false);
   assert.equal(body.code, 'LESSON_ACCESS_DENIED');
+});
+
+test('daily room rejects join attempts before the lesson window opens', async () => {
+  const response = await createHandler({
+    getLessonJoinWindowStatusForBooking: async () => ({
+      ok: false,
+      code: 'CLASS_NOT_OPEN',
+      message: 'Class is not open yet. You can join 10 minutes before the scheduled start.',
+    }),
+  })(dailyRequest({ bookingId: 'booking-1', participantRole: 'tutor' }));
+  const body = await response.json();
+
+  assert.equal(response.status, 403);
+  assert.equal(body.ok, false);
+  assert.equal(body.code, 'CLASS_NOT_OPEN');
+});
+
+test('daily room rejects join attempts after the lesson window closes', async () => {
+  const response = await createHandler({
+    getLessonJoinWindowStatusForBooking: async () => ({
+      ok: false,
+      code: 'CLASS_ENDED',
+      message: 'Class has ended. This room is no longer open.',
+    }),
+  })(dailyRequest({ bookingId: 'booking-1', participantRole: 'tutor' }));
+  const body = await response.json();
+
+  assert.equal(response.status, 403);
+  assert.equal(body.ok, false);
+  assert.equal(body.code, 'CLASS_ENDED');
 });
 
 test('daily room rejects parent access with 403', async () => {
@@ -192,6 +224,38 @@ test('daily room retries without cloud recording when Daily plan rejects recordi
   assert.equal(response.status, 200);
   assert.equal(body.ok, true);
   assert.equal(calls.filter((call) => call.path === '/rooms').length, 2);
+  for (const call of calls.filter((item) => item.path === '/rooms')) {
+    assert.equal((call.body as { properties?: { max_participants?: number } }).properties?.max_participants, 2);
+  }
+});
+
+test('daily room creates one-on-one Daily rooms with a two participant cap', async () => {
+  const calls: Array<{ path: string; method: string; body?: unknown }> = [];
+  const response = await createHandler({
+    dailyFetch: async (path, method, body) => {
+      calls.push({ path, method, body });
+      if (path.startsWith('/rooms/') && method === 'GET') {
+        throw new (class extends Error {
+          status = 404;
+          constructor() {
+            super('Daily API GET /rooms/anion-booking-1 failed 404');
+            this.name = 'DailyApiError';
+          }
+        })();
+      }
+      if (path === '/rooms' && method === 'POST') {
+        return { url: 'https://anion.daily.co/anion-booking-1' };
+      }
+      return { token: 'daily-token' };
+    },
+  })(dailyRequest({ bookingId: 'booking-1', participantRole: 'tutor' }));
+  const body = await response.json();
+  const createRoomCall = calls.find((call) => call.path === '/rooms' && call.method === 'POST');
+
+  assert.equal(response.status, 200);
+  assert.equal(body.ok, true);
+  assert.ok(createRoomCall);
+  assert.equal((createRoomCall.body as { properties?: { max_participants?: number } }).properties?.max_participants, 2);
 });
 
 test('daily room returns room URL and token for authorized student', async () => {

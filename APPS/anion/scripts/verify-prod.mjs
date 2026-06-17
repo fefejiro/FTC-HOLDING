@@ -296,6 +296,8 @@ async function checkDailyRoomContract(baseUrl) {
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
+        Origin: baseUrl,
+        'sec-fetch-site': 'same-origin',
       },
       body: '{}',
       redirect: 'manual',
@@ -327,7 +329,7 @@ function printSummaryAndExit() {
   const failures = results.filter((result) => !result.ok);
   console.log('\n=== Production Verification Summary ===');
   for (const result of results) {
-    console.log(`- [${result.ok ? 'PASS' : 'FAIL'}] ${result.name}${result.detail ? ` — ${result.detail}` : ''}`);
+    console.log(`- [${result.ok ? 'PASS' : 'FAIL'}] ${result.name}${result.detail ? ` - ${result.detail}` : ''}`);
   }
 
   if (failures.length > 0) {

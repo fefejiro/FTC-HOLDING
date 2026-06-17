@@ -14,6 +14,7 @@ What is implemented:
 - Sessions expire after 3 hours.
 - Cloud recording capability is configured.
 - Local demo mode works for QA (`ANION_LOCAL_DEMO=1`).
+- The lesson room uses Anion's first-party Daily call-object UI instead of the hosted Daily prebuilt iframe, so it does not depend on `https://c.daily.co` call UI assets.
 - Production provider config is present, but final handover still requires authenticated parent/tutor/student evidence.
 
 How it works:
@@ -21,7 +22,7 @@ How it works:
 2. `LessonRoom` calls `POST /api/daily/room` with the booking ID.
 3. The handler validates auth and booking access.
 4. Daily API creates or retrieves the room and generates a meeting token.
-5. Daily iframe is embedded in the lesson page.
+5. `daily-js` joins through a custom Anion call UI and renders participant media tracks in the lesson page.
 
 Testing:
 - E2E tests: `npm run test:e2e`
@@ -31,21 +32,25 @@ Testing:
 
 ## 2. Background Customization
 
-### Current Status: Not Implemented
+### Current Status: Implemented for in-call blur; production role evidence pending
 
-What is missing:
-- No background selection UI in profile, lesson setup, or video room.
-- No background storage in the database.
-- No background configuration passed to the Daily API.
+What is implemented:
+- The lesson room exposes in-call background controls: Off, Soft blur, and Strong blur.
+- Production Daily calls apply the selected effect through `daily-js` `updateInputSettings()`.
+- Local demo video exposes the same control surface for QA and E2E coverage.
+
+What is still missing:
+- No profile-level saved background preference.
+- No lesson setup background preset.
 - No context-specific backgrounds for Math, Science, English, Art, Music, or similar subjects.
 
 Possible implementation paths:
 - Profile-level preference: users pick a default background once.
 - Lesson-level preference: tutor selects a background for each booking or subject.
-- Real-time switcher: participant changes background during the lesson.
+- Real-time switcher: participant changes background during the lesson. Initial blur controls are now implemented.
 
 Recommendation:
-Start with lesson-level background selection after Phase 1 production evidence passes. It best matches tutoring context and avoids profile-setting complexity before handover.
+Keep the in-call blur switcher for handoff, then add lesson-level background selection after Phase 1 production evidence passes. It best matches tutoring context and avoids profile-setting complexity before handover.
 
 ## 3. Password Management
 
@@ -53,33 +58,33 @@ Start with lesson-level background selection after Phase 1 production evidence p
 
 Why passwords are not needed:
 - Google OAuth is the primary authentication method.
-- Secure email magic link is available as a fallback for handoff and QA accounts.
 - No password fields are shown on the login page.
 - No "Forgot Password" or password reset flow is needed.
 - Users do not create or manage Anion passwords.
+- Service-generated links are used only by internal evidence scripts when a service-role key is supplied.
 
 Current flow:
-1. User clicks "Continue with Google" or enters email for a secure link.
-2. Supabase handles OAuth or magic-link verification.
+1. User clicks "Continue with Google".
+2. Supabase handles OAuth verification.
 3. `/auth/callback` exchanges the auth code for a session.
 4. User is redirected to the correct role dashboard.
 
 Recommendation:
-Keep Google OAuth primary plus magic-link fallback. Do not add password creation/reset unless UB explicitly requests password-based accounts.
+Keep the user-facing login Google-only. Do not add password creation/reset unless UB explicitly requests password-based accounts.
 
 ## Summary Table
 
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Video Call (Daily) | Implemented; prod evidence pending | Room creation, tokens, join/leave/rejoin |
-| Video Room UI | Working | Iframe embedded, error handling |
+| Video Room UI | Working | First-party Daily call UI, media tracks, error handling |
 | Local Demo Video | Working | Requires `ANION_LOCAL_DEMO=1` |
-| Background Customization | Not built | Requires DB schema, UI, and Daily integration |
+| Background Customization | In-call blur built | Saved presets still require DB schema and UI |
 | Profile Settings | Not built | Optional for future background preferences |
-| Password Creation | Not needed | Google OAuth and magic links avoid Anion passwords |
+| Password Creation | Not needed | Google OAuth avoids Anion passwords |
 | Password Reset | Not needed | No Anion-managed passwords |
 | Google OAuth | Working | Primary auth method |
-| Magic Link | Working | Secure fallback auth method |
+| Magic Link | Internal evidence only | Not exposed on public login |
 
 ## Test Commands
 

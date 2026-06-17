@@ -36,6 +36,7 @@ export async function getLocalDemoCurrentUser(): Promise<CurrentUser | null> {
     profileId: `${role}-local-profile`,
     displayName: names[role],
     role,
+    roles: [role],
   };
 }
 
