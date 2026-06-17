@@ -24,6 +24,10 @@ const NAV_ITEMS = [
   { title: "You", url: "/settings", icon: Settings },
 ];
 
+function isDemoPartnerName(value: string | null): boolean {
+  return Boolean(value && /demo co-parent/i.test(value));
+}
+
 export function AppSidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
@@ -41,6 +45,7 @@ export function AppSidebar() {
     activePartnership?.partner?.displayName ||
     activePartnership?.partner?.email ||
     null;
+  const visiblePartnerName = isDemoPartnerName(partnerName) ? null : partnerName;
   const items = NAV_ITEMS.map((item) =>
     item.title === "Messages"
       ? { ...item, url: user?.activePartnershipId ? "/chat" : "/compose" }
@@ -60,7 +65,7 @@ export function AppSidebar() {
           <div className="min-w-0">
             <p className="truncate text-sm font-medium">{user?.displayName || "PeacePad user"}</p>
             <p className="truncate text-xs text-muted-foreground">
-              {partnerName ? `Connected with ${partnerName}` : "Invite your co-parent to connect"}
+              {visiblePartnerName ? `Connected with ${visiblePartnerName}` : "Solo workspace"}
             </p>
           </div>
         </div>

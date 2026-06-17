@@ -1782,11 +1782,13 @@ Crawl-delay: 1
             (err) => console.error("[Profile Update] Failed to send welcome email:", err)
           );
 
-          // Create demo partnership for authenticated users on first onboarding
-          // so they can immediately see sample messages with tone analysis
-          createDemoPartnership(userId, "authenticated").catch((err) =>
-            console.error("[Profile Update] Failed to create demo partnership:", err)
-          );
+          // Demo data is opt-in only. Real users should not be connected to a
+          // sample co-parent unless an explicit seeded demo environment asks for it.
+          if (process.env.PEACEPAD_SEED_DEMO_PARTNERSHIP === "1") {
+            createDemoPartnership(userId, "authenticated").catch((err) =>
+              console.error("[Profile Update] Failed to create demo partnership:", err)
+            );
+          }
         }
       }
 

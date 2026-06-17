@@ -253,8 +253,9 @@ async function createGuestSession(req: any, payload: any) {
     callActivity: "0",
   });
 
-  // Async demo setup for first-time guests; non-blocking by design.
-  if (process.env.NODE_ENV !== "test") {
+  // Demo data is opt-in only. Production guest users should start in a real solo
+  // workspace, then invite a real co-parent when they are ready.
+  if (process.env.PEACEPAD_SEED_DEMO_PARTNERSHIP === "1" && process.env.NODE_ENV !== "test") {
     createDemoPartnership(user.id, "guest").catch((error) => {
       if (isDevLogging) {
         console.error("[Guest] Demo setup failed:", error);
