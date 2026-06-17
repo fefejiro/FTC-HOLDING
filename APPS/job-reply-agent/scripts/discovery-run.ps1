@@ -1,6 +1,11 @@
+param(
+  [switch]$VisibleBrowser
+)
+
 # Scheduled Job Discovery Run
-# Scrapes visible signed-in job sites, refreshes premium queues, and prepares
-# trusted resume/cover packages without submitting.
+# Default mode is quiet/background: refreshes premium queues and prepares trusted
+# resume/cover packages without taking over the user's visible browser.
+# Use -VisibleBrowser, or JOB_AGENT_VISIBLE_DISCOVERY=1, for explicit browser scraping.
 $ErrorActionPreference = "Continue"
 $root = "C:\FTC HOLDING\APPS\job-reply-agent"
 $logDir = Join-Path $root "logs"
@@ -44,38 +49,49 @@ try {
 
   "=== Discovery scheduler start $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" | Tee-Object -FilePath $log -Append
   "Working dir: $root" | Tee-Object -FilePath $log -Append
+  $allowVisibleBrowser = $VisibleBrowser -or $env:JOB_AGENT_VISIBLE_DISCOVERY -in @("1", "true", "TRUE", "yes", "YES", "on", "ON")
+  if ($allowVisibleBrowser) {
+    "Visible browser discovery is ENABLED for this run. Chrome may be focused while Dice/Indeed/Monster are scraped." | Tee-Object -FilePath $log -Append
+  } else {
+    "Visible browser discovery is disabled for scheduled/background mode. Chrome focus will not be changed." | Tee-Object -FilePath $log -Append
+  }
 
   Remove-Item Env:\JOB_AGENT_CDP_URL -ErrorAction SilentlyContinue
   Remove-Item Env:\JOB_AGENT_REQUIRE_CDP -ErrorAction SilentlyContinue
 
-  $statusExit = Run-Step "0. Fejiro Chrome status" "npm run browser:fejiro-status"
-  $visibleFejiroReady = ($statusExit -eq 0)
-  if ($visibleFejiroReady) {
-    "Auth doctor intentionally skipped for scheduled discovery. The visible Fejiro profile is present; avoiding auth:doctor prevents Playwright from launching or using a separate Chrome profile when CDP is unavailable." | Tee-Object -FilePath $log -Append
+  $visibleFejiroReady = $false
+  if ($allowVisibleBrowser) {
+    $statusExit = Run-Step "0. Fejiro Chrome status" "npm run browser:fejiro-status"
+    $visibleFejiroReady = ($statusExit -eq 0)
+    if ($visibleFejiroReady) {
+      "Auth doctor intentionally skipped for scheduled discovery. The visible Fejiro profile is present; avoiding auth:doctor prevents Playwright from launching or using a separate Chrome profile when CDP is unavailable." | Tee-Object -FilePath $log -Append
+    } else {
+      "Auth doctor skipped because the visible Fejiro Chrome profile was not found. This avoids launching or using another Chrome profile." | Tee-Object -FilePath $log -Append
+      "Visible Fejiro browser/auth is not ready. Browser scraping will be skipped; package prep, queues, and trust reports will still run from saved data. No submissions will be attempted." | Tee-Object -FilePath $log -Append
+    }
   } else {
-    "Auth doctor skipped because the visible Fejiro Chrome profile was not found. This avoids launching or using another Chrome profile." | Tee-Object -FilePath $log -Append
-  }
-  if (-not $visibleFejiroReady) {
-    "Visible Fejiro browser/auth is not ready. Browser scraping will be skipped; package prep, queues, and trust reports will still run from saved data. No submissions will be attempted." | Tee-Object -FilePath $log -Append
+    "Fejiro Chrome status check skipped in background mode to avoid touching the active browser." | Tee-Object -FilePath $log -Append
   }
 
   $existingCdp = $false
-  try {
-    $ready = Invoke-WebRequest -Uri "http://127.0.0.1:9333/json/version" -UseBasicParsing -TimeoutSec 2
-    $existingCdp = $ready.StatusCode -eq 200
-  } catch {
-    $existingCdp = $false
+  if ($allowVisibleBrowser) {
+    try {
+      $ready = Invoke-WebRequest -Uri "http://127.0.0.1:9333/json/version" -UseBasicParsing -TimeoutSec 2
+      $existingCdp = $ready.StatusCode -eq 200
+    } catch {
+      $existingCdp = $false
+    }
   }
 
   if ($existingCdp) {
     $env:JOB_AGENT_CDP_URL = "http://127.0.0.1:9333"
     $env:JOB_AGENT_REQUIRE_CDP = "true"
     $env:JOB_AGENT_SCRAPER_TIMEOUT_MS = "30000"
-  } elseif ($visibleFejiroReady) {
+  } elseif ($allowVisibleBrowser -and $visibleFejiroReady) {
     "No Chrome CDP session is available on 127.0.0.1:9333. Continuing with visible Fejiro Chrome discovery only; no submissions will be attempted." | Tee-Object -FilePath $log -Append
   }
 
-  if ($visibleFejiroReady) {
+  if ($allowVisibleBrowser -and $visibleFejiroReady) {
     $diceExit = Run-Step "2. Visible Dice discovery" "npm run hunt:scrape-dice:visible -- -Limit 20"
     $indeedExit = Run-Step "3. Visible Indeed discovery" "npm run hunt:scrape-indeed:visible -- -Limit 20"
     $monsterExit = Run-Step "4. Visible Monster discovery" "npm run hunt:scrape-monster:visible -- -Limit 20"
@@ -83,8 +99,10 @@ try {
     if ($diceExit -ne 0) { "Dice discovery exited with $diceExit; continuing to queues." | Tee-Object -FilePath $log -Append }
     if ($indeedExit -ne 0) { "Indeed discovery exited with $indeedExit; continuing to queues." | Tee-Object -FilePath $log -Append }
     if ($monsterExit -ne 0) { "Monster discovery exited with $monsterExit; continuing to queues." | Tee-Object -FilePath $log -Append }
-  } else {
+  } elseif ($allowVisibleBrowser) {
     "=== 2-4. Visible site discovery skipped: Fejiro Chrome is not visible/auth-ready ===" | Tee-Object -FilePath $log -Append
+  } else {
+    "=== 2-4. Visible site discovery skipped: quiet background mode ===" | Tee-Object -FilePath $log -Append
   }
 
   $queueDiceExit = Run-Step "5. Premium Dice queue" "npm run hunt:premium-queue -- --source=dice --limit=20"

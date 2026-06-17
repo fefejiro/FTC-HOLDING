@@ -51,6 +51,22 @@ function parseOptionArg(argv: string[], name: string): string | undefined {
   return next;
 }
 
+async function requireGmailAuth(command: string, cfg: Parameters<typeof checkGmailAuthStatus>[0]): Promise<boolean> {
+  const status = await checkGmailAuthStatus(cfg);
+  if (status.ok) return true;
+
+  logger.error(
+    {
+      command,
+      gmail: status,
+      nextAction: "Run npm run gmail:auth:local, complete Google consent, then rerun npm run gmail:status."
+    },
+    "Gmail auth blocked; refusing to run recruiter email workflow."
+  );
+  process.exitCode = 1;
+  return false;
+}
+
 function extractEmailAddress(value: string): string {
   return value.match(/<([^>]+)>/)?.[1] || value.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "";
 }
@@ -246,7 +262,7 @@ export async function runCommand(args: {
   }
 
   if (command === "gmail:auth:url") {
-    const url = getGmailConsentUrl(cfg.env);
+    const url = getGmailConsentUrl(cfg.env, { fresh: true });
     logger.info({
       redirectUri: cfg.env.gmailRedirectUri,
       callbackServer: "npm run serve"
@@ -256,7 +272,7 @@ export async function runCommand(args: {
   }
 
   if (command === "gmail:auth:local") {
-    const url = getGmailConsentUrl(cfg.env);
+    const url = getGmailConsentUrl(cfg.env, { fresh: true });
     logger.info({
       redirectUri: cfg.env.gmailRedirectUri,
       steps: [
@@ -309,6 +325,7 @@ export async function runCommand(args: {
       logger.warn("Automation disabled. Skipping process:gmail.");
       return;
     }
+    if (!(await requireGmailAuth(command, cfg.env))) return;
 
       const scanLimit = limitArg ?? cfg.rules.automation.max_drafts_per_day * 3;
       const fetchLimit = limitArg ?? cfg.rules.automation.max_drafts_per_day;
@@ -418,6 +435,7 @@ export async function runCommand(args: {
       logger.warn("Automation disabled. Skipping run:gmail-cycle.");
       return;
     }
+    if (!(await requireGmailAuth(command, cfg.env))) return;
 
     const inbox = await listRecruiterInboundMessages(
       cfg.env,
@@ -495,6 +513,7 @@ export async function runCommand(args: {
       logger.warn("Automation disabled. Skipping run:cloud-cycle.");
       return;
     }
+    if (!(await requireGmailAuth(command, cfg.env))) return;
 
     const inbox = await listRecruiterInboundMessages(
       cfg.env,

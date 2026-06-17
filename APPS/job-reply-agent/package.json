@@ -32,8 +32,10 @@
     "schedule:gmail:register": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/register-gmail-agent-task.ps1",
     "schedule:discovery:register": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/register-discovery-agent-task.ps1",
     "schedule:discovery:run-now": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/discovery-run.ps1",
+    "schedule:discovery:run-visible": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/discovery-run.ps1 -VisibleBrowser",
     "schedule:gmail:run-now": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/gmail-run.ps1",
     "schedule:run-now": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/daily-run.ps1",
+    "schedule:run-browser": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/daily-run.ps1 -BrowserCycle",
     "schedule:status": "powershell -NoProfile -Command \"& { $names=@('JobReplyAgent-Periodic','JobReplyAgent-Gmail','JobReplyAgent-Discovery','JobReplyAgentDailyReport'); foreach ($name in $names) { $task=Get-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue; if ($task) { $info=$task | Get-ScheduledTaskInfo; [pscustomobject]@{ TaskName=$task.TaskName; State=$task.State; LastRunTime=$info.LastRunTime; LastTaskResult=$info.LastTaskResult; NextRunTime=$info.NextRunTime } } } } | Format-Table -AutoSize\"",
     "browser:attach-chrome": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-chrome-cdp.ps1",
     "browser:fejiro-status": "python scripts/fejiro_chrome_status.py",
@@ -79,6 +81,7 @@
     "nodemailer": "^6.9.15",
     "pino": "^9.5.0",
     "pino-pretty": "^11.2.2",
+    "playwright": "^1.58.2",
     "yaml": "^2.6.0",
     "zod": "^3.23.8"
   },

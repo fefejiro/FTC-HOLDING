@@ -1,5 +1,10 @@
+param(
+  [switch]$BrowserCycle
+)
+
 # Scheduled Job Agent Run
-# Runs the full production cycle and appends output to a daily log file.
+# Default mode is quiet/background: status, premium queues, and trust reports only.
+# Use -BrowserCycle, or JOB_AGENT_BROWSER_CYCLE=1, for explicit laptop browser proof runs.
 $ErrorActionPreference = "Continue"
 $root = "C:\FTC HOLDING\APPS\job-reply-agent"
 $logDir = Join-Path $root "logs"
@@ -44,6 +49,23 @@ function Run-Step($label, $cmd) {
 
 "=== Scheduler start $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" | Tee-Object -FilePath $log -Append
 "Working dir: $root" | Tee-Object -FilePath $log -Append
+$allowBrowserCycle = $BrowserCycle -or $env:JOB_AGENT_BROWSER_CYCLE -in @("1", "true", "TRUE", "yes", "YES", "on", "ON")
+
+if (-not $allowBrowserCycle) {
+  "Browser cycle is disabled for scheduled/background mode. Chrome/CDP will not be checked or controlled." | Tee-Object -FilePath $log -Append
+  $statusExit = Run-Step "1. Status snapshot" "npm run hunt:status"
+  $queueExit = Run-Step "2. Premium Dice queue snapshot" "npm run hunt:premium-queue -- --source=dice --limit=10"
+  $indeedQueueExit = Run-Step "3. Premium Indeed queue snapshot" "npm run hunt:premium-queue -- --source=indeed --limit=10"
+  $monsterQueueExit = Run-Step "4. Premium Monster queue snapshot" "npm run hunt:premium-queue -- --source=monster --limit=10"
+  $trustExit = Run-Step "5. Trust report snapshot" "npm run hunt:trust-report -- --limit=15"
+  if ($statusExit -ne 0) { exit $statusExit }
+  if ($queueExit -ne 0) { exit $queueExit }
+  if ($indeedQueueExit -ne 0) { exit $indeedQueueExit }
+  if ($monsterQueueExit -ne 0) { exit $monsterQueueExit }
+  if ($trustExit -ne 0) { exit $trustExit }
+  "=== Success $(Get-Date -Format 'HH:mm:ss'): quiet status/queue-only mode ===" | Tee-Object -FilePath $log -Append
+  exit 0
+}
 
 $existingCdp = $false
 try {

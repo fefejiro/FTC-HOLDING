@@ -145,9 +145,23 @@ This registers `JobReplyAgent-Periodic` to execute:
 
 `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/daily-run.ps1`
 
+This scheduled/default run is background-safe: it does not check, focus, or control Chrome. It only writes status, queue, and trust-report output.
+
+Only run the laptop browser/proof cycle when you are ready for the agent to use browser automation:
+
+`npm run schedule:run-browser`
+
 For a report-only daily task (optional), use:
 
 `powershell -ExecutionPolicy Bypass -File scripts/register-daily-report-task.ps1 -RunTime 19:00`
+
+For job discovery, the scheduled/background runner is intentionally non-intrusive. It refreshes queues, prepares packages, and writes trust reports without focusing or navigating your visible Chrome window:
+
+`npm run schedule:discovery:run-now`
+
+Only run visible browser scraping when you are ready for Chrome to be controlled:
+
+`npm run schedule:discovery:run-visible`
 
 ## GitHub Actions Automation
 

@@ -72,12 +72,53 @@ function Quote-Arg([string]$Value) {
   return $Value
 }
 
+function Set-JsonProperty($Object, [string]$Name, $Value) {
+  if ($Object.PSObject.Properties.Name -contains $Name) {
+    $Object.$Name = $Value
+  } else {
+    $Object | Add-Member -NotePropertyName $Name -NotePropertyValue $Value
+  }
+}
+
+function Set-ChromeCleanExit([string]$Root, [string]$ProfileDir) {
+  $paths = @(
+    (Join-Path $Root "Local State"),
+    (Join-Path (Join-Path $Root $ProfileDir) "Preferences")
+  )
+
+  foreach ($file in $paths) {
+    if (-not (Test-Path -LiteralPath $file)) {
+      continue
+    }
+
+    try {
+      $json = Get-Content -LiteralPath $file -Raw | ConvertFrom-Json
+      if ($json.profile) {
+        Set-JsonProperty $json.profile "exit_type" "Normal"
+        Set-JsonProperty $json.profile "exited_cleanly" $true
+
+        if ($json.profile.info_cache -and ($json.profile.info_cache.PSObject.Properties.Name -contains $ProfileDir)) {
+          $profileInfo = $json.profile.info_cache.$ProfileDir
+          Set-JsonProperty $profileInfo "exit_type" "Normal"
+          Set-JsonProperty $profileInfo "exited_cleanly" $true
+        }
+      }
+      $json | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $file -Encoding UTF8
+    } catch {
+      Write-Warning "Could not mark Chrome profile clean in ${file}: $($_.Exception.Message)"
+    }
+  }
+}
+
+Set-ChromeCleanExit -Root $UserDataDir -ProfileDir $ProfileDirectory
+
 $argsList = @(
   "--remote-debugging-port=$Port",
   "--user-data-dir=$UserDataDir",
   "--profile-directory=$ProfileDirectory",
   "--no-first-run",
   "--no-default-browser-check",
+  "--disable-session-crashed-bubble",
   $StartUrl
 ) | ForEach-Object { Quote-Arg $_ }
 

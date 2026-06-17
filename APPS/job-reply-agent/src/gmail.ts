@@ -325,9 +325,12 @@ export async function scanInboxForRecruiters(
   return { scanned: messages.length, labeled };
 }
 
-export function getGmailConsentUrl(cfg: GmailAuthConfig): string {
+export function getGmailConsentUrl(cfg: GmailAuthConfig, options: { fresh?: boolean } = {}): string {
   const oauth = createOAuthClient(cfg);
-  const pkce = getReusablePkcePair(cfg);
+  const pkce = options.fresh ? createPkcePair() : getReusablePkcePair(cfg);
+  if (options.fresh) {
+    savePkceVerifier(cfg, pkce.verifier);
+  }
   return oauth.generateAuthUrl({
     access_type: "offline",
     prompt: "consent",
