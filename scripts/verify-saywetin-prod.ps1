@@ -19,14 +19,14 @@ $checks = @(
     ContentTypeContains = "text/html";
   },
   @{
-    Name = "saywetin.app /health";
-    Url = "https://saywetin.app/health";
+    Name = "api.saywetin.app /health";
+    Url = "https://api.saywetin.app/health";
     Expected = 200;
     ContentTypeContains = "application/json";
   },
   @{
-    Name = "saywetin.app /api/status";
-    Url = "https://saywetin.app/api/status";
+    Name = "api.saywetin.app /api/status";
+    Url = "https://api.saywetin.app/api/status";
     Expected = 200;
     ContentTypeContains = "application/json";
   }
@@ -43,9 +43,25 @@ function Invoke-EndpointCheck {
   $detail = ""
 
   try {
-    $response = Invoke-WebRequest -Uri $Check.Url -Method Get -TimeoutSec $TimeoutSec -MaximumRedirection 5 -ErrorAction Stop
+    $requestParams = @{
+      Uri                = $Check.Url
+      Method             = "Get"
+      TimeoutSec         = $TimeoutSec
+      MaximumRedirection = 5
+      ErrorAction        = "Stop"
+    }
+    if ($PSVersionTable.PSVersion.Major -lt 6) {
+      $requestParams.UseBasicParsing = $true
+    }
+
+    $response = Invoke-WebRequest @requestParams
     $statusCode = [int]$response.StatusCode
-    $contentType = [string]$response.Headers["Content-Type"]
+    $contentTypeHeader = $response.Headers["Content-Type"]
+    if ($contentTypeHeader -is [array]) {
+      $contentType = [string]$contentTypeHeader[0]
+    } else {
+      $contentType = [string]$contentTypeHeader
+    }
   } catch {
     if ($_.Exception.Response) {
       try { $statusCode = [int]$_.Exception.Response.StatusCode } catch {}
@@ -87,11 +103,11 @@ foreach ($check in $checks) {
 
 $statusResponse = $null
 try {
-  $statusResponse = Invoke-RestMethod -Uri "https://saywetin.app/api/status" -Method Get -TimeoutSec $TimeoutSec -ErrorAction Stop
+  $statusResponse = Invoke-RestMethod -Uri "https://api.saywetin.app/api/status" -Method Get -TimeoutSec $TimeoutSec -ErrorAction Stop
 } catch {
   $results += [pscustomobject]@{
     Check       = "listen readiness status endpoint"
-    Url         = "https://saywetin.app/api/status"
+    Url         = "https://api.saywetin.app/api/status"
     Status      = "-"
     ContentType = "-"
     Result      = "FAIL"
@@ -110,7 +126,7 @@ if ($statusResponse) {
 
   $results += [pscustomobject]@{
     Check       = "listen readiness acrcloud configured"
-    Url         = "https://saywetin.app/api/status"
+    Url         = "https://api.saywetin.app/api/status"
     Status      = "-"
     ContentType = "-"
     Result      = if ($acrcloudConfigured) { "PASS" } else { "FAIL" }
@@ -119,7 +135,7 @@ if ($statusResponse) {
 
   $results += [pscustomobject]@{
     Check       = "listen readiness openai configured"
-    Url         = "https://saywetin.app/api/status"
+    Url         = "https://api.saywetin.app/api/status"
     Status      = "-"
     ContentType = "-"
     Result      = if ($openaiConfigured) { "PASS" } else { "FAIL" }
@@ -128,7 +144,7 @@ if ($statusResponse) {
 
   $results += [pscustomobject]@{
     Check       = "listen readiness database configured"
-    Url         = "https://saywetin.app/api/status"
+    Url         = "https://api.saywetin.app/api/status"
     Status      = "-"
     ContentType = "-"
     Result      = if ($databaseConfigured) { "PASS" } else { "FAIL" }
@@ -137,7 +153,7 @@ if ($statusResponse) {
 
   $results += [pscustomobject]@{
     Check       = "listen readiness database connected"
-    Url         = "https://saywetin.app/api/status"
+    Url         = "https://api.saywetin.app/api/status"
     Status      = "-"
     ContentType = "-"
     Result      = if ($databaseConnected) { "PASS" } else { "FAIL" }
@@ -146,7 +162,7 @@ if ($statusResponse) {
 
   $results += [pscustomobject]@{
     Check       = "listen readiness lyrics configured"
-    Url         = "https://saywetin.app/api/status"
+    Url         = "https://api.saywetin.app/api/status"
     Status      = "-"
     ContentType = "-"
     Result      = if ($lyricsConfigured) { "PASS" } else { "WARN" }

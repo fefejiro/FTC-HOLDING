@@ -82,6 +82,10 @@ type NormalizedIncident = {
   sourceKey: SourceKey;
 };
 
+function isNormalizedIncident(value: NormalizedIncident | null): value is NormalizedIncident {
+  return value !== null;
+}
+
 type Ontario511Event = {
   ID?: string | number;
   RoadwayName?: string;
@@ -639,7 +643,7 @@ async function fetchOntario511Incidents(): Promise<NormalizedIncident[]> {
       };
       if (!matchesAnyActiveRegion(candidate)) return null;
 
-      return {
+      const normalized: NormalizedIncident = {
         id: candidate.id,
         eventType,
         description,
@@ -651,9 +655,11 @@ async function fetchOntario511Incidents(): Promise<NormalizedIncident[]> {
         lastUpdated: toIsoString(event.LastUpdated),
         alerted: shouldAlert(eventType, description),
         sourceKey: 'on511' as const,
-      } satisfies NormalizedIncident;
+      };
+      return normalized;
     })
-    .filter((value): value is NormalizedIncident => Boolean(value && value.id !== 'on511:'));
+    .filter(isNormalizedIncident)
+    .filter((value) => value.id !== 'on511:');
 
   updateSourceSnapshot('on511', {
     lastSuccessAt: new Date().toISOString(),
@@ -705,7 +711,7 @@ async function fetchOttawaTrafficIncidents(): Promise<NormalizedIncident[]> {
 
       if (!alertable) return null;
 
-      return {
+      const normalized: NormalizedIncident = {
         id: `ottawa_traffic:${String(event.id ?? '')}`,
         eventType: normalizedType,
         description,
@@ -717,12 +723,11 @@ async function fetchOttawaTrafficIncidents(): Promise<NormalizedIncident[]> {
         lastUpdated: toIsoString(event.updated),
         alerted: true,
         sourceKey: 'ottawa_traffic' as const,
-      } satisfies NormalizedIncident;
+      };
+      return normalized;
     })
-    .filter(
-      (value): value is NormalizedIncident =>
-        Boolean(value && value.id !== 'ottawa_traffic:' && value.description),
-    );
+    .filter(isNormalizedIncident)
+    .filter((value) => value.id !== 'ottawa_traffic:' && Boolean(value.description));
 
   updateSourceSnapshot('ottawa_traffic', {
     lastSuccessAt: new Date().toISOString(),
@@ -854,7 +859,7 @@ async function fetchTomTomIncidents(regionKey: DispatchRegionKey): Promise<Norma
           ? (TOMTOM_DELAY_SEVERITY[props.magnitudeOfDelay] ?? null)
           : null;
 
-      return {
+      const normalized: NormalizedIncident = {
         id,
         eventType,
         description,
@@ -866,9 +871,10 @@ async function fetchTomTomIncidents(regionKey: DispatchRegionKey): Promise<Norma
         lastUpdated: props.startTime ? new Date(props.startTime).toISOString() : null,
         alerted: TOMTOM_ALERTABLE.has(cat),
         sourceKey: 'tomtom' as const,
-      } satisfies NormalizedIncident;
+      };
+      return normalized;
     })
-    .filter((v): v is NormalizedIncident => v !== null);
+    .filter(isNormalizedIncident);
 
   updateSourceSnapshot('tomtom', {
     lastSuccessAt: new Date().toISOString(),
@@ -1012,7 +1018,7 @@ async function fetchWazeIncidents(regionKey: DispatchRegionKey): Promise<WazeFet
             ? new Date(alert.publish_datetime_utc).toISOString()
             : null;
 
-          return {
+          const normalized: NormalizedIncident = {
             id,
             eventType,
             description,
@@ -1027,9 +1033,10 @@ async function fetchWazeIncidents(regionKey: DispatchRegionKey): Promise<WazeFet
             lastUpdated: startDate,
             alerted,
             sourceKey: 'waze' as const,
-          } satisfies NormalizedIncident;
+          };
+          return normalized;
         })
-        .filter((v): v is NormalizedIncident => v !== null),
+        .filter(isNormalizedIncident),
       status: res.status,
       error: null,
       rateLimited: false,

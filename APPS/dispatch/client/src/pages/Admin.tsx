@@ -992,7 +992,7 @@ function AdminDashboard({
                     (incidentSummary?.recentViewed ?? []).map((incident) => (
                       <div key={`view-${incident.id}`} className="text-xs text-slate-300">
                         <div className="font-semibold text-white">{incident.roadway || incident.eventType || 'Incident'}</div>
-                        <div className="text-slate-500 mt-0.5">{fmt(incident.lastViewedAt)} • {(incident.viewCount ?? 0)} view(s)</div>
+                        <div className="text-slate-500 mt-0.5">{fmtOptional(incident.lastViewedAt)} • {(incident.viewCount ?? 0)} view(s)</div>
                       </div>
                     ))
                   )}
@@ -1007,7 +1007,7 @@ function AdminDashboard({
                     (incidentSummary?.recentActioned ?? []).map((incident) => (
                       <div key={`action-${incident.id}`} className="text-xs text-slate-300">
                         <div className="font-semibold text-white">{incident.roadway || incident.eventType || 'Incident'}</div>
-                        <div className="text-slate-500 mt-0.5">{fmt(incident.lastActionedAt)} • {(incident.actionCount ?? 0)} action(s)</div>
+                        <div className="text-slate-500 mt-0.5">{fmtOptional(incident.lastActionedAt)} • {(incident.actionCount ?? 0)} action(s)</div>
                       </div>
                     ))
                   )}

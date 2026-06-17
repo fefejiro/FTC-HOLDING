@@ -444,7 +444,7 @@ export function buildDecisionPlan(params: {
   rule.fallbackTypes.forEach((entry) => neededTypes.add(entry.type));
 
   const rankedByType = {} as Record<SupportLocationType, RankedSupportLocation[]>;
-  for (const type of neededTypes) {
+  for (const type of Array.from(neededTypes)) {
     const candidates = SUPPORT_LOCATIONS.filter((location) => location.type === type);
     rankedByType[type] = rankLocationsByContext(candidates, point, hour);
   }

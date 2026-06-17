@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig, type PluginOption } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import fs from "node:fs";
 import path from "path";
@@ -111,7 +111,7 @@ export default defineConfig({
           },
         ],
       },
-    }),
+    }) as unknown as PluginOption,
   ],
   define: {
     __SAYWETIN_FRONTEND_BUILD__: JSON.stringify(frontendBuildInfo),

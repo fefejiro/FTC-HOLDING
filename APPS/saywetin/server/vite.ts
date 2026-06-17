@@ -11,7 +11,7 @@ const viteLogger = createLogger();
 export async function setupVite(server: Server, app: Express) {
   // This repo can resolve Vite from both the workspace root and app package.
   // Cast once here so runtime config reuse doesn't fail type-checking because of duplicate Vite types.
-  const runtimeViteConfig = viteConfig as Record<string, unknown>;
+  const runtimeViteConfig = viteConfig as unknown as Record<string, unknown>;
 
   const serverOptions = {
     middlewareMode: true,
