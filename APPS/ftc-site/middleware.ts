@@ -37,6 +37,7 @@ const CLIENT_DOMAIN_ROOT_REWRITES: Record<string, string> = {
 
 const DISPATCH_PUBLIC_HOST = "dispatch.unalabs.cloud";
 const DISPATCH_ADMIN_HOST = "dispatch-admin.unalabs.cloud";
+const ANION_AUTH_CALLBACK_URL = "https://anion.unalabs.cloud/auth/callback";
 
 const OG_TRADES_ROOT_LANDING_PATH = "/og-trades-academy";
 const OG_TRADES_STABLE_ALIAS_PATH = "/og-trades-academy-home";
@@ -132,6 +133,25 @@ function shouldDisableEdgeHtmlCache(req: NextRequest, pathname: string): boolean
   return pathname === "/" || pathname === "/ateam" || pathname.startsWith("/ateam/");
 }
 
+function isUnaLabsHost(host: string): boolean {
+  return host === SITE_HOST || host === "www.unalabs.cloud";
+}
+
+function hasAnionAuthPayload(req: NextRequest): boolean {
+  const params = req.nextUrl.searchParams;
+  return params.has("code") || params.has("error") || params.has("error_code");
+}
+
+function redirectAnionAuthPayload(req: NextRequest): NextResponse | null {
+  const pathname = req.nextUrl.pathname;
+  if (pathname !== "/" && pathname !== "/auth/callback") return null;
+  if (!hasAnionAuthPayload(req)) return null;
+
+  const destination = new URL(ANION_AUTH_CALLBACK_URL);
+  destination.search = req.nextUrl.search;
+  return NextResponse.redirect(destination, 307);
+}
+
 function withRuntimePageHeaders(req: NextRequest, response: NextResponse): NextResponse {
   if (!shouldDisableEdgeHtmlCache(req, req.nextUrl.pathname)) {
     return response;
@@ -149,6 +169,13 @@ export function middleware(req: NextRequest) {
   const hostWithoutPort = host.replace(/:\d+$/, "");
   const urlHost = String(req.nextUrl.hostname || "").toLowerCase().replace(/:\d+$/, "");
   const effectiveHost = hostWithoutPort || urlHost;
+
+  if (isUnaLabsHost(effectiveHost)) {
+    const authRedirect = redirectAnionAuthPayload(req);
+    if (authRedirect) {
+      return authRedirect;
+    }
+  }
 
   // Hard-lock Garden Cleaners host before any OG/domain inference logic.
   // This prevents accidental OG route rewrites when environment host config is mis-set.

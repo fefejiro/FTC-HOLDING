@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import AnionAuthCodeBridge from "./components/AnionAuthCodeBridge";
 import HomePageExperience from "./components/HomePageExperience";
 
 export const dynamic = "force-static";
@@ -13,5 +14,10 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  return <HomePageExperience />;
+  return (
+    <>
+      <AnionAuthCodeBridge />
+      <HomePageExperience />
+    </>
+  );
 }

@@ -19,6 +19,9 @@ const OG_HOSTS = new Set([
   "og-trades-pages.pages.dev"
 ]);
 
+const UNA_LABS_HOSTS = new Set(["unalabs.cloud", "www.unalabs.cloud"]);
+const ANION_AUTH_CALLBACK_URL = "https://anion.unalabs.cloud/auth/callback";
+
 const GARDEN_PUBLIC_PATHS = new Set([
   "/",
   "/about",
@@ -89,6 +92,19 @@ function rewrite(request: Request, env: Env, pathname: string) {
   const url = new URL(request.url);
   url.pathname = pathname;
   return env.ASSETS.fetch(new Request(url.toString(), request));
+}
+
+function redirectAnionAuthPayload(request: Request, pathname: string) {
+  if (pathname !== "/" && pathname !== "/auth/callback") return null;
+
+  const url = new URL(request.url);
+  if (!url.searchParams.has("code") && !url.searchParams.has("error") && !url.searchParams.has("error_code")) {
+    return null;
+  }
+
+  const destination = new URL(ANION_AUTH_CALLBACK_URL);
+  destination.search = url.search;
+  return Response.redirect(destination.toString(), 307);
 }
 
 function handleGardenHost(request: Request, env: Env, pathname: string) {
@@ -164,6 +180,11 @@ function handleOgHost(request: Request, env: Env, pathname: string) {
 export const onRequest: PagesFunction<Env> = async (context) => {
   const host = normalizeHost(context.request.headers.get("host") || "");
   const pathname = normalizePathname(new URL(context.request.url).pathname);
+
+  if (UNA_LABS_HOSTS.has(host)) {
+    const response = redirectAnionAuthPayload(context.request, pathname);
+    if (response) return response;
+  }
 
   if (GARDEN_HOSTS.has(host)) {
     const response = handleGardenHost(context.request, context.env, pathname);
