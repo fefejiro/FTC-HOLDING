@@ -13,7 +13,7 @@ function getSafeSessionErrorCopy(error: unknown): string {
 import { useLocation } from "wouter";
 import { ArrowRight, CheckCircle, Copy, Mail, MessageSquare, RefreshCw, Sparkles, Upload } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { rememberAuthRedirectState, sendMagicLink } from "@/lib/supabaseAuth";
+import { rememberAuthRedirectState } from "@/lib/supabaseAuth";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -48,7 +48,7 @@ function isMeaningfulDisplayName(value?: string | null): boolean {
 
 export default function OnboardingPage() {
   const [location, setLocation] = useLocation();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, login } = useAuth();
   const { toast } = useToast();
   const [step, setStep] = useState<1 | 1.5 | 2 | 3 | 4 | 5>(1);
   const [authEmail, setAuthEmail] = useState("");
@@ -211,34 +211,25 @@ export default function OnboardingPage() {
     }
   };
 
-  const handleSendMagicLink = async () => {
-    const email = authEmail.trim();
-    if (!email || !email.includes("@")) {
-      toast({
-        title: "Add your email",
-        description: "Enter a valid email address to continue.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const handleStartAccountSignIn = async () => {
     setIsSendingLink(true);
     setAuthError(null);
     try {
       rememberAuthRedirectState("/onboarding");
-      await sendMagicLink(email);
-      setMagicLinkSent(true);
+      login();
     } catch (error) {
       const description = error instanceof Error ? error.message : "Please try again.";
       setAuthError(description);
       toast({
-        title: "Could not send link",
+        title: "Could not start sign-in",
         description,
         variant: "destructive",
       });
-    } finally {
       setIsSendingLink(false);
     }
   };
+
+  const handleSendMagicLink = handleStartAccountSignIn;
 
   const saveProfile = async () => {
     const trimmedName = displayName.trim();
@@ -418,13 +409,24 @@ export default function OnboardingPage() {
                   {!magicLinkSent ? (
                     <>
                       <div className="space-y-2">
-                        <CardTitle>Let&apos;s get you set up</CardTitle>
-                        <CardDescription>
+                        <CardTitle>Save and sync your PeacePad</CardTitle>
+                        <CardDescription className="hidden">
                           Enter your email. We&apos;ll send you a link to sign in — no password needed.
                         </CardDescription>
+                        <CardDescription>
+                          Continue with your account when you want saved history across devices. You can keep using PeacePad as a guest anytime.
+                        </CardDescription>
+                        {authError ? (
+                          <p className="text-sm text-destructive" data-testid="text-auth-sign-in-error">
+                            {authError}
+                          </p>
+                        ) : null}
+                        <p className="text-xs text-muted-foreground">
+                          Account sign-in upgrades this guest session instead of starting your workspace over.
+                        </p>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="auth-email">Email</Label>
+                      <div className="hidden">
+                        <Label htmlFor="auth-email">Email, optional</Label>
                         <Input
                           id="auth-email"
                           type="email"
@@ -439,7 +441,7 @@ export default function OnboardingPage() {
                           </p>
                         ) : null}
                         <p className="text-xs text-muted-foreground">
-                          PeacePad still works without login. Sign-in is only needed for saved history and sync.
+                          Account sign-in upgrades this guest session instead of starting your workspace over.
                         </p>
                       </div>
                     </>
@@ -588,8 +590,8 @@ export default function OnboardingPage() {
 
               {step === 2 && !magicLinkSent && (
                 <Button type="button" onClick={() => void handleSendMagicLink()} disabled={isSendingLink}>
-                  {isSendingLink ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
-                  Send sign-in link
+                  {isSendingLink ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
+                  Continue with account
                 </Button>
               )}
 
@@ -600,7 +602,7 @@ export default function OnboardingPage() {
                   onClick={() => { setMagicLinkSent(false); void handleSendMagicLink(); }}
                   disabled={isSendingLink}
                 >
-                  Resend link
+                  Try account sign-in again
                 </Button>
               )}
 

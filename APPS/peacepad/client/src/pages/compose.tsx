@@ -356,6 +356,9 @@ export default function ComposePage() {
                   </Link>
                 </Button>
                 <Button type="button" variant="outline" asChild>
+                  <Link href="/settings">Invite partner</Link>
+                </Button>
+                <Button type="button" variant="outline" asChild>
                   <Link href="/onboarding?auth=upgrade">Sign in to save history</Link>
                 </Button>
               </div>

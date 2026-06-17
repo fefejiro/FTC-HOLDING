@@ -16,6 +16,10 @@ import { JoinPartnershipDialog } from "@/components/JoinPartnershipDialog";
 import { trackEvent } from "@/lib/analytics";
 import { markGuestUpgradeIntent } from "@/lib/guestUpgrade";
 
+function isDemoPartnerName(value: string | null): boolean {
+  return Boolean(value && /demo co-parent/i.test(value));
+}
+
 export default function SettingsPage() {
   const [, setLocation] = useLocation();
   const { user, logout } = useAuth();
@@ -61,10 +65,52 @@ export default function SettingsPage() {
       activePartnership.partner?.email ||
       "your co-parent"
     : null;
+  const visiblePartnerName = isDemoPartnerName(partnerName) ? null : partnerName;
 
   const handleGuestUpgrade = () => {
     markGuestUpgradeIntent();
     setLocation("/onboarding?auth=upgrade");
+  };
+
+  const copyGuestInviteLink = async () => {
+    if (!inviteLink) {
+      toast({
+        title: "Invite not ready",
+        description: "Refresh once and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setInviteCopied(true);
+      window.setTimeout(() => setInviteCopied(false), 2000);
+      toast({
+        title: "Invite copied",
+        description: "Share the link when you are ready to connect.",
+      });
+      trackEvent("invite_sent", {
+        share_method: "copy",
+        source: "guest_settings",
+      });
+    } catch {
+      toast({
+        title: "Copy failed",
+        description: "Select and copy the link manually.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const textGuestInviteLink = () => {
+    if (!inviteLink) return;
+    const shareText = `Join me on PeacePad so we can communicate clearly: ${inviteLink}`;
+    trackEvent("invite_sent", {
+      share_method: "text",
+      source: "guest_settings",
+    });
+    window.location.href = `sms:?body=${encodeURIComponent(shareText)}`;
   };
 
   if (user?.isGuest) {
@@ -93,6 +139,41 @@ export default function SettingsPage() {
                   <Link href="/prep-chat">Keep using Prep Chat</Link>
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/60">
+            <CardHeader>
+              <CardTitle>Invite a partner when you are ready</CardTitle>
+              <CardDescription>
+                PeacePad works for one person first. Share this link only when you want your co-parent to join the same workspace.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+                <p className="mb-2 text-sm font-medium">Your invite link</p>
+                <p className="break-all text-sm text-muted-foreground">
+                  {inviteLink || "Preparing your invite link..."}
+                </p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Button type="button" variant="outline" onClick={() => void copyGuestInviteLink()} disabled={!inviteLink}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  {inviteCopied ? "Copied" : "Copy link"}
+                </Button>
+                <Button type="button" variant="outline" onClick={textGuestInviteLink} disabled={!inviteLink}>
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Text link
+                </Button>
+              </div>
+              <JoinPartnershipDialog
+                trigger={
+                  <Button type="button" variant="outline" className="w-full">
+                    <Users className="mr-2 h-4 w-4" />
+                    Enter a partner code
+                  </Button>
+                }
+              />
             </CardContent>
           </Card>
 
@@ -340,9 +421,9 @@ export default function SettingsPage() {
               <CardDescription>Manage your connection and share your invite link.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {partnerName ? (
+              {visiblePartnerName ? (
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 dark:border-emerald-900 dark:bg-emerald-950/20">
-                  <p className="text-sm font-medium">Connected with {partnerName}</p>
+                  <p className="text-sm font-medium">Connected with {visiblePartnerName}</p>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Messages and calendar context are active for this partnership.
                   </p>
