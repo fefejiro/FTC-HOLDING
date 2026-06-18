@@ -112,6 +112,18 @@ describe("generateReply", () => {
     expect(body).not.toContain("Hi Recruiter,");
   });
 
+  it("uses sender email as company fallback instead of Unknown Company", () => {
+    const message = mkMessage({
+      from: "Patricia Norman <patricia.norman@kellyservices.ca>",
+      subject: "Urgent Job Opening: Test Lead",
+      body: "Hello Fejiro,\n\nI have a Test Lead opportunity and wanted to connect."
+    });
+    const parsed = parseRecruiterEmail(message);
+
+    expect(parsed.company).toBe("patricia.norman@kellyservices.ca");
+    expect(parsed.company).not.toBe("Unknown Company");
+  });
+
   it("never uses literal 'Recruiter' as a salutation", () => {
     const message = mkMessage({
       from: "info@somefirm.com",
