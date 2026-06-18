@@ -21,6 +21,25 @@ $env:SMOKE_API_BASE_URL='https://api.peacepad.ca'; npm --prefix APPS/peacepad ru
 Invoke-RestMethod https://api.peacepad.ca/api/health
 ```
 
+Closure status on 2026-06-18:
+
+- Latest green Railway deployment: `34f1b980-0e91-41ed-81b1-5f79d56a7f66`.
+- Latest deployed commit: `0bc84c88c5d94cf0215abd760d5362d5baca0369`.
+- Production smoke: `smoke:guest-auth` passed against `https://api.peacepad.ca`.
+- Production ownership: `verify:deployment-ownership` passed.
+- Human workflow proof: desktop and Android-sized Playwright projects passed.
+
+Closure proof commands:
+
+```powershell
+npm --prefix APPS/peacepad run check
+npm --prefix APPS/peacepad run build
+$env:SMOKE_API_BASE_URL='https://api.peacepad.ca'; npm --prefix APPS/peacepad run smoke:guest-auth
+npm --prefix APPS/peacepad run verify:deployment-ownership
+npm --prefix APPS/peacepad run test:e2e:human-workflow
+npm --prefix APPS/peacepad run test:e2e:human-workflow:mobile
+```
+
 Android note: production Android uses `server.url = 'https://peacepad.ca'` in `capacitor.config.ts`. Normal frontend fixes deployed to Cloudflare Pages and backend fixes deployed to Railway are picked up by Android users. Native app shell changes still require a rebuilt APK/AAB.
 
 ## Isolation Strategy

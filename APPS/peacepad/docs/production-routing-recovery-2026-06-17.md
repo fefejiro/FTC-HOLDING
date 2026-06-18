@@ -15,9 +15,11 @@ Do not relink `APPS/peacepad` to the old paused Railway project. That path cause
 
 ## Verified Recovery
 
-Latest verified Railway deployment during recovery:
+Latest verified Railway deployment after closure:
 
-- Deployment ID: `ffb3ee61-7b67-4c3d-b930-47653794d63b`
+- Deployment ID: `34f1b980-0e91-41ed-81b1-5f79d56a7f66`
+- Commit: `0bc84c88c5d94cf0215abd760d5362d5baca0369`
+- Message: `Verify PeacePad mobile dialog opening`
 - Status: `SUCCESS`
 
 Commands used:
@@ -27,6 +29,26 @@ npm --prefix APPS/peacepad run verify:deployment-ownership
 $env:SMOKE_API_BASE_URL='https://api.peacepad.ca'; npm --prefix APPS/peacepad run smoke:guest-auth
 Invoke-RestMethod https://api.peacepad.ca/api/health
 ```
+
+Closure verification:
+
+```powershell
+npm --prefix APPS/peacepad run check
+npm --prefix APPS/peacepad run build
+$env:SMOKE_API_BASE_URL='https://api.peacepad.ca'; npm --prefix APPS/peacepad run smoke:guest-auth
+npm --prefix APPS/peacepad run verify:deployment-ownership
+npm --prefix APPS/peacepad run test:e2e:human-workflow
+npm --prefix APPS/peacepad run test:e2e:human-workflow:mobile
+```
+
+Final closure state:
+
+- `api.peacepad.ca` is owned by the active Railway `@ftc/peacepad` service, not the old paused project.
+- Guest auth/session restore smoke passes against production.
+- The human workflow proof passes on desktop and mobile browser profiles.
+- Demo partnership seeding is opt-in only and is not used by production proof.
+- Partner join updates the active partnership for the joining user.
+- The latest Railway deployment is green.
 
 ## Android Delivery
 
@@ -40,6 +62,7 @@ Run the current PeacePad workflow proof before marking guest-first behavior gree
 
 ```powershell
 npm --prefix APPS/peacepad run test:e2e:human-workflow
+npm --prefix APPS/peacepad run test:e2e:human-workflow:mobile
 ```
 
 The suite covers solo guest drafting, tone-preview outage recovery, copy-to-send, invite link/code visibility, second-guest partner join, invalid/self-code failure, and direct join-link handoff through onboarding.

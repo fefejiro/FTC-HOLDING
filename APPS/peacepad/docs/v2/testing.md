@@ -25,6 +25,15 @@ What it proves:
 
 This suite intentionally avoids demo co-parent seeding. It creates real guest sessions and cleans up any partnership it creates.
 
+Latest production closure proof on 2026-06-18:
+
+- Desktop: `npm --prefix APPS/peacepad run test:e2e:human-workflow` passed.
+- Mobile/Android-sized: `npm --prefix APPS/peacepad run test:e2e:human-workflow:mobile` passed.
+- API smoke: `$env:SMOKE_API_BASE_URL='https://api.peacepad.ca'; npm --prefix APPS/peacepad run smoke:guest-auth` passed.
+- Deployment ownership: `npm --prefix APPS/peacepad run verify:deployment-ownership` passed.
+
+When a future change touches guest auth, partner invites, onboarding, compose, or the Railway API, rerun both human workflow commands before calling PeacePad green.
+
 ## Unit Tests (v2)
 
 Run targeted v2 suite:
