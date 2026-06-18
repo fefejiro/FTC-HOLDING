@@ -111,6 +111,14 @@ function extractFirstMatch(input: string, regexes: RegExp[]): string {
   return "";
 }
 
+function extractEmailAddress(fromHeader: string): string {
+  const value = String(fromHeader || "");
+  const angleMatch = value.match(/<([^<>@\s]+@[^<>\s]+)>/);
+  if (angleMatch?.[1]) return angleMatch[1].trim().toLowerCase();
+  const directMatch = value.match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i);
+  return directMatch?.[0]?.trim().toLowerCase() || "";
+}
+
 function guessRole(subject: string, body: string): string {
   const knownRoles = [
     "Technical Program Manager",
@@ -288,11 +296,12 @@ export function parseRecruiterEmail(message: RecruiterMessage): ParsedOpportunit
   const cleanedRoleTitle = cleanRoleTitle(decodedSubject, decodedBody);
   const alignmentKeywords = extractAlignmentKeywords(combined);
 
+  const senderEmail = extractEmailAddress(message.from || "");
   const company = extractFirstMatch(combined, [
     /company\s*:\s*([^\n]+)/i,
     /client\s*:\s*([^\n]+)/i,
     /from\s+([A-Za-z0-9 .,&-]+)\s+recruit/i
-  ]) || "Unknown Company";
+  ]) || senderEmail || "Unknown Company";
 
   const rawLocation =
     extractFirstMatch(combined, [

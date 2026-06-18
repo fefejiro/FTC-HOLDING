@@ -100,6 +100,16 @@ The laptop cycle requires a signed-in Dice browser session. If Dice auth is miss
 
 Verified success is represented by `applied_verified` / `submitted_verified`. Submit attempts without platform or email proof remain `applied_unverified` / `submitted_unverified`.
 
+## Recruiter Email Drafting Policy
+
+Recruiter emails should be draft-first, not skip-first.
+
+- Create a Gmail draft for every non-blocked recruiter opportunity, even when score or parser confidence is low.
+- Put low-score or uncertain emails in `JOB AGENT/Needs Review` with the reason recorded.
+- Use `JOB AGENT/Skipped` mainly for self-sent loopback messages or messages already handled outside the candidate workflow.
+- Keep `JOB AGENT/Blocked` for true risk items such as sensitive information requests, payment to apply, suspicious links, or representation/legal terms requiring caution.
+- When the employer is not present in the message, use the sender email as the artifact/company fallback instead of `Unknown Company`; this avoids generated resumes named with `Unknown_Company`.
+
 ## Safe Next Command
 
 ```powershell

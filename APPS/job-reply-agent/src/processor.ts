@@ -229,8 +229,8 @@ export async function processGmailInbox(params: {
     let decisionReason: string;
 
     if (score.score < scoreBands.needs_review_min) {
-      decisionStatus = "skipped";
-      decisionReason = `Score ${score.score} below needs_review threshold ${scoreBands.needs_review_min}`;
+      decisionStatus = "needs_review";
+      decisionReason = `Score ${score.score} below needs_review threshold ${scoreBands.needs_review_min}; draft created for human review`;
     } else if (score.score < scoreBands.draft_min) {
       decisionStatus = "needs_review";
       decisionReason = `Score ${score.score} in needs_review band (${scoreBands.needs_review_min}–${scoreBands.draft_min - 1})`;
@@ -255,19 +255,10 @@ export async function processGmailInbox(params: {
       }
     }
 
-    if (decisionStatus === "skipped") {
-      skipped += 1;
-      insertDecision(db, message.messageId, "skipped", decisionReason);
-      await params.onStatusChange?.(message.messageId, "skipped");
-      continue;
-    }
-
-    // For needs_review: skip draft creation if high parser uncertainty
+    // Needs-review messages still get a draft. The review label carries low
+    // score/parser uncertainty, but the user should not lose a possible lead.
     if (decisionStatus === "needs_review" && parsed.parserConfidence < 70) {
-      needsReview += 1;
-      insertDecision(db, message.messageId, "needs_review", `${decisionReason}; parser confidence ${parsed.parserConfidence}%`);
-      await params.onStatusChange?.(message.messageId, "needs_review");
-      continue;
+      decisionReason = `${decisionReason}; parser confidence ${parsed.parserConfidence}%`;
     }
 
     const resume = selectResume(parsed, message.body, resumeMap);
