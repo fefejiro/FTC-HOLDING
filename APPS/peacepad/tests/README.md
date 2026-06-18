@@ -42,6 +42,14 @@ npm run test:e2e:human-workflow
 
 This is the highest-signal production workflow test for the current PeacePad model. It does not seed demo data; it uses real guest sessions, verifies solo drafting, invite-code joining, invalid/self-code failures, and cleanup of any test partnership.
 
+Run the same proof with the Android-sized browser profile:
+
+```bash
+npm run test:e2e:human-workflow:mobile
+```
+
+The production closure run on 2026-06-18 passed both projects against `https://peacepad.ca`.
+
 ### Run Only P2 Important Tests
 ```bash
 npx playwright test --project=p2-important-chromium
