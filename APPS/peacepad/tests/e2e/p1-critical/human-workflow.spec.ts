@@ -164,7 +164,12 @@ async function dismissKnownDialogs(page: Page): Promise<void> {
 async function openJoinPartnershipDialog(page: Page): Promise<void> {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     await dismissKnownDialogs(page);
-    await enterPartnerCodeButton(page).click({ force: true });
+    const trigger = enterPartnerCodeButton(page).first();
+    await trigger.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(150);
+    await trigger.click({ force: true }).catch(async () => {
+      await trigger.evaluate((element: HTMLElement) => element.click());
+    });
     if (await page.getByTestId("dialog-join-partnership").isVisible().catch(() => false)) {
       return;
     }
