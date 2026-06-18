@@ -122,7 +122,10 @@ def run_javascript_url(window, payload: str, wait_seconds: float) -> None:
     keyboard.send_keys("^l")
     time.sleep(0.2)
     keyboard.send_keys("javascript:")
-    pyperclip.copy(payload)
+    # Chrome treats pasted multi-line JavaScript in the address bar as text on
+    # some pages, so keep the bookmarklet payload on one line after typing the
+    # javascript: prefix by hand.
+    pyperclip.copy(" ".join(payload.splitlines()))
     keyboard.send_keys("^v")
     keyboard.send_keys("{ENTER}")
     time.sleep(wait_seconds)
@@ -282,34 +285,34 @@ def upload_file_from_resume_options(window, file_path: str, wait_seconds: float)
     if not file.exists():
         return {"ok": False, "reason": f"Upload file not found: {file_path}"}
 
-    before_handles = set()
-    for candidate in Desktop(backend="uia").windows():
-        try:
-            before_handles.add(candidate.handle)
-        except Exception:
-            pass
+    before_handles = current_window_handles()
 
     window.set_focus()
     time.sleep(0.4)
-    resume_options_click = click_dom_control(window, r"^Resume options$")
-    if "Upload a different file" not in visible_text(window):
+    resume_options_click = click_dom_control(window, r"^(Resume options|File options)$")
+    if "Upload a different file" not in visible_text(window) and "Replace" not in visible_text(window):
         window.set_focus()
         time.sleep(0.2)
         keyboard.send_keys("{ENTER}")
         time.sleep(0.6)
-    if "Upload a different file" not in visible_text(window):
+    if "Upload a different file" not in visible_text(window) and "Replace" not in visible_text(window):
         window.set_focus()
         time.sleep(0.2)
         keyboard.send_keys("{SPACE}")
         time.sleep(0.6)
-    if not click_visible_button(window, "Resume options", scroll_attempts=3):
-        if "Upload a different file" not in visible_text(window):
-            return {"ok": False, "reason": "Resume options button was not found or could not be clicked."}
+    if not (
+        click_visible_button(window, "Resume options", scroll_attempts=8)
+        or click_visible_button(window, "File options", scroll_attempts=8)
+        or click_visible_text(window, "Resume options")
+        or click_visible_text(window, "File options")
+    ):
+        if "Upload a different file" not in visible_text(window) and "Replace" not in visible_text(window):
+            return {"ok": False, "reason": "Resume/File options button was not found or could not be clicked."}
     else:
         time.sleep(0.8)
 
-    if not click_visible_text(window, "Upload a different file"):
-        click_dom_control(window, r"^Upload a different file$")
+    if not (click_visible_text(window, "Upload a different file") or click_visible_text(window, "Replace")):
+        click_dom_control(window, r"^(Upload a different file|Replace)$")
     if not find_new_file_picker(before_handles, timeout_seconds=1.5)[0]:
         click_upload = r"""(() => {
   const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
@@ -387,21 +390,41 @@ def upload_file_from_resume_options(window, file_path: str, wait_seconds: float)
     }
 
 
+def current_window_handles() -> set[int]:
+    handles = set()
+    for backend in ("uia", "win32"):
+        try:
+            windows = Desktop(backend=backend).windows()
+        except Exception:
+            continue
+        for candidate in windows:
+            try:
+                handles.add(candidate.handle)
+            except Exception:
+                pass
+    return handles
+
+
 def find_new_file_picker(before_handles: set[int], timeout_seconds: float = 15.0):
     deadline = time.time() + timeout_seconds
     while time.time() < deadline:
         time.sleep(0.5)
-        for candidate in Desktop(backend="uia").windows():
+        for backend in ("uia", "win32"):
             try:
-                if candidate.handle in before_handles:
-                    continue
-                title = candidate.window_text() or ""
-                class_name = candidate.class_name() or ""
+                windows = Desktop(backend=backend).windows()
             except Exception:
                 continue
-            lowered = title.lower()
-            if class_name in ("#32770", "CabinetWClass") or "open" in lowered or "choose" in lowered or "upload" in lowered:
-                return candidate, title
+            for candidate in windows:
+                try:
+                    if candidate.handle in before_handles:
+                        continue
+                    title = candidate.window_text() or ""
+                    class_name = candidate.class_name() or ""
+                except Exception:
+                    continue
+                lowered = title.lower()
+                if class_name in ("#32770", "CabinetWClass") or "open" in lowered or "choose" in lowered or "upload" in lowered:
+                    return candidate, title
     return None, ""
 
 
@@ -428,12 +451,7 @@ def upload_supporting_document(window, file_path: str, wait_seconds: float) -> d
     if not file.exists():
         return {"ok": False, "reason": f"Supporting document not found: {file_path}"}
 
-    before_handles = set()
-    for candidate in Desktop(backend="uia").windows():
-        try:
-            before_handles.add(candidate.handle)
-        except Exception:
-            pass
+    before_handles = current_window_handles()
 
     window.set_focus()
     time.sleep(0.4)
@@ -455,11 +473,13 @@ def upload_supporting_document(window, file_path: str, wait_seconds: float) -> d
     time.sleep(1.0)
     if "No cover letter or additional documents added" in visible_text(window):
         click_visible_button(window, "Add", scroll_attempts=4)
+    if "Upload your cover letter" in visible_text(window):
+        click_visible_button(window, "Upload your cover letter", scroll_attempts=8)
 
     time.sleep(1.0)
     picker, picker_title = find_new_file_picker(before_handles, timeout_seconds=3.0)
     if not picker:
-        for label in ("Upload a file", "Upload file", "Add file", "Choose file"):
+        for label in ("Upload your cover letter", "Upload a file", "Upload file", "Add file", "Choose file"):
             if click_visible_text(window, label):
                 break
         picker, picker_title = find_new_file_picker(before_handles, timeout_seconds=12.0)
@@ -522,7 +542,7 @@ def run_dom_dump(window, wait_seconds: float) -> dict:
     keyboard.send_keys("^l")
     time.sleep(0.2)
     keyboard.send_keys("javascript:")
-    pyperclip.copy(payload)
+    pyperclip.copy(" ".join(payload.splitlines()))
     keyboard.send_keys("^v")
     keyboard.send_keys("{ENTER}")
     time.sleep(wait_seconds)
@@ -553,6 +573,7 @@ def main() -> int:
     parser.add_argument("--upload-wait", type=float, default=8.0)
     parser.add_argument("--leave-dump-page", action="store_true", help="Leave the tab on the copied JSON dump page instead of restoring the captured URL.")
     parser.add_argument("--no-dump", action="store_true", help="Navigate/click/screenshot only; do not replace the page with a DOM dump.")
+    parser.add_argument("--current-page", action="store_true", help="Use the active tab as-is instead of navigating to --url first.")
     args = parser.parse_args()
 
     with VisibleBrowserLock():
@@ -560,7 +581,8 @@ def main() -> int:
         out.parent.mkdir(parents=True, exist_ok=True)
         window = find_chrome_window()
         before_title = window.window_text()
-        navigate_current_tab(window, args.url, args.wait)
+        if not args.current_page:
+            navigate_current_tab(window, args.url, args.wait)
         if args.click_apply:
             click_apply_control(window, args.click_wait)
         if args.click_text:

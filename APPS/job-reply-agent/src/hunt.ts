@@ -509,6 +509,12 @@ export function generateApplyAssist(db: Database.Database): number {
       INSERT INTO hunt_apply_sessions 
       (job_id, apply_url, status, safe_fields_json, pause_fields_json, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(job_id) DO UPDATE SET
+        apply_url=excluded.apply_url,
+        status=excluded.status,
+        safe_fields_json=excluded.safe_fields_json,
+        pause_fields_json=excluded.pause_fields_json,
+        updated_at=excluded.updated_at
     `).run(job.id, applyUrl, status, JSON.stringify(SAFE_FIELDS), JSON.stringify(pauseFields), now, now);
 
     db.prepare("UPDATE hunt_jobs SET next_action = ?, updated_at = ? WHERE id = ?").run("review_apply_assist", now, job.id);

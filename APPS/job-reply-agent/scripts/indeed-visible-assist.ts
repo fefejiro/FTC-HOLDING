@@ -13,6 +13,7 @@ type JobRow = {
   company: string;
   location: string;
   source: string;
+  source_url?: string;
   apply_url: string;
   description: string;
   salary_or_rate: string;
@@ -43,6 +44,29 @@ function shortResumeCopy(job: JobRow, resumePath: string): string {
   return shortPath;
 }
 
+function companyForArtifacts(job: JobRow): string {
+  const company = clean(job.company);
+  const title = clean(job.title);
+  const companyIsUsable =
+    company
+    && !/^(unknown|unknown company|n\/a|null|undefined|search results for|explore high paying jobs)$/i.test(company)
+    && company.toLowerCase() !== title.toLowerCase();
+  if (companyIsUsable) return company;
+
+  const host = extractHost(job.apply_url || job.source_url || "");
+  if (host) return `${host} job ${job.id}`;
+
+  return `${clean(job.source || "indeed")} job ${job.id}`;
+}
+
+function extractHost(value: string): string {
+  try {
+    return new URL(value).hostname.replace(/^www\./i, "") || "";
+  } catch {
+    return "";
+  }
+}
+
 function getArg(name: string): string {
   const prefix = `--${name}=`;
   const direct = process.argv.find((arg) => arg.startsWith(prefix));
@@ -57,7 +81,7 @@ function hasFlag(name: string): boolean {
 
 function selectJob(db: ReturnType<typeof getDb>, jobId?: number): JobRow | undefined {
   const baseSelect = `
-    SELECT j.id, j.title, j.company, j.location, j.source, j.apply_url, j.description,
+    SELECT j.id, j.title, j.company, j.location, j.source, j.source_url, j.apply_url, j.description,
            j.salary_or_rate, j.score, j.tier, j.status,
            p.id AS package_id, p.cover_letter_text
     FROM hunt_jobs j
@@ -97,11 +121,12 @@ async function prepareArtifacts(job: JobRow): Promise<{ resumePath: string; cove
   }
 
   fs.mkdirSync(outputDir, { recursive: true });
+  const artifactCompany = companyForArtifacts(job);
   const tailored = await tailorResumeForJD({
     parsed: {
       roleTitle: job.title,
       cleanRoleTitle: job.title,
-      company: job.company,
+      company: artifactCompany,
       location: job.location,
       employmentType: "",
       salaryOrRate: job.salary_or_rate,
@@ -123,7 +148,7 @@ async function prepareArtifacts(job: JobRow): Promise<{ resumePath: string; cove
     coverText: job.cover_letter_text || "",
     fallback: {
       roleTitle: job.title,
-      company: job.company,
+      company: artifactCompany,
       location: job.location,
       jobDescription: job.description
     }
