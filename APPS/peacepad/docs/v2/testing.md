@@ -1,5 +1,30 @@
 # PeacePad v2 Testing
 
+## Human Workflow E2E
+
+Run the current production human workflow suite:
+
+```powershell
+npm --prefix APPS/peacepad run test:e2e:human-workflow
+```
+
+Run the same suite against the Android-sized browser profile:
+
+```powershell
+npm --prefix APPS/peacepad run test:e2e:human-workflow:mobile
+```
+
+What it proves:
+- Solo guest use works without login.
+- Compose remains usable if tone preview is unavailable.
+- Copy/export-to-outside-messenger flow works.
+- Guest invite link exists and uses a 6-character join code.
+- A second real guest can join through the partner-code flow.
+- Invalid, short, missing, and self invite-code cases fail without accidental partnerships.
+- Direct `/join/{code}` links preserve the pending code and send unauthenticated users through onboarding.
+
+This suite intentionally avoids demo co-parent seeding. It creates real guest sessions and cleans up any partnership it creates.
+
 ## Unit Tests (v2)
 
 Run targeted v2 suite:

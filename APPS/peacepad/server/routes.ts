@@ -3023,19 +3023,13 @@ Crawl-delay: 1
       );
       try {
         // Set for joining user
-        await storage.upsertUser({
-          id: userId,
-          activePartnershipId: partnership.id,
-        });
+        await storage.setActivePartnership(userId, partnership.id);
         console.log(
           `[Partnership Join] ✅ Partnership ${partnership.id} set as primary for user ${userId}`
         );
 
         // Set for co-parent (partner) - smooth experience so they see partnership immediately
-        await storage.upsertUser({
-          id: coParent.id,
-          activePartnershipId: partnership.id,
-        });
+        await storage.setActivePartnership(coParent.id, partnership.id);
         console.log(
           `[Partnership Join] ✅ Partnership ${partnership.id} set as primary for co-parent ${coParent.id}`
         );
@@ -3248,10 +3242,7 @@ Crawl-delay: 1
       console.log(
         `[Partnership Join] 🎯 Also setting partnership ${partnership.id} as primary for co-parent ${coParent.id}...`
       );
-      await storage.upsertUser({
-        id: coParent.id,
-        activePartnershipId: partnership.id,
-      });
+      await storage.setActivePartnership(coParent.id, partnership.id);
       console.log(
         `[Partnership Join] ✅ Partnership ${partnership.id} also set as primary for co-parent ${coParent.id}`
       );

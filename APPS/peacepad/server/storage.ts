@@ -184,6 +184,7 @@ export interface IStorage {
   getDeactivatedUserById(id: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
   upsertUser(user: UpsertUser): Promise<{ user: User; isNewUser: boolean }>;
+  setActivePartnership(userId: string, partnershipId: string | null): Promise<User | undefined>;
   getOtherUsers(currentUserId: string): Promise<User[]>;
   deactivateUser(userId: string): Promise<void>;
   reactivateUser(userId: string): Promise<void>;
@@ -563,6 +564,18 @@ export class DatabaseStorage implements IStorage {
     
     console.log(`[Storage] User ${isNewUser ? 'created' : 'updated'} - ID: ${user.id}, Invite Code: ${user.inviteCode}, Display Name: ${user.displayName}`);
     return { user, isNewUser };
+  }
+
+  async setActivePartnership(userId: string, partnershipId: string | null): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({
+        activePartnershipId: partnershipId,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
   }
 
 
