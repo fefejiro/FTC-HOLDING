@@ -73,7 +73,25 @@ async function ensureGuestUser(page: Page): Promise<PeacePadUser> {
   await page.goto("/compose");
   await expect(page.getByTestId("textarea-compose-message")).toBeVisible({ timeout: 30000 });
 
-  const existingUser = await apiFetch<PeacePadUser>(page, "/api/auth/user").catch(() => null);
+  const existingUser = await expect
+    .poll(
+      async () => {
+        try {
+          const user = await apiFetch<PeacePadUser>(page, "/api/auth/user");
+          return user?.inviteCode ? user : null;
+        } catch {
+          return null;
+        }
+      },
+      {
+        timeout: 10000,
+        message: "app should auto-create a guest user when possible",
+      },
+    )
+    .toBeTruthy()
+    .then(async () => await apiFetch<PeacePadUser>(page, "/api/auth/user"))
+    .catch(() => null);
+
   if (!existingUser?.inviteCode) {
     await apiFetch<{ user?: PeacePadUser }>(page, "/api/auth/guest", {
       method: "POST",
@@ -119,10 +137,12 @@ function enterPartnerCodeButton(page: Page) {
 }
 
 async function dismissKnownDialogs(page: Page): Promise<void> {
-  if (await page.getByRole("dialog", { name: /terms of service/i }).isVisible().catch(() => false)) {
+  const termsDialog = page.getByRole("dialog", { name: /terms of service/i });
+  await termsDialog.waitFor({ state: "visible", timeout: 2000 }).catch(() => null);
+  if (await termsDialog.isVisible().catch(() => false)) {
     await page.getByRole("checkbox", { name: /i agree/i }).check({ force: true });
     await page.getByRole("button", { name: /accept/i }).click({ force: true });
-    await expect(page.getByRole("dialog", { name: /terms of service/i })).toBeHidden({ timeout: 10000 });
+    await expect(termsDialog).toBeHidden({ timeout: 10000 });
   }
 
   const dismissers = [
@@ -139,6 +159,18 @@ async function dismissKnownDialogs(page: Page): Promise<void> {
   }
 
   await page.keyboard.press("Escape").catch(() => null);
+}
+
+async function openJoinPartnershipDialog(page: Page): Promise<void> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await dismissKnownDialogs(page);
+    await enterPartnerCodeButton(page).click({ force: true });
+    if (await page.getByTestId("dialog-join-partnership").isVisible().catch(() => false)) {
+      return;
+    }
+  }
+
+  await expect(page.getByTestId("dialog-join-partnership")).toBeVisible();
 }
 
 async function visibleInviteCode(page: Page): Promise<string> {
@@ -192,8 +224,7 @@ test.describe("PeacePad human workflow", () => {
       await expect(owner.page.getByText(/Invite a partner when you are ready/i)).toBeVisible();
       await expect(owner.page.locator("body")).toContainText(/https:\/\/peacepad\.ca\/join\/[A-Z0-9]{6}/);
 
-      await dismissKnownDialogs(owner.page);
-      await enterPartnerCodeButton(owner.page).click({ force: true });
+      await openJoinPartnershipDialog(owner.page);
       await owner.page.getByTestId("input-invite-code").fill("ABC");
       await expect(owner.page.getByTestId("button-submit-invite-code")).toBeDisabled();
       await owner.page.keyboard.press("Escape").catch(() => null);
@@ -217,10 +248,9 @@ test.describe("PeacePad human workflow", () => {
       partner = await createGuestContext(browser);
 
       await partner.page.goto("/settings");
-      await dismissKnownDialogs(partner.page);
-      await enterPartnerCodeButton(partner.page).click({ force: true });
-      await expect(partner.page.getByTestId("dialog-join-partnership")).toBeVisible();
+      await openJoinPartnershipDialog(partner.page);
       await partner.page.getByTestId("input-invite-code").fill(ownerInviteCode);
+      await expect(partner.page.getByTestId("button-submit-invite-code")).toBeEnabled();
       await partner.page.getByTestId("button-submit-invite-code").click({ force: true });
 
       await partner.page.waitForURL(/\/chat$/, { timeout: 30000 });
