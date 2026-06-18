@@ -28,6 +28,22 @@ export default defineConfig({
 
   projects: [
     {
+      name: 'human-workflow-chromium',
+      testDir: './tests/e2e/p1-critical',
+      testMatch: /human-workflow\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+      },
+    },
+    {
+      name: 'human-workflow-mobile-pixel-7',
+      testDir: './tests/e2e/p1-critical',
+      testMatch: /human-workflow\.spec\.ts/,
+      use: {
+        ...devices['Pixel 7'],
+      },
+    },
+    {
       name: 'guest-first-smoke',
       testDir: './tests/e2e/p1-critical',
       testMatch: /guest-first\.spec\.ts/,

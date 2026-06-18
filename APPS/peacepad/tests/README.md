@@ -7,6 +7,7 @@ Tests are organized by priority level:
 ### P1 Critical (Must Pass)
 - **auth.spec.ts** - Session persistence, login flow
 - **chat.spec.ts** - Core chat functionality, message input, send button
+- **human-workflow.spec.ts** - Real guest-first solo use, invite-code join, and edge-case recovery
 - **safety.spec.ts** - Help/support accessibility, safety plan features
 
 ### P2 Important (Should Pass)
@@ -33,6 +34,13 @@ npx playwright test
 ```bash
 npx playwright test --project=p1-critical-chromium
 ```
+
+### Run Human Workflow Test
+```bash
+npm run test:e2e:human-workflow
+```
+
+This is the highest-signal production workflow test for the current PeacePad model. It does not seed demo data; it uses real guest sessions, verifies solo drafting, invite-code joining, invalid/self-code failures, and cleanup of any test partnership.
 
 ### Run Only P2 Important Tests
 ```bash

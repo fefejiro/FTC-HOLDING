@@ -152,23 +152,35 @@ export default function SettingsPage() {
             <CardContent className="space-y-3">
               <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
                 <p className="mb-2 text-sm font-medium">Your invite link</p>
-                <p className="break-all text-sm text-muted-foreground">
+                <p className="break-all text-sm text-muted-foreground" data-testid="text-guest-invite-link">
                   {inviteLink || "Preparing your invite link..."}
                 </p>
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
-                <Button type="button" variant="outline" onClick={() => void copyGuestInviteLink()} disabled={!inviteLink}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void copyGuestInviteLink()}
+                  disabled={!inviteLink}
+                  data-testid="button-guest-copy-invite-link"
+                >
                   <Copy className="mr-2 h-4 w-4" />
                   {inviteCopied ? "Copied" : "Copy link"}
                 </Button>
-                <Button type="button" variant="outline" onClick={textGuestInviteLink} disabled={!inviteLink}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={textGuestInviteLink}
+                  disabled={!inviteLink}
+                  data-testid="button-guest-text-invite-link"
+                >
                   <MessageSquare className="mr-2 h-4 w-4" />
                   Text link
                 </Button>
               </div>
               <JoinPartnershipDialog
                 trigger={
-                  <Button type="button" variant="outline" className="w-full">
+                  <Button type="button" variant="outline" className="w-full" data-testid="button-guest-enter-partner-code">
                     <Users className="mr-2 h-4 w-4" />
                     Enter a partner code
                   </Button>
@@ -453,7 +465,9 @@ export default function SettingsPage() {
                 </button>
                 {inviteExpanded && (
                   <div className="space-y-3 border-t border-border/60 px-4 pb-4 pt-3">
-                    <p className="break-all text-sm text-muted-foreground">{inviteLink || "Generating your link..."}</p>
+                    <p className="break-all text-sm text-muted-foreground" data-testid="text-account-invite-link">
+                      {inviteLink || "Generating your link..."}
+                    </p>
                     <div className="grid gap-2 sm:grid-cols-2">
                       <Button type="button" variant="outline" onClick={() => void shareInvite("copy")} disabled={!inviteLink}>
                         <Copy className="mr-2 h-4 w-4" />
