@@ -606,6 +606,90 @@ describe("hunt flow", () => {
     expect(attempt.status).toBe("paused");
   });
 
+  it("premium artifact prep uses recruiter email instead of Unknown in generated artifact names", async () => {
+    const db = getDb(":memory:");
+    const now = new Date().toISOString();
+    const job = db.prepare(
+      `INSERT INTO hunt_jobs (title, company, location, source, apply_url, recruiter_email, description, status, score, tier, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      "Business Analyst",
+      "Unknown",
+      "Remote",
+      "gmail",
+      "mailto:jobs@example-recruiter.com",
+      "jobs@example-recruiter.com",
+      "Remote Business Analyst role covering ERP, POS, WMS, UAT, requirements, process mapping, and enterprise systems delivery.",
+      "package_generated",
+      88,
+      "tier_1",
+      now,
+      now
+    );
+
+    const templatePath = path.resolve(
+      ".local",
+      "resume-references",
+      "Fejiro_Efiuvwere_Canadian_Tire_Manager_Network_Analytics_Resume.docx"
+    );
+    const outputDir = path.resolve(".local", "generated-tests", "premium-artifacts-email-fallback");
+    const result = await preparePremiumQueueArtifacts(db, {
+      limit: 1,
+      sourceFilter: "gmail",
+      templatePath,
+      outputDir
+    });
+
+    const attempt = db.prepare("SELECT resume_artifact_path FROM application_attempts WHERE job_id=?")
+      .get(Number(job.lastInsertRowid)) as any;
+
+    expect(result.prepared).toHaveLength(1);
+    expect(attempt.resume_artifact_path).toMatch(/Jobs_Example_Recruiter_Com/);
+    expect(attempt.resume_artifact_path).not.toMatch(/Unknown/i);
+  });
+
+  it("premium artifact prep treats company equal to title as an unusable company", async () => {
+    const db = getDb(":memory:");
+    const now = new Date().toISOString();
+    const job = db.prepare(
+      `INSERT INTO hunt_jobs (title, company, location, source, apply_url, source_url, description, status, score, tier, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      "Senior Project Manager (ERP Transformation)",
+      "Senior Project Manager (ERP Transformation)",
+      "Remote",
+      "dice",
+      "https://www.dice.com/job-detail/noisy-company",
+      "https://www.dice.com/job-detail/noisy-company",
+      "Remote ERP transformation role covering enterprise systems delivery, governance, vendor coordination, UAT, release readiness, and stakeholder reporting.",
+      "package_generated",
+      88,
+      "tier_1",
+      now,
+      now
+    );
+
+    const templatePath = path.resolve(
+      ".local",
+      "resume-references",
+      "Fejiro_Efiuvwere_Canadian_Tire_Manager_Network_Analytics_Resume.docx"
+    );
+    const outputDir = path.resolve(".local", "generated-tests", "premium-artifacts-title-company-fallback");
+    const result = await preparePremiumQueueArtifacts(db, {
+      limit: 1,
+      sourceFilter: "dice",
+      templatePath,
+      outputDir
+    });
+
+    const attempt = db.prepare("SELECT resume_artifact_path FROM application_attempts WHERE job_id=?")
+      .get(Number(job.lastInsertRowid)) as any;
+
+    expect(result.prepared).toHaveLength(1);
+    expect(attempt.resume_artifact_path).toMatch(/Dice_Com_Job_/);
+    expect(attempt.resume_artifact_path).not.toMatch(/Transformation_Senior_Project_Manager/);
+  });
+
   it("trust report orders by latest application activity instead of attempt id", () => {
     const db = getDb(":memory:");
     const older = "2026-06-02T09:00:00.000Z";

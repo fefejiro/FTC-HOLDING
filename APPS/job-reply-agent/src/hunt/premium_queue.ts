@@ -25,6 +25,7 @@ type QueueRow = {
   source: string;
   source_url: string;
   apply_url: string;
+  recruiter_email: string | null;
   description: string;
   status: string;
   score: number | null;
@@ -74,7 +75,7 @@ export function buildPremiumQueueReport(
 
   const rows = db
     .prepare(
-      `SELECT j.id, j.title, j.company, j.location, j.source, j.source_url, j.apply_url, j.description,
+      `SELECT j.id, j.title, j.company, j.location, j.source, j.source_url, j.apply_url, j.recruiter_email, j.description,
               j.status, j.score, j.tier, j.next_action,
               a.status AS attempt_status, a.required_fields_json, a.answered_fields_json,
               a.pause_reason, a.resume_artifact_path, a.screenshot_path
@@ -225,20 +226,21 @@ export async function preparePremiumQueueArtifacts(
   const skipped: PreparedPremiumArtifact[] = [];
 
   for (const row of rows) {
+    const artifactCompany = companyForArtifacts(row);
     const packageRow = db
       .prepare("SELECT cover_letter_text FROM hunt_packages WHERE job_id=? LIMIT 1")
       .get(row.id) as { cover_letter_text?: string } | undefined;
 
     try {
       const tailored = await tailorResumeForJD({
-        parsed: { roleTitle: row.title, company: row.company } as any,
+        parsed: { roleTitle: row.title, company: artifactCompany } as any,
         jdText: row.description || "",
         templatePath,
         outputDir
       });
       const cover = await writeDurableCoverLetter(outputDir, tailored.docxPath, packageRow?.cover_letter_text || buildSafeCoverLetterText(row), {
         roleTitle: row.title,
-        company: row.company,
+        company: artifactCompany,
         location: row.location,
         jobDescription: row.description
       });
@@ -251,7 +253,7 @@ export async function preparePremiumQueueArtifacts(
       prepared.push({
         jobId: row.id,
         title: row.title,
-        company: row.company,
+        company: artifactCompany,
         action: row.action,
         resumePath: tailored.docxPath,
         coverLetterPath: cover.docxPath,
@@ -482,7 +484,7 @@ async function writeDurableCoverLetter(
 
 function buildSafeCoverLetterText(row: QueueRow): string {
   const title = cleanInline(row.title || "the role");
-  const company = cleanInline(row.company || "your team");
+  const company = cleanInline(companyForArtifacts(row));
   const focus = inferCoverFocus(row);
   return [
     "Dear Hiring Team,",
@@ -496,6 +498,36 @@ function buildSafeCoverLetterText(row: QueueRow): string {
     "Sincerely,",
     "Fejiro Efiuvwere"
   ].join("\n");
+}
+
+function companyForArtifacts(row: Pick<QueueRow, "id" | "title" | "company" | "source" | "source_url" | "apply_url" | "recruiter_email">): string {
+  const company = cleanInline(row.company || "");
+  const title = cleanInline(row.title || "");
+  const companyIsUsable =
+    company
+    && !/^(unknown|unknown company|n\/a|null|undefined|search results for|explore high paying jobs)$/i.test(company)
+    && company.toLowerCase() !== title.toLowerCase();
+  if (companyIsUsable) {
+    return company;
+  }
+
+  const email = cleanInline(row.recruiter_email || "");
+  if (email) return email;
+
+  const url = cleanInline(row.apply_url || row.source_url || "");
+  const host = extractHost(url);
+  if (host) return `${host} job ${row.id}`;
+
+  return `${cleanInline(row.source || "job")} job ${row.id}`;
+}
+
+function extractHost(value: string): string {
+  try {
+    const host = new URL(value).hostname.replace(/^www\./i, "");
+    return host || "";
+  } catch {
+    return "";
+  }
 }
 
 function inferCoverFocus(row: QueueRow): string {
