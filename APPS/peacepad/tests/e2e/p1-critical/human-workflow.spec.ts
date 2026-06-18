@@ -170,6 +170,10 @@ async function openJoinPartnershipDialog(page: Page): Promise<void> {
     await trigger.click({ force: true }).catch(async () => {
       await trigger.evaluate((element: HTMLElement) => element.click());
     });
+    if (!(await page.getByTestId("dialog-join-partnership").isVisible().catch(() => false))) {
+      await trigger.evaluate((element: HTMLElement) => element.click());
+      await page.waitForTimeout(150);
+    }
     if (await page.getByTestId("dialog-join-partnership").isVisible().catch(() => false)) {
       return;
     }
