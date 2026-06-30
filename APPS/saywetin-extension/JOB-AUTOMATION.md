@@ -17,6 +17,11 @@ Given one job description text file, the pipeline generates a targeting pack wit
 - Quick apply CSV and JSON payloads
 - PowerShell script to open top job links fast
 
+Interview-ready recruiter conversations should use the reusable interview prep templates:
+
+- `career/templates/interview-prep-template.md`
+- `career/templates/rq11067-interview-prep-pattern.md`
+
 Output path:
 
 - `career/outputs/job-pack-<timestamp>.md`

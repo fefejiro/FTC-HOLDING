@@ -54,6 +54,14 @@ function isQuickApplyLikely(job) {
   return false;
 }
 
+function replyStatusLabel(job) {
+  if (!job.replySuppressed) return "Reply OK";
+  const reasons = Array.isArray(job.replySuppressionReasons)
+    ? job.replySuppressionReasons.join("; ")
+    : "";
+  return reasons ? `Apply only - ${reasons}` : "Apply only - no reply";
+}
+
 function escHtml(s) {
   return String(s || "")
     .replaceAll("&", "&amp;")
@@ -173,9 +181,13 @@ function createDashboardHtml(jobs, payload, autoScript, runFileName) {
       const applyType = isQuickApplyLikely(j)
         ? "Quick Apply Likely"
         : "Manual Apply";
-      const outreach = escHtml(j.outreach || "");
+      const outreachText = j.replySuppressed
+        ? "Suppressed: automated job alert or no-reply job-board message. Do not reply; apply through the job link only."
+        : j.outreach || "";
+      const outreach = escHtml(outreachText);
       const bullets = escHtml((j.bullets?.summary || []).join("\n"));
       const desc = escHtml(j.description || "No description");
+      const replyStatus = escHtml(replyStatusLabel(j));
       return `<tr>
         <td>${idx + 1}</td>
         <td>${escHtml(j.score ?? "")}</td>
@@ -183,19 +195,20 @@ function createDashboardHtml(jobs, payload, autoScript, runFileName) {
         <td>${escHtml(j.company)}</td>
         <td>${escHtml(j.source)}</td>
         <td>${escHtml(applyType)}</td>
+        <td>${replyStatus}</td>
         <td>
           <a class="btn" href="${escHtml(j.link)}" target="_blank" rel="noreferrer">Open Job</a>
           <button class="btn alt deepDive" data-idx="${idx}">Deep Dive</button>
-          <button class="btn" data-copy="${outreach}">Copy Outreach</button>
+          <button class="btn${j.replySuppressed ? " alt" : ""}" data-copy="${outreach}">${j.replySuppressed ? "Copy Block Reason" : "Copy Outreach"}</button>
           <button class="btn" data-copy="${bullets}">Copy Resume Bullets</button>
         </td>
       </tr>
       <tr class="expandRow" id="expand-${idx}" style="display:none">
-        <td colspan="7" style="padding:0">
+        <td colspan="8" style="padding:0">
           <div class="expandInner">
             <div class="expandActions">
               <a class="btn" href="${escHtml(j.link)}" target="_blank" rel="noreferrer">Open Job</a>
-              <button class="btn alt" data-copy="${outreach}">Copy Outreach</button>
+              <button class="btn alt" data-copy="${outreach}">${j.replySuppressed ? "Copy Block Reason" : "Copy Outreach"}</button>
               <button class="btn alt" data-copy="${bullets}">Copy Resume Bullets</button>
               <button class="btn alt closeExpand" data-idx="${idx}">Collapse ▲</button>
             </div>
@@ -293,6 +306,7 @@ function createDashboardHtml(jobs, payload, autoScript, runFileName) {
             <th>Company</th>
             <th>Source</th>
             <th>Apply Type</th>
+            <th>Reply Status</th>
             <th>Actions</th>
           </tr>
         </thead>

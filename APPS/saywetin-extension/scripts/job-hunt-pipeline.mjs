@@ -20,6 +20,48 @@ function normalize(text) {
   return text.toLowerCase();
 }
 
+const AUTOMATED_JOB_ALERT_PATTERNS = [
+  "no-reply",
+  "noreply",
+  "do-not-reply",
+  "opportunity is knocking",
+  "you matched with a job",
+  "matched with a job",
+  "job alert",
+  "new jobs for you",
+  "recommended jobs",
+  "job recommendations",
+  "1-click-apply",
+  "one-click apply",
+  "easy apply",
+  "get your resume in front of the hiring manager",
+  "let our app do the work",
+  "download our app",
+  "unsubscribe",
+  "email.roberthalf.com",
+  "indeed.com",
+  "linkedin.com",
+  "ziprecruiter.com",
+];
+
+function detectAutomatedJobAlert(text) {
+  const haystack = normalize(text);
+  const hits = AUTOMATED_JOB_ALERT_PATTERNS.filter((term) =>
+    haystack.includes(term),
+  );
+  const strongHitCount = hits.filter(
+    (term) =>
+      term !== "indeed.com" &&
+      term !== "linkedin.com" &&
+      term !== "ziprecruiter.com",
+  ).length;
+
+  return {
+    suppressed: strongHitCount >= 2,
+    reasons: hits,
+  };
+}
+
 function countKeywordMatches(text, keywords) {
   const haystack = normalize(text);
   const matches = [];
@@ -187,6 +229,7 @@ function renderMarkdownReport(data) {
     experienceBullets,
     searchQueries,
     outreachMessage,
+    replySuppression,
   } = data;
 
   const roleRows = roleFamilyScores
@@ -203,7 +246,7 @@ function renderMarkdownReport(data) {
     })
     .join("\n\n");
 
-  return `# Job Targeting Pack\n\nGenerated: ${nowIso}\n\n## Target Title\n${title}\n\n## Best Role Family\n${topRoleFamily}\n\n## Role Family Match\n| Role Family | Match Score | Hits | Matched Keywords |\n|---|---:|---:|---|\n${roleRows}\n\n## JD Keyword Matches\n${topKeywords.length ? topKeywords.map((k) => `- ${k}`).join("\n") : "- No direct keyword hits found. Add more JD text."}\n\n## Tailored Summary Bullets\n${summaryBullets.map((b) => `- ${b}`).join("\n")}\n\n## Tailored Skills Bullets\n${skillsBullets.map((b) => `- ${b}`).join("\n")}\n\n## Tailored Experience Bullets\n${experienceBullets.map((b) => `- ${b}`).join("\n")}\n\n## Search Queries\n${searchSection}\n\n## Outreach Draft\n\n\`\`\`text\n${outreachMessage}\n\`\`\`\n`;
+  return `# Job Targeting Pack\n\nGenerated: ${nowIso}\n\n## Target Title\n${title}\n\n## Best Role Family\n${topRoleFamily}\n\n## Role Family Match\n| Role Family | Match Score | Hits | Matched Keywords |\n|---|---:|---:|---|\n${roleRows}\n\n## Reply Status\n${replySuppression?.suppressed ? `Apply only - ${replySuppression.reasons.join(", ")}` : "Reply OK"}\n\n## JD Keyword Matches\n${topKeywords.length ? topKeywords.map((k) => `- ${k}`).join("\n") : "- No direct keyword hits found. Add more JD text."}\n\n## Tailored Summary Bullets\n${summaryBullets.map((b) => `- ${b}`).join("\n")}\n\n## Tailored Skills Bullets\n${skillsBullets.map((b) => `- ${b}`).join("\n")}\n\n## Tailored Experience Bullets\n${experienceBullets.map((b) => `- ${b}`).join("\n")}\n\n## Search Queries\n${searchSection}\n\n## Outreach Draft\n\n\`\`\`text\n${outreachMessage}\n\`\`\`\n`;
 }
 
 function main() {
@@ -227,6 +270,9 @@ function main() {
   const profile = readJson(PROFILE_PATH);
   const targets = readJson(TARGETS_PATH);
   const jdText = readText(jdPath);
+  const replySuppression = detectAutomatedJobAlert(
+    `${companyName || ""}\n${jdText}`,
+  );
 
   const keywordMatches = countKeywordMatches(jdText, profile.coreKeywords);
   const roleFamilyScores = extractRoleFamilyScores(
@@ -248,10 +294,9 @@ function main() {
     jdText,
     profile.experienceHighlights,
   );
-  const outreachMessage = buildOutreachMessage(
-    title,
-    companyName || "Hiring Team",
-  );
+  const outreachMessage = replySuppression.suppressed
+    ? "Suppressed: automated job alert or no-reply job-board message. Do not reply; apply through the job link only."
+    : buildOutreachMessage(title, companyName || "Hiring Team");
 
   if (!fs.existsSync(INPUT_DIR)) {
     fs.mkdirSync(INPUT_DIR, { recursive: true });
@@ -274,6 +319,7 @@ function main() {
     experienceBullets,
     searchQueries: targets.searchQueries,
     outreachMessage,
+    replySuppression,
   });
 
   fs.writeFileSync(outputPath, report, "utf8");
@@ -284,6 +330,9 @@ function main() {
   console.log(`Best role family: ${topRoleFamily}`);
   console.log(`Target title: ${title}`);
   console.log(`Matched keywords: ${topKeywords.length}`);
+  console.log(
+    `Reply status: ${replySuppression.suppressed ? "apply only/no reply" : "reply ok"}`,
+  );
 }
 
 main();

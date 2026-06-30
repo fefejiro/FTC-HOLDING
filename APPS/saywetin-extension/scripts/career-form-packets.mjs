@@ -85,6 +85,7 @@ function main() {
       `Type: ${job.employmentType || ""}`,
       `Salary: ${job.salary || ""}`,
       `Score: ${job.score ?? ""}`,
+      `Reply Status: ${job.replySuppressed ? `Apply only - ${(job.replySuppressionReasons || []).join("; ")}` : "Reply OK"}`,
       "",
       "## Quick Answers",
       qna,
@@ -101,7 +102,9 @@ function main() {
       "",
       "## Recruiter Message Draft",
       "```text",
-      job.outreach || "",
+      job.replySuppressed
+        ? "Suppressed: automated job alert or no-reply job-board message. Do not reply; apply through the job link only."
+        : job.outreach || "",
       "```",
       "",
     ].join("\n");

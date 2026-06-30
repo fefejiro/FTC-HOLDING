@@ -9,7 +9,7 @@ const ANSWERS_PATH = path.join(CAREER_DIR, "candidate-answers.json");
 const OUTPUT_DIR = path.join(CAREER_DIR, "outputs");
 
 function readJson(filePath) {
-  return JSON.parse(fs.readFileSync(filePath, "utf8"));
+  return JSON.parse(fs.readFileSync(filePath, "utf8").replace(/^\uFEFF/, ""));
 }
 
 function normalize(text) {
@@ -19,6 +19,125 @@ function normalize(text) {
 function hasAny(text, terms) {
   const hay = normalize(text);
   return terms.some((t) => hay.includes(normalize(t)));
+}
+
+const AUTOMATED_REPLY_SENDERS = [
+  "no-reply",
+  "noreply",
+  "do-not-reply",
+  "donotreply",
+  "notification",
+  "notifications",
+  "job alert",
+  "jobs alert",
+];
+
+const JOB_ALERT_SENDERS = [
+  "indeed.com",
+  "indeed.ca",
+  "linkedin.com",
+  "ziprecruiter.com",
+  "glassdoor.com",
+  "monster.com",
+  "careerbuilder.com",
+  "workopolis.com",
+  "email.roberthalf.com",
+  "roberthalf.com",
+];
+
+const JOB_ALERT_SUBJECTS = [
+  "opportunity is knocking",
+  "you matched with a job",
+  "matched with a job",
+  "job alert",
+  "new jobs for you",
+  "recommended jobs",
+  "job recommendations",
+  "jobs you may be interested in",
+  "you have new job matches",
+  "your job match",
+  "apply now",
+  "1-click-apply",
+  "one-click apply",
+  "easy apply",
+];
+
+const JOB_ALERT_BODY_SIGNALS = [
+  "view details",
+  "1-click-apply",
+  "one-click apply",
+  "easy apply",
+  "apply now",
+  "get your resume in front of the hiring manager",
+  "you've matched with",
+  "you matched with",
+  "recommended jobs",
+  "let our app do the work",
+  "download our app",
+  "unsubscribe",
+  "terms of use",
+  "privacy policy",
+];
+
+const RECRUITER_REPLY_SIGNALS = [
+  "following up",
+  "i found your profile",
+  "your resume",
+  "your background",
+  "would you be interested",
+  "are you available",
+  "can we schedule",
+  "let's connect",
+  "please send",
+  "rate expectation",
+  "contract opportunity",
+  "client is looking",
+];
+
+function classifyReplySuppression(job) {
+  const sender = [
+    job.from,
+    job.fromName,
+    job.fromEmail,
+    job.sender,
+    job.senderEmail,
+    job.replyTo,
+    job.source,
+  ].join(" ");
+  const subject = job.subject || "";
+  const body = [
+    job.subject,
+    job.snippet,
+    job.body,
+    job.description,
+    job.title,
+    job.company,
+    job.source,
+    job.link,
+  ].join(" ");
+  const reasons = [];
+
+  const automatedSender = hasAny(sender, AUTOMATED_REPLY_SENDERS);
+  const jobAlertSender = hasAny(sender, JOB_ALERT_SENDERS);
+  const alertSubject = hasAny(subject, JOB_ALERT_SUBJECTS);
+  const alertBody = hasAny(body, JOB_ALERT_BODY_SIGNALS);
+  const recruiterSignal = hasAny(body, RECRUITER_REPLY_SIGNALS);
+
+  if (automatedSender) reasons.push("automated/no-reply sender");
+  if (jobAlertSender) reasons.push("job-board or job-alert sender");
+  if (alertSubject) reasons.push("job-alert subject");
+  if (alertBody) reasons.push("automated job-alert body");
+
+  const suppressed =
+    automatedSender ||
+    (jobAlertSender && (alertSubject || alertBody)) ||
+    (alertSubject && alertBody && !recruiterSignal);
+
+  return {
+    suppressed,
+    category: suppressed ? "apply_only_no_reply" : "reply_ok",
+    reasons: suppressed ? reasons : [],
+  };
 }
 
 function keywordMatches(text, keywords) {
@@ -161,7 +280,10 @@ function main() {
       const { score, matches } = scoreJob(job, profile);
       const family = roleFamilyFit(job, profile.roleFamilies);
       const bestFamily = family[0]?.name || "agile_project_delivery";
-      const outreach = buildOutreach(job, answers, matches);
+      const replySuppression = classifyReplySuppression(job);
+      const outreach = replySuppression.suppressed
+        ? ""
+        : buildOutreach(job, answers, matches);
       const bullets = buildResumeBullets(
         job,
         matches,
@@ -174,6 +296,9 @@ function main() {
         matchedKeywords: matches,
         bestRoleFamily: bestFamily,
         roleFamilyScores: family,
+        replySuppression,
+        replySuppressed: replySuppression.suppressed,
+        replySuppressionReasons: replySuppression.reasons,
         outreach,
         bullets,
       };
@@ -188,11 +313,11 @@ function main() {
     `Generated: ${new Date().toISOString()}`,
     "",
     "## Ranked Jobs",
-    "| Rank | Score | Title | Company | Location | Type | Salary | Link |",
-    "|---:|---:|---|---|---|---|---|---|",
+    "| Rank | Score | Reply Status | Title | Company | Location | Type | Salary | Link |",
+    "|---:|---:|---|---|---|---|---|---|---|",
     ...results.map(
       (r, i) =>
-        `| ${i + 1} | ${r.score} | ${r.title} | ${r.company} | ${r.location || ""} | ${r.employmentType || ""} | ${r.salary || ""} | ${r.link || ""} |`,
+        `| ${i + 1} | ${r.score} | ${r.replySuppressed ? `Apply only: ${r.replySuppressionReasons.join("; ")}` : "Reply OK"} | ${r.title} | ${r.company} | ${r.location || ""} | ${r.employmentType || ""} | ${r.salary || ""} | ${r.link || ""} |`,
     ),
     "",
     "## Quick Search Queries",
@@ -214,6 +339,7 @@ function main() {
         "",
         `- Score: ${r.score}`,
         `- Best Role Family: ${r.bestRoleFamily}`,
+        `- Reply Status: ${r.replySuppressed ? `Apply only - ${r.replySuppressionReasons.join("; ")}` : "Reply OK"}`,
         `- Link: ${r.link || ""}`,
         `- Matched Keywords: ${r.matchedKeywords.join(", ") || "None"}`,
         "",
@@ -228,7 +354,9 @@ function main() {
         "",
         "### Outreach Draft",
         "```text",
-        r.outreach,
+        r.replySuppressed
+          ? "Suppressed: automated job alert or no-reply job-board message. Do not reply; apply through the job link only."
+          : r.outreach,
         "```",
         "",
       ].join("\n"),
@@ -245,6 +373,8 @@ function main() {
       "employment_type",
       "salary",
       "source",
+      "reply_status",
+      "reply_suppression_reasons",
       "link",
       "availability_to_start",
       "availability_to_interview",
@@ -264,6 +394,8 @@ function main() {
       r.employmentType || "",
       r.salary || "",
       r.source || "",
+      r.replySuppressed ? "apply_only_no_reply" : "reply_ok",
+      (r.replySuppressionReasons || []).join("; "),
       r.link || "",
       answers.availabilityToStart,
       answers.availabilityToInterview,
