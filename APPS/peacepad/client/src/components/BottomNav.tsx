@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 
 const NAV_ITEMS = [
-  { path: "/compose", label: "Messages", icon: MessageCircle },
+  { path: "/compose", label: "Pause", icon: MessageCircle },
   { label: "Prep", path: "/prep-chat", icon: Sparkles },
   { path: "/scheduling", label: "Calendar", icon: CalendarDays },
   { path: "/settings", label: "You", icon: Settings },
@@ -14,7 +14,7 @@ export function BottomNav() {
   const [location] = useLocation();
   const { user } = useAuth();
   const items = NAV_ITEMS.map((item) =>
-    item.label === "Messages"
+    item.label === "Pause"
       ? { ...item, path: user?.activePartnershipId ? "/chat" : "/compose" }
       : item,
   );

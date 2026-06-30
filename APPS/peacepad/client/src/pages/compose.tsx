@@ -1,6 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
-import { Copy, RefreshCw, Sparkles } from "lucide-react";
+import {
+  Copy,
+  MessageCircle,
+  RefreshCw,
+  Sparkles,
+  TimerReset,
+} from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -21,21 +27,54 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 
+type InterventionPath = "send" | "received" | "disagreement";
+
+type PreviewTone = "calm" | "tense" | "escalating" | "neutral" | "hostile";
+
 type PreviewResponse = {
-  tone: "calm" | "tense" | "escalating";
+  tone: PreviewTone;
   summary: string;
   emoji: string;
-  confidence: number;
-  flags: string[];
-  rewordingSuggestion: string | null;
+  confidence?: number;
+  flags?: string[];
+  rewordingSuggestion?: string | null;
   originalMessage: string;
+  ces?: {
+    pauseRecommended?: boolean;
+    pauseDuration?: number;
+    deescalationSuggestion?: string | null;
+  } | null;
 };
 
-const TONE_STYLES: Record<PreviewResponse["tone"], string> = {
+const TONE_STYLES: Record<PreviewTone, string> = {
   calm: "border-emerald-200 bg-emerald-50/80 text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/20 dark:text-emerald-100",
+  neutral: "border-sky-200 bg-sky-50/80 text-sky-950 dark:border-sky-900 dark:bg-sky-950/20 dark:text-sky-100",
   tense: "border-amber-200 bg-amber-50/80 text-amber-950 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-100",
   escalating: "border-red-200 bg-red-50/80 text-red-950 dark:border-red-900 dark:bg-red-950/20 dark:text-red-100",
+  hostile: "border-red-200 bg-red-50/80 text-red-950 dark:border-red-900 dark:bg-red-950/20 dark:text-red-100",
 };
+
+const PATHS: Array<{
+  id: InterventionPath;
+  label: string;
+  description: string;
+}> = [
+  {
+    id: "send",
+    label: "I want to send a message",
+    description: "Draft it here before it leaves your hands.",
+  },
+  {
+    id: "received",
+    label: "I received a message",
+    description: "Paste it here and slow down the reply.",
+  },
+  {
+    id: "disagreement",
+    label: "We disagree about something",
+    description: "Name the issue and choose a next step.",
+  },
+];
 
 const COPY_COUNT_KEY = "peacepad_guest_copy_count";
 const UPGRADE_PROMPT_DISMISSED_KEY = "peacepad_guest_upgrade_prompt_dismissed";
@@ -46,10 +85,96 @@ function readCopyCount(): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function toneLabel(tone?: PreviewTone | null): string {
+  if (tone === "hostile" || tone === "escalating") {
+    return "This may land as heated";
+  }
+
+  if (tone === "tense") {
+    return "This may land as tense";
+  }
+
+  if (tone === "calm") {
+    return "This may land as calm";
+  }
+
+  return "This may land as neutral";
+}
+
+function pauseRecommended(analysis: PreviewResponse | null): boolean {
+  return analysis?.tone === "tense" || analysis?.tone === "escalating" || analysis?.tone === "hostile" || Boolean(analysis?.ces?.pauseRecommended);
+}
+
+function trimSentence(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+function buildReceivedResponse(receivedMessage: string, analysis: PreviewResponse | null): string {
+  const text = trimSentence(receivedMessage);
+  const opener =
+    analysis && pauseRecommended(analysis)
+      ? "I want to keep this calm and focused."
+      : "Thanks for letting me know.";
+  const focus = text.length > 120 ? "the main issue" : "this";
+
+  return `${opener} Can we focus on ${focus} and agree on the next practical step? I am open to working through it without blaming each other.`;
+}
+
+function buildDisagreementResponse(issue: string, outcome: string, analysis: PreviewResponse | null): string {
+  const cleanIssue = trimSentence(issue);
+  const cleanOutcome = trimSentence(outcome);
+  const firstLine = cleanIssue
+    ? `I think we are not aligned about ${cleanIssue}.`
+    : "I think we are not aligned yet.";
+  const outcomeLine = cleanOutcome
+    ? `What I am hoping for is ${cleanOutcome}.`
+    : "What I am hoping for is a clear next step we can both follow.";
+  const paceLine = pauseRecommended(analysis)
+    ? "If this feels too tense right now, we can pause and come back to it later."
+    : "Can we pick the next step that keeps things predictable?";
+
+  return `${firstLine} ${outcomeLine} ${paceLine}`;
+}
+
+function interpretationFor(path: InterventionPath, analysis: PreviewResponse | null): string {
+  if (!analysis) {
+    if (path === "received") {
+      return "PeacePad will look for pressure, blame, urgency, or room for a calmer response.";
+    }
+
+    if (path === "disagreement") {
+      return "PeacePad will help turn the disagreement into a clear request or next step.";
+    }
+
+    return "PeacePad will look for wording that could raise tension before you send it.";
+  }
+
+  if (path === "received") {
+    if (pauseRecommended(analysis)) {
+      return "There may be frustration, urgency, or defensiveness underneath the wording. You may want to respond to the issue without matching the heat.";
+    }
+
+    return "This looks workable. You can still reply with a clear boundary or next step.";
+  }
+
+  if (path === "disagreement") {
+    if (pauseRecommended(analysis)) {
+      return "The issue may need a slower pace before a decision. A short, specific next step can keep this from becoming personal.";
+    }
+
+    return "This looks like something that can be shaped into a practical request.";
+  }
+
+  return analysis.summary;
+}
+
 export default function ComposePage() {
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
+  const [activePath, setActivePath] = useState<InterventionPath>("send");
   const [message, setMessage] = useState("");
+  const [desiredOutcome, setDesiredOutcome] = useState("");
+  const [acceptedDraft, setAcceptedDraft] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<PreviewResponse | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
@@ -60,8 +185,33 @@ export default function ComposePage() {
   const [acceptedRewrite, setAcceptedRewrite] = useState(false);
   const [copyCount, setCopyCount] = useState(0);
   const [draftStartedAt, setDraftStartedAt] = useState<number | null>(null);
-  const [lastToneCategory, setLastToneCategory] = useState<PreviewResponse["tone"] | null>(null);
+  const [lastToneCategory, setLastToneCategory] = useState<PreviewTone | null>(null);
   const latestRequestId = useRef(0);
+
+  const previewContent = useMemo(() => {
+    const draft = message.trim();
+    if (activePath !== "disagreement") {
+      return draft;
+    }
+
+    const outcome = desiredOutcome.trim();
+    return [draft, outcome ? `Desired outcome: ${outcome}` : ""].filter(Boolean).join("\n\n");
+  }, [activePath, desiredOutcome, message]);
+
+  const suggestedDraft = useMemo(() => {
+    if (activePath === "send") {
+      return analysis?.rewordingSuggestion || message.trim();
+    }
+
+    if (activePath === "received") {
+      return buildReceivedResponse(message, analysis);
+    }
+
+    return buildDisagreementResponse(message, desiredOutcome, analysis);
+  }, [activePath, analysis, desiredOutcome, message]);
+
+  const canCopy = Boolean((acceptedDraft || suggestedDraft).trim());
+  const showOutcomePrompt = activePath === "received" || activePath === "disagreement";
 
   useEffect(() => {
     let cancelled = false;
@@ -76,7 +226,7 @@ export default function ComposePage() {
       .catch((error) => {
         if (!cancelled) {
           console.warn("[Compose] Guest session unavailable; continuing in local draft mode.", error);
-          setGuestSessionNotice("Cloud sync is offline right now. You can still draft, refine manually, and copy your message.");
+          setGuestSessionNotice("Cloud sync is offline right now. You can still pause, draft, and copy your next step.");
         }
       })
       .finally(() => {
@@ -91,12 +241,13 @@ export default function ComposePage() {
   }, [isLoading, user]);
 
   useEffect(() => {
-    const draft = message.trim();
+    const draft = previewContent.trim();
     if (!draft) {
       setAnalysis(null);
       setAnalysisError(null);
       setIsAnalyzing(false);
       setAcceptedRewrite(false);
+      setAcceptedDraft(null);
       setDraftStartedAt(null);
       setLastToneCategory(null);
       return;
@@ -134,25 +285,47 @@ export default function ComposePage() {
     }, 900);
 
     return () => window.clearTimeout(timer);
-  }, [message]);
+  }, [draftStartedAt, previewContent]);
+
+  const handlePathChange = (path: InterventionPath) => {
+    setActivePath(path);
+    setAnalysis(null);
+    setAnalysisError(null);
+    setAcceptedDraft(null);
+    setAcceptedRewrite(false);
+    setMessageCopied(false);
+    setDraftStartedAt(null);
+    setLastToneCategory(null);
+
+    trackEvent("compose_intervention_path_selected", {
+      path,
+    });
+  };
 
   const handleUseSuggestion = () => {
-    if (!analysis?.rewordingSuggestion) {
+    const draft = suggestedDraft.trim();
+    if (!draft) {
       return;
     }
 
     trackEvent("compose_rewrite_accepted", {
-      tone_category: analysis.tone,
-      message_length: message.trim().length,
+      tone_category: analysis?.tone ?? "unknown",
+      intervention_path: activePath,
+      message_length: previewContent.trim().length,
     });
-    setMessage(analysis.rewordingSuggestion);
-    setAnalysis(null);
-    setAnalysisError(null);
+
+    if (activePath === "send") {
+      setMessage(draft);
+      setAnalysis(null);
+      setAnalysisError(null);
+    }
+
+    setAcceptedDraft(draft);
     setAcceptedRewrite(true);
   };
 
   const handleCopyMessage = async () => {
-    const textToCopy = analysis?.rewordingSuggestion || message.trim();
+    const textToCopy = (acceptedDraft || suggestedDraft).trim();
     if (!textToCopy) {
       return;
     }
@@ -167,6 +340,7 @@ export default function ComposePage() {
 
       trackEvent("guest_message_copied", {
         tone_category: analysis?.tone ?? lastToneCategory ?? "unknown",
+        intervention_path: activePath,
         accepted_rewrite: acceptedRewrite,
         had_tone_analysis: Boolean(analysis || lastToneCategory),
         message_length: textToCopy.length,
@@ -187,7 +361,7 @@ export default function ComposePage() {
 
       toast({
         title: "Copied",
-        description: "Paste it into your messaging app to send it to your co-parent.",
+        description: "Paste it into your messaging app when you are ready.",
       });
     } catch {
       toast({
@@ -213,18 +387,32 @@ export default function ComposePage() {
     setShowUpgradePrompt(false);
   };
 
+  const activePathLabel = PATHS.find((path) => path.id === activePath)?.label || PATHS[0].label;
+  const inputLabel =
+    activePath === "send"
+      ? "What do you want to say?"
+      : activePath === "received"
+        ? "Paste the message you received"
+        : "What is the disagreement about?";
+  const inputPlaceholder =
+    activePath === "send"
+      ? "Type your message to your co-parent..."
+      : activePath === "received"
+        ? "Paste the message here..."
+        : "Example: pickup time, school expense, switching weekends...";
+
   return (
     <>
       <SEOHead
-        title="Compose - PeacePad"
-        description="Draft a message, check the tone, and soften it before you send."
+        title="Pause Before Sending - PeacePad"
+        description="Choose what happened, understand the tone, and draft a calmer next step before conflict grows."
         noindex
       />
 
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-4 py-4">
         <Card className="border-border/60">
-          <CardHeader className="space-y-3">
-            <div className="flex items-center gap-2">
+          <CardHeader className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline">No login required</Badge>
               {(isPreparingGuest || isLoading) && (
                 <Badge variant="outline" className="gap-1">
@@ -234,132 +422,237 @@ export default function ComposePage() {
               )}
             </div>
             <div className="space-y-2">
-              <CardTitle className="text-2xl">Compose your message</CardTitle>
+              <CardTitle className="text-2xl">Pause before it becomes damage</CardTitle>
               <CardDescription>
-                Type what you want to say. PeacePad will flag tense wording and suggest a calmer version before you send it.
+                Start without an account. Sign in later if you want saved history and sync.
               </CardDescription>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-2xl border border-border/70 bg-background p-4 shadow-sm">
+          <CardContent className="space-y-5">
+            <section className="space-y-3" aria-labelledby="what-happened-heading">
+              <div className="space-y-1">
+                <h1 id="what-happened-heading" className="text-lg font-semibold">
+                  What happened?
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Choose the closest starting point. PeacePad will help you slow it down.
+                </p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-3" role="list" aria-label="Choose what happened">
+                {PATHS.map((path) => {
+                  const isActive = activePath === path.id;
+                  return (
+                    <button
+                      key={path.id}
+                      type="button"
+                      onClick={() => handlePathChange(path.id)}
+                      className={`rounded-lg border p-3 text-left transition ${
+                        isActive
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border/70 bg-background hover:bg-muted/50"
+                      }`}
+                      data-testid={`button-compose-path-${path.id}`}
+                    >
+                      <span className="block text-sm font-semibold">{path.label}</span>
+                      <span className="mt-1 block text-xs text-muted-foreground">{path.description}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="space-y-3 rounded-lg border border-border/70 bg-background p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold">{activePathLabel}</p>
+                  <label htmlFor="compose-primary-input" className="text-base font-medium">
+                    {inputLabel}
+                  </label>
+                </div>
+                <MessageCircle className="mt-1 h-5 w-5 text-muted-foreground" aria-hidden="true" />
+              </div>
               <Textarea
+                id="compose-primary-input"
                 value={message}
                 onChange={(event) => {
                   setMessage(event.target.value);
                   setMessageCopied(false);
+                  setAcceptedDraft(null);
                   if (acceptedRewrite) {
                     setAcceptedRewrite(false);
                   }
                 }}
-                placeholder="Type your message to your co-parent..."
-                className="min-h-[180px] resize-none border-0 bg-transparent p-0 text-base focus-visible:ring-0"
+                placeholder={inputPlaceholder}
+                className="min-h-[150px] resize-none border-0 bg-transparent p-0 text-base focus-visible:ring-0"
                 data-testid="textarea-compose-message"
               />
-            </div>
+            </section>
+
+            {activePath === "disagreement" ? (
+              <section className="space-y-3 rounded-lg border border-border/70 bg-muted/20 p-4">
+                <label htmlFor="compose-outcome-input" className="text-base font-medium">
+                  What outcome do you want?
+                </label>
+                <Textarea
+                  id="compose-outcome-input"
+                  value={desiredOutcome}
+                  onChange={(event) => {
+                    setDesiredOutcome(event.target.value);
+                    setMessageCopied(false);
+                    setAcceptedDraft(null);
+                  }}
+                  placeholder="Example: agree on a pickup time for Friday without arguing..."
+                  className="min-h-[96px] resize-none bg-background text-base"
+                  data-testid="textarea-compose-outcome"
+                />
+              </section>
+            ) : null}
 
             {isAnalyzing ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground" data-testid="text-compose-analyzing">
                 <RefreshCw className="h-4 w-4 animate-spin" />
-                Checking tone...
+                Checking what may happen next...
               </div>
             ) : null}
 
             {analysisError ? (
-              <div className="rounded-2xl border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-900 dark:border-red-900 dark:bg-red-950/20 dark:text-red-100">
+              <div className="rounded-lg border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-900 dark:border-red-900 dark:bg-red-950/20 dark:text-red-100">
                 {analysisError}
               </div>
             ) : null}
 
             {guestSessionNotice ? (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-100">
+              <div className="rounded-lg border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-100">
                 {guestSessionNotice}
               </div>
             ) : null}
 
-            {analysis ? (
-              <div className={`rounded-2xl border p-4 ${TONE_STYLES[analysis.tone]}`} data-testid="card-compose-tone-feedback">
+            {previewContent.trim() ? (
+              <section
+                className={`rounded-lg border p-4 ${analysis ? TONE_STYLES[analysis.tone] : "border-border/70 bg-muted/20"}`}
+                data-testid="card-compose-tone-feedback"
+              >
                 <div className="flex items-start gap-3">
-                  <div className="text-2xl" aria-hidden="true">{analysis.emoji}</div>
-                  <div className="flex-1 space-y-3">
+                  <div className="text-2xl" aria-hidden="true">{analysis?.emoji || "..."}</div>
+                  <div className="min-w-0 flex-1 space-y-4">
                     <div className="space-y-1">
-                      <p className="font-medium">{analysis.summary}</p>
-                      <p className="text-sm opacity-85">
-                        Confidence: {Math.round(analysis.confidence * 100)}%
+                      <p className="text-xs font-semibold uppercase text-muted-foreground">
+                        What this may sound like
                       </p>
+                      <p className="font-medium">{toneLabel(analysis?.tone)}</p>
+                      <p className="text-sm opacity-90">{interpretationFor(activePath, analysis)}</p>
                     </div>
 
-                    {analysis.flags.length > 0 ? (
-                      <details className="rounded-xl border border-border/60 bg-background/70 p-3 text-sm">
-                        <summary className="cursor-pointer font-medium">Why?</summary>
+                    {showOutcomePrompt ? (
+                      <div className="rounded-lg border border-border/60 bg-background/75 p-3">
+                        <p className="text-xs font-semibold uppercase text-muted-foreground">
+                          What outcome do you want?
+                        </p>
+                        <p className="mt-1 text-sm leading-relaxed">
+                          {activePath === "received"
+                            ? "Reply to the issue, not the emotional temperature."
+                            : desiredOutcome.trim() || "Name one practical outcome before sending anything."}
+                        </p>
+                      </div>
+                    ) : null}
+
+                    {analysis?.flags && analysis.flags.length > 0 ? (
+                      <details className="rounded-lg border border-border/60 bg-background/70 p-3 text-sm">
+                        <summary className="cursor-pointer font-medium">Why PeacePad paused here</summary>
                         <ul className="mt-2 space-y-1 text-muted-foreground">
                           {analysis.flags.map((flag) => (
-                            <li key={flag}>• {flag}</li>
+                            <li key={flag}>- {flag}</li>
                           ))}
                         </ul>
                       </details>
                     ) : null}
 
-                    {analysis.rewordingSuggestion ? (
-                      <div className="rounded-xl border border-border/60 bg-background/80 p-3">
-                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          Try this instead
-                        </p>
-                        <p className="text-sm leading-relaxed">{analysis.rewordingSuggestion}</p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <Button type="button" size="sm" onClick={handleUseSuggestion} data-testid="button-compose-use-suggestion">
-                            Use this version
-                          </Button>
-                          <Button type="button" size="sm" variant="outline" onClick={handleCopyMessage} data-testid="button-compose-copy-suggestion">
-                            <Copy className="mr-2 h-4 w-4" />
-                            {messageCopied ? "Copied!" : "Copy to send"}
-                          </Button>
+                    {pauseRecommended(analysis) ? (
+                      <div className="rounded-lg border border-border/60 bg-background/80 p-3">
+                        <div className="flex items-start gap-2">
+                          <TimerReset className="mt-0.5 h-4 w-4" aria-hidden="true" />
+                          <div>
+                            <p className="font-medium">You may want to slow this down.</p>
+                            <p className="text-sm opacity-90">
+                              Waiting a few minutes before replying may help keep the conversation focused.
+                            </p>
+                          </div>
                         </div>
                       </div>
                     ) : null}
+
+                    <div className="rounded-lg border border-border/60 bg-background/80 p-3">
+                      <p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">
+                        Try this instead
+                      </p>
+                      <p className="text-sm leading-relaxed" data-testid="text-compose-suggestion">
+                        {acceptedDraft || suggestedDraft || "PeacePad will suggest a calmer next step here."}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={handleUseSuggestion}
+                          disabled={!suggestedDraft.trim()}
+                          data-testid="button-compose-use-suggestion"
+                        >
+                          Use this version
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={handleCopyMessage}
+                          disabled={!canCopy}
+                          data-testid="button-compose-copy-suggestion"
+                        >
+                          <Copy className="mr-2 h-4 w-4" />
+                          {messageCopied ? "Copied!" : "Copy to send"}
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </section>
             ) : null}
 
-            <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+            <section className="rounded-lg border border-border/60 bg-muted/20 p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="space-y-1">
-                  <p className="font-medium">Ready to send it outside PeacePad?</p>
+                  <p className="font-medium">Choose the next action when you are ready.</p>
                   <p className="text-sm text-muted-foreground">
-                    Copy your draft, then paste it into text, email, WhatsApp, or wherever you co-parent.
+                    Copy is here when you need it. The pause comes first.
                   </p>
                 </div>
                 <Button
                   type="button"
+                  variant="secondary"
                   onClick={handleCopyMessage}
-                  disabled={!message.trim()}
+                  disabled={!canCopy}
                   data-testid="button-compose-copy-send"
                 >
                   <Copy className="mr-2 h-4 w-4" />
-                  {messageCopied ? "Copied!" : "Copy to Send"}
+                  {messageCopied ? "Copied!" : "Copy to send"}
                 </Button>
               </div>
-              <p className="mt-3 text-xs text-muted-foreground">
-                PeacePad helps you refine the message first. You stay in control of where it gets sent.
-              </p>
-            </div>
+            </section>
 
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="text-sm text-muted-foreground">
-                Save and sync later if you want history across devices.
+                Start without an account. Sign in later if you want saved history and sync.
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" asChild>
                   <Link href="/prep-chat">
                     <Sparkles className="mr-2 h-4 w-4" />
-                    Need help shaping it?
+                    Talk it through
                   </Link>
                 </Button>
                 <Button type="button" variant="outline" asChild>
                   <Link href="/settings">Invite partner</Link>
                 </Button>
                 <Button type="button" variant="outline" asChild>
-                  <Link href="/onboarding?auth=upgrade">Sign in to save history</Link>
+                  <Link href="/onboarding?auth=upgrade">Sign in later</Link>
                 </Button>
               </div>
             </div>
@@ -378,17 +671,17 @@ export default function ComposePage() {
       >
         <DialogContent className="max-w-md" data-testid="dialog-compose-upgrade-prompt">
           <DialogHeader>
-            <DialogTitle>You're using PeacePad like a pro</DialogTitle>
+            <DialogTitle>Keep PeacePad with you</DialogTitle>
             <DialogDescription>
-              Sign in to keep your progress and unlock a smoother cross-device workflow.
+              Sign in if you want saved history and sync across devices.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 text-sm text-muted-foreground">
-            <p>Sign in to unlock:</p>
+            <p>With an account, PeacePad can help you keep track of:</p>
             <ul className="space-y-1">
-              <li>• Save message history</li>
-              <li>• Track your progress over time</li>
-              <li>• Access PeacePad from any device</li>
+              <li>- Saved message history</li>
+              <li>- Patterns that help you pause earlier</li>
+              <li>- Access from more than one device</li>
             </ul>
           </div>
           <DialogFooter className="gap-2 sm:gap-2">

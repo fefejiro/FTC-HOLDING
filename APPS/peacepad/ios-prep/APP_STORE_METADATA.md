@@ -2,12 +2,12 @@
 
 ## App Name (30 character limit)
 ```
-PeacePad - Co-Parenting App
+PeacePad Co-Parenting
 ```
 
 ## Subtitle (30 character limit)
 ```
-Communicate Clearly, No Drama
+Calmer co-parenting tools
 ```
 
 ## Keywords (100 character limit, comma separated)
@@ -17,18 +17,18 @@ co-parenting,coparent,custody,divorce,separated,family,calendar,expenses,communi
 
 ## Description (4000 character limit)
 
-PeacePad is a free co-parenting app that helps separated and divorced parents communicate clearly and reduce conflict — so you can focus on what matters most: your kids.
+PeacePad is a co-parenting app that helps separated and divorced parents communicate clearly and reduce conflict, so you can focus on what matters most: your kids.
 
-Whether you are navigating a fresh separation or managing a long-term co-parenting relationship, PeacePad gives you the tools to keep conversations calm, organized, and focused on your children.
+Whether you are navigating a fresh separation or managing a long-term co-parenting relationship, PeacePad gives you tools to keep conversations calm, organized, and focused on your children.
 
 COMMUNICATE WITH CLARITY
-- AI-powered message suggestions help you reword difficult messages before you send them
+- Message suggestions help you reword difficult messages before you send them
 - Tone analysis catches emotional language and suggests calmer alternatives
-- Prep Chat lets you practice conversations with an AI coach before talking to your co-parent
+- Prep Chat lets you practice conversations before talking to your co-parent
 
 STAY ORGANIZED TOGETHER
-- Shared custody calendar with conflict detection — know instantly when schedules overlap
-- Expense tracking with receipt uploads — log shared costs and settle up fairly
+- Shared custody calendar with conflict detection so you can see when schedules overlap
+- Expense tracking with receipt uploads so shared costs are easier to discuss
 - Shared to-do lists and child update notes keep both parents on the same page
 
 STRUCTURED CONVERSATIONS
@@ -39,12 +39,12 @@ STRUCTURED CONVERSATIONS
 FIND SUPPORT WHEN YOU NEED IT
 - Locate nearby family support services and domestic violence resources
 - Access crisis hotlines and safety planning tools
-- Private and encrypted safety plans for sensitive situations
+- Safety planning support for sensitive situations
 
 BUILT FOR REAL LIFE
-- Works on any device — phone, tablet, or computer
-- Guest mode lets you try everything before creating an account
-- Free to use — no premium tiers, no paywalls
+- Works on phone, tablet, and computer
+- Guest mode lets you try calm message help before creating an account
+- Designed for practical co-parenting tasks, not drama
 
 PeacePad was built by a co-parent, for co-parents. Every feature exists to make your life a little easier and your communication a little clearer.
 
@@ -52,7 +52,7 @@ Download PeacePad today and start co-parenting with clarity.
 
 ## Promotional Text (170 character limit, can be updated without new build)
 ```
-Free co-parenting app with AI message clarity, shared calendar, and expense tracking. Communicate clearly. Reduce conflict. Focus on your kids.
+Co-parenting tools for calmer messages, shared schedules, expenses, and practical next steps.
 ```
 
 ## Privacy Policy URL
@@ -78,12 +78,12 @@ Secondary: Productivity
 
 ## Age Rating
 ```
-4+ (No objectionable content)
+Complete in App Store Connect based on the live feature questionnaire. Do not assume final rating until the Apple questionnaire is answered.
 ```
 
 ## Copyright
 ```
-2024 PeacePad
+2026 PeacePad
 ```
 
 ## Contact Email
