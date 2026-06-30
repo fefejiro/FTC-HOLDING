@@ -66,12 +66,21 @@ def main() -> int:
     label = profile_label(preferred) or "unknown"
     rect = preferred.rectangle()
     screenshot = out_dir / "fejiro-visible-chrome-status.png"
-    preferred.capture_as_image().save(screenshot)
+    screenshot_status = ""
+    try:
+        image = preferred.capture_as_image()
+        if image is None:
+            screenshot_status = "Screenshot capture returned no image."
+        else:
+            image.save(screenshot)
+            screenshot_status = f"Screenshot: {screenshot.resolve()}"
+    except Exception as exc:
+        screenshot_status = f"Screenshot capture skipped: {exc}"
 
     print(f"Visible Chrome title: {title}")
     print(f"Visible Chrome profile: {label}")
     print(f"Window rectangle: left={rect.left} top={rect.top} right={rect.right} bottom={rect.bottom}")
-    print(f"Screenshot: {screenshot.resolve()}")
+    print(screenshot_status)
     print("No browser was launched and no navigation was performed.")
     return 0
 

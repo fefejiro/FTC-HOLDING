@@ -49,9 +49,15 @@ try {
 
   "=== Discovery scheduler start $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" | Tee-Object -FilePath $log -Append
   "Working dir: $root" | Tee-Object -FilePath $log -Append
+  $pausedSourcesRaw = if ($env:JOB_AGENT_PAUSED_SOURCES) { $env:JOB_AGENT_PAUSED_SOURCES } else { "dice,indeed,monster" }
+  $pausedSources = @($pausedSourcesRaw -split "," | ForEach-Object { $_.Trim().ToLowerInvariant() } | Where-Object { $_ })
+  function Test-SourcePaused($source) {
+    return $pausedSources -contains $source.ToLowerInvariant()
+  }
+  "Paused sources: $($pausedSources -join ', ')" | Tee-Object -FilePath $log -Append
   $allowVisibleBrowser = $VisibleBrowser -or $env:JOB_AGENT_VISIBLE_DISCOVERY -in @("1", "true", "TRUE", "yes", "YES", "on", "ON")
   if ($allowVisibleBrowser) {
-    "Visible browser discovery is ENABLED for this run. Chrome may be focused while Dice/Indeed/Monster are scraped." | Tee-Object -FilePath $log -Append
+    "Visible browser discovery is ENABLED for this run. LinkedIn discovery may use browser automation; Dice/Indeed/Monster remain paused unless explicitly unpaused." | Tee-Object -FilePath $log -Append
   } else {
     "Visible browser discovery is disabled for scheduled/background mode. Chrome focus will not be changed." | Tee-Object -FilePath $log -Append
   }
@@ -92,11 +98,22 @@ try {
   }
 
   if ($allowVisibleBrowser -and $visibleFejiroReady) {
-    $diceExit = Run-Step "2. Visible Dice discovery" "npm run hunt:scrape-dice:visible -- -Limit 20"
-    $indeedExit = Run-Step "3. Visible Indeed discovery" "npm run hunt:scrape-indeed:visible -- -Limit 20"
-    $monsterExit = Run-Step "4. Visible Monster discovery" "npm run hunt:scrape-monster:visible -- -Limit 20"
+    $linkedinDiscoveryExit = Run-Step "2. LinkedIn discovery" "npm run hunt:scrape-linkedin"
+    $diceExit = 0
+    if (Test-SourcePaused "indeed") {
+      "=== 3. Visible Indeed discovery skipped: source paused ===" | Tee-Object -FilePath $log -Append
+      $indeedExit = 0
+    } else {
+      $indeedExit = Run-Step "3. Visible Indeed discovery" "npm run hunt:scrape-indeed:visible -- -Limit 20"
+    }
+    if (Test-SourcePaused "monster") {
+      "=== 4. Visible Monster discovery skipped: source paused ===" | Tee-Object -FilePath $log -Append
+      $monsterExit = 0
+    } else {
+      $monsterExit = Run-Step "4. Visible Monster discovery" "npm run hunt:scrape-monster:visible -- -Limit 20"
+    }
 
-    if ($diceExit -ne 0) { "Dice discovery exited with $diceExit; continuing to queues." | Tee-Object -FilePath $log -Append }
+    if ($linkedinDiscoveryExit -ne 0) { "LinkedIn discovery exited with $linkedinDiscoveryExit; continuing to saved LinkedIn queues." | Tee-Object -FilePath $log -Append }
     if ($indeedExit -ne 0) { "Indeed discovery exited with $indeedExit; continuing to queues." | Tee-Object -FilePath $log -Append }
     if ($monsterExit -ne 0) { "Monster discovery exited with $monsterExit; continuing to queues." | Tee-Object -FilePath $log -Append }
   } elseif ($allowVisibleBrowser) {
@@ -105,19 +122,39 @@ try {
     "=== 2-4. Visible site discovery skipped: quiet background mode ===" | Tee-Object -FilePath $log -Append
   }
 
-  $queueDiceExit = Run-Step "5. Premium Dice queue" "npm run hunt:premium-queue -- --source=dice --limit=20"
-  $queueIndeedExit = Run-Step "6. Premium Indeed queue" "npm run hunt:premium-queue -- --source=indeed --limit=20"
-  $queueMonsterExit = Run-Step "7. Premium Monster queue" "npm run hunt:premium-queue -- --source=monster --limit=20"
-  $prepDiceExit = Run-Step "8. Prepare Dice packages" "npm run hunt:prepare-artifacts -- --source=dice --limit=4"
-  $prepIndeedExit = Run-Step "9. Prepare Indeed packages" "npm run hunt:prepare-artifacts -- --source=indeed --limit=4"
-  $prepMonsterExit = Run-Step "10. Prepare Monster packages" "npm run hunt:prepare-artifacts -- --source=monster --limit=4"
+  $queueLinkedInExit = Run-Step "5. Premium LinkedIn queue" "npm run hunt:premium-queue -- --source=linkedin --limit=20"
+  if (Test-SourcePaused "indeed") {
+    "=== 6. Premium Indeed queue skipped: source paused ===" | Tee-Object -FilePath $log -Append
+    $queueIndeedExit = 0
+  } else {
+    $queueIndeedExit = Run-Step "6. Premium Indeed queue" "npm run hunt:premium-queue -- --source=indeed --limit=20"
+  }
+  if (Test-SourcePaused "monster") {
+    "=== 7. Premium Monster queue skipped: source paused ===" | Tee-Object -FilePath $log -Append
+    $queueMonsterExit = 0
+  } else {
+    $queueMonsterExit = Run-Step "7. Premium Monster queue" "npm run hunt:premium-queue -- --source=monster --limit=20"
+  }
+  $prepLinkedInExit = Run-Step "8. Prepare LinkedIn packages" "npm run hunt:prepare-artifacts -- --source=linkedin --limit=4"
+  if (Test-SourcePaused "indeed") {
+    "=== 9. Prepare Indeed packages skipped: source paused ===" | Tee-Object -FilePath $log -Append
+    $prepIndeedExit = 0
+  } else {
+    $prepIndeedExit = Run-Step "9. Prepare Indeed packages" "npm run hunt:prepare-artifacts -- --source=indeed --limit=4"
+  }
+  if (Test-SourcePaused "monster") {
+    "=== 10. Prepare Monster packages skipped: source paused ===" | Tee-Object -FilePath $log -Append
+    $prepMonsterExit = 0
+  } else {
+    $prepMonsterExit = Run-Step "10. Prepare Monster packages" "npm run hunt:prepare-artifacts -- --source=monster --limit=4"
+  }
   $trustExit = Run-Step "11. Trust report" "npm run hunt:trust-report -- --limit=25"
   $statusSnapshotExit = Run-Step "12. Status snapshot" "npm run hunt:status"
 
-  if ($queueDiceExit -ne 0) { exit $queueDiceExit }
+  if ($queueLinkedInExit -ne 0) { exit $queueLinkedInExit }
   if ($queueIndeedExit -ne 0) { exit $queueIndeedExit }
   if ($queueMonsterExit -ne 0) { exit $queueMonsterExit }
-  if ($prepDiceExit -ne 0) { "Dice package prep exited with $prepDiceExit; continuing to trust report." | Tee-Object -FilePath $log -Append }
+  if ($prepLinkedInExit -ne 0) { "LinkedIn package prep exited with $prepLinkedInExit; continuing to trust report." | Tee-Object -FilePath $log -Append }
   if ($prepIndeedExit -ne 0) { "Indeed package prep exited with $prepIndeedExit; continuing to trust report." | Tee-Object -FilePath $log -Append }
   if ($prepMonsterExit -ne 0) { "Monster package prep exited with $prepMonsterExit; continuing to trust report." | Tee-Object -FilePath $log -Append }
   if ($trustExit -ne 0) { exit $trustExit }

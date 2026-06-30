@@ -2,8 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import JSZip from "jszip";
 import { beforeAll, describe, expect, it } from "vitest";
-import { tailorResumeForJD } from "../src/resume_tailor";
+import { selectTailoringTemplatePath, tailorResumeForJD } from "../src/resume_tailor";
 import {
+  APPROVED_BUSINESS_ANALYST_TEMPLATE_BASENAME,
   APPROVED_ORANGE_TEMPLATE_BASENAME,
   FORBIDDEN_VISIBLE_RESUME_PHRASES,
   isApprovedOrangeTemplatePath
@@ -14,6 +15,24 @@ const templatePath = path.resolve(
   ".local",
   "resume-references",
   "Fejiro_Efiuvwere_Canadian_Tire_Manager_Network_Analytics_Resume.docx"
+);
+const defaultTemplatePath = path.resolve(
+  process.cwd(),
+  "..",
+  "..",
+  "DOCS",
+  "Fejiro_Job_Reply_Agent_Resume_Bank",
+  "resumes",
+  APPROVED_ORANGE_TEMPLATE_BASENAME
+);
+const businessAnalystTemplatePath = path.resolve(
+  process.cwd(),
+  "..",
+  "..",
+  "DOCS",
+  "Fejiro_Job_Reply_Agent_Resume_Bank",
+  "resumes",
+  APPROVED_BUSINESS_ANALYST_TEMPLATE_BASENAME
 );
 const outputDir = path.resolve(process.cwd(), ".local", "generated-tests");
 
@@ -35,6 +54,23 @@ async function extractDocText(filePath: string): Promise<string> {
     .trim();
 }
 
+async function extractDocumentXml(filePath: string): Promise<string> {
+  const zip = await JSZip.loadAsync(fs.readFileSync(filePath));
+  return zip.file("word/document.xml")?.async("string") || "";
+}
+
+function rowText(rowXml: string): string {
+  return rowXml
+    .replace(/<w:tab\/?\s*>/g, "\t")
+    .replace(/<w:br\/?\s*>/g, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 describe("Resume Tailoring Engine", () => {
   beforeAll(() => {
     fs.mkdirSync(outputDir, { recursive: true });
@@ -43,9 +79,47 @@ describe("Resume Tailoring Engine", () => {
     }
   });
 
-  it("uses the approved orange resume template by default", () => {
-    expect(path.basename(templatePath)).toBe(APPROVED_ORANGE_TEMPLATE_BASENAME);
+  it("accepts the legacy reference template and the approved default job-agent template", () => {
     expect(isApprovedOrangeTemplatePath(templatePath)).toBe(true);
+    expect(path.basename(defaultTemplatePath)).toBe(APPROVED_ORANGE_TEMPLATE_BASENAME);
+    expect(isApprovedOrangeTemplatePath(defaultTemplatePath)).toBe(true);
+    expect(path.basename(businessAnalystTemplatePath)).toBe(APPROVED_BUSINESS_ANALYST_TEMPLATE_BASENAME);
+    expect(isApprovedOrangeTemplatePath(businessAnalystTemplatePath)).toBe(true);
+  });
+
+  it("selects the Business Analyst gold template only for BA-like roles", () => {
+    expect(selectTailoringTemplatePath({
+      parsed: {
+        roleTitle: "Senior Business Systems Analyst",
+        cleanRoleTitle: "Senior Business Systems Analyst",
+        company: "ExampleCo"
+      } as any,
+      jdText: "Requirements gathering, user stories, acceptance criteria, UAT, Jira, Confluence.",
+      defaultTemplatePath,
+      businessAnalysisTemplatePath: businessAnalystTemplatePath
+    })).toBe(businessAnalystTemplatePath);
+
+    expect(selectTailoringTemplatePath({
+      parsed: {
+        roleTitle: "Business System Analyst",
+        cleanRoleTitle: "Business System Analyst",
+        company: "ExampleCo"
+      } as any,
+      jdText: "Requirements gathering, user stories, acceptance criteria, UAT, Jira, Confluence.",
+      defaultTemplatePath,
+      businessAnalysisTemplatePath: businessAnalystTemplatePath
+    })).toBe(businessAnalystTemplatePath);
+
+    expect(selectTailoringTemplatePath({
+      parsed: {
+        roleTitle: "WMS Project Manager",
+        cleanRoleTitle: "WMS Project Manager",
+        company: "ExampleCo"
+      } as any,
+      jdText: "Warehouse management, WMS, logistics, inventory, and release readiness.",
+      defaultTemplatePath,
+      businessAnalysisTemplatePath: businessAnalystTemplatePath
+    })).toBe(defaultTemplatePath);
   });
 
   it("generates JD-aligned Canadian Tire styled resume in DOCX", async () => {
@@ -79,6 +153,8 @@ describe("Resume Tailoring Engine", () => {
     expect(text).toMatch(/core strengths/i);
     expect(text).toMatch(/PORTFOLIO|SELECTED ACHIEVEMENTS/);
     expect(text).toContain("Canadian Tire");
+    expect(text).not.toMatch(/Ã¢|â€¢|•/);
+    expect(text).not.toMatch(/Business Analyst \| Public Sector I&IT/i);
     expect(text).not.toMatch(/WMS Project Manager|Blue Yonder|North West Company/i);
   });
 
@@ -102,7 +178,7 @@ describe("Resume Tailoring Engine", () => {
         "RQ11067 Senior Business Analyst for I&IT public sector delivery.",
         "Requires requirements gathering, stakeholder engagement, current-state and future-state analysis, business process mapping, use cases, user stories, acceptance criteria, backlog refinement, Product Owner support, Agile ceremonies, UAT, DevOps, Jira, Confluence, Oracle, SQL, AODA-aware documentation, information management, workflows, and approval processes."
       ].join(" "),
-      templatePath,
+      templatePath: businessAnalystTemplatePath,
       outputDir
     });
 
@@ -162,6 +238,37 @@ describe("Resume Tailoring Engine", () => {
     expect(result.provenanceStats?.placedEmployerBulletCount).toBeGreaterThan(0);
     expect(result.provenanceStats?.rejectedEmployerPlacementCount).toBeGreaterThan(0);
     expect(result.provenanceStats?.fallbackBulletCount).toBeGreaterThan(0);
+  });
+
+  it("removes unused blank rows from template skill tables", async () => {
+    const result = await tailorResumeForJD({
+      parsed: {
+        roleTitle: "M&A Infra PM",
+        company: "Genpact",
+        location: "Remote Canada",
+        employmentType: "Contract",
+        summary: "",
+        recruiterName: "",
+        parserConfidence: 90,
+        cleanBody: "",
+        cleanRoleTitle: "M&A Infra PM",
+        alignmentKeywords: [],
+        salaryOrRate: "",
+        isUsRole: false
+      },
+      jdText: [
+        "Build a comprehensive project plan for company acquisition activities into a new parent company.",
+        "Manage technical infrastructure projects, server patch schedules, patch completion, endpoint management tool rollout, email tenant migration, networking and fileshare migration to SharePoint, executive leadership communication, and delivery task tracking."
+      ].join(" "),
+      templatePath,
+      outputDir
+    });
+
+    const documentXml = await extractDocumentXml(result.docxPath);
+    const tableXmls = [...documentXml.matchAll(/<w:tbl\b[\s\S]*?<\/w:tbl>/g)].map((match) => match[0]);
+    const rowXmls = [...documentXml.matchAll(/<w:tr\b[\s\S]*?<\/w:tr>/g)].map((match) => match[0]);
+    expect(tableXmls.length).toBeGreaterThan(0);
+    expect(rowXmls.every((row) => rowText(row).length > 0)).toBe(true);
   });
 
   it("keeps unverified or unknown-employer bullets out of employer experience sections", async () => {

@@ -20,6 +20,13 @@ export interface TailorArgs {
   outputDir: string;
 }
 
+export interface TailoringTemplateSelectionArgs {
+  parsed: Pick<ParsedOpportunity, "roleTitle" | "cleanRoleTitle" | "company">;
+  jdText: string;
+  defaultTemplatePath: string;
+  businessAnalysisTemplatePath?: string;
+}
+
 export interface TailorResult {
   docxPath: string;
   roleSlug: string;
@@ -95,7 +102,7 @@ function paragraphText(paragraphXml: string): string {
 function setParagraphText(paragraphXml: string, text: string): string {
   const safeText = escapeXml(text);
   let replaced = false;
-  return paragraphXml.replace(/<w:t(\b[^>]*)>[\s\S]*?<\/w:t>/g, (_match, attrs: string) => {
+  const updated = paragraphXml.replace(/<w:t(\b[^>]*)>[\s\S]*?<\/w:t>/g, (_match, attrs: string) => {
     if (!replaced) {
       replaced = true;
       const attrOut = /\bxml:space=/.test(attrs) ? attrs : `${attrs} xml:space="preserve"`;
@@ -103,6 +110,12 @@ function setParagraphText(paragraphXml: string, text: string): string {
     }
     return `<w:t${attrs}></w:t>`;
   });
+
+  if (!replaced) {
+    return updated.replace(/<\/w:p>$/, `<w:r><w:t xml:space="preserve">${safeText}</w:t></w:r></w:p>`);
+  }
+
+  return updated;
 }
 
 function splitTitleToLines(title: string, slots: number): string[] {
@@ -229,6 +242,53 @@ function joinParagraphs(templateXml: string, updatedParagraphs: string[]): strin
   });
 }
 
+function stripLegacyBulletPrefixesFromXml(input: string): string {
+  return input
+    .replace(/\u00c3\u00a2\u00e2\u201a\u00ac\u00c2\u00a2\s*/g, "")
+    .replace(/\u00e2\u20ac\u00a2\s*/g, "")
+    .replace(/\u2022\s*/g, "");
+}
+
+function stripEmptyTableRowsAndTables(input: string): string {
+  return input.replace(/<w:tbl\b[\s\S]*?<\/w:tbl>/g, (tableXml) => {
+    const cleanedTable = tableXml.replace(/<w:tr\b[\s\S]*?<\/w:tr>/g, (rowXml) => {
+      return paragraphText(rowXml) ? rowXml : "";
+    });
+    return paragraphText(cleanedTable) ? cleanedTable : "";
+  });
+}
+
+function isBusinessAnalysisTemplateMatch(parsed: Pick<ParsedOpportunity, "roleTitle" | "cleanRoleTitle" | "company">, jdText: string): boolean {
+  const title = `${parsed.roleTitle || ""} ${parsed.cleanRoleTitle || ""}`;
+  if (/\b(senior\s+)?(technical\s+)?business\s+(systems?\s+)?analyst\b/i.test(title)) return true;
+  if (/\b(functional|systems)\s+analyst\b/i.test(title)) return true;
+
+  const jdSignals = [
+    /\brequirements?\s+(gathering|analysis|documentation)\b/i,
+    /\bbusiness\s+process\s+(mapping|analysis)\b/i,
+    /\buser stor(?:y|ies)\b/i,
+    /\bacceptance criteria\b/i,
+    /\bbacklog\b/i,
+    /\bproduct owner\b/i,
+    /\bUAT\b/i,
+    /\btraceability matrix\b/i,
+    /\bJira\b/i,
+    /\bConfluence\b/i
+  ];
+  return jdSignals.filter((pattern) => pattern.test(jdText)).length >= 4;
+}
+
+export function selectTailoringTemplatePath(args: TailoringTemplateSelectionArgs): string {
+  if (
+    args.businessAnalysisTemplatePath
+    && fs.existsSync(args.businessAnalysisTemplatePath)
+    && isBusinessAnalysisTemplateMatch(args.parsed, args.jdText)
+  ) {
+    return args.businessAnalysisTemplatePath;
+  }
+  return args.defaultTemplatePath;
+}
+
 /**
  * Build a role-focused professional resume and prevent visible process language.
  */
@@ -274,9 +334,9 @@ export async function tailorResumeForJD(args: TailorArgs): Promise<TailorResult>
   const xml = await docEntry.async("string");
   const paragraphs = [...xml.matchAll(/<w:p\b[\s\S]*?<\/w:p>/g)].map((match) => match[0]);
 
-  const summaryHeadingIdx = findHeadingIndex(paragraphs, /^SUMMARY$/i);
-  const coreHeadingIdx = findHeadingIndex(paragraphs, /^CORE STRENGTHS$/i);
-  const experienceHeadingIdx = findHeadingIndex(paragraphs, /^EXPERIENCE$/i);
+  const summaryHeadingIdx = findHeadingIndex(paragraphs, /^(SUMMARY|PROFESSIONAL SUMMARY)$/i);
+  const coreHeadingIdx = findHeadingIndex(paragraphs, /^(CORE STRENGTHS|CORE SKILLS|SKILLS)$/i);
+  const experienceHeadingIdx = findHeadingIndex(paragraphs, /^(EXPERIENCE|PROFESSIONAL EXPERIENCE)$/i);
   const educationHeadingIdx = findHeadingIndex(paragraphs, /^(EDUCATION|EDUCATION\s*&\s*CERTIFICATIONS)/i);
   const portfolioHeadingIdx = findHeadingIndex(paragraphs, /^PORTFOLIO$/i);
 
@@ -291,7 +351,7 @@ export async function tailorResumeForJD(args: TailorArgs): Promise<TailorResult>
   const nameIdx = preambleIndexes.find((index) => /fejiro\s+efiuvwere/i.test(paragraphText(paragraphs[index]))) ?? -1;
   const subtitleIdx = preambleIndexes.find((index) => {
     const text = paragraphText(paragraphs[index]);
-    return text.includes("|") && (nameIdx < 0 || index < nameIdx);
+    return text.includes("|") && !/^\s*(?:whitby|toronto|oshawa|ajax|pickering|canada)\b/i.test(text);
   }) ?? -1;
 
   const titleLimit = subtitleIdx >= 0 ? subtitleIdx : nameIdx >= 0 ? nameIdx : summaryHeadingIdx;
@@ -342,7 +402,7 @@ export async function tailorResumeForJD(args: TailorArgs): Promise<TailorResult>
     }
   }
 
-  const updatedXml = joinParagraphs(xml, paragraphs);
+  const updatedXml = stripEmptyTableRowsAndTables(stripLegacyBulletPrefixesFromXml(joinParagraphs(xml, paragraphs)));
   zip.file("word/document.xml", sanitizeVisibleDocXml(updatedXml));
 
   const visibleXmlEntries = Object.keys(zip.files).filter((fileName) =>

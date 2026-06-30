@@ -9,7 +9,7 @@ import { createReplyDraftInThread, listRecruiterInboundMessages, sendDraftById, 
 import { generateApplyAssist, generateFollowups, generateInterviewPrep, generateOutreachDrafts, generatePackages, ingestGmailJobAlerts, insertHuntJob, normalizeSourceJob, scoreJobs, scrapeDice, scrapeIndeed, ingestScrapedJobs } from "./hunt.js";
 import { parseRecruiterEmail } from "./job_parser.js";
 import { scoreOpportunity } from "./match_scorer.js";
-import { tailorResumeForJD } from "./resume_tailor.js";
+import { selectTailoringTemplatePath, tailorResumeForJD } from "./resume_tailor.js";
 import { buildTailoredCoverLetter } from "./resume_style.js";
 import { resolveProjectPath } from "./db.js";
 
@@ -962,10 +962,16 @@ export async function runAutoEmailQueue(params: {
       && cfg.rules.resume_tailoring.output_dir
     ) {
       try {
+        const templatePath = selectTailoringTemplatePath({
+          parsed: parsed as any,
+          jdText: message.body || parsed.cleanBody || "",
+          defaultTemplatePath: cfg.rules.resume_tailoring.template_path,
+          businessAnalysisTemplatePath: cfg.rules.resume_tailoring.business_analysis_template_path
+        });
         const tailored = await tailorResumeForJD({
           parsed: parsed as any,
           jdText: message.body || parsed.cleanBody || "",
-          templatePath: cfg.rules.resume_tailoring.template_path,
+          templatePath,
           outputDir: cfg.rules.resume_tailoring.output_dir
         });
         recruiterResumePath = tailored.docxPath;
@@ -1738,10 +1744,16 @@ async function buildApplicationArtifacts(args: {
       isUsRole: false
     };
     try {
+      const templatePath = selectTailoringTemplatePath({
+        parsed: parsed as any,
+        jdText: args.job.description || "",
+        defaultTemplatePath: args.cfg.rules.resume_tailoring.template_path,
+        businessAnalysisTemplatePath: args.cfg.rules.resume_tailoring.business_analysis_template_path
+      });
       const result = await tailorResumeForJD({
         parsed: parsed as any,
         jdText: args.job.description || "",
-        templatePath: args.cfg.rules.resume_tailoring.template_path,
+        templatePath,
         outputDir: args.cfg.rules.resume_tailoring.output_dir
       });
       if (packageRow?.cover_letter_text) {

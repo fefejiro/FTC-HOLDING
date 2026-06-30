@@ -20,7 +20,7 @@ export type HuntJobStatus =
   | "needs_review"
   | "blocked";
 export type HuntSource = "manual" | "gmail_alert" | "greenhouse" | "lever" | "ashby" | "linkedin" | "indeed" | "dice" | "monster" | "workday" | "recruiter" | "agency_alert";
-export type HuntTier = "tier_1" | "tier_2" | "tier_3" | "blocked";
+export type HuntTier = "tier_1" | "tier_2" | "tier_3" | "tier_4" | "blocked";
 
 export interface HuntJobInput {
   title?: string;
@@ -79,10 +79,20 @@ export interface HuntScoreResult {
 
 const FORBIDDEN_AUTH_CLAIMS = [/\bu\.?s\.? citizen\b/i, /green card/i, /permanent resident/i, /security clearance/i];
 const SENSITIVE_REVIEW = /\b(salary|rate|work authorization|visa|sponsorship|relocation|eeo|legal attestation|references?|sin|ssn|passport|date of birth|dob|final submit)\b/i;
-const TIER_1_ROLES = /\b(business systems manager|technical program manager|program manager|senior manager|product owner|product manager|director)\b/i;
-const TIER_2_ROLES = /\b(technical project manager|delivery manager|implementation manager|business analyst|systems analyst|solution consultant|project manager)\b/i;
-const SYSTEMS_SIGNALS = /\b(erp|wms|warehouse management|pos|api|integration|integrations|enterprise systems|business systems|retail systems|supply chain|digital transformation|platform delivery|cloud migration|operations technology|uat|vendor|stakeholder|product ownership|program delivery|manhattan|sap|gcp|salesforce|crm)\b/i;
-const AUTOMATION_SIGNALS = /\b(ai|automation|workflow|node|typescript|react|cloud|data|reporting)\b/i;
+const WMS_SIGNALS = /\b(wms|warehouse management|manhattan wmos|manhattan active|blue yonder|supply chain|warehouse operations|distribution|logistics|inventory|retail operations)\b/i;
+const DELIVERY_ROLES = /\b(project manager|consultant|business analyst|business systems analyst|systems analyst|technical consultant|implementation consultant|delivery manager|program manager)\b/i;
+const SENIOR_BSA_ROLES = /\b(senior business systems analyst|technical business analyst|business systems analyst|business analyst|systems analyst)\b/i;
+const QA_UAT_ROLES = /\b(senior qa|quality engineer|uat lead|test lead|qa lead|quality assurance lead|release validation)\b/i;
+const TECH_PROJECT_ROLES = /\b(technical project manager|technical program manager|it project manager|program manager|project manager|implementation manager)\b/i;
+const SYSTEMS_SIGNALS = /\b(erp|wms|warehouse management|pos|api|integration|integrations|enterprise systems|business systems|retail systems|supply chain|digital transformation|platform delivery|cloud migration|operations technology|uat|vendor|stakeholder|program delivery|implementation|migration|saas|cloud|sql|regression|end-to-end|release validation|manhattan|sap|gcp|salesforce|crm)\b/i;
+const QA_SIGNALS = /\b(integration|api|sql|regression|end-to-end|e2e|release validation|uat|test plan|test strategy|data validation|quality gate)\b/i;
+const HARD_REJECT_PATTERNS: Array<[RegExp, string]> = [
+  [/\b(?:must|required|mandatory)[^.]{0,80}\b(?:cpa|ca|cia)\b|\b(?:cpa|ca|cia)\b[^.]{0,80}\b(?:must|required|mandatory)\b/i, "Hard reject: CPA/CA/CIA is mandatory."],
+  [/\bkinaxis\b[^.]{0,100}\b(?:certified|certification|mandatory|required|must)\b|\b(?:certified|certification|mandatory|required|must)\b[^.]{0,100}\bkinaxis\b/i, "Hard reject: Kinaxis certification or mandatory Kinaxis ownership is required."],
+  [/\bpmp\b[^.]{0,80}\b(?:mandatory|required|must)\b|\b(?:mandatory|required|must)\b[^.]{0,80}\bpmp\b/i, "Hard reject: PMP is mandatory and the posting does not show flexibility."],
+  [/\b(?:(?:0|zero)\s*(?:-|–|—|to)\s*(?:2|two)\s+(?:years?|yrs?)|entry[- ]level|early[- ]career|new grad)\b/i, "Hard reject: early-career or 0-2 years role."],
+  [/\b(?:must|required|mandatory)[^.]{0,80}\b(?:hands-on|daily|primary)[^.]{0,80}\b(?:c#|java|typescript|react|node)\b/i, "Hard reject: daily hands-on software development is mandatory."]
+];
 const JOB_ALERT_SENDERS = /\b(linkedin|indeed|dice|workday|greenhouse|lever|ashby|recruit|talent|staffing|agency|jobs?)\b/i;
 const JOB_ALERT_SUBJECTS = /\b(job alert|jobs? for you|new jobs?|recommended jobs?|job matches?|hiring|opening|opportunit|application|position)\b/i;
 const SOURCE_HOSTS: Array<[RegExp, HuntSource]> = [
@@ -226,7 +236,15 @@ export function scoreHuntJob(job: {
   const requiredSkills = parseJsonArray(job.required_skills || "[]");
   const preferredSkills = parseJsonArray(job.preferred_skills || "[]");
   const flags = parseJsonArray(job.red_flags || "[]");
-  const haystack = `${job.title || ""}\n${job.company || ""}\n${job.description || ""}\n${requiredSkills.join("\n")}\n${preferredSkills.join("\n")}`;
+  const haystack = [
+    job.title || "",
+    job.company || "",
+    job.location || "",
+    job.work_mode || "",
+    stripVisibleEvidenceMetadata(job.description || ""),
+    requiredSkills.join("\n"),
+    preferredSkills.join("\n")
+  ].join("\n");
 
   if (flags.includes("forbidden_auth_claim_present") || FORBIDDEN_AUTH_CLAIMS.some((re) => re.test(haystack))) {
     return {
@@ -238,33 +256,66 @@ export function scoreHuntJob(job: {
     };
   }
 
-  const roleTier1 = TIER_1_ROLES.test(haystack);
-  const roleTier2 = TIER_2_ROLES.test(haystack);
-  const systems = countMatches(haystack, SYSTEMS_SIGNALS);
-  const automation = countMatches(haystack, AUTOMATION_SIGNALS);
-  const skillScore = Math.min(24, (requiredSkills.length + preferredSkills.length) * 4);
-  const geoScore = scoreGeographyPreference(job.location || "", job.work_mode || "");
-
-  if (roleTier1 && systems > 0) {
+  const hardReject = getHardRejectReason({
+    haystack,
+    title: job.title || "",
+    location: job.location || "",
+    workMode: job.work_mode || ""
+  });
+  if (hardReject) {
     return {
-      score: Math.min(100, 72 + systems * 6 + automation * 3 + skillScore + geoScore),
-      tier: "tier_1",
-      status: job.needs_review ? "needs_review" : "scored",
-      next_action: job.needs_review ? "review_sensitive_fields_then_package" : "generate_package",
-      reason: "Tier 1 role with enterprise systems, platform, integration, retail, supply chain, or transformation signal."
+      score: 0,
+      tier: "blocked",
+      status: "blocked",
+      next_action: "do_not_apply",
+      reason: hardReject
     };
   }
 
-  if (roleTier1 || (roleTier2 && systems > 0)) {
-    return {
-      score: Math.min(89, 58 + systems * 5 + automation * 2 + skillScore + geoScore),
+  const wms = countMatches(haystack, WMS_SIGNALS);
+  const deliveryRole = DELIVERY_ROLES.test(haystack);
+  const seniorBsaRole = SENIOR_BSA_ROLES.test(haystack);
+  const qaRole = QA_UAT_ROLES.test(haystack);
+  const techProjectRole = TECH_PROJECT_ROLES.test(haystack);
+  const systems = countMatches(haystack, SYSTEMS_SIGNALS);
+  const qaSignals = countMatches(haystack, QA_SIGNALS);
+  const skillScore = Math.min(24, (requiredSkills.length + preferredSkills.length) * 4);
+  const geoScore = scoreGeographyPreference(job.location || "", job.work_mode || "");
+
+  if (seniorBsaRole && systems > 0) {
+    return finalizeFitScore({
+      score: Math.min(84, 58 + systems * 5 + skillScore + geoScore),
       tier: "tier_2",
-      status: "needs_review",
-      next_action: "review_medium_fit",
-      reason: roleTier1
-        ? "Tier 1 role title found, but systems/platform signal is weak or unclear."
-        : "Tier 2 delivery, BA, implementation, or project role with systems signal."
-    };
+      needsReview: true,
+      reason: "Tier 2 senior or technical business systems analyst role with ERP, WMS, supply chain, integration, SaaS, or cloud signal."
+    });
+  }
+
+  if (wms > 0 && deliveryRole) {
+    return finalizeFitScore({
+      score: Math.min(100, 74 + wms * 6 + systems * 4 + skillScore + geoScore),
+      tier: "tier_1",
+      needsReview: Boolean(job.needs_review),
+      reason: "Tier 1 WMS, warehouse, supply chain, or logistics systems role with delivery, consulting, BA, or project leadership signal."
+    });
+  }
+
+  if (qaRole && qaSignals > 0) {
+    return finalizeFitScore({
+      score: Math.min(84, 56 + qaSignals * 6 + systems * 3 + skillScore + geoScore),
+      tier: "tier_3",
+      needsReview: true,
+      reason: "Tier 3 QA, UAT, test lead, or quality engineering role for enterprise systems validation."
+    });
+  }
+
+  if (techProjectRole && systems > 0) {
+    return finalizeFitScore({
+      score: Math.min(84, 54 + systems * 5 + skillScore + geoScore),
+      tier: "tier_4",
+      needsReview: true,
+      reason: "Tier 4 systems-heavy technical project, program, implementation, migration, ERP, WMS, or SaaS delivery role."
+    });
   }
 
   const genericProject = /\bproject manager\b/i.test(haystack);
@@ -278,14 +329,99 @@ export function scoreHuntJob(job: {
     };
   }
 
-  const score = Math.min(74, 35 + systems * 6 + automation * 4 + skillScore + geoScore);
+  const score = Math.min(69, 35 + systems * 5 + qaSignals * 3 + skillScore + geoScore);
   return {
     score,
-    tier: score >= 60 ? "tier_3" : "blocked",
-    status: score >= 60 ? (job.needs_review ? "needs_review" : "scored") : "blocked",
-    next_action: score >= 60 ? (job.needs_review ? "review_sensitive_fields_then_package" : "review_low_fit") : "skip_low_fit",
-    reason: score >= 60 ? "Some relevant signals found, but not enough for Tier 1 or Tier 2." : "Low fit for the current hunt strategy."
+    tier: score >= 50 ? "tier_4" : "blocked",
+    status: score >= 50 ? "needs_review" : "blocked",
+    next_action: score >= 50 ? "save_do_not_apply" : "skip_low_fit",
+    reason: score >= 50 ? "Some relevant systems signals found, but below the active apply threshold." : "Low fit for the current hunt strategy."
   };
+}
+
+function finalizeFitScore(args: {
+  score: number;
+  tier: HuntTier;
+  needsReview: boolean;
+  reason: string;
+}): HuntScoreResult {
+  if (args.score >= 85) {
+    return {
+      score: args.score,
+      tier: args.tier,
+      status: args.needsReview ? "needs_review" : "scored",
+      next_action: args.needsReview ? "review_sensitive_fields_then_package" : "generate_package",
+      reason: args.reason
+    };
+  }
+  if (args.score >= 70) {
+    return {
+      score: args.score,
+      tier: args.tier,
+      status: "needs_review",
+      next_action: "prepare_if_easy_apply_or_recruiter_match",
+      reason: args.reason
+    };
+  }
+  if (args.score >= 50) {
+    return {
+      score: args.score,
+      tier: args.tier,
+      status: "needs_review",
+      next_action: "save_do_not_apply",
+      reason: args.reason
+    };
+  }
+  return {
+    score: args.score,
+    tier: "blocked",
+    status: "blocked",
+    next_action: "skip_low_fit",
+    reason: "Low fit for the current hunt strategy."
+  };
+}
+
+function stripVisibleEvidenceMetadata(description: string): string {
+  return description
+    .replace(/^\[[^\]]+ evidence\][\s\S]*?(?=About the job\b|Job details\b|Description\b|Responsibilities\b|Qualifications\b|$)/i, "")
+    .replace(/\b[a-z]:\\[^\s]+/gi, " ")
+    .replace(/\b[\w.-]+(?:search|screenshot|capture)[\w.-]*\.(?:png|jpg|jpeg|json)\b/gi, " ");
+}
+
+function getHardRejectReason(args: {
+  haystack: string;
+  title: string;
+  location: string;
+  workMode: string;
+}): string {
+  for (const [pattern, reason] of HARD_REJECT_PATTERNS) {
+    if (pattern.test(args.haystack)) return reason;
+  }
+
+  const pureDeveloperTitle = /\b(software engineer|software developer|developer|full stack|front[- ]?end|back[- ]?end|typescript engineer|java developer|c# developer)\b/i.test(args.title);
+  const dailyCoding = /\b(daily|hands-on|write|develop|code|coding|programming|build)\b[^.]{0,80}\b(c#|java|typescript|react|node)\b/i.test(args.haystack);
+  const qaException = QA_UAT_ROLES.test(args.title);
+  if (pureDeveloperTitle && dailyCoding && !qaException) {
+    return "Hard reject: pure developer role requiring daily coding in C#, Java, TypeScript, React, or Node.";
+  }
+
+  const geoBlob = `${args.location} ${args.workMode}`.toLowerCase();
+  const onsite = /\b(onsite|on-site|on site)\b/.test(geoBlob);
+  const gta = /\b(toronto|gta|greater toronto|mississauga|brampton|markham|vaughan|richmond hill|oakville|oshawa|whitby|ajax|pickering|scarborough|north york|etobicoke)\b/.test(geoBlob);
+  const excellentRate = hasExcellentRate(args.haystack);
+  if (onsite && !gta && !excellentRate) {
+    return "Hard reject: onsite outside GTA without excellent contract rate or salary evidence.";
+  }
+
+  return "";
+}
+
+function hasExcellentRate(value: string): boolean {
+  const hourly = [...value.matchAll(/\$\s?(\d{2,3})(?:\.\d+)?\s?(?:\/|per\s+)?(?:hr|hour)/gi)]
+    .some((match) => Number(match[1]) >= 75);
+  const annual = [...value.matchAll(/\$\s?(\d{3})(?:,\d{3})?\s?(?:k|000)?(?:\s?(?:\/|per\s+)?(?:yr|year))?/gi)]
+    .some((match) => Number(match[1]) >= 120);
+  return hourly || annual;
 }
 
 function scoreGeographyPreference(location: string, workMode: string): number {
@@ -313,7 +449,7 @@ export function generatePackages(db: Database.Database): number {
     WHERE status = 'scored'
        OR (
          status = 'needs_review'
-         AND next_action = 'review_medium_fit'
+         AND next_action IN ('review_medium_fit','prepare_if_easy_apply_or_recruiter_match')
          AND COALESCE(tier, '') IN ('tier_1','tier_2','tier_3')
        )
   `).all() as any[];
@@ -599,7 +735,7 @@ export function buildHuntReport(db: Database.Database): string {
   const followupsDue = (db.prepare("SELECT COUNT(*) as c FROM hunt_followups WHERE status='due'").get() as any).c;
   const contacts = (db.prepare("SELECT COUNT(*) as c FROM hunt_contacts").get() as any).c;
   const recruiterWaiting = (db.prepare("SELECT COUNT(*) as c FROM email_auto_response_attempts WHERE status='waiting_review'").get() as any).c;
-  const tierCounts = Object.fromEntries(["tier_1", "tier_2", "tier_3", "blocked"].map((tier) => [tier, (db.prepare("SELECT COUNT(*) as c FROM hunt_jobs WHERE tier=?").get(tier) as any).c]));
+  const tierCounts = Object.fromEntries(["tier_1", "tier_2", "tier_3", "tier_4", "blocked"].map((tier) => [tier, (db.prepare("SELECT COUNT(*) as c FROM hunt_jobs WHERE tier=?").get(tier) as any).c]));
   const latest = db.prepare("SELECT id,title,company,source,status,score,tier,next_action,needs_review FROM hunt_jobs ORDER BY id DESC LIMIT 10").all() as any[];
   const recommended = followupsDue ? "review_due_followups" : drafts ? "review_outreach_drafts" : counts.scored ? "run_hunt_package" : counts.discovered ? "run_hunt_score" : counts.needs_review ? "review_sensitive_or_uncertain_jobs" : "ingest_more_jobs";
   return JSON.stringify({
@@ -813,8 +949,8 @@ function buildOutreachBody(draftType: string, title: string, company: string): s
     return [
       `Hi there,`,
       `I noticed the ${role} opportunity at ${org} and wanted to connect.`,
-      `I work across product delivery, systems operations, automation, and practical AI workflows.`,
-      `Open to sharing a short profile if useful.`,
+      `My background includes enterprise systems delivery, WMS and supply chain systems, integration-heavy implementations, UAT, QA, stakeholder management, vendor coordination, and Agile/Hybrid project delivery.`,
+      `I would be happy to connect if my background looks relevant.`,
       `Best regards,`,
       `Fejiro Efiuvwere`,
       `https://unalabs.cloud/`,
@@ -836,9 +972,10 @@ function buildOutreachBody(draftType: string, title: string, company: string): s
   if (draftType === "post_application_followup") {
     return [
       `Hello,`,
-      `I recently applied for ${role} at ${org}.`,
-      `I remain strongly interested and would appreciate any update on next steps.`,
-      `Happy to provide additional details if needed.`,
+      `I recently applied for the ${role} role at ${org} and wanted to briefly introduce myself.`,
+      `My background includes enterprise systems delivery, WMS and supply chain systems, integration-heavy implementations, UAT, QA, stakeholder management, vendor coordination, and Agile/Hybrid project delivery across retail, public-sector, and logistics environments.`,
+      `The role looked aligned with my experience around systems delivery, integration, UAT, and stakeholder coordination.`,
+      `I would be happy to connect if my background looks relevant.`,
       `Best regards,`,
       `Fejiro Efiuvwere`,
       `https://unalabs.cloud/`,
@@ -848,7 +985,7 @@ function buildOutreachBody(draftType: string, title: string, company: string): s
   return [
     `Hello,`,
     `I am exploring ${role} opportunities and came across ${org}.`,
-    `My background combines product delivery, CRM systems, operations automation, and AI workflow implementation.`,
+    `My background includes enterprise systems delivery, WMS and supply chain systems, integration-heavy implementations, UAT, QA, stakeholder management, vendor coordination, and Agile/Hybrid project delivery.`,
     `If there is an active fit, I would value the chance to speak.`,
     `Best regards,`,
     `Fejiro Efiuvwere`,
@@ -963,7 +1100,8 @@ function assertRealJobRecord(job: Pick<NormalizedHuntJob, "title" | "company" | 
     .join("\n")
     .toLowerCase();
 
-  const isSynthetic = /\bvalidation\b|\bsynthetic\b/.test(haystack)
+  const isSynthetic = /\bsynthetic\b/.test(haystack)
+    || /\bvalidation\s+(?:test|fixture|sample|placeholder)\b/.test(haystack)
     || /https?:\/\/(www\.)?httpbin\.org\//.test(haystack)
     || /example\.com|\/example\//.test(haystack);
 

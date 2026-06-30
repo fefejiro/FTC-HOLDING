@@ -49,14 +49,30 @@ function Run-Step($label, $cmd) {
 
 "=== Scheduler start $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" | Tee-Object -FilePath $log -Append
 "Working dir: $root" | Tee-Object -FilePath $log -Append
+$pausedSourcesRaw = if ($env:JOB_AGENT_PAUSED_SOURCES) { $env:JOB_AGENT_PAUSED_SOURCES } else { "dice,indeed,monster" }
+$pausedSources = @($pausedSourcesRaw -split "," | ForEach-Object { $_.Trim().ToLowerInvariant() } | Where-Object { $_ })
+function Test-SourcePaused($source) {
+  return $pausedSources -contains $source.ToLowerInvariant()
+}
+"Paused sources: $($pausedSources -join ', ')" | Tee-Object -FilePath $log -Append
 $allowBrowserCycle = $BrowserCycle -or $env:JOB_AGENT_BROWSER_CYCLE -in @("1", "true", "TRUE", "yes", "YES", "on", "ON")
 
 if (-not $allowBrowserCycle) {
   "Browser cycle is disabled for scheduled/background mode. Chrome/CDP will not be checked or controlled." | Tee-Object -FilePath $log -Append
   $statusExit = Run-Step "1. Status snapshot" "npm run hunt:status"
-  $queueExit = Run-Step "2. Premium Dice queue snapshot" "npm run hunt:premium-queue -- --source=dice --limit=10"
-  $indeedQueueExit = Run-Step "3. Premium Indeed queue snapshot" "npm run hunt:premium-queue -- --source=indeed --limit=10"
-  $monsterQueueExit = Run-Step "4. Premium Monster queue snapshot" "npm run hunt:premium-queue -- --source=monster --limit=10"
+  $queueExit = Run-Step "2. Premium LinkedIn queue snapshot" "npm run hunt:premium-queue -- --source=linkedin --limit=10"
+  if (Test-SourcePaused "indeed") {
+    "=== 3. Premium Indeed queue snapshot skipped: source paused ===" | Tee-Object -FilePath $log -Append
+    $indeedQueueExit = 0
+  } else {
+    $indeedQueueExit = Run-Step "3. Premium Indeed queue snapshot" "npm run hunt:premium-queue -- --source=indeed --limit=10"
+  }
+  if (Test-SourcePaused "monster") {
+    "=== 4. Premium Monster queue snapshot skipped: source paused ===" | Tee-Object -FilePath $log -Append
+    $monsterQueueExit = 0
+  } else {
+    $monsterQueueExit = Run-Step "4. Premium Monster queue snapshot" "npm run hunt:premium-queue -- --source=monster --limit=10"
+  }
   $trustExit = Run-Step "5. Trust report snapshot" "npm run hunt:trust-report -- --limit=15"
   if ($statusExit -ne 0) { exit $statusExit }
   if ($queueExit -ne 0) { exit $queueExit }
@@ -78,9 +94,19 @@ try {
 if (-not $existingCdp) {
   "No Chrome CDP session is already available on 127.0.0.1:9333. Not launching a new Chrome/profile; keeping Fejiro's existing Chrome window untouched." | Tee-Object -FilePath $log -Append
   $statusExit = Run-Step "1. Status snapshot" "npm run hunt:status"
-  $queueExit = Run-Step "2. Premium Dice queue snapshot" "npm run hunt:premium-queue -- --source=dice --limit=10"
-  $indeedQueueExit = Run-Step "3. Premium Indeed queue snapshot" "npm run hunt:premium-queue -- --source=indeed --limit=10"
-  $monsterQueueExit = Run-Step "4. Premium Monster queue snapshot" "npm run hunt:premium-queue -- --source=monster --limit=10"
+  $queueExit = Run-Step "2. Premium LinkedIn queue snapshot" "npm run hunt:premium-queue -- --source=linkedin --limit=10"
+  if (Test-SourcePaused "indeed") {
+    "=== 3. Premium Indeed queue snapshot skipped: source paused ===" | Tee-Object -FilePath $log -Append
+    $indeedQueueExit = 0
+  } else {
+    $indeedQueueExit = Run-Step "3. Premium Indeed queue snapshot" "npm run hunt:premium-queue -- --source=indeed --limit=10"
+  }
+  if (Test-SourcePaused "monster") {
+    "=== 4. Premium Monster queue snapshot skipped: source paused ===" | Tee-Object -FilePath $log -Append
+    $monsterQueueExit = 0
+  } else {
+    $monsterQueueExit = Run-Step "4. Premium Monster queue snapshot" "npm run hunt:premium-queue -- --source=monster --limit=10"
+  }
   $trustExit = Run-Step "5. Trust report snapshot" "npm run hunt:trust-report -- --limit=15"
   if ($statusExit -ne 0) { exit $statusExit }
   if ($queueExit -ne 0) { exit $queueExit }
@@ -95,7 +121,7 @@ $env:JOB_AGENT_CDP_URL = "http://127.0.0.1:9333"
 $env:JOB_AGENT_REQUIRE_CDP = "true"
 $env:JOB_AGENT_SCRAPER_TIMEOUT_MS = "20000"
 
-$exitCode = Run-Step "1. Laptop Dice/proof cycle" "npm run run:laptop-cycle"
+$exitCode = Run-Step "1. LinkedIn laptop scout/package cycle" "npm run hunt:scrape-linkedin && npm run hunt:score -- --source=linkedin && npm run hunt:package -- --source=linkedin && npm run hunt:premium-queue -- --source=linkedin --limit=10"
 
 if ($exitCode -ne 0) {
   "=== FAILED with exit code $exitCode at $(Get-Date -Format 'HH:mm:ss') ===" | Tee-Object -FilePath $log -Append

@@ -77,18 +77,18 @@ describe("hunt flow", () => {
   it("manual happy path can score, package, draft outreach, and report next action", () => {
     const db = getDb(":memory:");
     insertHuntJob(db, parseManualJobText([
-      "Title: Senior Workflow Engineer",
+      "Title: Supply Chain Systems Project Manager",
       "Company: Northstar",
       "Location: Toronto Remote",
       "Apply URL: https://jobs.lever.co/northstar/workflow",
-      "Description: Remote full-time role building TypeScript, Node, React, CRM automation, and AI workflow tools.",
+      "Description: Remote full-time role leading WMS, warehouse management, supply chain integration, ERP, UAT, vendor coordination, and implementation delivery.",
       "Required Skills:",
-      "- TypeScript",
-      "- Node",
-      "- React",
-      "- CRM automation",
+      "- WMS",
+      "- ERP integration",
+      "- UAT",
+      "- Vendor coordination",
       "Preferred Skills:",
-      "- Salesforce"
+      "- Manhattan WMOS"
     ].join("\n")));
 
     expect(scoreJobs(db)).toBe(1);
@@ -141,28 +141,30 @@ describe("hunt flow", () => {
     expect(greenhouse.required_skills).toBe("[]");
   });
 
-  it("scoring status transition moves discovered jobs forward", () => {
+  it("scoring blocks pure developer jobs before package generation", () => {
     const db = getDb(":memory:");
     insertHuntJob(db, normalizeSourceJob({
-      title: "Engineer",
+      title: "Software Engineer",
       company: "Acme",
-      description: "TypeScript Node React automation",
+      description: "Daily hands-on coding role requiring TypeScript, Node, and React development.",
       required_skills: ["TypeScript", "Node", "React"]
     }));
 
     scoreJobs(db);
-    const row = db.prepare("SELECT status, score FROM hunt_jobs LIMIT 1").get() as any;
+    const row = db.prepare("SELECT status, score, next_action, tier_reason FROM hunt_jobs LIMIT 1").get() as any;
 
-    expect(row.status).toBe("scored");
-    expect(row.score).toBeGreaterThanOrEqual(60);
+    expect(row.status).toBe("blocked");
+    expect(row.score).toBe(0);
+    expect(row.next_action).toBe("do_not_apply");
+    expect(row.tier_reason).toContain("pure developer");
   });
 
-  it("tier scoring prioritizes business systems and program/product roles with systems signals", () => {
+  it("tier scoring prioritizes WMS and supply chain systems delivery roles", () => {
     const result = scoreHuntJob({
-      title: "Business Systems Manager",
+      title: "WMS Supply Chain Systems Project Manager",
       company: "RetailCo",
-      description: "Lead ERP, WMS, POS, API integration, UAT, vendor delivery, and retail systems transformation.",
-      required_skills: JSON.stringify(["ERP", "WMS", "POS", "API integration"]),
+      description: "Lead Manhattan WMOS, warehouse management, supply chain integration, ERP, UAT, vendor delivery, and retail systems transformation.",
+      required_skills: JSON.stringify(["ERP", "WMS", "Warehouse Management", "API integration"]),
       preferred_skills: "[]",
       needs_review: 0,
       red_flags: "[]"
@@ -171,7 +173,95 @@ describe("hunt flow", () => {
     expect(result.tier).toBe("tier_1");
     expect(result.status).toBe("scored");
     expect(result.next_action).toBe("generate_package");
-    expect(result.score).toBeGreaterThanOrEqual(80);
+    expect(result.score).toBeGreaterThanOrEqual(85);
+  });
+
+  it("places senior BSA roles into prepare-only band unless fit is exceptional", () => {
+    const result = scoreHuntJob({
+      title: "Senior Business Systems Analyst",
+      company: "SystemsCo",
+      location: "Canada Remote",
+      work_mode: "remote",
+      description: "ERP, WMS, supply chain, SaaS integration, cloud workflow, stakeholder requirements, and UAT.",
+      required_skills: JSON.stringify(["ERP", "WMS", "Integration", "UAT"]),
+      preferred_skills: "[]",
+      needs_review: 0,
+      red_flags: "[]"
+    });
+
+    expect(result.tier).toBe("tier_2");
+    expect(result.status).toBe("needs_review");
+    expect(result.next_action).toBe("prepare_if_easy_apply_or_recruiter_match");
+    expect(result.score).toBeGreaterThanOrEqual(70);
+    expect(result.score).toBeLessThan(85);
+  });
+
+  it("routes QA and UAT enterprise validation roles into the quality engineering lane", () => {
+    const result = scoreHuntJob({
+      title: "UAT Lead",
+      company: "ReleaseCo",
+      location: "Remote Canada",
+      work_mode: "remote",
+      description: "Integration testing, API validation, SQL data checks, regression, end-to-end release validation, and UAT leadership.",
+      required_skills: JSON.stringify(["API", "SQL", "Regression", "UAT"]),
+      preferred_skills: "[]",
+      needs_review: 0,
+      red_flags: "[]"
+    });
+
+    expect(result.tier).toBe("tier_3");
+    expect(result.status).toBe("needs_review");
+    expect(result.next_action).toBe("prepare_if_easy_apply_or_recruiter_match");
+    expect(result.score).toBeGreaterThanOrEqual(70);
+  });
+
+  it("hard rejects mandatory CPA, Kinaxis, PMP, and early-career roles", () => {
+    const cpa = scoreHuntJob({ title: "Transformation Manager", description: "CPA or CA is mandatory for this role.", required_skills: "[]", preferred_skills: "[]", red_flags: "[]" });
+    const kinaxis = scoreHuntJob({ title: "Supply Chain Consultant", description: "Must have Kinaxis certification.", required_skills: "[]", preferred_skills: "[]", red_flags: "[]" });
+    const pmp = scoreHuntJob({ title: "Project Manager", description: "PMP certification is required.", required_skills: "[]", preferred_skills: "[]", red_flags: "[]" });
+    const junior = scoreHuntJob({ title: "Business Analyst", description: "Entry-level role, 0-2 years of experience.", required_skills: "[]", preferred_skills: "[]", red_flags: "[]" });
+
+    for (const result of [cpa, kinaxis, pmp, junior]) {
+      expect(result.status).toBe("blocked");
+      expect(result.next_action).toBe("do_not_apply");
+      expect(result.score).toBe(0);
+    }
+  });
+
+  it("does not mistake LinkedIn freshness or company-size text for a 0-2 years gate", () => {
+    const result = scoreHuntJob({
+      title: "Senior Information Technology Project Manager",
+      company: "NEOGOV",
+      location: "Canada (Remote)",
+      work_mode: "remote",
+      description: "Remote contract role posted 2 weeks ago at a 501-1,000 employee SaaS company. Requires 7+ years of PMO leadership, release readiness, QA coordination, Jira reporting, and portfolio delivery.",
+      required_skills: JSON.stringify(["PMO", "SaaS", "Jira", "QA", "release readiness"]),
+      preferred_skills: JSON.stringify(["SAFe", "AI-enabled reporting"]),
+      needs_review: 0,
+      red_flags: "[]"
+    });
+
+    expect(result.status).not.toBe("blocked");
+    expect(result.next_action).not.toBe("do_not_apply");
+    expect(result.score).toBeGreaterThan(0);
+  });
+
+  it("does not let evidence filenames or screenshot paths inflate fit scoring", () => {
+    const result = scoreHuntJob({
+      title: "Senior Information Technology Project Manager",
+      company: "NEOGOV",
+      location: "Canada (Remote)",
+      work_mode: "remote",
+      description: "[LinkedIn visible evidence] easy_apply=yes; screenshot=C:\\FTC HOLDING\\APPS\\job-reply-agent\\.local\\visible-linkedin\\linkedin-wms-search-20260619.png About the job Remote SaaS portfolio PMO role with release readiness, QA coordination, Jira reporting, and delivery governance.",
+      required_skills: JSON.stringify(["PMO", "SaaS", "Jira", "QA", "release readiness"]),
+      preferred_skills: JSON.stringify(["SAFe", "AI-enabled reporting"]),
+      needs_review: 0,
+      red_flags: "[]"
+    });
+
+    expect(result.tier).toBe("tier_4");
+    expect(result.score).toBeLessThan(85);
+    expect(result.next_action).toBe("prepare_if_easy_apply_or_recruiter_match");
   });
 
   it("adds extra priority for US and Canada remote or hybrid roles", () => {
@@ -799,10 +889,10 @@ describe("hunt flow", () => {
   it("package generation path and outreach drafts are draft-only", () => {
     const db = getDb(":memory:");
     insertHuntJob(db, normalizeSourceJob({
-      title: "Technical Program Manager",
+      title: "WMS Technical Program Manager",
       company: "Acme",
-      description: "ERP API integration program delivery with TypeScript and Node implementation partners.",
-      required_skills: ["ERP", "API integration", "TypeScript", "Node"]
+      description: "WMS, warehouse management, ERP, API integration, UAT, vendor coordination, and supply chain program delivery.",
+      required_skills: ["WMS", "ERP", "API integration", "UAT"]
     }));
     scoreJobs(db);
 
@@ -818,7 +908,7 @@ describe("hunt flow", () => {
     expect(pkg.resume_text).toContain("Core Strengths");
     expect(pkg.resume_text).toContain("Selected Experience Bullets");
     expect(pkg.cover_letter_text).toContain("Dear Hiring Team");
-    expect(pkg.cover_letter_text).toContain("Technical Program Manager");
+    expect(pkg.cover_letter_text).toContain("WMS Technical Program Manager");
     expect(pkg.cover_letter_text).toContain("Acme");
     expect(pkg.cover_letter_text).not.toMatch(/U\.?S\.? citizen|Green Card|permanent resident|security clearance/i);
     expect(pkg.cover_letter_text).not.toMatch(/WMS Project Manager|Blue Yonder|North West Company/i);
@@ -827,6 +917,31 @@ describe("hunt flow", () => {
     expect(waiting.every((draft) => draft.body.split(/\s+/).length <= 120)).toBe(true);
     expect(waiting.every((draft) => !/[—<]/.test(draft.body))).toBe(true);
     expect(sendable.c).toBe(0);
+  });
+
+  it("packages 70-84 Easy Apply review-band jobs after fit-gate scoring", () => {
+    const db = getDb(":memory:");
+    insertHuntJob(db, normalizeSourceJob({
+      title: "Product Quality Owner",
+      company: "Flinks",
+      location: "Toronto, ON (Remote)",
+      source: "linkedin",
+      apply_url: "https://www.linkedin.com/jobs/view/4424719503",
+      description: "Easy Apply. Senior Product Quality Owner responsible for QA, release validation, risk management, product quality backlogs, test case repositories, SaaS delivery, and cross-functional release readiness.",
+      required_skills: ["QA", "release validation", "risk management", "test cases", "SaaS"]
+    }));
+
+    scoreJobs(db);
+    const row = db.prepare("SELECT status, score, tier, next_action FROM hunt_jobs LIMIT 1").get() as any;
+    expect(row.status).toBe("needs_review");
+    expect(row.next_action).toBe("prepare_if_easy_apply_or_recruiter_match");
+    expect(row.score).toBeGreaterThanOrEqual(70);
+    expect(row.score).toBeLessThan(85);
+
+    expect(generatePackages(db)).toBe(1);
+    const pkg = db.prepare("SELECT resume_text, cover_letter_text FROM hunt_packages LIMIT 1").get() as any;
+    expect(pkg.resume_text).toContain("Product Quality Owner");
+    expect(pkg.cover_letter_text).toContain("Flinks");
   });
 
   it("missing title or company moves scored job to needs_review instead of generic fallback", () => {
@@ -853,13 +968,13 @@ describe("hunt flow", () => {
   it("salary-sensitive jobs pause for review before packaging", () => {
     const db = getDb(":memory:");
     insertHuntJob(db, parseManualJobText([
-      "Title: Senior Workflow Engineer",
+      "Title: Supply Chain Systems Project Manager",
       "Company: Northstar",
-      "Description: Remote full-time role building TypeScript, Node, React, CRM automation, and AI workflow tools with salary $130k.",
+      "Description: Remote full-time role leading WMS, warehouse management, ERP integration, UAT, vendor coordination, and supply chain delivery with salary $130k.",
       "Required Skills:",
-      "- TypeScript",
-      "- Node",
-      "- React"
+      "- WMS",
+      "- ERP integration",
+      "- UAT"
     ].join("\n")));
 
     expect(scoreJobs(db)).toBe(1);
@@ -883,11 +998,11 @@ describe("hunt flow", () => {
   it("apply assist generates sessions with safe and pause fields idempotently", () => {
     const db = getDb(":memory:");
     insertHuntJob(db, normalizeSourceJob({
-      title: "Technical Program Manager",
+      title: "WMS Technical Program Manager",
       company: "Acme",
       apply_url: "https://jobs.lever.co/acme/typescript",
-      description: "ERP API integration program delivery with TypeScript and Node implementation partners.",
-      required_skills: ["ERP", "API integration", "TypeScript", "Node"]
+      description: "WMS, warehouse management, ERP, API integration, UAT, vendor coordination, and supply chain program delivery.",
+      required_skills: ["WMS", "ERP", "API integration", "UAT"]
     }));
     scoreJobs(db);
     generatePackages(db);
@@ -914,11 +1029,11 @@ describe("hunt flow", () => {
   it("apply assist detects Workday and sets manual_open_pause status", () => {
     const db = getDb(":memory:");
     insertHuntJob(db, normalizeSourceJob({
-      title: "Technical Program Manager",
+      title: "WMS Technical Program Manager",
       company: "BigCorp",
       apply_url: "https://bigcorp.myworkdayjobs.com/en-US/bigcorp/job/123",
-      description: "ERP API integration program delivery with TypeScript and Node implementation partners.",
-      required_skills: ["ERP", "API integration", "TypeScript", "Node"]
+      description: "WMS, warehouse management, ERP, API integration, UAT, vendor coordination, and supply chain program delivery.",
+      required_skills: ["WMS", "ERP", "API integration", "UAT"]
     }));
     scoreJobs(db);
     generatePackages(db);
@@ -931,11 +1046,11 @@ describe("hunt flow", () => {
   it("apply assist detects Greenhouse/Lever/Ashby and sets assist_ready status", () => {
     const db = getDb(":memory:");
     insertHuntJob(db, normalizeSourceJob({
-      title: "Technical Program Manager",
+      title: "WMS Technical Program Manager",
       company: "Acme",
       apply_url: "https://boards.greenhouse.io/acme/jobs/1",
-      description: "ERP API integration program delivery with TypeScript and Node implementation partners.",
-      required_skills: ["ERP", "API integration", "TypeScript", "Node"]
+      description: "WMS, warehouse management, ERP, API integration, UAT, vendor coordination, and supply chain program delivery.",
+      required_skills: ["WMS", "ERP", "API integration", "UAT"]
     }));
     scoreJobs(db);
     generatePackages(db);
@@ -948,11 +1063,11 @@ describe("hunt flow", () => {
   it("no auto-submit happens—apply assist is browser-assist only", () => {
     const db = getDb(":memory:");
     insertHuntJob(db, normalizeSourceJob({
-      title: "Technical Program Manager",
+      title: "WMS Technical Program Manager",
       company: "Acme",
       apply_url: "https://jobs.lever.co/acme/eng",
-      description: "ERP API integration program delivery with TypeScript and Node implementation partners.",
-      required_skills: ["ERP", "API integration", "TypeScript", "Node"]
+      description: "WMS, warehouse management, ERP, API integration, UAT, vendor coordination, and supply chain program delivery.",
+      required_skills: ["WMS", "ERP", "API integration", "UAT"]
     }));
     scoreJobs(db);
     generatePackages(db);
@@ -968,10 +1083,10 @@ describe("hunt flow", () => {
   it("interview prep generates prep records with likely questions and STAR prompts from interview status jobs", () => {
     const db = getDb(":memory:");
     insertHuntJob(db, normalizeSourceJob({
-      title: "Technical Program Manager",
+      title: "WMS Technical Program Manager",
       company: "Acme",
-      description: "Node TypeScript React integration and automation platform delivery",
-      required_skills: ["TypeScript", "Node", "React", "API", "automation"]
+      description: "WMS, warehouse management, ERP, API integration, UAT, vendor coordination, and supply chain program delivery.",
+      required_skills: ["WMS", "ERP", "API", "UAT"]
     }));
     
     scoreJobs(db);
@@ -988,14 +1103,14 @@ describe("hunt flow", () => {
     const record = db.prepare("SELECT company_brief, likely_questions_json, star_stories_json, technical_talking_points_json FROM hunt_interview_prep LIMIT 1").get() as any;
     
     expect(record.company_brief).toContain("Acme");
-    expect(record.company_brief).toContain("Technical Program Manager");
+    expect(record.company_brief).toContain("WMS Technical Program Manager");
     
     const questions = JSON.parse(record.likely_questions_json);
     const stories = JSON.parse(record.star_stories_json);
     const talking = JSON.parse(record.technical_talking_points_json);
     
     expect(questions.length).toBeGreaterThan(0);
-    expect(questions.some((q: string) => /typescript|node|react|integration|automation/i.test(q))).toBe(true);
+    expect(questions.some((q: string) => /wms|warehouse|integration|api|system/i.test(q))).toBe(true);
     expect(stories.length).toBeGreaterThan(0);
     expect(stories.some((s: string) => /situation|task|action|result/i.test(s))).toBe(true);
     expect(talking.length).toBeGreaterThan(0);
@@ -1004,9 +1119,9 @@ describe("hunt flow", () => {
   it("interview prep includes questions for interviewer and no forbidden claims", () => {
     const db = getDb(":memory:");
     insertHuntJob(db, normalizeSourceJob({
-      title: "Engineer",
+      title: "WMS Technical Program Manager",
       company: "TechCo",
-      description: "Remote Node TypeScript engineering"
+      description: "Remote WMS, warehouse management, ERP, API integration, UAT, and vendor delivery."
     }));
     scoreJobs(db);
     generatePackages(db);
@@ -1025,18 +1140,18 @@ describe("hunt flow", () => {
   it("report includes apply assist and interview prep counts", () => {
     const db = getDb(":memory:");
     insertHuntJob(db, normalizeSourceJob({
-      title: "Technical Program Manager",
+      title: "WMS Technical Program Manager",
       company: "Acme",
       apply_url: "https://jobs.lever.co/acme/mgr",
-      description: "ERP API integration program delivery with TypeScript and Node implementation partners.",
-      required_skills: ["ERP", "API integration", "TypeScript", "Node"]
+      description: "WMS, warehouse management, ERP, API integration, UAT, vendor coordination, and supply chain program delivery.",
+      required_skills: ["WMS", "ERP", "API integration", "UAT"]
     }));
     insertHuntJob(db, normalizeSourceJob({
-      title: "Technical Program Manager",
+      title: "WMS Technical Program Manager",
       company: "TechCo",
       apply_url: "https://jobs.lever.co/techco/eng",
-      description: "ERP API integration program delivery with TypeScript and Node implementation partners.",
-      required_skills: ["ERP", "API integration", "TypeScript", "Node"]
+      description: "WMS, warehouse management, ERP, API integration, UAT, vendor coordination, and supply chain program delivery.",
+      required_skills: ["WMS", "ERP", "API integration", "UAT"]
     }));
     scoreJobs(db);
     generatePackages(db);

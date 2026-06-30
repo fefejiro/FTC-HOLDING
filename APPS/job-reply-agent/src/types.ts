@@ -145,6 +145,7 @@ export interface RulesConfig {
   resume_tailoring?: {
     enabled: boolean;
     template_path: string;
+    business_analysis_template_path?: string;
     output_dir: string;
     attach_mode: "docx_only" | "docx_and_pdf" | "pdf_only";
     auto_send: boolean;

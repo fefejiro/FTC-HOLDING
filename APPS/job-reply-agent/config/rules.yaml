@@ -14,11 +14,11 @@ automation:
     no_auto_send_weekdays: []
 
 filters:
-  min_match_score: 55
+  min_match_score: 70
   score_bands:
-    auto_send_min: 75
-    draft_min: 69
-    needs_review_min: 55
+    auto_send_min: 85
+    draft_min: 70
+    needs_review_min: 50
   labels:
     inbound: JOB AGENT/Recruiter Inbound
     drafted: JOB AGENT/Drafted
@@ -52,7 +52,7 @@ risk_controls:
 scraper:
   enabled: true
   dice:
-    enabled: true
+    enabled: false
     keywords:
       - remote IT manager retail systems
       - remote service delivery manager
@@ -74,7 +74,7 @@ scraper:
       - implementation program manager
     max_jobs_per_run: 25
   indeed:
-    enabled: true
+    enabled: false
     keywords:
       - Houston technical program manager
       - Houston IT project manager
@@ -91,15 +91,13 @@ scraper:
       - implementation program manager
     max_jobs_per_run: 10
   linkedin:
-    enabled: false
+    enabled: true
     keywords:
-      - enterprise architect
-      - technical program manager
-      - business systems analyst
-      - delivery program manager
-      - product operations manager
-      - transformation manager
-      - implementation program manager
+      - WMS Warehouse Management Manhattan WMOS Manhattan Active Blue Yonder Project Manager Consultant Business Analyst Systems Analyst Remote Canada Toronto
+      - Senior Business Systems Analyst Technical Business Analyst ERP WMS supply chain integration SaaS cloud Remote Canada Ontario
+      - Senior QA Quality Engineer UAT Lead Test Lead integration API SQL regression end-to-end release validation Remote Canada
+      - Technical Project Manager Technical Program Manager IT Project Manager implementation integration migration SaaS ERP WMS contract remote hybrid
+      - Technical Consultant enterprise systems WMS supply chain ERP integration Canada remote hybrid
     max_jobs_per_run: 25
   robert_half:
     enabled: false
@@ -134,12 +132,13 @@ trusted_recruiter_domains:
 
 resume_tailoring:
   enabled: true
-  template_path: "C:/FTC HOLDING/DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes/Fejiro_Efiuvwere_Canadian_Tire_Manager_Network_Analytics_Resume.docx"
+  template_path: "C:/FTC HOLDING/DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes/Fejiro_Efiuvwere_Default_Job_Agent_Resume_Template_RQ11067.docx"
+  business_analysis_template_path: "C:/FTC HOLDING/DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes/Fejiro_Efiuvwere_Business_Analyst_Gold_Standard_Template.docx"
   output_dir: "C:/FTC HOLDING/DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes"
   attach_mode: docx_only
   auto_send: false
   auto_send_criteria:
-    min_score: 75
+    min_score: 85
     require_recruiter_name: true
     require_clean_role_title: true
     require_resume_generated: true

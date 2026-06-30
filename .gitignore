@@ -99,7 +99,8 @@ APPS/job-reply-agent/src/hunt/
 APPS/job-reply-agent/tests/automation.test.ts
 
 # Generated resume bank (compiled from agent)
-DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes/
+DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes/*
+!DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes/Fejiro_Efiuvwere_Default_Job_Agent_Resume_Template_RQ11067.docx
 
 # Local dev mounts / artifacts
 APPS/fefejiro

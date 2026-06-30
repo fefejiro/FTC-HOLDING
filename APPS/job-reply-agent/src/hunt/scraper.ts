@@ -449,7 +449,14 @@ export async function scrapeLinkedIn(searchQuery: string, maxJobs: number = 50):
       return normalized.slice(0, maxJobs);
     });
   } catch (error) {
-    logger.error({ error }, "LinkedIn scrape failed");
+    const errorDetails =
+      error instanceof Error
+        ? { name: error.name, message: error.message, stack: error.stack }
+        : { error };
+    logger.error(errorDetails, "LinkedIn scrape failed");
+    if (process.env.JOB_AGENT_REQUIRE_CDP === "true") {
+      throw error;
+    }
     return [];
   }
 }

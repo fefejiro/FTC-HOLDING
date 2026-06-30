@@ -3,7 +3,7 @@ import path from "node:path";
 import type Database from "better-sqlite3";
 import { writeCoverLetterArtifacts } from "../cover_letter.js";
 import { logger } from "../logger.js";
-import { tailorResumeForJD } from "../resume_tailor.js";
+import { selectTailoringTemplatePath, tailorResumeForJD } from "../resume_tailor.js";
 
 type PremiumAction =
   | "apply_candidate"
@@ -157,7 +157,8 @@ function classifyPremiumQueueItem(row: QueueRow): PremiumQueueItem {
 
   if (verified) {
     action = "already_verified";
-    reason = "Already verified in Dice Applied Jobs.";
+    const source = row.source ? row.source[0].toUpperCase() + row.source.slice(1) : "source";
+    reason = `Already verified in ${source} application proof.`;
   } else if (typeof evidence.matchScore === "number" && evidence.matchScore < 40) {
     action = "skip_low_fit";
     reason = `Dice match score ${evidence.matchScore}% is below the safe threshold.`;
@@ -208,6 +209,7 @@ export async function preparePremiumQueueArtifacts(
     limit?: number;
     sourceFilter?: string;
     templatePath: string;
+    businessAnalysisTemplatePath?: string;
     outputDir: string;
   }
 ): Promise<{ prepared: PreparedPremiumArtifact[]; skipped: PreparedPremiumArtifact[] }> {
@@ -232,10 +234,16 @@ export async function preparePremiumQueueArtifacts(
       .get(row.id) as { cover_letter_text?: string } | undefined;
 
     try {
+      const selectedTemplatePath = selectTailoringTemplatePath({
+        parsed: { roleTitle: row.title, cleanRoleTitle: row.title, company: artifactCompany } as any,
+        jdText: row.description || "",
+        defaultTemplatePath: templatePath,
+        businessAnalysisTemplatePath: opts.businessAnalysisTemplatePath
+      });
       const tailored = await tailorResumeForJD({
         parsed: { roleTitle: row.title, company: artifactCompany } as any,
         jdText: row.description || "",
-        templatePath,
+        templatePath: selectedTemplatePath,
         outputDir
       });
       const cover = await writeDurableCoverLetter(outputDir, tailored.docxPath, packageRow?.cover_letter_text || buildSafeCoverLetterText(row), {

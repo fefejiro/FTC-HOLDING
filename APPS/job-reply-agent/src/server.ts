@@ -1167,6 +1167,23 @@ async function start(): Promise<void> {
         return;
       }
 
+      if (
+        req.method === "GET" &&
+        (url.pathname === "/oauth2callback" || url.searchParams.has("code") || url.searchParams.has("error"))
+      ) {
+        const code = url.searchParams.get("code");
+        if (!code) {
+          res.writeHead(400, { "content-type": "text/plain; charset=utf-8" });
+          res.end(`Missing OAuth code. ${url.searchParams.get("error") || ""}`);
+          return;
+        }
+        const cfg = loadConfig();
+        await exchangeCodeAndSaveTokens(cfg.env, code);
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+        res.end("<h1>Gmail OAuth saved</h1><p>You can close this tab and rerun npm run gmail:status.</p>");
+        return;
+      }
+
       if (req.method === "GET" && url.pathname === "/") {
         const cfg = loadConfig();
         const db = getDb();
@@ -1258,20 +1275,6 @@ async function start(): Promise<void> {
         const cfg = loadConfig();
         res.writeHead(200, { "content-type": "application/json" });
         res.end(JSON.stringify({ url: getGmailConsentUrl(cfg.env) }));
-        return;
-      }
-
-      if (req.method === "GET" && (url.pathname === "/oauth2callback" || url.pathname === "/")) {
-        const code = url.searchParams.get("code");
-        if (!code) {
-          res.writeHead(400, { "content-type": "text/plain" });
-          res.end(`Missing OAuth code. ${url.searchParams.get("error") || ""}`);
-          return;
-        }
-        const cfg = loadConfig();
-        await exchangeCodeAndSaveTokens(cfg.env, code);
-        res.writeHead(200, { "content-type": "text/html" });
-        res.end("<h1>Gmail OAuth saved</h1><p>You can close this tab and rerun npm run gmail:status.</p>");
         return;
       }
 

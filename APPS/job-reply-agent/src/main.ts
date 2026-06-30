@@ -484,6 +484,9 @@ export async function runCommand(args: {
   if (command === "gmail:status") {
     const status = await checkGmailAuthStatus(cfg.env);
     logger.info(status, "gmail:status completed.");
+    if (!status.ok) {
+      process.exitCode = 1;
+    }
     return;
   }
 

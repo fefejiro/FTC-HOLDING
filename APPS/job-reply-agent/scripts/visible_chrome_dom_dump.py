@@ -84,10 +84,20 @@ def find_chrome_window():
 
     for window in candidates:
         title = window.window_text()
-        if "Fejiro" in title or "Dice" in title or "Indeed" in title or "dice.com" in title or "indeed" in title.lower():
+        if "JOB_AGENT_RECT" in title:
+            continue
+        title_lower = title.lower()
+        if (
+            "fejiro" in title_lower
+            or "dice" in title_lower
+            or "indeed" in title_lower
+            or "linkedin" in title_lower
+            or "monster" in title_lower
+        ):
             return window
 
-    return candidates[0]
+    non_helper = [window for window in candidates if "JOB_AGENT_RECT" not in window.window_text()]
+    return non_helper[0] if non_helper else candidates[0]
 
 
 def navigate_current_tab(window, url: str, wait_seconds: float) -> None:
@@ -171,6 +181,11 @@ def click_text_control(window, text_pattern: str, wait_seconds: float) -> None:
   target.click();
   document.documentElement.setAttribute('data-job-agent-click-text', 'clicked');
 })()"""
+    run_javascript_url(window, payload, wait_seconds)
+
+
+def run_eval_js_file(window, file_path: str, wait_seconds: float) -> None:
+    payload = Path(file_path).read_text(encoding="utf-8")
     run_javascript_url(window, payload, wait_seconds)
 
 
@@ -307,12 +322,14 @@ def upload_file_from_resume_options(window, file_path: str, wait_seconds: float)
         or click_visible_text(window, "File options")
     ):
         if "Upload a different file" not in visible_text(window) and "Replace" not in visible_text(window):
-            return {"ok": False, "reason": "Resume/File options button was not found or could not be clicked."}
+            if not (click_visible_text(window, "Upload resume") or click_dom_control(window, r"^Upload resume$")):
+                return {"ok": False, "reason": "Resume/File options or direct Upload resume button was not found or could not be clicked."}
     else:
         time.sleep(0.8)
 
-    if not (click_visible_text(window, "Upload a different file") or click_visible_text(window, "Replace")):
-        click_dom_control(window, r"^(Upload a different file|Replace)$")
+    if "Upload a different file" in visible_text(window) or "Replace" in visible_text(window):
+        if not (click_visible_text(window, "Upload a different file") or click_visible_text(window, "Replace")):
+            click_dom_control(window, r"^(Upload a different file|Replace)$")
     if not find_new_file_picker(before_handles, timeout_seconds=1.5)[0]:
         click_upload = r"""(() => {
   const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
@@ -567,6 +584,7 @@ def main() -> int:
     parser.add_argument("--dump-wait", type=float, default=1.5)
     parser.add_argument("--click-apply", action="store_true", help="Click a visible Apply/Apply with Indeed control before capture.")
     parser.add_argument("--click-text", help="Click a visible button/link whose text matches this regex before capture.")
+    parser.add_argument("--eval-js-file", help="Run a JavaScript file in the active tab before capture.")
     parser.add_argument("--click-wait", type=float, default=5.0)
     parser.add_argument("--upload-file", help="Use Resume options -> Upload a different file, then upload this file path.")
     parser.add_argument("--upload-supporting-file", help="Use Supporting documents -> Add, then upload this file path.")
@@ -587,6 +605,8 @@ def main() -> int:
             click_apply_control(window, args.click_wait)
         if args.click_text:
             click_text_control(window, args.click_text, args.click_wait)
+        if args.eval_js_file:
+            run_eval_js_file(window, args.eval_js_file, args.click_wait)
         upload_result = None
         if args.upload_file:
             upload_result = upload_file_from_resume_options(window, args.upload_file, args.upload_wait)

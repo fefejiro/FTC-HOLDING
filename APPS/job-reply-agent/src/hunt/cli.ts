@@ -167,6 +167,7 @@ export async function runHuntCommand(args: {
       limit: args.limitArg,
       sourceFilter: args.sourceArg || "dice",
       templatePath,
+      businessAnalysisTemplatePath: cfg.rules.resume_tailoring?.business_analysis_template_path,
       outputDir
     });
     logger.info(result, "hunt:prepare-artifacts completed.");
@@ -338,7 +339,7 @@ export async function runHuntCommand(args: {
 
   if (command === "hunt:export") {
     const { loadConfig } = await import("../config.js");
-    const { tailorResumeForJD } = await import("../resume_tailor.js");
+    const { selectTailoringTemplatePath, tailorResumeForJD } = await import("../resume_tailor.js");
     const cfg = loadConfig();
     let templatePath = cfg.rules.resume_tailoring?.template_path || "";
     const primaryOutputDir = cfg.rules.resume_tailoring?.output_dir || path.resolve(".local", "inspectable-resumes");
@@ -367,13 +368,23 @@ export async function runHuntCommand(args: {
     const exportManifest: Array<{ jobId: number; title: string; company: string; outputDir: string; reason: string }> = [];
     for (const job of jobs) {
       try {
+        const selectedTemplatePath = selectTailoringTemplatePath({
+          parsed: {
+            roleTitle: job.title,
+            cleanRoleTitle: job.title,
+            company: job.company
+          } as any,
+          jdText: job.description || "",
+          defaultTemplatePath: templatePath,
+          businessAnalysisTemplatePath: cfg.rules.resume_tailoring?.business_analysis_template_path
+        });
         const result = await tailorResumeForJD({
           parsed: {
             roleTitle: job.title,
             company: job.company
           } as any,
           jdText: job.description || "",
-          templatePath,
+          templatePath: selectedTemplatePath,
           outputDir
         });
         exported.push({ jobId: job.id, title: job.title, company: job.company, docxPath: result.docxPath });
@@ -383,13 +394,23 @@ export async function runHuntCommand(args: {
         if (/\bEBUSY\b|resource busy or locked/i.test(message)) {
           outputDir = path.resolve(".local", "inspectable-resumes");
           fs.mkdirSync(outputDir, { recursive: true });
+          const selectedTemplatePath = selectTailoringTemplatePath({
+            parsed: {
+              roleTitle: job.title,
+              cleanRoleTitle: job.title,
+              company: job.company
+            } as any,
+            jdText: job.description || "",
+            defaultTemplatePath: templatePath,
+            businessAnalysisTemplatePath: cfg.rules.resume_tailoring?.business_analysis_template_path
+          });
           const result = await tailorResumeForJD({
             parsed: {
               roleTitle: job.title,
               company: job.company
             } as any,
             jdText: job.description || "",
-            templatePath,
+            templatePath: selectedTemplatePath,
             outputDir
           });
           exported.push({ jobId: job.id, title: job.title, company: job.company, docxPath: result.docxPath });
@@ -399,13 +420,23 @@ export async function runHuntCommand(args: {
 
         if (templatePath !== fallbackTemplate && fs.existsSync(fallbackTemplate)) {
           templatePath = fallbackTemplate;
+          const selectedTemplatePath = selectTailoringTemplatePath({
+            parsed: {
+              roleTitle: job.title,
+              cleanRoleTitle: job.title,
+              company: job.company
+            } as any,
+            jdText: job.description || "",
+            defaultTemplatePath: templatePath,
+            businessAnalysisTemplatePath: cfg.rules.resume_tailoring?.business_analysis_template_path
+          });
           const result = await tailorResumeForJD({
             parsed: {
               roleTitle: job.title,
               company: job.company
             } as any,
             jdText: job.description || "",
-            templatePath,
+            templatePath: selectedTemplatePath,
             outputDir
           });
           exported.push({ jobId: job.id, title: job.title, company: job.company, docxPath: result.docxPath });
