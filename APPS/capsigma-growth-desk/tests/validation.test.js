@@ -17,6 +17,9 @@ import { decryptSecret, encryptSecret } from '../functions/_lib/crypto.js'
 import { messageToReply, parseEmailAddress } from '../functions/_lib/gmail.js'
 import { classifyReply } from '../functions/_lib/replies.js'
 import { buildCcRecipients, parseEmailList, resolveRecipients } from '../functions/api/send-email.js'
+import { normalizeSearchParameters } from '../functions/api/prospect-runs.js'
+import { assertPurgeConfirmation, buildPurgePlan, PURGE_CONFIRMATION } from '../functions/_lib/demo-purge.js'
+import { buildScheduleSafety, checkEmailDomain, nextScheduledTime, normalizeIntelligenceInput, normalizeSendWindows } from '../functions/_lib/evidence.js'
 
 test('normalizes a real lead without requiring demo data', () => {
   const lead = normalizeLead({
@@ -206,4 +209,136 @@ test('parses Gmail sender headers into reply records', () => {
   assert.equal(reply.messageId, 'gmail_msg_1')
   assert.equal(reply.fromEmail, 'jane@example.com')
   assert.equal(reply.subject, 'Re: CapSigma pilot')
+})
+
+test('demo purge plan targets explicit test data and preserves real prospects', () => {
+  const plan = buildPurgePlan({
+    leads: [
+      {
+        id: 'lead_capsigma-internal-smoke-2026',
+        company: 'CapSigma Internal Smoke 2026',
+        email: 'fejiro.efiuvwere+smoke@example.com',
+        source: 'production smoke test',
+      },
+      {
+        id: 'lead_harris-health',
+        company: 'Harris Health System',
+        email: 'victoria.nikitin@harrishealth.org',
+        source: 'public web research',
+      },
+    ],
+    drafts: [
+      { id: 'draft_demo', lead_id: 'lead_capsigma-internal-smoke-2026' },
+      { id: 'draft_real', lead_id: 'lead_harris-health' },
+    ],
+    sends: [
+      { id: 'send_demo', lead_id: 'lead_capsigma-internal-smoke-2026', subject: 'Internal production delivery test' },
+      { id: 'send_real', lead_id: 'lead_harris-health', subject: 'Revenue cycle support' },
+    ],
+    replies: [
+      { id: 'reply_demo', lead_id: 'lead_capsigma-internal-smoke-2026', send_event_id: 'send_demo' },
+      { id: 'reply_real', lead_id: 'lead_harris-health', send_event_id: 'send_real' },
+    ],
+    activities: [
+      { id: 'act_demo', lead_id: 'lead_capsigma-internal-smoke-2026', label: 'Smoke proof' },
+      { id: 'act_real', lead_id: 'lead_harris-health', label: 'Real prospect proof' },
+    ],
+  })
+
+  assert.deepEqual(plan.leadIds, ['lead_capsigma-internal-smoke-2026'])
+  assert.deepEqual(plan.draftIds, ['draft_demo'])
+  assert.deepEqual(plan.sendIds, ['send_demo'])
+  assert.deepEqual(plan.replyIds, ['reply_demo'])
+  assert.deepEqual(plan.activityIds, ['act_demo'])
+  assert.equal(plan.counts.leads, 1)
+  assert.ok(plan.preservedConfig.includes('suppression list'))
+})
+
+test('demo purge requires exact destructive confirmation phrase', () => {
+  assert.equal(assertPurgeConfirmation(PURGE_CONFIRMATION), true)
+  assert.equal(assertPurgeConfirmation('purge capsigma demo data'), false)
+  assert.equal(assertPurgeConfirmation('PURGE ALL DATA'), false)
+})
+
+test('campaign send windows normalize to safe HH:mm values', () => {
+  assert.deepEqual(normalizeSendWindows(['08:00', '15:00', '25:00', '8am', '15:00']), ['08:00', '15:00'])
+  assert.deepEqual(normalizeIntelligenceInput({ sendWindows: ['09:30'] }).sendWindows, ['09:30'])
+})
+
+test('schedule safety requires draft, valid email, qualified status, and configured window', () => {
+  const safe = buildScheduleSafety({
+    status: 'approved',
+    email: 'buyer@example.com',
+    draft_subject: 'CapSigma pilot',
+    draft_body: 'Hello from CapSigma.',
+  }, '08:00')
+  assert.equal(safe.ok, true)
+
+  const unsafe = buildScheduleSafety({
+    status: 'new',
+    email: '',
+    draft_subject: '',
+    draft_body: '',
+  }, '8am')
+  assert.equal(unsafe.ok, false)
+  assert.equal(unsafe.checks.qualified, false)
+  assert.equal(unsafe.checks.hasVerifiedFormatEmail, false)
+  assert.equal(unsafe.checks.hasDraft, false)
+  assert.equal(unsafe.checks.sendWindow, false)
+})
+
+test('next scheduled time rolls past elapsed send windows', () => {
+  const afterEight = nextScheduledTime('08:00', new Date('2026-06-18T09:00:00-04:00'))
+  assert.equal(afterEight.startsWith('2026-06-19'), true)
+})
+
+test('email domain verification separates format, domain match, and MX readiness', () => {
+  assert.deepEqual(checkEmailDomain({
+    email: 'ops@idt.example',
+    sourceUrl: 'https://www.idt.example/about',
+  }), {
+    domain: 'idt.example',
+    formatValid: true,
+    domainMatch: true,
+    mxCheckStatus: 'not_checked_provider_needed',
+  })
+
+  const unmatched = checkEmailDomain({
+    email: 'ops@other.example',
+    sourceUrl: 'https://idt.example/about',
+  })
+  assert.equal(unmatched.formatValid, true)
+  assert.equal(unmatched.domainMatch, false)
+
+  const invalid = checkEmailDomain({ email: 'not-an-email', sourceUrl: '' })
+  assert.equal(invalid.formatValid, false)
+  assert.equal(invalid.mxCheckStatus, 'missing_domain')
+})
+
+test('prospect search parameters normalize distance controls safely', () => {
+  assert.deepEqual(normalizeSearchParameters({
+    targetLocations: ['Houston, TX', ''],
+    startingRadius: '50',
+    radiusIncrement: '25',
+    maxRadius: '100',
+  }), {
+    targetLocations: ['Houston, TX'],
+    startingRadius: 50,
+    radiusIncrement: 25,
+    maxRadius: 100,
+    nextRadius: 75,
+  })
+
+  assert.deepEqual(normalizeSearchParameters({
+    targetLocations: '',
+    startingRadius: '150',
+    radiusIncrement: '50',
+    maxRadius: '100',
+  }), {
+    targetLocations: ['Houston, TX'],
+    startingRadius: 150,
+    radiusIncrement: 50,
+    maxRadius: 150,
+    nextRadius: 150,
+  })
 })

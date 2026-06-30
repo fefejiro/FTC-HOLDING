@@ -13,6 +13,7 @@ export async function onRequest({ request, env }) {
 
   const url = new URL(request.url)
   const attentionOnly = url.searchParams.get('attention') === '1'
+  const classification = url.searchParams.get('classification') || ''
   const { results } = await db
     .prepare(
       `SELECT
@@ -20,14 +21,37 @@ export async function onRequest({ request, env }) {
         l.company,
         l.contact_name,
         l.contact_title,
-        l.source_url
+        l.source_url,
+        (
+          SELECT action_type
+          FROM reply_actions a
+          WHERE a.reply_id = r.id
+          ORDER BY a.created_at DESC
+          LIMIT 1
+        ) AS last_action,
+        (
+          SELECT status
+          FROM reply_actions a
+          WHERE a.reply_id = r.id
+          ORDER BY a.created_at DESC
+          LIMIT 1
+        ) AS last_action_status
       FROM replies r
-      LEFT JOIN leads l ON l.id = r.lead_id
+      INNER JOIN leads l ON l.id = r.lead_id
       WHERE (? = 0 OR r.needs_human = 1)
+        AND (? = '' OR r.classification = ?)
+        AND COALESCE(r.lead_id, '') <> ''
+        AND COALESCE(r.send_event_id, '') <> ''
+        AND EXISTS (
+          SELECT 1 FROM send_events s
+          WHERE s.id = r.send_event_id
+            AND s.lead_id = r.lead_id
+            AND s.status IN ('sent', 'sandbox_sent', 'live_sent')
+        )
       ORDER BY r.created_at DESC
       LIMIT 50`,
     )
-    .bind(attentionOnly ? 1 : 0)
+    .bind(attentionOnly ? 1 : 0, classification, classification)
     .all()
 
   return json({
@@ -50,6 +74,7 @@ export async function onRequest({ request, env }) {
       contactName: row.contact_name,
       contactTitle: row.contact_title,
       sourceUrl: row.source_url,
+      lastAction: row.last_action ? { action: row.last_action, status: row.last_action_status } : null,
     })),
   })
 }

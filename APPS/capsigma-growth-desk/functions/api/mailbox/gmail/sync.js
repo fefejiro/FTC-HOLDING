@@ -49,6 +49,10 @@ export async function onRequest(context) {
         continue
       }
       const match = await findMatchingSend(db, reply.fromEmail)
+      if (!match?.id || !match?.lead_id) {
+        rejected.push({ messageId: ref.id, fromEmail: reply.fromEmail, errors: ['no matching CapSigma sent email'] })
+        continue
+      }
       const result = await insertReply(db, reply, match)
       if (result.duplicate) duplicates.push(result)
       else imported.push(result)

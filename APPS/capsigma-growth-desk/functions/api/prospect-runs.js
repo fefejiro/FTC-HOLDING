@@ -1,5 +1,6 @@
 import { requireAuth } from '../_lib/auth.js'
 import { addActivity, getDb, newId, nowIso } from '../_lib/db.js'
+import { recordLeadEvidence } from '../_lib/evidence.js'
 import { json, methodNotAllowed, readJson } from '../_lib/json.js'
 import { normalizeLead, validateLead } from '../_lib/validation.js'
 
@@ -113,10 +114,30 @@ function resolveLocationTarget(text) {
   return locationTargets.find((target) => target.detector.test(value)) || null
 }
 
-function prospectPrompt({ query, industries, maxResults }) {
+function normalizeSearchParameters(value = {}) {
+  const targetLocations = Array.isArray(value.targetLocations)
+    ? value.targetLocations.map((item) => String(item || '').trim()).filter(Boolean)
+    : String(value.targetLocations || '')
+      .split('\n')
+      .map((item) => item.trim())
+      .filter(Boolean)
+  const startingRadius = Math.max(1, Number.parseInt(value.startingRadius || '25', 10) || 25)
+  const radiusIncrement = Math.max(1, Number.parseInt(value.radiusIncrement || '25', 10) || 25)
+  const maxRadius = Math.max(startingRadius, Number.parseInt(value.maxRadius || '100', 10) || 100)
+  return {
+    targetLocations: targetLocations.length ? targetLocations : ['Houston, TX'],
+    startingRadius,
+    radiusIncrement,
+    maxRadius,
+    nextRadius: Math.min(startingRadius + radiusIncrement, maxRadius),
+  }
+}
+
+function prospectPrompt({ query, industries, maxResults, searchParameters }) {
   const targetIndustries = industries || 'healthcare, real estate, energy, financial services, logistics, retail, technology'
   const target = strictTarget(query, targetIndustries)
   const locationTarget = strictLocation(query)
+  const geo = normalizeSearchParameters(searchParameters)
   return `Find source-backed CapSigma outreach prospects.
 
 CapSigma services:
@@ -130,6 +151,9 @@ CapSigma services:
 Target query: ${query}
 Target industries: ${targetIndustries}
 Maximum prospects: ${maxResults}
+Configured search locations: ${geo.targetLocations.join(', ')}
+Configured search radius: ${geo.startingRadius} miles
+Radius expansion rule: if fewer than ${maxResults} qualified prospects are found, expand by ${geo.radiusIncrement} miles up to ${geo.maxRadius} miles.
 ${target ? `Strict inferred target: ${target.label}. Return only prospects that clearly match this target.` : ''}
 ${locationTarget ? `Strict inferred location: ${locationTarget.label}. Return only prospects with public evidence of an office, operations, or service presence in this location target.` : ''}
 
@@ -138,6 +162,8 @@ Rules:
 - Treat the target industries as a hard filter. Do not return prospects outside the target industries.
 - If the query or target industries say "only", return only that industry and do not substitute adjacent industries.
 - If the query includes geography, radius, revenue, headcount, or size criteria, use those as source-backed selection constraints where public evidence exists.
+- Use the configured search locations and radius unless the operator's query explicitly gives a different geography or radius.
+- Prefer prospects inside the configured radius. If public sources cannot prove distance precisely, use source-backed office/location evidence and say what was verifiable in researchSummary.
 - Do not fabricate revenue, headcount, location radius, or firm size. If a criterion is not publicly verifiable, say so briefly in researchSummary instead of inventing it.
 - If the query includes a ZIP code, city, or radius, sourceUrl should preferably be an official office, contact, locations, or about page proving the relevant geography.
 - Do not invent email addresses.
@@ -213,6 +239,8 @@ export function strictTarget(query, industries) {
 export function strictLocation(query) {
   return resolveLocationTarget(query)
 }
+
+export { normalizeSearchParameters }
 
 export function validateTargetIndustry(prospect, target) {
   if (!target) return []
@@ -375,6 +403,7 @@ async function handlePost({ request, env }) {
   const industries = Array.isArray(body.industries)
     ? body.industries.join(', ')
     : String(body.industries || '').trim()
+  const searchParameters = normalizeSearchParameters(body.searchParameters || {})
   const target = strictTarget(query, industries)
   const locationTarget = strictLocation(query)
   const effectiveIndustries = target?.label || industries
@@ -390,7 +419,7 @@ async function handlePost({ request, env }) {
       model,
       tools: [{ type: 'web_search', search_context_size: 'low' }],
       tool_choice: 'required',
-      input: prospectPrompt({ query, industries: effectiveIndustries, maxResults }),
+      input: prospectPrompt({ query, industries: effectiveIndustries, maxResults, searchParameters }),
       max_output_tokens: 5000,
       temperature: 0.2,
     }),
@@ -436,6 +465,7 @@ async function handlePost({ request, env }) {
       continue
     }
     await insertLead(db, lead, now)
+    await recordLeadEvidence(db, lead, { sourceType: 'web_search', sourceName: lead.source || 'public web research' })
     imported.push(lead)
   }
 
@@ -461,11 +491,12 @@ async function handlePost({ request, env }) {
       query,
       targetIndustry: effectiveIndustries,
       targetLocation: locationTarget?.label || '',
+      searchParameters,
       rejected: rejected.length,
     },
   })
 
-  return json({ runId, imported, rejected, summary: parsed.summary || '' }, { status: rejected.length ? 207 : 200 })
+  return json({ runId, imported, rejected, summary: parsed.summary || '', searchParameters }, { status: rejected.length ? 207 : 200 })
 }
 
 export function onRequest(context) {

@@ -1,5 +1,6 @@
 import { requireAuth } from '../_lib/auth.js'
 import { addActivity, getDb, nowIso } from '../_lib/db.js'
+import { recordLeadEvidence } from '../_lib/evidence.js'
 import { json, methodNotAllowed, readJson } from '../_lib/json.js'
 import { normalizeLead, validateLead } from '../_lib/validation.js'
 
@@ -113,6 +114,7 @@ export async function onRequest({ request, env }) {
       .run()
 
     imported.push(lead)
+    await recordLeadEvidence(db, lead, { sourceType: 'lead_import', sourceName: lead.source })
   }
 
   if (imported.length) {
