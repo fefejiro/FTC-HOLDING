@@ -12,13 +12,13 @@ export default {
     if (url.pathname === "/health") {
       return Response.json({
         status: "ok",
-        worker: "peacepadai",
+        worker: "peacepad",
         ts: new Date().toISOString(),
       });
     }
 
     return Response.json({
-      worker: "peacepadai",
+      worker: "peacepad",
       message: "Cloudflare Worker is deployed",
     });
   },

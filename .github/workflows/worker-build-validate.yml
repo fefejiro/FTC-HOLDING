@@ -30,5 +30,5 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: Validate peacepadai worker build
+      - name: Validate peacepad worker build
         run: npx wrangler deploy --dry-run --config workers/peacepadai/wrangler.toml
