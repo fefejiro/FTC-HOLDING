@@ -1,0 +1,353 @@
+{
+  "generated": "2026-07-06",
+  "status": "active discovery workbench",
+  "purpose": "Build future EbonyExchange and MikeLitoriz prospect lists from warm local networks rather than broad keyword search.",
+  "safety_rules": [
+    "Use normal human browsing only.",
+    "Do not open rapid chains of profiles.",
+    "Work in small batches of 5-10 visible leads.",
+    "Pause between profile opens.",
+    "Stop immediately on warnings, lockouts, login prompts, rate limits, or unusual security messages.",
+    "Do not click message, follow, add friend, crush, or profile-control buttons during discovery.",
+    "Prefer user-opened profiles, pasted context, screenshots, and visible current-page review over automated browsing."
+  ],
+  "capture_fields": [
+    "handle",
+    "profile_url",
+    "source_seed",
+    "source_type",
+    "category",
+    "local_signal",
+    "active_signal",
+    "similarity_signal",
+    "openness_signal",
+    "risk_or_boundary_note",
+    "recommended_sender",
+    "recommended_action"
+  ],
+  "allowed_source_types": [
+    "mutual",
+    "friend",
+    "follower",
+    "commenter",
+    "group",
+    "event",
+    "post",
+    "manual paste"
+  ],
+  "allowed_categories": [
+    "Bi/Pan/Queer",
+    "Couples",
+    "Straight",
+    "Dommes",
+    "FTMs",
+    "Lesbian",
+    "Desi Queens",
+    "Latina"
+  ],
+  "allowed_senders": [
+    "EbonyExchange",
+    "MikeLitoriz",
+    "either",
+    "neither"
+  ],
+  "allowed_actions": [
+    "draft candidate",
+    "manual review",
+    "save for later",
+    "do not contact"
+  ],
+  "fit_rules": {
+    "local_signal": "Toronto, Scarborough, East Toronto, Pickering, Ajax, Whitby, Oshawa, Durham Region, GTA, Ontario, or active in those local groups/events.",
+    "profile_signal": "Ebony/Black women, bi/pan/queer/heteroflexible women, couples, hotwife, swinger, unicorn, ENM/poly, or couple-friendly profiles.",
+    "activity_signal": "Recent post, comment, love, picture, writing, event RSVP, group participation, or recent profile activity.",
+    "openness_signal": "Friendship, play partners, community, events, ENM/poly, couples, respectful DMs, hotwife/swinger/unicorn dynamics, or open-minded local social connection.",
+    "boundary_signal": "No visible conflict such as no men, not looking, tribute-only, locked-down contact rules, or obvious mismatch."
+  },
+  "engagement_first_strategy": {
+    "purpose": "Use groups and friend-follow networks to become visible before direct outreach.",
+    "priority_surfaces": [
+      "Groups already followed by MikeLitoriz or EbonyExchange.",
+      "Groups followed by strong seed profiles.",
+      "Recent discussions where seed profiles or similar accounts are commenting.",
+      "Local Toronto/Ontario event, munch, lifestyle, Black/Ebony, bi/queer, hotwife, swinger, unicorn, and ENM/poly groups.",
+      "Friend-of-friend activity where there is mutual social context."
+    ],
+    "daily_rhythm": [
+      "Read 3-5 recent local group posts before interacting.",
+      "Leave 1-3 thoughtful comments where there is a real reason to contribute.",
+      "Prioritize comments that show personality, respect, humor, local familiarity, or shared scene interest.",
+      "Avoid immediate sexual asks, copy-paste compliments, and recruitment language.",
+      "Save promising profiles only after local fit, activity, and compatibility signals are visible."
+    ],
+    "good_comment_styles": [
+      "welcome/support",
+      "shared-context",
+      "conversation starter",
+      "appreciation"
+    ],
+    "avoid": [
+      "commenting only on photos",
+      "repeating the same line across posts",
+      "asking for DMs before rapport exists",
+      "using EbonyExchange language in women-only or no-unicorn-hunting spaces",
+      "engaging where group rules or post tone reject men, couples, or outreach"
+    ],
+    "promotion_rule": "After 2-3 genuine interactions with the same person or group context, move the profile to manual review before any follow or message decision."
+  },
+  "fetish_affinity_narrowing_strategy": {
+    "principle": "Use fetish pages for compatibility validation, not as the first filter.",
+    "reason": "Large fetish kinkster lists are global and do not expose a clean Toronto/Durham/Canada filter.",
+    "recommended_order": [
+      "Start local first.",
+      "Find active Toronto/GTA/Durham/Ontario people through groups, discussions, events, mutuals, and friend-follow networks.",
+      "Open only promising local profiles manually.",
+      "Check whether their fetishes include the target affinity set.",
+      "Promote only people who pass both local fit and fetish/profile fit."
+    ],
+    "target_affinity_set": [
+      "praise kink / being called a good girl",
+      "brat / princess / babygirl",
+      "switch / submissive / goddess",
+      "BBW / curvy / thick / slim-thick",
+      "Black / Ebony / Afrocentric",
+      "bisexual / bi-curious / pan / queer / sapphic / heteroflexible",
+      "hotwife / unicorn / swinger / ENM / poly / threesome / FMF / MFF"
+    ],
+    "source_priority": [
+      {
+        "step": 1,
+        "source": "joined local groups",
+        "why": "Already local and socially relevant.",
+        "capture": "Active posters/commenters who match type."
+      },
+      {
+        "step": 2,
+        "source": "local group discussions",
+        "why": "Shows activity and tone before profile review.",
+        "capture": "Handles, thread topic, reply quality, location clues."
+      },
+      {
+        "step": 3,
+        "source": "seed-profile networks",
+        "why": "Warmest social graph.",
+        "capture": "Mutuals, friends, commenters, lovers, followed groups."
+      },
+      {
+        "step": 4,
+        "source": "local events/munches",
+        "why": "Strongest real-world scene signal.",
+        "capture": "RSVPs, commenters, organizers, regular attendees."
+      },
+      {
+        "step": 5,
+        "source": "fetish pages",
+        "why": "Compatibility validation only.",
+        "capture": "Confirm affinity after local fit is known."
+      }
+    ],
+    "if_using_fetish_page": [
+      "Use browser find on the page for Toronto, Ontario, Scarborough, Pickering, Ajax, Whitby, Oshawa, Durham, GTA, and Canada.",
+      "Capture visible local cards only.",
+      "Do not paginate deeply; one or two pages is enough unless multiple local hits appear.",
+      "Treat non-local or hidden-location cards as skip, not manual review."
+    ],
+    "rule": "A profile must be local first, fetish-compatible second. Do not chase fetish-compatible profiles across huge global lists."
+  },
+  "mikelitoriz_override": {
+    "location": "East Toronto, Scarborough, Pickering, Ajax, Whitby, Oshawa, Durham Region, or clear Toronto-region activity.",
+    "profile_type": "Ebony/Black women only.",
+    "orientation": "Bi, bi-curious, pan, queer, heteroflexible, or woman-open/couple-adjacent signal required.",
+    "source_preference": "Friend-of-friend and local event/munch overlap.",
+    "current_known_keep": "SAINTLEEE"
+  },
+  "seed_profiles": [
+    {
+      "handle": "BLACK_LIFESTYLE6",
+      "profile_url": "https://fetlife.com/BLACK_LIFESTYLE6",
+      "sender_bias": "EbonyExchange",
+      "category": "Couples",
+      "why_seed": "Bisexual swinger/lifestyle, non-monogamous/open relationship, couple/community signals.",
+      "first_surfaces_to_check": [
+        "friends",
+        "followers",
+        "groups",
+        "recent commenters",
+        "local lifestyle groups"
+      ]
+    },
+    {
+      "handle": "yourdreamduo",
+      "profile_url": "https://fetlife.com/yourdreamduo",
+      "sender_bias": "EbonyExchange",
+      "category": "Couples",
+      "why_seed": "Couple/swinger profile, bisexual orientation, play partner/friendship fit.",
+      "first_surfaces_to_check": [
+        "friends",
+        "followers",
+        "picture commenters",
+        "group activity"
+      ]
+    },
+    {
+      "handle": "SweetParadse",
+      "profile_url": "https://fetlife.com/SweetParadse",
+      "sender_bias": "EbonyExchange",
+      "category": "Bi/Pan/Queer",
+      "why_seed": "Bisexual unicorn profile with friendship/community/events signals.",
+      "first_surfaces_to_check": [
+        "friends",
+        "followers",
+        "unicorn/couple groups",
+        "recent activity"
+      ]
+    },
+    {
+      "handle": "hotwife_demi",
+      "profile_url": "https://fetlife.com/hotwife_demi",
+      "sender_bias": "EbonyExchange",
+      "category": "Bi/Pan/Queer",
+      "why_seed": "Queer hotwife-coded profile with play-partner/community/events interest.",
+      "first_surfaces_to_check": [
+        "partner network",
+        "groups",
+        "activity",
+        "commenters"
+      ]
+    },
+    {
+      "handle": "princessjuggssx",
+      "profile_url": "https://fetlife.com/princessjuggssx",
+      "sender_bias": "EbonyExchange",
+      "category": "Bi/Pan/Queer",
+      "why_seed": "Bisexual profile with play partner, friendship, community, events, and dynamic signals.",
+      "first_surfaces_to_check": [
+        "friends",
+        "followers",
+        "recent lovers/commenters",
+        "groups"
+      ]
+    },
+    {
+      "handle": "Shygirl14908",
+      "profile_url": "https://fetlife.com/Shygirl14908",
+      "sender_bias": "EbonyExchange",
+      "category": "Bi/Pan/Queer",
+      "why_seed": "Bisexual profile with relationship, dynamic, play partner, friendship, and community signals.",
+      "first_surfaces_to_check": [
+        "friends",
+        "followers",
+        "mentor/community groups",
+        "activity"
+      ]
+    },
+    {
+      "handle": "SAINTLEEE",
+      "profile_url": "https://fetlife.com/SAINTLEEE",
+      "sender_bias": "MikeLitoriz",
+      "category": "Bi/Pan/Queer",
+      "why_seed": "User-confirmed strongest MikeLitoriz lane: Scarborough/Toronto, Ebony/Black similarity, bisexual, partner context.",
+      "first_surfaces_to_check": [
+        "mutuals",
+        "friends",
+        "local events/munch overlap",
+        "recent commenters"
+      ]
+    },
+    {
+      "handle": "RedRoom_Lioness",
+      "profile_url": "https://fetlife.com/RedRoom_Lioness",
+      "sender_bias": "EbonyExchange",
+      "category": "Couples",
+      "why_seed": "Couples/swinger-related signals, play partner and friendship interest.",
+      "first_surfaces_to_check": [
+        "friends",
+        "followers",
+        "group posts",
+        "lifestyle commenters"
+      ]
+    },
+    {
+      "handle": "miamoans",
+      "profile_url": "https://fetlife.com/miamoans",
+      "sender_bias": "EbonyExchange",
+      "category": "Desi Queens",
+      "why_seed": "Bisexual Desi bucket seed with couple/unicorn/swinger-like signals.",
+      "first_surfaces_to_check": [
+        "friends",
+        "followers",
+        "Desi/local groups",
+        "recent activity"
+      ]
+    }
+  ],
+  "known_keep": [
+    {
+      "handle": "SAINTLEEE",
+      "profile_url": "https://fetlife.com/SAINTLEEE",
+      "source_seed": "goddessblkvelvet / willowolf network",
+      "source_type": "friend",
+      "category": "Bi/Pan/Queer",
+      "local_signal": "Toronto, Ontario, Canada, Scarborough",
+      "active_signal": "recent visible activity observed in prior read-only pass",
+      "similarity_signal": "Ebony/Black, bisexual, hotwife, play partner, friendship, community, events, dynamic, FMF",
+      "openness_signal": "play partner, friendship, community, events, hotwife, FMF, dynamic, relationship",
+      "risk_or_boundary_note": "none visible in prior read-only pass; manual review still required before outreach",
+      "recommended_sender": "MikeLitoriz",
+      "recommended_action": "manual review"
+    }
+  ],
+  "source_leads_not_prospects": [
+    {
+      "handle_or_channel": "Kattzz1",
+      "source_type": "post",
+      "visible_context": "Appeared beside a Scarborough group post looking for a trans or bisexual female to join a woman and her guy.",
+      "current_decision": "source lead only; verify local, identity, activity, openness, and boundaries before adding"
+    },
+    {
+      "handle_or_channel": "BDSM Ontario (Canada)",
+      "source_type": "group",
+      "visible_context": "Local Ontario BDSM group surfaced in Scarborough search.",
+      "current_decision": "use as group channel, not a candidate"
+    },
+    {
+      "handle_or_channel": "Anonymous Encounters Toronto",
+      "source_type": "group",
+      "visible_context": "Local Toronto group surfaced in Scarborough search.",
+      "current_decision": "use cautiously as channel; check boundaries and freshness"
+    },
+    {
+      "handle_or_channel": "Kinky Roommates Toronto & the rest of Ontario",
+      "source_type": "group",
+      "visible_context": "Local Ontario group surfaced around Toronto/Ontario context.",
+      "current_decision": "use as channel only"
+    }
+  ],
+  "prospects": [],
+  "batch_001_manual_review_queue": [
+    {
+      "step": 1,
+      "instruction": "Open SAINTLEEE manually and inspect mutuals, friends, groups, and recent commenters."
+    },
+    {
+      "step": 2,
+      "instruction": "Capture only East Toronto / Scarborough / Durham / Toronto-region Ebony bi or woman-open women for MikeLitoriz."
+    },
+    {
+      "step": 3,
+      "instruction": "Open BLACK_LIFESTYLE6 manually and inspect friends/followers/groups/recent commenters."
+    },
+    {
+      "step": 4,
+      "instruction": "Capture local couples, bisexual swinger/lifestyle women, unicorns, hotwife/swinger profiles, and ENM/poly community profiles for EbonyExchange."
+    },
+    {
+      "step": 5,
+      "instruction": "Open SweetParadse manually and inspect unicorn/couple/local community overlap."
+    },
+    {
+      "step": 6,
+      "instruction": "Stop after 5-10 candidate handles, then rank them before any further browsing."
+    }
+  ]
+}

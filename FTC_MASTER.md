@@ -1,5 +1,5 @@
 # FTC Master Orchestration
-Last updated: 2026-05-20
+Last updated: 2026-07-07
 
 Single source of truth for cross-project status, priority, burn, and next actions.
 Paste the relevant section into any AI tool to seed context instantly.
@@ -181,8 +181,8 @@ git -C "C:\FTC HOLDING" status -sb
 ## Una Labs Ops Snapshot (Auto)
 
 <!-- AUTO:UNALABS_MASTER:START -->
-- Updated at: 2026-05-20T17:30:04.455Z
-- Smoke checks: 4/14 passing
+- Updated at: 2026-07-07T12:10:02.790Z
+- Smoke checks: 5/14 passing
 - Admin verification: unauthenticated admin guard smoke only
 - Canonical status doc: DOCS/UNALABS_STATUS.md
 <!-- AUTO:UNALABS_MASTER:END -->
@@ -191,14 +191,10 @@ git -C "C:\FTC HOLDING" status -sb
 ## SayWetin Ops Snapshot (Auto)
 
 <!-- AUTO:SAYWETIN_MASTER:START -->
-- Updated at: 2026-04-23T00:00:00.000Z
-- Smoke checks: 1/3 passing (web OK; API /health + /status return 404 — backend route gap, not outage)
-- Test suite: 12 tests across 3 files
-- Velocity: 86 commits since 2026-04-01; last commit 66746ca 2026-04-23
-- API routing: FIXED — Capacitor native runtime now always routes to Railway (not localhost)
-- Android build: STABLE — installDebug BUILD SUCCESSFUL
-- Animation: FIXED — saywetin-native FadeInView synced with nav animation, Listen→Result direct
-- Awaiting: real-device test feedback from user
+- Updated at: 2026-07-07T12:10:04.567Z
+- Smoke checks: 3/3 passing
+- Test suite: 13 tests across 3 files
+- Velocity: 0 commits (14d), 1 commits (30d)
 - Canonical status doc: DOCS/SAYWETIN_STATUS.md
 <!-- AUTO:SAYWETIN_MASTER:END -->
 
@@ -206,10 +202,10 @@ git -C "C:\FTC HOLDING" status -sb
 ## Anion Ops Snapshot (Auto)
 
 <!-- AUTO:ANION_MASTER:START -->
-- Updated at: 2026-05-21T17:12:00.000Z
+- Updated at: 2026-06-16T00:00:00.000Z
 - Overall: red
 - Stage: phase1-call-closure-pending-auth-evidence
 - Metrics tracked: 5
-- Checks tracked: 9
+- Checks tracked: 12
 - Canonical status doc: DOCS/ANION/status/STATUS.md
 <!-- AUTO:ANION_MASTER:END -->

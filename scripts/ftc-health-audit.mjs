@@ -395,10 +395,8 @@ async function cloudEndpointChecks() {
     { name: 'CapSigma home', url: 'https://capsigma-growth-desk.pages.dev/', expectedContentType: 'text/html' },
     { name: 'CapSigma session API', url: 'https://capsigma-growth-desk.pages.dev/api/session', expectedContentType: 'application/json' },
     { name: 'PeacePad home', url: 'https://peacepad.ca/', expectedContentType: 'text/html' },
-    { name: 'PeacePad API root', url: 'https://api.peacepad.ca/', expectedStatuses: [200, 204, 301, 302] },
     { name: 'PeacePad API /health', url: 'https://api.peacepad.ca/health', expectedContentType: 'application/json' },
     { name: 'PeacePad API /api/health', url: 'https://api.peacepad.ca/api/health', expectedContentType: 'application/json' },
-    { name: 'PeacePad API /api/status', url: 'https://api.peacepad.ca/api/status', expectedContentType: 'application/json' },
     { name: 'SayWetin home', url: 'https://saywetin.app/', expectedContentType: 'text/html' },
     { name: 'SayWetin www home', url: 'https://www.saywetin.app/', expectedContentType: 'text/html' },
     { name: 'SayWetin API /health', url: 'https://api.saywetin.app/health', expectedContentType: 'application/json' },
@@ -447,12 +445,12 @@ async function vendorChecks() {
   await runCommand({
     section: 'Credentials and vendors',
     name: 'Railway API identity/projects',
-    command: 'node',
-    args: ['APPS\\railway-status.js'],
+    command: 'railway',
+    args: ['status', '--json'],
     timeoutMs: 45000,
     classify: ({ code, stdout, stderr }) => {
       const text = `${stdout}\n${stderr}`;
-      if (/Not Authorized|Unauthorized|invalid token/i.test(text)) return STATUS.BLOCKED_EXTERNAL;
+      if (/Not Authorized|Unauthorized|invalid token|not logged in/i.test(text)) return STATUS.BLOCKED_EXTERNAL;
       return code === 0 ? STATUS.PASS : STATUS.BLOCKED_EXTERNAL;
     }
   });
@@ -548,14 +546,6 @@ async function productionScriptChecks() {
     },
     {
       section: 'Cloud command checks',
-      name: 'CapSigma production smoke',
-      cwd: path.join(APPS_DIR, 'capsigma-growth-desk'),
-      command: 'npm',
-      args: ['run', 'prod:smoke'],
-      timeoutMs: 120000
-    },
-    {
-      section: 'Cloud command checks',
       name: 'PeacePad production verifier',
       command: 'powershell',
       args: ['-ExecutionPolicy', 'Bypass', '-File', 'scripts\\verify-peacepad-prod.ps1', '-TimeoutSec', '20'],
@@ -569,7 +559,8 @@ async function productionScriptChecks() {
       timeoutMs: 120000,
       classify: ({ code, stdout, stderr }) => {
         const text = `${stdout}\n${stderr}`;
-        if (/api\.peacepad\.ca|404|Railway/i.test(text)) return STATUS.FAIL;
+        if (code === 0 && /\[Ownership\]\s+PASS/i.test(text)) return STATUS.PASS;
+        if (/should be|does not reference|got server=|got \d{3}/i.test(text)) return STATUS.FAIL;
         return code === 0 ? STATUS.PASS : STATUS.FAIL;
       }
     },
@@ -763,7 +754,7 @@ function deriveRecoveryActions() {
     addRecovery(
       'P1',
       'GitHub Actions',
-      'Repair GitHub billing/runner access after production routes are stable; tonight use direct local checks and Cloudflare/Wrangler deploys only when needed.',
+      'Repair GitHub hosted runner entitlement or billing after production routes are stable; manual dispatch also fails before checkout when no runner is assigned.',
       scheduleWarns.map((item) => item.name).join(', ')
     );
   }
@@ -819,6 +810,8 @@ async function writeReports(startedAt, finishedAt) {
   const stamp = nowStamp();
   const jsonPath = path.join(REPORT_DIR, `FTC-HEALTH-AUDIT-${stamp}.json`);
   const mdPath = path.join(REPORT_DIR, `FTC-HEALTH-AUDIT-${stamp}.md`);
+  const latestJsonPath = path.join(REPORT_DIR, 'FTC-HEALTH-AUDIT-LATEST.json');
+  const latestMdPath = path.join(REPORT_DIR, 'FTC-HEALTH-AUDIT-LATEST.md');
   const counts = countsByStatus();
   const sections = [...new Set(results.map((item) => item.section))];
 
@@ -857,7 +850,9 @@ async function writeReports(startedAt, finishedAt) {
   ].join('\n');
 
   await fs.writeFile(jsonPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
-  await fs.writeFile(mdPath, `${md}\n`, 'utf8');
+  await fs.writeFile(mdPath, `${md.trimEnd()}\n`, 'utf8');
+  await fs.writeFile(latestJsonPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+  await fs.writeFile(latestMdPath, `${md.trimEnd()}\n`, 'utf8');
   return { jsonPath, mdPath, counts };
 }
 

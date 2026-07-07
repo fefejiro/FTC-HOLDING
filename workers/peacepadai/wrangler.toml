@@ -1,4 +1,4 @@
-name = "peacepadai"
+name = "peacepad"
 account_id = "4c5c204659aebe5d95a99b55a5a7d0b4"
 main = "src/index.ts"
 compatibility_date = "2026-03-04"

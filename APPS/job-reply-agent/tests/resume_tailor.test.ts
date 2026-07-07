@@ -147,6 +147,8 @@ describe("Resume Tailoring Engine", () => {
     expect(result.subtitle.length).toBeGreaterThan(20);
     expect(result.docxPath.endsWith(".docx")).toBe(true);
     expect(fs.existsSync(result.docxPath)).toBe(true);
+    expect(path.basename(result.docxPath)).toBe("Manager Network Analytics - Fejiro Efiuvwere - Canadian Tire Resume.docx");
+    expect(path.basename(result.docxPath)).not.toContain("_");
 
     const text = await extractDocText(result.docxPath);
     expect(text).toContain("Manager, Network Analytics");
@@ -183,7 +185,8 @@ describe("Resume Tailoring Engine", () => {
     });
 
     const text = await extractDocText(result.docxPath);
-    expect(path.basename(result.docxPath)).toMatch(/RQ11067/i);
+    expect(path.basename(result.docxPath)).toBe("RQ11067 Senior Business Analyst - Fejiro Efiuvwere - Ontario Public Service Resume.docx");
+    expect(path.basename(result.docxPath)).not.toContain("_");
     expect(text).toContain("Senior Business Analyst");
     expect(text).toMatch(/I&IT business analysis/i);
     expect(text).toMatch(/requirements gathering/i);

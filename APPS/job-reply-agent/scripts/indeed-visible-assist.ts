@@ -38,8 +38,12 @@ function safeSlug(value: string): string {
 
 function shortResumeCopy(job: JobRow, resumePath: string): string {
   const dir = path.dirname(resumePath);
-  const role = safeSlug(job.title).replace(/-/g, "_").slice(0, 28) || "resume";
-  const shortPath = path.join(dir, `I_${job.id}_${role}_Resume.docx`);
+  const role = clean(job.title)
+    .replace(/[<>:"/\\|?*]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 48) || "Resume";
+  const shortPath = path.join(dir, `Fejiro Efiuvwere ${role} Resume ${job.id}.docx`);
   fs.copyFileSync(resumePath, shortPath);
   return shortPath;
 }

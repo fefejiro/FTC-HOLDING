@@ -734,7 +734,8 @@ describe("hunt flow", () => {
       .get(Number(job.lastInsertRowid)) as any;
 
     expect(result.prepared).toHaveLength(1);
-    expect(attempt.resume_artifact_path).toMatch(/Jobs_Example_Recruiter_Com/);
+    expect(path.basename(attempt.resume_artifact_path)).toMatch(/Fejiro Efiuvwere Business Analyst - Jobs Example Recruiter Com Resume\.docx/);
+    expect(path.basename(attempt.resume_artifact_path)).not.toContain("_");
     expect(attempt.resume_artifact_path).not.toMatch(/Unknown/i);
   });
 
@@ -776,7 +777,8 @@ describe("hunt flow", () => {
       .get(Number(job.lastInsertRowid)) as any;
 
     expect(result.prepared).toHaveLength(1);
-    expect(attempt.resume_artifact_path).toMatch(/Dice_Com_Job_/);
+    expect(path.basename(attempt.resume_artifact_path)).toMatch(/Fejiro Efiuvwere Senior Project Manager ERP Transformation - Dice Com Job \d+ Resume\.docx/);
+    expect(path.basename(attempt.resume_artifact_path)).not.toContain("_");
     expect(attempt.resume_artifact_path).not.toMatch(/Transformation_Senior_Project_Manager/);
   });
 

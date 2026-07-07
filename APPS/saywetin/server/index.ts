@@ -41,7 +41,7 @@ const allowedOrigins = new Set([
   "ionic://localhost",
   "https://saywetin.app",
   "https://www.saywetin.app",
-  "https://saywetin-pages.pages.dev",
+  "https://saywetin.pages.dev",
 ]);
 
 function isAllowedOrigin(origin: string): boolean {
@@ -52,7 +52,7 @@ function isAllowedOrigin(origin: string): boolean {
   try {
     const parsed = new URL(origin);
     const host = parsed.hostname.toLowerCase();
-    return host === "saywetin-pages.pages.dev" || host.endsWith(".saywetin-pages.pages.dev");
+    return host === "saywetin.pages.dev" || host.endsWith(".saywetin.pages.dev");
   } catch {
     return false;
   }

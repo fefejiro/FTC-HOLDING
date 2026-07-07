@@ -1,0 +1,176 @@
+{
+  "generated": "2026-07-06",
+  "status": "active visibility and warm-network queue",
+  "source": "Visible FetLife Groups page in signed-in session",
+  "read_only": true,
+  "actions_taken": {
+    "comments": 0,
+    "follows": 0,
+    "messages": 0,
+    "friend_requests": 0,
+    "profile_controls": 0
+  },
+  "engagement_goal": "Use groups already joined and followed discussions to build visibility before direct outreach.",
+  "highest_priority_joined_groups": [
+    {
+      "group": "AfroCentric BDSM : For black men and black women in BDSM who don't hate their own kind",
+      "why_it_matters": "Black/Ebony BDSM local-community fit; active followed discussion visible.",
+      "sender_fit": "either",
+      "engagement_priority": "highest"
+    },
+    {
+      "group": "Anonymous Encounters Oshawa",
+      "why_it_matters": "East-side / Durham signal; 7 new items visible.",
+      "sender_fit": "MikeLitoriz / EbonyExchange",
+      "engagement_priority": "high"
+    },
+    {
+      "group": "Anonymous Encounters Toronto",
+      "why_it_matters": "Toronto local signal; 61 new items visible; several EbonyExchange-adjacent posts already visible.",
+      "sender_fit": "EbonyExchange",
+      "engagement_priority": "high"
+    },
+    {
+      "group": "Black Bulls from Toronto Ontario [GTA] [BBC]",
+      "why_it_matters": "Local GTA Black lifestyle signal; visible Pickering/GTA unicorn/couple post.",
+      "sender_fit": "EbonyExchange",
+      "engagement_priority": "high"
+    },
+    {
+      "group": "Black female submissives for BLACK MEN",
+      "why_it_matters": "Strong Black/Ebony category match; 1 new item visible.",
+      "sender_fit": "MikeLitoriz",
+      "engagement_priority": "high"
+    },
+    {
+      "group": "Black men who love black women and the black women who love them",
+      "why_it_matters": "Black/Ebony social overlap; useful for non-cold visibility.",
+      "sender_fit": "MikeLitoriz",
+      "engagement_priority": "high"
+    },
+    {
+      "group": "Kinky Roommates Toronto & the rest of Ontario",
+      "why_it_matters": "Toronto/Ontario local graph; useful for local scene familiarity.",
+      "sender_fit": "either",
+      "engagement_priority": "medium"
+    },
+    {
+      "group": "Naughty Pickering",
+      "why_it_matters": "Pickering east-side signal.",
+      "sender_fit": "MikeLitoriz / EbonyExchange",
+      "engagement_priority": "high"
+    },
+    {
+      "group": "Oasis Aqualounge",
+      "why_it_matters": "Toronto lifestyle venue/community signal.",
+      "sender_fit": "EbonyExchange",
+      "engagement_priority": "medium"
+    },
+    {
+      "group": "Toronto Hotwives (and admirers)",
+      "why_it_matters": "Strong hotwife/couple/swinger overlap.",
+      "sender_fit": "EbonyExchange",
+      "engagement_priority": "high"
+    },
+    {
+      "group": "Curvy Women and the People Who Love Them",
+      "why_it_matters": "Active group with visible high-comment discussion; softer social visibility lane.",
+      "sender_fit": "either",
+      "engagement_priority": "medium"
+    },
+    {
+      "group": "Kinky and Geeky",
+      "why_it_matters": "Very active broad community; useful for personality-first comments.",
+      "sender_fit": "MikeLitoriz",
+      "engagement_priority": "medium"
+    }
+  ],
+  "batch_001_followed_discussions": [
+    {
+      "priority": 1,
+      "discussion": "What are Black Men looking for?",
+      "author": "bbygirlzcole",
+      "group": "AfroCentric BDSM : For black men and black women in BDSM who don't hate their own kind",
+      "visible_activity": "4 hours ago; 4 unread comments",
+      "suggested_move": "Read thread, then add a thoughtful answer from lived/local perspective. Comment as a person first.",
+      "status": "ready to read"
+    },
+    {
+      "priority": 2,
+      "discussion": "Unicorn or Female or couples in Pickering/GTA looking for a MF couple?",
+      "author": "abs23",
+      "group": "Black Bulls from Toronto Ontario [GTA] [BBC]",
+      "visible_activity": "23 May",
+      "suggested_move": "Review carefully. Directly aligned with Pickering/GTA couple/unicorn search, but may be stale.",
+      "status": "manual freshness check"
+    },
+    {
+      "priority": 3,
+      "discussion": "MF Ebony Couple in Pickering/GTA region",
+      "author": "unknown from visible group page",
+      "group": "Anonymous Encounters Toronto",
+      "visible_activity": "no comments yet",
+      "suggested_move": "Good EbonyExchange visibility lane. Consider simple non-pushy local intro comment if group norms allow.",
+      "status": "ready to read"
+    },
+    {
+      "priority": 4,
+      "discussion": "Durham Ebony Couple - FMF or MFMF",
+      "author": "unknown from visible group page",
+      "group": "Anonymous Encounters Toronto",
+      "visible_activity": "no comments yet",
+      "suggested_move": "Strong east-side EbonyExchange match. Review boundaries and freshness before engagement.",
+      "status": "ready to read"
+    },
+    {
+      "priority": 5,
+      "discussion": "gangbang?",
+      "author": "Freaky_yasir",
+      "group": "Anonymous Encounters Oshawa",
+      "visible_activity": "17 hours ago; 2 unread comments",
+      "suggested_move": "Likely not ideal for first visibility unless tone is respectful and aligned. Default observe/save.",
+      "status": "observe first"
+    },
+    {
+      "priority": 6,
+      "discussion": "Question for the guys here. Stretch marks",
+      "author": "Bow-Man11",
+      "group": "Curvy Women and the People Who Love Them",
+      "visible_activity": "22 hours ago; 91 unread comments",
+      "suggested_move": "Good low-pressure community comment opportunity. Avoid prospecting language; comment supportively if relevant.",
+      "status": "ready to read"
+    },
+    {
+      "priority": 7,
+      "discussion": "Boudoir Photoshoot?",
+      "author": "Candylicious4U",
+      "group": "Curvy Women and the People Who Love Them",
+      "visible_activity": "13 Feb; 3 unread comments",
+      "suggested_move": "Likely stale. Save for later only if comments are active.",
+      "status": "save for later"
+    },
+    {
+      "priority": 8,
+      "discussion": "straight BBC looking for a roommate",
+      "author": "unknown from visible group page",
+      "group": "Kinky Roommates Toronto & the rest of Ontario",
+      "visible_activity": "no comments yet",
+      "suggested_move": "Not a prospecting target. Ignore unless there is a real local network reason.",
+      "status": "ignore"
+    }
+  ],
+  "commenting_rules": [
+    "Comment as a real local person, not as a pitch.",
+    "One comment per thread at first.",
+    "Do not ask for DMs in the first comment.",
+    "Do not mention profile review, lists, outreach, prospecting, or EbonyExchange in groups where that would feel like recruiting.",
+    "Avoid sexual escalation unless the original post explicitly invites that tone and the group norm supports it.",
+    "After a good comment, wait for replies or nearby engagement before reviewing profiles."
+  ],
+  "promotion_rule": [
+    "They reply positively to a comment.",
+    "They appear repeatedly in the same local thread/group orbit.",
+    "Their profile is clearly visible as local, active, and compatible from group context.",
+    "They are connected to one of the strong seed profiles."
+  ]
+}

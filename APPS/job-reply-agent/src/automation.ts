@@ -1759,7 +1759,7 @@ async function buildApplicationArtifacts(args: {
       if (packageRow?.cover_letter_text) {
         const coverDir = args.cfg.rules.resume_tailoring.output_dir || path.dirname(result.docxPath);
         fs.mkdirSync(coverDir, { recursive: true });
-        const coverBase = path.basename(result.docxPath).replace(/\.docx$/i, "_Cover_Letter.txt");
+        const coverBase = path.basename(result.docxPath).replace(/\.docx$/i, " Cover Letter.txt");
         const durableCoverLetterPath = path.join(coverDir, coverBase);
         fs.writeFileSync(durableCoverLetterPath, packageRow.cover_letter_text || "", "utf8");
         return { resumePath: result.docxPath, coverLetterPath: durableCoverLetterPath, screenshotPath };

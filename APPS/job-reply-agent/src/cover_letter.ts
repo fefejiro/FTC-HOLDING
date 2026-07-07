@@ -108,7 +108,7 @@ export async function writeCoverLetterArtifacts(args: {
 }): Promise<CoverLetterArtifacts> {
   const outputDir = path.resolve(args.outputDir);
   fs.mkdirSync(outputDir, { recursive: true });
-  const base = path.basename(args.resumeDocxPath).replace(/\.docx$/i, "_Cover_Letter");
+  const base = path.basename(args.resumeDocxPath).replace(/\.docx$/i, " Cover Letter");
   const textPath = path.join(outputDir, `${base}.txt`);
   const docxPath = path.join(outputDir, `${base}.docx`);
   const suppliedCoverText = args.coverText.trim();

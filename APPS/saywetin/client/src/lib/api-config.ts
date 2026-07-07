@@ -20,7 +20,7 @@ function normalizeHostname(hostname: string): string {
 
 export function isLegacyWebHost(hostname: string): boolean {
   const normalized = normalizeHostname(hostname);
-  return normalized === "www.saywetin.app" || normalized.endsWith("saywetin-pages.pages.dev");
+  return normalized === "www.saywetin.app" || normalized.endsWith("saywetin.pages.dev");
 }
 
 export function isSaywetinHostedWebHost(hostname: string): boolean {
@@ -28,7 +28,7 @@ export function isSaywetinHostedWebHost(hostname: string): boolean {
   return (
     normalized === "saywetin.app" ||
     normalized === "www.saywetin.app" ||
-    normalized.endsWith("saywetin-pages.pages.dev")
+    normalized.endsWith("saywetin.pages.dev")
   );
 }
 

@@ -48,7 +48,9 @@ function titleCaseSlug(input: string): string {
     .replace(/^_+|_+$/g, "")
     .split("_")
     .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .map((part) => /^[A-Z0-9]{2,}$/.test(part) && /[A-Z]/.test(part)
+      ? part
+      : part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
     .join("_");
 }
 
@@ -57,10 +59,26 @@ function cropSlug(input: string, maxLen: number): string {
   return value || "Value";
 }
 
+function displayPartFromSlug(input: string): string {
+  return (input || "")
+    .replace(/_+/g, " ")
+    .replace(/[<>:"/\\|?*]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim() || "Value";
+}
+
+function cropDisplayPart(input: string, maxLen: number): string {
+  const value = displayPartFromSlug(input).slice(0, maxLen).replace(/[\s.-]+$/g, "").trim();
+  return value || "Value";
+}
+
 function buildTailoredFileName(roleSlug: string, employerSlug: string): string {
-  const prefix = "Fejiro_Efiuvwere_";
-  const suffix = "_Resume.docx";
-  const base = `${prefix}${roleSlug}_${employerSlug}${suffix}`;
+  const candidate = "Fejiro Efiuvwere";
+  const suffix = " Resume.docx";
+  const separator = " - ";
+  const roleName = displayPartFromSlug(roleSlug);
+  const employerName = displayPartFromSlug(employerSlug);
+  const base = `${roleName}${separator}${candidate}${separator}${employerName}${suffix}`;
   if (base.length <= MAX_FILE_BASENAME) {
     return base;
   }
@@ -68,9 +86,9 @@ function buildTailoredFileName(roleSlug: string, employerSlug: string): string {
   const extra = base.length - MAX_FILE_BASENAME;
   const targetRoleLen = Math.max(16, roleSlug.length - Math.ceil(extra / 2));
   const targetEmployerLen = Math.max(16, employerSlug.length - Math.floor(extra / 2));
-  const shortRole = cropSlug(roleSlug, targetRoleLen);
-  const shortEmployer = cropSlug(employerSlug, targetEmployerLen);
-  return `${prefix}${shortRole}_${shortEmployer}${suffix}`;
+  const shortRole = cropDisplayPart(roleSlug, targetRoleLen);
+  const shortEmployer = cropDisplayPart(employerSlug, targetEmployerLen);
+  return `${shortRole}${separator}${candidate}${separator}${shortEmployer}${suffix}`;
 }
 
 function escapeXml(input: string): string {

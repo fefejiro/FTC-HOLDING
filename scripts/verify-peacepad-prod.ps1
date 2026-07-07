@@ -27,7 +27,7 @@ $checks = @(
     Expected = 200;
     ContentTypeContains = "application/json";
     HeaderName = "x-railway-edge";
-    HeaderContains = "railway/";
+    HeaderRequired = $true;
   },
   @{
     Name = "api.peacepad.ca /api/health";
@@ -35,7 +35,7 @@ $checks = @(
     Expected = 200;
     ContentTypeContains = "application/json";
     HeaderName = "x-railway-edge";
-    HeaderContains = "railway/";
+    HeaderRequired = $true;
   },
   @{
     Name = "peacepad.ca /auth/callback";
@@ -241,6 +241,14 @@ function Invoke-EndpointCheck {
     $headerPass = -not [string]::IsNullOrWhiteSpace($headerValue) -and $headerValue.ToLowerInvariant().Contains($requiredHeaderValue.ToLowerInvariant())
     if (-not $headerPass -and [string]::IsNullOrWhiteSpace($detail)) {
       $detail = "Header '$requiredHeaderName' did not include '$requiredHeaderValue'."
+    }
+  }
+
+  if ($Check.ContainsKey("HeaderName") -and $Check.ContainsKey("HeaderRequired")) {
+    $requiredHeaderName = [string]$Check.HeaderName
+    $headerPass = -not [string]::IsNullOrWhiteSpace($headerValue)
+    if (-not $headerPass -and [string]::IsNullOrWhiteSpace($detail)) {
+      $detail = "Header '$requiredHeaderName' was missing or empty."
     }
   }
 

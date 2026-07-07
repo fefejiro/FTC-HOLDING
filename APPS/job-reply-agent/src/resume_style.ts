@@ -69,10 +69,11 @@ interface ScoringRules {
 
 const DEFAULT_CONTAMINATION_TERMS = ["WMS Project Manager", "Blue Yonder", "North West Company"];
 export const APPROVED_ORANGE_TEMPLATE_BASENAME = "Fejiro_Efiuvwere_Default_Job_Agent_Resume_Template_RQ11067.docx";
-export const APPROVED_BUSINESS_ANALYST_TEMPLATE_BASENAME = "Fejiro_Efiuvwere_Business_Analyst_Gold_Standard_Template.docx";
+export const APPROVED_BUSINESS_ANALYST_TEMPLATE_BASENAME = "Business Systems Analyst - Fejiro Efiuvwere.docx";
 const APPROVED_ORANGE_TEMPLATE_BASENAMES = new Set([
   APPROVED_ORANGE_TEMPLATE_BASENAME.toLowerCase(),
   APPROVED_BUSINESS_ANALYST_TEMPLATE_BASENAME.toLowerCase(),
+  "Fejiro_Efiuvwere_Business_Analyst_Gold_Standard_Template.docx".toLowerCase(),
   "Fejiro_Efiuvwere_Canadian_Tire_Manager_Network_Analytics_Resume.docx".toLowerCase()
 ]);
 export const FORBIDDEN_VISIBLE_RESUME_PHRASES = [

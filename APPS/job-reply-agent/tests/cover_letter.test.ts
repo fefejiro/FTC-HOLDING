@@ -8,7 +8,7 @@ import { writeCoverLetterArtifacts } from "../src/cover_letter.js";
 describe("cover letter artifacts", () => {
   it("creates non-empty txt and valid docx when package cover text is empty", async () => {
     const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), "job-agent-cover-"));
-    const resumeDocxPath = path.join(outputDir, "Fejiro_Efiuvwere_Project_Manager_Entergrade_Solutions_Resume.docx");
+    const resumeDocxPath = path.join(outputDir, "Fejiro Efiuvwere Project Manager - Entergrade Solutions Resume.docx");
     fs.writeFileSync(resumeDocxPath, "placeholder");
 
     const artifacts = await writeCoverLetterArtifacts({
@@ -28,6 +28,8 @@ describe("cover letter artifacts", () => {
     expect(text).toContain("Entergrade Solutions");
     expect(text.length).toBeGreaterThan(500);
     expect(artifacts.docxPath.endsWith(".docx")).toBe(true);
+    expect(path.basename(artifacts.docxPath)).toBe("Fejiro Efiuvwere Project Manager - Entergrade Solutions Resume Cover Letter.docx");
+    expect(path.basename(artifacts.docxPath)).not.toContain("_");
 
     const zip = await JSZip.loadAsync(fs.readFileSync(artifacts.docxPath));
     const documentXml = await zip.file("word/document.xml")?.async("string");
@@ -37,7 +39,7 @@ describe("cover letter artifacts", () => {
 
   it("regenerates the artifact when saved cover text contains scraped Indeed noise", async () => {
     const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), "job-agent-cover-noise-"));
-    const resumeDocxPath = path.join(outputDir, "Fejiro_Efiuvwere_Program_Manager_Servicenow_Dacaro_Resume.docx");
+    const resumeDocxPath = path.join(outputDir, "Fejiro Efiuvwere Program Manager Servicenow - Dacaro Resume.docx");
     fs.writeFileSync(resumeDocxPath, "placeholder");
 
     const artifacts = await writeCoverLetterArtifacts({
@@ -68,7 +70,7 @@ describe("cover letter artifacts", () => {
 
   it("includes Salesforce and CRM focus when the job description requires Salesforce", async () => {
     const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), "job-agent-cover-salesforce-"));
-    const resumeDocxPath = path.join(outputDir, "Fejiro_Efiuvwere_Business_Systems_Project_Manager_Addepar_Resume.docx");
+    const resumeDocxPath = path.join(outputDir, "Fejiro Efiuvwere Business Systems Project Manager - Addepar Resume.docx");
     fs.writeFileSync(resumeDocxPath, "placeholder");
 
     const artifacts = await writeCoverLetterArtifacts({
