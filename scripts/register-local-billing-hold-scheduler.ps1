@@ -8,26 +8,34 @@ $root = Resolve-Path (Join-Path $PSScriptRoot "..")
 $cycleScript = Join-Path $root "scripts\local-billing-hold-ops-cycle.ps1"
 $taskPath = "\FTC Holding\"
 $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
+$legacyTaskNames = @("FTC Billing Hold Health", "FTC Billing Hold Status Sync")
 
 $tasks = @(
   @{
-    Name = "FTC Billing Hold Health"
+    Name = "FTC Product Health"
     Mode = "Health"
-    Trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).Date.AddMinutes(5) -RepetitionInterval (New-TimeSpan -Minutes 30) -RepetitionDuration (New-TimeSpan -Days 3650)
+    Trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).Date.AddMinutes(5) -RepetitionInterval (New-TimeSpan -Hours 2) -RepetitionDuration (New-TimeSpan -Days 3650)
   },
   @{
-    Name = "FTC Billing Hold Status Sync"
+    Name = "FTC Product Status Sync"
     Mode = "StatusSync"
-    Trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).Date.AddMinutes(10) -RepetitionInterval (New-TimeSpan -Hours 2) -RepetitionDuration (New-TimeSpan -Days 3650)
+    Trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).Date.AddMinutes(10) -RepetitionInterval (New-TimeSpan -Hours 6) -RepetitionDuration (New-TimeSpan -Days 3650)
   }
 )
 
 if ($Unregister) {
+  foreach ($name in $legacyTaskNames) {
+    Unregister-ScheduledTask -TaskName $name -TaskPath $taskPath -Confirm:$false -ErrorAction SilentlyContinue
+  }
   foreach ($task in $tasks) {
     Unregister-ScheduledTask -TaskName $task.Name -TaskPath $taskPath -Confirm:$false -ErrorAction SilentlyContinue
   }
-  Write-Host "Unregistered FTC billing-hold local tasks."
+  Write-Host "Unregistered FTC local product-health tasks."
   exit 0
+}
+
+foreach ($name in $legacyTaskNames) {
+  Unregister-ScheduledTask -TaskName $name -TaskPath $taskPath -Confirm:$false -ErrorAction SilentlyContinue
 }
 
 foreach ($task in $tasks) {
@@ -54,4 +62,4 @@ foreach ($task in $tasks) {
   Write-Host "Registered $($task.Name) ($($task.Mode))."
 }
 
-Write-Host "Local billing-hold scheduler is active."
+Write-Host "Local product-health scheduler is active."

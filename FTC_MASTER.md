@@ -181,7 +181,7 @@ git -C "C:\FTC HOLDING" status -sb
 ## Una Labs Ops Snapshot (Auto)
 
 <!-- AUTO:UNALABS_MASTER:START -->
-- Updated at: 2026-07-07T12:10:02.790Z
+- Updated at: 2026-07-07T14:10:04.585Z
 - Smoke checks: 5/14 passing
 - Admin verification: unauthenticated admin guard smoke only
 - Canonical status doc: DOCS/UNALABS_STATUS.md
@@ -191,10 +191,10 @@ git -C "C:\FTC HOLDING" status -sb
 ## SayWetin Ops Snapshot (Auto)
 
 <!-- AUTO:SAYWETIN_MASTER:START -->
-- Updated at: 2026-07-07T12:10:04.567Z
+- Updated at: 2026-07-07T14:10:09.160Z
 - Smoke checks: 3/3 passing
 - Test suite: 13 tests across 3 files
-- Velocity: 0 commits (14d), 1 commits (30d)
+- Velocity: 1 commits (14d), 2 commits (30d)
 - Canonical status doc: DOCS/SAYWETIN_STATUS.md
 <!-- AUTO:SAYWETIN_MASTER:END -->
 

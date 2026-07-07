@@ -40,12 +40,12 @@ function Invoke-LoggedCommand {
 }
 
 $failures = @()
-Write-Log "FTC local billing-hold ops cycle mode=$Mode root=$root"
+Write-Log "FTC local product-health ops cycle mode=$Mode root=$root"
 
 switch ($Mode) {
   "Health" {
     foreach ($check in @(
-      @{ Label = "FTC health audit"; Command = "npm run health:audit -- --no-fail" },
+      @{ Label = "FTC product health audit"; Command = "npm run health:audit -- --no-fail --max-links 160" },
       @{ Label = "Core production verification"; Command = "powershell -ExecutionPolicy Bypass -File scripts\verify-prod.ps1" },
       @{ Label = "PeacePad production verification"; Command = "powershell -ExecutionPolicy Bypass -File scripts\verify-peacepad-prod.ps1 -TimeoutSec 20" },
       @{ Label = "SayWetin production verification"; Command = "powershell -ExecutionPolicy Bypass -File scripts\verify-saywetin-prod.ps1 -TimeoutSec 20" }
@@ -89,13 +89,13 @@ switch ($Mode) {
 
 $status = if ($failures.Count -eq 0) { "PASS" } else { "FAIL" }
 $summary = @(
-  "# FTC Local Billing-Hold Ops",
+  "# FTC Local Product-Health Ops",
   "",
   "- Last run: $(Get-Date -Format o)",
   "- Mode: $Mode",
   "- Status: $status",
   "- Log: $logPath",
-  "- GitHub hosted runners: bypassed while billing is on hold",
+  "- GitHub hosted runners: bypassed while billing is on hold; product health remains the primary signal",
   "",
   "## Failures",
   "",

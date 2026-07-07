@@ -1,6 +1,6 @@
 # FTC Health Audit
 
-Generated: 2026-07-07T12:15:14.803Z
+Generated: 2026-07-07T14:47:01.429Z
 Root: `C:\FTC HOLDING`
 
 ## Summary

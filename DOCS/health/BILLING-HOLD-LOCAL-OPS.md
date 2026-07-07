@@ -1,6 +1,6 @@
-# Billing-Hold Local Ops
+# Local Product-Health Ops
 
-GitHub hosted runners are temporarily unavailable while billing is on hold. During this period, critical FTC operations run from the local Windows machine instead of GitHub Actions.
+GitHub hosted runners are temporarily unavailable while billing is on hold. During this period, product health checks run from the local Windows machine instead of GitHub Actions.
 
 ## Disabled Hosted Schedules
 
@@ -17,8 +17,10 @@ GitHub hosted runners are temporarily unavailable while billing is on hold. Duri
 
 Registered Windows tasks:
 
-- `\FTC Holding\FTC Billing Hold Health`: every 30 minutes.
-- `\FTC Holding\FTC Billing Hold Status Sync`: every 2 hours.
+- `\FTC Holding\FTC Product Health`: every 2 hours.
+- `\FTC Holding\FTC Product Status Sync`: every 6 hours.
+
+The health task is intentionally product-first. It checks cloud endpoints, Una Labs/Anion/SayWetin/PeacePad/Garden/Dispatch/CapSigma surfaces, production verification scripts, and a wider internal-link crawl. Billing is only the reason these checks are running locally right now.
 
 Logs and latest state:
 
