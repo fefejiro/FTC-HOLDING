@@ -93,6 +93,8 @@ scraper:
   linkedin:
     enabled: true
     keywords:
+      - IT Manager Information Technology Lead IT Business Systems Manager Enterprise Applications Manager Remote Hybrid Canada Toronto Easy Apply
+      - Information Technology Operations Manager IT Operations Manager Business Systems Manager Retail Systems Manager Remote Hybrid Canada
       - WMS Warehouse Management Manhattan WMOS Manhattan Active Blue Yonder Project Manager Consultant Business Analyst Systems Analyst Remote Canada Toronto
       - Senior Business Systems Analyst Technical Business Analyst ERP WMS supply chain integration SaaS cloud Remote Canada Ontario
       - Senior QA Quality Engineer UAT Lead Test Lead integration API SQL regression end-to-end release validation Remote Canada
@@ -134,6 +136,7 @@ resume_tailoring:
   enabled: true
   template_path: "C:/FTC HOLDING/DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes/Business Systems Analyst - Fejiro Efiuvwere.docx"
   business_analysis_template_path: "C:/FTC HOLDING/DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes/Business Systems Analyst - Fejiro Efiuvwere.docx"
+  it_management_template_path: "C:/FTC HOLDING/DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes/IT Business Systems Manager Fejiro Efiuvwere.docx"
   output_dir: "C:/FTC HOLDING/DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes"
   attach_mode: docx_only
   auto_send: false

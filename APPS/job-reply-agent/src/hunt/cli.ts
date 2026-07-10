@@ -168,6 +168,7 @@ export async function runHuntCommand(args: {
       sourceFilter: args.sourceArg || "dice",
       templatePath,
       businessAnalysisTemplatePath: cfg.rules.resume_tailoring?.business_analysis_template_path,
+      itManagementTemplatePath: cfg.rules.resume_tailoring?.it_management_template_path,
       outputDir
     });
     logger.info(result, "hunt:prepare-artifacts completed.");
@@ -376,7 +377,8 @@ export async function runHuntCommand(args: {
           } as any,
           jdText: job.description || "",
           defaultTemplatePath: templatePath,
-          businessAnalysisTemplatePath: cfg.rules.resume_tailoring?.business_analysis_template_path
+          businessAnalysisTemplatePath: cfg.rules.resume_tailoring?.business_analysis_template_path,
+          itManagementTemplatePath: cfg.rules.resume_tailoring?.it_management_template_path
         });
         const result = await tailorResumeForJD({
           parsed: {
@@ -402,7 +404,8 @@ export async function runHuntCommand(args: {
             } as any,
             jdText: job.description || "",
             defaultTemplatePath: templatePath,
-            businessAnalysisTemplatePath: cfg.rules.resume_tailoring?.business_analysis_template_path
+            businessAnalysisTemplatePath: cfg.rules.resume_tailoring?.business_analysis_template_path,
+            itManagementTemplatePath: cfg.rules.resume_tailoring?.it_management_template_path
           });
           const result = await tailorResumeForJD({
             parsed: {
@@ -428,7 +431,8 @@ export async function runHuntCommand(args: {
             } as any,
             jdText: job.description || "",
             defaultTemplatePath: templatePath,
-            businessAnalysisTemplatePath: cfg.rules.resume_tailoring?.business_analysis_template_path
+            businessAnalysisTemplatePath: cfg.rules.resume_tailoring?.business_analysis_template_path,
+            itManagementTemplatePath: cfg.rules.resume_tailoring?.it_management_template_path
           });
           const result = await tailorResumeForJD({
             parsed: {

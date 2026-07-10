@@ -25,6 +25,7 @@ export interface TailoringTemplateSelectionArgs {
   jdText: string;
   defaultTemplatePath: string;
   businessAnalysisTemplatePath?: string;
+  itManagementTemplatePath?: string;
 }
 
 export interface TailorResult {
@@ -296,6 +297,30 @@ function isBusinessAnalysisTemplateMatch(parsed: Pick<ParsedOpportunity, "roleTi
   return jdSignals.filter((pattern) => pattern.test(jdText)).length >= 4;
 }
 
+function isItManagementTemplateMatch(parsed: Pick<ParsedOpportunity, "roleTitle" | "cleanRoleTitle" | "company">, jdText: string): boolean {
+  const title = `${parsed.roleTitle || ""} ${parsed.cleanRoleTitle || ""}`;
+  if (/\b(information\s+technology|it)\s+(lead|manager|operations\s+manager|business\s+systems\s+manager|systems\s+manager|support\s+manager)\b/i.test(title)) return true;
+  if (/\b(it|technology)\s+business\s+(systems?\s+)?manager\b/i.test(title)) return true;
+  if (/\b(manager|lead|director)\b.*\b(enterprise\s+applications?|business\s+systems?|retail\s+systems?|it\s+operations|technology\s+operations|service\s+delivery|digital\s+transformation)\b/i.test(title)) return true;
+  if (/\b(enterprise\s+applications?|business\s+systems?|retail\s+systems?|it\s+operations|technology\s+operations|service\s+delivery|digital\s+transformation)\b.*\b(manager|lead|director)\b/i.test(title)) return true;
+
+  const jdSignals = [
+    /\bIT\s+(operations|leadership|support|service delivery)\b/i,
+    /\benterprise\s+applications?\b/i,
+    /\bbusiness\s+systems?\b/i,
+    /\bretail\s+systems?\b/i,
+    /\bERP\b/i,
+    /\bPOS\b/i,
+    /\bWMS\b/i,
+    /\bvendor\s+(coordination|management|oversight)\b/i,
+    /\brelease\s+(readiness|management|coordination)\b/i,
+    /\bincident\s+(escalation|management|response)\b/i,
+    /\bstakeholder\s+(management|communication|alignment)\b/i,
+    /\bteam\s+(leadership|management|coordination)\b/i
+  ];
+  return /\b(manager|lead|director)\b/i.test(title) && jdSignals.filter((pattern) => pattern.test(jdText)).length >= 3;
+}
+
 export function selectTailoringTemplatePath(args: TailoringTemplateSelectionArgs): string {
   if (
     args.businessAnalysisTemplatePath
@@ -303,6 +328,13 @@ export function selectTailoringTemplatePath(args: TailoringTemplateSelectionArgs
     && isBusinessAnalysisTemplateMatch(args.parsed, args.jdText)
   ) {
     return args.businessAnalysisTemplatePath;
+  }
+  if (
+    args.itManagementTemplatePath
+    && fs.existsSync(args.itManagementTemplatePath)
+    && isItManagementTemplateMatch(args.parsed, args.jdText)
+  ) {
+    return args.itManagementTemplatePath;
   }
   return args.defaultTemplatePath;
 }
@@ -367,13 +399,21 @@ export async function tailorResumeForJD(args: TailorArgs): Promise<TailorResult>
     .filter((entry) => entry.index < summaryHeadingIdx && entry.text.length > 0)
     .map((entry) => entry.index);
   const nameIdx = preambleIndexes.find((index) => /fejiro\s+efiuvwere/i.test(paragraphText(paragraphs[index]))) ?? -1;
-  const subtitleIdx = preambleIndexes.find((index) => {
+  const isContactLine = (text: string): boolean =>
+    /(?:@|linkedin\.com|github\.com|\b\d{3}[.\-\s]\d{3}[.\-\s]\d{4}\b|\bwhitby\b|\btoronto\b|\boshawa\b|\bajax\b|\bpickering\b|\bcanada\b)/i.test(text);
+  const subtitleCandidates = preambleIndexes.filter((index) => {
     const text = paragraphText(paragraphs[index]);
-    return text.includes("|") && !/^\s*(?:whitby|toronto|oshawa|ajax|pickering|canada)\b/i.test(text);
-  }) ?? -1;
+    return index > nameIdx && text.includes("|") && !isContactLine(text);
+  });
+  const subtitleIdx = subtitleCandidates.length > 0 ? subtitleCandidates[subtitleCandidates.length - 1] : -1;
 
-  const titleLimit = subtitleIdx >= 0 ? subtitleIdx : nameIdx >= 0 ? nameIdx : summaryHeadingIdx;
-  const titleIndexes = preambleIndexes.filter((index) => index < titleLimit).slice(0, 4);
+  const titleLimit = nameIdx >= 0 ? nameIdx : (subtitleIdx >= 0 ? subtitleIdx : summaryHeadingIdx);
+  const titleIndexes = preambleIndexes
+    .filter((index) => {
+      const text = paragraphText(paragraphs[index]);
+      return index < titleLimit && !isContactLine(text);
+    })
+    .slice(0, 4);
   const titleLines = splitTitleToLines(visibleTitle, Math.max(1, titleIndexes.length || 1));
   if (titleIndexes.length === 0) {
     paragraphs[0] = setParagraphText(paragraphs[0], visibleTitle);

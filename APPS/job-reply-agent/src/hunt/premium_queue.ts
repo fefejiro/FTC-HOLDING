@@ -210,6 +210,7 @@ export async function preparePremiumQueueArtifacts(
     sourceFilter?: string;
     templatePath: string;
     businessAnalysisTemplatePath?: string;
+    itManagementTemplatePath?: string;
     outputDir: string;
   }
 ): Promise<{ prepared: PreparedPremiumArtifact[]; skipped: PreparedPremiumArtifact[] }> {
@@ -238,7 +239,8 @@ export async function preparePremiumQueueArtifacts(
         parsed: { roleTitle: row.title, cleanRoleTitle: row.title, company: artifactCompany } as any,
         jdText: row.description || "",
         defaultTemplatePath: templatePath,
-        businessAnalysisTemplatePath: opts.businessAnalysisTemplatePath
+        businessAnalysisTemplatePath: opts.businessAnalysisTemplatePath,
+        itManagementTemplatePath: opts.itManagementTemplatePath
       });
       const tailored = await tailorResumeForJD({
         parsed: { roleTitle: row.title, company: artifactCompany } as any,

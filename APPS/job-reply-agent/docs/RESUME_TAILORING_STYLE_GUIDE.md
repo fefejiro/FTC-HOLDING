@@ -6,6 +6,9 @@ This specification is based on direct comparison of:
 
 ## 1. Required Output Structure
 - Resume output must remain DOCX and preserve the existing template paragraph styles.
+- For BA/recruiter-reply packages, preserve the approved two-column `Business Systems Analyst - Fejiro Efiuvwere.docx` style family. Do not rebuild it as a new one-column resume unless the user explicitly asks for a different format.
+- The left column is for stable section labels only; the right column is for candidate content only.
+- Keep alignment clean in Google Docs/Word imports; avoid blank left-label rows, abstract notes, and process descriptions.
 - Required top block:
   - Target title (prominent title area)
   - Subtitle line using pipe-delimited capability framing
@@ -55,6 +58,7 @@ This specification is based on direct comparison of:
 - Core strengths must map to the role track and JD keywords.
 - Must be concrete capabilities, not vague traits.
 - No tool claims outside truth bank.
+- For Maximo/EWMS roles, use the confirmed The Brick-through-Talize Maximo-related experience only. Emphasize asset/work management, work orders, preventative maintenance, service requests, facilities, warehouse operations, reporting checks, integrations, data handoffs, QA/UAT, BRD inputs, process mapping, stakeholder signoffs, and implementation support. Do not claim unsupported Maximo administration, configuration, development, certification, or version-specific ownership.
 
 ## 8. Experience Bullet Selection From Truth Bank
 - Pull only from approved `experience_pool` truth bullets.

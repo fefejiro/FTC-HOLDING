@@ -146,6 +146,7 @@ export interface RulesConfig {
     enabled: boolean;
     template_path: string;
     business_analysis_template_path?: string;
+    it_management_template_path?: string;
     output_dir: string;
     attach_mode: "docx_only" | "docx_and_pdf" | "pdf_only";
     auto_send: boolean;

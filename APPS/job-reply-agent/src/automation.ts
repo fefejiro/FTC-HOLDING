@@ -966,7 +966,8 @@ export async function runAutoEmailQueue(params: {
           parsed: parsed as any,
           jdText: message.body || parsed.cleanBody || "",
           defaultTemplatePath: cfg.rules.resume_tailoring.template_path,
-          businessAnalysisTemplatePath: cfg.rules.resume_tailoring.business_analysis_template_path
+          businessAnalysisTemplatePath: cfg.rules.resume_tailoring.business_analysis_template_path,
+          itManagementTemplatePath: cfg.rules.resume_tailoring.it_management_template_path
         });
         const tailored = await tailorResumeForJD({
           parsed: parsed as any,
@@ -1748,7 +1749,8 @@ async function buildApplicationArtifacts(args: {
         parsed: parsed as any,
         jdText: args.job.description || "",
         defaultTemplatePath: args.cfg.rules.resume_tailoring.template_path,
-        businessAnalysisTemplatePath: args.cfg.rules.resume_tailoring.business_analysis_template_path
+        businessAnalysisTemplatePath: args.cfg.rules.resume_tailoring.business_analysis_template_path,
+        itManagementTemplatePath: args.cfg.rules.resume_tailoring.it_management_template_path
       });
       const result = await tailorResumeForJD({
         parsed: parsed as any,

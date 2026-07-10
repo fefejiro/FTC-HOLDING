@@ -115,6 +115,12 @@ tracks:
       - Enterprise systems and workflow improvement
   wms_erp_supply_chain:
     keywords:
+      - maximo
+      - ewms
+      - enterprise work management
+      - work order
+      - preventative maintenance
+      - service request
       - wms
       - erp
       - warehouse
@@ -183,6 +189,12 @@ experience_pool:
     employer: Talize
     confidence: 100
     verified: true
+  - text: Used Maximo in retail operations support to document asset, work order, preventative maintenance, service-request, facilities, and issue-resolution workflows, translating operational needs into process maps, BRD inputs, functional requirements, test scenarios, reporting checks, signoff evidence, and support documentation.
+    tags: [ba, requirements, maximo, ewms, asset_management, work_order, maintenance, uat, retail, operations]
+    source: user_confirmed_kristen_stafingo_resume_2026_07_07
+    employer: Talize
+    confidence: 100
+    verified: true
   - text: Improved transaction processing performance and reduced store-level downtime by 40 percent through structured systems and operations coordination.
     tags: [retail, operations, support]
     source: master_resume_orange_template
@@ -223,6 +235,12 @@ experience_pool:
     tags: [ba, wms, warehouse, supply_chain, retail, operations]
     source: master_resume_orange_template
     employer: SCI Group Inc.
+    confidence: 100
+    verified: true
+  - text: Used Maximo in QA and business analysis activities for asset, work order, maintenance, warehouse recycling, service request, and facilities-related workflows, validating requirements, workflow states, defects, reporting outputs, integrations, data handoffs, and stakeholder signoffs for operational support teams.
+    tags: [ba, requirements, maximo, ewms, asset_management, work_order, maintenance, service_request, uat, retail, operations]
+    source: user_confirmed_kristen_stafingo_resume_2026_07_07
+    employer: The Brick
     confidence: 100
     verified: true
   - text: Managed cross-functional delivery governance for enterprise software and ERP initiatives, including scope, documentation, vendor coordination, and training.

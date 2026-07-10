@@ -70,9 +70,11 @@ interface ScoringRules {
 const DEFAULT_CONTAMINATION_TERMS = ["WMS Project Manager", "Blue Yonder", "North West Company"];
 export const APPROVED_ORANGE_TEMPLATE_BASENAME = "Fejiro_Efiuvwere_Default_Job_Agent_Resume_Template_RQ11067.docx";
 export const APPROVED_BUSINESS_ANALYST_TEMPLATE_BASENAME = "Business Systems Analyst - Fejiro Efiuvwere.docx";
+export const APPROVED_IT_MANAGEMENT_TEMPLATE_BASENAME = "IT Business Systems Manager Fejiro Efiuvwere.docx";
 const APPROVED_ORANGE_TEMPLATE_BASENAMES = new Set([
   APPROVED_ORANGE_TEMPLATE_BASENAME.toLowerCase(),
   APPROVED_BUSINESS_ANALYST_TEMPLATE_BASENAME.toLowerCase(),
+  APPROVED_IT_MANAGEMENT_TEMPLATE_BASENAME.toLowerCase(),
   "Fejiro_Efiuvwere_Business_Analyst_Gold_Standard_Template.docx".toLowerCase(),
   "Fejiro_Efiuvwere_Canadian_Tire_Manager_Network_Analytics_Resume.docx".toLowerCase()
 ]);
@@ -90,7 +92,8 @@ const FORBIDDEN_VISIBLE_RESUME_PATTERNS = [
 ];
 const SALESFORCE_SIGNALS = /\b(salesforce|crm|service cloud|sales cloud|salesforce cpq|appbuilder|agentforce)\b/i;
 const AZURE_CLOUD_SIGNALS = /\b(azure|cloud enterprise architect|landing zone|cloud migration|cloud governance|devsecops|enterprise architecture)\b/i;
-const WMS_ERP_SUPPLY_CHAIN_SIGNALS = /\b(wms|warehouse|warehouse management|erp|supply chain|logistics|inventory|distribution center|distribution centres?|fulfillment|blue yonder|manhattan|sap|oracle|pos integration|warehouse operations)\b/i;
+const MAXIMO_EWMS_SIGNALS = /\b(maximo|ewms|enterprise work management|asset management|work orders?|preventative maintenance|preventive maintenance|service requests?|facilities maintenance|mobile field workflows?)\b/i;
+const WMS_ERP_SUPPLY_CHAIN_SIGNALS = /\b(maximo|ewms|enterprise work management|wms|warehouse|warehouse management|erp|supply chain|logistics|inventory|distribution center|distribution centres?|fulfillment|blue yonder|manhattan|sap|oracle|pos integration|warehouse operations)\b/i;
 const RETAIL_TECH_SIGNALS = /\b(pos|store systems|store operations|retail operations|merchandising|omni[- ]?channel|loyalty|retail technology)\b/i;
 const PROJECT_PROGRAM_SIGNALS = /\b(project manager|program manager|delivery manager|pmo|portfolio|raid|risk register|budget|governance|executive reporting|implementation planning|release readiness)\b/i;
 const BUSINESS_ANALYSIS_TITLE_SIGNALS = /\b(business analyst|systems analyst|business systems analyst|iit business analyst|i&it business analyst)\b/i;
@@ -269,14 +272,38 @@ function isBusinessAnalysisRole(title: string, jdText: string): boolean {
   return BUSINESS_ANALYSIS_DETAIL_SIGNALS.filter((pattern) => pattern.test(corpus)).length >= 4;
 }
 
-function businessAnalysisContent(): Pick<TailoredResumeContent, "subtitle" | "summaryBullets" | "coreStrengths"> {
+function businessAnalysisContent(jdText = ""): Pick<TailoredResumeContent, "subtitle" | "summaryBullets" | "coreStrengths"> {
+  if (MAXIMO_EWMS_SIGNALS.test(jdText)) {
+    return {
+      subtitle: "I&IT Business Analysis | EWMS / IBM Maximo | QA/UAT Governance | Enterprise Systems",
+      summaryBullets: [
+        "Senior IT Business Analyst experienced in I&IT delivery, requirements gathering, stakeholder engagement, QA/UAT, and implementation support for complex enterprise systems.",
+        "Brings confirmed Maximo-related experience across The Brick through Talize, supporting asset, work order, preventative maintenance, service request, facilities, warehouse, reporting, and operational workflows.",
+        "Translates current-state and future-state analysis into process maps, BRD inputs, functional requirements, user stories, acceptance criteria, test scenarios, and stakeholder signoff evidence.",
+        "Supports EWMS-style delivery through defect triage, reporting checks, integration validation, data handoffs, release readiness, and business-to-technical coordination.",
+        "Works across Jira, Confluence, SQL, Postman, WMS/POS/back-office contexts, AODA-aware documentation, Agile delivery, and regulated service environments."
+      ],
+      coreStrengths: [
+        "I&IT business analysis and requirements gathering",
+        "EWMS and IBM Maximo-related workflow analysis",
+        "Asset, work order, preventative maintenance, and service-request processes",
+        "Current-state and future-state process mapping",
+        "BRD inputs, user stories, use cases, and acceptance criteria",
+        "UAT planning, test cases, defect triage, and release readiness",
+        "Jira, Confluence, SQL, Postman, WMS, POS, and reporting validation",
+        "Stakeholder workshops, approvals, signoffs, and implementation support",
+        "AODA-aware documentation and information management"
+      ]
+    };
+  }
+
   return {
     subtitle: "I&IT Business Analysis | Agile Delivery | Public Sector Systems | UAT Governance",
     summaryBullets: [
-      "Senior business analyst experienced in I&IT delivery, requirements gathering, stakeholder engagement, and clear documentation for complex public sector systems.",
+      "Senior business analyst experienced in I&IT and public sector delivery, requirements gathering, stakeholder engagement, and clear documentation for complex public sector systems.",
       "Translates current-state and future-state analysis into business process mapping, use cases, user stories, acceptance criteria, and delivery-ready backlog items.",
       "Supports Product Owners and delivery teams through backlog refinement, Agile ceremonies, UAT planning, defect triage, and release readiness evidence.",
-      "Works across DevOps, Jira, Confluence, Oracle, SQL, workflow analysis and approval process improvement, information management, and AODA-aware documentation.",
+      "Works across DevOps, Jira, Confluence, Oracle, and SQL, with workflow analysis and approval process improvement, information management, and AODA-aware documentation.",
       "Known for clarifying ambiguity, aligning business and technical stakeholders, and improving implementation quality across regulated service environments."
     ],
     coreStrengths: [
@@ -418,7 +445,7 @@ export function buildTailoredResumeContent(args: {
   const track = detectTrack(roleTitle, company, jdText, truthBank);
   const trackConfig = truthBank.tracks?.[track] || truthBank.tracks?.enterprise_delivery || {};
   const businessAnalysis = track === "business_analysis";
-  const baContent = businessAnalysis ? businessAnalysisContent() : null;
+  const baContent = businessAnalysis ? businessAnalysisContent(jdText) : null;
 
   const subtitle = clean(
     baContent?.subtitle

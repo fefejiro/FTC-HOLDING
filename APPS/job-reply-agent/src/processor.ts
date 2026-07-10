@@ -316,7 +316,8 @@ export async function processGmailInbox(params: {
           parsed,
           jdText: message.body,
           defaultTemplatePath: tailoring.template_path,
-          businessAnalysisTemplatePath: tailoring.business_analysis_template_path
+          businessAnalysisTemplatePath: tailoring.business_analysis_template_path,
+          itManagementTemplatePath: tailoring.it_management_template_path
         });
         const tailored = await tailorResumeForJD({
           parsed,

@@ -124,6 +124,7 @@ const rulesSchema = z.object({
       enabled: z.boolean(),
       template_path: z.string(),
       business_analysis_template_path: z.string().optional(),
+      it_management_template_path: z.string().optional(),
       output_dir: z.string(),
       attach_mode: z.enum(["docx_only", "docx_and_pdf", "pdf_only"]),
       auto_send: z.boolean(),

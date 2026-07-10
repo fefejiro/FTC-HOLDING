@@ -5,6 +5,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { selectTailoringTemplatePath, tailorResumeForJD } from "../src/resume_tailor";
 import {
   APPROVED_BUSINESS_ANALYST_TEMPLATE_BASENAME,
+  APPROVED_IT_MANAGEMENT_TEMPLATE_BASENAME,
   APPROVED_ORANGE_TEMPLATE_BASENAME,
   FORBIDDEN_VISIBLE_RESUME_PHRASES,
   isApprovedOrangeTemplatePath
@@ -33,6 +34,15 @@ const businessAnalystTemplatePath = path.resolve(
   "Fejiro_Job_Reply_Agent_Resume_Bank",
   "resumes",
   APPROVED_BUSINESS_ANALYST_TEMPLATE_BASENAME
+);
+const itManagementTemplatePath = path.resolve(
+  process.cwd(),
+  "..",
+  "..",
+  "DOCS",
+  "Fejiro_Job_Reply_Agent_Resume_Bank",
+  "resumes",
+  APPROVED_IT_MANAGEMENT_TEMPLATE_BASENAME
 );
 const outputDir = path.resolve(process.cwd(), ".local", "generated-tests");
 
@@ -85,6 +95,8 @@ describe("Resume Tailoring Engine", () => {
     expect(isApprovedOrangeTemplatePath(defaultTemplatePath)).toBe(true);
     expect(path.basename(businessAnalystTemplatePath)).toBe(APPROVED_BUSINESS_ANALYST_TEMPLATE_BASENAME);
     expect(isApprovedOrangeTemplatePath(businessAnalystTemplatePath)).toBe(true);
+    expect(path.basename(itManagementTemplatePath)).toBe(APPROVED_IT_MANAGEMENT_TEMPLATE_BASENAME);
+    expect(isApprovedOrangeTemplatePath(itManagementTemplatePath)).toBe(true);
   });
 
   it("selects the Business Analyst gold template only for BA-like roles", () => {
@@ -120,6 +132,76 @@ describe("Resume Tailoring Engine", () => {
       defaultTemplatePath,
       businessAnalysisTemplatePath: businessAnalystTemplatePath
     })).toBe(defaultTemplatePath);
+  });
+
+  it("selects the IT management resume for IT lead and business systems manager roles", () => {
+    expect(selectTailoringTemplatePath({
+      parsed: {
+        roleTitle: "Information Technology Lead",
+        cleanRoleTitle: "Information Technology Lead",
+        company: "Sprung Studio"
+      } as any,
+      jdText: "Lead IT operations, business systems support, vendor coordination, ERP, POS, WMS, release readiness, and stakeholder communication.",
+      defaultTemplatePath,
+      businessAnalysisTemplatePath: businessAnalystTemplatePath,
+      itManagementTemplatePath
+    })).toBe(itManagementTemplatePath);
+
+    expect(selectTailoringTemplatePath({
+      parsed: {
+        roleTitle: "IT Business Systems Manager",
+        cleanRoleTitle: "IT Business Systems Manager",
+        company: "ExampleCo"
+      } as any,
+      jdText: "Manage enterprise applications, retail systems, service delivery, incident escalation, and team leadership.",
+      defaultTemplatePath,
+      businessAnalysisTemplatePath: businessAnalystTemplatePath,
+      itManagementTemplatePath
+    })).toBe(itManagementTemplatePath);
+
+    expect(selectTailoringTemplatePath({
+      parsed: {
+        roleTitle: "Senior Business Systems Analyst",
+        cleanRoleTitle: "Senior Business Systems Analyst",
+        company: "ExampleCo"
+      } as any,
+      jdText: "Requirements gathering, user stories, acceptance criteria, UAT, Jira, Confluence.",
+      defaultTemplatePath,
+      businessAnalysisTemplatePath: businessAnalystTemplatePath,
+      itManagementTemplatePath
+    })).toBe(businessAnalystTemplatePath);
+  });
+
+  it("generates an IT management resume from the Sprung-calibrated template", async () => {
+    const result = await tailorResumeForJD({
+      parsed: {
+        roleTitle: "Information Technology Lead",
+        company: "Sprung Studio",
+        location: "",
+        employmentType: "",
+        summary: "",
+        recruiterName: "",
+        parserConfidence: 90,
+        cleanBody: "",
+        cleanRoleTitle: "Information Technology Lead",
+        alignmentKeywords: [],
+        salaryOrRate: "",
+        isUsRole: false
+      },
+      jdText: "Lead IT operations, business systems support, ERP, POS, WMS, vendor coordination, release readiness, stakeholder communication, incident escalation, and team leadership.",
+      templatePath: itManagementTemplatePath,
+      outputDir
+    });
+
+    const text = await extractDocText(result.docxPath);
+    expect(path.basename(result.docxPath)).toBe("Information Technology Lead - Fejiro Efiuvwere - Sprung Studio Resume.docx");
+    expect(path.basename(result.docxPath)).not.toContain("_");
+    expect(text).toContain("Information Technology Lead");
+    expect(text).toMatch(/IT|Information Technology|business systems/i);
+    expect(text).not.toMatch(/\bOrange Standard\b/i);
+    for (const phrase of FORBIDDEN_VISIBLE_RESUME_PHRASES) {
+      expect(text.toLowerCase()).not.toContain(phrase);
+    }
   });
 
   it("generates JD-aligned Canadian Tire styled resume in DOCX", async () => {
@@ -211,6 +293,51 @@ describe("Resume Tailoring Engine", () => {
     for (const phrase of FORBIDDEN_VISIBLE_RESUME_PHRASES) {
       expect(text.toLowerCase()).not.toContain(phrase);
     }
+  });
+
+  it("preserves the approved two-column BA format while emphasizing Maximo and EWMS when requested", async () => {
+    const result = await tailorResumeForJD({
+      parsed: {
+        roleTitle: "Senior IT Business Analyst",
+        company: "City of Toronto",
+        location: "Toronto, ON",
+        employmentType: "Contract",
+        summary: "",
+        recruiterName: "",
+        parserConfidence: 90,
+        cleanBody: "",
+        cleanRoleTitle: "Senior IT Business Analyst",
+        alignmentKeywords: [],
+        salaryOrRate: "",
+        isUsRole: false
+      },
+      jdText: [
+        "Senior IT Business Analyst supporting Enterprise Work Management System EWMS Phase 2.",
+        "Must have IBM Maximo, asset management, work orders, preventative maintenance, service requests, BRD, test plans, UAT, defect tracking, data conversion, integrations, stakeholder signoffs, and implementation support."
+      ].join(" "),
+      templatePath: businessAnalystTemplatePath,
+      outputDir
+    });
+
+    const text = await extractDocText(result.docxPath);
+    expect(text).toMatch(/EWMS \/ IBM Maximo/i);
+    expect(text).toMatch(/Maximo-related experience across The Brick through Talize/i);
+    expect(text).toMatch(/asset, work order, preventative maintenance, service request/i);
+    expect(text).toMatch(/BRD inputs/i);
+    expect(text).toMatch(/stakeholder signoff/i);
+    expect(text).not.toMatch(/\bstrong fit for\b/i);
+    expect(text).not.toMatch(/\btailored\b/i);
+    for (const phrase of FORBIDDEN_VISIBLE_RESUME_PHRASES) {
+      expect(text.toLowerCase()).not.toContain(phrase);
+    }
+
+    const documentXml = await extractDocumentXml(result.docxPath);
+    const tableXmls = [...documentXml.matchAll(/<w:tbl\b[\s\S]*?<\/w:tbl>/g)].map((match) => match[0]);
+    expect(tableXmls.length).toBeGreaterThan(0);
+    expect(rowText(tableXmls[0])).toMatch(/Senior IT Business Analyst/i);
+    expect(rowText(tableXmls[0])).toMatch(/SUMMARY/i);
+    expect(rowText(tableXmls[0])).toMatch(/SKILLS/i);
+    expect(rowText(tableXmls[0])).toMatch(/EXPERIENCE/i);
   });
 
   it("creates a structurally valid DOCX package", async () => {
