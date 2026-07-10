@@ -1,0 +1,20 @@
+{
+  "storyId": "ai-policy",
+  "confidenceLevel": "draft-needs-story-specific-verification",
+  "primarySources": [
+    {
+      "title": "Government source official AI news source",
+      "publisher": "Government source",
+      "url": "https://www.whitehouse.gov/ostp/ai/",
+      "publishedAt": "2026-07-09",
+      "retrievedAt": "2026-07-10T03:56:53.432Z",
+      "verifiedClaims": [
+        "Draft feed seed. Requires story-specific verification before publication."
+      ]
+    }
+  ],
+  "secondarySources": [],
+  "remainingUncertainty": [
+    "Seed feed item needs a specific current primary-source story before publication."
+  ]
+}

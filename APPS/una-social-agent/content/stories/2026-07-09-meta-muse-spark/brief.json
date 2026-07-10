@@ -1,0 +1,80 @@
+{
+  "storyId": "meta-muse-spark",
+  "status": "draft",
+  "category": "AI NEWS",
+  "headline": "META OPENED A NEW AI LANE",
+  "summary": "Meta announced Muse Spark 1.1 and opened a public preview of the Meta Model API for developers.",
+  "whatHappened": "Meta released Muse Spark 1.1, a multimodal reasoning model focused on agentic tasks, coding, computer use, tool use, and developer workflows. The company says developers can access it through the Meta Model API public preview.",
+  "whyItMatters": [
+    "Developers get another serious model to test for coding and workflow automation.",
+    "The AI race is moving from chatbot demos into tools that can work across apps.",
+    "Teams still need source checks, review steps, and proof before trusting agent output."
+  ],
+  "signal": {
+    "type": "capability",
+    "value": "Public developer API preview",
+    "context": "The useful signal is developer access, not only benchmark claims."
+  },
+  "whatToWatch": [
+    "How developers compare Muse Spark 1.1 with existing coding models.",
+    "Whether agentic computer-use features become reliable in real work.",
+    "How pricing and API compatibility affect adoption."
+  ],
+  "people": [
+    "Mark Zuckerberg"
+  ],
+  "companies": [
+    "Meta"
+  ],
+  "primarySources": [
+    {
+      "title": "Introducing Muse Spark 1.1",
+      "publisher": "Meta AI Blog",
+      "url": "https://ai.meta.com/blog/introducing-muse-spark-meta-model-api/",
+      "publishedAt": "2026-07-09",
+      "retrievedAt": "2026-07-10T03:56:53.432Z",
+      "verifiedClaims": [
+        "Meta announced Muse Spark 1.1.",
+        "Muse Spark 1.1 is described as a multimodal reasoning model for agentic tasks.",
+        "Developer access is available through the Meta Model API public preview."
+      ]
+    }
+  ],
+  "image": {
+    "type": "generated-illustration",
+    "sourceUrl": "",
+    "credit": "AI-generated editorial illustration created locally from structured template art.",
+    "license": "internal generated editorial asset",
+    "disclosureRequired": true
+  },
+  "heroVariant": "people",
+  "instagramCaption": "Meta has a new signal worth watching.\n\nMeta released Muse Spark 1.1, a multimodal reasoning model focused on agentic tasks, coding, computer use, tool use, and developer workflows. The company says developers can access it through the Meta Model API public preview.\n\nWhy this matters: Developers get another serious model to test for coding and workflow automation. The AI race is moving from chatbot demos into tools that can work across apps.\n\nUna Labs take: the model race is becoming a workflow race. Powerful AI matters, but the bigger business question is whether teams can place it inside real products, support flows, coding work, and daily operations without losing control of quality.\n\nWould you test this now, or wait until the ecosystem matures?\n\nSource: Meta AI Blog - https://ai.meta.com/blog/introducing-muse-spark-meta-model-api/\nImage: AI-generated editorial illustration created locally from structured template art.\n\n#ArtificialIntelligence #AINews #Developers #Technology #Workflow #AITools\n",
+  "linkedInCaption": "META OPENED A NEW AI LANE\n\nMeta released Muse Spark 1.1, a multimodal reasoning model focused on agentic tasks, coding, computer use, tool use, and developer workflows. The company says developers can access it through the Meta Model API public preview.\n\nThe business relevance is practical: AI tools are moving closer to real implementation work. For leaders and builders, the question is less \"which model is trending today?\" and more \"which model can reliably support a workflow we can measure, review, and improve?\"\n\nUna Labs perspective: the next advantage will come from pairing AI capability with operating discipline. Pick a narrow workflow, test the output, keep proof, and improve the process before scaling it.\n\nWhat would you test first: coding, research, support, operations, or internal admin?\n\nPrimary source: Meta AI Blog - https://ai.meta.com/blog/introducing-muse-spark-meta-model-api/\n\n#ArtificialIntelligence #AITools #Technology #Innovation\n",
+  "slides": [
+    {
+      "slide": 1,
+      "purpose": "cover"
+    },
+    {
+      "slide": 2,
+      "purpose": "what happened"
+    },
+    {
+      "slide": 3,
+      "purpose": "why it matters"
+    },
+    {
+      "slide": 4,
+      "purpose": "signal"
+    },
+    {
+      "slide": 5,
+      "purpose": "watch next"
+    }
+  ],
+  "createdAt": "2026-07-10T03:56:53.433Z",
+  "approvedAt": null,
+  "publishedAt": null,
+  "instagramUrl": null,
+  "linkedInUrl": null
+}

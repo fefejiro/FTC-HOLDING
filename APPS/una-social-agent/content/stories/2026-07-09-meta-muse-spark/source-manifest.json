@@ -1,0 +1,20 @@
+{
+  "storyId": "meta-muse-spark",
+  "confidenceLevel": "high",
+  "primarySources": [
+    {
+      "title": "Introducing Muse Spark 1.1",
+      "publisher": "Meta AI Blog",
+      "url": "https://ai.meta.com/blog/introducing-muse-spark-meta-model-api/",
+      "publishedAt": "2026-07-09",
+      "retrievedAt": "2026-07-10T03:56:53.432Z",
+      "verifiedClaims": [
+        "Meta announced Muse Spark 1.1.",
+        "Muse Spark 1.1 is described as a multimodal reasoning model for agentic tasks.",
+        "Developer access is available through the Meta Model API public preview."
+      ]
+    }
+  ],
+  "secondarySources": [],
+  "remainingUncertainty": []
+}

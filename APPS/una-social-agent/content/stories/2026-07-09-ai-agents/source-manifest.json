@@ -1,0 +1,20 @@
+{
+  "storyId": "ai-agents",
+  "confidenceLevel": "draft-needs-story-specific-verification",
+  "primarySources": [
+    {
+      "title": "OpenAI official AI news source",
+      "publisher": "OpenAI",
+      "url": "https://openai.com/news/",
+      "publishedAt": "2026-07-09",
+      "retrievedAt": "2026-07-10T03:56:53.432Z",
+      "verifiedClaims": [
+        "Draft feed seed. Requires story-specific verification before publication."
+      ]
+    }
+  ],
+  "secondarySources": [],
+  "remainingUncertainty": [
+    "Seed feed item needs a specific current primary-source story before publication."
+  ]
+}

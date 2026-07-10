@@ -1,0 +1,26 @@
+{
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "safeSpace": 80
+  },
+  "colors": {
+    "black": "#070B0E",
+    "deepTeal": "#07363A",
+    "cyan": "#19D3D1",
+    "orange": "#F05A28",
+    "offWhite": "#F5F7F6",
+    "mutedGrey": "#A5B0B4"
+  },
+  "type": {
+    "headline": "Arial Black, Impact, Arial, Helvetica, sans-serif",
+    "body": "Arial, Helvetica, sans-serif"
+  },
+  "cover": {
+    "label": "AI NEWS",
+    "handle": "@unalabs.cloud",
+    "swipe": "SWIPE ->",
+    "maxHeadlineWords": 12,
+    "maxHeadlineLines": 3
+  }
+}

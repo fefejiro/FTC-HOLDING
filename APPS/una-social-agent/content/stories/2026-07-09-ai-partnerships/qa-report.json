@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "checkedAt": "2026-07-10T03:58:57.717Z",
+  "dimensions": "1080x1350",
+  "thumbnailChecks": [
+    "proof/cover-thumb-320.png",
+    "proof/cover-thumb-160.png"
+  ],
+  "issues": [],
+  "warnings": [
+    "Draft seed story: source must be replaced with story-specific primary source before publishing."
+  ]
+}

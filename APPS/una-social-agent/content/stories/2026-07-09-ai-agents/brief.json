@@ -1,0 +1,76 @@
+{
+  "storyId": "ai-agents",
+  "status": "draft",
+  "category": "AI AGENTS",
+  "headline": "AI AGENTS ARE ENTERING THE OFFICE",
+  "summary": "AI agent products are shifting from demos into business workflows.",
+  "whatHappened": "AI agent products are shifting from demos into business workflows.",
+  "whyItMatters": [
+    "The useful question is how this changes real work.",
+    "Teams need a practical way to test the tool before trusting it.",
+    "The winners will make AI easier to deploy, not just more impressive to demo."
+  ],
+  "signal": {
+    "type": "context",
+    "value": "Watch the implementation layer",
+    "context": "Adoption depends on workflow fit, reliability, and access."
+  },
+  "whatToWatch": [
+    "Product access",
+    "Real user adoption",
+    "Integration into existing workflows"
+  ],
+  "people": [],
+  "companies": [
+    "OpenAI"
+  ],
+  "primarySources": [
+    {
+      "title": "OpenAI official AI news source",
+      "publisher": "OpenAI",
+      "url": "https://openai.com/news/",
+      "publishedAt": "2026-07-09",
+      "retrievedAt": "2026-07-10T03:56:53.432Z",
+      "verifiedClaims": [
+        "Draft feed seed. Requires story-specific verification before publication."
+      ]
+    }
+  ],
+  "image": {
+    "type": "generated-illustration",
+    "sourceUrl": "",
+    "credit": "AI-generated/local editorial illustration placeholder for draft feed preview.",
+    "license": "internal generated draft asset",
+    "disclosureRequired": true
+  },
+  "heroVariant": "agent",
+  "instagramCaption": "OpenAI has a new signal worth watching.\n\nAI agent products are shifting from demos into business workflows.\n\nWhy this matters: The useful question is how this changes real work. Teams need a practical way to test the tool before trusting it.\n\nUna Labs take: the model race is becoming a workflow race. Powerful AI matters, but the bigger business question is whether teams can place it inside real products, support flows, coding work, and daily operations without losing control of quality.\n\nWould you test this now, or wait until the ecosystem matures?\n\nSource: OpenAI - https://openai.com/news/\nImage: AI-generated/local editorial illustration placeholder for draft feed preview.\n\n#ArtificialIntelligence #AINews #Developers #Technology #Workflow #AITools\n",
+  "linkedInCaption": "AI AGENTS ARE ENTERING THE OFFICE\n\nAI agent products are shifting from demos into business workflows.\n\nThe business relevance is practical: AI tools are moving closer to real implementation work. For leaders and builders, the question is less \"which model is trending today?\" and more \"which model can reliably support a workflow we can measure, review, and improve?\"\n\nUna Labs perspective: the next advantage will come from pairing AI capability with operating discipline. Pick a narrow workflow, test the output, keep proof, and improve the process before scaling it.\n\nWhat would you test first: coding, research, support, operations, or internal admin?\n\nPrimary source: OpenAI - https://openai.com/news/\n\n#ArtificialIntelligence #AITools #Technology #Innovation\n",
+  "slides": [
+    {
+      "slide": 1,
+      "purpose": "cover"
+    },
+    {
+      "slide": 2,
+      "purpose": "what happened"
+    },
+    {
+      "slide": 3,
+      "purpose": "why it matters"
+    },
+    {
+      "slide": 4,
+      "purpose": "signal"
+    },
+    {
+      "slide": 5,
+      "purpose": "watch next"
+    }
+  ],
+  "createdAt": "2026-07-10T03:57:06.563Z",
+  "approvedAt": null,
+  "publishedAt": null,
+  "instagramUrl": null,
+  "linkedInUrl": null
+}

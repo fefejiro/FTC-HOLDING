@@ -1,0 +1,13 @@
+logs/
+.browser-profile/
+.local/
+scripts/__pycache__/
+*.pyc
+content/drafts/*
+!content/drafts/.gitkeep
+content/assets/*
+!content/assets/.gitkeep
+content/proof/*
+!content/proof/.gitkeep
+content/ledger/social-ledger.jsonl
+content/ledger/*.jsonl

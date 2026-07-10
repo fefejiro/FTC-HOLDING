@@ -1,0 +1,89 @@
+{
+  "feeds": [
+    {
+      "name": "OpenAI News",
+      "url": "https://openai.com/news/rss.xml",
+      "tier": "primary",
+      "topics": ["ai", "models", "agents", "developer tools"]
+    },
+    {
+      "name": "Google AI",
+      "url": "https://blog.google/technology/ai/rss/",
+      "tier": "primary",
+      "topics": ["ai", "search", "models", "developer tools"]
+    },
+    {
+      "name": "Microsoft Research",
+      "url": "https://www.microsoft.com/en-us/research/blog/feed/",
+      "tier": "primary",
+      "topics": ["ai", "research", "models", "developer tools"]
+    },
+    {
+      "name": "TechCrunch AI",
+      "url": "https://techcrunch.com/category/artificial-intelligence/feed/",
+      "tier": "secondary",
+      "topics": ["ai", "startups", "products", "funding"]
+    },
+    {
+      "name": "MIT Technology Review AI",
+      "url": "https://www.technologyreview.com/topic/artificial-intelligence/feed/",
+      "tier": "secondary",
+      "topics": ["ai", "research", "society", "innovation"]
+    },
+    {
+      "name": "The Verge AI",
+      "url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
+      "tier": "secondary",
+      "topics": ["ai", "consumer tech", "platforms"]
+    },
+    {
+      "name": "Axios Technology",
+      "url": "https://www.axios.com/technology/rss.xml",
+      "tier": "secondary",
+      "topics": ["ai", "big tech", "policy", "startups"]
+    },
+    {
+      "name": "Hacker News AI Search",
+      "url": "https://hnrss.org/newest?q=AI",
+      "tier": "community",
+      "topics": ["ai", "developer tools", "startups", "engineering"]
+    },
+    {
+      "name": "Reddit MachineLearning",
+      "url": "https://www.reddit.com/r/MachineLearning/top/.rss?t=day",
+      "tier": "community",
+      "topics": ["ai", "research", "machine learning", "community"]
+    },
+    {
+      "name": "Reddit Artificial",
+      "url": "https://www.reddit.com/r/artificial/top/.rss?t=day",
+      "tier": "community",
+      "topics": ["ai", "tools", "automation", "community"]
+    }
+  ],
+  "keywords": [
+    "ai",
+    "agent",
+    "agents",
+    "automation",
+    "workflow",
+    "model",
+    "developer",
+    "platform",
+    "productivity",
+    "enterprise",
+    "robotics",
+    "cloud",
+    "data",
+    "security",
+    "open source"
+  ],
+  "avoidKeywords": [
+    "celebrity",
+    "rumor",
+    "gossip",
+    "crypto price",
+    "stock price",
+    "political petition"
+  ]
+}

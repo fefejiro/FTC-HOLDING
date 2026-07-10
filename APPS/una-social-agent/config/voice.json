@@ -1,0 +1,24 @@
+{
+  "brand": "Una Labs",
+  "site": "https://unalabs.cloud",
+  "tagline": "AI + workflow systems",
+  "tone": "simple, human, practical, Fejiro style",
+  "instagram": {
+    "captionWordsMin": 45,
+    "captionWordsMax": 110,
+    "hashtags": ["#ArtificialIntelligence", "#Automation", "#TechNews", "#Workflow", "#AITools"]
+  },
+  "linkedin": {
+    "wordsMin": 120,
+    "wordsMax": 260,
+    "style": "simple source-backed post in plain human language with one clear takeaway and one question"
+  },
+  "visual": {
+    "width": 1080,
+    "height": 1080,
+    "background": "#071C22",
+    "teal": "#4DB8A8",
+    "orange": "#FF3D00",
+    "cream": "#F5F2EA"
+  }
+}
