@@ -301,6 +301,24 @@ function visualTakeaway(topic) {
   return 'The real value is turning the news into useful daily work.'
 }
 
+function visualSummary(topic) {
+  const text = topicText(topic)
+  if (/deutsche telekom|telecommunications|telco|network operations|future of voice/.test(text)) {
+    return 'Deutsche Telekom says it is using OpenAI for customer service, network operations, and voice.'
+  }
+  if (/muse spark|meta model api|meta ai/.test(text)) {
+    return 'Meta opened Muse Spark 1.1 to developers through the Meta Model API.'
+  }
+  return trimWords(plainSummary(topic), 22)
+}
+
+function visualHeroText(topic) {
+  const text = topicText(topic)
+  if (/deutsche telekom|telecommunications|telco|network operations|future of voice/.test(text)) return ['AI', 'PHONE', 'NETWORKS']
+  if (/muse spark|meta model api|meta ai/.test(text)) return ['AI', 'DEVELOPER', 'TOOLS']
+  return ['AI', 'NEWS']
+}
+
 function simpleWhyItMatters(topic) {
   const text = topicText(topic)
   if (/muse spark|meta model api|meta ai/.test(text)) {
@@ -363,12 +381,10 @@ function makeImagePrompt(topic, voice) {
   return [
     'Create a square 1080 x 1080 editorial technology news image.',
     `Headline: "${makeNewsHeadline(topic)}"`,
-    'Style: clean modern tech-news graphic with abstract interface panels, signal lines, and one clear headline.',
-    `Colors: dark background ${voice.visual.background}, teal ${voice.visual.teal}, orange ${voice.visual.orange}, warm off-white ${voice.visual.cream}.`,
-    'Show a serious tech-news mood, not a corporate promo. Put the big headline on the image and a short why-it-matters caption under it.',
+    'Style reference: orange editorial news carousel card with a stacked white paper panel, one strong top visual area, large readable body text, and carousel dots.',
+    'Do not generate a realistic person or fake screenshot. Use an approved image when available, otherwise use a clean non-realistic visual block.',
     'Do not include logos from the source article. Do not mimic a news website screenshot.',
-    'Do not include dates, source names, or Una Labs branding inside the image.',
-    'Keep text minimal, bold, and easy to understand.',
+    'Keep it simple, human-readable, modern, and professional.',
   ].join('\n')
 }
 
@@ -397,57 +413,89 @@ function wrapSvgText(text, maxChars = 24) {
   return lines.slice(0, 5)
 }
 
+function wrapSvgParagraph(text, maxChars = 42, maxLines = 6) {
+  const words = String(text || '').split(/\s+/).filter(Boolean)
+  const lines = []
+  let line = ''
+  for (const word of words) {
+    const next = line ? `${line} ${word}` : word
+    if (next.length > maxChars && line) {
+      lines.push(line)
+      line = word
+    } else {
+      line = next
+    }
+  }
+  if (line) lines.push(line)
+  return lines.slice(0, maxLines)
+}
+
 function makeSvgCard(topic, voice) {
-  const v = voice.visual
-  const lines = wrapSvgText(makeNewsHeadline(topic), 18)
-  const lineNodes = lines
-    .map((line, index) => `<text x="72" y="${680 + index * 72}" font-family="Arial Black, Impact, Arial, Helvetica, sans-serif" font-size="60" font-weight="900" fill="${index >= lines.length - 2 ? v.teal : v.cream}">${escapeSvg(line)}</text>`)
+  const heroText = visualHeroText(topic)
+  const summary = visualSummary(topic)
+  const why = simpleWhyItMatters(topic)
+  const summaryLines = wrapSvgParagraph(summary, 38, 3)
+    .map((line, index) => `<text x="196" y="${666 + index * 46}" font-family="Arial, Helvetica, sans-serif" font-size="33" font-weight="800" fill="#9A4A08">${escapeSvg(line)}</text>`)
     .join('\n')
-  const takeaway = wrapSvgText(visualTakeaway(topic), 34)
-    .map((line, index) => `<text x="86" y="${888 + index * 34}" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="700" fill="${v.cream}" opacity="0.92">${escapeSvg(line)}</text>`)
+  const whyLines = wrapSvgParagraph(why, 43, 5)
+    .map((line, index) => `<text x="196" y="${832 + index * 43}" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="700" fill="#141414">${escapeSvg(line)}</text>`)
     .join('\n')
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080" role="img" aria-label="Technology news card">
   <defs>
-    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0%" stop-color="#071014"/>
-      <stop offset="50%" stop-color="${v.background}"/>
-      <stop offset="100%" stop-color="#010506"/>
+    <linearGradient id="orangeBg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#FF9C26"/>
+      <stop offset="52%" stop-color="#FF7B09"/>
+      <stop offset="100%" stop-color="#F26000"/>
     </linearGradient>
-    <linearGradient id="panel" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0%" stop-color="#12333b"/>
-      <stop offset="100%" stop-color="#050b0e"/>
+    <linearGradient id="visual" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#12253D"/>
+      <stop offset="48%" stop-color="#1D6E87"/>
+      <stop offset="100%" stop-color="#0E1117"/>
     </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000000" flood-opacity="0.55"/>
+    <filter id="paperShadow" x="-20%" y="-20%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#4F2400" flood-opacity="0.38"/>
+    </filter>
+    <filter id="labelShadow" x="-20%" y="-20%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#4F2400" flood-opacity="0.30"/>
     </filter>
   </defs>
-  <rect width="1080" height="1080" fill="url(#bg)"/>
-  <rect x="42" y="42" width="996" height="996" rx="18" fill="#081519" stroke="${v.cream}" stroke-opacity="0.08" stroke-width="2"/>
-  <rect x="80" y="78" width="920" height="520" rx="24" fill="url(#panel)" filter="url(#shadow)"/>
-  <circle cx="850" cy="88" r="230" fill="${v.teal}" opacity="0.16"/>
-  <circle cx="175" cy="520" r="210" fill="${v.orange}" opacity="0.10"/>
-  <path d="M128 438 C 260 310, 382 520, 520 356 S 792 238, 952 342" fill="none" stroke="${v.teal}" stroke-width="10" stroke-linecap="round" opacity="0.55"/>
-  <path d="M122 492 C 266 486, 316 352, 474 430 S 736 512, 950 418" fill="none" stroke="${v.orange}" stroke-width="8" stroke-linecap="round" opacity="0.75"/>
-  <rect x="168" y="158" width="300" height="260" rx="28" fill="#061014" stroke="${v.teal}" stroke-width="4" opacity="0.96"/>
-  <rect x="204" y="202" width="172" height="20" rx="8" fill="${v.teal}"/>
-  <rect x="204" y="258" width="214" height="18" rx="8" fill="${v.cream}" opacity="0.64"/>
-  <rect x="204" y="302" width="144" height="18" rx="8" fill="${v.orange}" opacity="0.9"/>
-  <rect x="204" y="346" width="232" height="18" rx="8" fill="${v.cream}" opacity="0.42"/>
-  <rect x="560" y="150" width="330" height="312" rx="32" fill="#071014" stroke="${v.cream}" stroke-opacity="0.16" stroke-width="3"/>
-  <circle cx="638" cy="230" r="36" fill="${v.orange}"/>
-  <circle cx="724" cy="230" r="36" fill="${v.teal}"/>
-  <circle cx="810" cy="230" r="36" fill="${v.cream}" opacity="0.86"/>
-  <rect x="616" y="320" width="218" height="20" rx="8" fill="${v.teal}" opacity="0.85"/>
-  <rect x="616" y="368" width="142" height="18" rx="8" fill="${v.cream}" opacity="0.46"/>
-  <rect x="616" y="412" width="190" height="18" rx="8" fill="${v.orange}" opacity="0.72"/>
-  <text x="100" y="548" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="800" fill="${v.cream}" opacity="0.62">SOURCE-BACKED TECH NEWS</text>
-  <text x="72" y="624" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="800" fill="${v.orange}">AI NEWS</text>
-  ${lineNodes}
-  <rect x="72" y="832" width="936" height="154" rx="22" fill="#020608" opacity="0.82" stroke="${v.teal}" stroke-opacity="0.35"/>
-  <text x="86" y="866" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="900" fill="${v.teal}">WHY IT MATTERS</text>
-  ${takeaway}
-  <rect x="72" y="1006" width="180" height="6" rx="3" fill="${v.orange}"/>
+  <rect width="1080" height="1080" fill="url(#orangeBg)"/>
+  <g transform="rotate(-2 540 540)">
+    <rect x="176" y="110" width="744" height="854" rx="28" fill="#F4F1EA" opacity="0.55" filter="url(#paperShadow)"/>
+  </g>
+  <g filter="url(#paperShadow)">
+    <rect x="142" y="92" width="792" height="884" rx="34" fill="#FFFFFF"/>
+    <rect x="170" y="126" width="736" height="358" rx="24" fill="url(#visual)"/>
+    <path d="M206 365 C 306 252, 395 410, 515 300 S 717 218, 870 330" fill="none" stroke="#FFFFFF" stroke-width="20" stroke-linecap="round" opacity="0.28"/>
+    <path d="M214 410 C 342 412, 414 252, 542 338 S 740 452, 872 372" fill="none" stroke="#FF8B1A" stroke-width="14" stroke-linecap="round" opacity="0.82"/>
+    <circle cx="276" cy="244" r="58" fill="#FFFFFF" opacity="0.18"/>
+    <circle cx="796" cy="206" r="84" fill="#FFFFFF" opacity="0.12"/>
+    <rect x="284" y="208" width="232" height="168" rx="22" fill="#071014" opacity="0.86"/>
+    <rect x="314" y="244" width="150" height="16" rx="7" fill="#FF8B1A"/>
+    <rect x="314" y="286" width="172" height="14" rx="7" fill="#FFFFFF" opacity="0.65"/>
+    <rect x="314" y="326" width="118" height="14" rx="7" fill="#FFFFFF" opacity="0.38"/>
+    <text x="548" y="258" font-family="Arial Black, Impact, Arial, Helvetica, sans-serif" font-size="76" font-weight="900" fill="#FFFFFF" opacity="0.94">${escapeSvg(heroText[0] || 'AI')}</text>
+    <text x="548" y="328" font-family="Arial Black, Impact, Arial, Helvetica, sans-serif" font-size="54" font-weight="900" fill="#FFFFFF" opacity="0.88">${escapeSvg(heroText[1] || 'NEWS')}</text>
+    <text x="548" y="384" font-family="Arial Black, Impact, Arial, Helvetica, sans-serif" font-size="48" font-weight="900" fill="#FFFFFF" opacity="0.76">${escapeSvg(heroText[2] || '')}</text>
+    <rect x="166" y="514" width="744" height="2" fill="#EAE2D7"/>
+    ${summaryLines}
+    <text x="196" y="794" font-family="Arial, Helvetica, sans-serif" font-size="31" font-weight="800" fill="#111111">Why this matters:</text>
+    ${whyLines}
+  </g>
+  <g transform="rotate(-5 280 112)" filter="url(#labelShadow)">
+    <rect x="162" y="78" width="260" height="72" rx="14" fill="#FFFFFF"/>
+    <circle cx="196" cy="114" r="17" fill="#FF8B1A"/>
+    <circle cx="196" cy="114" r="9" fill="#111111"/>
+    <text x="226" y="124" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="900" fill="#111111" letter-spacing="3">AI NEWS</text>
+  </g>
+  <rect x="354" y="1010" width="86" height="11" rx="6" fill="#9C5B26" opacity="0.7"/>
+  <rect x="462" y="1010" width="86" height="11" rx="6" fill="#C87B2F" opacity="0.55"/>
+  <circle cx="568" cy="1015" r="7" fill="#FFFFFF" opacity="0.92"/>
+  <circle cx="588" cy="1015" r="7" fill="#FFFFFF" opacity="0.62"/>
+  <circle cx="608" cy="1015" r="7" fill="#FFFFFF" opacity="0.62"/>
+  <rect x="632" y="1010" width="86" height="11" rx="6" fill="#C87B2F" opacity="0.55"/>
+  <rect x="740" y="1010" width="86" height="11" rx="6" fill="#9C5B26" opacity="0.50"/>
 </svg>
 `
 }
@@ -525,8 +573,8 @@ function makePostingBrief({ topic, sources, files, instagramCaption, linkedinPos
   return [
     `# Una Labs Posting Brief - ${runDate}`,
     '',
-    'Status: ready for browser publish',
-    'Auto-post: browser publish enabled',
+    'Status: draft for review',
+    'Auto-post: disabled until visual style is approved',
     '',
     '## Topic',
     '',
@@ -653,7 +701,7 @@ async function writePackage({ files, selected, related, sources, voice, topicPay
     },
     sourceCount: sources.length,
     outputPaths: Object.fromEntries(Object.entries(files).map(([key, value]) => [key, path.relative(root, value)])),
-    autoPost: true,
+    autoPost: false,
     createdAt: new Date().toISOString(),
   })
 }
@@ -674,8 +722,8 @@ async function main() {
       feedErrors: [],
       policy: {
         status: 'drafted',
-        postingMode: 'browser_publish',
-        autoPost: true,
+        postingMode: 'review_before_publish',
+        autoPost: false,
         selectionMode: 'manual_news_override',
       },
     }
@@ -719,8 +767,8 @@ async function main() {
       ...existing.topic,
       policy: {
         status: 'drafted',
-        postingMode: 'browser_publish',
-        autoPost: true,
+        postingMode: 'review_before_publish',
+        autoPost: false,
       },
       refreshedAt: new Date().toISOString(),
     }
@@ -784,8 +832,8 @@ async function main() {
     feedErrors: errors,
     policy: {
       status: 'drafted',
-      postingMode: 'browser_publish',
-      autoPost: true,
+      postingMode: 'review_before_publish',
+      autoPost: false,
     },
   }
 
