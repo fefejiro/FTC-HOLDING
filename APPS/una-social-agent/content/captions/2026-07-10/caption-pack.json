@@ -1,0 +1,20 @@
+{
+  "runDate": "2026-07-10",
+  "status": "draft_caption_only",
+  "spending": "no_openai_or_image_api_used",
+  "story": {
+    "title": "Meta opened a new AI lane for developers",
+    "sourceName": "Meta AI Blog",
+    "url": "https://ai.meta.com/blog/introducing-muse-spark-meta-model-api/"
+  },
+  "instagramCaption": "Meta opened a new AI lane for developers\n\nMeta released Muse Spark 1.1 and opened developer access through the Meta Model API.\n\nWhy it matters: AI is moving from chat into tools that can help people build, test, and finish real work.\n\nUna Labs take: The bigger signal is simple: the AI race is becoming a workflow race. A powerful model is useful, but a model people can actually build with is more important.\n\nWould you use this now, or wait until the tools mature?\n\nSource: Meta AI Blog - https://ai.meta.com/blog/introducing-muse-spark-meta-model-api/\n\n#AINews #ArtificialIntelligence #TechNews #Developers #AITools",
+  "linkedInCaption": "Meta opened a new AI lane for developers\n\nMeta released Muse Spark 1.1 and opened developer access through the Meta Model API.\n\nThe practical point is this: AI news only matters if it changes how people build, work, learn, support customers, or make decisions.\n\nAI is moving from chat into tools that can help people build, test, and finish real work.\n\nUna Labs take: The bigger signal is simple: the AI race is becoming a workflow race. A powerful model is useful, but a model people can actually build with is more important.\n\nFor builders and small teams, the next step is not to chase every launch. The next step is to pick one workflow, test it carefully, keep proof, and decide if it actually saves time or improves quality.\n\nWhat would you test first?\n\nSource: Meta AI Blog - https://ai.meta.com/blog/introducing-muse-spark-meta-model-api/\n\n#ArtificialIntelligence #AINews #Technology #Workflow",
+  "checks": {
+    "sourceUrlValid": true,
+    "instagramWords": 96,
+    "linkedInWords": 145,
+    "noFancyWords": true,
+    "imageGenerationUsed": false
+  },
+  "createdAt": "2026-07-10T04:35:09.510Z"
+}

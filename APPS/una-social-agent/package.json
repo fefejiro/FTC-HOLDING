@@ -30,6 +30,7 @@
     "social:seed-feed": "node scripts/social-publication.mjs seed-feed",
     "social:preview": "node scripts/social-publication.mjs seed-feed",
     "social:qa": "node scripts/social-publication.mjs qa",
+    "caption:write": "node scripts/caption-writer.mjs",
     "check": "node scripts/draft-today.mjs --date 2026-07-09 --dry-run --force-new"
   }
 }

@@ -32,6 +32,38 @@ The account should feel like a reliable AI and technology news publication, not 
 - Captions stay factual, human, source-backed, and separate for Instagram and LinkedIn.
 - Draft seed posts are not publish-ready until their specific primary source is verified.
 
+## Low-Cost Caption-Only Mode
+
+When OpenAI/image budget is low, use caption-only mode. It does not call OpenAI,
+does not generate images, and does not publish anything.
+
+```powershell
+npm run caption:write
+```
+
+Or pass a specific source-backed story:
+
+```powershell
+npm run caption:write -- --title "Meta opened a new AI lane for developers" --url "https://ai.meta.com/blog/introducing-muse-spark-meta-model-api/" --source "Meta AI Blog" --summary "Meta released Muse Spark 1.1 and opened developer access through the Meta Model API."
+```
+
+Output:
+
+```text
+content/captions/YYYY-MM-DD/caption-pack.md
+content/captions/YYYY-MM-DD/caption-pack.json
+```
+
+Writing standard:
+
+- plain human language
+- no fancy words
+- no hype claims
+- no fake urgency
+- source included
+- Instagram and LinkedIn captions written separately
+- status stays `draft_caption_only` until a person approves or posts it
+
 ## New Editorial Workflow
 
 Generate the redesigned Meta Muse Spark story:
@@ -108,6 +140,7 @@ npm run social:generate
 npm run social:seed-feed
 npm run social:preview
 npm run social:qa
+npm run caption:write
 ```
 
 Normal same-day runs are idempotent: if a package already exists for today,
