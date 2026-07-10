@@ -475,22 +475,37 @@ def publish_instagram(window, run_date: str, image_path: Path, caption: str, pro
         result.update(status="blocked_needs_login", reason="Instagram login form is visible.")
         return result
 
-    before = current_window_handles()
     rect = window.rectangle()
     create_x = rect.left + 46
-    create_y = rect.top + int(rect.height() * 0.63)
+    create_y = rect.top + int(rect.height() * 0.60)
     mouse.click(button="left", coords=(create_x, create_y))
     time.sleep(1.8)
     click = {"ok": True, "reason": "clicked visible Instagram sidebar create button", "coords": [create_x, create_y]}
     if "Create new post" not in visible_text(window) and "Select from computer" not in visible_text(window):
+        click_relative(window, 0.038, 0.60, 1.0)
         fallback_click = click_instagram_create(window, 1.5)
         if not fallback_click.get("ok"):
             click_text_fallback(window, "Create") or click_dom(window, r"^Create$", 1.0)
         click["fallback"] = fallback_click
     time.sleep(1.0)
-    if "Select from computer" in visible_text(window):
-        click_text_fallback(window, "Select from computer") or click_dom(window, r"Select from computer", 0.8)
-    picker, picker_title = find_file_picker(before, 8)
+    picker = None
+    picker_title = ""
+    for attempt in range(3):
+        before = current_window_handles()
+        page_text = visible_text(window)
+        if "Select from computer" in page_text:
+            clicked = click_text_fallback(window, "Select from computer")
+            if not clicked:
+                clicked = bool(click_dom(window, r"Select from computer", 0.8).get("ok"))
+            if not clicked:
+                click_relative(window, 0.50, 0.64, 0.8)
+        elif "Create new post" in page_text:
+            click_relative(window, 0.50, 0.64, 0.8)
+        else:
+            click_text_fallback(window, "Create") or click_instagram_create(window, 1.0)
+        picker, picker_title = find_file_picker(before, 6)
+        if picker:
+            break
     if not picker:
         result.update(status="blocked_no_file_picker", reason="Instagram file picker did not open.", clickCreate=click)
         result["proof"]["error"] = screenshot(window, proof_dir / "visible-instagram-error.png")

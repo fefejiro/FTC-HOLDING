@@ -192,6 +192,10 @@ function trimWords(text, maxWords) {
 
 function plainSummary(item) {
   if (!item?.summary) return 'A new technology update is showing how artificial intelligence is moving from demos into real work people can use every day.'
+  const text = topicText(item)
+  if (/deutsche telekom|telecommunications|telco|customer service|network operations|future of voice/.test(text)) {
+    return 'Deutsche Telekom says it is using OpenAI across customer service, employee workflows, network operations, and voice experiences.'
+  }
   return trimWords(item.summary, 45)
 }
 
@@ -207,6 +211,7 @@ function makeHeadline(title) {
 function makeNewsHeadline(topic) {
   const text = topicText(topic)
   if (/muse spark|meta model api|meta ai/.test(text)) return 'AI JUST GOT A NEW DEVELOPER LANE'
+  if (/deutsche telekom|telecommunications|telco|network operations|future of voice/.test(text)) return 'AI IS MOVING INTO PHONE NETWORKS'
   if (/climate|energy|electricity|emissions|water|data center|datacenter|carbon/.test(text)) return 'AI IS GROWING FAST. POWER IS THE NEXT PROBLEM'
   if (/openai|chatgpt|codex|gpt/.test(text)) return 'AI WORK TOOLS ARE MOVING FAST'
   if (/security|privacy|risk|trust|safety/.test(text)) return 'AI TRUST IS BECOMING THE REAL TEST'
@@ -281,6 +286,9 @@ function visualTakeaway(topic) {
   if (/muse spark|meta model api|meta ai/.test(text)) {
     return 'Meta opened Muse Spark 1.1 to developers. The bigger story is AI agents moving closer to real coding and workflow tools.'
   }
+  if (/deutsche telekom|telecommunications|telco|network operations|future of voice/.test(text)) {
+    return 'AI is moving into support, employee tools, network operations, and voice experiences.'
+  }
   if (/climate|energy|electricity|emissions|water|data center|datacenter|carbon/.test(text)) {
     return 'AI is growing fast, but it needs power, cooling, and better planning.'
   }
@@ -297,6 +305,9 @@ function simpleWhyItMatters(topic) {
   const text = topicText(topic)
   if (/muse spark|meta model api|meta ai/.test(text)) {
     return 'Developers now have another serious AI model to test for coding, computer use, and longer workflow tasks.'
+  }
+  if (/deutsche telekom|telecommunications|telco|network operations|future of voice/.test(text)) {
+    return 'Telecom work touches millions of customers, so AI needs clear testing, review, and proof before people trust it.'
   }
   if (/climate|energy|electricity|emissions|water|data center|datacenter|carbon/.test(text)) {
     return 'AI is not only software. It also needs real electricity, real buildings, and smart planning.'
@@ -315,11 +326,11 @@ function makeInstagramCaption(topic, voice) {
   return [
     `${makeNewsHeadline(topic)}`,
     '',
-    'Meta released Muse Spark 1.1 and opened developer access through the Meta Model API.',
+    plainSummary(topic),
     '',
-    'Why it matters: this is another sign that AI is moving from chatbots into tools that can code, use computers, and help with longer work.',
+    `Why it matters: ${simpleWhyItMatters(topic)}`,
     '',
-    'The real question is simple: would you trust an AI agent to help with your daily work yet?',
+    'The real question is simple: where does this make real work easier, and where do people still need to check the output?',
     '',
     hashtags,
   ].join('\n')
@@ -330,11 +341,11 @@ function makeLinkedInPost(topic, related, voice) {
   return [
     `${makeNewsHeadline(topic)}`,
     '',
-    'Meta released Muse Spark 1.1 and opened access for developers through the Meta Model API.',
+    plainSummary(topic),
     '',
-    'The important part is not just that another model launched. The important part is what it is built for: coding, computer use, tool use, multimodal understanding, and longer agent-style tasks.',
+    'The important part is not just the launch. The important part is what this changes for real teams: support, planning, operations, research, coding, or daily admin work.',
     '',
-    'That tells me the AI race is moving deeper into real work. Less demo. More workflow. More building. More pressure to check the output before trusting it.',
+    'That tells me the AI race is moving deeper into real work. Less demo. More workflow. More pressure to check the output before trusting it.',
     '',
     `Simple takeaway: ${simpleWhyItMatters(topic)}`,
     '',
@@ -352,7 +363,7 @@ function makeImagePrompt(topic, voice) {
   return [
     'Create a square 1080 x 1080 editorial technology news image.',
     `Headline: "${makeNewsHeadline(topic)}"`,
-    'Style: bold social media tech-news graphic with illustrated public-tech-leader style portraits, a developer at a laptop, and AI interface elements.',
+    'Style: clean modern tech-news graphic with abstract interface panels, signal lines, and one clear headline.',
     `Colors: dark background ${voice.visual.background}, teal ${voice.visual.teal}, orange ${voice.visual.orange}, warm off-white ${voice.visual.cream}.`,
     'Show a serious tech-news mood, not a corporate promo. Put the big headline on the image and a short why-it-matters caption under it.',
     'Do not include logos from the source article. Do not mimic a news website screenshot.',
@@ -403,8 +414,8 @@ function makeSvgCard(topic, voice) {
       <stop offset="50%" stop-color="${v.background}"/>
       <stop offset="100%" stop-color="#010506"/>
     </linearGradient>
-    <linearGradient id="stage" x1="0" x2="0" y1="0" y2="1">
-      <stop offset="0%" stop-color="#15363f"/>
+    <linearGradient id="panel" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#12333b"/>
       <stop offset="100%" stop-color="#050b0e"/>
     </linearGradient>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
@@ -413,25 +424,24 @@ function makeSvgCard(topic, voice) {
   </defs>
   <rect width="1080" height="1080" fill="url(#bg)"/>
   <rect x="42" y="42" width="996" height="996" rx="18" fill="#081519" stroke="${v.cream}" stroke-opacity="0.08" stroke-width="2"/>
-  <rect x="80" y="78" width="920" height="520" rx="24" fill="url(#stage)" filter="url(#shadow)"/>
-  <circle cx="250" cy="250" r="168" fill="#23363d"/>
-  <circle cx="250" cy="196" r="82" fill="#e7c5ad"/>
-  <path d="M166 198 C 178 96, 322 82, 338 200 C 308 146, 220 142, 166 198 Z" fill="#5f4032"/>
-  <path d="M164 330 C 188 262, 315 260, 344 330 L 382 514 L 112 514 Z" fill="#1b4f5a"/>
-  <text x="126" y="548" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="${v.cream}" opacity="0.8">META</text>
-  <circle cx="530" cy="285" r="130" fill="#18252b"/>
-  <circle cx="530" cy="242" r="66" fill="#f0c7aa"/>
-  <path d="M470 234 C 492 166, 574 160, 602 230 C 566 204, 514 204, 470 234 Z" fill="#2c1f1a"/>
-  <rect x="430" y="326" width="200" height="138" rx="42" fill="${v.orange}" opacity="0.88"/>
-  <text x="418" y="548" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="${v.cream}" opacity="0.8">AI MODEL</text>
-  <circle cx="790" cy="250" r="160" fill="#1c3037"/>
-  <rect x="666" y="284" width="248" height="152" rx="16" fill="#050a0d" stroke="${v.teal}" stroke-width="5"/>
-  <rect x="694" y="318" width="180" height="18" rx="6" fill="${v.teal}" opacity="0.9"/>
-  <rect x="694" y="360" width="118" height="14" rx="5" fill="${v.cream}" opacity="0.55"/>
-  <rect x="694" y="394" width="150" height="14" rx="5" fill="${v.orange}" opacity="0.76"/>
-  <circle cx="790" cy="200" r="58" fill="#e9c1a5"/>
-  <path d="M734 196 C 742 136, 834 132, 850 198 C 814 176, 770 176, 734 196 Z" fill="#33251f"/>
-  <text x="666" y="548" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="${v.cream}" opacity="0.8">DEVELOPERS</text>
+  <rect x="80" y="78" width="920" height="520" rx="24" fill="url(#panel)" filter="url(#shadow)"/>
+  <circle cx="850" cy="88" r="230" fill="${v.teal}" opacity="0.16"/>
+  <circle cx="175" cy="520" r="210" fill="${v.orange}" opacity="0.10"/>
+  <path d="M128 438 C 260 310, 382 520, 520 356 S 792 238, 952 342" fill="none" stroke="${v.teal}" stroke-width="10" stroke-linecap="round" opacity="0.55"/>
+  <path d="M122 492 C 266 486, 316 352, 474 430 S 736 512, 950 418" fill="none" stroke="${v.orange}" stroke-width="8" stroke-linecap="round" opacity="0.75"/>
+  <rect x="168" y="158" width="300" height="260" rx="28" fill="#061014" stroke="${v.teal}" stroke-width="4" opacity="0.96"/>
+  <rect x="204" y="202" width="172" height="20" rx="8" fill="${v.teal}"/>
+  <rect x="204" y="258" width="214" height="18" rx="8" fill="${v.cream}" opacity="0.64"/>
+  <rect x="204" y="302" width="144" height="18" rx="8" fill="${v.orange}" opacity="0.9"/>
+  <rect x="204" y="346" width="232" height="18" rx="8" fill="${v.cream}" opacity="0.42"/>
+  <rect x="560" y="150" width="330" height="312" rx="32" fill="#071014" stroke="${v.cream}" stroke-opacity="0.16" stroke-width="3"/>
+  <circle cx="638" cy="230" r="36" fill="${v.orange}"/>
+  <circle cx="724" cy="230" r="36" fill="${v.teal}"/>
+  <circle cx="810" cy="230" r="36" fill="${v.cream}" opacity="0.86"/>
+  <rect x="616" y="320" width="218" height="20" rx="8" fill="${v.teal}" opacity="0.85"/>
+  <rect x="616" y="368" width="142" height="18" rx="8" fill="${v.cream}" opacity="0.46"/>
+  <rect x="616" y="412" width="190" height="18" rx="8" fill="${v.orange}" opacity="0.72"/>
+  <text x="100" y="548" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="800" fill="${v.cream}" opacity="0.62">SOURCE-BACKED TECH NEWS</text>
   <text x="72" y="624" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="800" fill="${v.orange}">AI NEWS</text>
   ${lineNodes}
   <rect x="72" y="832" width="936" height="154" rx="22" fill="#020608" opacity="0.82" stroke="${v.teal}" stroke-opacity="0.35"/>

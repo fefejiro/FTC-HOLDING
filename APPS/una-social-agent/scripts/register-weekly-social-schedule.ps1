@@ -30,6 +30,20 @@ function Register-UnaTask {
 
 $runArgs = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$runner`" -ProjectDir `"$ProjectDir`" -CaptionOnly -Channels `"$Channels`""
 
+$staleTasks = @(
+  'UnaLabsSocial-DailyDraft',
+  'UnaLabsSocial-Morning',
+  'UnaLabsSocial-Evening',
+  'UnaLabsSocial-EngagementMonitor'
+)
+
+foreach ($staleTask in $staleTasks) {
+  if (Get-ScheduledTask -TaskName $staleTask -ErrorAction SilentlyContinue) {
+    Unregister-ScheduledTask -TaskName $staleTask -Confirm:$false
+    Write-Host "Removed stale task $staleTask."
+  }
+}
+
 Register-UnaTask -TaskName 'UnaLabsSocial-PeakCaption' -At $PeakAt -Arguments $runArgs -Description 'Daily peak Eastern caption-only Una Labs Instagram and LinkedIn source-backed draft run.'
 
 Write-Host "Una Labs caption-only social schedule ready for weekdays at $PeakAt Eastern."
