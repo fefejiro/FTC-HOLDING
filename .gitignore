@@ -120,6 +120,7 @@ APPS/job-reply-agent/resumes/*_Cover_Letter.docx
 # Local capture inbox (flushed to GitHub Issues by scripts/flush-inbox.mjs)
 INBOX.md
 tmp/ai-queue/
+GITHUB-PROFILE/
 
 # Local ops generated history (stable latest reports remain tracked)
 DOCS/health/FTC-HEALTH-AUDIT-20*.json

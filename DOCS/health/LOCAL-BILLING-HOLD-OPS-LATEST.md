@@ -1,9 +1,9 @@
 ﻿# FTC Local Product-Health Ops
 
-- Last run: 2026-07-07T10:47:05.2934983-04:00
-- Mode: Health
+- Last run: 2026-07-10T00:10:05.3393299-04:00
+- Mode: StatusSync
 - Status: PASS
-- Log: C:\FTC HOLDING\DOCS\health\local-ops\2026-07-07T10-46-35-Health.log
+- Log: C:\FTC HOLDING\DOCS\health\local-ops\2026-07-10T00-10-02-StatusSync.log
 - GitHub hosted runners: bypassed while billing is on hold; product health remains the primary signal
 
 ## Failures

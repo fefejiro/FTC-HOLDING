@@ -73,3 +73,11 @@ Do not follow or message any profile until the ready-draft list has been reviewe
 - Found that over-specific east-side identity searches can fail, while place-only searches reveal useful local group hubs.
 - Created `docs/ebony-exchange-local-first-debug-run.md`.
 - No comments, follows, messages, friend requests, joins, or profile controls were used.
+
+## 2026-07-09 MikeLitoriz Draft Review
+
+- Read-only reviewed four supplied FetLife profiles: `XenaLongLeggs`, `Hotwife_Kat`, `LynnAndJoe`, and `Nova-leader420`.
+- Used 75-second pauses between profile loads and a longer pause after the third profile before opening the fourth.
+- Drafted outreach notes in `docs/mikelitoriz-fetlife-drafts-2026-07-09.md`.
+- No messages were sent.
+- No comments, follows, friend requests, crushes, joins, or profile controls were used.
