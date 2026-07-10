@@ -2,7 +2,8 @@ param(
   [string]$ProjectDir = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path,
   [switch]$ForceNew,
   [string]$Channels = 'instagram,linkedin',
-  [switch]$CaptionOnly
+  [switch]$CaptionOnly,
+  [switch]$DraftOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -34,6 +35,11 @@ try {
     "[$(Get-Date -Format o)] Una Labs social quality check starting" | Tee-Object -FilePath $logPath -Append
     npm run quality:today 2>&1 | Tee-Object -FilePath $logPath -Append
     $exit = $LASTEXITCODE
+  }
+  if ($DraftOnly) {
+    "[$(Get-Date -Format o)] Draft-only mode enabled. Package and quality proof created; browser publish skipped." | Tee-Object -FilePath $logPath -Append
+    "[$(Get-Date -Format o)] Una Labs social draft workflow finished with exit code $exit" | Tee-Object -FilePath $logPath -Append
+    exit $exit
   }
   if ($exit -eq 0) {
     "[$(Get-Date -Format o)] Una Labs visible Chrome publish starting" | Tee-Object -FilePath $logPath -Append
