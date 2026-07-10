@@ -120,6 +120,19 @@ function unaTake(story) {
   return 'The bigger signal is simple: useful AI has to move from headlines into repeatable work people can trust.'
 }
 
+function linkedInDiagram(story) {
+  return [
+    'Simple map:',
+    `${story.sourceName} -> ${simpleHeadline(story)} -> ${whyItMatters(story)}`,
+    '',
+    'How I would read it:',
+    '1. Check the source.',
+    '2. Ask what changed.',
+    '3. Ask who this helps.',
+    '4. Test one real workflow before trusting the hype.',
+  ].join('\n')
+}
+
 function instagramCaption(story) {
   return `${simpleHeadline(story)}
 
@@ -149,6 +162,8 @@ Una Labs take: ${unaTake(story)}
 
 For builders and small teams, the next step is not to chase every launch. The next step is to pick one workflow, test it carefully, keep proof, and decide if it actually saves time or improves quality.
 
+${linkedInDiagram(story)}
+
 What would you test first?
 
 Source: ${story.sourceName} - ${story.url}
@@ -173,10 +188,12 @@ async function writeCaptionPack(story) {
     },
     instagramCaption: instagramCaption(story),
     linkedInCaption: linkedInCaption(story),
+    linkedInDiagram: linkedInDiagram(story),
     checks: {
       sourceUrlValid: isUrl(story.url),
       instagramWords: wordCount(instagramCaption(story)),
       linkedInWords: wordCount(linkedInCaption(story)),
+      linkedInDiagramIncluded: true,
       noFancyWords: true,
       imageGenerationUsed: false,
     },

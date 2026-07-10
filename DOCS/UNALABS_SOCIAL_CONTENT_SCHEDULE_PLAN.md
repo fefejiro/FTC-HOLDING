@@ -6,7 +6,25 @@ Generated: 2026-07-09
 
 Build a consistent Una Labs social-media operating rhythm using tools already present in the FTC workspace.
 
-The first target is a reliable daily generate-post-verify-record system that produces:
+The current target is a reliable daily caption-pack system that produces:
+
+- one short Instagram caption
+- one LinkedIn company-page post with a simple source-to-impact text map
+- source links and quality notes
+- a dated caption pack
+- a clear proof record of what was drafted
+
+Paused for now:
+
+- image generation
+- carousel generation
+- automatic Instagram publishing
+- automatic LinkedIn publishing
+- paid OpenAI/image API usage
+
+The previous full generate-post-verify-record system can still be resumed later. For now, the system must protect budget and write better human-readable news captions.
+
+Older full-posting goal:
 
 - one Instagram-ready AI/tech/news visual
 - one short Instagram caption
@@ -16,7 +34,7 @@ The first target is a reliable daily generate-post-verify-record system that pro
 - proof screenshots
 - a proof record of what was drafted, posted, verified, skipped, or failed
 
-Official API publishing can still be added later, but the immediate workflow uses browser automation because the Instagram and LinkedIn accounts are already available in Chrome.
+Official API publishing and browser automation can still be added later, but the immediate workflow is caption-only.
 
 ## Current Channel Evidence
 
@@ -27,7 +45,7 @@ Screenshots show:
 
 This means the immediate browser posting route is available today. API posting still needs separate token/app setup and is not required for the first live proof.
 
-Preferred browser route:
+Paused browser route:
 
 ```text
 Chrome profile: Fejiro / Profile 5
@@ -36,7 +54,7 @@ LinkedIn admin start URL: https://www.linkedin.com/company/112328320/admin/dashb
 Instagram account: unalabs.cloud
 ```
 
-The scheduled runner starts the Fejiro profile through `scripts/open-posting-browser.ps1` when the control port is not already available. If Chrome is already open without the control port, the runner fails visibly instead of silently pretending to publish.
+The scheduled caption runner does not need Chrome. Browser posting is intentionally paused until there is an approved asset and posting decision.
 
 ## Reuse Existing FTC Tools
 
@@ -77,12 +95,11 @@ One daily topic becomes two channel outputs.
 
 Format:
 
-- square image, 1080 x 1080 preferred
-- headline embedded in the image
-- one core idea
-- no copyrighted article screenshots
-- original generated or designed visual
-- caption: 45 to 90 words
+- caption: 45 to 120 words
+- plain human language
+- no fake urgency
+- no generated image requirement
+- source included
 - 3 to 6 hashtags
 
 Example structure:
@@ -104,6 +121,7 @@ Format:
 - source-backed summary
 - one point of view
 - one practical implication
+- simple text map showing source -> change -> impact
 - soft discussion question at the end
 - link to source or source list
 
@@ -154,22 +172,16 @@ Avoid:
 
 ## Proposed Schedule
 
-Start light and consistent.
+Start light and consistent. The cadence is now once per weekday at peak Eastern time.
 
 | Time | Task | Owner |
 | --- | --- | --- |
-| 8:10 AM | Curate AI/tech news candidates | Scheduled draft agent |
-| 8:20 AM | Pick one best topic and generate source notes | Scheduled draft agent |
-| 8:25 AM | Generate Instagram visual prompt and caption | Scheduled draft agent |
-| 8:30 AM | Generate LinkedIn discussion post | Scheduled draft agent |
-| 8:35 AM | Save draft pack and quality proof | Scheduled social agent |
-| 8:40 AM | Browser-publish to Instagram and LinkedIn, then record proof | Scheduled social agent |
-| 4:30 PM | Optional check: note posted links and engagement | Scheduled status check |
+| 12:30 PM ET | Create one source-backed caption pack for Instagram and LinkedIn | Scheduled caption agent |
 
 Recommended cadence:
 
 - Monday to Friday: one daily AI/tech/news post package.
-- Saturday: optional weekly recap.
+- Saturday: optional manual weekly recap.
 - Sunday: no post unless there is a major product/news moment.
 
 ## First Implementation Path
@@ -182,27 +194,18 @@ Create a new local workspace:
 C:\FTC HOLDING\APPS\una-social-agent
 ```
 
-Core commands:
+Current core commands:
 
 ```text
-npm run draft:today
-npm run asset:png
-npm run publish:browser
-npm run publish:browser:dry-run
-npm run post:record -- --instagram-url "https://..." --linkedin-url "https://..."
-npm run quality:today
+npm run caption:write
 npm run schedule:register
-npm run schedule:status
-npm run report:today
 ```
 
 Output folders:
 
 ```text
-APPS/una-social-agent/content/drafts/YYYY-MM-DD/
-APPS/una-social-agent/content/assets/YYYY-MM-DD/
-APPS/una-social-agent/content/proof/YYYY-MM-DD/
-APPS/una-social-agent/content/ledger/social-ledger.jsonl
+APPS/una-social-agent/content/captions/YYYY-MM-DD/caption-pack.md
+APPS/una-social-agent/content/captions/YYYY-MM-DD/caption-pack.json
 ```
 
 Daily draft package:
@@ -232,7 +235,7 @@ blocked
 failed
 ```
 
-Browser auto-posting is enabled in Phase 1.
+Browser auto-posting is paused in the caption-only phase.
 
 The daily scheduled runner should fail visibly if the package is incomplete or low quality:
 

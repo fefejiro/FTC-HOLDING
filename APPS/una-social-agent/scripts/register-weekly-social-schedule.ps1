@@ -1,20 +1,14 @@
 param(
   [string]$ProjectDir = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path,
-  [string]$MorningAt = '09:10',
-  [string]$EveningAt = '18:40',
-  [string]$MonitorAt = '20:50',
+  [string]$PeakAt = '12:30',
   [string]$Channels = 'instagram,linkedin'
 )
 
 $ErrorActionPreference = 'Stop'
 
 $runner = Join-Path $ProjectDir 'scripts\social-run.ps1'
-$monitor = Join-Path $ProjectDir 'scripts\visible-social-monitor.py'
 if (-not (Test-Path -LiteralPath $runner)) {
   throw "Una Labs social runner was not found: $runner"
-}
-if (-not (Test-Path -LiteralPath $monitor)) {
-  throw "Una Labs social monitor was not found: $monitor"
 }
 
 function Register-UnaTask {
@@ -34,11 +28,9 @@ function Register-UnaTask {
   Write-Host "Registered $TaskName for weekdays at $At."
 }
 
-$runArgs = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$runner`" -ProjectDir `"$ProjectDir`" -ForceNew -Channels `"$Channels`""
-$monitorArgs = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -Command `"Set-Location '$ProjectDir'; python '$monitor'`""
+$runArgs = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$runner`" -ProjectDir `"$ProjectDir`" -CaptionOnly -Channels `"$Channels`""
 
-Register-UnaTask -TaskName 'UnaLabsSocial-Morning' -At $MorningAt -Arguments $runArgs -Description 'Morning Una Labs source-backed Instagram and LinkedIn visible-browser publishing run.'
-Register-UnaTask -TaskName 'UnaLabsSocial-Evening' -At $EveningAt -Arguments $runArgs -Description 'Evening Una Labs source-backed Instagram and LinkedIn visible-browser publishing run.'
-Register-UnaTask -TaskName 'UnaLabsSocial-EngagementMonitor' -At $MonitorAt -Arguments $monitorArgs -Description 'Capture Una Labs Instagram and LinkedIn engagement proof screenshots.'
+Register-UnaTask -TaskName 'UnaLabsSocial-PeakCaption' -At $PeakAt -Arguments $runArgs -Description 'Daily peak Eastern caption-only Una Labs Instagram and LinkedIn source-backed draft run.'
 
-Write-Host "Una Labs social schedule ready. Keep the computer signed in, unlocked, online, and Chrome available."
+Write-Host "Una Labs caption-only social schedule ready for weekdays at $PeakAt Eastern."
+Write-Host "No image generation, no OpenAI call, and no browser publish happen in this scheduled task."

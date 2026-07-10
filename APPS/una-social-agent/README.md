@@ -2,6 +2,8 @@
 
 Social content agent for Una Labs.
 
+Current default: caption-only AI and technology news drafts. Image generation is paused.
+
 It creates AI and technology news packages for:
 
 - Instagram: five-slide 1080 x 1350 carousel package
@@ -13,13 +15,14 @@ It creates AI and technology news packages for:
 - browser publishing proof screenshots
 - JSONL ledger entry with posted/failed status
 
-The scheduled runner performs:
+The caption-only scheduled runner performs:
 
-1. `npm run draft:today`
-2. `npm run quality:today`
-3. `npm run publish:visible`
+1. `npm run caption:write`
+2. Writes Instagram and LinkedIn caption drafts
+3. Saves source and proof metadata
+4. Stops without image generation, OpenAI calls, or browser publishing
 
-If quality or browser publishing fails, the Windows task returns a non-zero result and the log/proof report explains which step failed.
+The older visual and browser-publishing commands remain in the repo, but they are no longer the default scheduled path.
 
 ## Publication Standard
 
@@ -34,8 +37,7 @@ The account should feel like a reliable AI and technology news publication, not 
 
 ## Low-Cost Caption-Only Mode
 
-When OpenAI/image budget is low, use caption-only mode. It does not call OpenAI,
-does not generate images, and does not publish anything.
+Caption-only mode does not call OpenAI, does not generate images, and does not publish anything.
 
 ```powershell
 npm run caption:write
@@ -62,6 +64,7 @@ Writing standard:
 - no fake urgency
 - source included
 - Instagram and LinkedIn captions written separately
+- LinkedIn includes a simple source-to-impact text map
 - status stays `draft_caption_only` until a person approves or posts it
 
 ## New Editorial Workflow
@@ -243,13 +246,13 @@ npm run publish:browser:dry-run
 Default scheduled task:
 
 ```text
-UnaLabsSocial-DailyDraft
+UnaLabsSocial-PeakCaption
 ```
 
 Default run time:
 
 ```text
-8:10 AM Eastern, weekdays
+12:30 PM Eastern, weekdays
 ```
 
 Register it:
@@ -257,3 +260,7 @@ Register it:
 ```powershell
 npm run schedule:register
 ```
+
+This one daily peak Eastern run creates both Instagram and LinkedIn caption drafts.
+Instagram still needs an image or reel before it can be posted. LinkedIn can use
+the text/link caption directly when you choose to publish.
