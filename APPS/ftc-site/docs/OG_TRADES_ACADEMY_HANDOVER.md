@@ -91,7 +91,7 @@ Optional webhooks:
 
 Webhooks are delivery/notification enhancements, not a requirement for keeping the approved `www.ogtradesacademy.com` domain live.
 
-Live endpoint routing is verified on production after the 2026-07-14 Cloudflare Pages direct upload to `og-trades-pages` (`https://7b1dc9d2.og-trades-pages.pages.dev`). `OPTIONS https://www.ogtradesacademy.com/api/og-trades-leads` returns `204` with the approved origin.
+Live endpoint routing is verified on production after the 2026-07-14 Cloudflare Pages direct upload to `og-trades-pages` (`https://f6713cac.og-trades-pages.pages.dev`). `OPTIONS https://www.ogtradesacademy.com/api/og-trades-leads` returns `204` with the approved origin.
 
 Live Supabase persistence is not yet verified. Controlled POST submissions now reach the worker, but return `500` because `og-trades-pages` is missing `SUPABASE_SERVICE_ROLE_KEY`. `NEXT_PUBLIC_SUPABASE_URL` has been added to the project. Add the service-role secret from the secure Supabase source of truth, redeploy if needed, then rerun one clearly labeled QA submission and Supabase readback for table `og_trades_leads`.
 

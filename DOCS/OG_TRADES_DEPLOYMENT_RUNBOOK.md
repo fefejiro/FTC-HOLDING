@@ -10,7 +10,7 @@ Current implementation source of truth is `APPS/ftc-site`; the standalone `APPS/
 
 - ✅ Domain preserved: www.ogtradesacademy.com remains the approved production URL
 - ✅ Project created: og-trades-pages on Cloudflare Pages
-- ✅ Deployment: 2026-07-14 direct upload deployed to `og-trades-pages` (`https://7b1dc9d2.og-trades-pages.pages.dev`)
+- ✅ Deployment: 2026-07-14 direct upload deployed to `og-trades-pages` (`https://f6713cac.og-trades-pages.pages.dev`)
 - ⚠️ Lead persistence: API routing is live, but Supabase writes need `SUPABASE_SERVICE_ROLE_KEY` added to `og-trades-pages`
 - ✅ Code ready: All routes, API, and dependencies in place at APPS/og-trades-academy/
 
