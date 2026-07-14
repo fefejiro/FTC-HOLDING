@@ -19,6 +19,8 @@ module.exports = {
   swcMinify: true,
   env: {
     ATEAM_UPSTREAM_ORIGIN: process.env.ATEAM_UPSTREAM_ORIGIN || "",
+    NEXT_PUBLIC_FTC_SITE_BRAND_SNAPSHOT:
+      process.env.NEXT_PUBLIC_FTC_SITE_BRAND_SNAPSHOT || process.env.FTC_SITE_PAGES_TARGET || "",
   },
   // Cloudflare Pages static deploy has no /_next/image optimizer.
   // Serve images directly from /public so next/image renders correctly.

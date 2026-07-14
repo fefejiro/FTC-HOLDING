@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import dynamic from "next/dynamic";
+import nextDynamic from "next/dynamic";
 import { Inter, Space_Grotesk } from "next/font/google";
 import React from "react";
 import { SITE_URL } from "../lib/site";
-import { getRequestHost } from "../lib/requestHost";
 import "../styles/globals.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -11,7 +10,7 @@ import ScrollReveal from "./components/ScrollReveal";
 import ChatWidget from "./components/ChatWidget";
 import RootBrandRouter from "./components/RootBrandRouter";
 
-const Analytics = dynamic(() => import("./components/Analytics"), { ssr: false });
+const Analytics = nextDynamic(() => import("./components/Analytics"), { ssr: false });
 
 const GOOGLE_SITE_VERIFICATION = process.env.GOOGLE_SITE_VERIFICATION;
 const GOOGLE_ANALYTICS_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
@@ -32,7 +31,6 @@ const defaultTitle = "Una Labs | Trusted AI Workflow Systems and Delivery Infras
 const defaultDescription =
   "Una Labs designs trusted AI workflow systems, lead operations, and delivery infrastructure. ATEAM turns rough requests into scoped plans, human-approved outputs, and decision-ready next steps.";
 const defaultOgImage = `${SITE_URL}/opengraph-image`;
-
 
 
 export const metadata: Metadata = {
@@ -100,8 +98,6 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const requestHost = getRequestHost();
-
   return (
     <html lang="en">
       <head>
@@ -112,9 +108,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${inter.variable} ${spaceGrotesk.variable}`}>
         <ScrollReveal />
         <RootBrandRouter>
-          <Header initialHost={requestHost} />
+          <Header />
           <main className="main-shell">{children}</main>
-          <Footer initialHost={requestHost} />
+          <Footer />
         </RootBrandRouter>
         {GOOGLE_ANALYTICS_ID ? <Analytics /> : null}
         <ChatWidget />

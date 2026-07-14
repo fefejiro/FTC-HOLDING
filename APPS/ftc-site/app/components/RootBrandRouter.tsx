@@ -13,6 +13,17 @@ import {
 } from '../../lib/ogTradesAcademy';
 import { PRODUCT_AUTH_CONFIG } from '../../lib/productAuth';
 
+const brandSnapshot = String(process.env.NEXT_PUBLIC_FTC_SITE_BRAND_SNAPSHOT || '').trim().toLowerCase();
+const shouldRenderBrandSnapshot = [
+  'garden',
+  'garden-cleaners',
+  'gardencleaners',
+  'og-trades',
+  'ogtrades',
+  'og-trades-academy',
+  'ogtradesacademy',
+].includes(brandSnapshot);
+
 /**
  * Root-level brand isolation router for ftc-site.
  *
@@ -45,7 +56,7 @@ import { PRODUCT_AUTH_CONFIG } from '../../lib/productAuth';
  * - RootBrandRouter will automatically apply to all new branded routes
  */
 export default function RootBrandRouter({ children }: { children: ReactNode }) {
-  const [shouldRender, setShouldRender] = useState(false);
+  const [shouldRender, setShouldRender] = useState(shouldRenderBrandSnapshot);
   const unaThemeClass = PRODUCT_AUTH_CONFIG.una.themeBodyClass;
   const gardenThemeClass = PRODUCT_AUTH_CONFIG.garden.themeBodyClass;
 
