@@ -1,6 +1,6 @@
 # FTC Health Audit
 
-Generated: 2026-07-10T04:05:27.415Z
+Generated: 2026-07-14T20:05:32.096Z
 Root: `C:\FTC HOLDING`
 
 ## Summary
@@ -48,7 +48,7 @@ Root: `C:\FTC HOLDING`
 | PASS | APPS/saywetin-extension | package.json found with 17 scripts. |
 | PASS | APPS/saywetin-native | package.json found with 32 scripts. |
 | PASS | APPS/una-labs-site | package.json found with 4 scripts. |
-| PASS | APPS/una-social-agent | package.json found with 26 scripts. |
+| PASS | APPS/una-social-agent | package.json found with 34 scripts. |
 | PASS | workers/ateam-edge | Worker folder inventory only. |
 | PASS | workers/ateam-ops | Worker folder inventory only. |
 | PASS | workers/dispatch-edge | Worker folder inventory only. |
