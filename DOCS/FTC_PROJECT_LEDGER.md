@@ -59,16 +59,15 @@ Last refreshed: 2026-07-14
 - **Estimated remaining effort:** 1d (access unblock + QA)
 
 ## OG Trades Academy
-- **Current status:** LIVE ON APPROVED WWW DOMAIN (lead persistence and link QA in progress)
+- **Current status:** LIVE ON APPROVED WWW DOMAIN (Cloudflare deploy complete; Supabase write secret pending)
 - **Last known commits:** (see repo)
 - **Blockers:**
-  - Live production lead endpoint is not currently accepting controlled POST submissions: `https://www.ogtradesacademy.com/api/og-trades-leads` returns `308` to the homepage, while `og.unalabs.cloud` and `unalabs.cloud` return `405` for POST diagnostics
-  - Source fix added in `APPS/ftc-site/public/_worker.js` to handle `POST /api/og-trades-leads`; deployment and runtime verification are still pending
-  - Supabase `og_trades_leads` persistence is not verified on production
+  - Supabase `og_trades_leads` persistence is not verified on production because `og-trades-pages` is missing `SUPABASE_SERVICE_ROLE_KEY`
+  - `NEXT_PUBLIC_SUPABASE_URL` is set on `og-trades-pages`; add the service-role secret from the secure Supabase source of truth before rerunning the controlled POST
   - Beacons profile, Beacons checkout, and `tinyurl.com/ogtradesacademy` resolve to Cloudflare `403` in curl and headless browser checks; this may be bot protection but needs human browser confirmation
-- **Tests/QA:** `https://www.ogtradesacademy.com/` is the accepted production URL. All six clean public pages returned HTTP 200. Playwright Chromium was repaired on 2026-07-14, and `PLAYWRIGHT_BASE_URL=https://www.ogtradesacademy.com npx playwright test tests/og-trades-public.spec.ts` passed 11 checks with 1 skipped enrollment API assertion.
+- **Tests/QA:** `https://www.ogtradesacademy.com/` is the accepted production URL. All six clean public pages returned HTTP 200 after the 2026-07-14 Cloudflare Pages direct upload (`https://7b1dc9d2.og-trades-pages.pages.dev`), with OG titles/content and no Una Labs branding. `OPTIONS /api/og-trades-leads` returns 204. Playwright Chromium was repaired on 2026-07-14, and `PLAYWRIGHT_BASE_URL=https://www.ogtradesacademy.com npx playwright test tests/og-trades-public.spec.ts` passed 11 checks with 1 skipped enrollment API assertion.
 - **Human follow-up notes:** Do not change DNS, Cloudflare domain bindings, apex routing, or OG Trades connection settings. Current `www.ogtradesacademy.com` behavior is approved. Apex/Squarespace observations are informational only, not blockers.
-- **Next action:** Deploy the worker lead-handler fix without changing DNS/domain connection, verify Supabase persistence with one controlled submission, human-browser-check Beacons/checkout/community destinations, and rerun the enrollment API assertion once production endpoint routing is live.
+- **Next action:** Add `SUPABASE_SERVICE_ROLE_KEY` to `og-trades-pages`, verify Supabase persistence with one controlled submission, human-browser-check Beacons/checkout/community destinations, and rerun the enrollment API assertion.
 - **Estimated remaining effort:** ~0.5d for lead endpoint fix, link QA, and documentation closeout. Webhooks/confirmation emails are optional enhancements, not required for the current live domain to remain approved.
 
 ## FTC/Auth/Skills

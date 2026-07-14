@@ -496,16 +496,16 @@ async function persistGardenQuote(quoteRecord, env) {
 }
 
 async function persistOgLead(leadRecord, env) {
-  const config = getSupabaseConfig(env);
+  const config = getSupabaseServiceConfig(env);
   if (!config) {
-    throw new Error("Supabase OG lead persistence is not configured.");
+    throw new Error("Supabase OG lead service-role persistence is not configured.");
   }
 
   const response = await fetch(`${config.supabaseUrl}/rest/v1/og_trades_leads`, {
     method: "POST",
     headers: {
-      "apikey": config.supabaseKey,
-      "authorization": `Bearer ${config.supabaseKey}`,
+      "apikey": config.serviceRoleKey,
+      "authorization": `Bearer ${config.serviceRoleKey}`,
       "content-type": "application/json",
       "prefer": "return=minimal"
     },

@@ -4,6 +4,8 @@
 
 `https://www.ogtradesacademy.com/` is now the approved live production URL. Do not change DNS, Cloudflare domain bindings, apex routing, or OG Trades connection settings. Any older cutover instructions below are historical context only unless the owner explicitly asks for domain work.
 
+2026-07-14 Cloudflare update: `og-trades-pages` received a direct upload deployment (`https://7b1dc9d2.og-trades-pages.pages.dev`) with the approved `www` domain preserved. Public page checks passed for `/`, `/about`, `/course`, `/resources`, `/community`, and `/contact`. `OPTIONS /api/og-trades-leads` is live; controlled POST still needs `SUPABASE_SERVICE_ROLE_KEY` added to `og-trades-pages` before Supabase `og_trades_leads` persistence can be verified.
+
 ## Live now
 
 - **Premium site (working URL):** https://og-trades-pages.pages.dev/ — HTTP 200, content verified

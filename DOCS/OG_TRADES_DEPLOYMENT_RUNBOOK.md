@@ -8,9 +8,10 @@ Current implementation source of truth is `APPS/ftc-site`; the standalone `APPS/
 
 ## Status (2026-04-24)
 
-- ✅ Domain transferred: www.ogtradesacademy.com now points to og-trades-pages
+- ✅ Domain preserved: www.ogtradesacademy.com remains the approved production URL
 - ✅ Project created: og-trades-pages on Cloudflare Pages
-- ❌ Deployment: Pending (awaiting build + deploy)
+- ✅ Deployment: 2026-07-14 direct upload deployed to `og-trades-pages` (`https://7b1dc9d2.og-trades-pages.pages.dev`)
+- ⚠️ Lead persistence: API routing is live, but Supabase writes need `SUPABASE_SERVICE_ROLE_KEY` added to `og-trades-pages`
 - ✅ Code ready: All routes, API, and dependencies in place at APPS/og-trades-academy/
 
 ## Build Requirement
@@ -88,8 +89,8 @@ npx wrangler pages deploy .vercel/output/static --project-name og-trades-pages
 ## Next Steps
 
 1. **Preserve domain:** Keep `https://www.ogtradesacademy.com/` as the approved live production URL.
-2. **Lead QA:** Deploy the `public/_worker.js` lead-handler fix without DNS/domain changes, then verify production Supabase persistence for `POST /api/og-trades-leads`.
-3. **Configuration:** Set webhook secrets only if OG wants additional delivery/notification automation:
+2. **Lead QA:** Add `SUPABASE_SERVICE_ROLE_KEY` to `og-trades-pages`, then verify production Supabase persistence for `POST /api/og-trades-leads`.
+3. **Configuration:** `NEXT_PUBLIC_SUPABASE_URL` is already set on `og-trades-pages`. Set webhook secrets only if OG wants additional delivery/notification automation:
    - `OG_TRADES_LEADS_WEBHOOK_URL`
    - `OG_TRADES_CONFIRMATION_WEBHOOK_URL`
 4. **Link QA:** Browser-check checkout, Beacons, community, YouTube, TikTok, and Instagram links.
@@ -102,7 +103,7 @@ npx wrangler pages deploy .vercel/output/static --project-name og-trades-pages
 - [ ] About page (`/about`) loads
 - [ ] Course page (`/course`) loads
 - [ ] Lead form validates honeypot correctly
-- [ ] Lead submission persists to Supabase `og_trades_leads`
+- [ ] Lead submission persists to Supabase `og_trades_leads` after `SUPABASE_SERVICE_ROLE_KEY` is configured
 - [ ] Optional webhook delivery works if webhook secrets are configured
 - [ ] Portfolio link at https://unalabs.cloud/work/og-trades-academy still works
 

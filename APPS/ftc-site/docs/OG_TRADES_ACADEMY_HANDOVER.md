@@ -91,9 +91,9 @@ Optional webhooks:
 
 Webhooks are delivery/notification enhancements, not a requirement for keeping the approved `www.ogtradesacademy.com` domain live.
 
-Live lead persistence is not verified on production. On 2026-07-14, a controlled POST to `https://www.ogtradesacademy.com/api/og-trades-leads` returned `308` to the homepage instead of accepting JSON. Diagnostic POSTs to `https://og.unalabs.cloud/api/og-trades-leads` and `https://unalabs.cloud/api/og-trades-leads` returned `405`.
+Live endpoint routing is verified on production after the 2026-07-14 Cloudflare Pages direct upload to `og-trades-pages` (`https://7b1dc9d2.og-trades-pages.pages.dev`). `OPTIONS https://www.ogtradesacademy.com/api/og-trades-leads` returns `204` with the approved origin.
 
-A no-DNS code fix was added in `public/_worker.js` to handle `POST /api/og-trades-leads` in the static Pages worker and persist to Supabase table `og_trades_leads`. Deploy that source fix without changing DNS/domain connection, then rerun controlled submission and Supabase readback.
+Live Supabase persistence is not yet verified. Controlled POST submissions now reach the worker, but return `500` because `og-trades-pages` is missing `SUPABASE_SERVICE_ROLE_KEY`. `NEXT_PUBLIC_SUPABASE_URL` has been added to the project. Add the service-role secret from the secure Supabase source of truth, redeploy if needed, then rerun one clearly labeled QA submission and Supabase readback for table `og_trades_leads`.
 
 ## CTA and conversion decisions
 
@@ -156,8 +156,9 @@ Current-state audit on 2026-07-14:
 - `https://www.ogtradesacademy.com/` returned HTTP `200`.
 - `https://www.ogtradesacademy.com/course` returned HTTP `200`.
 - `https://www.ogtradesacademy.com/about`, `/resources`, `/community`, and `/contact` returned HTTP `200`.
-- `POST https://www.ogtradesacademy.com/api/og-trades-leads` returned HTTP `308` to the homepage, so lead capture is not verified on the approved production host.
-- `public/_worker.js` now includes an OG lead handler for `POST /api/og-trades-leads`; it passed `node --check` and `npm run build`. Production deploy/runtime verification is still pending.
+- `POST https://www.ogtradesacademy.com/api/og-trades-leads` originally returned HTTP `308` to the homepage; the 2026-07-14 Cloudflare Pages deploy fixed routing.
+- `public/_worker.js` now includes an OG lead handler for `POST /api/og-trades-leads`; it passed `node --check`, OG-targeted `npm run build`, local Pages worker route checks, and production `OPTIONS` verification.
+- Controlled production POST currently returns `500` because `SUPABASE_SERVICE_ROLE_KEY` is not set on `og-trades-pages`; `NEXT_PUBLIC_SUPABASE_URL` is set.
 - Playwright Chromium was repaired locally and the live OG public spec passed 11 checks with 1 skipped enrollment API assertion:
   - command: `PLAYWRIGHT_BASE_URL=https://www.ogtradesacademy.com npx playwright test tests/og-trades-public.spec.ts`
   - result: 11 passed, 1 skipped
