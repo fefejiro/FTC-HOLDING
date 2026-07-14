@@ -5,7 +5,7 @@ Auto-generated operational snapshot for Una Labs. This file is refreshed by `scr
 ## Latest Snapshot
 
 <!-- AUTO:UNALABS_SNAPSHOT:START -->
-- Generated at: 2026-07-10T04:10:02.634Z
+- Generated at: 2026-07-14T16:10:03.595Z
 - Site origin: https://unalabs.cloud
 - Worker origin: https://una-stripe-api.fejiro-efiuvwere.workers.dev
 - Smoke status: 5/14 checks passed
@@ -37,6 +37,13 @@ Auto-generated operational snapshot for Una Labs. This file is refreshed by `scr
 
 ## Notes
 
+- Social newsroom update on 2026-07-13:
+  - `APPS/una-social-agent` now runs the regional daily tech-news flow: North America, Africa, and Rest of World stories; three Instagram carousel slides; Instagram caption; LinkedIn post; quality gate; visible-browser publishing; proof capture.
+  - Windows task `UnaLabsSocial-PeakDraft` is registered for weekdays at 6:45 AM Eastern.
+  - Scheduled command uses `scripts/social-run.ps1 -ForceNew -Channels "instagram,linkedin" -AllowScheduledPublish`.
+  - 2026-07-13 LinkedIn post was submitted and verified through the Una Labs page proof workflow.
+  - 2026-07-13 Instagram post was submitted and verified through the `unalabs.cloud` profile grid after correcting the virtual-monitor coordinate behavior and file-picker fallback.
+  - Proof files are under `APPS/una-social-agent/content/proof/2026-07-13/`.
 - Manual note on 2026-04-21:
   - The live status-board security model changed after this auto snapshot.
   - `/status` now redirects to `/admin/status`.

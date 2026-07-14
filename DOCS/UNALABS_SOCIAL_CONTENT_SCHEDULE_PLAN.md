@@ -2,27 +2,58 @@
 
 Generated: 2026-07-09
 
+Updated: 2026-07-13
+
+## 2026-07-13 Operating Update
+
+The Una Labs social workflow has moved beyond caption-only drafting. The active weekday flow is now:
+
+```text
+discover regional stories -> build North America / Africa / Rest of World brief
+-> render three Instagram carousel slides -> write Instagram and LinkedIn copy
+-> run quality checks -> publish through visible Chrome -> save proof
+```
+
+Current weekday schedule:
+
+```text
+Task: UnaLabsSocial-PeakDraft
+Time: 6:45 AM Eastern, Monday to Friday
+Command: scripts/social-run.ps1 -ForceNew -Channels "instagram,linkedin" -AllowScheduledPublish
+```
+
+Today's proof status, 2026-07-13:
+
+- LinkedIn: posted and verified through the Una Labs page visible-browser workflow.
+- Instagram: posted and verified through visible-browser profile proof after fixing the virtual-monitor coordinate handling and Select-from-computer fallback.
+- Proof folder: `APPS/una-social-agent/content/proof/2026-07-13/`
+- Approved carousel: `APPS/una-social-agent/content/previews/regional-news-preview-2026-07-13.png`
+
+Known posting note:
+
+- Split-screen and remote-desktop geometry can cause Chrome to report upper-monitor virtual coordinates such as `T=-1088`. Do not clamp these coordinates to the primary screen; they are valid for the visible Chrome window.
+- Instagram retry evidence on 2026-07-13: the working path used the collapsed left-rail Create icon at the window-relative left rail, then selected the carousel files through the OS picker, pasted the caption, clicked Share, and verified the new grid item on `unalabs.cloud`.
+- LinkedIn visible posting is working and proof-backed.
+
 ## Objective
 
 Build a consistent Una Labs social-media operating rhythm using tools already present in the FTC workspace.
 
-The current target is a reliable daily caption-pack system that produces:
+The current target is a reliable daily regional-news system that produces:
 
+- one three-slide Instagram carousel
 - one short Instagram caption
 - one LinkedIn company-page post with a simple source-to-impact text map
 - source links and quality notes
 - a dated caption pack
-- a clear proof record of what was drafted
+- a clear proof record of what was drafted, posted, verified, or blocked
 
 Paused for now:
 
-- image generation
-- carousel generation
-- automatic Instagram publishing
-- automatic LinkedIn publishing
 - paid OpenAI/image API usage
+- official API publishing
 
-The previous full generate-post-verify-record system can still be resumed later. For now, the system must protect budget and write better human-readable news captions.
+The system should protect budget, use the existing scripts, and avoid a rewrite. Improvements should patch the current newsroom pipeline unless a blocker proves a replacement is necessary.
 
 Older full-posting goal:
 
@@ -34,7 +65,7 @@ Older full-posting goal:
 - proof screenshots
 - a proof record of what was drafted, posted, verified, skipped, or failed
 
-Official API publishing and browser automation can still be added later, but the immediate workflow is caption-only.
+Official API publishing can still be added later, but the immediate workflow is visible-browser publishing with proof.
 
 ## Current Channel Evidence
 
@@ -176,7 +207,7 @@ Start light and consistent. The cadence is now once per weekday at peak Eastern 
 
 | Time | Task | Owner |
 | --- | --- | --- |
-| 12:30 PM ET | Create one source-backed caption pack for Instagram and LinkedIn | Scheduled caption agent |
+| 6:45 AM ET | Create one source-backed regional carousel and publish to Instagram and LinkedIn when browser sessions are available | Scheduled visible-browser agent |
 
 Recommended cadence:
 
@@ -235,14 +266,15 @@ blocked
 failed
 ```
 
-Browser auto-posting is paused in the caption-only phase.
+Browser auto-posting is active after quality gates pass.
 
 The daily scheduled runner should fail visibly if the package is incomplete or low quality:
 
 ```text
-npm run draft:today
+npm run draft:regional
+npm run visual:today
 npm run quality:today
-npm run publish:browser
+npm run publish:visible
 ```
 
 The quality check validates source URLs, source freshness, configured Instagram and LinkedIn word-count ranges, required package files, the posting brief, and the PNG upload asset.

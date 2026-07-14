@@ -3,7 +3,8 @@ param(
   [switch]$ForceNew,
   [string]$Channels = 'instagram,linkedin',
   [switch]$CaptionOnly,
-  [switch]$DraftOnly
+  [switch]$DraftOnly,
+  [switch]$AllowScheduledPublish
 )
 
 $ErrorActionPreference = 'Stop'
@@ -25,15 +26,25 @@ try {
     exit $exit
   }
 
-  $draftArgs = @('run', 'draft:today')
+  $draftArgs = @('run', 'draft:regional')
   if ($ForceNew) {
     $draftArgs += @('--', '--force-new')
   }
   npm @draftArgs 2>&1 | Tee-Object -FilePath $logPath -Append
   $exit = $LASTEXITCODE
   if ($exit -eq 0) {
+    "[$(Get-Date -Format o)] Una Labs visual newsroom render starting" | Tee-Object -FilePath $logPath -Append
+    npm run visual:today 2>&1 | Tee-Object -FilePath $logPath -Append
+    $exit = $LASTEXITCODE
+  }
+  if ($exit -eq 0) {
     "[$(Get-Date -Format o)] Una Labs social quality check starting" | Tee-Object -FilePath $logPath -Append
     npm run quality:today 2>&1 | Tee-Object -FilePath $logPath -Append
+    $exit = $LASTEXITCODE
+  }
+  if ($exit -eq 0) {
+    "[$(Get-Date -Format o)] Una Labs LinkedIn preview render starting" | Tee-Object -FilePath $logPath -Append
+    npm run preview:linkedin 2>&1 | Tee-Object -FilePath $logPath -Append
     $exit = $LASTEXITCODE
   }
   if ($DraftOnly) {
@@ -43,6 +54,10 @@ try {
   }
   if ($exit -eq 0) {
     "[$(Get-Date -Format o)] Una Labs visible Chrome publish starting" | Tee-Object -FilePath $logPath -Append
+    if ($AllowScheduledPublish) {
+      $env:UNA_ALLOW_UNAPPROVED_POST = '1'
+      "[$(Get-Date -Format o)] Scheduled publish override enabled after quality gates passed." | Tee-Object -FilePath $logPath -Append
+    }
     npm run publish:visible -- --channels $Channels 2>&1 | Tee-Object -FilePath $logPath -Append
     $exit = $LASTEXITCODE
   }

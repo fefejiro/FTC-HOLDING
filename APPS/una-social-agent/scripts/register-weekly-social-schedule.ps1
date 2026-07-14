@@ -1,6 +1,6 @@
 param(
   [string]$ProjectDir = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path,
-  [string]$PeakAt = '12:30',
+  [string]$PeakAt = '06:45',
   [string]$Channels = 'instagram,linkedin'
 )
 
@@ -28,7 +28,7 @@ function Register-UnaTask {
   Write-Host "Registered $TaskName for weekdays at $At."
 }
 
-$runArgs = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$runner`" -ProjectDir `"$ProjectDir`" -DraftOnly -Channels `"$Channels`""
+$runArgs = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$runner`" -ProjectDir `"$ProjectDir`" -ForceNew -Channels `"$Channels`" -AllowScheduledPublish"
 
 $staleTasks = @(
   'UnaLabsSocial-DailyDraft',
@@ -45,7 +45,7 @@ foreach ($staleTask in $staleTasks) {
   }
 }
 
-Register-UnaTask -TaskName 'UnaLabsSocial-PeakDraft' -At $PeakAt -Arguments $runArgs -Description 'Daily peak Eastern Una Labs Instagram and LinkedIn source-backed draft and quality run. Publishing remains review-gated.'
+Register-UnaTask -TaskName 'UnaLabsSocial-PeakDraft' -At $PeakAt -Arguments $runArgs -Description 'Daily peak Eastern Una Labs source-backed regional brief, visual quality gate, visible-browser publish, and proof ledger.'
 
-Write-Host "Una Labs social draft schedule ready for weekdays at $PeakAt Eastern."
-Write-Host "This creates the Instagram visual draft and LinkedIn/Instagram copy, runs quality checks, and skips browser publish."
+Write-Host "Una Labs social schedule ready for weekdays at $PeakAt Eastern."
+Write-Host "This creates the regional carousel, runs visual and caption quality checks, publishes through the visible browser, and records proof."

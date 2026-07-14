@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import time
 from pathlib import Path
 
@@ -43,6 +44,26 @@ class VisibleBrowserLock:
 def today_eastern() -> str:
     # Local machine is already on Eastern for this workflow.
     return time.strftime("%Y-%m-%d")
+
+
+def assert_publish_approved(draft_dir: Path, dry_run: bool) -> None:
+    if dry_run:
+        return
+    if os.environ.get("UNA_ALLOW_UNAPPROVED_POST") == "1":
+        return
+    approval_path = draft_dir / "publish-approved.json"
+    if not approval_path.exists():
+        raise RuntimeError(
+            "Live publishing is blocked until the exact preview is approved. "
+            f"Create {approval_path} with {{\"approved\": true}} after review, "
+            "or set UNA_ALLOW_UNAPPROVED_POST=1 for an intentional override."
+        )
+    try:
+        approval = json.loads(approval_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"Invalid publish approval file: {approval_path}") from exc
+    if approval.get("approved") is not True:
+        raise RuntimeError(f"Publish approval file does not contain approved=true: {approval_path}")
 
 
 def profile_label(window) -> str:
@@ -89,6 +110,24 @@ def screenshot(window, file_path: Path):
     file_path.parent.mkdir(parents=True, exist_ok=True)
     window.capture_as_image().save(file_path)
     return str(file_path.resolve())
+
+
+def validate_instagram_caption(caption: str) -> list[str]:
+    issues: list[str] = []
+    clean = (caption or "").strip()
+    words = [word for word in clean.split() if word.strip()]
+    if len(words) < 45:
+        issues.append(f"Instagram caption is too short: {len(words)} words.")
+    if len(words) > 120:
+        issues.append(f"Instagram caption is too long: {len(words)} words.")
+    if "Source:" not in clean and "Sources:" not in clean:
+        issues.append("Instagram caption is missing a Source/Sources line.")
+    if "#" not in clean:
+        issues.append("Instagram caption is missing hashtags.")
+    lowered = clean.lower()
+    if any(marker in lowered for marker in ["lorem ipsum", "caption goes here", "todo", "[source]", "[caption]"]):
+        issues.append("Instagram caption contains placeholder text.")
+    return issues
 
 
 def set_clipboard_temporarily(value: str):
@@ -180,6 +219,9 @@ def click_dom(window, pattern: str, wait: float = 1.0) -> dict:
   }
   target.scrollIntoView({ block: 'center', inline: 'center' });
   target.focus();
+  target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+  target.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
+  target.click();
   setTimeout(() => {
     const rect = target.getBoundingClientRect();
     document.title = 'UNA_RECT:' + JSON.stringify({
@@ -204,12 +246,57 @@ def click_dom(window, pattern: str, wait: float = 1.0) -> dict:
         return {"ok": False, "reason": f"parse failed: {exc}", "raw": raw}
     if not rect.get("ok"):
         return rect
+    time.sleep(wait)
+    return {"ok": True, "coords": None, "rect": rect, "mode": "dom_click"}
+
+
+def click_dom_physical(window, pattern: str, wait: float = 1.0) -> dict:
+    """Find a DOM element, then click it with a real mouse event at screen coords.
+
+    Browser file pickers often ignore synthetic DOM clicks. A physical click keeps
+    the upload path working while still using DOM discovery for resilience.
+    """
+    marker = "UNA_RECT:"
+    payload = r"""(() => {
+  const pattern = new RegExp(%s, 'i');
+  const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+  const candidates = [...document.querySelectorAll('button,a,input[type="button"],input[type="submit"],[role="button"],div[aria-label]')];
+  const target = candidates.find((el) => pattern.test(clean(el.innerText || el.textContent || el.value || el.getAttribute('aria-label') || '')));
+  if (!target) {
+    document.title = 'UNA_RECT:' + JSON.stringify({ ok: false, reason: 'not-found', pattern: String(pattern) });
+    return;
+  }
+  target.scrollIntoView({ block: 'center', inline: 'center' });
+  const rect = target.getBoundingClientRect();
+  document.title = 'UNA_RECT:' + JSON.stringify({
+    ok: true,
+    text: clean(target.innerText || target.textContent || target.value || target.getAttribute('aria-label') || ''),
+    x: Math.round(rect.x),
+    y: Math.round(rect.y),
+    width: Math.round(rect.width),
+    height: Math.round(rect.height)
+  });
+})()""" % json.dumps(pattern)
+    run_js(window, payload, 0.5)
+    title = window.window_text() or ""
+    start = title.find(marker)
+    if start < 0:
+        return {"ok": False, "reason": "marker not found", "title": title}
+    raw = title[start + len(marker):].split(" - Google Chrome", 1)[0]
+    try:
+        rect = json.loads(raw)
+    except Exception as exc:
+        return {"ok": False, "reason": f"parse failed: {exc}", "raw": raw}
+    if not rect.get("ok"):
+        return rect
     win = window.rectangle()
-    x = int(win.left + rect["x"] + rect["width"] / 2)
-    y = int(win.top + rect["y"] + rect["height"] / 2)
+    x = win.left + int(rect["x"] + rect["width"] / 2)
+    y = win.top + int(rect["y"] + rect["height"] / 2)
+    window.set_focus()
+    time.sleep(0.2)
     mouse.click(button="left", coords=(x, y))
     time.sleep(wait)
-    return {"ok": True, "coords": [x, y], "rect": rect}
+    return {"ok": True, "coords": [x, y], "rect": rect, "mode": "dom_physical_click"}
 
 
 def click_instagram_create(window, wait: float = 1.0) -> dict:
@@ -237,10 +324,14 @@ def click_instagram_create(window, wait: float = 1.0) -> dict:
     document.title = 'UNA_RECT:' + JSON.stringify({ ok: false, reason: 'instagram-create-not-found' });
     return;
   }
-  target.el.scrollIntoView({ block: 'center', inline: 'center' });
-  target.el.focus();
+  const clickEl = target.el.closest('a,button,[role="button"]') || target.el;
+  clickEl.scrollIntoView({ block: 'center', inline: 'center' });
+  clickEl.focus();
+  clickEl.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+  clickEl.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
+  clickEl.click();
   setTimeout(() => {
-    const rect = target.el.getBoundingClientRect();
+    const rect = clickEl.getBoundingClientRect();
     document.title = 'UNA_RECT:' + JSON.stringify({
       ok: true,
       text: target.text,
@@ -263,12 +354,8 @@ def click_instagram_create(window, wait: float = 1.0) -> dict:
         return {"ok": False, "reason": f"parse failed: {exc}", "raw": raw}
     if not rect.get("ok"):
         return rect
-    win = window.rectangle()
-    x = int(win.left + rect["x"] + rect["width"] / 2)
-    y = int(win.top + rect["y"] + rect["height"] / 2)
-    mouse.click(button="left", coords=(x, y))
     time.sleep(wait)
-    return {"ok": True, "coords": [x, y], "rect": rect}
+    return {"ok": True, "coords": None, "rect": rect, "mode": "dom_click"}
 
 
 def paste_text(window, text: str, select_all: bool = False):
@@ -322,10 +409,15 @@ def find_file_picker(before_handles: set[int], timeout: float = 15.0):
     return None, ""
 
 
-def fill_file_picker(picker, file_path: Path):
+def fill_file_picker(picker, file_paths):
     picker.set_focus()
     time.sleep(0.3)
-    old = set_clipboard_temporarily(str(file_path.resolve()))
+    paths = [Path(item).resolve() for item in file_paths]
+    if len(paths) == 1:
+        value = str(paths[0])
+    else:
+        value = " ".join(f'"{path}"' for path in paths)
+    old = set_clipboard_temporarily(value)
     try:
         keyboard.send_keys("%n")
         time.sleep(0.2)
@@ -387,21 +479,24 @@ def open_linkedin_post_composer(window, proof_dir: Path) -> dict:
 
     if not linkedin_composer_is_open(window):
         if "Start a post" in text:
-            if not (click_text_fallback(window, "Start a post") or click_dom(window, r"Start a post", 1.2).get("ok")):
+            if not (click_dom(window, r"Start a post", 1.2).get("ok") or click_text_fallback(window, "Start a post")):
                 coords = click_relative(window, 0.50, 0.41, 1.2)
                 detail["steps"].append({"action": "coordinate_start_post", "coords": coords})
             else:
-                detail["steps"].append({"action": "clicked_start_post_by_text"})
+                detail["steps"].append({"action": "clicked_start_post"})
             if not linkedin_composer_is_open(window):
                 coords = click_relative(window, 0.50, 0.41, 1.5)
                 detail["steps"].append({"action": "coordinate_start_post_after_soft_click", "coords": coords})
         else:
             navigate(window, "https://www.linkedin.com/company/112328320/admin/dashboard/", 4)
             detail["dashboard"] = screenshot(window, proof_dir / "visible-linkedin-home.png")
-            coords = click_relative(window, 0.21, 0.42, 1.2)
-            detail["steps"].append({"action": "dashboard_create", "coords": coords})
+            create_clicked = click_dom(window, r"^\+?\s*Create$", 1.2).get("ok") or click_text_fallback(window, "Create")
+            detail["steps"].append({"action": "dashboard_create", "mode": "dom_or_text", "ok": bool(create_clicked)})
+            if not create_clicked:
+                coords = click_relative(window, 0.21, 0.42, 1.2)
+                detail["steps"].append({"action": "dashboard_create_coordinate_fallback", "coords": coords})
             if "Start a post" in visible_text(window):
-                if not (click_text_fallback(window, "Start a post") or click_dom(window, r"Start a post", 1.0).get("ok")):
+                if not (click_dom(window, r"Start a post", 1.0).get("ok") or click_text_fallback(window, "Start a post")):
                     coords = click_relative(window, 0.57, 0.56, 1.0)
                     detail["steps"].append({"action": "coordinate_start_post_after_create", "coords": coords})
 
@@ -466,7 +561,7 @@ def verify_linkedin_post(window, post: str, proof_dir: Path) -> dict:
     return {"ok": False, "proof": proof, "reason": "Page posts proof did not show today's LinkedIn post text."}
 
 
-def publish_instagram(window, run_date: str, image_path: Path, caption: str, proof_dir: Path, dry_run: bool) -> dict:
+def publish_instagram(window, run_date: str, image_paths: list[Path], caption: str, proof_dir: Path, dry_run: bool) -> dict:
     result = {"channel": "instagram", "status": "started", "proof": {}, "url": ""}
     navigate(window, "https://www.instagram.com/", 5)
     result["proof"]["home"] = screenshot(window, proof_dir / "visible-instagram-home.png")
@@ -475,18 +570,18 @@ def publish_instagram(window, run_date: str, image_path: Path, caption: str, pro
         result.update(status="blocked_needs_login", reason="Instagram login form is visible.")
         return result
 
-    rect = window.rectangle()
-    create_x = rect.left + 46
-    create_y = rect.top + int(rect.height() * 0.60)
-    mouse.click(button="left", coords=(create_x, create_y))
-    time.sleep(1.8)
-    click = {"ok": True, "reason": "clicked visible Instagram sidebar create button", "coords": [create_x, create_y]}
+    fallback_click = click_instagram_create(window, 1.8)
+    click = {"ok": fallback_click.get("ok", False), "reason": "clicked Instagram create by DOM", "fallback": fallback_click}
     if "Create new post" not in visible_text(window) and "Select from computer" not in visible_text(window):
-        click_relative(window, 0.038, 0.60, 1.0)
         fallback_click = click_instagram_create(window, 1.5)
         if not fallback_click.get("ok"):
-            click_text_fallback(window, "Create") or click_dom(window, r"^Create$", 1.0)
+            if not (click_dom(window, r"^Create$", 1.0).get("ok") or click_text_fallback(window, "Create")):
+                coords = click_relative(window, 0.019, 0.60, 1.2)
+                fallback_click = {"ok": True, "reason": "screen-relative Instagram create fallback", "coords": coords}
         click["fallback"] = fallback_click
+    if "Create new post" not in visible_text(window) and "Select from computer" not in visible_text(window):
+        navigate(window, "https://www.instagram.com/create/select/", 3)
+        click["directCreateRoute"] = True
     time.sleep(1.0)
     picker = None
     picker_title = ""
@@ -494,15 +589,17 @@ def publish_instagram(window, run_date: str, image_path: Path, caption: str, pro
         before = current_window_handles()
         page_text = visible_text(window)
         if "Select from computer" in page_text:
-            clicked = click_text_fallback(window, "Select from computer")
+            clicked = bool(click_dom_physical(window, r"Select from computer", 0.8).get("ok"))
             if not clicked:
-                clicked = bool(click_dom(window, r"Select from computer", 0.8).get("ok"))
+                clicked = click_text_fallback(window, "Select from computer")
             if not clicked:
-                click_relative(window, 0.50, 0.64, 0.8)
+                click_relative(window, 0.50, 0.607, 0.8)
         elif "Create new post" in page_text:
-            click_relative(window, 0.50, 0.64, 0.8)
+            if not click_dom(window, r"Select from computer|Create new post", 0.8).get("ok"):
+                click_relative(window, 0.50, 0.607, 0.8)
         else:
-            click_text_fallback(window, "Create") or click_instagram_create(window, 1.0)
+            if not (click_instagram_create(window, 1.0).get("ok") or click_dom(window, r"^Create$", 1.0).get("ok") or click_text_fallback(window, "Create")):
+                click_relative(window, 0.019, 0.60, 0.8)
         picker, picker_title = find_file_picker(before, 6)
         if picker:
             break
@@ -511,9 +608,10 @@ def publish_instagram(window, run_date: str, image_path: Path, caption: str, pro
         result["proof"]["error"] = screenshot(window, proof_dir / "visible-instagram-error.png")
         return result
 
-    fill_file_picker(picker, image_path)
+    fill_file_picker(picker, image_paths)
     time.sleep(3)
     result["proof"]["image_selected"] = screenshot(window, proof_dir / "visible-instagram-image-selected.png")
+    result["imageCount"] = len(image_paths)
 
     for _ in range(3):
         if "Next" in visible_text(window):
@@ -525,7 +623,7 @@ def publish_instagram(window, run_date: str, image_path: Path, caption: str, pro
     # Instagram's caption box often exposes little useful UIA text. Click the
     # visible right-side composer area before paste so we do not silently post
     # an image with an empty caption.
-    click_relative(window, 0.66, 0.35, 0.3)
+    click_relative(window, 0.66, 0.32, 0.3)
     paste_text(window, caption)
     time.sleep(1)
     result["proof"]["caption_filled"] = screenshot(window, proof_dir / "visible-instagram-caption-filled.png")
@@ -536,7 +634,7 @@ def publish_instagram(window, run_date: str, image_path: Path, caption: str, pro
         return result
 
     if dry_run:
-        result.update(status="dry_run_ready", reason="Instagram image and caption reached the share step.")
+        result.update(status="dry_run_ready", reason="Instagram carousel and caption reached the share step.")
         return result
 
     if not (click_text_fallback(window, "Share") or click_dom(window, r"^Share$", 1.5).get("ok")):
@@ -592,6 +690,20 @@ def append_ledger(entry: dict):
         f.write(json.dumps(entry) + "\n")
 
 
+def instagram_image_paths(run_date: str, asset_dir: Path) -> list[Path]:
+    preview_dir = ROOT / "content" / "previews"
+    regional = [preview_dir / f"regional-news-preview-{run_date}-slide-{index}.png" for index in range(1, 4)]
+    editorial = [preview_dir / f"editorial-news-preview-{run_date}-slide-{index}.png" for index in range(1, 4)]
+    if all(path.exists() for path in regional):
+        return regional
+    if all(path.exists() for path in editorial):
+        return editorial
+    fallback = asset_dir / "instagram-card.png"
+    if fallback.exists():
+        return [fallback]
+    raise RuntimeError(f"Instagram image not found. Tried regional carousel, editorial carousel, and {fallback}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Post Una Labs social content through the visible Fejiro Chrome window.")
     parser.add_argument("--date", default=today_eastern())
@@ -604,13 +716,17 @@ def main() -> int:
     asset_dir = ROOT / "content" / "assets" / run_date
     proof_dir = ROOT / "content" / "proof" / run_date
     proof_dir.mkdir(parents=True, exist_ok=True)
+    assert_publish_approved(draft_dir, args.dry_run)
 
     topic = json.loads((draft_dir / "topic.json").read_text(encoding="utf-8"))
     instagram_caption = (draft_dir / "instagram-caption.md").read_text(encoding="utf-8").strip()
     linkedin_post = (draft_dir / "linkedin-post.md").read_text(encoding="utf-8").strip()
-    image_path = asset_dir / "instagram-card.png"
-    if not image_path.exists():
-        raise RuntimeError(f"Instagram image not found: {image_path}")
+    image_paths = instagram_image_paths(run_date, asset_dir)
+
+    if "instagram" in [item.strip().lower() for item in args.channels.split(",") if item.strip()]:
+        caption_issues = validate_instagram_caption(instagram_caption)
+        if caption_issues:
+            raise RuntimeError("Instagram caption preflight failed: " + " ".join(caption_issues))
 
     channels = [item.strip().lower() for item in args.channels.split(",") if item.strip()]
     with VisibleBrowserLock():
@@ -618,7 +734,7 @@ def main() -> int:
         window.set_focus()
         results = {}
         if "instagram" in channels:
-            results["instagram"] = publish_instagram(window, run_date, image_path, instagram_caption, proof_dir, args.dry_run)
+            results["instagram"] = publish_instagram(window, run_date, image_paths, instagram_caption, proof_dir, args.dry_run)
         if "linkedin" in channels:
             results["linkedin"] = publish_linkedin(window, linkedin_post, proof_dir, args.dry_run)
 

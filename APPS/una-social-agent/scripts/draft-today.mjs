@@ -42,6 +42,8 @@ function decodeXml(value = '') {
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&apos;/g, "'")
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(Number.parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, decimal) => String.fromCodePoint(Number.parseInt(decimal, 10)))
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/\s+/g, ' ')
@@ -125,7 +127,53 @@ async function fetchCandidates(config) {
       errors.push({ sourceName: feed.name, url: feed.url, error: String(error.message || error) })
     }
   }
+  for (const archive of config.archives || []) {
+    try {
+      const html = await fetchText(archive.url)
+      const parsed = parseArchive(html, archive)
+      results.push(...parsed)
+    } catch (error) {
+      errors.push({ sourceName: archive.name, url: archive.url, error: String(error.message || error) })
+    }
+  }
   return { results, errors }
+}
+
+function parseArchive(html, source) {
+  if (/superhuman\.ai/i.test(source.url)) return parseSuperhumanArchive(html, source)
+  return []
+}
+
+function parseSuperhumanArchive(html, source) {
+  const cards = []
+  const seen = new Set()
+  const pattern = /<a\s+href="(\/p\/[^"]+)"[^>]+aria-label="([^"]+)"([\s\S]*?)(?=<a\s+href="\/p\/|<\/body>)/gi
+  for (const match of html.matchAll(pattern)) {
+    const relativeUrl = decodeXml(match[1])
+    const title = decodeXml(match[2]).trim()
+    const block = match[3] || ''
+    const url = new URL(relativeUrl, source.baseUrl || source.url).toString()
+    if (!title || seen.has(url)) continue
+    seen.add(url)
+
+    const subtitleMatch = block.match(/<p[^>]*>([\s\S]*?)<\/p>/i)
+    const dateMatch = block.match(/<span[^>]*>\s*([A-Z][a-z]{2}\s+\d{1,2},\s+\d{4})\s*<\/span>/)
+    const imageMatch = block.match(/srcSet="([^"]+?uploads\/asset\/file\/[^" ]+)/i)
+    const publishedAt = parseDate(dateMatch ? dateMatch[1] : '')
+    cards.push({
+      sourceName: source.name,
+      sourceTier: source.tier,
+      feedUrl: source.url,
+      title,
+      url,
+      summary: subtitleMatch ? decodeXml(subtitleMatch[1]) : '',
+      publishedAt: publishedAt ? publishedAt.toISOString() : '',
+      topics: source.topics || [],
+      imageUrl: imageMatch ? decodeXml(imageMatch[1]) : '',
+      sourceType: 'archive',
+    })
+  }
+  return cards
 }
 
 function normalizeHost(url) {
@@ -146,7 +194,8 @@ function scoreItem(item, config, usedUrls) {
   const text = `${item.title} ${item.summary} ${item.topics.join(' ')}`.toLowerCase()
   if (usedUrls.has(item.url)) return -100
   if ((config.avoidKeywords || []).some((keyword) => text.includes(keyword.toLowerCase()))) return -50
-  let score = item.sourceTier === 'primary' ? 25 : 15
+  let score = item.sourceTier === 'primary' ? 25 : item.sourceTier === 'community' ? -10 : 15
+  if (/reddit|hacker news/i.test(item.sourceName || '')) score -= 25
   const age = daysOld(item)
   score += Math.max(0, 30 - age * 7)
   for (const keyword of config.keywords || []) {
@@ -194,7 +243,7 @@ function plainSummary(item) {
   if (!item?.summary) return 'A new technology update is showing how artificial intelligence is moving from demos into real work people can use every day.'
   const text = topicText(item)
   if (/deutsche telekom|telecommunications|telco|customer service|network operations|future of voice/.test(text)) {
-    return 'Deutsche Telekom says it is using OpenAI across customer service, employee workflows, network operations, and voice experiences.'
+    return 'Deutsche Telekom is testing OpenAI in customer support, employee tools, phone networks, and voice services.'
   }
   return trimWords(item.summary, 45)
 }
@@ -304,7 +353,7 @@ function visualTakeaway(topic) {
 function visualSummary(topic) {
   const text = topicText(topic)
   if (/deutsche telekom|telecommunications|telco|network operations|future of voice/.test(text)) {
-    return 'Deutsche Telekom says it is using OpenAI for customer service, network operations, and voice.'
+    return 'Deutsche Telekom is testing OpenAI in support, employee tools, phone networks, and voice services.'
   }
   if (/muse spark|meta model api|meta ai/.test(text)) {
     return 'Meta opened Muse Spark 1.1 to developers through the Meta Model API.'
@@ -325,13 +374,13 @@ function simpleWhyItMatters(topic) {
     return 'Developers now have another serious AI model to test for coding, computer use, and longer workflow tasks.'
   }
   if (/deutsche telekom|telecommunications|telco|network operations|future of voice/.test(text)) {
-    return 'Telecom work touches millions of customers, so AI needs clear testing, review, and proof before people trust it.'
+    return 'Phone networks affect millions of people. AI can help, but teams still need testing, review, and proof.'
   }
   if (/climate|energy|electricity|emissions|water|data center|datacenter|carbon/.test(text)) {
     return 'AI is not only software. It also needs real electricity, real buildings, and smart planning.'
   }
   if (/developer|coding|code|api|agent|model/.test(text)) {
-    return 'Use it to help with real work, then check the result before trusting it.'
+    return 'Work agents are useful when they can handle real files, real tasks, and real follow-through, not just chat.'
   }
   if (/security|privacy|risk|trust|safety/.test(text)) {
     return 'Move fast, but keep a human review step before trusting the result.'
@@ -348,7 +397,9 @@ function makeInstagramCaption(topic, voice) {
     '',
     `Why it matters: ${simpleWhyItMatters(topic)}`,
     '',
-    'The real question is simple: where does this make real work easier, and where do people still need to check the output?',
+    'The real question is simple: what work can it safely finish, and what still needs a person to review?',
+    '',
+    `Source: ${topic.sourceName}`,
     '',
     hashtags,
   ].join('\n')
@@ -363,11 +414,11 @@ function makeLinkedInPost(topic, related, voice) {
     '',
     'The important part is not just the launch. The important part is what this changes for real teams: support, planning, operations, research, coding, or daily admin work.',
     '',
-    'That tells me the AI race is moving deeper into real work. Less demo. More workflow. More pressure to check the output before trusting it.',
+    'That tells me the AI race is moving deeper into real work. Less demo. More workflow. More pressure to build good review habits around the output.',
     '',
     `Simple takeaway: ${simpleWhyItMatters(topic)}`,
     '',
-    'For small teams, this means the next useful AI advantage may come from picking a clear task, testing the tool, keeping proof, and improving the workflow one step at a time.',
+    'For small teams, this means the next useful AI advantage may come from picking one clear task, testing the tool on real work, keeping proof, and improving the workflow one step at a time.',
     '',
     `Source: ${sourceLine}`,
     '',
@@ -379,12 +430,15 @@ function makeLinkedInPost(topic, related, voice) {
 
 function makeImagePrompt(topic, voice) {
   return [
-    'Create a square 1080 x 1080 editorial technology news image.',
+    'Create a 16:9 editorial technology news hero photo that can crop cleanly for Instagram and LinkedIn.',
     `Headline: "${makeNewsHeadline(topic)}"`,
-    'Style reference: orange editorial news carousel card with a stacked white paper panel, one strong top visual area, large readable body text, and carousel dots.',
-    'Do not generate a realistic person or fake screenshot. Use an approved image when available, otherwise use a clean non-realistic visual block.',
-    'Do not include logos from the source article. Do not mimic a news website screenshot.',
-    'Keep it simple, human-readable, modern, and professional.',
+    'Scene: a modern technology operations room, product team workspace, or newsroom-style desk that matches the story.',
+    'Subject: a confident Black or African technology professional, with Nigerian/Afro-diaspora visual warmth where it fits naturally.',
+    'Style: premium editorial photography, source-backed tech news mood, human and professional, not a generic stock-photo template.',
+    'Composition: strong human subject, visible computer/workflow context, clean background, enough negative space for card cropping.',
+    'Lighting: warm professional light, clear face, realistic office or operations environment.',
+    'Do not include fake logos, fake app screens, fake news site screenshots, watermarks, unreadable UI text, or in-image captions.',
+    'Keep it realistic, modern, and directly connected to the news story.',
   ].join('\n')
 }
 

@@ -1,0 +1,457 @@
+{
+  "run_id": "una-visual-2026-07-13",
+  "runDate": "2026-07-13",
+  "status": "visual_review_ready",
+  "publish_status": "review_required",
+  "note": "Live posting remains blocked until publish-approved.json is created after human review.",
+  "records": [
+    {
+      "run_id": "una-visual-2026-07-13",
+      "story_id": "north-america-aurora-1-5-extending-open-foundation-model-1",
+      "region": "North America",
+      "headline": "Aurora 1.5: Extending open foundation models for weather and Earth-system applications",
+      "source_url": "https://www.microsoft.com/en-us/research/blog/aurora-1-5-extending-open-foundation-models-for-weather-and-earth-system-applications/",
+      "source_date": "2026-07-09T16:46:22.000Z",
+      "story_score": 0,
+      "story_facts": {
+        "story_id": "north-america-aurora-1-5-extending-open-foundation-model-1",
+        "region": "North America",
+        "country_or_market": "North America",
+        "headline": "Aurora 1.5: Extending open foundation models for weather and Earth-system applications",
+        "plain_language_summary": "Aurora 1.5 adds 22 more variables, hourly temporal resolution, and probabilistic ensemble forecasting to the Aurora foundation model, making it more useful for real-world weather, climate, and energy applications. The post Aurora 1.5: Extending open foundation models for weather and Earth-system applications appeared first on Microsoft Research .",
+        "primary_subject": "weather and Earth-system forecasting platform",
+        "technology": [
+          "AI weather model",
+          "Earth-system modelling",
+          "satellite observations",
+          "probability forecasting"
+        ],
+        "organization": "Microsoft Research",
+        "people_or_roles": [
+          "meteorologist",
+          "climate researcher",
+          "energy operator"
+        ],
+        "physical_environment": "operational forecasting and climate research centre",
+        "visible_objects": [
+          "satellite cloud imagery",
+          "pressure map",
+          "temperature layer screen",
+          "storm probability panel"
+        ],
+        "important_actions": [
+          "interpreting probabilistic atmospheric forecasts",
+          "comparing satellite observations",
+          "reviewing energy forecast panels"
+        ],
+        "real_world_application": [
+          "severe-weather planning",
+          "renewable-energy forecasting",
+          "climate risk analysis"
+        ],
+        "visual_evidence_from_source": [
+          "weather",
+          "ai",
+          "research",
+          "models",
+          "developer tools",
+          "Aurora"
+        ],
+        "source_name": "Microsoft Research",
+        "source_url": "https://www.microsoft.com/en-us/research/blog/aurora-1-5-extending-open-foundation-models-for-weather-and-earth-system-applications/",
+        "publication_date": "2026-07-09T16:46:22.000Z",
+        "confidence": 0.86
+      },
+      "visual_brief": {
+        "story_id": "north-america-aurora-1-5-extending-open-foundation-model-1",
+        "region": "North America",
+        "editorial_angle": "Weather And Earth-system Forecasting Platform moving into practical use",
+        "image_type": "editorial_photo",
+        "primary_subject": "weather and Earth-system forecasting platform",
+        "subject_action": "interpreting probabilistic atmospheric forecasts",
+        "environment": "operational forecasting and climate research centre",
+        "supporting_elements": [
+          "satellite cloud imagery",
+          "pressure map",
+          "temperature layer screen",
+          "storm probability panel",
+          "severe-weather planning",
+          "renewable-energy forecasting",
+          "climate risk analysis"
+        ],
+        "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
+        "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
+        "lighting": "natural professional lighting",
+        "mood": "credible, operational, human, practical",
+        "regional_context": [
+          "authentic North America business context where relevant"
+        ],
+        "technology_signals": [
+          "AI weather model",
+          "Earth-system modelling",
+          "satellite observations",
+          "probability forecasting"
+        ],
+        "must_show": [
+          "weather and Earth-system forecasting platform",
+          "AI weather model",
+          "Earth-system modelling",
+          "satellite observations",
+          "interpreting probabilistic atmospheric forecasts"
+        ],
+        "must_not_show": [
+          "abstract screen",
+          "glowing ai brain",
+          "robot head",
+          "generic server room",
+          "generic city skyline",
+          "floating hologram",
+          "phone as the main subject",
+          "people standing beside a screen",
+          "decorative people",
+          "stereotype imagery",
+          "flags as the main subject",
+          "unlicensed logos",
+          "visible text"
+        ],
+        "text_safe_area": "bottom",
+        "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Aurora 1.5: Extending open foundation models for weather and Earth-system applications. Primary subject: weather and Earth-system forecasting platform. Show a meteorologist actively interpreting probabilistic atmospheric forecasts in a operational forecasting and climate research centre. Story-specific technology: AI weather model, Earth-system modelling, satellite observations, probability forecasting. Visible supporting details: satellite cloud imagery, pressure map, temperature layer screen, storm probability panel, severe-weather planning, renewable-energy forecasting, climate risk analysis. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic North America business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+        "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
+        "visual_confidence": 0.86
+      },
+      "image_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Aurora 1.5: Extending open foundation models for weather and Earth-system applications. Primary subject: weather and Earth-system forecasting platform. Show a meteorologist actively interpreting probabilistic atmospheric forecasts in a operational forecasting and climate research centre. Story-specific technology: AI weather model, Earth-system modelling, satellite observations, probability forecasting. Visible supporting details: satellite cloud imagery, pressure map, temperature layer screen, storm probability panel, severe-weather planning, renewable-energy forecasting, climate risk analysis. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic North America business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+      "image_asset_path": "content\\visuals\\2026-07-13\\01-north-america-aurora-1-5-extending-open-foundation\\raw-image.png",
+      "image_model": "openverse-editorial-photo",
+      "generation_attempts": 1,
+      "image_evaluation": {
+        "story_alignment": 80,
+        "technology_specificity": 76,
+        "regional_authenticity": 78,
+        "editorial_credibility": 86,
+        "composition_quality": 86,
+        "text_safe_area_quality": 86,
+        "stereotype_risk": 8,
+        "generic_stock_risk": 30,
+        "overall_score": 86,
+        "failure_reasons": [],
+        "retry_instructions": [],
+        "decision": "accept",
+        "evaluation_mode": "brief_static_with_rendered_fallback"
+      },
+      "rejected_generations": [],
+      "fallback_used": false,
+      "fallback_reason": "",
+      "attribution": {
+        "title": "First Full Disk ABI Image from GOES-17",
+        "source_url": "https://www.flickr.com/photos/24662369@N07/41752931424",
+        "license": "by 2.0",
+        "artist": "NASA Goddard Photo and Video",
+        "search_term": "weather forecasting operations center meteorologist",
+        "provider": "flickr"
+      },
+      "slide_asset_path": "content\\visuals\\2026-07-13\\01-north-america-aurora-1-5-extending-open-foundation\\slide.png",
+      "publish_status": "review_required",
+      "published_urls": [],
+      "screenshots": [],
+      "timestamp": "2026-07-13T16:09:19.387Z"
+    },
+    {
+      "run_id": "una-visual-2026-07-13",
+      "story_id": "africa-why-lava-believes-the-best-of-africa-s-web-2",
+      "region": "Africa",
+      "headline": "Why LAVA believes the best of Africa's Web3 ecosystem is yet to come",
+      "source_url": "https://techcabal.com/2026/07/13/lava-yoseph-ayele-on-africas-web3-market/",
+      "source_date": "2026-07-13T10:31:27.000Z",
+      "story_score": 0,
+      "story_facts": {
+        "story_id": "africa-why-lava-believes-the-best-of-africa-s-web-2",
+        "region": "Africa",
+        "country_or_market": "Africa",
+        "headline": "Why LAVA believes the best of Africa's Web3 ecosystem is yet to come",
+        "plain_language_summary": "LAVA founder Yoseph Ayele explains how the $11 million fund picks African Web3 startups and why founders matter more than markets.",
+        "primary_subject": "regulated digital asset infrastructure",
+        "technology": [
+          "wallet security",
+          "stablecoin rails",
+          "blockchain settlement"
+        ],
+        "organization": "TechCabal",
+        "people_or_roles": [
+          "fintech founder",
+          "compliance analyst",
+          "product operator"
+        ],
+        "physical_environment": "startup operations room with compliance review",
+        "visible_objects": [
+          "risk checklist",
+          "settlement dashboard",
+          "compliance notes"
+        ],
+        "important_actions": [
+          "reviewing transaction risk",
+          "mapping settlement flows",
+          "checking compliance controls"
+        ],
+        "real_world_application": [
+          "payments infrastructure",
+          "capital movement",
+          "financial inclusion"
+        ],
+        "visual_evidence_from_source": [
+          "web3",
+          "africa",
+          "startups",
+          "fintech",
+          "payments",
+          "technology"
+        ],
+        "source_name": "TechCabal",
+        "source_url": "https://techcabal.com/2026/07/13/lava-yoseph-ayele-on-africas-web3-market/",
+        "publication_date": "2026-07-13T10:31:27.000Z",
+        "confidence": 0.86
+      },
+      "visual_brief": {
+        "story_id": "africa-why-lava-believes-the-best-of-africa-s-web-2",
+        "region": "Africa",
+        "editorial_angle": "Regulated Digital Asset Infrastructure moving into practical use",
+        "image_type": "editorial_photo",
+        "primary_subject": "regulated digital asset infrastructure",
+        "subject_action": "reviewing transaction risk",
+        "environment": "startup operations room with compliance review",
+        "supporting_elements": [
+          "risk checklist",
+          "settlement dashboard",
+          "compliance notes",
+          "payments infrastructure",
+          "capital movement",
+          "financial inclusion"
+        ],
+        "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
+        "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
+        "lighting": "natural professional lighting",
+        "mood": "credible, operational, human, practical",
+        "regional_context": [
+          "authentic Africa business context where relevant"
+        ],
+        "technology_signals": [
+          "wallet security",
+          "stablecoin rails",
+          "blockchain settlement"
+        ],
+        "must_show": [
+          "regulated digital asset infrastructure",
+          "wallet security",
+          "stablecoin rails",
+          "blockchain settlement",
+          "reviewing transaction risk"
+        ],
+        "must_not_show": [
+          "abstract screen",
+          "glowing ai brain",
+          "robot head",
+          "generic server room",
+          "generic city skyline",
+          "floating hologram",
+          "phone as the main subject",
+          "people standing beside a screen",
+          "decorative people",
+          "stereotype imagery",
+          "flags as the main subject",
+          "unlicensed logos",
+          "visible text"
+        ],
+        "text_safe_area": "bottom",
+        "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Why LAVA believes the best of Africa's Web3 ecosystem is yet to come. Primary subject: regulated digital asset infrastructure. Show a fintech founder actively reviewing transaction risk in a startup operations room with compliance review. Story-specific technology: wallet security, stablecoin rails, blockchain settlement. Visible supporting details: risk checklist, settlement dashboard, compliance notes, payments infrastructure, capital movement, financial inclusion. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Africa business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+        "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
+        "visual_confidence": 0.86
+      },
+      "image_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Why LAVA believes the best of Africa's Web3 ecosystem is yet to come. Primary subject: regulated digital asset infrastructure. Show a fintech founder actively reviewing transaction risk in a startup operations room with compliance review. Story-specific technology: wallet security, stablecoin rails, blockchain settlement. Visible supporting details: risk checklist, settlement dashboard, compliance notes, payments infrastructure, capital movement, financial inclusion. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Africa business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+      "image_asset_path": "content\\visuals\\2026-07-13\\02-africa-why-lava-believes-the-best-of-africa\\raw-image.png",
+      "image_model": "openverse-editorial-photo",
+      "generation_attempts": 1,
+      "image_evaluation": {
+        "story_alignment": 80,
+        "technology_specificity": 76,
+        "regional_authenticity": 78,
+        "editorial_credibility": 80,
+        "composition_quality": 86,
+        "text_safe_area_quality": 86,
+        "stereotype_risk": 8,
+        "generic_stock_risk": 30,
+        "overall_score": 85,
+        "failure_reasons": [],
+        "retry_instructions": [],
+        "decision": "accept",
+        "evaluation_mode": "brief_static_with_rendered_fallback"
+      },
+      "rejected_generations": [],
+      "fallback_used": false,
+      "fallback_reason": "",
+      "attribution": {
+        "title": "Business people working on laptops during a meeting",
+        "source_url": "https://www.flickr.com/photos/147875007@N03/45739297502",
+        "license": "by 2.0",
+        "artist": "Rawpixel Ltd",
+        "search_term": "African startup office team",
+        "provider": "flickr"
+      },
+      "slide_asset_path": "content\\visuals\\2026-07-13\\02-africa-why-lava-believes-the-best-of-africa\\slide.png",
+      "publish_status": "review_required",
+      "published_urls": [],
+      "screenshots": [],
+      "timestamp": "2026-07-13T16:09:21.431Z"
+    },
+    {
+      "run_id": "una-visual-2026-07-13",
+      "story_id": "rest-of-world-india-s-crackdown-on-a-new-whatsapp-featur-3",
+      "region": "Rest of World",
+      "headline": "India's crackdown on a new WhatsApp feature risks setting a global precedent",
+      "source_url": "https://restofworld.org/2026/india-whatsapp-username-ban-encryption-cyber-fraud/?utm_source=rss&utm_medium=rss&utm_campaign=feeds",
+      "source_date": "2026-07-13T10:00:22.000Z",
+      "story_score": 0,
+      "story_facts": {
+        "story_id": "rest-of-world-india-s-crackdown-on-a-new-whatsapp-featur-3",
+        "region": "Rest of World",
+        "country_or_market": "India",
+        "headline": "India's crackdown on a new WhatsApp feature risks setting a global precedent",
+        "plain_language_summary": "If Meta complies or modifies its app for India, it risks creating a \"slippery slope\" that emboldens governments worldwide to demand changes to encrypted messaging apps.",
+        "primary_subject": "encrypted messaging policy review",
+        "technology": [
+          "encrypted messaging",
+          "platform policy",
+          "cyber fraud controls",
+          "user privacy"
+        ],
+        "organization": "Rest of World",
+        "people_or_roles": [
+          "policy analyst",
+          "trust and safety operator",
+          "product counsel"
+        ],
+        "physical_environment": "platform policy review room with legal, safety and product workflow",
+        "visible_objects": [
+          "policy checklist",
+          "secure messaging flow diagram",
+          "risk review board",
+          "privacy notes"
+        ],
+        "important_actions": [
+          "reviewing policy tradeoffs",
+          "checking fraud risk controls",
+          "mapping user privacy impact"
+        ],
+        "real_world_application": [
+          "messaging safety",
+          "privacy protection",
+          "platform governance"
+        ],
+        "visual_evidence_from_source": [
+          "platform policy",
+          "global tech",
+          "policy",
+          "platforms",
+          "ai",
+          "society"
+        ],
+        "source_name": "Rest of World",
+        "source_url": "https://restofworld.org/2026/india-whatsapp-username-ban-encryption-cyber-fraud/?utm_source=rss&utm_medium=rss&utm_campaign=feeds",
+        "publication_date": "2026-07-13T10:00:22.000Z",
+        "confidence": 0.86
+      },
+      "visual_brief": {
+        "story_id": "rest-of-world-india-s-crackdown-on-a-new-whatsapp-featur-3",
+        "region": "Rest of World",
+        "editorial_angle": "Encrypted Messaging Policy Review moving into practical use",
+        "image_type": "editorial_photo",
+        "primary_subject": "encrypted messaging policy review",
+        "subject_action": "reviewing policy tradeoffs",
+        "environment": "platform policy review room with legal, safety and product workflow",
+        "supporting_elements": [
+          "policy checklist",
+          "secure messaging flow diagram",
+          "risk review board",
+          "privacy notes",
+          "messaging safety",
+          "privacy protection",
+          "platform governance"
+        ],
+        "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
+        "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
+        "lighting": "natural professional lighting",
+        "mood": "credible, operational, human, practical",
+        "regional_context": [
+          "authentic India market context where relevant"
+        ],
+        "technology_signals": [
+          "encrypted messaging",
+          "platform policy",
+          "cyber fraud controls",
+          "user privacy"
+        ],
+        "must_show": [
+          "encrypted messaging policy review",
+          "encrypted messaging",
+          "platform policy",
+          "cyber fraud controls",
+          "reviewing policy tradeoffs"
+        ],
+        "must_not_show": [
+          "abstract screen",
+          "glowing ai brain",
+          "robot head",
+          "generic server room",
+          "generic city skyline",
+          "floating hologram",
+          "phone as the main subject",
+          "people standing beside a screen",
+          "decorative people",
+          "stereotype imagery",
+          "flags as the main subject",
+          "unlicensed logos",
+          "visible text"
+        ],
+        "text_safe_area": "bottom",
+        "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: India's crackdown on a new WhatsApp feature risks setting a global precedent. Primary subject: encrypted messaging policy review. Show a policy analyst actively reviewing policy tradeoffs in a platform policy review room with legal, safety and product workflow. Story-specific technology: encrypted messaging, platform policy, cyber fraud controls, user privacy. Visible supporting details: policy checklist, secure messaging flow diagram, risk review board, privacy notes, messaging safety, privacy protection, platform governance. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic India market context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+        "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
+        "visual_confidence": 0.86
+      },
+      "image_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: India's crackdown on a new WhatsApp feature risks setting a global precedent. Primary subject: encrypted messaging policy review. Show a policy analyst actively reviewing policy tradeoffs in a platform policy review room with legal, safety and product workflow. Story-specific technology: encrypted messaging, platform policy, cyber fraud controls, user privacy. Visible supporting details: policy checklist, secure messaging flow diagram, risk review board, privacy notes, messaging safety, privacy protection, platform governance. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic India market context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+      "image_asset_path": "content\\visuals\\2026-07-13\\03-rest-of-world-india-s-crackdown-on-a-new-whatsapp-\\raw-image.png",
+      "image_model": "openverse-editorial-photo",
+      "generation_attempts": 1,
+      "image_evaluation": {
+        "story_alignment": 80,
+        "technology_specificity": 76,
+        "regional_authenticity": 78,
+        "editorial_credibility": 86,
+        "composition_quality": 86,
+        "text_safe_area_quality": 86,
+        "stereotype_risk": 8,
+        "generic_stock_risk": 30,
+        "overall_score": 86,
+        "failure_reasons": [],
+        "retry_instructions": [],
+        "decision": "accept",
+        "evaluation_mode": "brief_static_with_rendered_fallback"
+      },
+      "rejected_generations": [],
+      "fallback_used": false,
+      "fallback_reason": "",
+      "attribution": {
+        "title": "Internet Freedom Fellows Press Conference at UN",
+        "source_url": "https://www.flickr.com/photos/41916075@N06/7408713960",
+        "license": "by-nd 2.0",
+        "artist": "US Mission Geneva",
+        "search_term": "India technology policy meeting India",
+        "provider": "flickr"
+      },
+      "slide_asset_path": "content\\visuals\\2026-07-13\\03-rest-of-world-india-s-crackdown-on-a-new-whatsapp-\\slide.png",
+      "publish_status": "review_required",
+      "published_urls": [],
+      "screenshots": [],
+      "timestamp": "2026-07-13T16:09:23.981Z"
+    }
+  ],
+  "contact_sheet": "content\\previews\\regional-news-preview-2026-07-13.png",
+  "createdAt": "2026-07-13T16:09:26.198Z"
+}
