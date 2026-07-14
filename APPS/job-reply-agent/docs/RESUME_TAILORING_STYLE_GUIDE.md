@@ -6,7 +6,8 @@ This specification is based on direct comparison of:
 
 ## 1. Required Output Structure
 - Resume output must remain DOCX and preserve the existing template paragraph styles.
-- For BA/recruiter-reply packages, preserve the approved two-column `Business Systems Analyst - Fejiro Efiuvwere.docx` style family. Do not rebuild it as a new one-column resume unless the user explicitly asks for a different format.
+- For BA/recruiter-reply packages, use `Business Systems Analyst - Fejiro Efiuvwere Golden Template.docx` as the internal source template and preserve that approved two-column style family. Do not rebuild it as a new one-column resume unless the user explicitly asks for a different format.
+- Keep generated candidate-facing filenames human-readable; do not include "Golden Template" in visible resume filenames.
 - The left column is for stable section labels only; the right column is for candidate content only.
 - Keep alignment clean in Google Docs/Word imports; avoid blank left-label rows, abstract notes, and process descriptions.
 - Required top block:

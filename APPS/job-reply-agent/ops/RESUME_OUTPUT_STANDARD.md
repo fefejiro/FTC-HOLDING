@@ -2,12 +2,13 @@
 
 Generated resumes must use the approved two-column orange-style resume template as the default visible layout.
 
-For Business Analyst, Business Systems Analyst, Senior IT Business Analyst, Technical Business Analyst, Functional Analyst, UAT, ERP/WMS, and recruiter-reply resumes, preserve the `Business Systems Analyst - Fejiro Efiuvwere.docx` format family:
+For Business Analyst, Business Systems Analyst, Senior IT Business Analyst, Technical Business Analyst, Functional Analyst, UAT, ERP/WMS, and recruiter-reply resumes, use `Business Systems Analyst - Fejiro Efiuvwere Golden Template.docx` as the internal source template and preserve that approved two-column format family:
 
 - left column: section labels only
 - right column: resume content only
 - clean two-column alignment
 - human-readable filenames with spaces and dashes
+- visible generated resume filenames must not include "Golden Template"
 - no new one-column rebuilds unless the user explicitly asks for a different format
 
 For IT Manager, Information Technology Operations Manager, Enterprise Applications Manager, Retail Systems Manager, Business Systems Manager, Service Delivery Manager, and Digital Transformation Manager resumes, use `Fejiro Efiuvwere IT Manager.docx` as the master. It must keep the same Business Analyst orange-format family, but the filename and visible title should be normal IT Manager resume language, not "Orange Standard."

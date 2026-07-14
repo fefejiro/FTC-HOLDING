@@ -134,8 +134,8 @@ trusted_recruiter_domains:
 
 resume_tailoring:
   enabled: true
-  template_path: "C:/FTC HOLDING/DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes/Business Systems Analyst - Fejiro Efiuvwere.docx"
-  business_analysis_template_path: "C:/FTC HOLDING/DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes/Business Systems Analyst - Fejiro Efiuvwere.docx"
+  template_path: "C:/FTC HOLDING/DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes/Business Systems Analyst - Fejiro Efiuvwere Golden Template.docx"
+  business_analysis_template_path: "C:/FTC HOLDING/DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes/Business Systems Analyst - Fejiro Efiuvwere Golden Template.docx"
   it_management_template_path: "C:/FTC HOLDING/DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes/IT Business Systems Manager Fejiro Efiuvwere.docx"
   output_dir: "C:/FTC HOLDING/DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes"
   attach_mode: docx_only
