@@ -80,28 +80,28 @@
     ]
   },
   "OG Trades Academy": {
-    "status": "HOLD",
-    "controlled_walkthrough_status": "HOLD (canonical URL and webhook delivery unconfirmed)",
-    "full_handoff_status": "HOLD (domain live status and webhook config required)",
+    "status": "LIVE_WWW_QA_IN_PROGRESS",
+    "controlled_walkthrough_status": "LIVE on approved www domain; lead/link QA in progress",
+    "full_handoff_status": "LIVE on approved www domain; documentation updated, lead persistence and CTA checks pending",
     "blockers": [
-      "ogtradesacademy.com live status unconfirmed",
-      "OG_TRADES_LEADS_WEBHOOK_URL not set - leads not delivered",
-      "OG_TRADES_CONFIRMATION_WEBHOOK_URL not set",
-      "Community URL destination unverified"
+      "Live production lead endpoint is not accepting POST on the approved www domain; /api/og-trades-leads returns 308 to the homepage",
+      "Source fix added in APPS/ftc-site/public/_worker.js; deployment and runtime verification are pending",
+      "Supabase og_trades_leads persistence is not verified on production",
+      "Beacons profile, Beacons checkout, and tinyurl.com/ogtradesacademy resolve to Cloudflare 403 in curl and headless browser checks; this may be bot protection but needs human browser confirmation"
     ],
     "last_commit_hashes": [],
-    "qa_status": "E2E spec created (tests/og-trades-public.spec.ts); not run against live URL yet",
-    "estimated_remaining_effort": "~0.5d after CTO unblocks domain + webhooks",
+    "qa_status": "2026-07-14 HTTP checks confirmed all six clean public pages return 200. Playwright Chromium repaired; live OG public spec passed 11 checks with 1 skipped enrollment API assertion.",
+    "estimated_remaining_effort": "~0.5d for lead endpoint fix and browser-level Beacons/community link QA",
     "owner_actions_needed": [
-      "Confirm ogtradesacademy.com is live (HTTP 200)",
-      "Provide OG_TRADES_LEADS_WEBHOOK_URL",
-      "Provide OG_TRADES_CONFIRMATION_WEBHOOK_URL",
-      "Verify community URL redirect target"
+      "Keep https://www.ogtradesacademy.com/ as the approved production URL",
+      "Do not change DNS, Cloudflare domain bindings, apex routing, or OG Trades connection settings",
+      "Confirm intended destination for tinyurl.com/ogtradesacademy if it should be a community/Telegram link"
     ],
     "next_dev_actions": [
-      "Run smoke:prod against live URL",
-      "Enable OG Trades in portfolio E2E config",
-      "Update telemetry after GO confirmed"
+      "Deploy worker lead-handler fix without changing DNS/domain connection",
+      "Verify live lead persistence to Supabase og_trades_leads after endpoint is reachable",
+      "Human-browser-check checkout, Beacons, and community CTAs",
+      "Rerun enrollment API assertion after endpoint routing and Supabase/public env are available"
     ]
   },
   "FTC Auth/Skills": {

@@ -60,7 +60,7 @@ function shouldCopyPagesWorker() {
   // Add OG Trades Academy static build target support
   const explicitPagesTarget = String(process.env.FTC_SITE_PAGES_TARGET || "").trim().toLowerCase();
   if (["og-trades", "ogtrades", "og-trades-academy", "ogtradesacademy"].includes(explicitPagesTarget)) {
-    return false; // OG does not use _worker.js for static output
+    return true;
   }
 
   const pagesUrl = String(process.env.CF_PAGES_URL || "").trim().toLowerCase();
@@ -68,7 +68,7 @@ function shouldCopyPagesWorker() {
     return true;
   }
   if (pagesUrl.includes("ogtradesacademy")) {
-    return false;
+    return true;
   }
 
   // Default to no worker for core ftc-site/unalabs deployments.
@@ -150,7 +150,7 @@ async function ensureCompatibilityMirror() {
   if (await pathExists(workerSourcePath)) {
     if (shouldCopyPagesWorker()) {
       await cp(workerSourcePath, workerDestinationPath, { force: true });
-      console.log("[build-fix] Copied public/_worker.js to .vercel/output/static/_worker.js for Garden Pages routing.");
+      console.log("[build-fix] Copied public/_worker.js to .vercel/output/static/_worker.js for brand Pages routing.");
     } else if (await pathExists(workerDestinationPath)) {
       await rm(workerDestinationPath, { force: true });
       console.log("[build-fix] Removed stale .vercel/output/static/_worker.js outside Garden Pages build.");

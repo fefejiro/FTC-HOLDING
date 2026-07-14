@@ -90,9 +90,9 @@ export default function OgTradesAboutPage() {
           title="Ready to learn inside OG Trades Academy?"
           description="Move from the founder story into the academy programs, resources, and community support."
           primaryLabel="View Programs"
-          primaryHref={getOgTradesBrandedPath("/course")}
+          primaryHref={getOgTradesBrandedPath("/course", { customDomain: true })}
           secondaryLabel="Browse Resources"
-          secondaryHref={getOgTradesBrandedPath("/resources")}
+          secondaryHref={getOgTradesBrandedPath("/resources", { customDomain: true })}
         />
       </div>
     </div>

@@ -106,9 +106,9 @@ export default function OgTradesResourcesPage() {
           title="Want more support beyond the free resources?"
           description="Explore the academy programs or join the Telegram community to keep learning with more structure and connection."
           primaryLabel="View Programs"
-          primaryHref={getOgTradesBrandedPath("/course")}
+          primaryHref={getOgTradesBrandedPath("/course", { customDomain: true })}
           secondaryLabel="Join the Community"
-          secondaryHref={getOgTradesBrandedPath("/community")}
+          secondaryHref={getOgTradesBrandedPath("/community", { customDomain: true })}
         />
       </div>
     </div>

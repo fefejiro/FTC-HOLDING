@@ -6,9 +6,9 @@
 - npm
 - Cloudflare Wrangler authenticated (`pages` write scope)
 
-## Infrastructure Source Of Truth (2026-05-08)
+## Infrastructure Source Of Truth (updated 2026-07-14)
 
-Use this section as the canonical map. If dashboard state differs, treat dashboard as drift and correct it.
+Use this section as the canonical map. If dashboard state differs, treat dashboard as drift and correct it, except for OG Trades DNS/domain connection: do not change OG Trades DNS, Cloudflare domain bindings, apex routing, or connection settings without a new explicit instruction.
 
 - Canonical Pages project for Una Labs + brand hosts: `ftc-site-pages`
 - Canonical production domain: `unalabs.cloud`
@@ -17,14 +17,13 @@ Use this section as the canonical map. If dashboard state differs, treat dashboa
   - `www.gardencleaners.ca`
 - OG preview alias attached to `ftc-site-pages`:
   - `og.unalabs.cloud`
-- OG public custom domains are attached but pending verification:
-  - `ogtradesacademy.com`
-  - `www.ogtradesacademy.com`
+- OG approved production URL:
+  - `https://www.ogtradesacademy.com/`
 
 Known external ownership:
 
-- `ogtradesacademy.com` DNS is managed outside Cloudflare (Google nameservers).
-- Old OG apex records still point to Squarespace IPs unless corrected in the external DNS host.
+- `www.ogtradesacademy.com` is the approved live OG Trades public URL and should be preserved.
+- Apex/Squarespace behavior is informational only for the current handoff; do not alter it as part of OG QA.
 
 Clean-up status already completed:
 
@@ -186,9 +185,7 @@ Expected project/domain binding:
   - `gardencleaners.ca`
   - `www.gardencleaners.ca`
   - `og.unalabs.cloud`
-- Pending external DNS cutover domains:
-  - `ogtradesacademy.com`
-  - `www.ogtradesacademy.com`
+- OG Trades public URL is already accepted as `https://www.ogtradesacademy.com/`; do not perform DNS or connection changes during routine QA.
 - Production branch: `main`
 
 Deploy rule to avoid guessing:
@@ -259,12 +256,11 @@ Expected content behavior:
 - OG alias host paths render OG content only.
 - Una Labs host paths render Una Labs content only.
 
-External DNS action still required for OG public host:
+OG Trades domain preservation rule:
 
-- At the external DNS provider for `ogtradesacademy.com`:
-  - set `www.ogtradesacademy.com` CNAME -> `ftc-site-pages.pages.dev`
-  - set apex `ogtradesacademy.com` ALIAS/ANAME -> `ftc-site-pages.pages.dev` (or redirect apex to `www`)
-  - remove legacy Squarespace A/AAAA records once cutover is active
+- `https://www.ogtradesacademy.com/` is the approved live domain.
+- Do not change OG Trades DNS, Cloudflare domain bindings, apex routing, or connection settings.
+- Treat any apex/Squarespace observations as informational unless the owner explicitly requests a domain migration.
 
 ## Launch readiness artifacts
 

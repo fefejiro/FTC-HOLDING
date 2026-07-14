@@ -79,9 +79,9 @@ export default function OgTradesCommunityPage() {
           title="Want to turn community interest into structured learning?"
           description="Use the programs page for the full 8-week course and the resources page for more public lessons and support."
           primaryLabel="View Programs"
-          primaryHref={getOgTradesBrandedPath("/course")}
+          primaryHref={getOgTradesBrandedPath("/course", { customDomain: true })}
           secondaryLabel="Open Resources"
-          secondaryHref={getOgTradesBrandedPath("/resources")}
+          secondaryHref={getOgTradesBrandedPath("/resources", { customDomain: true })}
         />
       </div>
     </div>

@@ -4,6 +4,7 @@
 
 An OG_Trades Academy microsite was added inside the Una Labs Next.js app and is served from:
 
+- approved production URL: `https://www.ogtradesacademy.com/`
 - `/og-trades-academy`
 - `/og-trades-academy/about`
 - `/og-trades-academy/course`
@@ -81,12 +82,18 @@ Validation includes:
 - honeypot field (`website`)
 - anti-bot timing check (`startedAt`)
 
+Current implementation first attempts to persist valid submissions to Supabase table `og_trades_leads`, then optionally calls webhook and confirmation endpoints when those env vars are configured.
+
 Optional webhooks:
 
 - `OG_TRADES_LEADS_WEBHOOK_URL`
 - `OG_TRADES_CONFIRMATION_WEBHOOK_URL`
 
-Without those env vars, valid submissions still succeed but only log server-side.
+Webhooks are delivery/notification enhancements, not a requirement for keeping the approved `www.ogtradesacademy.com` domain live.
+
+Live lead persistence is not verified on production. On 2026-07-14, a controlled POST to `https://www.ogtradesacademy.com/api/og-trades-leads` returned `308` to the homepage instead of accepting JSON. Diagnostic POSTs to `https://og.unalabs.cloud/api/og-trades-leads` and `https://unalabs.cloud/api/og-trades-leads` returned `405`.
+
+A no-DNS code fix was added in `public/_worker.js` to handle `POST /api/og-trades-leads` in the static Pages worker and persist to Supabase table `og_trades_leads`. Deploy that source fix without changing DNS/domain connection, then rerun controlled submission and Supabase readback.
 
 ## CTA and conversion decisions
 
@@ -122,10 +129,13 @@ This direction was requested explicitly by the user as a more typical bright New
 
 ## Important constraints
 
-- Do not introduce fake testimonials, fake student counts, or unsupported profit claims.
+- Real, approved testimonials are allowed and recommended for professionalism and conversion. They may use first name, initials, or anonymized descriptors if the source is real and permission is clear.
+- Testimonial copy should focus on clarity, structure, confidence, discipline, mentorship, and community support.
+- Do not introduce invented testimonials, fake student counts, unsupported profit claims, financial advice, or guaranteed trading outcomes.
 - Keep the financial-risk disclaimer in place.
 - Treat the site as trading education, not financial advice.
 - Preserve the real Beacons checkout URL unless the client supplies a replacement.
+- Do not change DNS, Cloudflare domain bindings, apex routing, or OG Trades connection settings. The current approved live domain is `https://www.ogtradesacademy.com/`.
 
 ## Verification already completed
 
@@ -141,6 +151,34 @@ Production route checks were previously verified for:
 - sitemap including OG routes
 - live form endpoint accepting a valid submission
 
+Current-state audit on 2026-07-14:
+
+- `https://www.ogtradesacademy.com/` returned HTTP `200`.
+- `https://www.ogtradesacademy.com/course` returned HTTP `200`.
+- `https://www.ogtradesacademy.com/about`, `/resources`, `/community`, and `/contact` returned HTTP `200`.
+- `POST https://www.ogtradesacademy.com/api/og-trades-leads` returned HTTP `308` to the homepage, so lead capture is not verified on the approved production host.
+- `public/_worker.js` now includes an OG lead handler for `POST /api/og-trades-leads`; it passed `node --check` and `npm run build`. Production deploy/runtime verification is still pending.
+- Playwright Chromium was repaired locally and the live OG public spec passed 11 checks with 1 skipped enrollment API assertion:
+  - command: `PLAYWRIGHT_BASE_URL=https://www.ogtradesacademy.com npx playwright test tests/og-trades-public.spec.ts`
+  - result: 11 passed, 1 skipped
+- Source CTAs were updated so OG page links use clean approved-domain paths such as `/course`, `/community`, and `/resources` rather than `/og-trades-academy/...` on the custom-domain experience.
+- The apex `https://ogtradesacademy.com/` still redirects through Squarespace to `https://www.ogtradesacademy.com`; this is informational only and not a blocker because the approved production URL is the `www` host.
+- Browser/headless link QA:
+  - YouTube returned `200` and loaded `OG_Trades Academy - YouTube`.
+  - TikTok returned `200`.
+  - Instagram returned `200`.
+  - Beacons profile returned Cloudflare `403`.
+  - Beacons checkout returned Cloudflare `403`.
+  - `tinyurl.com/ogtradesacademy` resolved to the Beacons checkout URL and returned Cloudflare `403`.
+  - The Beacons/TinyURL results may be bot protection, but they need human browser confirmation before community/checkout links can be marked fully verified.
+
+Recommended live QA command after browser repair:
+
+```powershell
+$env:PLAYWRIGHT_BASE_URL="https://www.ogtradesacademy.com"
+npx playwright test tests/og-trades-public.spec.ts
+```
+
 ## Recent commits
 
 Notable OG-related commits on `main` include:
@@ -154,7 +192,9 @@ Notable OG-related commits on `main` include:
 
 ## Follow-up ideas
 
-- connect real lead webhook + confirmation email
+- verify Supabase lead persistence with one controlled production QA submission
+- connect real lead webhook + confirmation email if OG wants additional delivery/notification automation
+- collect and publish real approved testimonials focused on learning clarity, structure, mentorship, discipline, and community
 - add blog/article content under a true OG content hub if needed
 - replace the synthetic chart visual with a more polished finance dashboard mock if desired
-- run a focused mobile QA pass on production after Cloudflare finishes propagating the latest design changes
+- run a focused mobile QA pass on `https://www.ogtradesacademy.com/`

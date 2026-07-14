@@ -1,5 +1,9 @@
 # OG Trades Academy — Domain Cutover Status (2026-04-25)
 
+## 2026-07-14 update
+
+`https://www.ogtradesacademy.com/` is now the approved live production URL. Do not change DNS, Cloudflare domain bindings, apex routing, or OG Trades connection settings. Any older cutover instructions below are historical context only unless the owner explicitly asks for domain work.
+
 ## Live now
 
 - **Premium site (working URL):** https://og-trades-pages.pages.dev/ — HTTP 200, content verified

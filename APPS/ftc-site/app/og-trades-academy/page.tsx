@@ -21,10 +21,10 @@ export function generateMetadata(): Metadata {
 
 export default function OgTradesAcademyHomePage() {
   const canonicalUrl = getOgTradesAbsoluteUrl("/", { customDomain: true });
-  const aboutHref = getOgTradesBrandedPath("/about");
-  const courseHref = getOgTradesBrandedPath("/course");
-  const communityHref = getOgTradesBrandedPath("/community");
-  const resourcesHref = getOgTradesBrandedPath("/resources");
+  const aboutHref = getOgTradesBrandedPath("/about", { customDomain: true });
+  const courseHref = getOgTradesBrandedPath("/course", { customDomain: true });
+  const communityHref = getOgTradesBrandedPath("/community", { customDomain: true });
+  const resourcesHref = getOgTradesBrandedPath("/resources", { customDomain: true });
   const communityInviteHref = ogTradesAcademyConfig.communityUrl;
   const pricingPaths = [
     {

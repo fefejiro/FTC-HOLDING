@@ -2,7 +2,7 @@
 
 A human-readable, cross-project delivery ledger for FTC/Una Labs. Use this template to track project status, commits, blockers, QA, human follow-up, and next actions for every major project.
 
-Last refreshed: 2026-05-18
+Last refreshed: 2026-07-14
 
 ---
 
@@ -59,17 +59,17 @@ Last refreshed: 2026-05-18
 - **Estimated remaining effort:** 1d (access unblock + QA)
 
 ## OG Trades Academy
-- **Current status:** HOLD (canonical URL unconfirmed, webhook delivery not configured, E2E coverage added)
+- **Current status:** LIVE ON APPROVED WWW DOMAIN (lead persistence and link QA in progress)
 - **Last known commits:** (see repo)
 - **Blockers:**
-  - `ogtradesacademy.com` live status unconfirmed — no HTTP probe run yet
-  - `OG_TRADES_LEADS_WEBHOOK_URL` not set — leads return 200 but are not delivered
-  - `OG_TRADES_CONFIRMATION_WEBHOOK_URL` not set — no user confirmation sent
-  - Community URL destination (`tinyurl.com/ogtradesacademy`) unverified
-- **Tests/QA:** E2E spec created (`tests/og-trades-public.spec.ts`); not run against live URL yet
-- **Human follow-up notes:** CTO to confirm domain is live and provide webhook URLs before GO
-- **Next action:** CTO confirms `ogtradesacademy.com` HTTP 200 + provides webhook URLs; then run `npm run smoke:prod` and enable in telemetry
-- **Estimated remaining effort:** ~0.5d after CTO unblocks domain + webhooks
+  - Live production lead endpoint is not currently accepting controlled POST submissions: `https://www.ogtradesacademy.com/api/og-trades-leads` returns `308` to the homepage, while `og.unalabs.cloud` and `unalabs.cloud` return `405` for POST diagnostics
+  - Source fix added in `APPS/ftc-site/public/_worker.js` to handle `POST /api/og-trades-leads`; deployment and runtime verification are still pending
+  - Supabase `og_trades_leads` persistence is not verified on production
+  - Beacons profile, Beacons checkout, and `tinyurl.com/ogtradesacademy` resolve to Cloudflare `403` in curl and headless browser checks; this may be bot protection but needs human browser confirmation
+- **Tests/QA:** `https://www.ogtradesacademy.com/` is the accepted production URL. All six clean public pages returned HTTP 200. Playwright Chromium was repaired on 2026-07-14, and `PLAYWRIGHT_BASE_URL=https://www.ogtradesacademy.com npx playwright test tests/og-trades-public.spec.ts` passed 11 checks with 1 skipped enrollment API assertion.
+- **Human follow-up notes:** Do not change DNS, Cloudflare domain bindings, apex routing, or OG Trades connection settings. Current `www.ogtradesacademy.com` behavior is approved. Apex/Squarespace observations are informational only, not blockers.
+- **Next action:** Deploy the worker lead-handler fix without changing DNS/domain connection, verify Supabase persistence with one controlled submission, human-browser-check Beacons/checkout/community destinations, and rerun the enrollment API assertion once production endpoint routing is live.
+- **Estimated remaining effort:** ~0.5d for lead endpoint fix, link QA, and documentation closeout. Webhooks/confirmation emails are optional enhancements, not required for the current live domain to remain approved.
 
 ## FTC/Auth/Skills
 - **Current status:** GO (foundation skill committed)

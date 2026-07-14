@@ -31,6 +31,35 @@ const OG_PUBLIC_PATHS = new Set([
   "/contact"
 ]);
 
+const OG_INTEREST_VALUES = new Set([
+  "8-week-beginner-forex-course",
+  "community-access",
+  "free-resources",
+  "not-sure-yet"
+]);
+
+const OG_EXPERIENCE_VALUES = new Set([
+  "brand-new",
+  "learning-basics",
+  "demo-trading",
+  "live-trading",
+  "prop-firm-focused"
+]);
+
+const OG_GOAL_VALUES = new Set([
+  "build-foundation",
+  "improve-risk-management",
+  "learn-a-repeatable-strategy",
+  "gain-consistency"
+]);
+
+const OG_TIMELINE_VALUES = new Set([
+  "ready-now",
+  "this-month",
+  "next-month",
+  "just-looking"
+]);
+
 const ROLE_ROUTE_PATTERN = /^\/(?:garden-cleaners\/)?(?:customer|worker|cleaner|staff|admin|operator|dashboard|jobs|bookings|status|login)(?:\/|$)/;
 
 const PROPERTY_TYPES = new Set(["House", "Condo / Apartment", "Office", "Retail / Commercial", "Vacant unit", "Other"]);
@@ -94,6 +123,17 @@ function json(data, status = 200) {
   });
 }
 
+function corsJson(data, status = 200, origin = null, env = {}) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      ...ogCorsHeaders(origin, env)
+    }
+  });
+}
+
 function normalizeText(value) {
   return typeof value === "string" ? value.trim().replace(/\s+/g, " ") : "";
 }
@@ -104,6 +144,63 @@ function normalizeEmail(value) {
 
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function slugify(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function normalizeChoice(value, allowedValues, fallback, aliases = {}) {
+  const raw = normalizeText(value).toLowerCase();
+  if (!raw) return fallback;
+  if (allowedValues.has(raw)) return raw;
+  const rawSlug = slugify(raw);
+  if (allowedValues.has(rawSlug)) return rawSlug;
+  return aliases[raw] || aliases[rawSlug] || fallback;
+}
+
+function makeRequestId(prefix = "REQ") {
+  const ymd = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `${prefix}-${ymd}-${rand}`;
+}
+
+function ogAllowedOrigins(env) {
+  return new Set([
+    "https://www.ogtradesacademy.com",
+    "https://ogtradesacademy.com",
+    "https://og.unalabs.cloud",
+    "https://og-trades-pages.pages.dev",
+    ...String(env.OG_TRADES_ALLOWED_ORIGINS || "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean)
+  ]);
+}
+
+function isAllowedOgOrigin(origin, env) {
+  if (!origin) return false;
+  if (ogAllowedOrigins(env).has(origin)) return true;
+  try {
+    const host = new URL(origin).hostname.toLowerCase();
+    return host.endsWith(".squarespace.com") || host.endsWith(".squarespace.net");
+  } catch {
+    return false;
+  }
+}
+
+function ogCorsHeaders(origin, env = {}) {
+  const allowOrigin = isAllowedOgOrigin(origin, env) ? origin : "https://www.ogtradesacademy.com";
+  return {
+    "access-control-allow-origin": allowOrigin,
+    "access-control-allow-methods": "POST, OPTIONS",
+    "access-control-allow-headers": "content-type, authorization",
+    "access-control-max-age": "86400",
+    "vary": "origin"
+  };
 }
 
 function clientKey(request) {
@@ -395,6 +492,28 @@ async function persistGardenQuote(quoteRecord, env) {
 
   if (!response.ok) {
     throw new Error(`Supabase quote insert failed with status ${response.status}.`);
+  }
+}
+
+async function persistOgLead(leadRecord, env) {
+  const config = getSupabaseConfig(env);
+  if (!config) {
+    throw new Error("Supabase OG lead persistence is not configured.");
+  }
+
+  const response = await fetch(`${config.supabaseUrl}/rest/v1/og_trades_leads`, {
+    method: "POST",
+    headers: {
+      "apikey": config.supabaseKey,
+      "authorization": `Bearer ${config.supabaseKey}`,
+      "content-type": "application/json",
+      "prefer": "return=minimal"
+    },
+    body: JSON.stringify(leadRecord)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Supabase OG lead insert failed with status ${response.status}.`);
   }
 }
 
@@ -970,6 +1089,153 @@ async function handleGardenQuote(request, env) {
   return json({ ok: true, message: "Thanks. Garden Cleaners received your quote request and will follow up with the next step." });
 }
 
+async function handleOgTradesLead(request, env) {
+  const origin = request.headers.get("origin");
+
+  if (request.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: ogCorsHeaders(origin, env)
+    });
+  }
+
+  if (request.method !== "POST") {
+    return corsJson({ ok: false, message: "Method not allowed." }, 405, origin, env);
+  }
+
+  let payload;
+  try {
+    payload = await request.json();
+  } catch {
+    return corsJson({ ok: false, message: "Invalid request payload." }, 400, origin, env);
+  }
+
+  const name = normalizeText(payload?.name);
+  const email = normalizeEmail(payload?.email);
+  const phone = normalizeText(payload?.phone);
+  const website = normalizeText(payload?.website);
+  const notes = normalizeText(payload?.notes || payload?.message);
+  const startedAt = Number(payload?.startedAt || 0);
+  const interest = normalizeChoice(payload?.interest, OG_INTEREST_VALUES, "not-sure-yet", {
+    course: "8-week-beginner-forex-course",
+    "8-week-course": "8-week-beginner-forex-course",
+    community: "community-access",
+    resources: "free-resources",
+    exploring: "not-sure-yet"
+  });
+  const experienceLevel = normalizeChoice(payload?.experienceLevel || payload?.experience, OG_EXPERIENCE_VALUES, "brand-new");
+  const primaryGoal = normalizeChoice(payload?.primaryGoal || payload?.goal, OG_GOAL_VALUES, "build-foundation", {
+    risk: "improve-risk-management",
+    strategy: "learn-a-repeatable-strategy",
+    consistency: "gain-consistency"
+  });
+  const timeline = normalizeChoice(payload?.timeline, OG_TIMELINE_VALUES, "just-looking", {
+    exploring: "just-looking"
+  });
+
+  if (website.length > 0) {
+    return corsJson({ ok: true, message: "Thanks, your request has been received." }, 202, origin, env);
+  }
+  if (name.length < 2 || name.length > 80) {
+    return corsJson({ ok: false, message: "Please provide a valid name." }, 400, origin, env);
+  }
+  if (!isValidEmail(email) || email.length > 120) {
+    return corsJson({ ok: false, message: "Please provide a valid email address." }, 400, origin, env);
+  }
+  if (notes.length > 1200) {
+    return corsJson({ ok: false, message: "Please keep your notes under 1200 characters." }, 400, origin, env);
+  }
+  if (!Number.isFinite(startedAt) || Date.now() - startedAt < 800) {
+    return corsJson({ ok: false, message: "Submission flagged as automated. Please retry." }, 422, origin, env);
+  }
+
+  const requestId = makeRequestId("OGT");
+  const receivedAt = new Date().toISOString();
+  const rawLead = {
+    requestId,
+    source: "og-trades-academy",
+    receivedAt,
+    name,
+    email,
+    phone,
+    interest,
+    experienceLevel,
+    primaryGoal,
+    timeline,
+    notes
+  };
+  const leadRecord = {
+    name,
+    email,
+    phone: phone || null,
+    interest,
+    experience_level: experienceLevel,
+    primary_goal: primaryGoal,
+    timeline,
+    message: notes || null,
+    status: "new",
+    source: "og_trades_enrollment_form",
+    raw_payload: rawLead
+  };
+
+  try {
+    await persistOgLead(leadRecord, env);
+  } catch (error) {
+    console.error("og_trades_lead_supabase_error", JSON.stringify({
+      requestId,
+      message: error instanceof Error ? error.message : "unknown"
+    }));
+    return corsJson({ ok: false, message: "Request received but storage failed. Please try again.", requestId }, 500, origin, env);
+  }
+
+  const webhookUrl = normalizeText(env.OG_TRADES_LEADS_WEBHOOK_URL);
+  if (webhookUrl) {
+    try {
+      await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-unalabs-source": "og-trades-academy" },
+        body: JSON.stringify({ type: "og_trades_lead", lead: rawLead })
+      });
+    } catch (error) {
+      console.warn("og_trades_lead_webhook_error", JSON.stringify({
+        requestId,
+        message: error instanceof Error ? error.message : "unknown"
+      }));
+    }
+  }
+
+  const confirmationWebhookUrl = normalizeText(env.OG_TRADES_CONFIRMATION_WEBHOOK_URL);
+  let confirmationSent = false;
+  if (confirmationWebhookUrl) {
+    try {
+      const response = await fetch(confirmationWebhookUrl, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-unalabs-source": "og-trades-academy" },
+        body: JSON.stringify({
+          type: "og_trades_confirmation",
+          requestId,
+          email,
+          interest,
+          receivedAt
+        })
+      });
+      confirmationSent = response.ok;
+    } catch (error) {
+      console.warn("og_trades_confirmation_error", JSON.stringify({
+        requestId,
+        message: error instanceof Error ? error.message : "unknown"
+      }));
+    }
+  }
+
+  return corsJson({
+    ok: true,
+    message: "Request received. OG_Trades Academy will follow up with next steps.",
+    requestId,
+    confirmationSent: confirmationSent || undefined
+  }, 200, origin, env);
+}
+
 function withGardenHeaders(response) {
   const headers = new Headers(response.headers);
   headers.set("x-ftc-site", "garden-cleaners");
@@ -1018,6 +1284,9 @@ export default {
     }
     if (url.pathname === "/api/garden-cleaners-admin-users") {
       return handleGardenAdminUsers(request, env);
+    }
+    if (url.pathname === "/api/og-trades-leads") {
+      return handleOgTradesLead(request, env);
     }
 
     const host = hostFrom(request);

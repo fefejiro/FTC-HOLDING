@@ -1,5 +1,11 @@
 # OG Trades Academy Deployment Runbook
 
+## Current owner decision (2026-07-14)
+
+`https://www.ogtradesacademy.com/` is the approved live production URL. Do not change DNS, Cloudflare domain bindings, apex routing, or OG Trades connection settings. Older domain migration/cutover notes in this file are historical context only unless the owner explicitly requests domain work.
+
+Current implementation source of truth is `APPS/ftc-site`; the standalone `APPS/og-trades-academy` folder is not the active implementation surface.
+
 ## Status (2026-04-24)
 
 - ✅ Domain transferred: www.ogtradesacademy.com now points to og-trades-pages
@@ -81,12 +87,13 @@ npx wrangler pages deploy .vercel/output/static --project-name og-trades-pages
 
 ## Next Steps
 
-1. **Immediate:** Push the `.github/workflows/og-trades-deploy.yml` to GitHub to enable CI/CD
-2. **Short-term:** Verify domain is live at https://www.ogtradesacademy.com/
-3. **Configuration:** Set webhook secrets in `.env` once providers are ready:
+1. **Preserve domain:** Keep `https://www.ogtradesacademy.com/` as the approved live production URL.
+2. **Lead QA:** Deploy the `public/_worker.js` lead-handler fix without DNS/domain changes, then verify production Supabase persistence for `POST /api/og-trades-leads`.
+3. **Configuration:** Set webhook secrets only if OG wants additional delivery/notification automation:
    - `OG_TRADES_LEADS_WEBHOOK_URL`
    - `OG_TRADES_CONFIRMATION_WEBHOOK_URL`
-4. **Remaining domains:** Move the other 3 domains (ogtradesacademy.com, *.ca variants) using same process
+4. **Link QA:** Browser-check checkout, Beacons, community, YouTube, TikTok, and Instagram links.
+5. **Testimonials:** Collect only real approved testimonials; do not invent testimonials, student counts, profit claims, or financial-advice language.
 
 ## Testing Checklist
 
@@ -95,7 +102,8 @@ npx wrangler pages deploy .vercel/output/static --project-name og-trades-pages
 - [ ] About page (`/about`) loads
 - [ ] Course page (`/course`) loads
 - [ ] Lead form validates honeypot correctly
-- [ ] Lead submission triggers webhook (once secrets set)
+- [ ] Lead submission persists to Supabase `og_trades_leads`
+- [ ] Optional webhook delivery works if webhook secrets are configured
 - [ ] Portfolio link at https://unalabs.cloud/work/og-trades-academy still works
 
 ## Monitoring

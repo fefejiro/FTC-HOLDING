@@ -4,9 +4,9 @@ import { getOgTradesBrandedPath, ogTradesAcademyConfig } from "../../../lib/ogTr
 export default function OgTradesHero() {
   const primaryHref = ogTradesAcademyConfig.primaryCta.href;
   const secondaryHref = ogTradesAcademyConfig.secondaryCta.href.startsWith("/")
-    ? getOgTradesBrandedPath(ogTradesAcademyConfig.secondaryCta.href)
+    ? getOgTradesBrandedPath(ogTradesAcademyConfig.secondaryCta.href, { customDomain: true })
     : ogTradesAcademyConfig.secondaryCta.href;
-  const communityHref = getOgTradesBrandedPath("/community");
+  const communityHref = getOgTradesBrandedPath("/community", { customDomain: true });
   const primaryIsExternal = primaryHref.startsWith("http");
   const primaryIsAnchor = primaryHref.startsWith("#");
 
