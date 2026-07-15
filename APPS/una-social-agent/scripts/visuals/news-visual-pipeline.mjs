@@ -81,6 +81,8 @@ function inferCountry(region, text) {
 function inferDomain(text) {
   const lower = text.toLowerCase()
   if (hasAny(lower, ['weather', 'climate', 'earth-system', 'satellite', 'storm', 'forecast'])) return 'weather'
+  if (hasAny(lower, ['earthquake', 'disaster', 'relief', 'missing persons', 'missing people', 'emergency response', 'citizen-led'])) return 'disaster response'
+  if (hasAny(lower, ['daily brief', 'inbox', 'calendar', 'assistant', 'attention each day', 'morning'])) return 'workplace AI'
   if (hasAny(lower, ['cryptography', 'cryptographic', 'symcrypt', 'verified code', 'code verification', 'memory safety'])) return 'cybersecurity'
   if (hasAny(lower, ['nvidia', 'gpu', 'blackwell', 'semiconductor', 'foundry', 'chip'])) return 'semiconductor'
   if (hasAny(lower, ['web3', 'blockchain', 'stablecoin'])) return 'web3'
@@ -181,6 +183,15 @@ const DOMAIN_VISUALS = {
     actions: ['verifying identity documents', 'helping a resident access a service'],
     applications: ['public services', 'benefits access', 'secure onboarding'],
   },
+  'disaster response': {
+    primarySubject: 'AI-assisted disaster response coordination',
+    technology: ['AI search', 'missing-person reports', 'relief coordination', 'crisis mapping'],
+    roles: ['volunteer coordinator', 'developer', 'community responder'],
+    environment: 'community response workspace or emergency coordination room',
+    objects: ['missing-person list', 'relief map', 'message queue', 'coordination dashboard'],
+    actions: ['matching reports to known locations', 'coordinating relief requests', 'checking updates from families'],
+    applications: ['disaster response', 'public safety coordination', 'community support'],
+  },
   'platform policy': {
     primarySubject: 'encrypted messaging policy review',
     technology: ['encrypted messaging', 'platform policy', 'cyber fraud controls', 'user privacy'],
@@ -245,7 +256,7 @@ export function buildStoryFacts(entry, index = 0) {
   const story = entry.story || entry
   const headline = normalizeText(story.title || story.headline || '')
   const summary = normalizeText(story.summary || story.description || entry.takeaway || '')
-  const text = `${headline} ${summary} ${(story.topics || []).join(' ')}`
+  const text = `${headline} ${summary}`
   const domain = inferDomain(text)
   const preset = domainPreset(domain)
   return {
@@ -264,7 +275,7 @@ export function buildStoryFacts(entry, index = 0) {
     real_world_application: unique(preset.applications),
     visual_evidence_from_source: unique([
       domain,
-      ...(story.topics || []),
+      ...(story.topics || []).slice(0, 2),
       headline.match(/\b(OpenAI|Google|Microsoft|Meta|Amazon|Deutsche Telekom|Aurora)\b/i)?.[0],
     ]),
     source_name: story.sourceName || '',
@@ -455,6 +466,7 @@ function visualSceneHtml(facts, brief) {
     semiconductor: ['#20233a', '#71b9ff', '#eee8ff'],
     'health technology': ['#113b4a', '#4cc6b7', '#fff5f5'],
     'digital identity': ['#23314a', '#ffb44a', '#f4f5ff'],
+    'disaster response': ['#23314a', '#ff8a1c', '#fff4e8'],
     satellite: ['#0d2235', '#74b6ff', '#f9fbff'],
     'workplace AI': ['#202d33', '#4db8a8', '#fff8ea'],
     'logistics automation': ['#25352d', '#ff8c1a', '#f2efe5'],
@@ -476,6 +488,7 @@ function visualSceneHtml(facts, brief) {
     'renewable energy': 'energy site',
     semiconductor: 'clean-room review',
     'health technology': 'clinic workflow',
+    'disaster response': 'relief coordination',
     satellite: 'mission desk',
     'workplace AI': 'team workflow',
     'logistics automation': 'dispatch floor',
@@ -528,6 +541,7 @@ function searchTermsForFacts(facts) {
     semiconductor: ['semiconductor clean room engineer', 'wafer inspection clean room'],
     'health technology': ['doctor computer clinic workflow', 'health technology hospital staff'],
     'digital identity': ['public service office digital identity', 'government service counter computer'],
+    'disaster response': ['volunteer disaster relief coordination room', 'emergency response team laptops map', 'community disaster response volunteers computer'],
     'platform policy': ['smartphone privacy policy meeting', 'India technology policy meeting', 'people using smartphones India'],
     satellite: ['satellite control room operator', 'earth observation control room'],
     'workplace AI': ['diverse team office computer workflow', 'business analyst team dashboard'],
@@ -542,7 +556,7 @@ function searchTermsForFacts(facts) {
 
 function imageCandidateRejected(candidate) {
   const text = `${candidate.title || ''} ${candidate.url || ''}`.toLowerCase()
-  return /logo|icon|diagram|clipart|flag|seal|map only|cartoon|illustration|screenshot|poster|infographic/.test(text)
+  return /logo|icon|diagram|clipart|flag|seal|map only|cartoon|illustration|screenshot|poster|infographic|museum|disney|historic house|estate|mansion|castle/.test(text)
 }
 
 async function downloadImage(candidate, outPath) {

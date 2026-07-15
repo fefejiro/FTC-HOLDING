@@ -1,0 +1,57 @@
+{
+  "story_id": "rest-of-world-ai-powers-citizen-led-disaster-relief-from-3",
+  "region": "Rest of World",
+  "editorial_angle": "Ai-assisted Disaster Response Coordination moving into practical use",
+  "image_type": "editorial_photo",
+  "primary_subject": "AI-assisted disaster response coordination",
+  "subject_action": "matching reports to known locations",
+  "environment": "community response workspace or emergency coordination room",
+  "supporting_elements": [
+    "missing-person list",
+    "relief map",
+    "message queue",
+    "coordination dashboard",
+    "disaster response",
+    "public safety coordination",
+    "community support"
+  ],
+  "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
+  "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
+  "lighting": "natural professional lighting",
+  "mood": "credible, operational, human, practical",
+  "regional_context": [
+    "authentic Rest of World business context where relevant"
+  ],
+  "technology_signals": [
+    "AI search",
+    "missing-person reports",
+    "relief coordination",
+    "crisis mapping"
+  ],
+  "must_show": [
+    "AI-assisted disaster response coordination",
+    "AI search",
+    "missing-person reports",
+    "relief coordination",
+    "matching reports to known locations"
+  ],
+  "must_not_show": [
+    "abstract screen",
+    "glowing ai brain",
+    "robot head",
+    "generic server room",
+    "generic city skyline",
+    "floating hologram",
+    "phone as the main subject",
+    "people standing beside a screen",
+    "decorative people",
+    "stereotype imagery",
+    "flags as the main subject",
+    "unlicensed logos",
+    "visible text"
+  ],
+  "text_safe_area": "bottom",
+  "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: AI powers citizen-led disaster relief from afar for Venezuela. Primary subject: AI-assisted disaster response coordination. Show a volunteer coordinator actively matching reports to known locations in a community response workspace or emergency coordination room. Story-specific technology: AI search, missing-person reports, relief coordination, crisis mapping. Visible supporting details: missing-person list, relief map, message queue, coordination dashboard, disaster response, public safety coordination, community support. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Rest of World business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+  "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
+  "visual_confidence": 0.86
+}

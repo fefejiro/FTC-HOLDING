@@ -143,7 +143,8 @@ function daysOld(item, now = new Date(`${runDate}T12:00:00-04:00`)) {
 function isUsableStory(item) {
   const text = `${item?.title || ''} ${item?.summary || ''}`.toLowerCase()
   if (!item?.title || !item?.url || daysOld(item) > maxSourceAgeDays) return false
-  return !/(celebrity|gossip|career advice|how to transition|stock price|crypto price|\[d\])/i.test(text)
+  if (/\/brandpress\//i.test(item.url || '')) return false
+  return !/(celebrity|gossip|career advice|how to transition|stock price|crypto price|\[d\]|request for expressions? of interest|capacity development|procurement|tender|call for applications|sponsored|advertorial|press release)/i.test(text)
 }
 
 function scoreStory(item, preferred = []) {
@@ -171,7 +172,7 @@ function selectRegionalStories(items) {
     'developer',
     'research',
   ])
-  const africa = pickStory(items, ['TechCabal'], ['africa', 'payment', 'fintech', 'startup', 'web3', 'technology'])
+  const africa = pickStory(items, ['TechCabal', 'Techpoint Africa', 'Tech In Africa'], ['africa', 'payment', 'fintech', 'startup', 'web3', 'technology'])
   const world = pickStory(items, ['Rest of World', 'The Register AI'], ['policy', 'platform', 'ai', 'global', 'security'])
 
   return [
@@ -201,13 +202,13 @@ function selectRegionalStories(items) {
 
 function instagramCaption(entries) {
   return [
-    'TODAY IN TECH: THREE REGIONS TO WATCH',
+    'Today in tech, from three places that matter.',
     '',
     `North America: ${plainTitle(entries[0].story.title)}`,
     `Africa: ${plainTitle(entries[1].story.title)}`,
     `Rest of world: ${plainTitle(entries[2].story.title)}`,
     '',
-    'Simple takeaway: useful tech news is not only about one company or one country. The real signal is where AI, payments, platforms, and policy start changing everyday work.',
+    'My takeaway: do not only watch the loudest company in the room. Watch where the tools are becoming useful, where money is moving, and where policy is shaping what people can actually do.',
     '',
     `Sources: ${entries.map((entry) => entry.story.sourceName).join(', ')}`,
     '',
@@ -217,27 +218,23 @@ function instagramCaption(entries) {
 
 function linkedinPost(entries) {
   return [
-    "Today's useful tech signal is not coming from one place.",
+    "A useful tech update today: the signal is not coming from only one place.",
     '',
-    `North America: ${plainTitle(entries[0].story.title)}`,
-    `Source: ${entries[0].story.sourceName}`,
+    `In North America, ${plainTitle(entries[0].story.title)}. I watch this because AI is moving from demos into budgets, operating models, and accountability.`,
     '',
-    `Africa: ${plainTitle(entries[1].story.title)}`,
-    `Source: ${entries[1].story.sourceName}`,
+    `In Africa, ${plainTitle(entries[1].story.title)}. I like seeing this included because adoption does not only happen in Silicon Valley. It happens where people solve daily work problems with the tools they have.`,
     '',
-    `Rest of world: ${plainTitle(entries[2].story.title)}`,
-    `Source: ${entries[2].story.sourceName}`,
+    `For the rest of the world, ${plainTitle(entries[2].story.title)}. This is a reminder that AI is also showing up in public safety, relief work, and situations where trust matters.`,
     '',
-    'The pattern is simple: AI, payments, and platform rules are moving from headlines into daily operations.',
+    'The simple pattern: useful technology is becoming less about hype and more about where it fits into actual work.',
     '',
-    'For small teams, the opportunity is to notice where real adoption is happening, where rules are changing, and where customers are already adjusting their behaviour.',
+    'For small teams and operators, that is the part to watch. Who is using it? What problem is it solving? What proof do we have? What needs to be checked before people depend on it?',
     '',
-    'Simple takeaway: watch the regions, not only the brands.',
+    'My takeaway: watch the regions, not only the brands. The next useful idea may come from a research lab, an African startup, or a field team trying to solve a real problem under pressure.',
     '',
-    'Sources:',
-    ...entries.map((entry) => `- ${entry.story.sourceName}: ${entry.story.url}`),
+    `Sources: ${entries.map((entry) => entry.story.sourceName).join(', ')}`,
     '',
-    'Which signal matters most right now: AI systems, Africa tech, or platform policy?',
+    'Which story would you pay the most attention to today: AI investment, Africa tech, or AI for public response?',
   ].join('\n')
 }
 
@@ -339,7 +336,7 @@ function contactSheetHtml(slides) {
 }
 
 const config = await readJson('config/sources.json')
-const wanted = new Set(['OpenAI News', 'Microsoft Research', 'Google AI', 'TechCabal', 'Rest of World', 'The Register AI'])
+const wanted = new Set(['OpenAI News', 'Microsoft Research', 'Google AI', 'TechCabal', 'Techpoint Africa', 'Tech In Africa', 'Rest of World', 'The Register AI'])
 const errors = []
 const items = []
 for (const feed of config.feeds.filter((item) => wanted.has(item.name))) {

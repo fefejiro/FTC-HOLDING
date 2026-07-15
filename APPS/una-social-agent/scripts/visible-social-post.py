@@ -196,7 +196,13 @@ def run_js(window, payload: str, wait: float = 1.0):
     time.sleep(0.2)
     keyboard.send_keys("^l")
     time.sleep(0.15)
-    keyboard.send_keys("javascript:")
+    # Chrome strips pasted javascript: URLs, so type the scheme and paste only
+    # the payload. Type it in two chunks; on some visible sessions the first
+    # characters can be swallowed when the omnibox is still settling.
+    keyboard.send_keys("java")
+    time.sleep(0.05)
+    keyboard.send_keys("script:")
+    time.sleep(0.05)
     old = set_clipboard_temporarily(" ".join(payload.splitlines()))
     try:
         keyboard.send_keys("^v")
@@ -500,7 +506,10 @@ def open_linkedin_post_composer(window, proof_dir: Path) -> dict:
                     coords = click_relative(window, 0.57, 0.56, 1.0)
                     detail["steps"].append({"action": "coordinate_start_post_after_create", "coords": coords})
 
-    time.sleep(1.5)
+    for _ in range(8):
+        if linkedin_composer_is_open(window):
+            break
+        time.sleep(1.0)
     if not linkedin_composer_is_open(window):
         detail["composer_missing"] = screenshot(window, proof_dir / "visible-linkedin-composer-missing.png")
         return {"ok": False, "reason": "LinkedIn composer did not open.", **detail}
@@ -516,7 +525,7 @@ def fill_linkedin_composer(window, post: str, proof_dir: Path) -> dict:
     click_dom(window, r"What do you want to talk about|Text editor", 0.4)
     coords = click_relative(window, 0.50, 0.34, 0.3)
     detail["steps"].append({"action": "focus_editor_coordinate", "coords": coords})
-    paste_text(window, post)
+    paste_text(window, post, select_all=True)
     time.sleep(1.2)
     detail["post_filled"] = screenshot(window, proof_dir / "visible-linkedin-post-filled.png")
     text = visible_text(window)
@@ -524,6 +533,37 @@ def fill_linkedin_composer(window, post: str, proof_dir: Path) -> dict:
     if title not in text:
         detail["post_not_visible"] = screenshot(window, proof_dir / "visible-linkedin-post-text-missing.png")
         return {"ok": False, "reason": "LinkedIn composer text was not visible after paste.", **detail}
+    return {"ok": True, **detail}
+
+
+def attach_linkedin_images(window, image_paths: list[Path], proof_dir: Path) -> dict:
+    detail = {"steps": [], "imageCount": len(image_paths)}
+    if click_text_fallback(window, "Remove media"):
+        detail["steps"].append({"action": "removed_link_preview_media"})
+        time.sleep(1.0)
+    before = current_window_handles()
+    clicked = (
+        click_dom_physical(window, r"^Add media$|Add a photo|Add photo|Photo|Image", 1.0).get("ok")
+        or click_text_fallback(window, "Add media")
+        or click_text_fallback(window, "Photo")
+        or click_text_fallback(window, "Add photo")
+    )
+    if not clicked:
+        # In the LinkedIn composer, the media button is usually in the lower
+        # toolbar. Coordinate fallback is only used after text/DOM attempts.
+        coords = click_relative(window, 0.33, 0.68, 1.0)
+        detail["steps"].append({"action": "linkedin_media_coordinate_fallback", "coords": coords})
+    else:
+        detail["steps"].append({"action": "linkedin_media_button_clicked"})
+
+    picker, picker_title = find_file_picker(before, 8)
+    if not picker:
+        detail["media_missing"] = screenshot(window, proof_dir / "visible-linkedin-media-picker-missing.png")
+        return {"ok": False, "reason": "LinkedIn media file picker did not open.", **detail}
+
+    fill_file_picker(picker, image_paths)
+    time.sleep(4)
+    detail["media_selected"] = screenshot(window, proof_dir / "visible-linkedin-media-selected.png")
     return {"ok": True, **detail}
 
 
@@ -563,7 +603,9 @@ def verify_linkedin_post(window, post: str, proof_dir: Path) -> dict:
 
 def publish_instagram(window, run_date: str, image_paths: list[Path], caption: str, proof_dir: Path, dry_run: bool) -> dict:
     result = {"channel": "instagram", "status": "started", "proof": {}, "url": ""}
-    navigate(window, "https://www.instagram.com/", 5)
+    navigate(window, "https://www.instagram.com/unalabs.cloud/", 5)
+    keyboard.send_keys("{ESC}")
+    time.sleep(0.5)
     result["proof"]["home"] = screenshot(window, proof_dir / "visible-instagram-home.png")
     text = visible_text(window)
     if "Log in" in text and "Password" in text:
@@ -580,23 +622,32 @@ def publish_instagram(window, run_date: str, image_paths: list[Path], caption: s
                 fallback_click = {"ok": True, "reason": "screen-relative Instagram create fallback", "coords": coords}
         click["fallback"] = fallback_click
     if "Create new post" not in visible_text(window) and "Select from computer" not in visible_text(window):
-        navigate(window, "https://www.instagram.com/create/select/", 3)
-        click["directCreateRoute"] = True
+        # Do not navigate to /create/select/ directly. Instagram may treat
+        # that path as a profile named "create" and open the wrong account
+        # modal instead of the post composer.
+        if not (click_dom(window, r"^Create$", 1.0).get("ok") or click_text_fallback(window, "Create")):
+            coords = click_relative(window, 0.019, 0.60, 1.2)
+            click["profileCreateFallback"] = {"coords": coords}
     time.sleep(1.0)
+    if "Create new post" in visible_text(window) or "Select from computer" in visible_text(window):
+        result["proof"]["composer_open"] = screenshot(window, proof_dir / "visible-instagram-composer-open.png")
     picker = None
     picker_title = ""
     for attempt in range(3):
         before = current_window_handles()
         page_text = visible_text(window)
         if "Select from computer" in page_text:
+            click_relative(window, 0.50, 0.64, 0.8)
+            picker, picker_title = find_file_picker(before, 2)
+            if picker:
+                break
             clicked = bool(click_dom_physical(window, r"Select from computer", 0.8).get("ok"))
             if not clicked:
                 clicked = click_text_fallback(window, "Select from computer")
             if not clicked:
-                click_relative(window, 0.50, 0.607, 0.8)
+                click_relative(window, 0.50, 0.64, 0.8)
         elif "Create new post" in page_text:
-            if not click_dom(window, r"Select from computer|Create new post", 0.8).get("ok"):
-                click_relative(window, 0.50, 0.607, 0.8)
+            click_relative(window, 0.50, 0.64, 0.8)
         else:
             if not (click_instagram_create(window, 1.0).get("ok") or click_dom(window, r"^Create$", 1.0).get("ok") or click_text_fallback(window, "Create")):
                 click_relative(window, 0.019, 0.60, 0.8)
@@ -650,7 +701,7 @@ def publish_instagram(window, run_date: str, image_paths: list[Path], caption: s
     return result
 
 
-def publish_linkedin(window, post: str, proof_dir: Path, dry_run: bool) -> dict:
+def publish_linkedin(window, post: str, image_paths: list[Path], proof_dir: Path, dry_run: bool) -> dict:
     result = {"channel": "linkedin", "status": "started", "proof": {}, "url": ""}
     opened = open_linkedin_post_composer(window, proof_dir)
     result["proof"].update({k: v for k, v in opened.items() if isinstance(v, str) and k not in ("reason",)})
@@ -664,8 +715,16 @@ def publish_linkedin(window, post: str, proof_dir: Path, dry_run: bool) -> dict:
         result.update(status="blocked_text_not_filled", reason=filled.get("reason", "LinkedIn text was not filled."), details=filled)
         return result
 
+    if image_paths:
+        attached = attach_linkedin_images(window, image_paths, proof_dir)
+        result["proof"].update({k: v for k, v in attached.items() if isinstance(v, str) and k not in ("reason",)})
+        result["imageCount"] = len(image_paths)
+        if not attached.get("ok"):
+            result.update(status="blocked_media_not_attached", reason=attached.get("reason", "LinkedIn image was not attached."), details=attached)
+            return result
+
     if dry_run:
-        result.update(status="dry_run_ready", reason="LinkedIn post composer reached with text filled.")
+        result.update(status="dry_run_ready", reason="LinkedIn post composer reached with text and image filled.")
         return result
 
     posted = click_linkedin_post_button(window, proof_dir)
@@ -704,6 +763,17 @@ def instagram_image_paths(run_date: str, asset_dir: Path) -> list[Path]:
     raise RuntimeError(f"Instagram image not found. Tried regional carousel, editorial carousel, and {fallback}")
 
 
+def linkedin_image_paths(run_date: str) -> list[Path]:
+    preview_dir = ROOT / "content" / "previews"
+    contact = preview_dir / f"regional-news-preview-{run_date}.png"
+    if contact.exists():
+        return [contact]
+    slide1 = preview_dir / f"regional-news-preview-{run_date}-slide-1.png"
+    if slide1.exists():
+        return [slide1]
+    return []
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Post Una Labs social content through the visible Fejiro Chrome window.")
     parser.add_argument("--date", default=today_eastern())
@@ -722,6 +792,7 @@ def main() -> int:
     instagram_caption = (draft_dir / "instagram-caption.md").read_text(encoding="utf-8").strip()
     linkedin_post = (draft_dir / "linkedin-post.md").read_text(encoding="utf-8").strip()
     image_paths = instagram_image_paths(run_date, asset_dir)
+    linkedin_images = linkedin_image_paths(run_date)
 
     if "instagram" in [item.strip().lower() for item in args.channels.split(",") if item.strip()]:
         caption_issues = validate_instagram_caption(instagram_caption)
@@ -736,7 +807,7 @@ def main() -> int:
         if "instagram" in channels:
             results["instagram"] = publish_instagram(window, run_date, image_paths, instagram_caption, proof_dir, args.dry_run)
         if "linkedin" in channels:
-            results["linkedin"] = publish_linkedin(window, linkedin_post, proof_dir, args.dry_run)
+            results["linkedin"] = publish_linkedin(window, linkedin_post, linkedin_images, proof_dir, args.dry_run)
 
     statuses = [item.get("status") for item in results.values()]
     if args.dry_run:

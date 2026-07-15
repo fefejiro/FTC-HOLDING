@@ -1,0 +1,15 @@
+{
+  "story_alignment": 80,
+  "technology_specificity": 76,
+  "regional_authenticity": 78,
+  "editorial_credibility": 80,
+  "composition_quality": 86,
+  "text_safe_area_quality": 86,
+  "stereotype_risk": 8,
+  "generic_stock_risk": 34,
+  "overall_score": 85,
+  "failure_reasons": [],
+  "retry_instructions": [],
+  "decision": "accept",
+  "evaluation_mode": "brief_static_with_rendered_fallback"
+}

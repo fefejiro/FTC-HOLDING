@@ -158,6 +158,11 @@ if (!visualLedger) {
       if (evaluation.decision !== 'accept') {
         issues.push(`${record.region || 'Region'} visual was not accepted by image relevance review.`)
       }
+      if (record.fallback_used === true || /deterministic-technical-composition/i.test(record.image_model || '')) {
+        issues.push(
+          `${record.region || 'Region'} visual used the deterministic fallback renderer. Fallback/template visuals are preview-only and cannot be auto-published.`,
+        )
+      }
       if ((evaluation.overall_score || 0) < 78) {
         issues.push(`${record.region || 'Region'} visual overall score ${evaluation.overall_score || 0} is below 78.`)
       }

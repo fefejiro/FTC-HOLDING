@@ -1,0 +1,46 @@
+{
+  "story_id": "rest-of-world-ai-powers-citizen-led-disaster-relief-from-3",
+  "region": "Rest of World",
+  "country_or_market": "Global",
+  "headline": "AI powers citizen-led disaster relief from afar for Venezuela",
+  "plain_language_summary": "After the earthquakes, developers and citizens used AI to build websites and apps to help locate missing persons and coordinate relief efforts amid a slow government response.",
+  "primary_subject": "AI-assisted disaster response coordination",
+  "technology": [
+    "AI search",
+    "missing-person reports",
+    "relief coordination",
+    "crisis mapping"
+  ],
+  "organization": "Rest of World",
+  "people_or_roles": [
+    "volunteer coordinator",
+    "developer",
+    "community responder"
+  ],
+  "physical_environment": "community response workspace or emergency coordination room",
+  "visible_objects": [
+    "missing-person list",
+    "relief map",
+    "message queue",
+    "coordination dashboard"
+  ],
+  "important_actions": [
+    "matching reports to known locations",
+    "coordinating relief requests",
+    "checking updates from families"
+  ],
+  "real_world_application": [
+    "disaster response",
+    "public safety coordination",
+    "community support"
+  ],
+  "visual_evidence_from_source": [
+    "disaster response",
+    "global tech",
+    "policy"
+  ],
+  "source_name": "Rest of World",
+  "source_url": "https://restofworld.org/2026/venezuela-ai-citizen-disaster-response/?utm_source=rss&utm_medium=rss&utm_campaign=feeds",
+  "publication_date": "2026-07-15T10:00:00.000Z",
+  "confidence": 0.86
+}

@@ -2,7 +2,7 @@
 
 Social content agent for Una Labs.
 
-Current default: caption-only AI and technology news drafts. Image generation is paused.
+Current default: source-backed regional AI and technology news packages with visible-browser publishing proof.
 
 It creates AI and technology news packages for:
 
@@ -15,14 +15,17 @@ It creates AI and technology news packages for:
 - browser publishing proof screenshots
 - JSONL ledger entry with posted/failed status
 
-The caption-only scheduled runner performs:
+The scheduled regional runner performs:
 
-1. `npm run caption:write`
-2. Writes Instagram and LinkedIn caption drafts
-3. Saves source and proof metadata
-4. Stops without image generation, OpenAI calls, or browser publishing
+1. Discovers fresh source-backed technology stories.
+2. Selects one story each for North America, Africa, and Rest of World.
+3. Writes separate Instagram and LinkedIn copy in plain human language.
+4. Renders a three-slide Instagram carousel.
+5. Runs quality checks for source count, freshness, caption length, and visual records.
+6. Publishes through the visible Chrome browser only after `publish-approved.json` exists.
+7. Saves proof screenshots and writes `content/ledger/social-ledger.jsonl`.
 
-The older visual and browser-publishing commands remain in the repo, but they are no longer the default scheduled path.
+Caption-only commands remain available for low-cost draft experiments, but they are not the normal Una Labs daily newsroom path.
 
 ## Publication Standard
 
@@ -181,7 +184,7 @@ Current preferred mode is visible Chrome automation, matching the job-agent visi
 1. Generate the package.
 2. Run the quality check.
 3. Use the already-open visible Fejiro Chrome window.
-4. Upload `instagram-card.png` to Instagram through the real page.
+4. Upload the three `regional-news-preview-YYYY-MM-DD-slide-*.png` files to Instagram through the real page.
 5. Paste the Instagram caption and publish.
 6. Paste the LinkedIn post to the Una Labs company page and publish.
 7. Verify the post surfaces and save screenshots under `content/proof/YYYY-MM-DD/`.
@@ -219,6 +222,18 @@ Open the dedicated browser profile with:
 npm run browser:open-profile
 ```
 
+## July 15 Posting Lessons
+
+- Do not use `https://www.instagram.com/create/select/` as a direct navigation fallback. Instagram can treat `/create/` like a profile and open the wrong account/about modal.
+- Start Instagram posting from `https://www.instagram.com/unalabs.cloud/`, close any modal with `Esc`, then click the real Create control.
+- When the `Create new post` modal is visible, use a physical click on the blue `Select from computer` button before DOM/text fallbacks. This is what opened the Windows file picker reliably.
+- Upload all three carousel slide PNGs, not the contact sheet and not only slide 1.
+- Block posting if the caption is not visible before Share. The caption proof screenshot matters because Instagram can otherwise publish an image with no caption.
+- LinkedIn page publishing was verified from the Una Labs Page posts view. Instagram verification is profile-grid proof after Share.
+- Keep visual claims honest: if public image search returns irrelevant photos, use the deterministic story visual instead of a misleading stock photo.
+- Deterministic fallback visuals are preview-only. They must not pass `quality:today` for live publishing because they look too generic for the Una Labs Instagram standard.
+- A publishable Instagram image must either use a relevant editorial/photo asset or a reviewed generated visual that looks human, professional, story-aware, and not like a reusable dashboard template.
+
 Seed the dedicated browser profile from the Fejiro Chrome profile (`Profile 5`) when that profile already has the Una Labs Instagram/LinkedIn sessions:
 
 ```powershell
@@ -246,13 +261,13 @@ npm run publish:browser:dry-run
 Default scheduled task:
 
 ```text
-UnaLabsSocial-PeakCaption
+UnaLabsSocial-PeakDraft
 ```
 
 Default run time:
 
 ```text
-12:30 PM Eastern, weekdays
+6:45 AM Eastern, weekdays
 ```
 
 Register it:
@@ -262,5 +277,19 @@ npm run schedule:register
 ```
 
 This one daily peak Eastern run creates both Instagram and LinkedIn caption drafts.
-Instagram still needs an image or reel before it can be posted. LinkedIn can use
-the text/link caption directly when you choose to publish.
+It creates the regional news brief, renders the Instagram carousel, renders the
+LinkedIn visual, runs the source/caption/visual quality gate, publishes through
+the visible browser, and records proof screenshots plus the JSONL ledger.
+
+Scheduled live posting is allowed only after the automated quality gates pass.
+If the visual pipeline falls back to deterministic/template art, `quality:today`
+must fail and the scheduled task must not publish.
+
+Operational lessons from the July 15 live run:
+
+- Instagram must upload the three carousel slide PNGs and must show the caption before Share.
+- LinkedIn should use the `Photo` path from the Page posts composer when attaching the visual. Avoid raw source URLs in the LinkedIn body because LinkedIn can turn them into link previews and block photo attachment.
+- LinkedIn copy should be fuller than Instagram: human, practical, and operator-focused, while still naming the sources.
+- A public post counts as done only when the Page/profile proof screenshot shows the post after publishing.
+- The scheduled runner loads `.env.local` into the process at runtime, but it must still spend sparingly. If acceptable photo/editorial visuals cannot be produced, the run should fail closed and write the reason to `logs/` instead of publishing a weak template.
+- Keep the visible Chrome window available and signed in before 6:45 AM. LinkedIn and Instagram publishing depend on the real browser session, not a headless login.

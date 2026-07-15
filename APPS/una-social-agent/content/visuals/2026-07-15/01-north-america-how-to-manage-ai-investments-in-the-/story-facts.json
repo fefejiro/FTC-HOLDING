@@ -1,0 +1,46 @@
+{
+  "story_id": "north-america-how-to-manage-ai-investments-in-the-agenti-1",
+  "region": "North America",
+  "country_or_market": "North America",
+  "headline": "How to manage AI investments in the agentic era",
+  "plain_language_summary": "Learn how enterprises can manage AI investments in the agentic era by measuring useful work per dollar, improving efficiency, and scaling high-value workflows.",
+  "primary_subject": "work-focused AI agent in daily operations",
+  "technology": [
+    "AI agents",
+    "workflow automation",
+    "document review",
+    "customer support"
+  ],
+  "organization": "OpenAI News",
+  "people_or_roles": [
+    "operations manager",
+    "support lead",
+    "analyst"
+  ],
+  "physical_environment": "real team workspace or meeting room",
+  "visible_objects": [
+    "workflow board",
+    "ticket queue",
+    "review checklist",
+    "shared dashboard"
+  ],
+  "important_actions": [
+    "checking agent output",
+    "reviewing a task queue",
+    "deciding the next action"
+  ],
+  "real_world_application": [
+    "support operations",
+    "admin work",
+    "research and reporting"
+  ],
+  "visual_evidence_from_source": [
+    "workplace AI",
+    "ai",
+    "models"
+  ],
+  "source_name": "OpenAI News",
+  "source_url": "https://openai.com/index/managing-ai-investments-in-agentic-era",
+  "publication_date": "2026-07-14T10:00:00.000Z",
+  "confidence": 0.86
+}

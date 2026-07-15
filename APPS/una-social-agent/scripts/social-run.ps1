@@ -18,6 +18,20 @@ Push-Location $ProjectDir
 try {
   "[$(Get-Date -Format o)] Una Labs social daily workflow starting for channels: $Channels" | Tee-Object -FilePath $logPath
 
+  $envPath = Join-Path $ProjectDir '.env.local'
+  if (Test-Path -LiteralPath $envPath) {
+    Get-Content -LiteralPath $envPath | ForEach-Object {
+      if ($_ -match '^\s*#' -or $_ -notmatch '=') { return }
+      $parts = $_ -split '=', 2
+      $name = $parts[0].Trim()
+      $value = $parts[1].Trim()
+      if ($name -and -not [Environment]::GetEnvironmentVariable($name, 'Process')) {
+        [Environment]::SetEnvironmentVariable($name, $value, 'Process')
+      }
+    }
+    "[$(Get-Date -Format o)] Loaded local environment keys from .env.local for this run." | Tee-Object -FilePath $logPath -Append
+  }
+
   if ($CaptionOnly) {
     "[$(Get-Date -Format o)] Caption-only mode enabled. No image generation, no OpenAI call, no browser publish." | Tee-Object -FilePath $logPath -Append
     npm run caption:write 2>&1 | Tee-Object -FilePath $logPath -Append

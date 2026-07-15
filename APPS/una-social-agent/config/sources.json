@@ -68,6 +68,20 @@
       "topics": ["africa", "startups", "fintech", "payments", "technology"]
     },
     {
+      "name": "Techpoint Africa",
+      "url": "https://techpoint.africa/feed/",
+      "tier": "regional",
+      "region": "Africa",
+      "topics": ["africa", "startups", "fintech", "payments", "technology"]
+    },
+    {
+      "name": "Tech In Africa",
+      "url": "https://techinafrica.com/feed/",
+      "tier": "regional",
+      "region": "Africa",
+      "topics": ["africa", "startups", "fintech", "payments", "technology"]
+    },
+    {
       "name": "Rest of World",
       "url": "https://restofworld.org/feed/latest/",
       "tier": "regional",
