@@ -81,3 +81,11 @@ Do not follow or message any profile until the ready-draft list has been reviewe
 - Drafted outreach notes in `docs/mikelitoriz-fetlife-drafts-2026-07-09.md`.
 - No messages were sent.
 - No comments, follows, friend requests, crushes, joins, or profile controls were used.
+
+## 2026-07-17 Documentation Hardening
+
+- Reconciled stale "ready draft" language in `docs/ebony-exchange-outreach.md` and `docs/ebony-exchange-profile-links.md` with this ledger's review-first rule.
+- Preserved the original score data and draft copy, but relabeled former draft sections as review-only/archive material.
+- Added profile-line artifact flags for rows where scraped profile text appears to contain counts such as `Friends` or `Followers`.
+- No FetLife browser session was opened.
+- No messages, comments, follows, friend requests, crushes, joins, or profile controls were used.

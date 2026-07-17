@@ -2,9 +2,15 @@
 
 Generated: 2026-07-05
 
-Use this as a manual investigation sheet. Click through each profile yourself before any follow or message action.
+## Current Authority
 
-## Draft Message Queue
+Use this as a manual investigation sheet only. The current rule lives in `ebony-exchange-action-ledger.md`: do not follow or message any profile until the ready-draft list has been reviewed again live, including FetLife contact warnings and profile-specific boundaries.
+
+No label in this file is send permission. `draft message` means "historically high-ranking draft candidate," not "ready to send now."
+
+## Review-Only Former Draft Queue
+
+These were the 13 strongest draft candidates from the 2026-07-05 scoring pass. They must be reviewed live again before any follow/message decision.
 
 - [FrenchChaos666](https://fetlife.com/FrenchChaos666) - score 61 - FrenchChaos666 45F
 - [BLACK_LIFESTYLE6](https://fetlife.com/BLACK_LIFESTYLE6) - score 58 - BLACK_LIFESTYLE6 48F Swinger
@@ -19,6 +25,18 @@ Use this as a manual investigation sheet. Click through each profile yourself be
 - [hotwife_demi](https://fetlife.com/hotwife_demi) - score 42 - profile line needs manual check
 - [SweetParadse](https://fetlife.com/SweetParadse) - score 42 - SweetParadse 34F Unicorn
 - [goddessblkvelvet](https://fetlife.com/goddessblkvelvet) - score 42 - goddessblkvelvet 36F Goddess
+
+## Profile-Line Artifact Flags
+
+The score data includes profile-line scrape artifacts that need manual correction before these rows can be used for any outreach decision:
+
+- `hotwife_demi` - `136Followers`
+- `raya_divine` - `39Friends`
+- `AxisAmazon` - `336Followers`
+- `THELEAGUEXXXPPL` - `33Friends`
+- `AnjaliAndAle` - `195Friends`
+- `rahabibi` - `26Friends`
+- Save-for-later artifacts also exist for `alluring-kay`, `BlackBrat`, `Raya_theGoddess`, `Moaminxx`, `Cybelle_Rose`, `Qteefantasy`, and `SomeSweetheart`.
 
 ## Manual Review Queue
 

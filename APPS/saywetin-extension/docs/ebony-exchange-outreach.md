@@ -2,6 +2,12 @@
 
 Generated: 2026-07-05
 
+## Current Authority
+
+This file is historical triage plus draft language. The current operating rule is in `ebony-exchange-action-ledger.md`: do not follow, message, friend, crush, or otherwise contact any profile until the prior draft list has been reviewed again live, including FetLife warning screens and profile-specific contact boundaries.
+
+`draft message`, `ready draft`, and draft-copy sections below are archival labels from the 2026-07-05 scoring pass. They are not permission to send. `FrenchChaos666` specifically triggered a FetLife `Heads Up` warning and is manual-review-only until that warning is read and resolved by the user.
+
 ## Verified Profile Pass
 
 Source: signed-in FetLife session under Chrome profile `Michael (MiKe Lit)` / `Profile 8`.
@@ -173,29 +179,29 @@ Outcome:
 - `save for later`: 72 lower-signal profiles
 - `do not contact/manual review`: 10 profiles with uncertainty or contact-risk signals
 
-## Best Outreach Targets
+## Best Review Targets
 
-These are the strongest first-contact targets from the live profile pass.
+These are the strongest first-contact targets from the original profile pass, but every row is review-only until live re-check is complete.
 
-| Rank | Handle | Why They Fit | Message Status |
+| Rank | Handle | Why They Fit | Current Status |
 |---:|---|---|---|
-| 1 | FrenchChaos666 | Couple/hotwife profile, explicit couples interest, clear communication and boundaries emphasized. | ready draft |
-| 2 | BLACK_LIFESTYLE6 | Bisexual swinger/lifestyle profile, open relationship/non-monogamy signals, couple and community signals. | ready draft |
-| 3 | islandpineapple2 | Couple profile, married/male-female profile signals, swinger/play-partner interest. | ready draft |
-| 4 | yourdreamduo | Couple/swinger profile, bisexual orientation, play-partner and friendship signals. | ready draft |
-| 5 | RedRoom_Lioness | Couples/swinger-related signals, play-partner and friendship interest. | ready draft |
-| 6 | hotwife_demi | Queer hotwife-coded profile, existing partner relationship, play-partner/community/events interest. | ready draft |
-| 7 | SweetParadse | Bisexual unicorn profile, friendship/community/events interest, couple/unicorn signals. | ready draft |
-| 8 | goddessblkvelvet | Pansexual profile, partnered/life-partner context, friendship/dynamic signals. | ready draft |
-| 9 | miamoans | Bisexual profile with couple/unicorn/swinger signals. | ready draft |
-| 10 | princessjuggssx | Bisexual profile with dynamic/play-partner/friendship/community signals. | ready draft |
-| 11 | Shygirl14908 | Bisexual profile, relationship/dynamic/play-partner/friendship/community signals. | ready draft |
-| 12 | SwitcharooOtaku | Bisexual profile, long-term/dynamic/friendship/community signals. | ready draft |
-| 13 | ririh89 | Heteroflexible profile, play-partner/events signals, strong group/FMF/MFF signal set. | ready draft |
+| 1 | FrenchChaos666 | Couple/hotwife profile, explicit couples interest, clear communication and boundaries emphasized. | manual review only; FetLife `Heads Up` warning appeared |
+| 2 | BLACK_LIFESTYLE6 | Bisexual swinger/lifestyle profile, open relationship/non-monogamy signals, couple and community signals. | review-only former draft |
+| 3 | islandpineapple2 | Couple profile, married/male-female profile signals, swinger/play-partner interest. | review-only former draft |
+| 4 | yourdreamduo | Couple/swinger profile, bisexual orientation, play-partner and friendship signals. | review-only former draft |
+| 5 | RedRoom_Lioness | Couples/swinger-related signals, play-partner and friendship interest. | manual review before any draft |
+| 6 | hotwife_demi | Queer hotwife-coded profile, existing partner relationship, play-partner/community/events interest. | review-only; profile-line artifact needs correction |
+| 7 | SweetParadse | Bisexual unicorn profile, friendship/community/events interest, couple/unicorn signals. | review-only former draft |
+| 8 | goddessblkvelvet | Pansexual profile, partnered/life-partner context, friendship/dynamic signals. | manual review before any draft |
+| 9 | miamoans | Bisexual profile with couple/unicorn/swinger signals. | manual review before any draft |
+| 10 | princessjuggssx | Bisexual profile with dynamic/play-partner/friendship/community signals. | review-only former draft |
+| 11 | Shygirl14908 | Bisexual profile, relationship/dynamic/play-partner/friendship/community signals. | review-only former draft |
+| 12 | SwitcharooOtaku | Bisexual profile, long-term/dynamic/friendship/community signals. | manual review before any draft |
+| 13 | ririh89 | Heteroflexible profile, play-partner/events signals, strong group/FMF/MFF signal set. | manual review before any draft |
 
-## Ready Draft Review Before Sending
+## Review-First Stop Before Sending
 
-Review status added before sending/following.
+Review status added before sending/following. This section overrides the older "ready draft" language below.
 
 No messages have been sent from this working list.
 
@@ -242,9 +248,9 @@ Manual judgment overrides:
 - `raya_divine`: strong poly/consent/community signals, but relationship/orientation context needs a careful read before couple outreach.
 - `makemebegforit2`: strong non-monogamy/play signals, but has a `no single men` contact-risk signal. Couple outreach may be fine, but verify first.
 
-## Ready Custom Drafts
+## Archived Custom Drafts - Do Not Send Without Live Review
 
-Use one message per profile. Do not mass-send identical text.
+These drafts are retained as writing references only. Do not send them without live profile re-review, warning-screen review, and one verified profile-specific sentence from current visible profile context. Do not mass-send identical text.
 
 **FrenchChaos666**
 
@@ -313,25 +319,25 @@ This is a bucket-based shortlist from the supplied handles only. Live profile ve
 
 | Priority | Handle | Supplied Bucket | Why It Is In The First Pass | Next Step |
 |---|---|---|---|---|
-| 1 | FrenchChaos666 | Couples | Couple profile is the clearest possible fit for couple-to-couple exchange. | draft message after profile check |
-| 1 | islandpineapple2 | Couples | Couple profile; likely more open to shared social/kink connection. | draft message after profile check |
-| 1 | yourdreamduo | Couples | Couple profile; likely aligned with duo-to-duo outreach. | draft message after profile check |
-| 1 | RedRoom_Lioness | Couples | Couple profile with a strong scene-coded handle. | draft message after profile check |
-| 1 | BLACK_LIFESTYLE6 | Couples | Couple profile and likely community/lifestyle framing. | draft message after profile check |
+| 1 | FrenchChaos666 | Couples | Couple profile is the clearest possible fit for couple-to-couple exchange. | manual review only; warning appeared |
+| 1 | islandpineapple2 | Couples | Couple profile; likely more open to shared social/kink connection. | live review, then possible draft |
+| 1 | yourdreamduo | Couples | Couple profile; likely aligned with duo-to-duo outreach. | live review, then possible draft |
+| 1 | RedRoom_Lioness | Couples | Couple profile with a strong scene-coded handle. | manual review |
+| 1 | BLACK_LIFESTYLE6 | Couples | Couple profile and likely community/lifestyle framing. | live review, then possible draft |
 | 1 | THELEAGUEXXXPPL | Couples | Couple/group-coded profile; good manual review target. | manual review |
-| 2 | princessonika | Bi/Pan/Queer | Queer bucket makes couple/bi-friendly outreach plausible if profile confirms. | draft message after profile check |
-| 2 | rahabibi | Bi/Pan/Queer | Queer bucket; good for warm, low-pressure intro. | draft message after profile check |
-| 2 | alluring-kay | Bi/Pan/Queer | Queer bucket; suitable for soft curiosity-based opener. | draft message after profile check |
-| 2 | BrowneSugar12 | Bi/Pan/Queer | Queer bucket; strong fit pending self-stated openness. | draft message after profile check |
-| 2 | AxisAmazon | Bi/Pan/Queer | Queer bucket; potentially strong personality/scene signal. | draft message after profile check |
-| 2 | kissthegirl | Bi/Pan/Queer | Handle and bucket both suggest woman-to-woman openness, but verify. | draft message after profile check |
-| 2 | ebonyequestrian | Bi/Pan/Queer | Queer bucket; likely enough to review for lifestyle and compatibility details. | draft message after profile check |
-| 2 | Jasmuna | Bi/Pan/Queer | Queer bucket; good general-fit candidate. | draft message after profile check |
-| 2 | PrincessNyx91 | Bi/Pan/Queer | Queer bucket and kink-coded handle; verify boundaries before contact. | draft message after profile check |
-| 2 | hotwife_demi | Bi/Pan/Queer | Hotwife-coded handle may fit couple dynamics; profile confirmation required. | draft message after profile check |
-| 2 | SwitcharooOtaku | Bi/Pan/Queer | Switch-coded handle may fit flexible dynamics; verify interests. | draft message after profile check |
-| 2 | Cybelle_Rose | Bi/Pan/Queer | Queer bucket; suitable for respectful intro after profile read. | draft message after profile check |
-| 2 | AllureObscure | Bi/Pan/Queer | Queer bucket; good manual review for vibe and boundaries. | draft message after profile check |
+| 2 | princessonika | Bi/Pan/Queer | Queer bucket makes couple/bi-friendly outreach plausible if profile confirms. | manual review; prior risk label exists |
+| 2 | rahabibi | Bi/Pan/Queer | Queer bucket; good for warm, low-pressure intro. | manual review; profile-line artifact |
+| 2 | alluring-kay | Bi/Pan/Queer | Queer bucket; suitable for soft curiosity-based opener. | manual review; profile-line artifact |
+| 2 | BrowneSugar12 | Bi/Pan/Queer | Queer bucket; strong fit pending self-stated openness. | live review, then possible draft |
+| 2 | AxisAmazon | Bi/Pan/Queer | Queer bucket; potentially strong personality/scene signal. | manual review; profile-line artifact |
+| 2 | kissthegirl | Bi/Pan/Queer | Handle and bucket both suggest woman-to-woman openness, but verify. | live review, then possible draft |
+| 2 | ebonyequestrian | Bi/Pan/Queer | Queer bucket; likely enough to review for lifestyle and compatibility details. | live review, then possible draft |
+| 2 | Jasmuna | Bi/Pan/Queer | Queer bucket; good general-fit candidate. | live review, then possible draft |
+| 2 | PrincessNyx91 | Bi/Pan/Queer | Queer bucket and kink-coded handle; verify boundaries before contact. | live review, then possible draft |
+| 2 | hotwife_demi | Bi/Pan/Queer | Hotwife-coded handle may fit couple dynamics; profile confirmation required. | manual review; profile-line artifact |
+| 2 | SwitcharooOtaku | Bi/Pan/Queer | Switch-coded handle may fit flexible dynamics; verify interests. | manual review |
+| 2 | Cybelle_Rose | Bi/Pan/Queer | Queer bucket; suitable for respectful intro after profile read. | manual review; profile-line artifact |
+| 2 | AllureObscure | Bi/Pan/Queer | Queer bucket; good manual review for vibe and boundaries. | manual review |
 | 2 | GoddessGenesis_ | Bi/Pan/Queer | Kink-coded handle; verify whether they welcome couples or respectful admirers. | manual review |
 | 3 | LethalLadyV | Dommes | Domme bucket can fit if Ebony Exchange seeks service/submissive or power-dynamic connection. | manual review |
 | 3 | sassmasterOG | Dommes | Domme bucket; only contact if profile welcomes couples or respectful DMs. | manual review |
@@ -353,9 +359,9 @@ FTM profiles should be reviewed only if Ebony Exchange is actively looking for t
 
 Duplicate handles found in the pasted list: `-Koolio-`, `pretyblackgirl`, `ebonynympho`, `LethalLadyV`, `miamoans`.
 
-## Message Drafts
+## Archived Message Drafts
 
-Each draft should get one verified profile-specific sentence before sending. Replace `[profile detail]` with something self-stated and non-private, such as a listed dynamic, event interest, group topic, boundary, or shared value.
+Each draft should get one verified profile-specific sentence before any future human-approved send decision. Replace `[profile detail]` with something self-stated and non-private, such as a listed dynamic, event interest, group topic, boundary, or shared value. These are not currently send-ready.
 
 ### Couples
 
