@@ -3,6 +3,7 @@ import { logger } from "../../../lib/logger";
 import { gardenFrequencies, gardenPropertyTypes, gardenServiceOptions } from "../../../lib/gardenCleaners";
 import type { GardenQuotePayload } from "../../../lib/gardenContracts";
 import { createServerClient } from "@ftc/supabase";
+import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "edge";
 
@@ -77,6 +78,19 @@ function parseAdminEmails(value: string | undefined): string[] {
 
 function getAdminEmailSet(): Set<string> {
   return new Set([...DEFAULT_ADMIN_EMAILS, ...parseAdminEmails(process.env.NEXT_PUBLIC_GARDEN_PORTAL_ADMIN_EMAILS)]);
+}
+
+function createGardenQuotePersistenceClient() {
+  const supabaseUrl = String(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "").trim();
+  const serviceRoleKey = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("Supabase quote persistence is not configured.");
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false }
+  });
 }
 
 function hasMissingAddOnsColumn(error: unknown): boolean {
@@ -245,7 +259,7 @@ export async function POST(req: NextRequest) {
   // Insert into Supabase
   let supabaseError: unknown = null;
   try {
-    const supabase = createServerClient();
+    const supabase = createGardenQuotePersistenceClient();
     let { error } = await supabase.from("garden_cleaners_quotes").insert([quoteRecord]);
     if (error && hasMissingAddOnsColumn(error)) {
       const { add_ons: _addOns, ...quoteRecordWithoutAddOns } = quoteRecord;

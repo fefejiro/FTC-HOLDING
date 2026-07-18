@@ -474,7 +474,7 @@ async function writeAuditLog(env, actorEmail, action, targetEmail, targetUserId,
 }
 
 async function persistGardenQuote(quoteRecord, env) {
-  const config = getSupabaseConfig(env);
+  const config = getSupabaseServiceConfig(env);
   if (!config) {
     throw new Error("Supabase quote persistence is not configured.");
   }
@@ -482,8 +482,8 @@ async function persistGardenQuote(quoteRecord, env) {
   const response = await fetch(`${config.supabaseUrl}/rest/v1/garden_cleaners_quotes`, {
     method: "POST",
     headers: {
-      "apikey": config.supabaseKey,
-      "authorization": `Bearer ${config.supabaseKey}`,
+      "apikey": config.serviceRoleKey,
+      "authorization": `Bearer ${config.serviceRoleKey}`,
       "content-type": "application/json",
       "prefer": "return=minimal"
     },
