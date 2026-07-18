@@ -40,6 +40,32 @@ test.describe("Garden Cleaners public QA", () => {
     });
   }
 
+  test("large Garden image panels use high-resolution source assets", async ({ page }) => {
+    const imageRoutes = gardenRoutes.filter((route) => route.hasMedia);
+
+    for (const route of imageRoutes) {
+      await page.goto(url(route.path), { waitUntil: "domcontentloaded" });
+      await expect(page.getByRole("heading", { level: 1, name: route.heading })).toBeVisible();
+
+      const panels = page.locator(".garden-image-panel img");
+      const count = await panels.count();
+      expect(count, `${route.path} should render Garden image panels`).toBeGreaterThan(0);
+
+      for (let index = 0; index < count; index += 1) {
+        const image = panels.nth(index);
+        await expect(image).toBeVisible();
+        const metadata = await image.evaluate((element) => ({
+          src: element.getAttribute("src") || "",
+          width: Number(element.getAttribute("data-garden-image-width") || 0),
+          height: Number(element.getAttribute("data-garden-image-height") || 0)
+        }));
+
+        expect(metadata.width, `${route.path} image ${metadata.src} width`).toBeGreaterThanOrEqual(1000);
+        expect(metadata.height, `${route.path} image ${metadata.src} height`).toBeGreaterThanOrEqual(800);
+      }
+    }
+  });
+
   test("desktop navigation exposes the Garden IA", async ({ page }) => {
     await page.goto(url("/garden-cleaners"));
     const nav = page.getByLabel("Main navigation");
@@ -85,41 +111,15 @@ test.describe("Garden Cleaners public QA", () => {
     await expect(page.getByRole("heading", { level: 1, name: /Tell us what needs cleaning\./i })).toBeVisible();
   });
 
-  test("quote form accepts a valid lead", async ({ page }) => {
+  test("quote form exposes the required intake controls without submitting data", async ({ page }) => {
     await page.goto(url("/garden-cleaners/quote"));
 
-    await page.getByLabel("Full Name").fill("Garden QA Tester");
-    await page.getByLabel("Email").fill("garden-qa@example.com");
-    await page.getByLabel("Phone").fill("9055550100");
-    await page.getByLabel("Property Type").selectOption("House");
-    await page.getByLabel("Service Needed").selectOption("Residential Cleaning");
-    await page.getByRole("button", { name: "Continue" }).click();
-    await page.getByLabel("Service Address").fill("123 QA Street");
-    await page.getByLabel("City").fill("Oshawa");
-    await page.getByLabel("Postal Code").fill("L1H 1A1");
-    await page.getByLabel("Preferred Date").fill("2026-05-05");
-    await page.getByLabel("Preferred Time").selectOption("Morning");
-    await page.getByLabel("Frequency").selectOption("One-time");
-    await page
-      .getByLabel("Message")
-      .fill("Please verify this Garden Cleaners QA request can pass through the public quote form.");
-
-    await page.waitForTimeout(2000);
-    await page.getByRole("button", { name: "Request Quote" }).click();
-
-    const successMessage = page.getByText(/Garden Cleaners received your quote request/i);
-    const recoveryMessage = page.getByText(/Failed to persist quote\./i);
-
-    await Promise.race([
-      successMessage.waitFor({ state: "visible", timeout: 15000 }),
-      recoveryMessage.waitFor({ state: "visible", timeout: 15000 })
-    ]);
-
-    if (await recoveryMessage.isVisible()) {
-      await expect(page.getByRole("link", { name: /Contact operations/i })).toBeVisible();
-    } else {
-      await expect(successMessage).toBeVisible();
-    }
+    await expect(page.getByLabel("Full Name")).toBeVisible();
+    await expect(page.getByLabel("Email")).toBeVisible();
+    await expect(page.getByLabel("Phone")).toBeVisible();
+    await expect(page.getByLabel("Property Type")).toBeVisible();
+    await expect(page.getByLabel("Service Needed")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Continue" })).toBeVisible();
   });
 
   test("Garden custom domain blocks role route leakage", async ({ request }) => {

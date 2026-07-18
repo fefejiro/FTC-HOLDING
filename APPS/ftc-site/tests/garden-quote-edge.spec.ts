@@ -18,11 +18,12 @@ test.describe("Garden quote edge cases", () => {
     await expect(page.getByRole("button", { name: "Request Quote" })).toHaveCount(0);
   });
 
-  test("keeps the modern office greenery image on the quote page", async ({ page }) => {
+  test("keeps the high-resolution modern office image on the quote page", async ({ page }) => {
     await page.goto(url("/garden-cleaners/quote"), { waitUntil: "domcontentloaded" });
 
-    const image = page.locator('img[src*="/images/garden-cleaners/gc-desk-cleaning"]').first();
+    const image = page.locator('img[src*="/images/garden-cleaners/commercial-cleaner"]').first();
     await expect(image).toBeVisible();
     await expect(image).toHaveAttribute("alt", /modern office with greenery/i);
+    await expect(image).toHaveAttribute("data-garden-image-width", "3840");
   });
 });

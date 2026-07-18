@@ -16,6 +16,8 @@ export default function GardenImagePanel({ asset, priority = false, className }:
           src={asset.src}
           alt={asset.alt}
           fill
+          data-garden-image-width={asset.intrinsicWidth}
+          data-garden-image-height={asset.intrinsicHeight}
           sizes="(max-width: 767px) 100vw, (max-width: 1100px) 50vw, 560px"
           priority={priority}
           className="garden-image"
