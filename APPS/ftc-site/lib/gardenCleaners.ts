@@ -351,8 +351,8 @@ export const gardenCleanersConfig = {
       caption: 'Garden Cleaners supports offices, managed spaces, and commercial environments with dependable service in Oshawa.'
     },
     deepCleaning: {
-      src: '/images/garden-cleaners/gc-desk-cleaning.webp',
-      alt: 'Garden Cleaners professional wiping a desk in a bright modern office with greenery.',
+      src: '/images/garden-cleaners/commercial-cleaner.webp',
+      alt: 'Garden Cleaners professional team cleaning a bright modern office with greenery.',
       badge: 'One-time deep cleaning',
       title: 'Detailed cleaning when the space needs more than a routine visit.',
       caption: 'Ideal for first-time service, seasonal resets, turnover preparation, and polished handoffs.'
