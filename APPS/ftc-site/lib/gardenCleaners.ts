@@ -393,8 +393,8 @@ export const gardenCleanersConfig = {
       caption: 'A good fit for contact, quote, and handoff moments where a calm, polished visual helps balance the layout.'
     },
     quote: {
-      src: '/images/garden-cleaners/gc-owner-portrait.webp',
-      alt: 'Black Nigerian Canadian cleaning professional in a bright workspace representing Garden Cleaners.',
+      src: '/images/garden-cleaners/gc-desk-cleaning.webp',
+      alt: 'Garden Cleaners professional wiping a desk in a bright modern office with greenery.',
       badge: 'Responsive service',
       title: 'Clear communication and practical next steps from the first quote request.',
       caption: 'Use the quote form to scope one-time, recurring, office, and turnover cleaning needs in Oshawa.'

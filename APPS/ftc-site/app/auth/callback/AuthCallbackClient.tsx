@@ -58,7 +58,7 @@ export default function AuthCallbackClient() {
 
     let active = true;
 
-    const finalizeSession = async (authClient: any) => {
+    const finalizeSession = async (authClient: ReturnType<typeof getSupabase>["auth"]) => {
       const code = query.get("code");
       const tokenHash = query.get("token_hash");
       const typeParam = query.get("type") ?? "magiclink";
@@ -98,7 +98,7 @@ export default function AuthCallbackClient() {
       }
     };
 
-    const routeAuthenticatedUser = async (authClient: any) => {
+    const routeAuthenticatedUser = async (authClient: ReturnType<typeof getSupabase>["auth"]) => {
       const { data, error } = await authClient.getUser();
 
       if (error) {
@@ -130,7 +130,7 @@ export default function AuthCallbackClient() {
     const bootstrap = async () => {
       try {
         const supabase = getSupabase();
-        const authClient = supabase.auth as any;
+        const authClient = supabase.auth;
 
         await finalizeSession(authClient);
         const routed = await routeAuthenticatedUser(authClient);

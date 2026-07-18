@@ -29,6 +29,7 @@ export default function GardenQuoteForm({ source = "quote_page" }: GardenQuoteFo
   const [serviceNeeded, setServiceNeeded] = useState("");
   const [selectedAddOns, setSelectedAddOns] = useState<Set<string>>(new Set());
   const formRef = useRef<HTMLFormElement | null>(null);
+  const emailInputRef = useRef<HTMLInputElement | null>(null);
   const startedAtRef = useRef<number>(Date.now());
 
   useEffect(() => {
@@ -56,10 +57,22 @@ export default function GardenQuoteForm({ source = "quote_page" }: GardenQuoteFo
     event.preventDefault();
     const form = event.currentTarget;
     const formData = new FormData(form);
+    const trimmedEmail = email.trim();
+
+    if (!emailRegex.test(trimmedEmail)) {
+      setSubmitState("error");
+      setStep(1);
+      setStepError("Please add a valid email address before requesting your quote.");
+      setMessage("Please add your email address so Garden Cleaners can send your estimate and next steps.");
+      window.setTimeout(() => {
+        emailInputRef.current?.focus();
+      }, 0);
+      return;
+    }
 
     const payload: GardenQuotePayload = {
       fullName: fullName.trim(),
-      email: email.trim(),
+      email: trimmedEmail,
       phone: phone.trim(),
       address: String(formData.get("address") || "").trim(),
       city: String(formData.get("city") || "").trim(),
@@ -146,6 +159,9 @@ export default function GardenQuoteForm({ source = "quote_page" }: GardenQuoteFo
     }
     if (!emailRegex.test(trimmedEmail)) {
       setStepError("Please enter a valid email address.");
+      window.setTimeout(() => {
+        emailInputRef.current?.focus();
+      }, 0);
       return;
     }
     if (trimmedPhone.length < 7 || trimmedPhone.length > 40) {
@@ -200,6 +216,7 @@ export default function GardenQuoteForm({ source = "quote_page" }: GardenQuoteFo
             <label>
               <span>Email</span>
               <input
+                ref={emailInputRef}
                 type="email"
                 autoComplete="email"
                 required

@@ -44,7 +44,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
 
 async function fetchWithAuth(url: string, options: RequestInit = {}) {
   const supabase = getSupabase();
-  const authClient = supabase.auth as any;
+  const authClient = supabase.auth;
   const { data: sessionData } = await authClient.getSession();
   const accessToken = sessionData.session?.access_token;
   if (!accessToken) throw new Error("No session token");

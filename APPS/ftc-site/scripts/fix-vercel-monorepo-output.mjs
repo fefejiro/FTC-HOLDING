@@ -71,8 +71,10 @@ function shouldCopyPagesWorker() {
     return true;
   }
 
-  // Default to no worker for core ftc-site/unalabs deployments.
-  return false;
+  // ftc-site-pages is a shared shell for Garden, Una, and branded custom
+  // domains. The Pages worker owns host-scoped routing and Garden API routes,
+  // so include it by default unless a deployment explicitly opts out.
+  return true;
 }
 
 async function ensureCompatibilityMirror() {

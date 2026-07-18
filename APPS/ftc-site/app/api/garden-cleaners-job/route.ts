@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { data: actorData } = await (supabase.auth as any).getUser();
+    const { data: actorData } = await supabase.auth.getUser();
     await supabase.from("garden_cleaners_audit_log").insert({
       actor_email: String(actorData.user?.email || "unknown").toLowerCase(),
       action: "quote_converted_to_job",

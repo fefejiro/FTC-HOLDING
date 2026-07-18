@@ -4,7 +4,7 @@ import { listGardenNotifications, markGardenNotificationRead } from "../../../li
 
 export async function GET(req: NextRequest) {
   const supabase = createServerClient(req.headers);
-  const { data: authData, error: authError } = await (supabase.auth as any).getUser();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError || !authData.user?.email) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   const supabase = createServerClient(req.headers);
-  const { data: authData, error: authError } = await (supabase.auth as any).getUser();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError || !authData.user?.email) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }

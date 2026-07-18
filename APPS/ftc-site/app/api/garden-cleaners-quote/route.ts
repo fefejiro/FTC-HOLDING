@@ -90,7 +90,7 @@ function hasMissingAddOnsColumn(error: unknown): boolean {
 async function resolveAuthenticatedEmail(req: NextRequest): Promise<string | null> {
   try {
     const supabase = createServerClient(req.headers);
-    const { data, error } = await (supabase.auth as any).getUser();
+    const { data, error } = await supabase.auth.getUser();
     if (error || !data.user?.email) {
       return null;
     }

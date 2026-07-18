@@ -35,7 +35,7 @@ function toNumberOrNull(value: unknown): number | null {
 
 async function resolveRoleAndUser(req: NextRequest) {
   const supabase = createServerClient(req.headers);
-  const { data: authData, error: authError } = await (supabase.auth as any).getUser();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError || !authData.user?.id) {
     return { supabase, error: NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 }) };
   }

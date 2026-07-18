@@ -33,7 +33,7 @@ export default function LoginClient() {
 
     try {
       const supabase = getSupabase();
-      const authClient = supabase.auth as any;
+      const authClient = supabase.auth;
       const product = resolveProductContext({
         host: window.location.host,
         pathname: pathname || window.location.pathname,

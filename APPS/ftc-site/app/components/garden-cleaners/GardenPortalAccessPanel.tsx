@@ -471,7 +471,7 @@ export default function GardenPortalAccessPanel() {
   // API fetch helpers
   async function fetchWithAuth(url: string, options: RequestInit = {}) {
     const supabase = getSupabase();
-    const authClient = supabase.auth as any;
+    const authClient = supabase.auth;
     const { data: sessionData } = await authClient.getSession();
     const accessToken = sessionData.session?.access_token;
     if (!accessToken) throw new Error("No session token");
@@ -541,7 +541,7 @@ export default function GardenPortalAccessPanel() {
     async function loadSessionAndData(emailFromSession?: string) {
       try {
         const supabase = getSupabase();
-        const authClient = supabase.auth as any;
+        const authClient = supabase.auth;
         const { data: sessionData } = await authClient.getSession();
         const sessionEmail = (emailFromSession || sessionData.session?.user?.email || "").trim().toLowerCase();
 
@@ -598,7 +598,7 @@ export default function GardenPortalAccessPanel() {
       await loadSessionAndData();
       try {
         const supabase = getSupabase();
-        const authClient = supabase.auth as any;
+        const authClient = supabase.auth;
         const { data } = authClient.onAuthStateChange((_event: string, nextSession: { user?: { email?: string } } | null) => {
           void loadSessionAndData(nextSession?.user?.email || undefined);
         });
@@ -716,7 +716,7 @@ export default function GardenPortalAccessPanel() {
   async function signOut() {
     try {
       const supabase = getSupabase();
-      const authClient = supabase.auth as any;
+      const authClient = supabase.auth;
       await authClient.signOut();
     } catch {
       setAuthState("unavailable");
@@ -874,7 +874,7 @@ export default function GardenPortalAccessPanel() {
 
   async function handleGoogleSignIn() {
     const supabase = getSupabase();
-    const authClient = supabase.auth as any;
+    const authClient = supabase.auth;
     const redirectTo = buildProductCallbackUrl({
       origin: window.location.origin,
       product: "garden",
