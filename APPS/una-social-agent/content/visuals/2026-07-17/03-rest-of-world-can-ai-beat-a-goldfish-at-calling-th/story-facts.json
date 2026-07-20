@@ -1,0 +1,46 @@
+{
+  "story_id": "rest-of-world-can-ai-beat-a-goldfish-at-calling-the-worl-3",
+  "region": "Rest of World",
+  "country_or_market": "Global",
+  "headline": "Can AI beat a goldfish at calling the World Cup?",
+  "plain_language_summary": "As chatbots compete to forecast the tournament, an unlikely rival from a Toronto fish tank continues to outperform them.",
+  "primary_subject": "weather and Earth-system forecasting platform",
+  "technology": [
+    "AI weather model",
+    "Earth-system modelling",
+    "satellite observations",
+    "probability forecasting"
+  ],
+  "organization": "Rest of World",
+  "people_or_roles": [
+    "meteorologist",
+    "climate researcher",
+    "energy operator"
+  ],
+  "physical_environment": "operational forecasting and climate research centre",
+  "visible_objects": [
+    "satellite cloud imagery",
+    "pressure map",
+    "temperature layer screen",
+    "storm probability panel"
+  ],
+  "important_actions": [
+    "interpreting probabilistic atmospheric forecasts",
+    "comparing satellite observations",
+    "reviewing energy forecast panels"
+  ],
+  "real_world_application": [
+    "severe-weather planning",
+    "renewable-energy forecasting",
+    "climate risk analysis"
+  ],
+  "visual_evidence_from_source": [
+    "weather",
+    "global tech",
+    "policy"
+  ],
+  "source_name": "Rest of World",
+  "source_url": "https://restofworld.org/2026/world-cup-ai-prediction/?utm_source=rss&utm_medium=rss&utm_campaign=feeds",
+  "publication_date": "2026-07-17T13:00:00.000Z",
+  "confidence": 0.86
+}

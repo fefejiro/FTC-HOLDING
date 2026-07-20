@@ -1,0 +1,140 @@
+{
+  "run_id": "una-visual-2026-07-19",
+  "story_id": "africa-hackers-take-over-kenya-s-president-s-webs-2",
+  "region": "Africa",
+  "headline": "Hackers take over Kenya's president's website, demand 5 Bitcoins ransom",
+  "source_url": "https://techpoint.africa/insight/kenyas-presidents-website-hack/",
+  "source_date": "2026-07-18T19:49:47.000Z",
+  "story_score": 0,
+  "story_facts": {
+    "story_id": "africa-hackers-take-over-kenya-s-president-s-webs-2",
+    "region": "Africa",
+    "country_or_market": "Kenya",
+    "headline": "Hackers take over Kenya's president's website, demand 5 Bitcoins ransom",
+    "plain_language_summary": "Kenya's president hacked website was defaced with demeaning messages targeting the president; the unknown group responsible for the attack are demanding a ransom of 5 Bitcoins (approximately $317,215).",
+    "primary_subject": "technology operations workflow",
+    "technology": [
+      "AI systems",
+      "automation",
+      "reporting workflow"
+    ],
+    "organization": "Techpoint Africa",
+    "people_or_roles": [
+      "operator",
+      "analyst",
+      "team lead"
+    ],
+    "physical_environment": "practical technology operations workspace",
+    "visible_objects": [
+      "operations board",
+      "review checklist",
+      "system dashboard"
+    ],
+    "important_actions": [
+      "checking a workflow",
+      "reviewing source-backed information"
+    ],
+    "real_world_application": [
+      "daily operations",
+      "decision support"
+    ],
+    "visual_evidence_from_source": [
+      "technology operations",
+      "africa",
+      "startups"
+    ],
+    "source_name": "Techpoint Africa",
+    "source_url": "https://techpoint.africa/insight/kenyas-presidents-website-hack/",
+    "publication_date": "2026-07-18T19:49:47.000Z",
+    "confidence": 0.72
+  },
+  "visual_brief": {
+    "story_id": "africa-hackers-take-over-kenya-s-president-s-webs-2",
+    "region": "Africa",
+    "editorial_angle": "Technology Operations Workflow moving into practical use",
+    "image_type": "editorial_photo",
+    "primary_subject": "technology operations workflow",
+    "subject_action": "checking a workflow",
+    "environment": "practical technology operations workspace",
+    "supporting_elements": [
+      "operations board",
+      "review checklist",
+      "system dashboard",
+      "daily operations",
+      "decision support"
+    ],
+    "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
+    "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
+    "lighting": "natural professional lighting",
+    "mood": "credible, operational, human, practical",
+    "regional_context": [
+      "authentic Kenya market context where relevant"
+    ],
+    "technology_signals": [
+      "AI systems",
+      "automation",
+      "reporting workflow"
+    ],
+    "must_show": [
+      "technology operations workflow",
+      "AI systems",
+      "automation",
+      "reporting workflow",
+      "checking a workflow"
+    ],
+    "must_not_show": [
+      "abstract screen",
+      "glowing ai brain",
+      "robot head",
+      "generic server room",
+      "generic city skyline",
+      "floating hologram",
+      "phone as the main subject",
+      "people standing beside a screen",
+      "decorative people",
+      "stereotype imagery",
+      "flags as the main subject",
+      "unlicensed logos",
+      "visible text"
+    ],
+    "text_safe_area": "bottom",
+    "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Hackers take over Kenya's president's website, demand 5 Bitcoins ransom. Primary subject: technology operations workflow. Show a operator actively checking a workflow in a practical technology operations workspace. Story-specific technology: AI systems, automation, reporting workflow. Visible supporting details: operations board, review checklist, system dashboard, daily operations, decision support. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Kenya market context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+    "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
+    "visual_confidence": 0.72
+  },
+  "image_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Hackers take over Kenya's president's website, demand 5 Bitcoins ransom. Primary subject: technology operations workflow. Show a operator actively checking a workflow in a practical technology operations workspace. Story-specific technology: AI systems, automation, reporting workflow. Visible supporting details: operations board, review checklist, system dashboard, daily operations, decision support. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Kenya market context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+  "image_asset_path": "content\\visuals\\2026-07-19\\02-africa-hackers-take-over-kenya-s-president-\\raw-image.png",
+  "image_model": "openverse-editorial-photo",
+  "generation_attempts": 1,
+  "image_evaluation": {
+    "story_alignment": 80,
+    "technology_specificity": 76,
+    "regional_authenticity": 78,
+    "editorial_credibility": 86,
+    "composition_quality": 86,
+    "text_safe_area_quality": 86,
+    "stereotype_risk": 8,
+    "generic_stock_risk": 30,
+    "overall_score": 86,
+    "failure_reasons": [],
+    "retry_instructions": [],
+    "decision": "accept",
+    "evaluation_mode": "brief_static_with_rendered_fallback"
+  },
+  "rejected_generations": [],
+  "fallback_used": false,
+  "fallback_reason": "",
+  "attribution": {
+    "title": "Business people working on laptops during a meeting",
+    "source_url": "https://www.flickr.com/photos/147875007@N03/45739297502",
+    "license": "by 2.0",
+    "artist": "Rawpixel Ltd",
+    "search_term": "African business team laptop office",
+    "provider": "flickr"
+  },
+  "slide_asset_path": "content\\visuals\\2026-07-19\\02-africa-hackers-take-over-kenya-s-president-\\slide.png",
+  "publish_status": "review_required",
+  "published_urls": [],
+  "screenshots": [],
+  "timestamp": "2026-07-19T23:55:29.134Z"
+}

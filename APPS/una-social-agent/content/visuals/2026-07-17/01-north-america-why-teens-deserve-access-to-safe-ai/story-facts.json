@@ -1,0 +1,47 @@
+{
+  "story_id": "north-america-why-teens-deserve-access-to-safe-ai-1",
+  "region": "North America",
+  "country_or_market": "North America",
+  "headline": "Why teens deserve access to safe AI",
+  "plain_language_summary": "Learn how OpenAI is making ChatGPT safer for teens with age-appropriate protections, learning tools, parental controls, and expert partnerships.",
+  "primary_subject": "youth online safety review",
+  "technology": [
+    "AI safety controls",
+    "parental controls",
+    "age-aware product design",
+    "learning safeguards"
+  ],
+  "organization": "OpenAI News",
+  "people_or_roles": [
+    "product safety lead",
+    "educator",
+    "parent advisor"
+  ],
+  "physical_environment": "school technology review room or youth safety product workshop",
+  "visible_objects": [
+    "safety checklist",
+    "student device",
+    "parent control dashboard",
+    "learning policy notes"
+  ],
+  "important_actions": [
+    "reviewing youth safety controls",
+    "checking learning safeguards",
+    "discussing age-appropriate AI access"
+  ],
+  "real_world_application": [
+    "student learning",
+    "online safety",
+    "family controls",
+    "responsible AI access"
+  ],
+  "visual_evidence_from_source": [
+    "online safety",
+    "ai",
+    "models"
+  ],
+  "source_name": "OpenAI News",
+  "source_url": "https://openai.com/index/why-teens-deserve-access-safe-ai",
+  "publication_date": "2026-07-16T16:00:00.000Z",
+  "confidence": 0.86
+}

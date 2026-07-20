@@ -46,6 +46,10 @@ def today_eastern() -> str:
     return time.strftime("%Y-%m-%d")
 
 
+def draft_key(run_date: str, slot: str) -> str:
+    return run_date if slot == "news" else f"{run_date}-{slot}"
+
+
 def assert_publish_approved(draft_dir: Path, dry_run: bool) -> None:
     if dry_run:
         return
@@ -154,7 +158,15 @@ def navigate(window, url: str, wait: float = 5.0):
         keyboard.send_keys("{ENTER}")
         time.sleep(1.0)
         if "Leave site?" in visible_text(window):
-            click_text_fallback(window, "Leave")
+            if not click_text_fallback(window, "Leave"):
+                # Chrome's native leave-site dialog does not always expose a
+                # reliable UIA button. The visible "Leave" button sits near the
+                # center of the browser window in the confirmation dialog.
+                click_relative(window, 0.56, 0.28, 0.8)
+            keyboard.send_keys("^l")
+            time.sleep(0.2)
+            keyboard.send_keys("^v")
+            keyboard.send_keys("{ENTER}")
             time.sleep(1.0)
         time.sleep(wait)
     finally:
@@ -362,6 +374,34 @@ def click_instagram_create(window, wait: float = 1.0) -> dict:
         return rect
     time.sleep(wait)
     return {"ok": True, "coords": None, "rect": rect, "mode": "dom_click"}
+
+
+def force_instagram_create_with_bookmarklet(window, wait: float = 1.5) -> dict:
+    """Open Instagram's Create modal with an address-bar JS click.
+
+    Instagram's left rail sometimes ignores UIA and coordinate clicks, while the
+    same element still responds to JavaScript inside the page. This mirrors the
+    manual recovery path that successfully opened the composer on 2026-07-17.
+    """
+    payload = r"""(() => {
+  const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+  const elements = [...document.querySelectorAll('a,button,[role="button"],div[aria-label],svg[aria-label]')];
+  const target = elements.find((el) => /^Create$/i.test(clean(el.innerText || el.textContent || el.getAttribute('aria-label') || '')))
+    || elements.find((el) => /Create/i.test(clean(el.innerText || el.textContent || el.getAttribute('aria-label') || '')));
+  if (!target) {
+    document.title = 'UNA_IG_CREATE_MISSING';
+    return;
+  }
+  const clickEl = target.closest('a,button,[role="button"]') || target;
+  clickEl.scrollIntoView({ block: 'center', inline: 'center' });
+  clickEl.focus();
+  clickEl.click();
+  document.title = 'UNA_IG_CREATE_CLICKED';
+})()"""
+    run_js(window, payload, wait)
+    if "Create new post" in visible_text(window) or "Select from computer" in visible_text(window):
+        return {"ok": True, "mode": "bookmarklet"}
+    return {"ok": False, "mode": "bookmarklet", "reason": "Create modal did not open after bookmarklet click."}
 
 
 def paste_text(window, text: str, select_all: bool = False):
@@ -622,6 +662,9 @@ def publish_instagram(window, run_date: str, image_paths: list[Path], caption: s
                 fallback_click = {"ok": True, "reason": "screen-relative Instagram create fallback", "coords": coords}
         click["fallback"] = fallback_click
     if "Create new post" not in visible_text(window) and "Select from computer" not in visible_text(window):
+        bookmarklet_click = force_instagram_create_with_bookmarklet(window, 1.5)
+        click["bookmarkletFallback"] = bookmarklet_click
+    if "Create new post" not in visible_text(window) and "Select from computer" not in visible_text(window):
         # Do not navigate to /create/select/ directly. Instagram may treat
         # that path as a profile named "create" and open the wrong account
         # modal instead of the post composer.
@@ -637,10 +680,6 @@ def publish_instagram(window, run_date: str, image_paths: list[Path], caption: s
         before = current_window_handles()
         page_text = visible_text(window)
         if "Select from computer" in page_text:
-            click_relative(window, 0.50, 0.64, 0.8)
-            picker, picker_title = find_file_picker(before, 2)
-            if picker:
-                break
             clicked = bool(click_dom_physical(window, r"Select from computer", 0.8).get("ok"))
             if not clicked:
                 clicked = click_text_fallback(window, "Select from computer")
@@ -749,8 +788,12 @@ def append_ledger(entry: dict):
         f.write(json.dumps(entry) + "\n")
 
 
-def instagram_image_paths(run_date: str, asset_dir: Path) -> list[Path]:
+def instagram_image_paths(run_date: str, asset_dir: Path, slot: str = "news") -> list[Path]:
     preview_dir = ROOT / "content" / "previews"
+    if slot != "news":
+        evergreen = [preview_dir / f"evergreen-tip-{run_date}-{slot}-slide-{index}.png" for index in range(1, 4)]
+        if all(path.exists() for path in evergreen):
+            return evergreen
     regional = [preview_dir / f"regional-news-preview-{run_date}-slide-{index}.png" for index in range(1, 4)]
     editorial = [preview_dir / f"editorial-news-preview-{run_date}-slide-{index}.png" for index in range(1, 4)]
     if all(path.exists() for path in regional):
@@ -763,8 +806,15 @@ def instagram_image_paths(run_date: str, asset_dir: Path) -> list[Path]:
     raise RuntimeError(f"Instagram image not found. Tried regional carousel, editorial carousel, and {fallback}")
 
 
-def linkedin_image_paths(run_date: str) -> list[Path]:
+def linkedin_image_paths(run_date: str, slot: str = "news") -> list[Path]:
     preview_dir = ROOT / "content" / "previews"
+    if slot != "news":
+        evergreen = preview_dir / f"evergreen-tip-{run_date}-{slot}.png"
+        if evergreen.exists():
+            return [evergreen]
+        evergreen_slide1 = preview_dir / f"evergreen-tip-{run_date}-{slot}-slide-1.png"
+        if evergreen_slide1.exists():
+            return [evergreen_slide1]
     contact = preview_dir / f"regional-news-preview-{run_date}.png"
     if contact.exists():
         return [contact]
@@ -777,22 +827,26 @@ def linkedin_image_paths(run_date: str) -> list[Path]:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Post Una Labs social content through the visible Fejiro Chrome window.")
     parser.add_argument("--date", default=today_eastern())
+    parser.add_argument("--slot", default="news")
     parser.add_argument("--channels", default="instagram,linkedin")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
     run_date = args.date
-    draft_dir = ROOT / "content" / "drafts" / run_date
+    key = draft_key(run_date, args.slot)
+    draft_dir = ROOT / "content" / "drafts" / key
     asset_dir = ROOT / "content" / "assets" / run_date
     proof_dir = ROOT / "content" / "proof" / run_date
+    if args.slot != "news":
+        proof_dir = proof_dir / args.slot
     proof_dir.mkdir(parents=True, exist_ok=True)
     assert_publish_approved(draft_dir, args.dry_run)
 
     topic = json.loads((draft_dir / "topic.json").read_text(encoding="utf-8"))
     instagram_caption = (draft_dir / "instagram-caption.md").read_text(encoding="utf-8").strip()
     linkedin_post = (draft_dir / "linkedin-post.md").read_text(encoding="utf-8").strip()
-    image_paths = instagram_image_paths(run_date, asset_dir)
-    linkedin_images = linkedin_image_paths(run_date)
+    image_paths = instagram_image_paths(run_date, asset_dir, args.slot)
+    linkedin_images = linkedin_image_paths(run_date, args.slot)
 
     if "instagram" in [item.strip().lower() for item in args.channels.split(",") if item.strip()]:
         caption_issues = validate_instagram_caption(instagram_caption)
@@ -818,6 +872,8 @@ def main() -> int:
     report = {
         "id": f"una-social-visible-{run_date}-{int(time.time())}",
         "runDate": run_date,
+        "slot": args.slot,
+        "draftKey": key,
         "mode": "visible_chrome",
         "status": status,
         "dryRun": args.dry_run,

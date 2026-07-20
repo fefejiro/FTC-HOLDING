@@ -1,0 +1,46 @@
+{
+  "story_id": "africa-the-young-kenyan-engineer-who-thinks-robot-2",
+  "region": "Africa",
+  "country_or_market": "Kenya",
+  "headline": "The young Kenyan engineer who thinks robots belong in every classroom",
+  "plain_language_summary": "During her mentoring of young people in STEM, she met deaf students struggling through STEM classes because qualified sign language interpreters were scarce. It struck her as an engineering problem as much as an educational one.",
+  "primary_subject": "classroom robotics and STEM learning",
+  "technology": [
+    "classroom robotics",
+    "assistive learning tools",
+    "engineering education",
+    "student STEM projects"
+  ],
+  "organization": "TechCabal",
+  "people_or_roles": [
+    "engineering mentor",
+    "student team",
+    "teacher"
+  ],
+  "physical_environment": "STEM classroom or youth robotics workshop",
+  "visible_objects": [
+    "student laptops",
+    "robotics kit",
+    "classroom worktable",
+    "prototype parts"
+  ],
+  "important_actions": [
+    "mentoring students",
+    "building classroom robots",
+    "testing a student prototype"
+  ],
+  "real_world_application": [
+    "STEM education",
+    "accessible learning",
+    "student engineering skills"
+  ],
+  "visual_evidence_from_source": [
+    "education robotics",
+    "africa",
+    "startups"
+  ],
+  "source_name": "TechCabal",
+  "source_url": "https://techcabal.com/2026/07/17/the-young-kenyan-engineer-who-thinks-robots-belong-in-every-classroom/",
+  "publication_date": "2026-07-17T11:53:05.000Z",
+  "confidence": 0.86
+}

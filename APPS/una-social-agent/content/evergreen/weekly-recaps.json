@@ -1,0 +1,44 @@
+[
+  {
+    "id": "watch-ai-at-work",
+    "category": "Week Ahead",
+    "title": "Watch where AI enters real work",
+    "hook": "This week, watch less for loud AI headlines and more for where AI quietly enters everyday work.",
+    "tip": "The useful signal is when AI moves from demo videos into customer service, reporting, operations, research, coding, admin, and decision support.",
+    "why": "That is where teams start needing better review habits, clearer proof, and simple rules for what AI can help with and what still needs human judgment.",
+    "steps": [
+      "Which tools are moving from demo to daily workflow.",
+      "Which teams are adding AI review before decisions.",
+      "Which stories show real use, not just hype."
+    ],
+    "hashtags": ["#ArtificialIntelligence", "#AITools", "#TechNews", "#Workflow", "#Automation"]
+  },
+  {
+    "id": "watch-ai-proof",
+    "category": "Week Ahead",
+    "title": "Watch the proof, not only the promise",
+    "hook": "This week, the question is simple: who is showing proof that AI actually improves the work?",
+    "tip": "A good AI story should show what changed, who benefits, what risk remains, and how the result is checked.",
+    "why": "Reliable AI adoption will come from teams that measure output, keep records, and make the review step part of the workflow.",
+    "steps": [
+      "Look for real metrics when a company announces AI progress.",
+      "Watch for adoption inside operations, support, finance, health, education, and public services.",
+      "Pay attention when teams explain how humans review the output."
+    ],
+    "hashtags": ["#AI", "#TechStrategy", "#DigitalTransformation", "#Automation", "#Productivity"]
+  },
+  {
+    "id": "watch-small-team-ai",
+    "category": "Week Ahead",
+    "title": "Watch what small teams can actually use",
+    "hook": "This week, I am watching AI tools through a small-team lens.",
+    "tip": "The best tools are not always the flashiest. The best tools help a team write faster, respond faster, check work faster, or understand customers better.",
+    "why": "Small teams win when AI removes friction from real work without creating confusion, quality problems, or extra cleanup.",
+    "steps": [
+      "Find tools that save time on one repeated task.",
+      "Check whether the output is easy to review.",
+      "Avoid tools that add more steps than they remove."
+    ],
+    "hashtags": ["#SmallBusiness", "#AIWorkflow", "#ChatGPT", "#ClaudeAI", "#Automation"]
+  }
+]

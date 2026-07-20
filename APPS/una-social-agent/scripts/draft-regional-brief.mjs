@@ -6,6 +6,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(__dirname, '..')
 const runDate = readArg('--date') || todayInTimeZone()
 const maxSourceAgeDays = Number(readArg('--max-source-age-days') || 3)
+const feedFetchTimeoutMs = Number(readArg('--feed-timeout-ms') || process.env.UNA_FEED_TIMEOUT_MS || 12000)
 
 function readArg(name) {
   const index = process.argv.indexOf(name)
@@ -81,12 +82,15 @@ function parseDate(value) {
 }
 
 async function fetchText(url) {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), feedFetchTimeoutMs)
   const response = await fetch(url, {
+    signal: controller.signal,
     headers: {
       'User-Agent': 'UnaLabsSocialAgent/0.1 (+https://unalabs.cloud)',
       Accept: 'application/rss+xml, application/xml, text/xml, text/html, */*',
     },
-  })
+  }).finally(() => clearTimeout(timeout))
   if (!response.ok) throw new Error(`${response.status} ${response.statusText}`)
   return response.text()
 }
@@ -144,7 +148,7 @@ function isUsableStory(item) {
   const text = `${item?.title || ''} ${item?.summary || ''}`.toLowerCase()
   if (!item?.title || !item?.url || daysOld(item) > maxSourceAgeDays) return false
   if (/\/brandpress\//i.test(item.url || '')) return false
-  return !/(celebrity|gossip|career advice|how to transition|stock price|crypto price|\[d\]|request for expressions? of interest|capacity development|procurement|tender|call for applications|sponsored|advertorial|press release)/i.test(text)
+  return !/(celebrity|gossip|career advice|how to transition|stock price|crypto price|\[d\]|request for expressions? of interest|capacity development|procurement|tender|call for applications|sponsored|advertorial|press release|world cup|football prediction|sports prediction|goldfish)/i.test(text)
 }
 
 function scoreStory(item, preferred = []) {
@@ -339,11 +343,24 @@ const config = await readJson('config/sources.json')
 const wanted = new Set(['OpenAI News', 'Microsoft Research', 'Google AI', 'TechCabal', 'Techpoint Africa', 'Tech In Africa', 'Rest of World', 'The Register AI'])
 const errors = []
 const items = []
-for (const feed of config.feeds.filter((item) => wanted.has(item.name))) {
-  try {
-    items.push(...parseFeed(await fetchText(feed.url), feed))
-  } catch (error) {
-    errors.push({ sourceName: feed.name, url: feed.url, error: String(error.message || error) })
+const feedResults = await Promise.all(
+  config.feeds
+    .filter((item) => wanted.has(item.name))
+    .map(async (feed) => {
+      try {
+        return { feed, items: parseFeed(await fetchText(feed.url), feed), error: null }
+      } catch (error) {
+        const reason = error?.name === 'AbortError' ? `fetch timed out after ${feedFetchTimeoutMs}ms` : String(error.message || error)
+        return { feed, items: [], error: reason }
+      }
+    }),
+)
+
+for (const result of feedResults) {
+  if (result.error) {
+    errors.push({ sourceName: result.feed.name, url: result.feed.url, error: result.error })
+  } else {
+    items.push(...result.items)
   }
 }
 
@@ -353,10 +370,6 @@ if (entries.length !== 3) {
 }
 
 const draftDir = path.join(root, 'content', 'drafts', runDate)
-const assetDir = path.join(root, 'content', 'assets', runDate)
-const previewDir = path.join(root, 'content', 'previews')
-await fs.mkdir(assetDir, { recursive: true })
-await fs.mkdir(previewDir, { recursive: true })
 
 const instagram = instagramCaption(entries)
 const linkedin = linkedinPost(entries)
@@ -395,19 +408,6 @@ await writeFile(
   )}\n`,
 )
 
-const slidePaths = []
-for (const [index, entry] of entries.entries()) {
-  const regionalPath = path.join(previewDir, `regional-news-preview-${runDate}-slide-${index + 1}.png`)
-  const editorialPath = path.join(previewDir, `editorial-news-preview-${runDate}-slide-${index + 1}.png`)
-  await renderHtmlToPng(slideHtml(entry, index), regionalPath)
-  await fs.copyFile(regionalPath, editorialPath)
-  slidePaths.push(regionalPath)
-}
-const slideData = await Promise.all(slidePaths.map((filePath) => imageDataUrl(filePath)))
-const contactPath = path.join(previewDir, `regional-news-preview-${runDate}.png`)
-await renderHtmlToPng(contactSheetHtml(slideData), contactPath, { width: 1440, height: 680 })
-await fs.copyFile(slidePaths[0], path.join(assetDir, 'instagram-card.png'))
-
 console.log(
   JSON.stringify(
     {
@@ -425,8 +425,6 @@ console.log(
         brief: path.relative(root, path.join(draftDir, 'regional-brief.json')),
         instagram: path.relative(root, path.join(draftDir, 'instagram-caption.md')),
         linkedin: path.relative(root, path.join(draftDir, 'linkedin-post.md')),
-        preview: path.relative(root, contactPath),
-        slides: slidePaths.map((filePath) => path.relative(root, filePath)),
       },
       errors,
     },

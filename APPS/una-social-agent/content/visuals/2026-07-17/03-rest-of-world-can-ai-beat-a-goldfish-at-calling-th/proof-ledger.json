@@ -1,0 +1,147 @@
+{
+  "run_id": "una-visual-2026-07-17",
+  "story_id": "rest-of-world-can-ai-beat-a-goldfish-at-calling-the-worl-3",
+  "region": "Rest of World",
+  "headline": "Can AI beat a goldfish at calling the World Cup?",
+  "source_url": "https://restofworld.org/2026/world-cup-ai-prediction/?utm_source=rss&utm_medium=rss&utm_campaign=feeds",
+  "source_date": "2026-07-17T13:00:00.000Z",
+  "story_score": 0,
+  "story_facts": {
+    "story_id": "rest-of-world-can-ai-beat-a-goldfish-at-calling-the-worl-3",
+    "region": "Rest of World",
+    "country_or_market": "Global",
+    "headline": "Can AI beat a goldfish at calling the World Cup?",
+    "plain_language_summary": "As chatbots compete to forecast the tournament, an unlikely rival from a Toronto fish tank continues to outperform them.",
+    "primary_subject": "weather and Earth-system forecasting platform",
+    "technology": [
+      "AI weather model",
+      "Earth-system modelling",
+      "satellite observations",
+      "probability forecasting"
+    ],
+    "organization": "Rest of World",
+    "people_or_roles": [
+      "meteorologist",
+      "climate researcher",
+      "energy operator"
+    ],
+    "physical_environment": "operational forecasting and climate research centre",
+    "visible_objects": [
+      "satellite cloud imagery",
+      "pressure map",
+      "temperature layer screen",
+      "storm probability panel"
+    ],
+    "important_actions": [
+      "interpreting probabilistic atmospheric forecasts",
+      "comparing satellite observations",
+      "reviewing energy forecast panels"
+    ],
+    "real_world_application": [
+      "severe-weather planning",
+      "renewable-energy forecasting",
+      "climate risk analysis"
+    ],
+    "visual_evidence_from_source": [
+      "weather",
+      "global tech",
+      "policy"
+    ],
+    "source_name": "Rest of World",
+    "source_url": "https://restofworld.org/2026/world-cup-ai-prediction/?utm_source=rss&utm_medium=rss&utm_campaign=feeds",
+    "publication_date": "2026-07-17T13:00:00.000Z",
+    "confidence": 0.86
+  },
+  "visual_brief": {
+    "story_id": "rest-of-world-can-ai-beat-a-goldfish-at-calling-the-worl-3",
+    "region": "Rest of World",
+    "editorial_angle": "Weather And Earth-system Forecasting Platform moving into practical use",
+    "image_type": "editorial_photo",
+    "primary_subject": "weather and Earth-system forecasting platform",
+    "subject_action": "interpreting probabilistic atmospheric forecasts",
+    "environment": "operational forecasting and climate research centre",
+    "supporting_elements": [
+      "satellite cloud imagery",
+      "pressure map",
+      "temperature layer screen",
+      "storm probability panel",
+      "severe-weather planning",
+      "renewable-energy forecasting",
+      "climate risk analysis"
+    ],
+    "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
+    "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
+    "lighting": "natural professional lighting",
+    "mood": "credible, operational, human, practical",
+    "regional_context": [
+      "authentic Rest of World business context where relevant"
+    ],
+    "technology_signals": [
+      "AI weather model",
+      "Earth-system modelling",
+      "satellite observations",
+      "probability forecasting"
+    ],
+    "must_show": [
+      "weather and Earth-system forecasting platform",
+      "AI weather model",
+      "Earth-system modelling",
+      "satellite observations",
+      "interpreting probabilistic atmospheric forecasts"
+    ],
+    "must_not_show": [
+      "abstract screen",
+      "glowing ai brain",
+      "robot head",
+      "generic server room",
+      "generic city skyline",
+      "floating hologram",
+      "phone as the main subject",
+      "people standing beside a screen",
+      "decorative people",
+      "stereotype imagery",
+      "flags as the main subject",
+      "unlicensed logos",
+      "visible text"
+    ],
+    "text_safe_area": "bottom",
+    "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Can AI beat a goldfish at calling the World Cup?. Primary subject: weather and Earth-system forecasting platform. Show a meteorologist actively interpreting probabilistic atmospheric forecasts in a operational forecasting and climate research centre. Story-specific technology: AI weather model, Earth-system modelling, satellite observations, probability forecasting. Visible supporting details: satellite cloud imagery, pressure map, temperature layer screen, storm probability panel, severe-weather planning, renewable-energy forecasting, climate risk analysis. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Rest of World business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+    "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
+    "visual_confidence": 0.86
+  },
+  "image_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Can AI beat a goldfish at calling the World Cup?. Primary subject: weather and Earth-system forecasting platform. Show a meteorologist actively interpreting probabilistic atmospheric forecasts in a operational forecasting and climate research centre. Story-specific technology: AI weather model, Earth-system modelling, satellite observations, probability forecasting. Visible supporting details: satellite cloud imagery, pressure map, temperature layer screen, storm probability panel, severe-weather planning, renewable-energy forecasting, climate risk analysis. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Rest of World business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+  "image_asset_path": "content\\visuals\\2026-07-17\\03-rest-of-world-can-ai-beat-a-goldfish-at-calling-th\\raw-image.png",
+  "image_model": "openverse-editorial-photo",
+  "generation_attempts": 1,
+  "image_evaluation": {
+    "story_alignment": 80,
+    "technology_specificity": 76,
+    "regional_authenticity": 78,
+    "editorial_credibility": 86,
+    "composition_quality": 86,
+    "text_safe_area_quality": 86,
+    "stereotype_risk": 8,
+    "generic_stock_risk": 30,
+    "overall_score": 86,
+    "failure_reasons": [],
+    "retry_instructions": [],
+    "decision": "accept",
+    "evaluation_mode": "brief_static_with_rendered_fallback"
+  },
+  "rejected_generations": [],
+  "fallback_used": false,
+  "fallback_reason": "",
+  "attribution": {
+    "title": "First Full Disk ABI Image from GOES-17",
+    "source_url": "https://www.flickr.com/photos/24662369@N07/41752931424",
+    "license": "by 2.0",
+    "artist": "NASA Goddard Photo and Video",
+    "search_term": "weather forecasting operations center meteorologist",
+    "provider": "flickr"
+  },
+  "slide_asset_path": "content\\visuals\\2026-07-17\\03-rest-of-world-can-ai-beat-a-goldfish-at-calling-th\\slide.png",
+  "publish_status": "review_required",
+  "published_urls": [],
+  "screenshots": [],
+  "timestamp": "2026-07-17T18:42:56.225Z"
+}

@@ -1,0 +1,439 @@
+{
+  "run_id": "una-visual-2026-07-19",
+  "runDate": "2026-07-19",
+  "status": "visual_review_ready",
+  "publish_status": "review_required",
+  "note": "Visuals passed review and the publishable Instagram card was exported.",
+  "records": [
+    {
+      "run_id": "una-visual-2026-07-19",
+      "story_id": "north-america-a-scorecard-for-the-ai-age-1",
+      "region": "North America",
+      "headline": "A scorecard for the AI age",
+      "source_url": "https://openai.com/index/a-scorecard-for-the-ai-age",
+      "source_date": "2026-07-17T10:00:00.000Z",
+      "story_score": 0,
+      "story_facts": {
+        "story_id": "north-america-a-scorecard-for-the-ai-age-1",
+        "region": "North America",
+        "country_or_market": "North America",
+        "headline": "A scorecard for the AI age",
+        "plain_language_summary": "Sarah Friar, CFO of OpenAI, introduces a practical AI scorecard to measure ROI through useful work, cost per successful task, dependability, and return on compute.",
+        "primary_subject": "technology operations workflow",
+        "technology": [
+          "AI systems",
+          "automation",
+          "reporting workflow"
+        ],
+        "organization": "OpenAI News",
+        "people_or_roles": [
+          "operator",
+          "analyst",
+          "team lead"
+        ],
+        "physical_environment": "practical technology operations workspace",
+        "visible_objects": [
+          "operations board",
+          "review checklist",
+          "system dashboard"
+        ],
+        "important_actions": [
+          "checking a workflow",
+          "reviewing source-backed information"
+        ],
+        "real_world_application": [
+          "daily operations",
+          "decision support"
+        ],
+        "visual_evidence_from_source": [
+          "technology operations",
+          "ai",
+          "models"
+        ],
+        "source_name": "OpenAI News",
+        "source_url": "https://openai.com/index/a-scorecard-for-the-ai-age",
+        "publication_date": "2026-07-17T10:00:00.000Z",
+        "confidence": 0.72
+      },
+      "visual_brief": {
+        "story_id": "north-america-a-scorecard-for-the-ai-age-1",
+        "region": "North America",
+        "editorial_angle": "Technology Operations Workflow moving into practical use",
+        "image_type": "editorial_photo",
+        "primary_subject": "technology operations workflow",
+        "subject_action": "checking a workflow",
+        "environment": "practical technology operations workspace",
+        "supporting_elements": [
+          "operations board",
+          "review checklist",
+          "system dashboard",
+          "daily operations",
+          "decision support"
+        ],
+        "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
+        "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
+        "lighting": "natural professional lighting",
+        "mood": "credible, operational, human, practical",
+        "regional_context": [
+          "authentic North America business context where relevant"
+        ],
+        "technology_signals": [
+          "AI systems",
+          "automation",
+          "reporting workflow"
+        ],
+        "must_show": [
+          "technology operations workflow",
+          "AI systems",
+          "automation",
+          "reporting workflow",
+          "checking a workflow"
+        ],
+        "must_not_show": [
+          "abstract screen",
+          "glowing ai brain",
+          "robot head",
+          "generic server room",
+          "generic city skyline",
+          "floating hologram",
+          "phone as the main subject",
+          "people standing beside a screen",
+          "decorative people",
+          "stereotype imagery",
+          "flags as the main subject",
+          "unlicensed logos",
+          "visible text"
+        ],
+        "text_safe_area": "bottom",
+        "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: A scorecard for the AI age. Primary subject: technology operations workflow. Show a operator actively checking a workflow in a practical technology operations workspace. Story-specific technology: AI systems, automation, reporting workflow. Visible supporting details: operations board, review checklist, system dashboard, daily operations, decision support. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic North America business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+        "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
+        "visual_confidence": 0.72
+      },
+      "image_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: A scorecard for the AI age. Primary subject: technology operations workflow. Show a operator actively checking a workflow in a practical technology operations workspace. Story-specific technology: AI systems, automation, reporting workflow. Visible supporting details: operations board, review checklist, system dashboard, daily operations, decision support. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic North America business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+      "image_asset_path": "content\\visuals\\2026-07-19\\01-north-america-a-scorecard-for-the-ai-age\\raw-image.png",
+      "image_model": "openverse-editorial-photo",
+      "generation_attempts": 1,
+      "image_evaluation": {
+        "story_alignment": 80,
+        "technology_specificity": 76,
+        "regional_authenticity": 78,
+        "editorial_credibility": 86,
+        "composition_quality": 86,
+        "text_safe_area_quality": 86,
+        "stereotype_risk": 8,
+        "generic_stock_risk": 30,
+        "overall_score": 86,
+        "failure_reasons": [],
+        "retry_instructions": [],
+        "decision": "accept",
+        "evaluation_mode": "brief_static_with_rendered_fallback"
+      },
+      "rejected_generations": [],
+      "fallback_used": false,
+      "fallback_reason": "",
+      "attribution": {
+        "title": "Business people working on laptops during a meeting",
+        "source_url": "https://www.flickr.com/photos/147875007@N03/45739297502",
+        "license": "by 2.0",
+        "artist": "Rawpixel Ltd",
+        "search_term": "African business team laptop office",
+        "provider": "flickr"
+      },
+      "slide_asset_path": "content\\visuals\\2026-07-19\\01-north-america-a-scorecard-for-the-ai-age\\slide.png",
+      "publish_status": "review_required",
+      "published_urls": [],
+      "screenshots": [],
+      "timestamp": "2026-07-19T23:55:26.782Z"
+    },
+    {
+      "run_id": "una-visual-2026-07-19",
+      "story_id": "africa-hackers-take-over-kenya-s-president-s-webs-2",
+      "region": "Africa",
+      "headline": "Hackers take over Kenya's president's website, demand 5 Bitcoins ransom",
+      "source_url": "https://techpoint.africa/insight/kenyas-presidents-website-hack/",
+      "source_date": "2026-07-18T19:49:47.000Z",
+      "story_score": 0,
+      "story_facts": {
+        "story_id": "africa-hackers-take-over-kenya-s-president-s-webs-2",
+        "region": "Africa",
+        "country_or_market": "Kenya",
+        "headline": "Hackers take over Kenya's president's website, demand 5 Bitcoins ransom",
+        "plain_language_summary": "Kenya's president hacked website was defaced with demeaning messages targeting the president; the unknown group responsible for the attack are demanding a ransom of 5 Bitcoins (approximately $317,215).",
+        "primary_subject": "technology operations workflow",
+        "technology": [
+          "AI systems",
+          "automation",
+          "reporting workflow"
+        ],
+        "organization": "Techpoint Africa",
+        "people_or_roles": [
+          "operator",
+          "analyst",
+          "team lead"
+        ],
+        "physical_environment": "practical technology operations workspace",
+        "visible_objects": [
+          "operations board",
+          "review checklist",
+          "system dashboard"
+        ],
+        "important_actions": [
+          "checking a workflow",
+          "reviewing source-backed information"
+        ],
+        "real_world_application": [
+          "daily operations",
+          "decision support"
+        ],
+        "visual_evidence_from_source": [
+          "technology operations",
+          "africa",
+          "startups"
+        ],
+        "source_name": "Techpoint Africa",
+        "source_url": "https://techpoint.africa/insight/kenyas-presidents-website-hack/",
+        "publication_date": "2026-07-18T19:49:47.000Z",
+        "confidence": 0.72
+      },
+      "visual_brief": {
+        "story_id": "africa-hackers-take-over-kenya-s-president-s-webs-2",
+        "region": "Africa",
+        "editorial_angle": "Technology Operations Workflow moving into practical use",
+        "image_type": "editorial_photo",
+        "primary_subject": "technology operations workflow",
+        "subject_action": "checking a workflow",
+        "environment": "practical technology operations workspace",
+        "supporting_elements": [
+          "operations board",
+          "review checklist",
+          "system dashboard",
+          "daily operations",
+          "decision support"
+        ],
+        "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
+        "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
+        "lighting": "natural professional lighting",
+        "mood": "credible, operational, human, practical",
+        "regional_context": [
+          "authentic Kenya market context where relevant"
+        ],
+        "technology_signals": [
+          "AI systems",
+          "automation",
+          "reporting workflow"
+        ],
+        "must_show": [
+          "technology operations workflow",
+          "AI systems",
+          "automation",
+          "reporting workflow",
+          "checking a workflow"
+        ],
+        "must_not_show": [
+          "abstract screen",
+          "glowing ai brain",
+          "robot head",
+          "generic server room",
+          "generic city skyline",
+          "floating hologram",
+          "phone as the main subject",
+          "people standing beside a screen",
+          "decorative people",
+          "stereotype imagery",
+          "flags as the main subject",
+          "unlicensed logos",
+          "visible text"
+        ],
+        "text_safe_area": "bottom",
+        "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Hackers take over Kenya's president's website, demand 5 Bitcoins ransom. Primary subject: technology operations workflow. Show a operator actively checking a workflow in a practical technology operations workspace. Story-specific technology: AI systems, automation, reporting workflow. Visible supporting details: operations board, review checklist, system dashboard, daily operations, decision support. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Kenya market context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+        "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
+        "visual_confidence": 0.72
+      },
+      "image_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Hackers take over Kenya's president's website, demand 5 Bitcoins ransom. Primary subject: technology operations workflow. Show a operator actively checking a workflow in a practical technology operations workspace. Story-specific technology: AI systems, automation, reporting workflow. Visible supporting details: operations board, review checklist, system dashboard, daily operations, decision support. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Kenya market context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+      "image_asset_path": "content\\visuals\\2026-07-19\\02-africa-hackers-take-over-kenya-s-president-\\raw-image.png",
+      "image_model": "openverse-editorial-photo",
+      "generation_attempts": 1,
+      "image_evaluation": {
+        "story_alignment": 80,
+        "technology_specificity": 76,
+        "regional_authenticity": 78,
+        "editorial_credibility": 86,
+        "composition_quality": 86,
+        "text_safe_area_quality": 86,
+        "stereotype_risk": 8,
+        "generic_stock_risk": 30,
+        "overall_score": 86,
+        "failure_reasons": [],
+        "retry_instructions": [],
+        "decision": "accept",
+        "evaluation_mode": "brief_static_with_rendered_fallback"
+      },
+      "rejected_generations": [],
+      "fallback_used": false,
+      "fallback_reason": "",
+      "attribution": {
+        "title": "Business people working on laptops during a meeting",
+        "source_url": "https://www.flickr.com/photos/147875007@N03/45739297502",
+        "license": "by 2.0",
+        "artist": "Rawpixel Ltd",
+        "search_term": "African business team laptop office",
+        "provider": "flickr"
+      },
+      "slide_asset_path": "content\\visuals\\2026-07-19\\02-africa-hackers-take-over-kenya-s-president-\\slide.png",
+      "publish_status": "review_required",
+      "published_urls": [],
+      "screenshots": [],
+      "timestamp": "2026-07-19T23:55:29.134Z"
+    },
+    {
+      "run_id": "una-visual-2026-07-19",
+      "story_id": "rest-of-world-the-problem-ai-content-moderation-cannot-s-3",
+      "region": "Rest of World",
+      "headline": "The problem AI content moderation cannot solve",
+      "source_url": "https://restofworld.org/2026/ai-content-moderation-consent-muse/?utm_source=rss&utm_medium=rss&utm_campaign=feeds",
+      "source_date": "2026-07-16T10:00:00.000Z",
+      "story_score": 0,
+      "story_facts": {
+        "story_id": "rest-of-world-the-problem-ai-content-moderation-cannot-s-3",
+        "region": "Rest of World",
+        "country_or_market": "Global",
+        "headline": "The problem AI content moderation cannot solve",
+        "plain_language_summary": "Meta and other big tech companies are increasingly using AI for content moderation, but as the backlash to Muse Image shows, it cannot protect users because it does not account for consent.",
+        "primary_subject": "AI content moderation and consent review",
+        "technology": [
+          "content moderation workflow",
+          "consent review",
+          "trust and safety operations",
+          "platform policy"
+        ],
+        "organization": "Rest of World",
+        "people_or_roles": [
+          "trust and safety analyst",
+          "policy reviewer",
+          "product counsel"
+        ],
+        "physical_environment": "platform trust and safety review room",
+        "visible_objects": [
+          "moderation queue",
+          "consent checklist",
+          "policy notes",
+          "review dashboard"
+        ],
+        "important_actions": [
+          "reviewing consent risk",
+          "checking moderation decisions",
+          "mapping platform safety gaps"
+        ],
+        "real_world_application": [
+          "user consent",
+          "platform safety",
+          "privacy protection",
+          "policy enforcement"
+        ],
+        "visual_evidence_from_source": [
+          "content moderation",
+          "global tech",
+          "policy"
+        ],
+        "source_name": "Rest of World",
+        "source_url": "https://restofworld.org/2026/ai-content-moderation-consent-muse/?utm_source=rss&utm_medium=rss&utm_campaign=feeds",
+        "publication_date": "2026-07-16T10:00:00.000Z",
+        "confidence": 0.86
+      },
+      "visual_brief": {
+        "story_id": "rest-of-world-the-problem-ai-content-moderation-cannot-s-3",
+        "region": "Rest of World",
+        "editorial_angle": "Ai Content Moderation And Consent Review moving into practical use",
+        "image_type": "editorial_photo",
+        "primary_subject": "AI content moderation and consent review",
+        "subject_action": "reviewing consent risk",
+        "environment": "platform trust and safety review room",
+        "supporting_elements": [
+          "moderation queue",
+          "consent checklist",
+          "policy notes",
+          "review dashboard",
+          "user consent",
+          "platform safety",
+          "privacy protection"
+        ],
+        "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
+        "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
+        "lighting": "natural professional lighting",
+        "mood": "credible, operational, human, practical",
+        "regional_context": [
+          "authentic Rest of World business context where relevant"
+        ],
+        "technology_signals": [
+          "content moderation workflow",
+          "consent review",
+          "trust and safety operations",
+          "platform policy"
+        ],
+        "must_show": [
+          "AI content moderation and consent review",
+          "content moderation workflow",
+          "consent review",
+          "trust and safety operations",
+          "reviewing consent risk"
+        ],
+        "must_not_show": [
+          "abstract screen",
+          "glowing ai brain",
+          "robot head",
+          "generic server room",
+          "generic city skyline",
+          "floating hologram",
+          "phone as the main subject",
+          "people standing beside a screen",
+          "decorative people",
+          "stereotype imagery",
+          "flags as the main subject",
+          "unlicensed logos",
+          "visible text"
+        ],
+        "text_safe_area": "bottom",
+        "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: The problem AI content moderation cannot solve. Primary subject: AI content moderation and consent review. Show a trust and safety analyst actively reviewing consent risk in a platform trust and safety review room. Story-specific technology: content moderation workflow, consent review, trust and safety operations, platform policy. Visible supporting details: moderation queue, consent checklist, policy notes, review dashboard, user consent, platform safety, privacy protection. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Rest of World business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+        "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
+        "visual_confidence": 0.86
+      },
+      "image_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: The problem AI content moderation cannot solve. Primary subject: AI content moderation and consent review. Show a trust and safety analyst actively reviewing consent risk in a platform trust and safety review room. Story-specific technology: content moderation workflow, consent review, trust and safety operations, platform policy. Visible supporting details: moderation queue, consent checklist, policy notes, review dashboard, user consent, platform safety, privacy protection. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Rest of World business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+      "image_asset_path": "content\\visuals\\2026-07-19\\03-rest-of-world-the-problem-ai-content-moderation-ca\\raw-image.png",
+      "image_model": "openverse-editorial-photo",
+      "generation_attempts": 1,
+      "image_evaluation": {
+        "story_alignment": 80,
+        "technology_specificity": 76,
+        "regional_authenticity": 78,
+        "editorial_credibility": 86,
+        "composition_quality": 86,
+        "text_safe_area_quality": 86,
+        "stereotype_risk": 8,
+        "generic_stock_risk": 30,
+        "overall_score": 86,
+        "failure_reasons": [],
+        "retry_instructions": [],
+        "decision": "accept",
+        "evaluation_mode": "brief_static_with_rendered_fallback"
+      },
+      "rejected_generations": [],
+      "fallback_used": false,
+      "fallback_reason": "",
+      "attribution": {
+        "title": "Writing Papers",
+        "source_url": "https://stocksnap.io/photo/writing-papers-Y01VDYAX63",
+        "license": "cc0 1.0",
+        "artist": "Helloquence",
+        "search_term": "people meeting laptop office technology",
+        "provider": "stocksnap"
+      },
+      "slide_asset_path": "content\\visuals\\2026-07-19\\03-rest-of-world-the-problem-ai-content-moderation-ca\\slide.png",
+      "publish_status": "review_required",
+      "published_urls": [],
+      "screenshots": [],
+      "timestamp": "2026-07-19T23:55:32.003Z"
+    }
+  ],
+  "contact_sheet": "content\\previews\\regional-news-preview-2026-07-19.png",
+  "createdAt": "2026-07-19T23:55:33.235Z"
+}

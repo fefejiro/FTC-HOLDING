@@ -1,0 +1,69 @@
+{
+  "id": "una-social-visible-2026-07-19-1784505447",
+  "runDate": "2026-07-19",
+  "slot": "news",
+  "draftKey": "2026-07-19",
+  "mode": "visible_chrome",
+  "status": "publish_blocked",
+  "dryRun": false,
+  "channels": [
+    "instagram",
+    "linkedin"
+  ],
+  "topic": {
+    "title": "Today in tech: three regions to watch",
+    "url": "https://openai.com/index/a-scorecard-for-the-ai-age",
+    "sourceName": "OpenAI News, Techpoint Africa, Rest of World"
+  },
+  "results": {
+    "instagram": {
+      "channel": "instagram",
+      "status": "blocked_no_file_picker",
+      "proof": {
+        "home": "C:\\FTC HOLDING\\APPS\\una-social-agent\\content\\proof\\2026-07-19\\visible-instagram-home.png",
+        "composer_open": "C:\\FTC HOLDING\\APPS\\una-social-agent\\content\\proof\\2026-07-19\\visible-instagram-composer-open.png",
+        "error": "C:\\FTC HOLDING\\APPS\\una-social-agent\\content\\proof\\2026-07-19\\visible-instagram-error.png"
+      },
+      "url": "",
+      "reason": "Instagram file picker did not open.",
+      "clickCreate": {
+        "ok": false,
+        "reason": "clicked Instagram create by DOM",
+        "fallback": {
+          "ok": true,
+          "reason": "screen-relative Instagram create fallback",
+          "coords": [
+            28,
+            -460
+          ]
+        }
+      }
+    },
+    "linkedin": {
+      "channel": "linkedin",
+      "status": "blocked_media_not_attached",
+      "proof": {
+        "page_posts": "C:\\FTC HOLDING\\APPS\\una-social-agent\\content\\proof\\2026-07-19\\visible-linkedin-page-posts.png",
+        "composer_open": "C:\\FTC HOLDING\\APPS\\una-social-agent\\content\\proof\\2026-07-19\\visible-linkedin-composer-open.png",
+        "post_filled": "C:\\FTC HOLDING\\APPS\\una-social-agent\\content\\proof\\2026-07-19\\visible-linkedin-post-filled.png",
+        "media_missing": "C:\\FTC HOLDING\\APPS\\una-social-agent\\content\\proof\\2026-07-19\\visible-linkedin-media-picker-missing.png"
+      },
+      "url": "",
+      "imageCount": 1,
+      "reason": "LinkedIn media file picker did not open.",
+      "details": {
+        "ok": false,
+        "reason": "LinkedIn media file picker did not open.",
+        "steps": [
+          {
+            "action": "linkedin_media_button_clicked"
+          }
+        ],
+        "imageCount": 1,
+        "media_missing": "C:\\FTC HOLDING\\APPS\\una-social-agent\\content\\proof\\2026-07-19\\visible-linkedin-media-picker-missing.png"
+      }
+    }
+  },
+  "proofDir": "C:\\FTC HOLDING\\APPS\\una-social-agent\\content\\proof\\2026-07-19",
+  "createdAt": "2026-07-19T23:57:27Z"
+}

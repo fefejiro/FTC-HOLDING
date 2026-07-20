@@ -1,0 +1,42 @@
+{
+  "story_id": "rest-of-world-the-problem-ai-content-moderation-cannot-s-3",
+  "region": "Rest of World",
+  "country_or_market": "Global",
+  "headline": "The problem AI content moderation cannot solve",
+  "plain_language_summary": "Meta and other big tech companies are increasingly using AI for content moderation, but as the backlash to Muse Image shows, it cannot protect users because it does not account for consent.",
+  "primary_subject": "technology operations workflow",
+  "technology": [
+    "AI systems",
+    "automation",
+    "reporting workflow"
+  ],
+  "organization": "Rest of World",
+  "people_or_roles": [
+    "operator",
+    "analyst",
+    "team lead"
+  ],
+  "physical_environment": "practical technology operations workspace",
+  "visible_objects": [
+    "operations board",
+    "review checklist",
+    "system dashboard"
+  ],
+  "important_actions": [
+    "checking a workflow",
+    "reviewing source-backed information"
+  ],
+  "real_world_application": [
+    "daily operations",
+    "decision support"
+  ],
+  "visual_evidence_from_source": [
+    "technology operations",
+    "global tech",
+    "policy"
+  ],
+  "source_name": "Rest of World",
+  "source_url": "https://restofworld.org/2026/ai-content-moderation-consent-muse/?utm_source=rss&utm_medium=rss&utm_campaign=feeds",
+  "publication_date": "2026-07-16T10:00:00.000Z",
+  "confidence": 0.72
+}

@@ -172,7 +172,17 @@ for (const [index, entry] of entries.entries()) {
   await fs.copyFile(record.slidePath, editorialSlidePath)
 }
 
-if (slidePaths[0]) await fs.copyFile(slidePaths[0], path.join(assetDir, 'instagram-card.png'))
+const allPublishable =
+  records.length > 0 &&
+  records.every(
+    (record) => record.image_evaluation.decision === 'accept' && record.fallback_used !== true,
+  )
+const publishableAssetPath = path.join(assetDir, 'instagram-card.png')
+if (allPublishable && slidePaths[0]) {
+  await fs.copyFile(slidePaths[0], publishableAssetPath)
+} else {
+  await fs.rm(publishableAssetPath, { force: true })
+}
 const contactPath = path.join(previewDir, `regional-news-preview-${runDate}.png`)
 await renderContactSheet(slidePaths, contactPath)
 const editorialContactPath = path.join(previewDir, `editorial-news-preview-${runDate}.png`)
@@ -182,9 +192,11 @@ const ledgerPath = path.join(root, 'content', 'visuals', runDate, 'visual-proof-
 await writeJson(ledgerPath, {
   run_id: `una-visual-${runDate}`,
   runDate,
-  status: records.every((record) => record.image_evaluation.decision === 'accept') ? 'visual_review_ready' : 'visual_review_blocked',
+  status: allPublishable ? 'visual_review_ready' : 'visual_review_blocked',
   publish_status: 'review_required',
-  note: 'Live posting remains blocked until publish-approved.json is created after human review.',
+  note: allPublishable
+    ? 'Visuals passed review and the publishable Instagram card was exported.'
+    : 'Fallback/template visuals are preview-only. No publishable instagram-card.png was exported.',
   records: records.map(({ rawPath, slidePath, outDir, ...record }) => record),
   contact_sheet: path.relative(root, contactPath),
   createdAt: new Date().toISOString(),
@@ -193,9 +205,10 @@ await writeJson(ledgerPath, {
 console.log(
   JSON.stringify(
     {
-      status: records.every((record) => record.image_evaluation.decision === 'accept') ? 'visual_review_ready' : 'visual_review_blocked',
+      status: allPublishable ? 'visual_review_ready' : 'visual_review_blocked',
       runDate,
       case: useAurora ? 'aurora' : 'regional',
+      publishable_asset: allPublishable ? path.relative(root, publishableAssetPath) : null,
       preview: path.relative(root, contactPath),
       slides: slidePaths.map((slidePath) => path.relative(root, slidePath)),
       ledger: path.relative(root, ledgerPath),

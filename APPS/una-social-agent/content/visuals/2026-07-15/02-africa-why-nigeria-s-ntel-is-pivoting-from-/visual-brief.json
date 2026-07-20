@@ -1,0 +1,55 @@
+{
+  "story_id": "africa-why-nigeria-s-ntel-is-pivoting-from-teleco-2",
+  "region": "Africa",
+  "editorial_angle": "Satellite Data Operations moving into practical use",
+  "image_type": "editorial_photo",
+  "primary_subject": "satellite data operations",
+  "subject_action": "reviewing satellite passes",
+  "environment": "satellite operations room",
+  "supporting_elements": [
+    "ground station display",
+    "Earth observation map",
+    "telemetry console",
+    "mapping",
+    "climate monitoring",
+    "communications"
+  ],
+  "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
+  "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
+  "lighting": "natural professional lighting",
+  "mood": "credible, operational, human, practical",
+  "regional_context": [
+    "authentic Nigeria market context where relevant"
+  ],
+  "technology_signals": [
+    "Earth observation",
+    "orbital data",
+    "ground station telemetry"
+  ],
+  "must_show": [
+    "satellite data operations",
+    "Earth observation",
+    "orbital data",
+    "ground station telemetry",
+    "reviewing satellite passes"
+  ],
+  "must_not_show": [
+    "abstract screen",
+    "glowing ai brain",
+    "robot head",
+    "generic server room",
+    "generic city skyline",
+    "floating hologram",
+    "phone as the main subject",
+    "people standing beside a screen",
+    "decorative people",
+    "stereotype imagery",
+    "flags as the main subject",
+    "unlicensed logos",
+    "visible text"
+  ],
+  "text_safe_area": "bottom",
+  "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Why Nigeria's ntel is pivoting from telecom operator to infrastructure company. Primary subject: satellite data operations. Show a mission operator actively reviewing satellite passes in a satellite operations room. Story-specific technology: Earth observation, orbital data, ground station telemetry. Visible supporting details: ground station display, Earth observation map, telemetry console, mapping, climate monitoring, communications. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Nigeria market context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+  "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
+  "visual_confidence": 0.86
+}

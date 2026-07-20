@@ -68,7 +68,6 @@ const paths = {
   sources: path.join(draftDir, 'sources.json'),
   instagram: path.join(draftDir, 'instagram-caption.md'),
   linkedin: path.join(draftDir, 'linkedin-post.md'),
-  png: path.join(assetDir, 'instagram-card.png'),
   slide1: path.join(root, 'content', 'previews', `regional-news-preview-${runDate}-slide-1.png`),
   slide2: path.join(root, 'content', 'previews', `regional-news-preview-${runDate}-slide-2.png`),
   slide3: path.join(root, 'content', 'previews', `regional-news-preview-${runDate}-slide-3.png`),

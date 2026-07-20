@@ -1,0 +1,42 @@
+{
+  "story_id": "africa-hackers-take-over-kenya-s-president-s-webs-2",
+  "region": "Africa",
+  "country_or_market": "Kenya",
+  "headline": "Hackers take over Kenya's president's website, demand 5 Bitcoins ransom",
+  "plain_language_summary": "Kenya's president hacked website was defaced with demeaning messages targeting the president; the unknown group responsible for the attack are demanding a ransom of 5 Bitcoins (approximately $317,215).",
+  "primary_subject": "technology operations workflow",
+  "technology": [
+    "AI systems",
+    "automation",
+    "reporting workflow"
+  ],
+  "organization": "Techpoint Africa",
+  "people_or_roles": [
+    "operator",
+    "analyst",
+    "team lead"
+  ],
+  "physical_environment": "practical technology operations workspace",
+  "visible_objects": [
+    "operations board",
+    "review checklist",
+    "system dashboard"
+  ],
+  "important_actions": [
+    "checking a workflow",
+    "reviewing source-backed information"
+  ],
+  "real_world_application": [
+    "daily operations",
+    "decision support"
+  ],
+  "visual_evidence_from_source": [
+    "technology operations",
+    "africa",
+    "startups"
+  ],
+  "source_name": "Techpoint Africa",
+  "source_url": "https://techpoint.africa/insight/kenyas-presidents-website-hack/",
+  "publication_date": "2026-07-18T19:49:47.000Z",
+  "confidence": 0.72
+}

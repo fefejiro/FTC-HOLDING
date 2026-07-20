@@ -3,78 +3,72 @@
   "runDate": "2026-07-15",
   "status": "visual_review_ready",
   "publish_status": "review_required",
-  "note": "Built-in image generation triptych reviewed and rendered into carousel slides.",
+  "note": "Live posting remains blocked until publish-approved.json is created after human review.",
   "records": [
     {
       "run_id": "una-visual-2026-07-15",
-      "story_id": "north-america-how-to-manage-ai-investments-in-the-agenti-1",
+      "story_id": "north-america-the-us-is-advancing-ai-safety-through-stat-1",
       "region": "North America",
-      "headline": "How to manage AI investments in the agentic era",
-      "source_url": "https://openai.com/index/managing-ai-investments-in-agentic-era",
-      "source_date": "2026-07-14T10:00:00.000Z",
+      "headline": "The US is advancing AI safety through state and federal action",
+      "source_url": "https://openai.com/index/advancing-ai-safety-through-state-and-federal-action",
+      "source_date": "2026-07-15T12:00:00.000Z",
       "story_score": 0,
       "story_facts": {
-        "story_id": "north-america-how-to-manage-ai-investments-in-the-agenti-1",
+        "story_id": "north-america-the-us-is-advancing-ai-safety-through-stat-1",
         "region": "North America",
         "country_or_market": "North America",
-        "headline": "How to manage AI investments in the agentic era",
-        "plain_language_summary": "Learn how enterprises can manage AI investments in the agentic era by measuring useful work per dollar, improving efficiency, and scaling high-value workflows.",
-        "primary_subject": "work-focused AI agent in daily operations",
+        "headline": "The US is advancing AI safety through state and federal action",
+        "plain_language_summary": "OpenAI outlines a \"reverse federalism\" approach to AI governance, where state laws help build a national framework for safe, democratic AI.",
+        "primary_subject": "technology operations workflow",
         "technology": [
-          "AI agents",
-          "workflow automation",
-          "document review",
-          "customer support"
+          "AI systems",
+          "automation",
+          "reporting workflow"
         ],
         "organization": "OpenAI News",
         "people_or_roles": [
-          "operations manager",
-          "support lead",
-          "analyst"
+          "operator",
+          "analyst",
+          "team lead"
         ],
-        "physical_environment": "real team workspace or meeting room",
+        "physical_environment": "practical technology operations workspace",
         "visible_objects": [
-          "workflow board",
-          "ticket queue",
+          "operations board",
           "review checklist",
-          "shared dashboard"
+          "system dashboard"
         ],
         "important_actions": [
-          "checking agent output",
-          "reviewing a task queue",
-          "deciding the next action"
+          "checking a workflow",
+          "reviewing source-backed information"
         ],
         "real_world_application": [
-          "support operations",
-          "admin work",
-          "research and reporting"
+          "daily operations",
+          "decision support"
         ],
         "visual_evidence_from_source": [
-          "workplace AI",
+          "technology operations",
           "ai",
           "models"
         ],
         "source_name": "OpenAI News",
-        "source_url": "https://openai.com/index/managing-ai-investments-in-agentic-era",
-        "publication_date": "2026-07-14T10:00:00.000Z",
-        "confidence": 0.86
+        "source_url": "https://openai.com/index/advancing-ai-safety-through-state-and-federal-action",
+        "publication_date": "2026-07-15T12:00:00.000Z",
+        "confidence": 0.72
       },
       "visual_brief": {
-        "story_id": "north-america-how-to-manage-ai-investments-in-the-agenti-1",
+        "story_id": "north-america-the-us-is-advancing-ai-safety-through-stat-1",
         "region": "North America",
-        "editorial_angle": "Work-focused Ai Agent In Daily Operations moving into practical use",
+        "editorial_angle": "Technology Operations Workflow moving into practical use",
         "image_type": "editorial_photo",
-        "primary_subject": "work-focused AI agent in daily operations",
-        "subject_action": "checking agent output",
-        "environment": "real team workspace or meeting room",
+        "primary_subject": "technology operations workflow",
+        "subject_action": "checking a workflow",
+        "environment": "practical technology operations workspace",
         "supporting_elements": [
-          "workflow board",
-          "ticket queue",
+          "operations board",
           "review checklist",
-          "shared dashboard",
-          "support operations",
-          "admin work",
-          "research and reporting"
+          "system dashboard",
+          "daily operations",
+          "decision support"
         ],
         "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
         "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
@@ -84,17 +78,16 @@
           "authentic North America business context where relevant"
         ],
         "technology_signals": [
-          "AI agents",
-          "workflow automation",
-          "document review",
-          "customer support"
+          "AI systems",
+          "automation",
+          "reporting workflow"
         ],
         "must_show": [
-          "work-focused AI agent in daily operations",
-          "AI agents",
-          "workflow automation",
-          "document review",
-          "checking agent output"
+          "technology operations workflow",
+          "AI systems",
+          "automation",
+          "reporting workflow",
+          "checking a workflow"
         ],
         "must_not_show": [
           "abstract screen",
@@ -112,135 +105,123 @@
           "visible text"
         ],
         "text_safe_area": "bottom",
-        "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: How to manage AI investments in the agentic era. Primary subject: work-focused AI agent in daily operations. Show a operations manager actively checking agent output in a real team workspace or meeting room. Story-specific technology: AI agents, workflow automation, document review, customer support. Visible supporting details: workflow board, ticket queue, review checklist, shared dashboard, support operations, admin work, research and reporting. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic North America business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+        "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: The US is advancing AI safety through state and federal action. Primary subject: technology operations workflow. Show a operator actively checking a workflow in a practical technology operations workspace. Story-specific technology: AI systems, automation, reporting workflow. Visible supporting details: operations board, review checklist, system dashboard, daily operations, decision support. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic North America business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
         "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
-        "visual_confidence": 0.86
+        "visual_confidence": 0.72
       },
-      "image_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: How to manage AI investments in the agentic era. Primary subject: work-focused AI agent in daily operations. Show a operations manager actively checking agent output in a real team workspace or meeting room. Story-specific technology: AI agents, workflow automation, document review, customer support. Visible supporting details: workflow board, ticket queue, review checklist, shared dashboard, support operations, admin work, research and reporting. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic North America business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
-      "image_asset_path": "content\\visuals\\2026-07-15\\01-north-america-how-to-manage-ai-investments-in-the-\\raw-image.png",
-      "image_model": "built-in-imagegen-triptych",
+      "image_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: The US is advancing AI safety through state and federal action. Primary subject: technology operations workflow. Show a operator actively checking a workflow in a practical technology operations workspace. Story-specific technology: AI systems, automation, reporting workflow. Visible supporting details: operations board, review checklist, system dashboard, daily operations, decision support. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic North America business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+      "image_asset_path": "content\\visuals\\2026-07-15\\01-north-america-the-us-is-advancing-ai-safety-throug\\raw-image.png",
+      "image_model": "deterministic-technical-composition",
       "generation_attempts": 1,
       "image_evaluation": {
         "story_alignment": 80,
         "technology_specificity": 76,
         "regional_authenticity": 78,
-        "editorial_credibility": 88,
+        "editorial_credibility": 86,
         "composition_quality": 86,
         "text_safe_area_quality": 86,
         "stereotype_risk": 8,
-        "generic_stock_risk": 24,
-        "overall_score": 88,
+        "generic_stock_risk": 34,
+        "overall_score": 86,
         "failure_reasons": [],
         "retry_instructions": [],
         "decision": "accept",
         "evaluation_mode": "brief_static_with_rendered_fallback"
       },
       "rejected_generations": [],
-      "fallback_used": false,
-      "fallback_reason": "",
-      "attribution": {
-        "title": "Codex built-in image generation triptych",
-        "source_url": "",
-        "license": "project-generated",
-        "artist": "Una Labs / Codex"
-      },
-      "slide_asset_path": "content\\visuals\\2026-07-15\\01-north-america-how-to-manage-ai-investments-in-the-\\slide.png",
+      "fallback_used": true,
+      "fallback_reason": "Image generation is not configured for unattended use; rendered a deterministic story-specific technical composition.",
+      "attribution": null,
+      "slide_asset_path": "content\\visuals\\2026-07-15\\01-north-america-the-us-is-advancing-ai-safety-throug\\slide.png",
       "publish_status": "review_required",
       "published_urls": [],
       "screenshots": [],
-      "timestamp": "2026-07-15T12:14:31.112Z"
+      "timestamp": "2026-07-15T22:28:33.023Z"
     },
     {
       "run_id": "una-visual-2026-07-15",
-      "story_id": "africa-how-google-s-daily-brief-works-and-how-to--2",
+      "story_id": "africa-why-nigeria-s-ntel-is-pivoting-from-teleco-2",
       "region": "Africa",
-      "headline": "How Google's Daily Brief works and how to set it up",
-      "source_url": "https://techcabal.com/2026/07/15/how-googles-daily-brief-works-and-how-to-set-it-up/",
-      "source_date": "2026-07-15T11:50:36.000Z",
+      "headline": "Why Nigeria's ntel is pivoting from telecom operator to infrastructure company",
+      "source_url": "https://techcabal.com/2026/07/15/ntel-bets-its-future-on-towers-fibre-and-power-not-phone-calls/",
+      "source_date": "2026-07-15T15:59:19.000Z",
       "story_score": 0,
       "story_facts": {
-        "story_id": "africa-how-google-s-daily-brief-works-and-how-to--2",
+        "story_id": "africa-why-nigeria-s-ntel-is-pivoting-from-teleco-2",
         "region": "Africa",
-        "country_or_market": "Africa",
-        "headline": "How Google's Daily Brief works and how to set it up",
-        "plain_language_summary": "Google wants your morning to start with an AI assistant that has already read your inbox, scanned your calendar, and figured out what needs your attention each day.",
-        "primary_subject": "work-focused AI agent in daily operations",
+        "country_or_market": "Nigeria",
+        "headline": "Why Nigeria's ntel is pivoting from telecom operator to infrastructure company",
+        "plain_language_summary": "ntel said on Monday, during its relaunch, that it is transitioning into a digital infrastructure company, focusing on towers, fibre networks, power systems and real estate",
+        "primary_subject": "satellite data operations",
         "technology": [
-          "AI agents",
-          "workflow automation",
-          "document review",
-          "customer support"
+          "Earth observation",
+          "orbital data",
+          "ground station telemetry"
         ],
         "organization": "TechCabal",
         "people_or_roles": [
-          "operations manager",
-          "support lead",
-          "analyst"
+          "mission operator",
+          "remote-sensing analyst"
         ],
-        "physical_environment": "real team workspace or meeting room",
+        "physical_environment": "satellite operations room",
         "visible_objects": [
-          "workflow board",
-          "ticket queue",
-          "review checklist",
-          "shared dashboard"
+          "ground station display",
+          "Earth observation map",
+          "telemetry console"
         ],
         "important_actions": [
-          "checking agent output",
-          "reviewing a task queue",
-          "deciding the next action"
+          "reviewing satellite passes",
+          "checking imagery quality"
         ],
         "real_world_application": [
-          "support operations",
-          "admin work",
-          "research and reporting"
+          "mapping",
+          "climate monitoring",
+          "communications"
         ],
         "visual_evidence_from_source": [
-          "workplace AI",
+          "satellite",
           "africa",
-          "startups",
-          "Google"
+          "startups"
         ],
         "source_name": "TechCabal",
-        "source_url": "https://techcabal.com/2026/07/15/how-googles-daily-brief-works-and-how-to-set-it-up/",
-        "publication_date": "2026-07-15T11:50:36.000Z",
+        "source_url": "https://techcabal.com/2026/07/15/ntel-bets-its-future-on-towers-fibre-and-power-not-phone-calls/",
+        "publication_date": "2026-07-15T15:59:19.000Z",
         "confidence": 0.86
       },
       "visual_brief": {
-        "story_id": "africa-how-google-s-daily-brief-works-and-how-to--2",
+        "story_id": "africa-why-nigeria-s-ntel-is-pivoting-from-teleco-2",
         "region": "Africa",
-        "editorial_angle": "Work-focused Ai Agent In Daily Operations moving into practical use",
+        "editorial_angle": "Satellite Data Operations moving into practical use",
         "image_type": "editorial_photo",
-        "primary_subject": "work-focused AI agent in daily operations",
-        "subject_action": "checking agent output",
-        "environment": "real team workspace or meeting room",
+        "primary_subject": "satellite data operations",
+        "subject_action": "reviewing satellite passes",
+        "environment": "satellite operations room",
         "supporting_elements": [
-          "workflow board",
-          "ticket queue",
-          "review checklist",
-          "shared dashboard",
-          "support operations",
-          "admin work",
-          "research and reporting"
+          "ground station display",
+          "Earth observation map",
+          "telemetry console",
+          "mapping",
+          "climate monitoring",
+          "communications"
         ],
         "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
         "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
         "lighting": "natural professional lighting",
         "mood": "credible, operational, human, practical",
         "regional_context": [
-          "authentic Africa business context where relevant"
+          "authentic Nigeria market context where relevant"
         ],
         "technology_signals": [
-          "AI agents",
-          "workflow automation",
-          "document review",
-          "customer support"
+          "Earth observation",
+          "orbital data",
+          "ground station telemetry"
         ],
         "must_show": [
-          "work-focused AI agent in daily operations",
-          "AI agents",
-          "workflow automation",
-          "document review",
-          "checking agent output"
+          "satellite data operations",
+          "Earth observation",
+          "orbital data",
+          "ground station telemetry",
+          "reviewing satellite passes"
         ],
         "must_not_show": [
           "abstract screen",
@@ -258,43 +239,38 @@
           "visible text"
         ],
         "text_safe_area": "bottom",
-        "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: How Google's Daily Brief works and how to set it up. Primary subject: work-focused AI agent in daily operations. Show a operations manager actively checking agent output in a real team workspace or meeting room. Story-specific technology: AI agents, workflow automation, document review, customer support. Visible supporting details: workflow board, ticket queue, review checklist, shared dashboard, support operations, admin work, research and reporting. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Africa business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+        "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Why Nigeria's ntel is pivoting from telecom operator to infrastructure company. Primary subject: satellite data operations. Show a mission operator actively reviewing satellite passes in a satellite operations room. Story-specific technology: Earth observation, orbital data, ground station telemetry. Visible supporting details: ground station display, Earth observation map, telemetry console, mapping, climate monitoring, communications. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Nigeria market context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
         "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
         "visual_confidence": 0.86
       },
-      "image_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: How Google's Daily Brief works and how to set it up. Primary subject: work-focused AI agent in daily operations. Show a operations manager actively checking agent output in a real team workspace or meeting room. Story-specific technology: AI agents, workflow automation, document review, customer support. Visible supporting details: workflow board, ticket queue, review checklist, shared dashboard, support operations, admin work, research and reporting. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Africa business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
-      "image_asset_path": "content\\visuals\\2026-07-15\\02-africa-how-google-s-daily-brief-works-and-h\\raw-image.png",
-      "image_model": "built-in-imagegen-triptych",
+      "image_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Why Nigeria's ntel is pivoting from telecom operator to infrastructure company. Primary subject: satellite data operations. Show a mission operator actively reviewing satellite passes in a satellite operations room. Story-specific technology: Earth observation, orbital data, ground station telemetry. Visible supporting details: ground station display, Earth observation map, telemetry console, mapping, climate monitoring, communications. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Nigeria market context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+      "image_asset_path": "content\\visuals\\2026-07-15\\02-africa-why-nigeria-s-ntel-is-pivoting-from-\\raw-image.png",
+      "image_model": "deterministic-technical-composition",
       "generation_attempts": 1,
       "image_evaluation": {
         "story_alignment": 80,
         "technology_specificity": 76,
         "regional_authenticity": 78,
-        "editorial_credibility": 88,
+        "editorial_credibility": 86,
         "composition_quality": 86,
         "text_safe_area_quality": 86,
         "stereotype_risk": 8,
-        "generic_stock_risk": 24,
-        "overall_score": 88,
+        "generic_stock_risk": 34,
+        "overall_score": 86,
         "failure_reasons": [],
         "retry_instructions": [],
         "decision": "accept",
         "evaluation_mode": "brief_static_with_rendered_fallback"
       },
       "rejected_generations": [],
-      "fallback_used": false,
-      "fallback_reason": "",
-      "attribution": {
-        "title": "Codex built-in image generation triptych",
-        "source_url": "",
-        "license": "project-generated",
-        "artist": "Una Labs / Codex"
-      },
-      "slide_asset_path": "content\\visuals\\2026-07-15\\02-africa-how-google-s-daily-brief-works-and-h\\slide.png",
+      "fallback_used": true,
+      "fallback_reason": "Image generation is not configured for unattended use; rendered a deterministic story-specific technical composition.",
+      "attribution": null,
+      "slide_asset_path": "content\\visuals\\2026-07-15\\02-africa-why-nigeria-s-ntel-is-pivoting-from-\\slide.png",
       "publish_status": "review_required",
       "published_urls": [],
       "screenshots": [],
-      "timestamp": "2026-07-15T12:14:32.613Z"
+      "timestamp": "2026-07-15T22:28:35.231Z"
     },
     {
       "run_id": "una-visual-2026-07-15",
@@ -409,41 +385,34 @@
       },
       "image_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: AI powers citizen-led disaster relief from afar for Venezuela. Primary subject: AI-assisted disaster response coordination. Show a volunteer coordinator actively matching reports to known locations in a community response workspace or emergency coordination room. Story-specific technology: AI search, missing-person reports, relief coordination, crisis mapping. Visible supporting details: missing-person list, relief map, message queue, coordination dashboard, disaster response, public safety coordination, community support. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Rest of World business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
       "image_asset_path": "content\\visuals\\2026-07-15\\03-rest-of-world-ai-powers-citizen-led-disaster-relie\\raw-image.png",
-      "image_model": "built-in-imagegen-triptych",
+      "image_model": "deterministic-technical-composition",
       "generation_attempts": 1,
       "image_evaluation": {
         "story_alignment": 80,
         "technology_specificity": 76,
         "regional_authenticity": 78,
-        "editorial_credibility": 88,
+        "editorial_credibility": 86,
         "composition_quality": 86,
         "text_safe_area_quality": 86,
         "stereotype_risk": 8,
-        "generic_stock_risk": 24,
-        "overall_score": 88,
+        "generic_stock_risk": 34,
+        "overall_score": 86,
         "failure_reasons": [],
         "retry_instructions": [],
         "decision": "accept",
         "evaluation_mode": "brief_static_with_rendered_fallback"
       },
       "rejected_generations": [],
-      "fallback_used": false,
-      "fallback_reason": "",
-      "attribution": {
-        "title": "Codex built-in image generation triptych",
-        "source_url": "",
-        "license": "project-generated",
-        "artist": "Una Labs / Codex"
-      },
+      "fallback_used": true,
+      "fallback_reason": "Image generation is not configured for unattended use; rendered a deterministic story-specific technical composition.",
+      "attribution": null,
       "slide_asset_path": "content\\visuals\\2026-07-15\\03-rest-of-world-ai-powers-citizen-led-disaster-relie\\slide.png",
       "publish_status": "review_required",
       "published_urls": [],
       "screenshots": [],
-      "timestamp": "2026-07-15T12:14:35.742Z"
+      "timestamp": "2026-07-15T22:28:37.441Z"
     }
   ],
   "contact_sheet": "content\\previews\\regional-news-preview-2026-07-15.png",
-  "createdAt": "2026-07-15T12:14:36.221Z",
-  "generated_triptych": "content\\visuals\\2026-07-15\\imagegen-triptych.png",
-  "updatedAt": "2026-07-15T13:00:37.169Z"
+  "createdAt": "2026-07-15T22:28:37.861Z"
 }

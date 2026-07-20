@@ -81,20 +81,24 @@ function inferCountry(region, text) {
 function inferDomain(text) {
   const lower = text.toLowerCase()
   if (hasAny(lower, ['weather', 'climate', 'earth-system', 'satellite', 'storm', 'forecast'])) return 'weather'
+  if (hasAny(lower, ['teen', 'teens', 'youth', 'children', 'minor', 'parental controls', 'age-appropriate', 'online safety', 'safe ai'])) return 'online safety'
+  if (hasAny(lower, ['content moderation', 'moderation', 'consent', 'trust and safety', 'user safety', 'platform safety'])) return 'content moderation'
   if (hasAny(lower, ['earthquake', 'disaster', 'relief', 'missing persons', 'missing people', 'emergency response', 'citizen-led'])) return 'disaster response'
   if (hasAny(lower, ['daily brief', 'inbox', 'calendar', 'assistant', 'attention each day', 'morning'])) return 'workplace AI'
   if (hasAny(lower, ['cryptography', 'cryptographic', 'symcrypt', 'verified code', 'code verification', 'memory safety'])) return 'cybersecurity'
   if (hasAny(lower, ['nvidia', 'gpu', 'blackwell', 'semiconductor', 'foundry', 'chip'])) return 'semiconductor'
+  if (hasAny(lower, ['enterprise ai', 'spreadsheet analysis', 'decide for work', 'workplaces', 'workplace', 'office productivity', 'productivity ai'])) return 'workplace AI'
   if (hasAny(lower, ['web3', 'blockchain', 'stablecoin'])) return 'web3'
   if (hasAny(lower, ['whatsapp', 'encryption', 'username', 'messaging', 'platform rule', 'platform policy', 'ban'])) return 'platform policy'
   if (hasAny(lower, ['payment', 'fintech', 'merchant', 'bank', 'wallet', 'remittance', 'mobile money'])) return 'fintech'
+  if (hasAny(lower, ['classroom', 'student', 'students', 'stem', 'school', 'deaf students', 'education']) && hasAny(lower, ['robot', 'robotics', 'engineering'])) return 'education robotics'
   if (hasAny(lower, ['robot', 'robotics', 'factory', 'manufacturing'])) return 'robotics'
   if (hasAny(lower, ['breach', 'cyber', 'security', 'ransomware', 'vulnerability'])) return 'cybersecurity'
   if (hasAny(lower, ['solar', 'wind', 'grid', 'renewable', 'energy'])) return 'renewable energy'
   if (hasAny(lower, ['chip', 'semiconductor', 'foundry', 'gpu'])) return 'semiconductor'
   if (hasAny(lower, ['health', 'hospital', 'clinical', 'patient', 'medical'])) return 'health technology'
   if (hasAny(lower, ['identity', 'public sector', 'government', 'digital id'])) return 'digital identity'
-  if (hasAny(lower, ['satellite', 'space', 'launch', 'orbit'])) return 'satellite'
+  if (hasAny(lower, ['satellite', 'spacecraft', 'orbital', 'orbit', 'earth observation', 'ground station'])) return 'satellite'
   if (hasAny(lower, ['agent', 'workflow', 'office', 'productivity', 'customer service'])) return 'workplace AI'
   if (hasAny(lower, ['logistics', 'warehouse', 'supply chain', 'delivery', 'fleet'])) return 'logistics automation'
   if (hasAny(lower, ['telecom', 'network', 'phone network', 'operator'])) return 'telecom AI'
@@ -137,6 +141,15 @@ const DOMAIN_VISUALS = {
     objects: ['robotic arm', 'inspection station', 'safety markings', 'parts tray'],
     actions: ['inspecting automated assembly', 'checking computer vision output'],
     applications: ['factory productivity', 'quality control', 'worker safety'],
+  },
+  'education robotics': {
+    primarySubject: 'classroom robotics and STEM learning',
+    technology: ['classroom robotics', 'assistive learning tools', 'engineering education', 'student STEM projects'],
+    roles: ['engineering mentor', 'student team', 'teacher'],
+    environment: 'STEM classroom or youth robotics workshop',
+    objects: ['student laptops', 'robotics kit', 'classroom worktable', 'prototype parts'],
+    actions: ['mentoring students', 'building classroom robots', 'testing a student prototype'],
+    applications: ['STEM education', 'accessible learning', 'student engineering skills'],
   },
   cybersecurity: {
     primarySubject: 'security operations response',
@@ -182,6 +195,24 @@ const DOMAIN_VISUALS = {
     objects: ['service counter', 'verification checklist', 'secure terminal'],
     actions: ['verifying identity documents', 'helping a resident access a service'],
     applications: ['public services', 'benefits access', 'secure onboarding'],
+  },
+  'online safety': {
+    primarySubject: 'youth online safety review',
+    technology: ['AI safety controls', 'parental controls', 'age-aware product design', 'learning safeguards'],
+    roles: ['product safety lead', 'educator', 'parent advisor'],
+    environment: 'school technology review room or youth safety product workshop',
+    objects: ['safety checklist', 'student device', 'parent control dashboard', 'learning policy notes'],
+    actions: ['reviewing youth safety controls', 'checking learning safeguards', 'discussing age-appropriate AI access'],
+    applications: ['student learning', 'online safety', 'family controls', 'responsible AI access'],
+  },
+  'content moderation': {
+    primarySubject: 'AI content moderation and consent review',
+    technology: ['content moderation workflow', 'consent review', 'trust and safety operations', 'platform policy'],
+    roles: ['trust and safety analyst', 'policy reviewer', 'product counsel'],
+    environment: 'platform trust and safety review room',
+    objects: ['moderation queue', 'consent checklist', 'policy notes', 'review dashboard'],
+    actions: ['reviewing consent risk', 'checking moderation decisions', 'mapping platform safety gaps'],
+    applications: ['user consent', 'platform safety', 'privacy protection', 'policy enforcement'],
   },
   'disaster response': {
     primarySubject: 'AI-assisted disaster response coordination',
@@ -536,6 +567,14 @@ function searchTermsForFacts(facts) {
     fintech: ['African mobile money merchant payment', 'mobile payment merchant Africa', 'digital payment shop Africa'],
     web3: ['African startup office team', 'African business team laptop', 'African fintech office', 'African fintech startup team office', 'Lagos technology startup meeting'],
     robotics: ['manufacturing engineer robot factory', 'industrial robot worker factory'],
+    'education robotics': [
+      'robotics classroom students laptop',
+      'STEM classroom robotics laptop',
+      'students robotics workshop computer',
+      'student finalists scientific competition',
+      'robotics workshop students',
+      'engineering students laptop classroom',
+    ],
     cybersecurity: ['security operations center analyst', 'cybersecurity analyst operations room'],
     'renewable energy': ['solar engineer Africa', 'renewable energy technician solar panels'],
     semiconductor: ['semiconductor clean room engineer', 'wafer inspection clean room'],
@@ -543,15 +582,59 @@ function searchTermsForFacts(facts) {
     'digital identity': ['public service office digital identity', 'government service counter computer'],
     'disaster response': ['volunteer disaster relief coordination room', 'emergency response team laptops map', 'community disaster response volunteers computer'],
     'platform policy': ['smartphone privacy policy meeting', 'India technology policy meeting', 'people using smartphones India'],
+    'online safety': [
+      'online safety classroom students laptop teacher',
+      'parental controls child online safety computer',
+      'student technology safety workshop laptop',
+      'school technology classroom computer students teacher',
+    ],
+    'content moderation': [
+      'trust and safety team content moderation office',
+      'content moderation analysts computer office',
+      'online safety policy review team laptop',
+      'privacy policy review meeting technology team',
+      'technology policy meeting laptop team',
+      'software team review meeting laptop',
+      'office team computer meeting policy review',
+      'people meeting laptop office technology',
+    ],
     satellite: ['satellite control room operator', 'earth observation control room'],
-    'workplace AI': ['diverse team office computer workflow', 'business analyst team dashboard'],
+    'workplace AI': [
+      'African business team laptop office',
+      'business people working laptops meeting',
+      'diverse team office computer workflow',
+      'business analyst team dashboard',
+      'office team spreadsheet laptop meeting',
+    ],
     'logistics automation': ['warehouse dispatch operator', 'logistics control room warehouse'],
     'telecom AI': ['telecom network operations center', 'network operations center engineer'],
   }[domain] || ['technology operations team office']
   const country = facts.country_or_market && !['Global', 'North America', 'Africa'].includes(facts.country_or_market)
     ? facts.country_or_market
     : ''
-  return terms.map((term) => `${term} ${country}`.trim())
+  if (!country) return terms
+  return unique([
+    ...terms.map((term) => `${term} ${country}`.trim()),
+    ...terms,
+  ])
+}
+
+function curatedImageCandidatesForFacts(facts) {
+  const domain = inferDomain(`${facts.headline} ${facts.plain_language_summary} ${facts.technology.join(' ')}`)
+  const candidatesByDomain = {
+    'education robotics': [
+      {
+        title: 'Student finalists compete in scientific competition',
+        url: 'https://live.staticflickr.com/7213/7405526220_c5a30672b4_b.jpg',
+        source: 'https://www.flickr.com/photos/34402227@N03/7405526220',
+        license: 'by 2.0',
+        artist: 'U.S. Army Combat Capabilities Development Command',
+        search_term: 'robotics classroom students laptop',
+        provider: 'flickr',
+      },
+    ],
+  }
+  return candidatesByDomain[domain] || []
 }
 
 function imageCandidateRejected(candidate) {
@@ -765,6 +848,29 @@ export async function renderRawVisual(facts, brief, outPath) {
   if (openverse.ok) return openverse
   const commons = await fetchCommonsImage(facts, outPath)
   if (commons.ok) return commons
+  for (const candidate of curatedImageCandidatesForFacts(facts)) {
+    try {
+      const saved = await downloadImage(candidate, outPath)
+      if (!saved) continue
+      return {
+        ok: true,
+        image_asset_path: outPath,
+        image_model: 'curated-editorial-photo',
+        fallback_used: false,
+        fallback_reason: '',
+        attribution: {
+          title: saved.title,
+          source_url: saved.source,
+          license: saved.license,
+          artist: saved.artist,
+          search_term: saved.search_term,
+          provider: saved.provider,
+        },
+      }
+    } catch {
+      continue
+    }
+  }
   await fs.mkdir(path.dirname(outPath), { recursive: true })
   await renderHtmlToPng(visualSceneHtml(facts, brief), outPath, { width: 1280, height: 760 })
   return {
