@@ -247,3 +247,57 @@ Remaining automation gap:
   before trusting unattended posting. The quality/draft/scheduler layers are
   working; the brittle part is still native media attachment through visible
   browser controls.
+
+## July 20 Visible Publisher Hardening
+
+Root cause found from the July 19/20 upload failures:
+
+- The script could attach to the correct signed-in Chrome profile while Windows
+  had that Chrome window parked on a split or offscreen display.
+- DOM discovery still found buttons such as `Select from computer`, but the
+  physical click coordinates could be negative or outside the primary screen.
+- When that happened, Instagram or LinkedIn looked ready, but the native file
+  picker never opened.
+
+Fix added in `scripts/visible-social-post.py`:
+
+- Normalize the selected Chrome window onto the primary visible screen before
+  navigation, JavaScript DOM probing, coordinate fallback clicks, and media
+  upload clicks.
+- Bounds-check physical DOM click coordinates before clicking.
+- Make native file-picker detection tolerate reused Windows file-dialog handles
+  instead of relying only on brand-new window handles.
+
+Verification:
+
+```powershell
+python -m py_compile scripts\visible-social-post.py
+```
+
+Remaining recommendation:
+
+- Keep the visible Fejiro/Una Labs Chrome profile open and signed in, but it no
+  longer needs to be perfectly maximized. The publisher should move it into a
+  usable visible position before upload actions.
+- Still treat platform API posting as the long-term stronger route once tokens
+  and permissions are ready. Visible browser posting is now more reliable, but
+  platform UI changes can still break it.
+
+July 20 live recovery:
+
+- Full scheduler run generated the July 20 regional package and passed quality,
+  but the first live publish attempt still blocked at native media upload.
+- A targeted retry was added for Instagram's visible blue upload button and
+  LinkedIn's visible photo toolbar icon.
+- Re-running `npm run publish:visible -- --channels instagram,linkedin` with
+  the scheduled approval override succeeded after the retry:
+  - Instagram uploaded a three-slide carousel and captured profile proof.
+  - LinkedIn attached the visual, posted, and verified the new Page post.
+- Proof report is local at
+  `content/proof/2026-07-20/visible-social-post-report.json`.
+
+Retry rule:
+
+- If a live publish blocks after a possible Share/Post click, check the platform
+  profile/page proof before retrying. Do not blindly rerun a live publish if the
+  post may already be visible.

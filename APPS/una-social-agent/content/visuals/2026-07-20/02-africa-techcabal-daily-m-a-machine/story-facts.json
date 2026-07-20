@@ -1,0 +1,46 @@
+{
+  "story_id": "africa-techcabal-daily-m-a-machine-2",
+  "region": "Africa",
+  "country_or_market": "Kenya",
+  "headline": "👨🏿‍🚀TechCabal Daily - 'M&A machine'",
+  "plain_language_summary": "In today's edition: iOCO acquires another startup || Starlink goes live in Côte d'Ivoire || Kenya wants foreign gambling platforms to block users || Telecom Egypt pulls away from data centre deal",
+  "primary_subject": "AI-assisted telecom operations",
+  "technology": [
+    "network operations",
+    "customer service AI",
+    "voice workflow",
+    "incident routing"
+  ],
+  "organization": "TechCabal",
+  "people_or_roles": [
+    "network operator",
+    "customer service lead",
+    "field coordinator"
+  ],
+  "physical_environment": "telecom network operations centre",
+  "visible_objects": [
+    "network map",
+    "call queue panel",
+    "incident timeline",
+    "field-service board"
+  ],
+  "important_actions": [
+    "reviewing network alerts",
+    "routing customer issues",
+    "checking service quality"
+  ],
+  "real_world_application": [
+    "phone networks",
+    "customer service",
+    "field operations"
+  ],
+  "visual_evidence_from_source": [
+    "telecom AI",
+    "africa",
+    "startups"
+  ],
+  "source_name": "TechCabal",
+  "source_url": "https://techcabal.com/2026/07/20/techcabal-daily-ma-machine/",
+  "publication_date": "2026-07-20T06:54:38.000Z",
+  "confidence": 0.86
+}

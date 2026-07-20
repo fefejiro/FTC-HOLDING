@@ -1,0 +1,44 @@
+{
+  "story_id": "rest-of-world-eu-forces-google-to-share-its-toys-with-th-3",
+  "region": "Rest of World",
+  "country_or_market": "Global",
+  "headline": "EU forces Google to share its toys with the other AI and search kids",
+  "plain_language_summary": "The Chocolate Factory is not amused",
+  "primary_subject": "robotics manufacturing line",
+  "technology": [
+    "industrial robots",
+    "computer vision",
+    "quality inspection"
+  ],
+  "organization": "The Register AI",
+  "people_or_roles": [
+    "manufacturing engineer",
+    "quality operator"
+  ],
+  "physical_environment": "modern factory floor",
+  "visible_objects": [
+    "robotic arm",
+    "inspection station",
+    "safety markings",
+    "parts tray"
+  ],
+  "important_actions": [
+    "inspecting automated assembly",
+    "checking computer vision output"
+  ],
+  "real_world_application": [
+    "factory productivity",
+    "quality control",
+    "worker safety"
+  ],
+  "visual_evidence_from_source": [
+    "robotics",
+    "ai",
+    "software",
+    "Google"
+  ],
+  "source_name": "The Register AI",
+  "source_url": "https://www.theregister.com/software/2026/07/16/eu-forces-google-to-share-its-toys-with-the-other-ai-and-search-kids/5273819",
+  "publication_date": "2026-07-16T16:48:41.000Z",
+  "confidence": 0.86
+}

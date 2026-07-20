@@ -1,0 +1,56 @@
+{
+  "story_id": "rest-of-world-eu-forces-google-to-share-its-toys-with-th-3",
+  "region": "Rest of World",
+  "editorial_angle": "Robotics Manufacturing Line moving into practical use",
+  "image_type": "documentary_photo",
+  "primary_subject": "robotics manufacturing line",
+  "subject_action": "inspecting automated assembly",
+  "environment": "modern factory floor",
+  "supporting_elements": [
+    "robotic arm",
+    "inspection station",
+    "safety markings",
+    "parts tray",
+    "factory productivity",
+    "quality control",
+    "worker safety"
+  ],
+  "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
+  "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
+  "lighting": "natural professional lighting",
+  "mood": "credible, operational, human, practical",
+  "regional_context": [
+    "authentic Rest of World business context where relevant"
+  ],
+  "technology_signals": [
+    "industrial robots",
+    "computer vision",
+    "quality inspection"
+  ],
+  "must_show": [
+    "robotics manufacturing line",
+    "industrial robots",
+    "computer vision",
+    "quality inspection",
+    "inspecting automated assembly"
+  ],
+  "must_not_show": [
+    "abstract screen",
+    "glowing ai brain",
+    "robot head",
+    "generic server room",
+    "generic city skyline",
+    "floating hologram",
+    "phone as the main subject",
+    "people standing beside a screen",
+    "decorative people",
+    "stereotype imagery",
+    "flags as the main subject",
+    "unlicensed logos",
+    "visible text"
+  ],
+  "text_safe_area": "bottom",
+  "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: EU forces Google to share its toys with the other AI and search kids. Primary subject: robotics manufacturing line. Show a manufacturing engineer actively inspecting automated assembly in a modern factory floor. Story-specific technology: industrial robots, computer vision, quality inspection. Visible supporting details: robotic arm, inspection station, safety markings, parts tray, factory productivity, quality control, worker safety. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Rest of World business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+  "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
+  "visual_confidence": 0.86
+}

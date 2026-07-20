@@ -1,0 +1,57 @@
+{
+  "story_id": "africa-techcabal-daily-m-a-machine-2",
+  "region": "Africa",
+  "editorial_angle": "Ai-assisted Telecom Operations moving into practical use",
+  "image_type": "editorial_photo",
+  "primary_subject": "AI-assisted telecom operations",
+  "subject_action": "reviewing network alerts",
+  "environment": "telecom network operations centre",
+  "supporting_elements": [
+    "network map",
+    "call queue panel",
+    "incident timeline",
+    "field-service board",
+    "phone networks",
+    "customer service",
+    "field operations"
+  ],
+  "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
+  "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
+  "lighting": "natural professional lighting",
+  "mood": "credible, operational, human, practical",
+  "regional_context": [
+    "authentic Kenya market context where relevant"
+  ],
+  "technology_signals": [
+    "network operations",
+    "customer service AI",
+    "voice workflow",
+    "incident routing"
+  ],
+  "must_show": [
+    "AI-assisted telecom operations",
+    "network operations",
+    "customer service AI",
+    "voice workflow",
+    "reviewing network alerts"
+  ],
+  "must_not_show": [
+    "abstract screen",
+    "glowing ai brain",
+    "robot head",
+    "generic server room",
+    "generic city skyline",
+    "floating hologram",
+    "phone as the main subject",
+    "people standing beside a screen",
+    "decorative people",
+    "stereotype imagery",
+    "flags as the main subject",
+    "unlicensed logos",
+    "visible text"
+  ],
+  "text_safe_area": "bottom",
+  "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: 👨🏿‍🚀TechCabal Daily - 'M&A machine'. Primary subject: AI-assisted telecom operations. Show a network operator actively reviewing network alerts in a telecom network operations centre. Story-specific technology: network operations, customer service AI, voice workflow, incident routing. Visible supporting details: network map, call queue panel, incident timeline, field-service board, phone networks, customer service, field operations. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Kenya market context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+  "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
+  "visual_confidence": 0.86
+}

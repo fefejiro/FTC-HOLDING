@@ -1,4 +1,5 @@
 import argparse
+import ctypes
 import json
 import os
 import time
@@ -86,6 +87,74 @@ def profile_label(window) -> str:
     return ""
 
 
+def primary_screen_size() -> tuple[int, int]:
+    try:
+        return int(ctypes.windll.user32.GetSystemMetrics(0)), int(ctypes.windll.user32.GetSystemMetrics(1))
+    except Exception:
+        return 1920, 1080
+
+
+def rect_payload(rect) -> dict:
+    return {
+        "left": int(rect.left),
+        "top": int(rect.top),
+        "right": int(rect.right),
+        "bottom": int(rect.bottom),
+        "width": int(rect.width()),
+        "height": int(rect.height()),
+    }
+
+
+def ensure_window_visible(window):
+    """Keep visible-browser coordinate clicks inside the primary display.
+
+    Scheduled runs sometimes attach to a signed-in Chrome window that Windows
+    left on a split/offscreen monitor. DOM discovery still succeeds there, but
+    the resulting physical click coordinates can be negative and miss the
+    browser entirely. Move Chrome into a predictable visible work area before
+    mouse-based upload actions.
+    """
+    try:
+        rect = window.rectangle()
+    except Exception:
+        return None
+
+    screen_width, screen_height = primary_screen_size()
+    visible_enough = (
+        rect.left >= 0
+        and rect.top >= 0
+        and rect.right <= screen_width
+        and rect.bottom <= screen_height
+        and rect.width() >= 900
+        and rect.height() >= 650
+    )
+    if not visible_enough:
+        width = min(max(int(rect.width() or 0), 1280), screen_width)
+        height = min(max(int(rect.height() or 0), 900), screen_height)
+        try:
+            window.restore()
+            time.sleep(0.2)
+        except Exception:
+            pass
+        try:
+            window.move_window(x=0, y=0, width=width, height=height, repaint=True)
+            time.sleep(0.8)
+        except Exception:
+            try:
+                window.move_window(0, 0, width, height)
+                time.sleep(0.8)
+            except Exception:
+                pass
+    try:
+        window.set_focus()
+    except Exception:
+        pass
+    try:
+        return window.rectangle()
+    except Exception:
+        return rect
+
+
 def find_chrome_window():
     candidates = []
     for window in Desktop(backend="uia").windows():
@@ -107,7 +176,9 @@ def find_chrome_window():
         if "fejiro" in label or "linkedin" in title or "instagram" in title:
             fejiro.append(window)
 
-    return fejiro[0] if fejiro else candidates[0]
+    selected = fejiro[0] if fejiro else candidates[0]
+    ensure_window_visible(selected)
+    return selected
 
 
 def screenshot(window, file_path: Path):
@@ -148,6 +219,7 @@ def restore_clipboard(value: str):
 
 
 def navigate(window, url: str, wait: float = 5.0):
+    ensure_window_visible(window)
     window.set_focus()
     time.sleep(0.3)
     old = set_clipboard_temporarily(url)
@@ -204,6 +276,7 @@ def visible_text(window) -> str:
 
 
 def run_js(window, payload: str, wait: float = 1.0):
+    ensure_window_visible(window)
     window.set_focus()
     time.sleep(0.2)
     keyboard.send_keys("^l")
@@ -307,9 +380,19 @@ def click_dom_physical(window, pattern: str, wait: float = 1.0) -> dict:
         return {"ok": False, "reason": f"parse failed: {exc}", "raw": raw}
     if not rect.get("ok"):
         return rect
-    win = window.rectangle()
+    win = ensure_window_visible(window) or window.rectangle()
     x = win.left + int(rect["x"] + rect["width"] / 2)
     y = win.top + int(rect["y"] + rect["height"] / 2)
+    screen_width, screen_height = primary_screen_size()
+    if x < 0 or y < 0 or x >= screen_width or y >= screen_height:
+        return {
+            "ok": False,
+            "reason": "physical click would land outside primary screen",
+            "coords": [x, y],
+            "windowRect": rect_payload(win),
+            "screen": [screen_width, screen_height],
+            "rect": rect,
+        }
     window.set_focus()
     time.sleep(0.2)
     mouse.click(button="left", coords=(x, y))
@@ -433,6 +516,8 @@ def current_window_handles() -> set[int]:
 
 
 def find_file_picker(before_handles: set[int], timeout: float = 15.0):
+    fallback_match = None
+    fallback_title = ""
     deadline = time.time() + timeout
     while time.time() < deadline:
         time.sleep(0.4)
@@ -450,9 +535,24 @@ def find_file_picker(before_handles: set[int], timeout: float = 15.0):
                 except Exception:
                     continue
                 lowered = title.lower()
-                if class_name in ("#32770", "CabinetWClass") or "open" in lowered or "choose" in lowered or "upload" in lowered:
+                is_file_dialog = (
+                    class_name == "#32770"
+                    and (
+                        "open" in lowered
+                        or "choose" in lowered
+                        or "upload" in lowered
+                        or "file" in lowered
+                    )
+                )
+                is_new_explorer_picker = candidate.handle not in before_handles and class_name == "CabinetWClass"
+                if candidate.handle in before_handles:
+                    if is_file_dialog and fallback_match is None:
+                        fallback_match = candidate
+                        fallback_title = title
+                    continue
+                if is_file_dialog or is_new_explorer_picker:
                     return candidate, title
-    return None, ""
+    return fallback_match, fallback_title
 
 
 def fill_file_picker(picker, file_paths):
@@ -473,6 +573,16 @@ def fill_file_picker(picker, file_paths):
         time.sleep(1.5)
     finally:
         restore_clipboard(old)
+
+
+def click_visible_upload_button(window, x_ratio: float, y_ratio: float, wait: float = 0.8) -> list[int]:
+    """Click a known visible upload control with the real mouse.
+
+    Some Instagram/LinkedIn upload buttons are visible and stable but do not
+    always expose reliable UIA names. Use this only after DOM/text attempts have
+    failed to produce a native file picker.
+    """
+    return click_relative(window, x_ratio, y_ratio, wait)
 
 
 def click_text_fallback(window, label: str) -> bool:
@@ -496,7 +606,7 @@ def click_text_fallback(window, label: str) -> bool:
 
 
 def click_relative(window, x_ratio: float, y_ratio: float, wait: float = 0.8) -> list[int]:
-    rect = window.rectangle()
+    rect = ensure_window_visible(window) or window.rectangle()
     x = rect.left + int(rect.width() * x_ratio)
     y = rect.top + int(rect.height() * y_ratio)
     mouse.click(button="left", coords=(x, y))
@@ -598,6 +708,13 @@ def attach_linkedin_images(window, image_paths: list[Path], proof_dir: Path) -> 
 
     picker, picker_title = find_file_picker(before, 8)
     if not picker:
+        # If DOM/text click hit the wrong toolbar item, try the visible photo
+        # icon in the lower-left composer toolbar and wait again.
+        before = current_window_handles()
+        coords = click_visible_upload_button(window, 0.36, 0.72, 1.0)
+        detail["steps"].append({"action": "linkedin_media_coordinate_retry", "coords": coords})
+        picker, picker_title = find_file_picker(before, 8)
+    if not picker:
         detail["media_missing"] = screenshot(window, proof_dir / "visible-linkedin-media-picker-missing.png")
         return {"ok": False, "reason": "LinkedIn media file picker did not open.", **detail}
 
@@ -691,6 +808,11 @@ def publish_instagram(window, run_date: str, image_paths: list[Path], caption: s
             if not (click_instagram_create(window, 1.0).get("ok") or click_dom(window, r"^Create$", 1.0).get("ok") or click_text_fallback(window, "Create")):
                 click_relative(window, 0.019, 0.60, 0.8)
         picker, picker_title = find_file_picker(before, 6)
+        if not picker and ("Select from computer" in page_text or "Create new post" in page_text):
+            before = current_window_handles()
+            coords = click_visible_upload_button(window, 0.50, 0.65, 0.8)
+            result.setdefault("uploadRetries", []).append({"attempt": attempt + 1, "coords": coords})
+            picker, picker_title = find_file_picker(before, 6)
         if picker:
             break
     if not picker:
