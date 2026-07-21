@@ -7,6 +7,7 @@ const root = path.resolve(__dirname, '..')
 const runDate = readArg('--date') || todayInTimeZone()
 const maxSourceAgeDays = Number(readArg('--max-source-age-days') || 3)
 const feedFetchTimeoutMs = Number(readArg('--feed-timeout-ms') || process.env.UNA_FEED_TIMEOUT_MS || 12000)
+const allowSameDayReuse = process.argv.includes('--allow-same-day-reuse')
 
 function readArg(name) {
   const index = process.argv.indexOf(name)
@@ -120,9 +121,75 @@ async function readJson(relativePath) {
   return JSON.parse(await fs.readFile(path.join(root, relativePath), 'utf8'))
 }
 
+async function readJsonIfExists(filePath) {
+  try {
+    return JSON.parse(await fs.readFile(filePath, 'utf8'))
+  } catch {
+    return null
+  }
+}
+
 async function writeFile(filePath, content) {
   await fs.mkdir(path.dirname(filePath), { recursive: true })
   await fs.writeFile(filePath, content, 'utf8')
+}
+
+async function walkFiles(dirPath, fileName) {
+  const matches = []
+  let entries = []
+  try {
+    entries = await fs.readdir(dirPath, { withFileTypes: true })
+  } catch {
+    return matches
+  }
+  for (const entry of entries) {
+    const fullPath = path.join(dirPath, entry.name)
+    if (entry.isDirectory()) {
+      matches.push(...await walkFiles(fullPath, fileName))
+    } else if (entry.isFile() && (entry.name === fileName || entry.name.startsWith('visible-social-post-report-'))) {
+      matches.push(fullPath)
+    }
+  }
+  return matches
+}
+
+async function usedSameDayUrls() {
+  if (allowSameDayReuse) return new Set()
+  const used = new Set()
+  const ledgerPath = path.join(root, 'content', 'ledger', 'social-ledger.jsonl')
+  try {
+    const lines = (await fs.readFile(ledgerPath, 'utf8')).split(/\r?\n/).filter(Boolean)
+    for (const line of lines) {
+      let entry
+      try {
+        entry = JSON.parse(line)
+      } catch {
+        continue
+      }
+      if (entry?.runDate !== runDate) continue
+      if (entry?.dryRun) continue
+      const posted = Object.values(entry.results || {}).some((result) => String(result?.status || '').startsWith('posted'))
+      if (!posted) continue
+      if (entry?.topic?.url) used.add(entry.topic.url)
+      for (const source of entry?.sources || []) {
+        if (source?.url) used.add(source.url)
+      }
+    }
+  } catch {
+    // The ledger is optional during local drafting and may be ignored.
+  }
+  const proofDir = path.join(root, 'content', 'proof', runDate)
+  for (const filePath of await walkFiles(proofDir, 'visible-social-post-report.json')) {
+    const report = await readJsonIfExists(filePath)
+    if (!report || report.dryRun) continue
+    const posted = Object.values(report.results || {}).some((result) => String(result?.status || '').startsWith('posted'))
+    if (!posted) continue
+    if (report?.topic?.url) used.add(report.topic.url)
+    for (const source of report?.sources || []) {
+      if (source?.url) used.add(source.url)
+    }
+  }
+  return used
 }
 
 function trimWords(text, maxWords) {
@@ -134,6 +201,7 @@ function plainTitle(title) {
   return normalizeText(title)
     .replace(/\s+-\s+[^-]+$/, '')
     .replace(/^[^\w"]+/, '')
+    .replace(/[.!?]+$/g, '')
     .trim()
 }
 
@@ -144,11 +212,12 @@ function daysOld(item, now = new Date(`${runDate}T12:00:00-04:00`)) {
   return Math.max(0, Math.floor((now.getTime() - published.getTime()) / 86400000))
 }
 
-function isUsableStory(item) {
+function isUsableStory(item, usedUrls = new Set()) {
   const text = `${item?.title || ''} ${item?.summary || ''}`.toLowerCase()
   if (!item?.title || !item?.url || daysOld(item) > maxSourceAgeDays) return false
+  if (usedUrls.has(item.url)) return false
   if (/\/brandpress\//i.test(item.url || '')) return false
-  return !/(celebrity|gossip|career advice|how to transition|stock price|crypto price|\[d\]|request for expressions? of interest|capacity development|procurement|tender|call for applications|sponsored|advertorial|press release|world cup|football prediction|sports prediction|goldfish)/i.test(text)
+  return !/(celebrity|gossip|career advice|how to transition|stock price|crypto price|\[d\]|request for expressions? of interest|capacity development|procurement|tender|call for applications|sponsored|advertorial|press release|world cup|football prediction|sports prediction|goldfish|hiring bias|biases when hiring|resume before a human sees it|e-visa|visa fee|labour mobility|song made with|suno|music opinion|entertainment|video game|gaming industry|sassa|payment dates?|grant amounts?|social grant|srd grant|pension grant|disability grant)/i.test(text)
 }
 
 function scoreStory(item, preferred = []) {
@@ -160,24 +229,24 @@ function scoreStory(item, preferred = []) {
   return score
 }
 
-function pickStory(items, preferredSources, preferredWords) {
+function pickStory(items, preferredSources, preferredWords, usedUrls) {
   return items
-    .filter(isUsableStory)
+    .filter((item) => isUsableStory(item, usedUrls))
     .filter((item) => preferredSources.includes(item.sourceName))
     .sort((a, b) => scoreStory(b, preferredWords) - scoreStory(a, preferredWords))[0]
 }
 
-function selectRegionalStories(items) {
-  const northAmerica = pickStory(items, ['Microsoft Research', 'Google AI', 'OpenAI News'], [
+function selectRegionalStories(items, usedUrls) {
+  const northAmerica = pickStory(items, ['Microsoft Research', 'Google AI', 'OpenAI News', 'TechCrunch AI', 'MIT Technology Review AI', 'Axios Technology'], [
     'ai',
     'agent',
     'weather',
     'model',
     'developer',
     'research',
-  ])
-  const africa = pickStory(items, ['TechCabal', 'Techpoint Africa', 'Tech In Africa'], ['africa', 'payment', 'fintech', 'startup', 'web3', 'technology'])
-  const world = pickStory(items, ['Rest of World', 'The Register AI'], ['policy', 'platform', 'ai', 'global', 'security'])
+  ], usedUrls)
+  const africa = pickStory(items, ['TechCabal', 'Techpoint Africa', 'Tech In Africa'], ['africa', 'payment', 'fintech', 'startup', 'web3', 'technology'], usedUrls)
+  const world = pickStory(items, ['Rest of World', 'The Register AI', 'MIT Technology Review AI', 'The Verge AI'], ['policy', 'platform', 'ai', 'global', 'security'], usedUrls)
 
   return [
     {
@@ -228,7 +297,7 @@ function linkedinPost(entries) {
     '',
     `In Africa, ${plainTitle(entries[1].story.title)}. I like seeing this included because adoption does not only happen in Silicon Valley. It happens where people solve daily work problems with the tools they have.`,
     '',
-    `For the rest of the world, ${plainTitle(entries[2].story.title)}. This is a reminder that AI is also showing up in public safety, relief work, and situations where trust matters.`,
+    `For the rest of the world, ${plainTitle(entries[2].story.title)}. This is a reminder that the AI race is not only a U.S. story. Model access, open-source releases, regulation, and local adoption can shift quickly.`,
     '',
     'The simple pattern: useful technology is becoming less about hype and more about where it fits into actual work.',
     '',
@@ -238,7 +307,7 @@ function linkedinPost(entries) {
     '',
     `Sources: ${entries.map((entry) => entry.story.sourceName).join(', ')}`,
     '',
-    'Which story would you pay the most attention to today: AI investment, Africa tech, or AI for public response?',
+    'Which story would you pay the most attention to today, and what would you want to verify before trusting it?',
   ].join('\n')
 }
 
@@ -340,7 +409,20 @@ function contactSheetHtml(slides) {
 }
 
 const config = await readJson('config/sources.json')
-const wanted = new Set(['OpenAI News', 'Microsoft Research', 'Google AI', 'TechCabal', 'Techpoint Africa', 'Tech In Africa', 'Rest of World', 'The Register AI'])
+const wanted = new Set([
+  'OpenAI News',
+  'Microsoft Research',
+  'Google AI',
+  'TechCrunch AI',
+  'MIT Technology Review AI',
+  'The Verge AI',
+  'Axios Technology',
+  'TechCabal',
+  'Techpoint Africa',
+  'Tech In Africa',
+  'Rest of World',
+  'The Register AI',
+])
 const errors = []
 const items = []
 const feedResults = await Promise.all(
@@ -364,9 +446,10 @@ for (const result of feedResults) {
   }
 }
 
-const entries = selectRegionalStories(items)
+const usedUrls = await usedSameDayUrls()
+const entries = selectRegionalStories(items, usedUrls)
 if (entries.length !== 3) {
-  throw new Error(`Expected 3 fresh regional stories, found ${entries.length}. Errors: ${JSON.stringify(errors)}`)
+  throw new Error(`Expected 3 fresh regional stories, found ${entries.length}. Used same-day URLs excluded: ${usedUrls.size}. Errors: ${JSON.stringify(errors)}`)
 }
 
 const draftDir = path.join(root, 'content', 'drafts', runDate)
@@ -427,6 +510,7 @@ console.log(
         linkedin: path.relative(root, path.join(draftDir, 'linkedin-post.md')),
       },
       errors,
+      excludedSameDayUrlCount: usedUrls.size,
     },
     null,
     2,

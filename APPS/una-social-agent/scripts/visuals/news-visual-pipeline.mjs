@@ -80,6 +80,9 @@ function inferCountry(region, text) {
 
 function inferDomain(text) {
   const lower = text.toLowerCase()
+  if (hasAny(lower, ['ai talent', 'talent race', 'high school', 'teenagers', 'research programs', 'student', 'students']) && hasAny(lower, ['ai', 'engineer', 'engineers', 'technology', 'computer science'])) return 'ai education talent'
+  if (hasAny(lower, ['hiring', 'resume', 'résumé', 'recruiting', 'job candidate', 'job screening', 'employment bias'])) return 'hiring AI'
+  if (hasAny(lower, ['china', 'chinese', 'qwen', 'kimi', 'alibaba', 'moonshot']) && hasAny(lower, ['open source', 'model', 'ai dominance'])) return 'ai model competition'
   if (hasAny(lower, ['weather', 'climate', 'earth-system', 'satellite', 'storm', 'forecast'])) return 'weather'
   if (hasAny(lower, ['teen', 'teens', 'youth', 'children', 'minor', 'parental controls', 'age-appropriate', 'online safety', 'safe ai'])) return 'online safety'
   if (hasAny(lower, ['content moderation', 'moderation', 'consent', 'trust and safety', 'user safety', 'platform safety'])) return 'content moderation'
@@ -90,7 +93,7 @@ function inferDomain(text) {
   if (hasAny(lower, ['enterprise ai', 'spreadsheet analysis', 'decide for work', 'workplaces', 'workplace', 'office productivity', 'productivity ai'])) return 'workplace AI'
   if (hasAny(lower, ['web3', 'blockchain', 'stablecoin'])) return 'web3'
   if (hasAny(lower, ['whatsapp', 'encryption', 'username', 'messaging', 'platform rule', 'platform policy', 'ban'])) return 'platform policy'
-  if (hasAny(lower, ['payment', 'fintech', 'merchant', 'bank', 'wallet', 'remittance', 'mobile money'])) return 'fintech'
+  if (hasAny(lower, ['payment', 'fintech', 'merchant', 'bank', 'wallet', 'remittance', 'mobile money', 'community finance', 'access to capital', 'entrepreneur', 'entrepreneurs', 'small business finance'])) return 'fintech'
   if (hasAny(lower, ['classroom', 'student', 'students', 'stem', 'school', 'deaf students', 'education']) && hasAny(lower, ['robot', 'robotics', 'engineering'])) return 'education robotics'
   if (hasAny(lower, ['robot', 'robotics', 'factory', 'manufacturing'])) return 'robotics'
   if (hasAny(lower, ['breach', 'cyber', 'security', 'ransomware', 'vulnerability'])) return 'cybersecurity'
@@ -150,6 +153,15 @@ const DOMAIN_VISUALS = {
     objects: ['student laptops', 'robotics kit', 'classroom worktable', 'prototype parts'],
     actions: ['mentoring students', 'building classroom robots', 'testing a student prototype'],
     applications: ['STEM education', 'accessible learning', 'student engineering skills'],
+  },
+  'ai education talent': {
+    primarySubject: 'AI education and talent pipeline',
+    technology: ['AI education', 'computer science training', 'student research programs', 'developer talent pipeline'],
+    roles: ['student developer', 'computer science mentor', 'AI program instructor'],
+    environment: 'computer science classroom or youth technology workshop',
+    objects: ['student laptops', 'coding lesson screen', 'workshop table', 'mentor notes'],
+    actions: ['mentoring student developers', 'reviewing coding projects', 'teaching AI fundamentals'],
+    applications: ['AI workforce development', 'student technology access', 'developer education'],
   },
   cybersecurity: {
     primarySubject: 'security operations response',
@@ -267,6 +279,24 @@ const DOMAIN_VISUALS = {
     objects: ['network map', 'call queue panel', 'incident timeline', 'field-service board'],
     actions: ['reviewing network alerts', 'routing customer issues', 'checking service quality'],
     applications: ['phone networks', 'customer service', 'field operations'],
+  },
+  'hiring AI': {
+    primarySubject: 'AI hiring and resume screening workflow',
+    technology: ['resume screening model', 'candidate scoring', 'bias review', 'human oversight'],
+    roles: ['recruiter', 'hiring manager', 'candidate advocate'],
+    environment: 'human resources review room with resumes and interview notes',
+    objects: ['candidate scorecard', 'resume stack', 'bias review checklist', 'interview notes'],
+    actions: ['reviewing candidate screening results', 'checking bias risks', 'comparing human and AI decisions'],
+    applications: ['fair hiring', 'job screening', 'workforce decisions'],
+  },
+  'ai model competition': {
+    primarySubject: 'open-source AI model competition',
+    technology: ['open-source AI models', 'developer ecosystem', 'model benchmarks', 'cloud AI tools'],
+    roles: ['AI developer', 'research engineer', 'technology analyst'],
+    environment: 'developer conference or AI research workspace',
+    objects: ['model benchmark dashboard', 'developer laptops', 'conference demo screen', 'research notes'],
+    actions: ['comparing model performance', 'reviewing open-source releases', 'testing developer tools'],
+    applications: ['AI competition', 'developer tools', 'enterprise adoption'],
   },
   'technology operations': {
     primarySubject: 'technology operations workflow',
@@ -485,7 +515,7 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;')
 }
 
-function visualSceneHtml(facts, brief) {
+export function visualSceneHtml(facts, brief) {
   const domain = inferDomain(`${facts.headline} ${facts.plain_language_summary} ${facts.technology.join(' ')}`)
   const colors = {
     weather: ['#153d5a', '#6fc3ff', '#f4f8ff'],
@@ -502,6 +532,8 @@ function visualSceneHtml(facts, brief) {
     'workplace AI': ['#202d33', '#4db8a8', '#fff8ea'],
     'logistics automation': ['#25352d', '#ff8c1a', '#f2efe5'],
     'telecom AI': ['#102b3c', '#45b6ff', '#fff8ea'],
+    'hiring AI': ['#2d2738', '#d58a37', '#fff8ea'],
+    'ai model competition': ['#1d2938', '#4aa3ff', '#fff8ea'],
     'technology operations': ['#112f35', '#4db8a8', '#fff8ea'],
   }[domain] || ['#112f35', '#4db8a8', '#fff8ea']
   const [bg, accent, cream] = colors
@@ -524,6 +556,8 @@ function visualSceneHtml(facts, brief) {
     'workplace AI': 'team workflow',
     'logistics automation': 'dispatch floor',
     'telecom AI': 'network desk',
+    'hiring AI': 'hiring review',
+    'ai model competition': 'model race',
   }[domain] || 'tech workflow'
   return `<!doctype html><html><head><meta charset="utf-8"/><style>
     *{box-sizing:border-box} html,body{margin:0;width:1280px;height:760px;overflow:hidden;background:${bg};font-family:Arial,Helvetica,sans-serif}
@@ -564,7 +598,14 @@ function searchTermsForFacts(facts) {
   const domain = inferDomain(`${facts.headline} ${facts.plain_language_summary} ${facts.technology.join(' ')}`)
   const terms = {
     weather: ['weather forecasting operations center meteorologist', 'meteorologist weather radar control room', 'climate research scientist weather model'],
-    fintech: ['African mobile money merchant payment', 'mobile payment merchant Africa', 'digital payment shop Africa'],
+    fintech: [
+      'African fintech founder laptop meeting',
+      'African entrepreneurs mobile payment shop',
+      'Lagos fintech startup team laptop',
+      'African small business owner mobile payment',
+      'mobile money agent Africa customer',
+      'African business owner smartphone payment',
+    ],
     web3: ['African startup office team', 'African business team laptop', 'African fintech office', 'African fintech startup team office', 'Lagos technology startup meeting'],
     robotics: ['manufacturing engineer robot factory', 'industrial robot worker factory'],
     'education robotics': [
@@ -574,6 +615,14 @@ function searchTermsForFacts(facts) {
       'student finalists scientific competition',
       'robotics workshop students',
       'engineering students laptop classroom',
+    ],
+    'ai education talent': [
+      'Chinese students computer classroom',
+      'students computer lab China',
+      'computer science students classroom laptop',
+      'teen students coding workshop laptop',
+      'AI education students laptop classroom',
+      'student developers coding classroom',
     ],
     cybersecurity: ['security operations center analyst', 'cybersecurity analyst operations room'],
     'renewable energy': ['solar engineer Africa', 'renewable energy technician solar panels'],
@@ -608,6 +657,19 @@ function searchTermsForFacts(facts) {
     ],
     'logistics automation': ['warehouse dispatch operator', 'logistics control room warehouse'],
     'telecom AI': ['telecom network operations center', 'network operations center engineer'],
+    'hiring AI': [
+      'diverse hiring panel reviewing resumes laptop',
+      'human resources team reviewing resumes',
+      'recruiters interview notes laptop office',
+      'diverse office hiring interview team',
+    ],
+    'ai model competition': [
+      'China AI conference developers laptops',
+      'Chinese technology conference developers artificial intelligence',
+      'AI research team conference laptops',
+      'open source AI developers conference',
+      'developer conference artificial intelligence laptops',
+    ],
   }[domain] || ['technology operations team office']
   const country = facts.country_or_market && !['Global', 'North America', 'Africa'].includes(facts.country_or_market)
     ? facts.country_or_market

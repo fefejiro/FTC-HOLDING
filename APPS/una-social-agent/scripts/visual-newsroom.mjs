@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises'
+import crypto from 'node:crypto'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -46,6 +47,59 @@ async function writeJson(filePath, value) {
 async function writeText(filePath, value) {
   await fs.mkdir(path.dirname(filePath), { recursive: true })
   await fs.writeFile(filePath, value, 'utf8')
+}
+
+async function copyReviewFile(sourcePath, targetPath) {
+  try {
+    await fs.copyFile(sourcePath, targetPath)
+    return targetPath
+  } catch (error) {
+    const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z')
+    const parsed = path.parse(targetPath)
+    const fallbackPath = path.join(parsed.dir, `${parsed.name}-${stamp}${parsed.ext}`)
+    await fs.copyFile(sourcePath, fallbackPath)
+    return fallbackPath
+  }
+}
+
+async function fileSha256(filePath) {
+  const buffer = await fs.readFile(filePath)
+  return crypto.createHash('sha256').update(buffer).digest('hex')
+}
+
+async function replaceDuplicateRawVisual(record, seenImageHashes, index) {
+  const hash = await fileSha256(record.rawPath)
+  if (!seenImageHashes.has(hash)) {
+    seenImageHashes.add(hash)
+    return record
+  }
+
+  const { visualSceneHtml } = await import('./visuals/news-visual-pipeline.mjs')
+  await renderHtmlToPng(
+    visualSceneHtml(record.story_facts, record.visual_brief),
+    record.rawPath,
+    { width: 1280, height: 760 },
+  )
+  const rawData = await imageDataUrl(record.rawPath)
+  await renderHtmlToPng(
+    slideHtml({
+      facts: record.story_facts,
+      brief: record.visual_brief,
+      imageDataUrl: rawData,
+      index,
+      sourceName: record.story_facts.source_name,
+    }),
+    record.slidePath,
+    { width: 1080, height: 1350 },
+  )
+  const nextHash = await fileSha256(record.rawPath)
+  seenImageHashes.add(nextHash)
+  return {
+    ...record,
+    image_model: 'deterministic-technical-composition',
+    fallback_used: true,
+    fallback_reason: 'Downloaded image duplicated another slide in the same run; replaced with story-specific technical composition.',
+  }
 }
 
 function auroraEntries() {
@@ -162,14 +216,15 @@ await fs.mkdir(assetDir, { recursive: true })
 
 const records = []
 const slidePaths = []
+const seenImageHashes = new Set()
 for (const [index, entry] of entries.entries()) {
-  const record = await buildVisual(entry, index)
+  const record = await replaceDuplicateRawVisual(await buildVisual(entry, index), seenImageHashes, index)
   records.push(record)
   slidePaths.push(record.slidePath)
   const regionalSlidePath = path.join(previewDir, `regional-news-preview-${runDate}-slide-${index + 1}.png`)
   const editorialSlidePath = path.join(previewDir, `editorial-news-preview-${runDate}-slide-${index + 1}.png`)
-  await fs.copyFile(record.slidePath, regionalSlidePath)
-  await fs.copyFile(record.slidePath, editorialSlidePath)
+  await copyReviewFile(record.slidePath, regionalSlidePath)
+  await copyReviewFile(record.slidePath, editorialSlidePath)
 }
 
 const allPublishable =
@@ -179,14 +234,14 @@ const allPublishable =
   )
 const publishableAssetPath = path.join(assetDir, 'instagram-card.png')
 if (allPublishable && slidePaths[0]) {
-  await fs.copyFile(slidePaths[0], publishableAssetPath)
+  await copyReviewFile(slidePaths[0], publishableAssetPath)
 } else {
   await fs.rm(publishableAssetPath, { force: true })
 }
 const contactPath = path.join(previewDir, `regional-news-preview-${runDate}.png`)
 await renderContactSheet(slidePaths, contactPath)
 const editorialContactPath = path.join(previewDir, `editorial-news-preview-${runDate}.png`)
-await fs.copyFile(contactPath, editorialContactPath)
+await copyReviewFile(contactPath, editorialContactPath)
 
 const ledgerPath = path.join(root, 'content', 'visuals', runDate, 'visual-proof-ledger.json')
 await writeJson(ledgerPath, {

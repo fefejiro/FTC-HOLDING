@@ -1,5 +1,6 @@
 import argparse
 import ctypes
+import hashlib
 import json
 import os
 import time
@@ -105,6 +106,27 @@ def rect_payload(rect) -> dict:
     }
 
 
+def force_window_to_primary(window, width: int | None = None, height: int | None = None) -> bool:
+    screen_width, screen_height = primary_screen_size()
+    target_width = min(width or 1400, screen_width)
+    target_height = min(height or 950, screen_height)
+    try:
+        ctypes.windll.user32.ShowWindow(int(window.handle), 9)  # SW_RESTORE
+        ctypes.windll.user32.SetWindowPos(
+            int(window.handle),
+            0,
+            0,
+            0,
+            int(target_width),
+            int(target_height),
+            0x0040,  # SWP_SHOWWINDOW
+        )
+        time.sleep(0.8)
+        return True
+    except Exception:
+        return False
+
+
 def ensure_window_visible(window):
     """Keep visible-browser coordinate clicks inside the primary display.
 
@@ -144,7 +166,7 @@ def ensure_window_visible(window):
                 window.move_window(0, 0, width, height)
                 time.sleep(0.8)
             except Exception:
-                pass
+                force_window_to_primary(window, width, height)
     try:
         window.set_focus()
     except Exception:
@@ -609,6 +631,27 @@ def click_relative(window, x_ratio: float, y_ratio: float, wait: float = 0.8) ->
     rect = ensure_window_visible(window) or window.rectangle()
     x = rect.left + int(rect.width() * x_ratio)
     y = rect.top + int(rect.height() * y_ratio)
+    screen_width, screen_height = primary_screen_size()
+    if x < 0 or y < 0 or x >= screen_width or y >= screen_height:
+        try:
+            window.restore()
+            window.move_window(0, 0, min(1400, screen_width), min(950, screen_height), repaint=True)
+            time.sleep(0.8)
+            rect = window.rectangle()
+            x = rect.left + int(rect.width() * x_ratio)
+            y = rect.top + int(rect.height() * y_ratio)
+        except Exception:
+            pass
+    if x < 0 or y < 0 or x >= screen_width or y >= screen_height:
+        force_window_to_primary(window)
+        rect = window.rectangle()
+        x = rect.left + int(rect.width() * x_ratio)
+        y = rect.top + int(rect.height() * y_ratio)
+    if x < 0 or y < 0 or x >= screen_width or y >= screen_height:
+        raise RuntimeError(
+            f"Visible browser click would land outside the primary screen: coords={[x, y]}, "
+            f"window={rect_payload(rect)}, screen={[screen_width, screen_height]}"
+        )
     mouse.click(button="left", coords=(x, y))
     time.sleep(wait)
     return [x, y]
@@ -634,16 +677,24 @@ def open_linkedin_post_composer(window, proof_dir: Path) -> dict:
         return {"ok": False, "reason": "LinkedIn login form is visible.", **detail}
 
     if not linkedin_composer_is_open(window):
+        # The Page Posts screen has a stable "Start a post" card. Prefer it
+        # over the dashboard Create menu so the page identity and media buttons
+        # stay in the same visible flow.
+        started = False
         if "Start a post" in text:
-            if not (click_dom(window, r"Start a post", 1.2).get("ok") or click_text_fallback(window, "Start a post")):
-                coords = click_relative(window, 0.50, 0.41, 1.2)
-                detail["steps"].append({"action": "coordinate_start_post", "coords": coords})
-            else:
+            physical = click_dom_physical(window, r"Start a post", 1.2)
+            if physical.get("ok"):
+                detail["steps"].append({"action": "clicked_start_post_physical", "detail": physical})
+                started = True
+            elif click_dom(window, r"Start a post", 1.2).get("ok") or click_text_fallback(window, "Start a post"):
                 detail["steps"].append({"action": "clicked_start_post"})
-            if not linkedin_composer_is_open(window):
-                coords = click_relative(window, 0.50, 0.41, 1.5)
-                detail["steps"].append({"action": "coordinate_start_post_after_soft_click", "coords": coords})
-        else:
+                started = True
+        if not started or not linkedin_composer_is_open(window):
+            coords = click_relative(window, 0.47, 0.41, 1.5)
+            detail["steps"].append({"action": "coordinate_start_post", "coords": coords})
+            started = True
+
+        if not linkedin_composer_is_open(window) and "Start a post" not in visible_text(window):
             navigate(window, "https://www.linkedin.com/company/112328320/admin/dashboard/", 4)
             detail["dashboard"] = screenshot(window, proof_dir / "visible-linkedin-home.png")
             create_clicked = click_dom(window, r"^\+?\s*Create$", 1.2).get("ok") or click_text_fallback(window, "Create")
@@ -686,8 +737,60 @@ def fill_linkedin_composer(window, post: str, proof_dir: Path) -> dict:
     return {"ok": True, **detail}
 
 
+def dismiss_linkedin_premium_prompt(window, proof_dir: Path) -> dict:
+    """Close LinkedIn's Premium Page prompt when it covers composer controls."""
+    detail = {"ok": False, "steps": []}
+    text = visible_text(window)
+    if "Try Premium Page" not in text and "Save time and grow your audience" not in text:
+        detail["reason"] = "premium prompt not visible"
+        return detail
+
+    payload = r"""(() => {
+  const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+  const buttons = [...document.querySelectorAll('button,[role="button"]')].map((el) => {
+    const rect = el.getBoundingClientRect();
+    const text = clean(el.innerText || el.textContent || el.getAttribute('aria-label') || '');
+    return { el, text, rect };
+  });
+  const target = buttons.find(({ text, rect }) =>
+    /^(dismiss|close|×|x)$/i.test(text)
+    && rect.y > window.innerHeight * 0.40
+    && rect.width > 0
+    && rect.height > 0
+  );
+  if (!target) {
+    document.title = 'UNA_PREMIUM:' + JSON.stringify({ ok: false, reason: 'close-button-not-found' });
+    return;
+  }
+  target.el.click();
+  document.title = 'UNA_PREMIUM:' + JSON.stringify({ ok: true, text: target.text, x: Math.round(target.rect.x), y: Math.round(target.rect.y) });
+})()"""
+    run_js(window, payload, 0.8)
+    time.sleep(0.6)
+    if "Try Premium Page" not in visible_text(window) and "Save time and grow your audience" not in visible_text(window):
+        detail["ok"] = True
+        detail["steps"].append({"action": "dismissed_premium_prompt_by_dom"})
+        return detail
+
+    # Coordinate fallback for the small close button on the Premium popover.
+    try:
+        coords = click_relative(window, 0.62, 0.59, 0.8)
+        detail["steps"].append({"action": "dismissed_premium_prompt_by_coordinate", "coords": coords})
+    except Exception as exc:
+        detail["steps"].append({"action": "premium_prompt_coordinate_failed", "error": str(exc)})
+    if "Try Premium Page" not in visible_text(window) and "Save time and grow your audience" not in visible_text(window):
+        detail["ok"] = True
+        return detail
+    detail["proof"] = screenshot(window, proof_dir / "visible-linkedin-premium-prompt-blocking.png")
+    detail["reason"] = "premium prompt remained visible"
+    return detail
+
+
 def attach_linkedin_images(window, image_paths: list[Path], proof_dir: Path) -> dict:
     detail = {"steps": [], "imageCount": len(image_paths)}
+    prompt = dismiss_linkedin_premium_prompt(window, proof_dir)
+    if prompt.get("steps"):
+        detail["steps"].extend(prompt["steps"])
     if click_text_fallback(window, "Remove media"):
         detail["steps"].append({"action": "removed_link_preview_media"})
         time.sleep(1.0)
@@ -701,7 +804,7 @@ def attach_linkedin_images(window, image_paths: list[Path], proof_dir: Path) -> 
     if not clicked:
         # In the LinkedIn composer, the media button is usually in the lower
         # toolbar. Coordinate fallback is only used after text/DOM attempts.
-        coords = click_relative(window, 0.33, 0.68, 1.0)
+        coords = click_relative(window, 0.40, 0.735, 1.0)
         detail["steps"].append({"action": "linkedin_media_coordinate_fallback", "coords": coords})
     else:
         detail["steps"].append({"action": "linkedin_media_button_clicked"})
@@ -710,8 +813,11 @@ def attach_linkedin_images(window, image_paths: list[Path], proof_dir: Path) -> 
     if not picker:
         # If DOM/text click hit the wrong toolbar item, try the visible photo
         # icon in the lower-left composer toolbar and wait again.
+        prompt = dismiss_linkedin_premium_prompt(window, proof_dir)
+        if prompt.get("steps"):
+            detail["steps"].extend(prompt["steps"])
         before = current_window_handles()
-        coords = click_visible_upload_button(window, 0.36, 0.72, 1.0)
+        coords = click_visible_upload_button(window, 0.40, 0.735, 1.0)
         detail["steps"].append({"action": "linkedin_media_coordinate_retry", "coords": coords})
         picker, picker_title = find_file_picker(before, 8)
     if not picker:
@@ -721,6 +827,17 @@ def attach_linkedin_images(window, image_paths: list[Path], proof_dir: Path) -> 
     fill_file_picker(picker, image_paths)
     time.sleep(4)
     detail["media_selected"] = screenshot(window, proof_dir / "visible-linkedin-media-selected.png")
+    editor_text = visible_text(window)
+    if "Editor" in editor_text and "Next" in editor_text:
+        if not (click_text_fallback(window, "Next") or click_dom(window, r"^Next$", 1.5).get("ok")):
+            detail["media_editor_next_missing"] = screenshot(window, proof_dir / "visible-linkedin-media-editor-next-missing.png")
+            return {"ok": False, "reason": "LinkedIn media editor opened but Next could not be clicked.", **detail}
+        time.sleep(3.0)
+        detail["media_confirmed"] = screenshot(window, proof_dir / "visible-linkedin-media-confirmed.png")
+    after_text = visible_text(window)
+    if "Editor" in after_text and "Next" in after_text:
+        detail["media_still_in_editor"] = screenshot(window, proof_dir / "visible-linkedin-media-still-in-editor.png")
+        return {"ok": False, "reason": "LinkedIn media editor was still open after attempting to confirm the image.", **detail}
     return {"ok": True, **detail}
 
 
@@ -748,12 +865,24 @@ def click_linkedin_post_button(window, proof_dir: Path) -> dict:
     return {"ok": True, **detail}
 
 
-def verify_linkedin_post(window, post: str, proof_dir: Path) -> dict:
+def verify_linkedin_post(window, post: str, proof_dir: Path, expected_media: bool = False) -> dict:
     title = post.splitlines()[0].strip()
     navigate(window, "https://www.linkedin.com/company/112328320/admin/page-posts/published/", 5)
     proof = screenshot(window, proof_dir / "visible-linkedin-posts-verify.png")
     text = visible_text(window)
     if title in text:
+        if expected_media:
+            # Open the newest matching post so verification is not satisfied by
+            # text-only Page-card summaries. The detail page must visibly include
+            # an image/media region before we call the publish verified.
+            opened = click_text_fallback(window, title[:80])
+            if opened:
+                media_proof = screenshot(window, proof_dir / "visible-linkedin-post-detail-verify.png")
+                detail_text = visible_text(window)
+                if "Activate to view larger image" in detail_text or "Image" in detail_text or "Photo" in detail_text:
+                    return {"ok": True, "proof": proof, "mediaProof": media_proof, "reason": "New LinkedIn post text and media are visible."}
+                return {"ok": False, "proof": proof, "mediaProof": media_proof, "reason": "New LinkedIn post text is visible, but media was not visible on the post detail."}
+            return {"ok": False, "proof": proof, "reason": "New LinkedIn post text is visible, but the post could not be opened for media verification."}
         return {"ok": True, "proof": proof, "reason": "New LinkedIn post text is visible on Page posts."}
     return {"ok": False, "proof": proof, "reason": "Page posts proof did not show today's LinkedIn post text."}
 
@@ -894,8 +1023,10 @@ def publish_linkedin(window, post: str, image_paths: list[Path], proof_dir: Path
         result.update(status="blocked_no_post_button", reason=posted.get("reason", "LinkedIn Post button not found."), details=posted)
         return result
 
-    verify = verify_linkedin_post(window, post, proof_dir)
+    verify = verify_linkedin_post(window, post, proof_dir, expected_media=bool(image_paths))
     result["proof"]["posts_verify"] = verify["proof"]
+    if verify.get("mediaProof"):
+        result["proof"]["post_detail_verify"] = verify["mediaProof"]
     if verify.get("ok"):
         result.update(status="posted_verified", reason=verify["reason"])
     else:
@@ -908,6 +1039,57 @@ def append_ledger(entry: dict):
     ledger.parent.mkdir(parents=True, exist_ok=True)
     with ledger.open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry) + "\n")
+
+
+def file_hash(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def image_hashes(paths: list[Path]) -> list[str]:
+    return [file_hash(path) for path in paths if path.exists()]
+
+
+def load_ledger_entries() -> list[dict]:
+    ledger = ROOT / "content" / "ledger" / "social-ledger.jsonl"
+    if not ledger.exists():
+        return []
+    entries = []
+    for line in ledger.read_text(encoding="utf-8", errors="ignore").splitlines():
+        if not line.strip():
+            continue
+        try:
+            entry = json.loads(line)
+            if isinstance(entry, dict):
+                entries.append(entry)
+        except json.JSONDecodeError:
+            continue
+    return entries
+
+
+def already_posted_same_images(run_date: str, slot: str, channel: str, hashes: list[str]) -> dict:
+    if os.environ.get("UNA_ALLOW_REPOST") == "1":
+        return {"duplicate": False, "reason": "repost override enabled"}
+    if not hashes:
+        return {"duplicate": False, "reason": "no hashes"}
+    wanted = set(hashes)
+    for entry in reversed(load_ledger_entries()):
+        if entry.get("runDate") != run_date or entry.get("slot", "news") != slot or entry.get("dryRun"):
+            continue
+        result = (entry.get("results") or {}).get(channel) or {}
+        if not str(result.get("status", "")).startswith("posted"):
+            continue
+        previous = set((((result.get("assetProof") or {}).get("imageHashes")) or []))
+        if previous and wanted.intersection(previous):
+            return {
+                "duplicate": True,
+                "reason": f"{channel} already posted one of these image hashes for {run_date}.",
+                "previousRunId": entry.get("id"),
+            }
+    return {"duplicate": False, "reason": "no matching posted hashes"}
 
 
 def instagram_image_paths(run_date: str, asset_dir: Path, slot: str = "news") -> list[Path]:
@@ -965,10 +1147,19 @@ def main() -> int:
     assert_publish_approved(draft_dir, args.dry_run)
 
     topic = json.loads((draft_dir / "topic.json").read_text(encoding="utf-8"))
+    sources_path = draft_dir / "sources.json"
+    sources = []
+    if sources_path.exists():
+        try:
+            sources = json.loads(sources_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            sources = []
     instagram_caption = (draft_dir / "instagram-caption.md").read_text(encoding="utf-8").strip()
     linkedin_post = (draft_dir / "linkedin-post.md").read_text(encoding="utf-8").strip()
     image_paths = instagram_image_paths(run_date, asset_dir, args.slot)
     linkedin_images = linkedin_image_paths(run_date, args.slot)
+    instagram_hashes = image_hashes(image_paths)
+    linkedin_hashes = image_hashes(linkedin_images)
 
     if "instagram" in [item.strip().lower() for item in args.channels.split(",") if item.strip()]:
         caption_issues = validate_instagram_caption(instagram_caption)
@@ -981,9 +1172,33 @@ def main() -> int:
         window.set_focus()
         results = {}
         if "instagram" in channels:
-            results["instagram"] = publish_instagram(window, run_date, image_paths, instagram_caption, proof_dir, args.dry_run)
+            duplicate = already_posted_same_images(run_date, args.slot, "instagram", instagram_hashes)
+            if duplicate.get("duplicate"):
+                results["instagram"] = {
+                    "channel": "instagram",
+                    "status": "blocked_duplicate_asset",
+                    "reason": duplicate["reason"],
+                    "assetProof": {"imageHashes": instagram_hashes, "images": [str(path) for path in image_paths]},
+                    "details": duplicate,
+                }
+            else:
+                results["instagram"] = publish_instagram(window, run_date, image_paths, instagram_caption, proof_dir, args.dry_run)
+                results["instagram"].setdefault("assetProof", {})
+                results["instagram"]["assetProof"].update({"imageHashes": instagram_hashes, "images": [str(path) for path in image_paths]})
         if "linkedin" in channels:
-            results["linkedin"] = publish_linkedin(window, linkedin_post, linkedin_images, proof_dir, args.dry_run)
+            duplicate = already_posted_same_images(run_date, args.slot, "linkedin", linkedin_hashes)
+            if duplicate.get("duplicate"):
+                results["linkedin"] = {
+                    "channel": "linkedin",
+                    "status": "blocked_duplicate_asset",
+                    "reason": duplicate["reason"],
+                    "assetProof": {"imageHashes": linkedin_hashes, "images": [str(path) for path in linkedin_images]},
+                    "details": duplicate,
+                }
+            else:
+                results["linkedin"] = publish_linkedin(window, linkedin_post, linkedin_images, proof_dir, args.dry_run)
+                results["linkedin"].setdefault("assetProof", {})
+                results["linkedin"]["assetProof"].update({"imageHashes": linkedin_hashes, "images": [str(path) for path in linkedin_images]})
 
     statuses = [item.get("status") for item in results.values()]
     if args.dry_run:
@@ -1005,12 +1220,15 @@ def main() -> int:
             "url": topic.get("selected", {}).get("url"),
             "sourceName": topic.get("selected", {}).get("sourceName"),
         },
+        "sources": sources,
         "results": results,
         "proofDir": str(proof_dir.resolve()),
         "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
-    report_path = proof_dir / "visible-social-post-report.json"
+    report_name = f"visible-social-post-report-{int(time.time())}.json"
+    report_path = proof_dir / report_name
     report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    (proof_dir / "visible-social-post-report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     if not args.dry_run:
         append_ledger(report)
     print(json.dumps(report, indent=2))

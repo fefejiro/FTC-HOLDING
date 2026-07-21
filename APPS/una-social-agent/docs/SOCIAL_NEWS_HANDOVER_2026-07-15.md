@@ -301,3 +301,72 @@ Retry rule:
 - If a live publish blocks after a possible Share/Post click, check the platform
   profile/page proof before retrying. Do not blindly rerun a live publish if the
   post may already be visible.
+
+## July 21 Duplicate-Post Recovery
+
+Problem observed:
+
+- Instagram showed repeated posts with the same first slide, especially the
+  `A scorecard for the AI age` cover.
+- LinkedIn previously accepted a text-only post because the proof check only
+  confirmed post text on the Page feed, not that the image was actually attached.
+
+Root causes:
+
+- `content/ledger/social-ledger.jsonl` contains some older malformed/multiline
+  hand notes. `scripts/draft-regional-brief.mjs` parsed the ledger inside one
+  broad `try`, so one bad line caused the script to ignore later posted history.
+  Same-day posted URLs were therefore not excluded.
+- Visible LinkedIn media upload can open an image editor. The poster must click
+  `Next` before the image is truly attached.
+- LinkedIn Page prompts and toolbar shifts can make the photo icon click land
+  slightly too low. Text-only posting must be treated as blocked when media was
+  expected.
+
+Fixes added:
+
+- Ledger parsing now skips bad/non-object lines and keeps reading later posted
+  entries.
+- Same-day used source URLs are excluded from both ledger entries and timestamped
+  proof reports.
+- The visible publisher records image hashes in the ledger and blocks reposting
+  the same image hash for the same channel/date unless `UNA_ALLOW_REPOST=1` is
+  intentionally set.
+- Proof reports are timestamped as
+  `visible-social-post-report-<epoch>.json` and copied to
+  `visible-social-post-report.json` for latest-run convenience, so retries no
+  longer erase run history.
+- LinkedIn media verification now requires image/media proof when an image was
+  expected. Text-only Page-feed verification is not enough.
+- LinkedIn media upload now handles the image editor `Next` step and uses a
+  corrected visible photo-icon fallback.
+
+July 21 recovery result:
+
+- Generated a fresh regional package with:
+  - North America: MIT Technology Review AI
+  - Africa: TechCabal
+  - Rest of World: The Verge AI
+- Visual quality passed with no fallback/template slides.
+- Instagram posted a new three-slide carousel and profile proof showed it as the
+  newest grid item.
+- LinkedIn posted with image media verified on the Page post detail.
+
+Proof files:
+
+- Instagram profile proof:
+  `content/proof/2026-07-21/visible-instagram-profile-verify.png`
+- LinkedIn media/detail proof:
+  `content/proof/2026-07-21/visible-linkedin-post-detail-verify.png`
+- Latest report:
+  `content/proof/2026-07-21/visible-social-post-report.json`
+
+Operational rule going forward:
+
+- A scheduled/live run is only good when all of these are true:
+  - three fresh source URLs,
+  - no fallback/template visuals,
+  - Instagram caption visible before Share,
+  - LinkedIn image media attached and confirmed,
+  - proof report records image hashes,
+  - duplicate hash guard does not fire.
