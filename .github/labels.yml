@@ -6,7 +6,10 @@
 
 - name: continuous-improvement
   color: "1D76DB"
-  description: "Small, low-risk, agent-safe job. Auto-grazed nightly."
+  description: "Detected maintenance candidate awaiting evidence and triage."
+- name: needs-triage
+  color: "FBCA04"
+  description: "Requires owner review before implementation or agent assignment."
 
 - name: bug
   color: "D73A4A"

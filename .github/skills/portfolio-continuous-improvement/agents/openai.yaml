@@ -1,0 +1,4 @@
+interface:
+  display_name: "Portfolio Continuous Improvement"
+  short_description: "Audit and improve FTC apps through safe PRs"
+  default_prompt: "Use $portfolio-continuous-improvement to audit the FTC portfolio and prepare the safest evidence-backed improvement."
