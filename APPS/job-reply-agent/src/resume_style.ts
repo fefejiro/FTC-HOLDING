@@ -70,10 +70,12 @@ interface ScoringRules {
 const DEFAULT_CONTAMINATION_TERMS = ["WMS Project Manager", "Blue Yonder", "North West Company"];
 export const APPROVED_ORANGE_TEMPLATE_BASENAME = "Fejiro_Efiuvwere_Default_Job_Agent_Resume_Template_RQ11067.docx";
 export const APPROVED_BUSINESS_ANALYST_TEMPLATE_BASENAME = "Business Systems Analyst - Fejiro Efiuvwere.docx";
+export const APPROVED_BUSINESS_ANALYST_GOLDEN_TEMPLATE_BASENAME = "Business Systems Analyst - Fejiro Efiuvwere Golden Template.docx";
 export const APPROVED_IT_MANAGEMENT_TEMPLATE_BASENAME = "IT Business Systems Manager Fejiro Efiuvwere.docx";
 const APPROVED_ORANGE_TEMPLATE_BASENAMES = new Set([
   APPROVED_ORANGE_TEMPLATE_BASENAME.toLowerCase(),
   APPROVED_BUSINESS_ANALYST_TEMPLATE_BASENAME.toLowerCase(),
+  APPROVED_BUSINESS_ANALYST_GOLDEN_TEMPLATE_BASENAME.toLowerCase(),
   APPROVED_IT_MANAGEMENT_TEMPLATE_BASENAME.toLowerCase(),
   "Fejiro_Efiuvwere_Business_Analyst_Gold_Standard_Template.docx".toLowerCase(),
   "Fejiro_Efiuvwere_Canadian_Tire_Manager_Network_Analytics_Resume.docx".toLowerCase()
@@ -113,6 +115,7 @@ const BUSINESS_ANALYSIS_DETAIL_SIGNALS = [
   /\baoda\b/i,
   /\binformation management\b/i
 ];
+const PRODUCT_ECOMMERCE_BA_SIGNALS = /\b(saas|software as a service|e[- ]?commerce|ecommerce|shopify|marketplace|digital product|web platform|mobile app)\b/i;
 const DEFAULT_UNSUPPORTED_PATTERNS = [
   /\bteam of\s+\d+/i,
   /\bbudget(?:s)?\b/i,
@@ -273,6 +276,30 @@ function isBusinessAnalysisRole(title: string, jdText: string): boolean {
 }
 
 function businessAnalysisContent(jdText = ""): Pick<TailoredResumeContent, "subtitle" | "summaryBullets" | "coreStrengths"> {
+  if (PRODUCT_ECOMMERCE_BA_SIGNALS.test(jdText)) {
+    return {
+      subtitle: "Product Ownership Support | eCommerce Workflows | Agile Backlogs | UAT Readiness",
+      summaryBullets: [
+        "Senior Business Analyst experienced in Product Owner support, requirements discovery, stakeholder alignment, and Agile delivery for digital, retail, and enterprise systems.",
+        "Translates eCommerce, SaaS-style, and operational product needs into current-state and future-state analysis, user stories, acceptance criteria, process flows, and delivery-ready backlog items.",
+        "Supports product and delivery teams through backlog refinement, prioritization conversations, Agile ceremonies, UAT planning, defect triage, and release readiness evidence.",
+        "Brings practical retail technology, omnichannel fulfillment, POS/WMS, API workflow, Jira, Confluence, SQL, and vendor coordination experience without overstating unsupported platform-specific claims.",
+        "Known for clarifying ambiguity, aligning business and technical stakeholders, and helping teams move from discovery to implementation with clean documentation and testable outcomes."
+      ],
+      coreStrengths: [
+        "Product Owner support and backlog refinement",
+        "eCommerce and retail technology workflow analysis",
+        "SaaS-style requirements discovery and user story writing",
+        "Acceptance criteria, process flows, and delivery-ready documentation",
+        "Stakeholder workshops, prioritization, and cross-functional alignment",
+        "Agile ceremonies, UAT planning, defect triage, and release readiness",
+        "Jira, Confluence, SQL, API workflow, POS, WMS, and fulfillment context",
+        "Vendor coordination, implementation support, and go-live evidence",
+        "Clear communication across product, engineering, QA, and business teams"
+      ]
+    };
+  }
+
   if (MAXIMO_EWMS_SIGNALS.test(jdText)) {
     return {
       subtitle: "I&IT Business Analysis | EWMS / IBM Maximo | QA/UAT Governance | Enterprise Systems",

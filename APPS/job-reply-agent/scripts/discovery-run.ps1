@@ -3,8 +3,8 @@ param(
 )
 
 # Scheduled Job Discovery Run
-# Default mode is quiet/background: refreshes premium queues and prepares trusted
-# resume/cover packages without taking over the user's visible browser.
+# Default mode is quiet/background: refreshes saved premium queues and prepares
+# trusted resume/cover packages without taking over the user's visible browser.
 # Use -VisibleBrowser, or JOB_AGENT_VISIBLE_DISCOVERY=1, for explicit browser scraping.
 $ErrorActionPreference = "Continue"
 $root = "C:\FTC HOLDING\APPS\job-reply-agent"
@@ -94,10 +94,10 @@ try {
     $env:JOB_AGENT_REQUIRE_CDP = "true"
     $env:JOB_AGENT_SCRAPER_TIMEOUT_MS = "30000"
   } elseif ($allowVisibleBrowser -and $visibleFejiroReady) {
-    "No Chrome CDP session is available on 127.0.0.1:9333. Continuing with visible Fejiro Chrome discovery only; no submissions will be attempted." | Tee-Object -FilePath $log -Append
+    "No Chrome CDP session is available on 127.0.0.1:9333. Browser scraping will be skipped to avoid launching or using a separate non-Fejiro Chrome profile. Run npm run browser:attach-chrome, sign into Fejiro's profile there if needed, then rerun visible discovery." | Tee-Object -FilePath $log -Append
   }
 
-  if ($allowVisibleBrowser -and $visibleFejiroReady) {
+  if ($allowVisibleBrowser -and $visibleFejiroReady -and $existingCdp) {
     $linkedinDiscoveryExit = Run-Step "2. LinkedIn discovery" "npm run hunt:scrape-linkedin"
     $diceExit = 0
     if (Test-SourcePaused "indeed") {
@@ -116,11 +116,16 @@ try {
     if ($linkedinDiscoveryExit -ne 0) { "LinkedIn discovery exited with $linkedinDiscoveryExit; continuing to saved LinkedIn queues." | Tee-Object -FilePath $log -Append }
     if ($indeedExit -ne 0) { "Indeed discovery exited with $indeedExit; continuing to queues." | Tee-Object -FilePath $log -Append }
     if ($monsterExit -ne 0) { "Monster discovery exited with $monsterExit; continuing to queues." | Tee-Object -FilePath $log -Append }
+  } elseif ($allowVisibleBrowser -and $visibleFejiroReady) {
+    "=== 2-4. Visible site discovery skipped: Fejiro Chrome is visible but CDP is not attached ===" | Tee-Object -FilePath $log -Append
   } elseif ($allowVisibleBrowser) {
     "=== 2-4. Visible site discovery skipped: Fejiro Chrome is not visible/auth-ready ===" | Tee-Object -FilePath $log -Append
   } else {
     "=== 2-4. Visible site discovery skipped: quiet background mode ===" | Tee-Object -FilePath $log -Append
   }
+
+  $scoreExit = Run-Step "4b. Score newly discovered jobs" "npm run hunt:score"
+  $packageExit = Run-Step "4c. Package scored/high-fit jobs" "npm run hunt:package"
 
   $queueLinkedInExit = Run-Step "5. Premium LinkedIn queue" "npm run hunt:premium-queue -- --source=linkedin --limit=20"
   if (Test-SourcePaused "indeed") {
@@ -154,6 +159,8 @@ try {
   if ($queueLinkedInExit -ne 0) { exit $queueLinkedInExit }
   if ($queueIndeedExit -ne 0) { exit $queueIndeedExit }
   if ($queueMonsterExit -ne 0) { exit $queueMonsterExit }
+  if ($scoreExit -ne 0) { exit $scoreExit }
+  if ($packageExit -ne 0) { exit $packageExit }
   if ($prepLinkedInExit -ne 0) { "LinkedIn package prep exited with $prepLinkedInExit; continuing to trust report." | Tee-Object -FilePath $log -Append }
   if ($prepIndeedExit -ne 0) { "Indeed package prep exited with $prepIndeedExit; continuing to trust report." | Tee-Object -FilePath $log -Append }
   if ($prepMonsterExit -ne 0) { "Monster package prep exited with $prepMonsterExit; continuing to trust report." | Tee-Object -FilePath $log -Append }

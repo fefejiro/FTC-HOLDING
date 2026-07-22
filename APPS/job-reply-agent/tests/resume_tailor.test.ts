@@ -4,6 +4,7 @@ import JSZip from "jszip";
 import { beforeAll, describe, expect, it } from "vitest";
 import { selectTailoringTemplatePath, tailorResumeForJD } from "../src/resume_tailor";
 import {
+  APPROVED_BUSINESS_ANALYST_GOLDEN_TEMPLATE_BASENAME,
   APPROVED_BUSINESS_ANALYST_TEMPLATE_BASENAME,
   APPROVED_IT_MANAGEMENT_TEMPLATE_BASENAME,
   APPROVED_ORANGE_TEMPLATE_BASENAME,
@@ -34,6 +35,15 @@ const businessAnalystTemplatePath = path.resolve(
   "Fejiro_Job_Reply_Agent_Resume_Bank",
   "resumes",
   APPROVED_BUSINESS_ANALYST_TEMPLATE_BASENAME
+);
+const businessAnalystGoldenTemplatePath = path.resolve(
+  process.cwd(),
+  "..",
+  "..",
+  "DOCS",
+  "Fejiro_Job_Reply_Agent_Resume_Bank",
+  "resumes",
+  APPROVED_BUSINESS_ANALYST_GOLDEN_TEMPLATE_BASENAME
 );
 const itManagementTemplatePath = path.resolve(
   process.cwd(),
@@ -81,6 +91,18 @@ function rowText(rowXml: string): string {
     .trim();
 }
 
+function paragraphTextsFromXml(documentXml: string): string[] {
+  return [...documentXml.matchAll(/<w:p\b[\s\S]*?<\/w:p>/g)]
+    .map((match) => rowText(match[0]));
+}
+
+function emptyListParagraphsFromXml(documentXml: string): string[] {
+  return [...documentXml.matchAll(/<w:p\b[\s\S]*?<\/w:p>/g)]
+    .map((match) => match[0])
+    .filter((paragraphXml) => rowText(paragraphXml) === "")
+    .filter((paragraphXml) => /<w:numPr\b|<w:pStyle\b[^>]*w:val="[^"]*(?:List|Bullet)[^"]*"/i.test(paragraphXml));
+}
+
 describe("Resume Tailoring Engine", () => {
   beforeAll(() => {
     fs.mkdirSync(outputDir, { recursive: true });
@@ -95,6 +117,8 @@ describe("Resume Tailoring Engine", () => {
     expect(isApprovedOrangeTemplatePath(defaultTemplatePath)).toBe(true);
     expect(path.basename(businessAnalystTemplatePath)).toBe(APPROVED_BUSINESS_ANALYST_TEMPLATE_BASENAME);
     expect(isApprovedOrangeTemplatePath(businessAnalystTemplatePath)).toBe(true);
+    expect(path.basename(businessAnalystGoldenTemplatePath)).toBe(APPROVED_BUSINESS_ANALYST_GOLDEN_TEMPLATE_BASENAME);
+    expect(isApprovedOrangeTemplatePath(businessAnalystGoldenTemplatePath)).toBe(true);
     expect(path.basename(itManagementTemplatePath)).toBe(APPROVED_IT_MANAGEMENT_TEMPLATE_BASENAME);
     expect(isApprovedOrangeTemplatePath(itManagementTemplatePath)).toBe(true);
   });
@@ -293,6 +317,89 @@ describe("Resume Tailoring Engine", () => {
     for (const phrase of FORBIDDEN_VISIBLE_RESUME_PHRASES) {
       expect(text.toLowerCase()).not.toContain(phrase);
     }
+  });
+
+  it("keeps BA format while tailoring Product Owner and eCommerce content", async () => {
+    const result = await tailorResumeForJD({
+      parsed: {
+        roleTitle: "Business Analyst | Product Owner",
+        company: "Makro Agency",
+        location: "Remote Canada",
+        employmentType: "Full-time",
+        summary: "",
+        recruiterName: "",
+        parserConfidence: 90,
+        cleanBody: "",
+        cleanRoleTitle: "Business Analyst | Product Owner",
+        alignmentKeywords: [],
+        salaryOrRate: "",
+        isUsRole: false
+      },
+      jdText: [
+        "Business Analyst or Product Owner for eCommerce industry or SaaS products.",
+        "Requires backlog refinement, requirements gathering, user stories, acceptance criteria, Agile ceremonies, Jira, QA coordination, UAT, stakeholder workshops, Shopify exposure preferred, and agency experience."
+      ].join(" "),
+      templatePath: businessAnalystTemplatePath,
+      outputDir
+    });
+
+    const text = await extractDocText(result.docxPath);
+    expect(path.basename(result.docxPath)).toBe("Business Analyst Product Owner - Fejiro Efiuvwere - Makro Agency Resume.docx");
+    expect(result.subtitle).toMatch(/Product Ownership Support/i);
+    expect(result.subtitle).toMatch(/eCommerce Workflows/i);
+    expect(result.subtitle).toMatch(/Agile Backlogs/i);
+    expect(text).toContain("Business Analyst | Product Owner");
+    expect(text).toMatch(/Product Owner support/i);
+    expect(text).toMatch(/backlog refinement/i);
+    expect(text).toMatch(/user stories/i);
+    expect(text).toMatch(/acceptance criteria/i);
+    expect(text).toMatch(/SaaS-style requirements discovery/i);
+    expect(text).toMatch(/eCommerce and retail technology workflow analysis/i);
+    expect(text).not.toMatch(/Public Sector Systems/i);
+    expect(text).not.toMatch(/Shopify expert|Shopify Plus|Shopify implementation/i);
+    for (const phrase of FORBIDDEN_VISIBLE_RESUME_PHRASES) {
+      expect(text.toLowerCase()).not.toContain(phrase);
+    }
+
+    const documentXml = await extractDocumentXml(result.docxPath);
+    expect(emptyListParagraphsFromXml(documentXml)).toHaveLength(0);
+  });
+
+  it("normalizes recruiter-subject titles and removes empty bullet placeholders", async () => {
+    const result = await tailorResumeForJD({
+      parsed: {
+        roleTitle: "Urgent opening for Publishing Analyst- BA // Toronto, ON // TCS // 98988-1",
+        company: "Artech Com",
+        location: "Toronto, ON",
+        employmentType: "Contract",
+        summary: "",
+        recruiterName: "",
+        parserConfidence: 90,
+        cleanBody: "",
+        cleanRoleTitle: "Urgent opening for Publishing Analyst- BA // Toronto, ON // TCS // 98988-1",
+        alignmentKeywords: [],
+        salaryOrRate: "",
+        isUsRole: false
+      },
+      jdText: [
+        "Publishing Analyst BA role supporting enterprise applications, Salesforce adjacent CRM workflows, Jira requirements, acceptance criteria, UAT, implementation readiness, vendor handoffs, operational adoption, release readiness, and stakeholder communication."
+      ].join(" "),
+      templatePath: businessAnalystTemplatePath,
+      outputDir
+    });
+
+    expect(result.newTitle).toBe("Publishing Analyst - BA");
+    expect(path.basename(result.docxPath)).toBe("Publishing Analyst BA - Fejiro Efiuvwere - Artech Com Resume.docx");
+
+    const text = await extractDocText(result.docxPath);
+    expect(text).toContain("Publishing Analyst - BA");
+    expect(text).not.toMatch(/Urgent opening|98988|\/\/|TCS/i);
+    expect(text).not.toMatch(/ÃƒÂ¢|Ã¢â‚¬Â¢|â€¢/);
+
+    const documentXml = await extractDocumentXml(result.docxPath);
+    expect(emptyListParagraphsFromXml(documentXml)).toHaveLength(0);
+    const rowXmls = [...documentXml.matchAll(/<w:tr\b[\s\S]*?<\/w:tr>/g)].map((match) => match[0]);
+    expect(rowXmls.every((row) => rowText(row).length > 0)).toBe(true);
   });
 
   it("preserves the approved two-column BA format while emphasizing Maximo and EWMS when requested", async () => {

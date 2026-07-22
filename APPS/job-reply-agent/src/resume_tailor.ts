@@ -106,6 +106,33 @@ function normalizeTitle(raw: string): string {
     .trim();
 }
 
+function cleanVisibleRoleTitle(raw: string): string {
+  let value = normalizeTitle(raw)
+    .replace(/\b(?:urgent\s+)?opening\s+for\b/gi, "")
+    .replace(/\burgent\s+opening\b/gi, "")
+    .replace(/\bimmediate\s+opening\b/gi, "")
+    .replace(/\brequirement\b/gi, "")
+    .replace(/\breq(?:uisition)?\s*(?:id|#)?\s*[:#-]?\s*[A-Z0-9-]+\b/gi, "")
+    .replace(/\b(?:job\s*)?(?:id|ref)\s*[:#-]\s*[A-Z0-9-]+\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (value.includes("//")) {
+    value = value.split(/\s*\/\/\s*/)[0] || value;
+  }
+
+  value = value
+    .replace(/\s+-\s+Fejiro\b.*$/i, "")
+    .replace(/\s+\b(?:Toronto|Scarborough|Mississauga|Brampton|Markham|Whitby|Oshawa|Ajax|Pickering|Ontario|ON|Canada|Remote|Hybrid|Onsite)\b.*$/i, "")
+    .replace(/\s+\b(?:TCS|Infosys|HCL|Cognizant|Deloitte|Accenture)\b.*$/i, "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s*-\s*BA\b/i, " - BA")
+    .replace(/^[\s:,-]+|[\s:,-]+$/g, "")
+    .trim();
+
+  return value || normalizeTitle(raw);
+}
+
 function paragraphText(paragraphXml: string): string {
   return paragraphXml
     .replace(/<w:tab\/?\s*>/g, "\t")
@@ -120,21 +147,12 @@ function paragraphText(paragraphXml: string): string {
 
 function setParagraphText(paragraphXml: string, text: string): string {
   const safeText = escapeXml(text);
-  let replaced = false;
-  const updated = paragraphXml.replace(/<w:t(\b[^>]*)>[\s\S]*?<\/w:t>/g, (_match, attrs: string) => {
-    if (!replaced) {
-      replaced = true;
-      const attrOut = /\bxml:space=/.test(attrs) ? attrs : `${attrs} xml:space="preserve"`;
-      return `<w:t${attrOut}>${safeText}</w:t>`;
-    }
-    return `<w:t${attrs}></w:t>`;
-  });
+  const open = paragraphXml.match(/^<w:p\b[^>]*>/)?.[0] || "<w:p>";
+  const pPr = paragraphXml.match(/<w:pPr\b[\s\S]*?<\/w:pPr>/)?.[0] || "";
+  const firstTextRun = paragraphXml.match(/<w:r\b(?:(?!<w:drawing\b)[\s\S])*?<w:t\b[\s\S]*?<\/w:t>[\s\S]*?<\/w:r>/)?.[0] || "";
+  const rPr = firstTextRun.match(/<w:rPr\b[\s\S]*?<\/w:rPr>/)?.[0] || "";
 
-  if (!replaced) {
-    return updated.replace(/<\/w:p>$/, `<w:r><w:t xml:space="preserve">${safeText}</w:t></w:r></w:p>`);
-  }
-
-  return updated;
+  return `${open}${pPr}<w:r>${rPr}<w:t xml:space="preserve">${safeText}</w:t></w:r></w:p>`;
 }
 
 function splitTitleToLines(title: string, slots: number): string[] {
@@ -164,13 +182,16 @@ function findHeadingIndex(paragraphs: string[], headingPattern: RegExp): number 
 function replaceSectionLines(paragraphs: string[], start: number, end: number, lines: string[]): void {
   if (start < 0 || end < start) return;
   const span = end - start + 1;
+  const cleanLines = lines.map((line) => cleanResumeLine(line)).filter(Boolean);
   for (let index = 0; index < span; index += 1) {
-    paragraphs[start + index] = setParagraphText(paragraphs[start + index], lines[index] || "");
+    const line = cleanLines[index] || "";
+    paragraphs[start + index] = line ? setParagraphText(paragraphs[start + index], line) : "";
   }
 }
 
 function replaceFirstBulletLines(paragraphs: string[], start: number, end: number, lines: string[]): void {
   if (start < 0 || end < start) return;
+  const cleanLines = lines.map((line) => cleanResumeLine(line)).filter(Boolean);
   const bulletIndexes: number[] = [];
   for (let index = start; index <= end; index += 1) {
     const text = paragraphText(paragraphs[index]);
@@ -179,8 +200,8 @@ function replaceFirstBulletLines(paragraphs: string[], start: number, end: numbe
     }
   }
   for (let i = 0; i < bulletIndexes.length; i += 1) {
-    const line = lines[i] || paragraphText(paragraphs[bulletIndexes[i]]);
-    paragraphs[bulletIndexes[i]] = setParagraphText(paragraphs[bulletIndexes[i]], line);
+    const line = cleanLines[i] || "";
+    paragraphs[bulletIndexes[i]] = line ? setParagraphText(paragraphs[bulletIndexes[i]], line) : "";
   }
 }
 
@@ -242,7 +263,7 @@ function replaceEmployerSafeBulletLines(
 
     const [record] = remaining.splice(replacementIndex, 1);
     placed.push(record);
-    paragraphs[index] = setParagraphText(paragraphs[index], `â€¢ ${record.text}`);
+    paragraphs[index] = setParagraphText(paragraphs[index], record.text);
   }
 
   return {
@@ -261,6 +282,16 @@ function joinParagraphs(templateXml: string, updatedParagraphs: string[]): strin
   });
 }
 
+function cleanResumeLine(input: string): string {
+  return input
+    .replace(/\u00c3\u00a2\u00e2\u201a\u00ac\u00c2\u00a2\s*/g, "")
+    .replace(/\u00e2\u20ac\u00a2\s*/g, "")
+    .replace(/\u2022\s*/g, "")
+    .replace(/^[-*]\s+/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function stripLegacyBulletPrefixesFromXml(input: string): string {
   return input
     .replace(/\u00c3\u00a2\u00e2\u201a\u00ac\u00c2\u00a2\s*/g, "")
@@ -274,6 +305,14 @@ function stripEmptyTableRowsAndTables(input: string): string {
       return paragraphText(rowXml) ? rowXml : "";
     });
     return paragraphText(cleanedTable) ? cleanedTable : "";
+  });
+}
+
+function stripEmptyListParagraphs(input: string): string {
+  return input.replace(/<w:p\b[\s\S]*?<\/w:p>/g, (paragraphXml) => {
+    if (paragraphText(paragraphXml)) return paragraphXml;
+    const looksLikeListParagraph = /<w:numPr\b|<w:pStyle\b[^>]*w:val="[^"]*(?:List|Bullet)[^"]*"/i.test(paragraphXml);
+    return looksLikeListParagraph ? "" : paragraphXml;
   });
 }
 
@@ -360,7 +399,7 @@ export async function tailorResumeForJD(args: TailorArgs): Promise<TailorResult>
     throw new Error("needs_review:missing_role_or_company");
   }
 
-  const newTitle = normalizeTitle(rawRole);
+  const newTitle = cleanVisibleRoleTitle(rawRole);
   const visibleTitle = sanitizeVisibleResumeText(newTitle);
   const roleSlug = cropSlug(titleCaseSlug(newTitle) || "Project_Manager", MAX_SLUG_PART);
   const employerSlug = cropSlug(titleCaseSlug(rawEmployer) || "Employer", MAX_SLUG_PART);
@@ -445,22 +484,21 @@ export async function tailorResumeForJD(args: TailorArgs): Promise<TailorResult>
   }
 
   */
-  const bulletPrefix = "\u00e2\u20ac\u00a2 ";
-  replaceSectionLines(paragraphs, summaryStart, summaryEnd, tailored.summaryBullets.map((item) => `${bulletPrefix}${item}`));
-  replaceSectionLines(paragraphs, coreStart, coreEnd, tailored.coreStrengths.map((item) => `${bulletPrefix}${item}`));
+  replaceSectionLines(paragraphs, summaryStart, summaryEnd, tailored.summaryBullets);
+  replaceSectionLines(paragraphs, coreStart, coreEnd, tailored.coreStrengths);
   const placement = replaceEmployerSafeBulletLines(paragraphs, experienceStart, experienceEnd, tailored.experienceBulletRecords);
   const fallbackSpan = portfolioStart >= 0 && portfolioEnd >= portfolioStart ? portfolioEnd - portfolioStart + 1 : 0;
   const fallbackRecords = placement.unplaced.slice(0, fallbackSpan);
   if (portfolioStart >= 0) {
     if (fallbackRecords.length > 0 && portfolioHeadingIdx >= 0) {
       paragraphs[portfolioHeadingIdx] = setParagraphText(paragraphs[portfolioHeadingIdx], "SELECTED ACHIEVEMENTS");
-      replaceSectionLines(paragraphs, portfolioStart, portfolioEnd, fallbackRecords.map((item) => `${bulletPrefix}${item.text}`));
+      replaceSectionLines(paragraphs, portfolioStart, portfolioEnd, fallbackRecords.map((item) => item.text));
     } else {
-      replaceSectionLines(paragraphs, portfolioStart, portfolioEnd, tailored.portfolioBullets.map((item) => `${bulletPrefix}${item}`));
+      replaceSectionLines(paragraphs, portfolioStart, portfolioEnd, tailored.portfolioBullets);
     }
   }
 
-  const updatedXml = stripEmptyTableRowsAndTables(stripLegacyBulletPrefixesFromXml(joinParagraphs(xml, paragraphs)));
+  const updatedXml = stripEmptyTableRowsAndTables(stripEmptyListParagraphs(stripLegacyBulletPrefixesFromXml(joinParagraphs(xml, paragraphs))));
   zip.file("word/document.xml", sanitizeVisibleDocXml(updatedXml));
 
   const visibleXmlEntries = Object.keys(zip.files).filter((fileName) =>

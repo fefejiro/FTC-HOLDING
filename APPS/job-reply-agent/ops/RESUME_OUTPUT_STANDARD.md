@@ -10,6 +10,8 @@ For Business Analyst, Business Systems Analyst, Senior IT Business Analyst, Tech
 - human-readable filenames with spaces and dashes
 - visible generated resume filenames must not include "Golden Template"
 - no new one-column rebuilds unless the user explicitly asks for a different format
+- remove empty bullet/list placeholders when a tailored section has fewer items than the template
+- normalize recruiter/email subject titles before they enter the left title block; remove urgent-opening phrasing, locations, client chains, and requisition IDs so the title reads like a clean role name
 
 For IT Manager, Information Technology Operations Manager, Enterprise Applications Manager, Retail Systems Manager, Business Systems Manager, Service Delivery Manager, and Digital Transformation Manager resumes, use `Fejiro Efiuvwere IT Manager.docx` as the master. It must keep the same Business Analyst orange-format family, but the filename and visible title should be normal IT Manager resume language, not "Orange Standard."
 
