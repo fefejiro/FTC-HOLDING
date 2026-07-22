@@ -1,0 +1,3 @@
+display_name: FTC iOS Release Operator
+short_description: Guide FTC iOS releases safely.
+default_prompt: Use this skill to continue an FTC iOS release through audit, Xcode archive upload, TestFlight, App Store Connect privacy, pricing, availability, and App Review submission while preserving architecture and reporting blockers honestly.
