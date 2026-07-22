@@ -76,6 +76,8 @@ output/playwright/**
 .tmp-cap.json
 play-store-key.json
 secrets/
+__pycache__/
+*.pyc
 
 # Job agent runtime/generated artifacts
 APPS/job-reply-agent/data/*.sqlite-shm
