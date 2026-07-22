@@ -1,0 +1,47 @@
+{
+  "story_id": "rest-of-world-dave-eggers-told-openai-staff-that-chatgpt-3",
+  "region": "Rest of World",
+  "country_or_market": "Global",
+  "headline": "Dave Eggers told OpenAI staff that ChatGPT was 'silencing an entire generation'",
+  "plain_language_summary": "Last year, Sam Altman invited author Dave Eggers to give a talk to around 200 OpenAI staffers. The man has written countless novels, screenplays, pieces of journalism, started McSweeney's, and founded multiple schools and nonprofits that support writers and the arts more broadly. So one might expect he'd roll into the company's offices and offer […]",
+  "primary_subject": "work-focused AI agent in daily operations",
+  "technology": [
+    "AI agents",
+    "workflow automation",
+    "document review",
+    "customer support"
+  ],
+  "organization": "The Verge AI",
+  "people_or_roles": [
+    "operations manager",
+    "support lead",
+    "analyst"
+  ],
+  "physical_environment": "real team workspace or meeting room",
+  "visible_objects": [
+    "workflow board",
+    "ticket queue",
+    "review checklist",
+    "shared dashboard"
+  ],
+  "important_actions": [
+    "checking agent output",
+    "reviewing a task queue",
+    "deciding the next action"
+  ],
+  "real_world_application": [
+    "support operations",
+    "admin work",
+    "research and reporting"
+  ],
+  "visual_evidence_from_source": [
+    "workplace AI",
+    "ai",
+    "consumer tech",
+    "OpenAI"
+  ],
+  "source_name": "The Verge AI",
+  "source_url": "https://www.theverge.com/ai-artificial-intelligence/967630/dave-eggers-openai-chatgpt-silencing-an-entire-generation",
+  "publication_date": "2026-07-18T20:54:42.000Z",
+  "confidence": 0.86
+}

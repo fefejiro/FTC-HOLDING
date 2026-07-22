@@ -1,0 +1,140 @@
+{
+  "run_id": "una-visual-2026-07-20",
+  "story_id": "north-america-databricks-hits-188b-valuation-extending-i-1",
+  "region": "North America",
+  "headline": "Databricks hits $188B valuation, extending its run as AI's favorite second act",
+  "source_url": "https://techcrunch.com/2026/07/17/databricks-hits-188b-valuation-extending-its-run-as-ais-favorite-second-act/",
+  "source_date": "2026-07-17T22:12:56.000Z",
+  "story_score": 0,
+  "story_facts": {
+    "story_id": "north-america-databricks-hits-188b-valuation-extending-i-1",
+    "region": "North America",
+    "country_or_market": "North America",
+    "headline": "Databricks hits $188B valuation, extending its run as AI's favorite second act",
+    "plain_language_summary": "Databricks has remade its image into an AI company and has published research on the cost savings of open weight AI models for coding.",
+    "primary_subject": "technology operations workflow",
+    "technology": [
+      "AI systems",
+      "automation",
+      "reporting workflow"
+    ],
+    "organization": "TechCrunch AI",
+    "people_or_roles": [
+      "operator",
+      "analyst",
+      "team lead"
+    ],
+    "physical_environment": "practical technology operations workspace",
+    "visible_objects": [
+      "operations board",
+      "review checklist",
+      "system dashboard"
+    ],
+    "important_actions": [
+      "checking a workflow",
+      "reviewing source-backed information"
+    ],
+    "real_world_application": [
+      "daily operations",
+      "decision support"
+    ],
+    "visual_evidence_from_source": [
+      "technology operations",
+      "ai",
+      "startups"
+    ],
+    "source_name": "TechCrunch AI",
+    "source_url": "https://techcrunch.com/2026/07/17/databricks-hits-188b-valuation-extending-its-run-as-ais-favorite-second-act/",
+    "publication_date": "2026-07-17T22:12:56.000Z",
+    "confidence": 0.72
+  },
+  "visual_brief": {
+    "story_id": "north-america-databricks-hits-188b-valuation-extending-i-1",
+    "region": "North America",
+    "editorial_angle": "Technology Operations Workflow moving into practical use",
+    "image_type": "editorial_photo",
+    "primary_subject": "technology operations workflow",
+    "subject_action": "checking a workflow",
+    "environment": "practical technology operations workspace",
+    "supporting_elements": [
+      "operations board",
+      "review checklist",
+      "system dashboard",
+      "daily operations",
+      "decision support"
+    ],
+    "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
+    "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
+    "lighting": "natural professional lighting",
+    "mood": "credible, operational, human, practical",
+    "regional_context": [
+      "authentic North America business context where relevant"
+    ],
+    "technology_signals": [
+      "AI systems",
+      "automation",
+      "reporting workflow"
+    ],
+    "must_show": [
+      "technology operations workflow",
+      "AI systems",
+      "automation",
+      "reporting workflow",
+      "checking a workflow"
+    ],
+    "must_not_show": [
+      "abstract screen",
+      "glowing ai brain",
+      "robot head",
+      "generic server room",
+      "generic city skyline",
+      "floating hologram",
+      "phone as the main subject",
+      "people standing beside a screen",
+      "decorative people",
+      "stereotype imagery",
+      "flags as the main subject",
+      "unlicensed logos",
+      "visible text"
+    ],
+    "text_safe_area": "bottom",
+    "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Databricks hits $188B valuation, extending its run as AI's favorite second act. Primary subject: technology operations workflow. Show a operator actively checking a workflow in a practical technology operations workspace. Story-specific technology: AI systems, automation, reporting workflow. Visible supporting details: operations board, review checklist, system dashboard, daily operations, decision support. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic North America business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+    "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
+    "visual_confidence": 0.72
+  },
+  "image_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Databricks hits $188B valuation, extending its run as AI's favorite second act. Primary subject: technology operations workflow. Show a operator actively checking a workflow in a practical technology operations workspace. Story-specific technology: AI systems, automation, reporting workflow. Visible supporting details: operations board, review checklist, system dashboard, daily operations, decision support. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic North America business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+  "image_asset_path": "content\\visuals\\2026-07-20\\01-north-america-databricks-hits-188b-valuation-exten\\raw-image.png",
+  "image_model": "openverse-editorial-photo",
+  "generation_attempts": 1,
+  "image_evaluation": {
+    "story_alignment": 80,
+    "technology_specificity": 76,
+    "regional_authenticity": 78,
+    "editorial_credibility": 86,
+    "composition_quality": 86,
+    "text_safe_area_quality": 86,
+    "stereotype_risk": 8,
+    "generic_stock_risk": 30,
+    "overall_score": 86,
+    "failure_reasons": [],
+    "retry_instructions": [],
+    "decision": "accept",
+    "evaluation_mode": "brief_static_with_rendered_fallback"
+  },
+  "rejected_generations": [],
+  "fallback_used": false,
+  "fallback_reason": "",
+  "attribution": {
+    "title": "Business people working on laptops during a meeting",
+    "source_url": "https://www.flickr.com/photos/147875007@N03/45739297502",
+    "license": "by 2.0",
+    "artist": "Rawpixel Ltd",
+    "search_term": "African business team laptop office",
+    "provider": "flickr"
+  },
+  "slide_asset_path": "content\\visuals\\2026-07-20\\01-north-america-databricks-hits-188b-valuation-exten\\slide.png",
+  "publish_status": "review_required",
+  "published_urls": [],
+  "screenshots": [],
+  "timestamp": "2026-07-20T12:50:15.048Z"
+}

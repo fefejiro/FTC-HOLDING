@@ -1,0 +1,46 @@
+{
+  "story_id": "africa-sassa-august-2026-payment-dates-full-sched-2",
+  "region": "Africa",
+  "country_or_market": "Africa",
+  "headline": "SASSA August 2026 payment dates: Full schedule, grant amounts and SRD",
+  "plain_language_summary": "The payment dates are based on the official 2026/27 grant payment calendar published by the Department of Social Development and approved by the National Treasury.",
+  "primary_subject": "work-focused AI agent in daily operations",
+  "technology": [
+    "AI agents",
+    "workflow automation",
+    "document review",
+    "customer support"
+  ],
+  "organization": "TechCabal",
+  "people_or_roles": [
+    "operations manager",
+    "support lead",
+    "analyst"
+  ],
+  "physical_environment": "real team workspace or meeting room",
+  "visible_objects": [
+    "workflow board",
+    "ticket queue",
+    "review checklist",
+    "shared dashboard"
+  ],
+  "important_actions": [
+    "checking agent output",
+    "reviewing a task queue",
+    "deciding the next action"
+  ],
+  "real_world_application": [
+    "support operations",
+    "admin work",
+    "research and reporting"
+  ],
+  "visual_evidence_from_source": [
+    "workplace AI",
+    "africa",
+    "startups"
+  ],
+  "source_name": "TechCabal",
+  "source_url": "https://techcabal.com/2026/07/21/sassa-payment-dates-august-2026/",
+  "publication_date": "2026-07-21T12:55:02.000Z",
+  "confidence": 0.86
+}

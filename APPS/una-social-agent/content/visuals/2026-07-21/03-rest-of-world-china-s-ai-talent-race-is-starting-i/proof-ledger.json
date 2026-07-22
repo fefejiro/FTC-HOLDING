@@ -1,0 +1,147 @@
+{
+  "run_id": "una-visual-2026-07-21",
+  "story_id": "rest-of-world-china-s-ai-talent-race-is-starting-in-high-3",
+  "region": "Rest of World",
+  "headline": "China's AI talent race is starting in high school",
+  "source_url": "https://restofworld.org/2026/china-tech-recruiting-teenagers-ai-shortage/?utm_source=rss&utm_medium=rss&utm_campaign=feeds",
+  "source_date": "2026-07-21T10:00:00.000Z",
+  "story_score": 0,
+  "story_facts": {
+    "story_id": "rest-of-world-china-s-ai-talent-race-is-starting-in-high-3",
+    "region": "Rest of World",
+    "country_or_market": "China",
+    "headline": "China's AI talent race is starting in high school",
+    "plain_language_summary": "As demand for elite AI engineers outpaces supply, companies are recruiting teenagers through camps, research programs, and guaranteed job pipelines.",
+    "primary_subject": "AI education and talent pipeline",
+    "technology": [
+      "AI education",
+      "computer science training",
+      "student research programs",
+      "developer talent pipeline"
+    ],
+    "organization": "Rest of World",
+    "people_or_roles": [
+      "student developer",
+      "computer science mentor",
+      "AI program instructor"
+    ],
+    "physical_environment": "computer science classroom or youth technology workshop",
+    "visible_objects": [
+      "student laptops",
+      "coding lesson screen",
+      "workshop table",
+      "mentor notes"
+    ],
+    "important_actions": [
+      "mentoring student developers",
+      "reviewing coding projects",
+      "teaching AI fundamentals"
+    ],
+    "real_world_application": [
+      "AI workforce development",
+      "student technology access",
+      "developer education"
+    ],
+    "visual_evidence_from_source": [
+      "ai education talent",
+      "global tech",
+      "policy"
+    ],
+    "source_name": "Rest of World",
+    "source_url": "https://restofworld.org/2026/china-tech-recruiting-teenagers-ai-shortage/?utm_source=rss&utm_medium=rss&utm_campaign=feeds",
+    "publication_date": "2026-07-21T10:00:00.000Z",
+    "confidence": 0.86
+  },
+  "visual_brief": {
+    "story_id": "rest-of-world-china-s-ai-talent-race-is-starting-in-high-3",
+    "region": "Rest of World",
+    "editorial_angle": "Ai Education And Talent Pipeline moving into practical use",
+    "image_type": "editorial_photo",
+    "primary_subject": "AI education and talent pipeline",
+    "subject_action": "mentoring student developers",
+    "environment": "computer science classroom or youth technology workshop",
+    "supporting_elements": [
+      "student laptops",
+      "coding lesson screen",
+      "workshop table",
+      "mentor notes",
+      "AI workforce development",
+      "student technology access",
+      "developer education"
+    ],
+    "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
+    "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
+    "lighting": "natural professional lighting",
+    "mood": "credible, operational, human, practical",
+    "regional_context": [
+      "authentic China market context where relevant"
+    ],
+    "technology_signals": [
+      "AI education",
+      "computer science training",
+      "student research programs",
+      "developer talent pipeline"
+    ],
+    "must_show": [
+      "AI education and talent pipeline",
+      "AI education",
+      "computer science training",
+      "student research programs",
+      "mentoring student developers"
+    ],
+    "must_not_show": [
+      "abstract screen",
+      "glowing ai brain",
+      "robot head",
+      "generic server room",
+      "generic city skyline",
+      "floating hologram",
+      "phone as the main subject",
+      "people standing beside a screen",
+      "decorative people",
+      "stereotype imagery",
+      "flags as the main subject",
+      "unlicensed logos",
+      "visible text"
+    ],
+    "text_safe_area": "bottom",
+    "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: China's AI talent race is starting in high school. Primary subject: AI education and talent pipeline. Show a student developer actively mentoring student developers in a computer science classroom or youth technology workshop. Story-specific technology: AI education, computer science training, student research programs, developer talent pipeline. Visible supporting details: student laptops, coding lesson screen, workshop table, mentor notes, AI workforce development, student technology access, developer education. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic China market context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+    "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
+    "visual_confidence": 0.86
+  },
+  "image_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: China's AI talent race is starting in high school. Primary subject: AI education and talent pipeline. Show a student developer actively mentoring student developers in a computer science classroom or youth technology workshop. Story-specific technology: AI education, computer science training, student research programs, developer talent pipeline. Visible supporting details: student laptops, coding lesson screen, workshop table, mentor notes, AI workforce development, student technology access, developer education. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic China market context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+  "image_asset_path": "content\\visuals\\2026-07-21\\03-rest-of-world-china-s-ai-talent-race-is-starting-i\\raw-image.png",
+  "image_model": "openverse-editorial-photo",
+  "generation_attempts": 1,
+  "image_evaluation": {
+    "story_alignment": 80,
+    "technology_specificity": 76,
+    "regional_authenticity": 78,
+    "editorial_credibility": 80,
+    "composition_quality": 86,
+    "text_safe_area_quality": 86,
+    "stereotype_risk": 8,
+    "generic_stock_risk": 30,
+    "overall_score": 85,
+    "failure_reasons": [],
+    "retry_instructions": [],
+    "decision": "accept",
+    "evaluation_mode": "brief_static_with_rendered_fallback"
+  },
+  "rejected_generations": [],
+  "fallback_used": false,
+  "fallback_reason": "",
+  "attribution": {
+    "title": "“Teachers open the door, but you must enter by yourself”~Chinese Proverb",
+    "source_url": "https://www.flickr.com/photos/8489692@N03/4562508343",
+    "license": "by 2.0",
+    "artist": "katerha",
+    "search_term": "Chinese students computer classroom",
+    "provider": "flickr"
+  },
+  "slide_asset_path": "content\\visuals\\2026-07-21\\03-rest-of-world-china-s-ai-talent-race-is-starting-i\\slide.png",
+  "publish_status": "review_required",
+  "published_urls": [],
+  "screenshots": [],
+  "timestamp": "2026-07-21T16:32:38.295Z"
+}

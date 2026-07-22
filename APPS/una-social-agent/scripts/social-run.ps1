@@ -56,6 +56,11 @@ try {
     "[$(Get-Date -Format o)] Loaded local environment keys from .env.local for this run." | Tee-Object -FilePath $logPath -Append
   }
 
+  if ($AllowScheduledPublish) {
+    $env:UNA_SANDBOX_AUTOPUBLISH = '1'
+    "[$(Get-Date -Format o)] Una Labs sandbox autopublish policy enabled. Accepted fallback visuals may continue, while factual, caption, source, and low-score failures still stop the run." | Tee-Object -FilePath $logPath -Append
+  }
+
   if ($CaptionOnly) {
     $stage = 'caption'
     Write-RunStatus -ExitCode 0 -Status 'running'

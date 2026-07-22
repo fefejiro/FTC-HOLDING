@@ -1,0 +1,57 @@
+{
+  "story_id": "africa-rank-launches-community-finance-products-t-2",
+  "region": "Africa",
+  "editorial_angle": "Digital Payment Workflow moving into practical use",
+  "image_type": "documentary_photo",
+  "primary_subject": "digital payment workflow",
+  "subject_action": "confirming a mobile payment",
+  "environment": "busy urban merchant counter or payments operations workspace",
+  "supporting_elements": [
+    "point-of-sale terminal",
+    "receipt printer",
+    "merchant phone",
+    "transaction dashboard",
+    "merchant payments",
+    "cross-border commerce",
+    "small business cash flow"
+  ],
+  "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
+  "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
+  "lighting": "natural professional lighting",
+  "mood": "credible, operational, human, practical",
+  "regional_context": [
+    "authentic Africa business context where relevant"
+  ],
+  "technology_signals": [
+    "mobile payments",
+    "merchant settlement",
+    "fraud checks",
+    "payment rails"
+  ],
+  "must_show": [
+    "digital payment workflow",
+    "mobile payments",
+    "merchant settlement",
+    "fraud checks",
+    "confirming a mobile payment"
+  ],
+  "must_not_show": [
+    "abstract screen",
+    "glowing ai brain",
+    "robot head",
+    "generic server room",
+    "generic city skyline",
+    "floating hologram",
+    "phone as the main subject",
+    "people standing beside a screen",
+    "decorative people",
+    "stereotype imagery",
+    "flags as the main subject",
+    "unlicensed logos",
+    "visible text"
+  ],
+  "text_safe_area": "bottom",
+  "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Rank launches community finance products to expand access to capital. Primary subject: digital payment workflow. Show a merchant actively confirming a mobile payment in a busy urban merchant counter or payments operations workspace. Story-specific technology: mobile payments, merchant settlement, fraud checks, payment rails. Visible supporting details: point-of-sale terminal, receipt printer, merchant phone, transaction dashboard, merchant payments, cross-border commerce, small business cash flow. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Africa business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+  "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
+  "visual_confidence": 0.86
+}

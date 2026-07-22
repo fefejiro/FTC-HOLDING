@@ -1,0 +1,44 @@
+{
+  "story_id": "rest-of-world-google-launches-a-cheaper-alternative-to-l-3",
+  "region": "Rest of World",
+  "country_or_market": "Global",
+  "headline": "Google launches a cheaper alternative to large AI security models like Mythos",
+  "plain_language_summary": "Google is launching Gemini 3.6 Flash alongside a new security model dedicated to quickly finding and patching security vulnerabilities. In a blog post on Tuesday, Google describes Gemini 3.5 Flash Cyber as a \"cost-efficient and highly capable alternative\" to larger, more expensive AI systems, such as the one offered by Anthropic's Mythos. The cybersecurity model […]",
+  "primary_subject": "security operations response",
+  "technology": [
+    "threat detection",
+    "incident response",
+    "identity logs"
+  ],
+  "organization": "The Verge AI",
+  "people_or_roles": [
+    "security analyst",
+    "incident commander"
+  ],
+  "physical_environment": "security operations centre",
+  "visible_objects": [
+    "alert board",
+    "access log timeline",
+    "incident checklist"
+  ],
+  "important_actions": [
+    "triaging alerts",
+    "confirming impacted systems",
+    "coordinating containment"
+  ],
+  "real_world_application": [
+    "data protection",
+    "service continuity",
+    "risk control"
+  ],
+  "visual_evidence_from_source": [
+    "cybersecurity",
+    "ai",
+    "consumer tech",
+    "Google"
+  ],
+  "source_name": "The Verge AI",
+  "source_url": "https://www.theverge.com/tech/968572/google-gemini-flash-cyber-ai-security-model",
+  "publication_date": "2026-07-21T15:00:00.000Z",
+  "confidence": 0.86
+}

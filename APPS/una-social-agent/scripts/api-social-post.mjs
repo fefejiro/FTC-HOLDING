@@ -5,6 +5,27 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(__dirname, '..')
 
+async function loadLocalEnv() {
+  const envPath = path.join(root, '.env.local')
+  if (!(await exists(envPath))) return
+  const contents = await readText(envPath)
+  for (const rawLine of contents.split(/\r?\n/)) {
+    const line = rawLine.trim()
+    if (!line || line.startsWith('#')) continue
+    const separator = line.indexOf('=')
+    if (separator < 1) continue
+    const name = line.slice(0, separator).trim()
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) || process.env[name]) continue
+    let value = line.slice(separator + 1).trim()
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1)
+    }
+    process.env[name] = value
+  }
+}
+
+await loadLocalEnv()
+
 const runDate = readArg('--date') || todayInTimeZone()
 const dryRun = process.argv.includes('--dry-run')
 const channels = (readArg('--channels') || 'instagram,linkedin')

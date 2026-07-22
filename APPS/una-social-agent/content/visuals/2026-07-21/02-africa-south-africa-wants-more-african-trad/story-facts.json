@@ -1,0 +1,44 @@
+{
+  "story_id": "africa-south-africa-wants-more-african-trade-stab-2",
+  "region": "Africa",
+  "country_or_market": "South Africa",
+  "headline": "South Africa wants more African trade. Stablecoins could help make it happen.",
+  "plain_language_summary": "Only about 15% to 18% of South Africa's trade is with African countries, highlighting how much work remains before AfCFTA can achieve its ambitions.",
+  "primary_subject": "regulated digital asset infrastructure",
+  "technology": [
+    "wallet security",
+    "stablecoin rails",
+    "blockchain settlement"
+  ],
+  "organization": "TechCabal",
+  "people_or_roles": [
+    "fintech founder",
+    "compliance analyst",
+    "product operator"
+  ],
+  "physical_environment": "startup operations room with compliance review",
+  "visible_objects": [
+    "risk checklist",
+    "settlement dashboard",
+    "compliance notes"
+  ],
+  "important_actions": [
+    "reviewing transaction risk",
+    "mapping settlement flows",
+    "checking compliance controls"
+  ],
+  "real_world_application": [
+    "payments infrastructure",
+    "capital movement",
+    "financial inclusion"
+  ],
+  "visual_evidence_from_source": [
+    "web3",
+    "africa",
+    "startups"
+  ],
+  "source_name": "TechCabal",
+  "source_url": "https://techcabal.com/2026/07/21/stablecoins-could-help-afcfta/",
+  "publication_date": "2026-07-21T16:08:45.000Z",
+  "confidence": 0.86
+}

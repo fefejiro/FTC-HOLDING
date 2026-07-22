@@ -1,0 +1,57 @@
+{
+  "story_id": "north-america-ai-is-more-likely-than-humans-to-form-bias-1",
+  "region": "North America",
+  "editorial_angle": "Ai Hiring And Resume Screening Workflow moving into practical use",
+  "image_type": "editorial_photo",
+  "primary_subject": "AI hiring and resume screening workflow",
+  "subject_action": "reviewing candidate screening results",
+  "environment": "human resources review room with resumes and interview notes",
+  "supporting_elements": [
+    "candidate scorecard",
+    "resume stack",
+    "bias review checklist",
+    "interview notes",
+    "fair hiring",
+    "job screening",
+    "workforce decisions"
+  ],
+  "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
+  "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
+  "lighting": "natural professional lighting",
+  "mood": "credible, operational, human, practical",
+  "regional_context": [
+    "authentic North America business context where relevant"
+  ],
+  "technology_signals": [
+    "resume screening model",
+    "candidate scoring",
+    "bias review",
+    "human oversight"
+  ],
+  "must_show": [
+    "AI hiring and resume screening workflow",
+    "resume screening model",
+    "candidate scoring",
+    "bias review",
+    "reviewing candidate screening results"
+  ],
+  "must_not_show": [
+    "abstract screen",
+    "glowing ai brain",
+    "robot head",
+    "generic server room",
+    "generic city skyline",
+    "floating hologram",
+    "phone as the main subject",
+    "people standing beside a screen",
+    "decorative people",
+    "stereotype imagery",
+    "flags as the main subject",
+    "unlicensed logos",
+    "visible text"
+  ],
+  "text_safe_area": "bottom",
+  "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: AI is more likely than humans to form biases when hiring. Primary subject: AI hiring and resume screening workflow. Show a recruiter actively reviewing candidate screening results in a human resources review room with resumes and interview notes. Story-specific technology: resume screening model, candidate scoring, bias review, human oversight. Visible supporting details: candidate scorecard, resume stack, bias review checklist, interview notes, fair hiring, job screening, workforce decisions. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic North America business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+  "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
+  "visual_confidence": 0.86
+}

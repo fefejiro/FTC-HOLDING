@@ -1,0 +1,57 @@
+{
+  "story_id": "rest-of-world-china-s-ai-talent-race-is-starting-in-high-3",
+  "region": "Rest of World",
+  "editorial_angle": "Ai Education And Talent Pipeline moving into practical use",
+  "image_type": "editorial_photo",
+  "primary_subject": "AI education and talent pipeline",
+  "subject_action": "mentoring student developers",
+  "environment": "computer science classroom or youth technology workshop",
+  "supporting_elements": [
+    "student laptops",
+    "coding lesson screen",
+    "workshop table",
+    "mentor notes",
+    "AI workforce development",
+    "student technology access",
+    "developer education"
+  ],
+  "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
+  "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
+  "lighting": "natural professional lighting",
+  "mood": "credible, operational, human, practical",
+  "regional_context": [
+    "authentic China market context where relevant"
+  ],
+  "technology_signals": [
+    "AI education",
+    "computer science training",
+    "student research programs",
+    "developer talent pipeline"
+  ],
+  "must_show": [
+    "AI education and talent pipeline",
+    "AI education",
+    "computer science training",
+    "student research programs",
+    "mentoring student developers"
+  ],
+  "must_not_show": [
+    "abstract screen",
+    "glowing ai brain",
+    "robot head",
+    "generic server room",
+    "generic city skyline",
+    "floating hologram",
+    "phone as the main subject",
+    "people standing beside a screen",
+    "decorative people",
+    "stereotype imagery",
+    "flags as the main subject",
+    "unlicensed logos",
+    "visible text"
+  ],
+  "text_safe_area": "bottom",
+  "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: China's AI talent race is starting in high school. Primary subject: AI education and talent pipeline. Show a student developer actively mentoring student developers in a computer science classroom or youth technology workshop. Story-specific technology: AI education, computer science training, student research programs, developer talent pipeline. Visible supporting details: student laptops, coding lesson screen, workshop table, mentor notes, AI workforce development, student technology access, developer education. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic China market context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+  "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
+  "visual_confidence": 0.86
+}

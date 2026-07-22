@@ -1,0 +1,46 @@
+{
+  "story_id": "africa-nigeria-s-central-bank-is-rewriting-the-ru-2",
+  "region": "Africa",
+  "country_or_market": "Nigeria",
+  "headline": "Nigeria's central bank is rewriting the rules for fintech growth",
+  "plain_language_summary": "Over the past decade, the playbook for Nigerian fintechs has been remarkably consistent: build payment products, acquire merchants, scale transaction volumes, obtain microfinance bank licences, expand into lending, and eventually launch savings products.",
+  "primary_subject": "encrypted messaging policy review",
+  "technology": [
+    "encrypted messaging",
+    "platform policy",
+    "cyber fraud controls",
+    "user privacy"
+  ],
+  "organization": "TechCabal",
+  "people_or_roles": [
+    "policy analyst",
+    "trust and safety operator",
+    "product counsel"
+  ],
+  "physical_environment": "platform policy review room with legal, safety and product workflow",
+  "visible_objects": [
+    "policy checklist",
+    "secure messaging flow diagram",
+    "risk review board",
+    "privacy notes"
+  ],
+  "important_actions": [
+    "reviewing policy tradeoffs",
+    "checking fraud risk controls",
+    "mapping user privacy impact"
+  ],
+  "real_world_application": [
+    "messaging safety",
+    "privacy protection",
+    "platform governance"
+  ],
+  "visual_evidence_from_source": [
+    "platform policy",
+    "africa",
+    "startups"
+  ],
+  "source_name": "TechCabal",
+  "source_url": "https://techcabal.com/2026/07/20/nigerias-central-bank-is-rewriting-the-rules-for-fintech-growth/",
+  "publication_date": "2026-07-20T11:32:22.000Z",
+  "confidence": 0.86
+}

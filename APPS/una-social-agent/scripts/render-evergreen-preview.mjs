@@ -67,6 +67,15 @@ async function imageDataUrl(filePath) {
   return `data:image/png;base64,${buffer.toString('base64')}`
 }
 
+async function maybeImageDataUrl(filePath) {
+  try {
+    await fs.access(filePath)
+    return await imageDataUrl(filePath)
+  } catch {
+    return ''
+  }
+}
+
 function baseStyles() {
   return `
     * { box-sizing: border-box; }
@@ -119,6 +128,26 @@ function baseStyles() {
       position: relative;
       overflow: hidden;
     }
+    .visual.compact {
+      height: 330px;
+      margin-bottom: 30px;
+    }
+    .visual.photo {
+      background: #111;
+    }
+    .visual.photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .visual.photo::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(0,0,0,.30) 100%);
+      pointer-events: none;
+    }
     .screen { position: absolute; right: 68px; top: 70px; width: 430px; height: 230px; border-radius: 22px; background: #071216; border: 5px solid #f5f2ea; box-shadow: 0 14px 36px rgba(0,0,0,.28); padding: 34px; }
     .line { height: 18px; border-radius: 999px; margin-bottom: 22px; background: #4db8a8; }
     .line:nth-child(2) { width: 78%; background: #f5f2ea; }
@@ -130,14 +159,22 @@ function baseStyles() {
   `
 }
 
-function slideHtml({ tip, kind, slide, sourceLabel, tagLabel }) {
+function photoBlock(dataUrl, className = '') {
+  return dataUrl ? `<div class="visual photo ${className}"><img src="${dataUrl}" alt="" /></div>` : ''
+}
+
+function slideHtml({ tip, kind, slide, sourceLabel, tagLabel, heroDataUrl, stepsDataUrl, takeawayDataUrl }) {
   let content = ''
   if (kind === 'cover') {
     content = `
-      <div class="visual">
-        <div class="head"></div><div class="person"></div>
-        <div class="screen"><div class="line"></div><div class="line"></div><div class="line"></div></div>
-      </div>
+      ${
+        heroDataUrl
+          ? `<div class="visual photo"><img src="${heroDataUrl}" alt="" /></div>`
+          : `<div class="visual">
+              <div class="head"></div><div class="person"></div>
+              <div class="screen"><div class="line"></div><div class="line"></div><div class="line"></div></div>
+            </div>`
+      }
       <div class="eyebrow">${escapeHtml(tip.category)}</div>
       <h1>${escapeHtml(tip.title)}</h1>
       <p class="hook">${escapeHtml(tip.hook)}</p>
@@ -145,6 +182,7 @@ function slideHtml({ tip, kind, slide, sourceLabel, tagLabel }) {
   } else if (kind === 'steps') {
     content = `
       <div class="tag">HOW TO USE IT</div>
+      ${photoBlock(stepsDataUrl, 'compact')}
       <h1>Make it a workflow</h1>
       <div class="steps">
         ${tip.steps
@@ -154,6 +192,7 @@ function slideHtml({ tip, kind, slide, sourceLabel, tagLabel }) {
   } else {
     content = `
       <div class="tag">WHY IT MATTERS</div>
+      ${photoBlock(takeawayDataUrl, 'compact')}
       <h1>Useful AI still needs judgment</h1>
       <p class="hook">${escapeHtml(tip.why)}</p>
       <div class="panel">
@@ -204,6 +243,9 @@ if (!tip) throw new Error(`Draft is not an evergreen tip: ${draftDir}`)
 const isWeeklyRecap = topic?.policy?.contentLane === 'weekly-recap'
 const sourceLabel = isWeeklyRecap ? 'Una Labs weekly AI notes' : 'Una Labs practical AI notes'
 const tagLabel = isWeeklyRecap ? 'WEEK AHEAD' : 'UNA LABS TIP'
+const heroDataUrl = await maybeImageDataUrl(path.join(root, 'content', 'assets', 'evergreen', `${tip.id}.png`))
+const stepsDataUrl = await maybeImageDataUrl(path.join(root, 'content', 'assets', 'evergreen', `${tip.id}-steps.png`))
+const takeawayDataUrl = await maybeImageDataUrl(path.join(root, 'content', 'assets', 'evergreen', `${tip.id}-takeaway.png`))
 
 await fs.mkdir(previewDir, { recursive: true })
 const slidePaths = [
@@ -212,9 +254,9 @@ const slidePaths = [
   path.join(previewDir, `evergreen-tip-${runDate}-${slot}-slide-3.png`),
 ]
 
-await renderHtmlToPng(slideHtml({ tip, kind: 'cover', slide: 1, sourceLabel, tagLabel }), slidePaths[0])
-await renderHtmlToPng(slideHtml({ tip, kind: 'steps', slide: 2, sourceLabel, tagLabel }), slidePaths[1])
-await renderHtmlToPng(slideHtml({ tip, kind: 'takeaway', slide: 3, sourceLabel, tagLabel }), slidePaths[2])
+await renderHtmlToPng(slideHtml({ tip, kind: 'cover', slide: 1, sourceLabel, tagLabel, heroDataUrl }), slidePaths[0])
+await renderHtmlToPng(slideHtml({ tip, kind: 'steps', slide: 2, sourceLabel, tagLabel, stepsDataUrl }), slidePaths[1])
+await renderHtmlToPng(slideHtml({ tip, kind: 'takeaway', slide: 3, sourceLabel, tagLabel, takeawayDataUrl }), slidePaths[2])
 
 const slideData = await Promise.all(slidePaths.map((filePath) => imageDataUrl(filePath)))
 const contactPath = path.join(previewDir, `evergreen-tip-${runDate}-${slot}.png`)

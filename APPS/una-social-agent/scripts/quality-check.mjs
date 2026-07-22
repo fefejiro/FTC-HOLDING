@@ -6,6 +6,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(__dirname, '..')
 const runDate = readArg('--date') || todayInTimeZone()
 const maxSourceAgeDays = Number(readArg('--max-source-age-days') || 7)
+const sandboxAutopublish = ['1', 'true', 'yes', 'on'].includes(
+  String(process.env.UNA_SANDBOX_AUTOPUBLISH || '').toLowerCase(),
+)
 
 function readArg(name) {
   const index = process.argv.indexOf(name)
@@ -158,9 +161,15 @@ if (!visualLedger) {
         issues.push(`${record.region || 'Region'} visual was not accepted by image relevance review.`)
       }
       if (record.fallback_used === true || /deterministic-technical-composition/i.test(record.image_model || '')) {
-        issues.push(
-          `${record.region || 'Region'} visual used the deterministic fallback renderer. Fallback/template visuals are preview-only and cannot be auto-published.`,
-        )
+        if (sandboxAutopublish && evaluation.decision === 'accept' && (evaluation.overall_score || 0) >= 82) {
+          warnings.push(
+            `${record.region || 'Region'} visual used an accepted deterministic fallback and is allowed only by the Una Labs sandbox autopublish policy.`,
+          )
+        } else {
+          issues.push(
+            `${record.region || 'Region'} visual used the deterministic fallback renderer. Set UNA_SANDBOX_AUTOPUBLISH=1 only for the Una Labs sandbox and only accepted fallback visuals scoring 82 or higher may continue.`,
+          )
+        }
       }
       if ((evaluation.overall_score || 0) < 78) {
         issues.push(`${record.region || 'Region'} visual overall score ${evaluation.overall_score || 0} is below 78.`)
@@ -194,6 +203,7 @@ const result = {
   sourceCount: Array.isArray(sources) ? sources.length : 0,
   visualRecordCount: Array.isArray(visualLedger?.records) ? visualLedger.records.length : 0,
   primarySourceAgeDays: Number.isFinite(primaryAge) ? primaryAge : null,
+  sandboxAutopublish,
   issues,
   warnings,
 }

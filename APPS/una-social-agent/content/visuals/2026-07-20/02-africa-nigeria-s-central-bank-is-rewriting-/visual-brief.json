@@ -1,0 +1,57 @@
+{
+  "story_id": "africa-nigeria-s-central-bank-is-rewriting-the-ru-2",
+  "region": "Africa",
+  "editorial_angle": "Encrypted Messaging Policy Review moving into practical use",
+  "image_type": "editorial_photo",
+  "primary_subject": "encrypted messaging policy review",
+  "subject_action": "reviewing policy tradeoffs",
+  "environment": "platform policy review room with legal, safety and product workflow",
+  "supporting_elements": [
+    "policy checklist",
+    "secure messaging flow diagram",
+    "risk review board",
+    "privacy notes",
+    "messaging safety",
+    "privacy protection",
+    "platform governance"
+  ],
+  "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
+  "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
+  "lighting": "natural professional lighting",
+  "mood": "credible, operational, human, practical",
+  "regional_context": [
+    "authentic Nigeria market context where relevant"
+  ],
+  "technology_signals": [
+    "encrypted messaging",
+    "platform policy",
+    "cyber fraud controls",
+    "user privacy"
+  ],
+  "must_show": [
+    "encrypted messaging policy review",
+    "encrypted messaging",
+    "platform policy",
+    "cyber fraud controls",
+    "reviewing policy tradeoffs"
+  ],
+  "must_not_show": [
+    "abstract screen",
+    "glowing ai brain",
+    "robot head",
+    "generic server room",
+    "generic city skyline",
+    "floating hologram",
+    "phone as the main subject",
+    "people standing beside a screen",
+    "decorative people",
+    "stereotype imagery",
+    "flags as the main subject",
+    "unlicensed logos",
+    "visible text"
+  ],
+  "text_safe_area": "bottom",
+  "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Nigeria's central bank is rewriting the rules for fintech growth. Primary subject: encrypted messaging policy review. Show a policy analyst actively reviewing policy tradeoffs in a platform policy review room with legal, safety and product workflow. Story-specific technology: encrypted messaging, platform policy, cyber fraud controls, user privacy. Visible supporting details: policy checklist, secure messaging flow diagram, risk review board, privacy notes, messaging safety, privacy protection, platform governance. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Nigeria market context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+  "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
+  "visual_confidence": 0.86
+}

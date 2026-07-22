@@ -1,0 +1,46 @@
+{
+  "story_id": "north-america-ai-is-more-likely-than-humans-to-form-bias-1",
+  "region": "North America",
+  "country_or_market": "North America",
+  "headline": "AI is more likely than humans to form biases when hiring",
+  "plain_language_summary": "The next time you apply for a job, AI may screen your résumé before any human sees it. But there's good reason to question whether AI will judge you fairly. Researchers already know that LLMs pick up human biases from their training data. New research suggests that LLMs can also develop their own biases from…",
+  "primary_subject": "AI hiring and resume screening workflow",
+  "technology": [
+    "resume screening model",
+    "candidate scoring",
+    "bias review",
+    "human oversight"
+  ],
+  "organization": "MIT Technology Review AI",
+  "people_or_roles": [
+    "recruiter",
+    "hiring manager",
+    "candidate advocate"
+  ],
+  "physical_environment": "human resources review room with resumes and interview notes",
+  "visible_objects": [
+    "candidate scorecard",
+    "resume stack",
+    "bias review checklist",
+    "interview notes"
+  ],
+  "important_actions": [
+    "reviewing candidate screening results",
+    "checking bias risks",
+    "comparing human and AI decisions"
+  ],
+  "real_world_application": [
+    "fair hiring",
+    "job screening",
+    "workforce decisions"
+  ],
+  "visual_evidence_from_source": [
+    "hiring AI",
+    "ai",
+    "research"
+  ],
+  "source_name": "MIT Technology Review AI",
+  "source_url": "https://www.technologyreview.com/2026/07/20/1140655/ai-biases-hiring-humans/",
+  "publication_date": "2026-07-20T08:39:01.000Z",
+  "confidence": 0.86
+}

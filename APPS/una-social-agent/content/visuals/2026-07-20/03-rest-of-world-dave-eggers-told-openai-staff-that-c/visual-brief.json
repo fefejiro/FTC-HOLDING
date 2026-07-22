@@ -1,0 +1,57 @@
+{
+  "story_id": "rest-of-world-dave-eggers-told-openai-staff-that-chatgpt-3",
+  "region": "Rest of World",
+  "editorial_angle": "Work-focused Ai Agent In Daily Operations moving into practical use",
+  "image_type": "editorial_photo",
+  "primary_subject": "work-focused AI agent in daily operations",
+  "subject_action": "checking agent output",
+  "environment": "real team workspace or meeting room",
+  "supporting_elements": [
+    "workflow board",
+    "ticket queue",
+    "review checklist",
+    "shared dashboard",
+    "support operations",
+    "admin work",
+    "research and reporting"
+  ],
+  "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
+  "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
+  "lighting": "natural professional lighting",
+  "mood": "credible, operational, human, practical",
+  "regional_context": [
+    "authentic Rest of World business context where relevant"
+  ],
+  "technology_signals": [
+    "AI agents",
+    "workflow automation",
+    "document review",
+    "customer support"
+  ],
+  "must_show": [
+    "work-focused AI agent in daily operations",
+    "AI agents",
+    "workflow automation",
+    "document review",
+    "checking agent output"
+  ],
+  "must_not_show": [
+    "abstract screen",
+    "glowing ai brain",
+    "robot head",
+    "generic server room",
+    "generic city skyline",
+    "floating hologram",
+    "phone as the main subject",
+    "people standing beside a screen",
+    "decorative people",
+    "stereotype imagery",
+    "flags as the main subject",
+    "unlicensed logos",
+    "visible text"
+  ],
+  "text_safe_area": "bottom",
+  "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Dave Eggers told OpenAI staff that ChatGPT was 'silencing an entire generation'. Primary subject: work-focused AI agent in daily operations. Show a operations manager actively checking agent output in a real team workspace or meeting room. Story-specific technology: AI agents, workflow automation, document review, customer support. Visible supporting details: workflow board, ticket queue, review checklist, shared dashboard, support operations, admin work, research and reporting. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Rest of World business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+  "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
+  "visual_confidence": 0.86
+}

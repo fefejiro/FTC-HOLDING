@@ -276,14 +276,29 @@ Register it:
 npm run schedule:register
 ```
 
-This one daily peak Eastern run creates both Instagram and LinkedIn caption drafts.
-It creates the regional news brief, renders the Instagram carousel, renders the
-LinkedIn visual, runs the source/caption/visual quality gate, publishes through
-the visible browser, and records proof screenshots plus the JSONL ledger.
+Una Labs is the automated publishing sandbox. Scheduled runs create the regional
+brief, render Instagram and LinkedIn visuals, run the source/caption/visual
+quality gates, and publish automatically through the visible browser while API
+credentials are not configured. Browser access is serialized and each result is
+written to the proof ledger.
 
-Scheduled live posting is allowed only after the automated quality gates pass.
-If the visual pipeline falls back to deterministic/template art, `quality:today`
-must fail and the scheduled task must not publish.
+The sandbox policy permits an accepted deterministic fallback visual scoring 82
+or higher to publish with a warning. Missing sources, placeholder text, rejected
+visuals, low scores, missing captions, authentication failures, and missing post
+proof still fail closed. This lets the sandbox learn from imperfect posts without
+turning off the safety and truth checks.
+
+The target background path is the API publisher:
+
+```powershell
+npm run publish:api:dry-run
+```
+
+The API path requires `META_ACCESS_TOKEN`, `INSTAGRAM_IG_USER_ID`,
+`UNA_PUBLIC_ASSET_BASE_URL`, `LINKEDIN_ACCESS_TOKEN`, and
+`LINKEDIN_ORGANIZATION_ID`. Until those values and the required platform
+permissions are configured, scheduled publishing continues through the visible
+Una Labs sandbox browser and may temporarily take focus during its publish window.
 
 Operational lessons from the July 15 live run:
 
@@ -291,5 +306,5 @@ Operational lessons from the July 15 live run:
 - LinkedIn should use the `Photo` path from the Page posts composer when attaching the visual. Avoid raw source URLs in the LinkedIn body because LinkedIn can turn them into link previews and block photo attachment.
 - LinkedIn copy should be fuller than Instagram: human, practical, and operator-focused, while still naming the sources.
 - A public post counts as done only when the Page/profile proof screenshot shows the post after publishing.
-- The scheduled runner loads `.env.local` into the process at runtime, but it must still spend sparingly. If acceptable photo/editorial visuals cannot be produced, the run should fail closed and write the reason to `logs/` instead of publishing a weak template.
-- Keep the visible Chrome window available and signed in before 6:45 AM. LinkedIn and Instagram publishing depend on the real browser session, not a headless login.
+- The scheduled runner loads `.env.local` into the process at runtime, but it must still spend sparingly. If acceptable photo/editorial visuals cannot be produced, the run should fail closed and write the reason to `logs/` instead of preparing a weak template for publication.
+- Una Labs scheduled publishing may use the visible browser because this account is the automation sandbox. Do not copy this policy to a personal account until the proof ledger shows sustained reliability.

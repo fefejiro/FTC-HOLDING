@@ -57,19 +57,19 @@ foreach ($staleTask in $staleTasks) {
   }
 }
 
-Register-UnaTask -TaskName 'UnaLabsSocial-PeakDraft' -At $PeakAt -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -Arguments $runArgs -Description 'Weekday peak Eastern Una Labs source-backed regional brief, visual quality gate, visible-browser publish, and proof ledger.'
+Register-UnaTask -TaskName 'UnaLabsSocial-PeakDraft' -At $PeakAt -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -Arguments $runArgs -Description 'Weekday Una Labs sandbox post: source-backed regional brief, sandbox quality gate, automatic visible-browser publish, and proof ledger.'
 
 $evergreenArgs = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$evergreenRunner`" -ProjectDir `"$ProjectDir`" -Slot `"evergreen`" -Mode `"tip`" -ForceNew -Channels `"$Channels`" -AllowScheduledPublish"
-Register-UnaTask -TaskName 'UnaLabsSocial-EvergreenTip' -At $EvergreenAt -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -Arguments $evergreenArgs -Description 'Weekday Una Labs evergreen AI, ChatGPT, Claude, and workflow tip post with visual quality gate, visible-browser publish, and proof ledger.'
+Register-UnaTask -TaskName 'UnaLabsSocial-EvergreenTip' -At $EvergreenAt -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -Arguments $evergreenArgs -Description 'Weekday Una Labs sandbox evergreen post with quality gate, automatic visible-browser publish, and proof ledger.'
 
 $saturdayArgs = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$evergreenRunner`" -ProjectDir `"$ProjectDir`" -Slot `"weekend-tip`" -Mode `"tip`" -ForceNew -Channels `"$Channels`" -AllowScheduledPublish"
-Register-UnaTask -TaskName 'UnaLabsSocial-WeekendTip' -At $SaturdayTipAt -DaysOfWeek Saturday -Arguments $saturdayArgs -Description 'Saturday Una Labs practical AI tip for lighter weekend reading, visible-browser publish, and proof ledger.'
+Register-UnaTask -TaskName 'UnaLabsSocial-WeekendTip' -At $SaturdayTipAt -DaysOfWeek Saturday -Arguments $saturdayArgs -Description 'Saturday Una Labs sandbox practical AI tip with automatic visible-browser publish and proof ledger.'
 
 $sundayArgs = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$evergreenRunner`" -ProjectDir `"$ProjectDir`" -Slot `"weekly-recap`" -Mode `"weekly-recap`" -ForceNew -Channels `"$Channels`" -AllowScheduledPublish"
-Register-UnaTask -TaskName 'UnaLabsSocial-WeeklyRecap' -At $SundayRecapAt -DaysOfWeek Sunday -Arguments $sundayArgs -Description 'Sunday Una Labs week-ahead AI and technology recap, visible-browser publish, and proof ledger.'
+Register-UnaTask -TaskName 'UnaLabsSocial-WeeklyRecap' -At $SundayRecapAt -DaysOfWeek Sunday -Arguments $sundayArgs -Description 'Sunday Una Labs sandbox week-ahead recap with automatic visible-browser publish and proof ledger.'
 
 Write-Host "Una Labs social schedule ready for weekdays at $PeakAt Eastern."
 Write-Host "Una Labs evergreen tip schedule ready for weekdays at $EvergreenAt Eastern."
 Write-Host "Una Labs weekend tip schedule ready for Saturdays at $SaturdayTipAt Eastern."
 Write-Host "Una Labs weekly recap schedule ready for Sundays at $SundayRecapAt Eastern."
-Write-Host "News creates the regional carousel. Evergreen/weekend content creates practical AI/workflow posts. All lanes publish through the visible browser and record proof."
+Write-Host "Una Labs is the sandbox: scheduled lanes publish automatically after quality gates, serialize browser access, and record proof for learning."

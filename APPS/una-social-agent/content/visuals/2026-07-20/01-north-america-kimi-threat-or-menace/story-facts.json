@@ -1,0 +1,46 @@
+{
+  "story_id": "north-america-kimi-threat-or-menace-1",
+  "region": "North America",
+  "country_or_market": "North America",
+  "headline": "Kimi: Threat or menace?",
+  "plain_language_summary": "Chinese company Moonshot AI released a new version of its Kimi model this week, prompting concern about \"full AI communism.\"",
+  "primary_subject": "open-source AI model competition",
+  "technology": [
+    "open-source AI models",
+    "developer ecosystem",
+    "model benchmarks",
+    "cloud AI tools"
+  ],
+  "organization": "TechCrunch AI",
+  "people_or_roles": [
+    "AI developer",
+    "research engineer",
+    "technology analyst"
+  ],
+  "physical_environment": "developer conference or AI research workspace",
+  "visible_objects": [
+    "model benchmark dashboard",
+    "developer laptops",
+    "conference demo screen",
+    "research notes"
+  ],
+  "important_actions": [
+    "comparing model performance",
+    "reviewing open-source releases",
+    "testing developer tools"
+  ],
+  "real_world_application": [
+    "AI competition",
+    "developer tools",
+    "enterprise adoption"
+  ],
+  "visual_evidence_from_source": [
+    "ai model competition",
+    "ai",
+    "startups"
+  ],
+  "source_name": "TechCrunch AI",
+  "source_url": "https://techcrunch.com/2026/07/18/kimi-threat-or-menace/",
+  "publication_date": "2026-07-18T18:51:07.000Z",
+  "confidence": 0.86
+}

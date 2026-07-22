@@ -1,0 +1,140 @@
+{
+  "run_id": "una-visual-2026-07-20",
+  "story_id": "north-america-ai-is-more-likely-than-humans-to-form-bias-1",
+  "region": "North America",
+  "headline": "AI is more likely than humans to form biases when hiring",
+  "source_url": "https://www.technologyreview.com/2026/07/20/1140655/ai-biases-hiring-humans/",
+  "source_date": "2026-07-20T08:39:01.000Z",
+  "story_score": 0,
+  "story_facts": {
+    "story_id": "north-america-ai-is-more-likely-than-humans-to-form-bias-1",
+    "region": "North America",
+    "country_or_market": "North America",
+    "headline": "AI is more likely than humans to form biases when hiring",
+    "plain_language_summary": "The next time you apply for a job, AI may screen your résumé before any human sees it. But there's good reason to question whether AI will judge you fairly. Researchers already know that LLMs pick up human biases from their training data. New research suggests that LLMs can also develop their own biases from…",
+    "primary_subject": "AI hiring and resume screening workflow",
+    "technology": [
+      "resume screening model",
+      "candidate scoring",
+      "bias review",
+      "human oversight"
+    ],
+    "organization": "MIT Technology Review AI",
+    "people_or_roles": [
+      "recruiter",
+      "hiring manager",
+      "candidate advocate"
+    ],
+    "physical_environment": "human resources review room with resumes and interview notes",
+    "visible_objects": [
+      "candidate scorecard",
+      "resume stack",
+      "bias review checklist",
+      "interview notes"
+    ],
+    "important_actions": [
+      "reviewing candidate screening results",
+      "checking bias risks",
+      "comparing human and AI decisions"
+    ],
+    "real_world_application": [
+      "fair hiring",
+      "job screening",
+      "workforce decisions"
+    ],
+    "visual_evidence_from_source": [
+      "hiring AI",
+      "ai",
+      "research"
+    ],
+    "source_name": "MIT Technology Review AI",
+    "source_url": "https://www.technologyreview.com/2026/07/20/1140655/ai-biases-hiring-humans/",
+    "publication_date": "2026-07-20T08:39:01.000Z",
+    "confidence": 0.86
+  },
+  "visual_brief": {
+    "story_id": "north-america-ai-is-more-likely-than-humans-to-form-bias-1",
+    "region": "North America",
+    "editorial_angle": "Ai Hiring And Resume Screening Workflow moving into practical use",
+    "image_type": "editorial_photo",
+    "primary_subject": "AI hiring and resume screening workflow",
+    "subject_action": "reviewing candidate screening results",
+    "environment": "human resources review room with resumes and interview notes",
+    "supporting_elements": [
+      "candidate scorecard",
+      "resume stack",
+      "bias review checklist",
+      "interview notes",
+      "fair hiring",
+      "job screening",
+      "workforce decisions"
+    ],
+    "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
+    "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
+    "lighting": "natural professional lighting",
+    "mood": "credible, operational, human, practical",
+    "regional_context": [
+      "authentic North America business context where relevant"
+    ],
+    "technology_signals": [
+      "resume screening model",
+      "candidate scoring",
+      "bias review",
+      "human oversight"
+    ],
+    "must_show": [
+      "AI hiring and resume screening workflow",
+      "resume screening model",
+      "candidate scoring",
+      "bias review",
+      "reviewing candidate screening results"
+    ],
+    "must_not_show": [
+      "abstract screen",
+      "glowing ai brain",
+      "robot head",
+      "generic server room",
+      "generic city skyline",
+      "floating hologram",
+      "phone as the main subject",
+      "people standing beside a screen",
+      "decorative people",
+      "stereotype imagery",
+      "flags as the main subject",
+      "unlicensed logos",
+      "visible text"
+    ],
+    "text_safe_area": "bottom",
+    "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: AI is more likely than humans to form biases when hiring. Primary subject: AI hiring and resume screening workflow. Show a recruiter actively reviewing candidate screening results in a human resources review room with resumes and interview notes. Story-specific technology: resume screening model, candidate scoring, bias review, human oversight. Visible supporting details: candidate scorecard, resume stack, bias review checklist, interview notes, fair hiring, job screening, workforce decisions. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic North America business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+    "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
+    "visual_confidence": 0.86
+  },
+  "image_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: AI is more likely than humans to form biases when hiring. Primary subject: AI hiring and resume screening workflow. Show a recruiter actively reviewing candidate screening results in a human resources review room with resumes and interview notes. Story-specific technology: resume screening model, candidate scoring, bias review, human oversight. Visible supporting details: candidate scorecard, resume stack, bias review checklist, interview notes, fair hiring, job screening, workforce decisions. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic North America business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+  "image_asset_path": "content\\visuals\\2026-07-20\\01-north-america-ai-is-more-likely-than-humans-to-for\\raw-image.png",
+  "image_model": "deterministic-technical-composition",
+  "generation_attempts": 1,
+  "image_evaluation": {
+    "story_alignment": 80,
+    "technology_specificity": 76,
+    "regional_authenticity": 78,
+    "editorial_credibility": 80,
+    "composition_quality": 86,
+    "text_safe_area_quality": 86,
+    "stereotype_risk": 8,
+    "generic_stock_risk": 34,
+    "overall_score": 85,
+    "failure_reasons": [],
+    "retry_instructions": [],
+    "decision": "accept",
+    "evaluation_mode": "brief_static_with_rendered_fallback"
+  },
+  "rejected_generations": [],
+  "fallback_used": true,
+  "fallback_reason": "Image generation is not configured for unattended use; rendered a deterministic story-specific technical composition.",
+  "attribution": null,
+  "slide_asset_path": "content\\visuals\\2026-07-20\\01-north-america-ai-is-more-likely-than-humans-to-for\\slide.png",
+  "publish_status": "review_required",
+  "published_urls": [],
+  "screenshots": [],
+  "timestamp": "2026-07-20T12:41:28.812Z"
+}

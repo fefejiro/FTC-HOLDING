@@ -1,0 +1,147 @@
+{
+  "run_id": "una-visual-2026-07-21",
+  "story_id": "africa-rank-launches-community-finance-products-t-2",
+  "region": "Africa",
+  "headline": "Rank launches community finance products to expand access to capital",
+  "source_url": "https://techcabal.com/2026/07/21/rank-launches-community-finance-products/",
+  "source_date": "2026-07-21T14:06:59.000Z",
+  "story_score": 0,
+  "story_facts": {
+    "story_id": "africa-rank-launches-community-finance-products-t-2",
+    "region": "Africa",
+    "country_or_market": "Africa",
+    "headline": "Rank launches community finance products to expand access to capital",
+    "plain_language_summary": "Rank is betting that digitising community-based finance can offer an alternative route to accessing capital for young entrepreneurs and workers.",
+    "primary_subject": "digital payment workflow",
+    "technology": [
+      "mobile payments",
+      "merchant settlement",
+      "fraud checks",
+      "payment rails"
+    ],
+    "organization": "TechCabal",
+    "people_or_roles": [
+      "merchant",
+      "payment operations analyst",
+      "customer"
+    ],
+    "physical_environment": "busy urban merchant counter or payments operations workspace",
+    "visible_objects": [
+      "point-of-sale terminal",
+      "receipt printer",
+      "merchant phone",
+      "transaction dashboard"
+    ],
+    "important_actions": [
+      "confirming a mobile payment",
+      "checking settlement status",
+      "serving a customer"
+    ],
+    "real_world_application": [
+      "merchant payments",
+      "cross-border commerce",
+      "small business cash flow"
+    ],
+    "visual_evidence_from_source": [
+      "fintech",
+      "africa",
+      "startups"
+    ],
+    "source_name": "TechCabal",
+    "source_url": "https://techcabal.com/2026/07/21/rank-launches-community-finance-products/",
+    "publication_date": "2026-07-21T14:06:59.000Z",
+    "confidence": 0.86
+  },
+  "visual_brief": {
+    "story_id": "africa-rank-launches-community-finance-products-t-2",
+    "region": "Africa",
+    "editorial_angle": "Digital Payment Workflow moving into practical use",
+    "image_type": "documentary_photo",
+    "primary_subject": "digital payment workflow",
+    "subject_action": "confirming a mobile payment",
+    "environment": "busy urban merchant counter or payments operations workspace",
+    "supporting_elements": [
+      "point-of-sale terminal",
+      "receipt printer",
+      "merchant phone",
+      "transaction dashboard",
+      "merchant payments",
+      "cross-border commerce",
+      "small business cash flow"
+    ],
+    "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
+    "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
+    "lighting": "natural professional lighting",
+    "mood": "credible, operational, human, practical",
+    "regional_context": [
+      "authentic Africa business context where relevant"
+    ],
+    "technology_signals": [
+      "mobile payments",
+      "merchant settlement",
+      "fraud checks",
+      "payment rails"
+    ],
+    "must_show": [
+      "digital payment workflow",
+      "mobile payments",
+      "merchant settlement",
+      "fraud checks",
+      "confirming a mobile payment"
+    ],
+    "must_not_show": [
+      "abstract screen",
+      "glowing ai brain",
+      "robot head",
+      "generic server room",
+      "generic city skyline",
+      "floating hologram",
+      "phone as the main subject",
+      "people standing beside a screen",
+      "decorative people",
+      "stereotype imagery",
+      "flags as the main subject",
+      "unlicensed logos",
+      "visible text"
+    ],
+    "text_safe_area": "bottom",
+    "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Rank launches community finance products to expand access to capital. Primary subject: digital payment workflow. Show a merchant actively confirming a mobile payment in a busy urban merchant counter or payments operations workspace. Story-specific technology: mobile payments, merchant settlement, fraud checks, payment rails. Visible supporting details: point-of-sale terminal, receipt printer, merchant phone, transaction dashboard, merchant payments, cross-border commerce, small business cash flow. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Africa business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+    "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
+    "visual_confidence": 0.86
+  },
+  "image_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Rank launches community finance products to expand access to capital. Primary subject: digital payment workflow. Show a merchant actively confirming a mobile payment in a busy urban merchant counter or payments operations workspace. Story-specific technology: mobile payments, merchant settlement, fraud checks, payment rails. Visible supporting details: point-of-sale terminal, receipt printer, merchant phone, transaction dashboard, merchant payments, cross-border commerce, small business cash flow. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Africa business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+  "image_asset_path": "content\\visuals\\2026-07-21\\02-africa-rank-launches-community-finance-prod\\raw-image.png",
+  "image_model": "openverse-editorial-photo",
+  "generation_attempts": 1,
+  "image_evaluation": {
+    "story_alignment": 80,
+    "technology_specificity": 76,
+    "regional_authenticity": 78,
+    "editorial_credibility": 86,
+    "composition_quality": 86,
+    "text_safe_area_quality": 86,
+    "stereotype_risk": 8,
+    "generic_stock_risk": 30,
+    "overall_score": 86,
+    "failure_reasons": [],
+    "retry_instructions": [],
+    "decision": "accept",
+    "evaluation_mode": "brief_static_with_rendered_fallback"
+  },
+  "rejected_generations": [],
+  "fallback_used": false,
+  "fallback_reason": "",
+  "attribution": {
+    "title": "EcoCash Agent",
+    "source_url": "https://www.flickr.com/photos/42487558@N00/43946038022",
+    "license": "by-nc-sa 2.0",
+    "artist": "The Advocacy Project",
+    "search_term": "mobile money agent Africa customer",
+    "provider": "flickr"
+  },
+  "slide_asset_path": "content\\visuals\\2026-07-21\\02-africa-rank-launches-community-finance-prod\\slide.png",
+  "publish_status": "review_required",
+  "published_urls": [],
+  "screenshots": [],
+  "timestamp": "2026-07-21T16:07:57.525Z"
+}

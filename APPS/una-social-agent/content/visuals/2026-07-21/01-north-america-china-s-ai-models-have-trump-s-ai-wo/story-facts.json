@@ -1,0 +1,46 @@
+{
+  "story_id": "north-america-china-s-ai-models-have-trump-s-ai-world-at-1",
+  "region": "North America",
+  "country_or_market": "China",
+  "headline": "China's AI models have Trump's AI world at war with itself",
+  "plain_language_summary": "This story originally appeared in The Algorithm, our weekly newsletter on AI. To get stories like this in your inbox first, sign up here. Over the weekend, several current and former advisors to President Donald Trump on AI publicly lobbed insults at the country's leading AI companies. David Sacks, the president's AI and crypto \"czar\" until…",
+  "primary_subject": "open-source AI model competition",
+  "technology": [
+    "open-source AI models",
+    "developer ecosystem",
+    "model benchmarks",
+    "cloud AI tools"
+  ],
+  "organization": "MIT Technology Review AI",
+  "people_or_roles": [
+    "AI developer",
+    "research engineer",
+    "technology analyst"
+  ],
+  "physical_environment": "developer conference or AI research workspace",
+  "visible_objects": [
+    "model benchmark dashboard",
+    "developer laptops",
+    "conference demo screen",
+    "research notes"
+  ],
+  "important_actions": [
+    "comparing model performance",
+    "reviewing open-source releases",
+    "testing developer tools"
+  ],
+  "real_world_application": [
+    "AI competition",
+    "developer tools",
+    "enterprise adoption"
+  ],
+  "visual_evidence_from_source": [
+    "ai model competition",
+    "ai",
+    "research"
+  ],
+  "source_name": "MIT Technology Review AI",
+  "source_url": "https://www.technologyreview.com/2026/07/20/1140675/chinas-ai-models-have-trumps-ai-world-at-war-with-itself/",
+  "publication_date": "2026-07-20T18:00:00.000Z",
+  "confidence": 0.86
+}

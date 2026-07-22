@@ -1,0 +1,57 @@
+{
+  "story_id": "north-america-china-delivers-a-one-two-punch-to-america--1",
+  "region": "North America",
+  "editorial_angle": "Open-source Ai Model Competition moving into practical use",
+  "image_type": "documentary_photo",
+  "primary_subject": "open-source AI model competition",
+  "subject_action": "comparing model performance",
+  "environment": "developer conference or AI research workspace",
+  "supporting_elements": [
+    "model benchmark dashboard",
+    "developer laptops",
+    "conference demo screen",
+    "research notes",
+    "AI competition",
+    "developer tools",
+    "enterprise adoption"
+  ],
+  "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
+  "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
+  "lighting": "natural professional lighting",
+  "mood": "credible, operational, human, practical",
+  "regional_context": [
+    "authentic China market context where relevant"
+  ],
+  "technology_signals": [
+    "open-source AI models",
+    "developer ecosystem",
+    "model benchmarks",
+    "cloud AI tools"
+  ],
+  "must_show": [
+    "open-source AI model competition",
+    "open-source AI models",
+    "developer ecosystem",
+    "model benchmarks",
+    "comparing model performance"
+  ],
+  "must_not_show": [
+    "abstract screen",
+    "glowing ai brain",
+    "robot head",
+    "generic server room",
+    "generic city skyline",
+    "floating hologram",
+    "phone as the main subject",
+    "people standing beside a screen",
+    "decorative people",
+    "stereotype imagery",
+    "flags as the main subject",
+    "unlicensed logos",
+    "visible text"
+  ],
+  "text_safe_area": "bottom",
+  "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: China delivers a one-two punch to America's AI dominance. Primary subject: open-source AI model competition. Show a AI developer actively comparing model performance in a developer conference or AI research workspace. Story-specific technology: open-source AI models, developer ecosystem, model benchmarks, cloud AI tools. Visible supporting details: model benchmark dashboard, developer laptops, conference demo screen, research notes, AI competition, developer tools, enterprise adoption. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic China market context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+  "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
+  "visual_confidence": 0.86
+}

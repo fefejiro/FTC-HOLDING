@@ -1,0 +1,46 @@
+{
+  "story_id": "north-america-china-delivers-a-one-two-punch-to-america--1",
+  "region": "North America",
+  "country_or_market": "China",
+  "headline": "China delivers a one-two punch to America's AI dominance",
+  "plain_language_summary": "China's leading AI companies are ramping up the pressure on Silicon Valley, as Moonshot and Alibaba unveiled models they claim can go toe-to-toe with the best from OpenAI and Anthropic at a fraction of the cost. The rapid-fire releases suggest America's lead at the AI frontier is increasingly tight, just as the technology is becoming […]",
+  "primary_subject": "open-source AI model competition",
+  "technology": [
+    "open-source AI models",
+    "developer ecosystem",
+    "model benchmarks",
+    "cloud AI tools"
+  ],
+  "organization": "The Verge AI",
+  "people_or_roles": [
+    "AI developer",
+    "research engineer",
+    "technology analyst"
+  ],
+  "physical_environment": "developer conference or AI research workspace",
+  "visible_objects": [
+    "model benchmark dashboard",
+    "developer laptops",
+    "conference demo screen",
+    "research notes"
+  ],
+  "important_actions": [
+    "comparing model performance",
+    "reviewing open-source releases",
+    "testing developer tools"
+  ],
+  "real_world_application": [
+    "AI competition",
+    "developer tools",
+    "enterprise adoption"
+  ],
+  "visual_evidence_from_source": [
+    "ai model competition",
+    "ai",
+    "consumer tech"
+  ],
+  "source_name": "The Verge AI",
+  "source_url": "https://www.theverge.com/ai-artificial-intelligence/967781/chinese-ai-models-open-source-moonshot-kimi-k3-alibaba-qwen",
+  "publication_date": "2026-07-20T10:16:33.000Z",
+  "confidence": 0.86
+}

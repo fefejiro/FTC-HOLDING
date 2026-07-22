@@ -1,0 +1,143 @@
+{
+  "run_id": "una-visual-2026-07-21",
+  "story_id": "rest-of-world-google-launches-a-cheaper-alternative-to-l-3",
+  "region": "Rest of World",
+  "headline": "Google launches a cheaper alternative to large AI security models like Mythos",
+  "source_url": "https://www.theverge.com/tech/968572/google-gemini-flash-cyber-ai-security-model",
+  "source_date": "2026-07-21T15:00:00.000Z",
+  "story_score": 0,
+  "story_facts": {
+    "story_id": "rest-of-world-google-launches-a-cheaper-alternative-to-l-3",
+    "region": "Rest of World",
+    "country_or_market": "Global",
+    "headline": "Google launches a cheaper alternative to large AI security models like Mythos",
+    "plain_language_summary": "Google is launching Gemini 3.6 Flash alongside a new security model dedicated to quickly finding and patching security vulnerabilities. In a blog post on Tuesday, Google describes Gemini 3.5 Flash Cyber as a \"cost-efficient and highly capable alternative\" to larger, more expensive AI systems, such as the one offered by Anthropic's Mythos. The cybersecurity model […]",
+    "primary_subject": "security operations response",
+    "technology": [
+      "threat detection",
+      "incident response",
+      "identity logs"
+    ],
+    "organization": "The Verge AI",
+    "people_or_roles": [
+      "security analyst",
+      "incident commander"
+    ],
+    "physical_environment": "security operations centre",
+    "visible_objects": [
+      "alert board",
+      "access log timeline",
+      "incident checklist"
+    ],
+    "important_actions": [
+      "triaging alerts",
+      "confirming impacted systems",
+      "coordinating containment"
+    ],
+    "real_world_application": [
+      "data protection",
+      "service continuity",
+      "risk control"
+    ],
+    "visual_evidence_from_source": [
+      "cybersecurity",
+      "ai",
+      "consumer tech",
+      "Google"
+    ],
+    "source_name": "The Verge AI",
+    "source_url": "https://www.theverge.com/tech/968572/google-gemini-flash-cyber-ai-security-model",
+    "publication_date": "2026-07-21T15:00:00.000Z",
+    "confidence": 0.86
+  },
+  "visual_brief": {
+    "story_id": "rest-of-world-google-launches-a-cheaper-alternative-to-l-3",
+    "region": "Rest of World",
+    "editorial_angle": "Security Operations Response moving into practical use",
+    "image_type": "editorial_photo",
+    "primary_subject": "security operations response",
+    "subject_action": "triaging alerts",
+    "environment": "security operations centre",
+    "supporting_elements": [
+      "alert board",
+      "access log timeline",
+      "incident checklist",
+      "data protection",
+      "service continuity",
+      "risk control"
+    ],
+    "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
+    "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
+    "lighting": "natural professional lighting",
+    "mood": "credible, operational, human, practical",
+    "regional_context": [
+      "authentic Rest of World business context where relevant"
+    ],
+    "technology_signals": [
+      "threat detection",
+      "incident response",
+      "identity logs"
+    ],
+    "must_show": [
+      "security operations response",
+      "threat detection",
+      "incident response",
+      "identity logs",
+      "triaging alerts"
+    ],
+    "must_not_show": [
+      "abstract screen",
+      "glowing ai brain",
+      "robot head",
+      "generic server room",
+      "generic city skyline",
+      "floating hologram",
+      "phone as the main subject",
+      "people standing beside a screen",
+      "decorative people",
+      "stereotype imagery",
+      "flags as the main subject",
+      "unlicensed logos",
+      "visible text"
+    ],
+    "text_safe_area": "bottom",
+    "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Google launches a cheaper alternative to large AI security models like Mythos. Primary subject: security operations response. Show a security analyst actively triaging alerts in a security operations centre. Story-specific technology: threat detection, incident response, identity logs. Visible supporting details: alert board, access log timeline, incident checklist, data protection, service continuity, risk control. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Rest of World business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+    "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
+    "visual_confidence": 0.86
+  },
+  "image_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Google launches a cheaper alternative to large AI security models like Mythos. Primary subject: security operations response. Show a security analyst actively triaging alerts in a security operations centre. Story-specific technology: threat detection, incident response, identity logs. Visible supporting details: alert board, access log timeline, incident checklist, data protection, service continuity, risk control. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Rest of World business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+  "image_asset_path": "content\\visuals\\2026-07-21\\03-rest-of-world-google-launches-a-cheaper-alternativ\\raw-image.png",
+  "image_model": "openverse-editorial-photo",
+  "generation_attempts": 1,
+  "image_evaluation": {
+    "story_alignment": 80,
+    "technology_specificity": 76,
+    "regional_authenticity": 78,
+    "editorial_credibility": 86,
+    "composition_quality": 86,
+    "text_safe_area_quality": 86,
+    "stereotype_risk": 8,
+    "generic_stock_risk": 30,
+    "overall_score": 86,
+    "failure_reasons": [],
+    "retry_instructions": [],
+    "decision": "accept",
+    "evaluation_mode": "brief_static_with_rendered_fallback"
+  },
+  "rejected_generations": [],
+  "fallback_used": false,
+  "fallback_reason": "",
+  "attribution": {
+    "title": "Take Your Child to Work Day",
+    "source_url": "https://www.flickr.com/photos/34728058@N08/8682142725",
+    "license": "by 2.0",
+    "artist": "USACE Europe District",
+    "search_term": "security operations center analyst",
+    "provider": "flickr"
+  },
+  "slide_asset_path": "content\\visuals\\2026-07-21\\03-rest-of-world-google-launches-a-cheaper-alternativ\\slide.png",
+  "publish_status": "review_required",
+  "published_urls": [],
+  "screenshots": [],
+  "timestamp": "2026-07-21T16:35:51.272Z"
+}

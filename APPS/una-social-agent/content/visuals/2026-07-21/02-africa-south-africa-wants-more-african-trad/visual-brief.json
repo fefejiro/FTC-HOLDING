@@ -1,0 +1,55 @@
+{
+  "story_id": "africa-south-africa-wants-more-african-trade-stab-2",
+  "region": "Africa",
+  "editorial_angle": "Regulated Digital Asset Infrastructure moving into practical use",
+  "image_type": "editorial_photo",
+  "primary_subject": "regulated digital asset infrastructure",
+  "subject_action": "reviewing transaction risk",
+  "environment": "startup operations room with compliance review",
+  "supporting_elements": [
+    "risk checklist",
+    "settlement dashboard",
+    "compliance notes",
+    "payments infrastructure",
+    "capital movement",
+    "financial inclusion"
+  ],
+  "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
+  "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
+  "lighting": "natural professional lighting",
+  "mood": "credible, operational, human, practical",
+  "regional_context": [
+    "authentic South Africa market context where relevant"
+  ],
+  "technology_signals": [
+    "wallet security",
+    "stablecoin rails",
+    "blockchain settlement"
+  ],
+  "must_show": [
+    "regulated digital asset infrastructure",
+    "wallet security",
+    "stablecoin rails",
+    "blockchain settlement",
+    "reviewing transaction risk"
+  ],
+  "must_not_show": [
+    "abstract screen",
+    "glowing ai brain",
+    "robot head",
+    "generic server room",
+    "generic city skyline",
+    "floating hologram",
+    "phone as the main subject",
+    "people standing beside a screen",
+    "decorative people",
+    "stereotype imagery",
+    "flags as the main subject",
+    "unlicensed logos",
+    "visible text"
+  ],
+  "text_safe_area": "bottom",
+  "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: South Africa wants more African trade. Stablecoins could help make it happen.. Primary subject: regulated digital asset infrastructure. Show a fintech founder actively reviewing transaction risk in a startup operations room with compliance review. Story-specific technology: wallet security, stablecoin rails, blockchain settlement. Visible supporting details: risk checklist, settlement dashboard, compliance notes, payments infrastructure, capital movement, financial inclusion. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic South Africa market context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+  "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
+  "visual_confidence": 0.86
+}

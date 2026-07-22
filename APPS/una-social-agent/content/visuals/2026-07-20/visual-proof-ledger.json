@@ -7,25 +7,25 @@
   "records": [
     {
       "run_id": "una-visual-2026-07-20",
-      "story_id": "north-america-a-scorecard-for-the-ai-age-1",
+      "story_id": "north-america-databricks-hits-188b-valuation-extending-i-1",
       "region": "North America",
-      "headline": "A scorecard for the AI age",
-      "source_url": "https://openai.com/index/a-scorecard-for-the-ai-age",
-      "source_date": "2026-07-17T10:00:00.000Z",
+      "headline": "Databricks hits $188B valuation, extending its run as AI's favorite second act",
+      "source_url": "https://techcrunch.com/2026/07/17/databricks-hits-188b-valuation-extending-its-run-as-ais-favorite-second-act/",
+      "source_date": "2026-07-17T22:12:56.000Z",
       "story_score": 0,
       "story_facts": {
-        "story_id": "north-america-a-scorecard-for-the-ai-age-1",
+        "story_id": "north-america-databricks-hits-188b-valuation-extending-i-1",
         "region": "North America",
         "country_or_market": "North America",
-        "headline": "A scorecard for the AI age",
-        "plain_language_summary": "Sarah Friar, CFO of OpenAI, introduces a practical AI scorecard to measure ROI through useful work, cost per successful task, dependability, and return on compute.",
+        "headline": "Databricks hits $188B valuation, extending its run as AI's favorite second act",
+        "plain_language_summary": "Databricks has remade its image into an AI company and has published research on the cost savings of open weight AI models for coding.",
         "primary_subject": "technology operations workflow",
         "technology": [
           "AI systems",
           "automation",
           "reporting workflow"
         ],
-        "organization": "OpenAI News",
+        "organization": "TechCrunch AI",
         "people_or_roles": [
           "operator",
           "analyst",
@@ -48,15 +48,15 @@
         "visual_evidence_from_source": [
           "technology operations",
           "ai",
-          "models"
+          "startups"
         ],
-        "source_name": "OpenAI News",
-        "source_url": "https://openai.com/index/a-scorecard-for-the-ai-age",
-        "publication_date": "2026-07-17T10:00:00.000Z",
+        "source_name": "TechCrunch AI",
+        "source_url": "https://techcrunch.com/2026/07/17/databricks-hits-188b-valuation-extending-its-run-as-ais-favorite-second-act/",
+        "publication_date": "2026-07-17T22:12:56.000Z",
         "confidence": 0.72
       },
       "visual_brief": {
-        "story_id": "north-america-a-scorecard-for-the-ai-age-1",
+        "story_id": "north-america-databricks-hits-188b-valuation-extending-i-1",
         "region": "North America",
         "editorial_angle": "Technology Operations Workflow moving into practical use",
         "image_type": "editorial_photo",
@@ -105,12 +105,12 @@
           "visible text"
         ],
         "text_safe_area": "bottom",
-        "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: A scorecard for the AI age. Primary subject: technology operations workflow. Show a operator actively checking a workflow in a practical technology operations workspace. Story-specific technology: AI systems, automation, reporting workflow. Visible supporting details: operations board, review checklist, system dashboard, daily operations, decision support. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic North America business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+        "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Databricks hits $188B valuation, extending its run as AI's favorite second act. Primary subject: technology operations workflow. Show a operator actively checking a workflow in a practical technology operations workspace. Story-specific technology: AI systems, automation, reporting workflow. Visible supporting details: operations board, review checklist, system dashboard, daily operations, decision support. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic North America business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
         "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
         "visual_confidence": 0.72
       },
-      "image_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: A scorecard for the AI age. Primary subject: technology operations workflow. Show a operator actively checking a workflow in a practical technology operations workspace. Story-specific technology: AI systems, automation, reporting workflow. Visible supporting details: operations board, review checklist, system dashboard, daily operations, decision support. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic North America business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
-      "image_asset_path": "content\\visuals\\2026-07-20\\01-north-america-a-scorecard-for-the-ai-age\\raw-image.png",
+      "image_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Databricks hits $188B valuation, extending its run as AI's favorite second act. Primary subject: technology operations workflow. Show a operator actively checking a workflow in a practical technology operations workspace. Story-specific technology: AI systems, automation, reporting workflow. Visible supporting details: operations board, review checklist, system dashboard, daily operations, decision support. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic North America business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+      "image_asset_path": "content\\visuals\\2026-07-20\\01-north-america-databricks-hits-188b-valuation-exten\\raw-image.png",
       "image_model": "openverse-editorial-photo",
       "generation_attempts": 1,
       "image_evaluation": {
@@ -139,102 +139,102 @@
         "search_term": "African business team laptop office",
         "provider": "flickr"
       },
-      "slide_asset_path": "content\\visuals\\2026-07-20\\01-north-america-a-scorecard-for-the-ai-age\\slide.png",
+      "slide_asset_path": "content\\visuals\\2026-07-20\\01-north-america-databricks-hits-188b-valuation-exten\\slide.png",
       "publish_status": "review_required",
       "published_urls": [],
       "screenshots": [],
-      "timestamp": "2026-07-20T08:45:28.208Z"
+      "timestamp": "2026-07-20T12:50:15.048Z"
     },
     {
       "run_id": "una-visual-2026-07-20",
-      "story_id": "africa-techcabal-daily-m-a-machine-2",
+      "story_id": "africa-nigeria-s-central-bank-is-rewriting-the-ru-2",
       "region": "Africa",
-      "headline": "👨🏿‍🚀TechCabal Daily - 'M&A machine'",
-      "source_url": "https://techcabal.com/2026/07/20/techcabal-daily-ma-machine/",
-      "source_date": "2026-07-20T06:54:38.000Z",
+      "headline": "Nigeria's central bank is rewriting the rules for fintech growth",
+      "source_url": "https://techcabal.com/2026/07/20/nigerias-central-bank-is-rewriting-the-rules-for-fintech-growth/",
+      "source_date": "2026-07-20T11:32:22.000Z",
       "story_score": 0,
       "story_facts": {
-        "story_id": "africa-techcabal-daily-m-a-machine-2",
+        "story_id": "africa-nigeria-s-central-bank-is-rewriting-the-ru-2",
         "region": "Africa",
-        "country_or_market": "Kenya",
-        "headline": "👨🏿‍🚀TechCabal Daily - 'M&A machine'",
-        "plain_language_summary": "In today's edition: iOCO acquires another startup || Starlink goes live in Côte d'Ivoire || Kenya wants foreign gambling platforms to block users || Telecom Egypt pulls away from data centre deal",
-        "primary_subject": "AI-assisted telecom operations",
+        "country_or_market": "Nigeria",
+        "headline": "Nigeria's central bank is rewriting the rules for fintech growth",
+        "plain_language_summary": "Over the past decade, the playbook for Nigerian fintechs has been remarkably consistent: build payment products, acquire merchants, scale transaction volumes, obtain microfinance bank licences, expand into lending, and eventually launch savings products.",
+        "primary_subject": "encrypted messaging policy review",
         "technology": [
-          "network operations",
-          "customer service AI",
-          "voice workflow",
-          "incident routing"
+          "encrypted messaging",
+          "platform policy",
+          "cyber fraud controls",
+          "user privacy"
         ],
         "organization": "TechCabal",
         "people_or_roles": [
-          "network operator",
-          "customer service lead",
-          "field coordinator"
+          "policy analyst",
+          "trust and safety operator",
+          "product counsel"
         ],
-        "physical_environment": "telecom network operations centre",
+        "physical_environment": "platform policy review room with legal, safety and product workflow",
         "visible_objects": [
-          "network map",
-          "call queue panel",
-          "incident timeline",
-          "field-service board"
+          "policy checklist",
+          "secure messaging flow diagram",
+          "risk review board",
+          "privacy notes"
         ],
         "important_actions": [
-          "reviewing network alerts",
-          "routing customer issues",
-          "checking service quality"
+          "reviewing policy tradeoffs",
+          "checking fraud risk controls",
+          "mapping user privacy impact"
         ],
         "real_world_application": [
-          "phone networks",
-          "customer service",
-          "field operations"
+          "messaging safety",
+          "privacy protection",
+          "platform governance"
         ],
         "visual_evidence_from_source": [
-          "telecom AI",
+          "platform policy",
           "africa",
           "startups"
         ],
         "source_name": "TechCabal",
-        "source_url": "https://techcabal.com/2026/07/20/techcabal-daily-ma-machine/",
-        "publication_date": "2026-07-20T06:54:38.000Z",
+        "source_url": "https://techcabal.com/2026/07/20/nigerias-central-bank-is-rewriting-the-rules-for-fintech-growth/",
+        "publication_date": "2026-07-20T11:32:22.000Z",
         "confidence": 0.86
       },
       "visual_brief": {
-        "story_id": "africa-techcabal-daily-m-a-machine-2",
+        "story_id": "africa-nigeria-s-central-bank-is-rewriting-the-ru-2",
         "region": "Africa",
-        "editorial_angle": "Ai-assisted Telecom Operations moving into practical use",
+        "editorial_angle": "Encrypted Messaging Policy Review moving into practical use",
         "image_type": "editorial_photo",
-        "primary_subject": "AI-assisted telecom operations",
-        "subject_action": "reviewing network alerts",
-        "environment": "telecom network operations centre",
+        "primary_subject": "encrypted messaging policy review",
+        "subject_action": "reviewing policy tradeoffs",
+        "environment": "platform policy review room with legal, safety and product workflow",
         "supporting_elements": [
-          "network map",
-          "call queue panel",
-          "incident timeline",
-          "field-service board",
-          "phone networks",
-          "customer service",
-          "field operations"
+          "policy checklist",
+          "secure messaging flow diagram",
+          "risk review board",
+          "privacy notes",
+          "messaging safety",
+          "privacy protection",
+          "platform governance"
         ],
         "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
         "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
         "lighting": "natural professional lighting",
         "mood": "credible, operational, human, practical",
         "regional_context": [
-          "authentic Kenya market context where relevant"
+          "authentic Nigeria market context where relevant"
         ],
         "technology_signals": [
-          "network operations",
-          "customer service AI",
-          "voice workflow",
-          "incident routing"
+          "encrypted messaging",
+          "platform policy",
+          "cyber fraud controls",
+          "user privacy"
         ],
         "must_show": [
-          "AI-assisted telecom operations",
-          "network operations",
-          "customer service AI",
-          "voice workflow",
-          "reviewing network alerts"
+          "encrypted messaging policy review",
+          "encrypted messaging",
+          "platform policy",
+          "cyber fraud controls",
+          "reviewing policy tradeoffs"
         ],
         "must_not_show": [
           "abstract screen",
@@ -252,12 +252,12 @@
           "visible text"
         ],
         "text_safe_area": "bottom",
-        "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: 👨🏿‍🚀TechCabal Daily - 'M&A machine'. Primary subject: AI-assisted telecom operations. Show a network operator actively reviewing network alerts in a telecom network operations centre. Story-specific technology: network operations, customer service AI, voice workflow, incident routing. Visible supporting details: network map, call queue panel, incident timeline, field-service board, phone networks, customer service, field operations. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Kenya market context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+        "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Nigeria's central bank is rewriting the rules for fintech growth. Primary subject: encrypted messaging policy review. Show a policy analyst actively reviewing policy tradeoffs in a platform policy review room with legal, safety and product workflow. Story-specific technology: encrypted messaging, platform policy, cyber fraud controls, user privacy. Visible supporting details: policy checklist, secure messaging flow diagram, risk review board, privacy notes, messaging safety, privacy protection, platform governance. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Nigeria market context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
         "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
         "visual_confidence": 0.86
       },
-      "image_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: 👨🏿‍🚀TechCabal Daily - 'M&A machine'. Primary subject: AI-assisted telecom operations. Show a network operator actively reviewing network alerts in a telecom network operations centre. Story-specific technology: network operations, customer service AI, voice workflow, incident routing. Visible supporting details: network map, call queue panel, incident timeline, field-service board, phone networks, customer service, field operations. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Kenya market context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
-      "image_asset_path": "content\\visuals\\2026-07-20\\02-africa-techcabal-daily-m-a-machine\\raw-image.png",
+      "image_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: Nigeria's central bank is rewriting the rules for fintech growth. Primary subject: encrypted messaging policy review. Show a policy analyst actively reviewing policy tradeoffs in a platform policy review room with legal, safety and product workflow. Story-specific technology: encrypted messaging, platform policy, cyber fraud controls, user privacy. Visible supporting details: policy checklist, secure messaging flow diagram, risk review board, privacy notes, messaging safety, privacy protection, platform governance. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Nigeria market context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+      "image_asset_path": "content\\visuals\\2026-07-20\\02-africa-nigeria-s-central-bank-is-rewriting-\\raw-image.png",
       "image_model": "openverse-editorial-photo",
       "generation_attempts": 1,
       "image_evaluation": {
@@ -279,106 +279,109 @@
       "fallback_used": false,
       "fallback_reason": "",
       "attribution": {
-        "title": "Business people working on laptops during a meeting",
-        "source_url": "https://www.flickr.com/photos/147875007@N03/45739297502",
+        "title": "CTBT Intensive Policy Course Executive Council Simulation",
+        "source_url": "https://www.flickr.com/photos/40662521@N07/7635558898",
         "license": "by 2.0",
-        "artist": "Rawpixel Ltd",
-        "search_term": "African business team laptop office",
+        "artist": "The Official CTBTO Photostream",
+        "search_term": "India technology policy meeting Nigeria",
         "provider": "flickr"
       },
-      "slide_asset_path": "content\\visuals\\2026-07-20\\02-africa-techcabal-daily-m-a-machine\\slide.png",
+      "slide_asset_path": "content\\visuals\\2026-07-20\\02-africa-nigeria-s-central-bank-is-rewriting-\\slide.png",
       "publish_status": "review_required",
       "published_urls": [],
       "screenshots": [],
-      "timestamp": "2026-07-20T08:45:29.145Z"
+      "timestamp": "2026-07-20T12:50:16.356Z"
     },
     {
       "run_id": "una-visual-2026-07-20",
-      "story_id": "rest-of-world-eu-forces-google-to-share-its-toys-with-th-3",
+      "story_id": "rest-of-world-china-delivers-a-one-two-punch-to-america--3",
       "region": "Rest of World",
-      "headline": "EU forces Google to share its toys with the other AI and search kids",
-      "source_url": "https://www.theregister.com/software/2026/07/16/eu-forces-google-to-share-its-toys-with-the-other-ai-and-search-kids/5273819",
-      "source_date": "2026-07-16T16:48:41.000Z",
+      "headline": "China delivers a one-two punch to America's AI dominance",
+      "source_url": "https://www.theverge.com/ai-artificial-intelligence/967781/chinese-ai-models-open-source-moonshot-kimi-k3-alibaba-qwen",
+      "source_date": "2026-07-20T10:16:33.000Z",
       "story_score": 0,
       "story_facts": {
-        "story_id": "rest-of-world-eu-forces-google-to-share-its-toys-with-th-3",
+        "story_id": "rest-of-world-china-delivers-a-one-two-punch-to-america--3",
         "region": "Rest of World",
-        "country_or_market": "Global",
-        "headline": "EU forces Google to share its toys with the other AI and search kids",
-        "plain_language_summary": "The Chocolate Factory is not amused",
-        "primary_subject": "robotics manufacturing line",
+        "country_or_market": "China",
+        "headline": "China delivers a one-two punch to America's AI dominance",
+        "plain_language_summary": "China's leading AI companies are ramping up the pressure on Silicon Valley, as Moonshot and Alibaba unveiled models they claim can go toe-to-toe with the best from OpenAI and Anthropic at a fraction of the cost. The rapid-fire releases suggest America's lead at the AI frontier is increasingly tight, just as the technology is becoming […]",
+        "primary_subject": "open-source AI model competition",
         "technology": [
-          "industrial robots",
-          "computer vision",
-          "quality inspection"
+          "open-source AI models",
+          "developer ecosystem",
+          "model benchmarks",
+          "cloud AI tools"
         ],
-        "organization": "The Register AI",
+        "organization": "The Verge AI",
         "people_or_roles": [
-          "manufacturing engineer",
-          "quality operator"
+          "AI developer",
+          "research engineer",
+          "technology analyst"
         ],
-        "physical_environment": "modern factory floor",
+        "physical_environment": "developer conference or AI research workspace",
         "visible_objects": [
-          "robotic arm",
-          "inspection station",
-          "safety markings",
-          "parts tray"
+          "model benchmark dashboard",
+          "developer laptops",
+          "conference demo screen",
+          "research notes"
         ],
         "important_actions": [
-          "inspecting automated assembly",
-          "checking computer vision output"
+          "comparing model performance",
+          "reviewing open-source releases",
+          "testing developer tools"
         ],
         "real_world_application": [
-          "factory productivity",
-          "quality control",
-          "worker safety"
+          "AI competition",
+          "developer tools",
+          "enterprise adoption"
         ],
         "visual_evidence_from_source": [
-          "robotics",
+          "ai model competition",
           "ai",
-          "software",
-          "Google"
+          "consumer tech"
         ],
-        "source_name": "The Register AI",
-        "source_url": "https://www.theregister.com/software/2026/07/16/eu-forces-google-to-share-its-toys-with-the-other-ai-and-search-kids/5273819",
-        "publication_date": "2026-07-16T16:48:41.000Z",
+        "source_name": "The Verge AI",
+        "source_url": "https://www.theverge.com/ai-artificial-intelligence/967781/chinese-ai-models-open-source-moonshot-kimi-k3-alibaba-qwen",
+        "publication_date": "2026-07-20T10:16:33.000Z",
         "confidence": 0.86
       },
       "visual_brief": {
-        "story_id": "rest-of-world-eu-forces-google-to-share-its-toys-with-th-3",
+        "story_id": "rest-of-world-china-delivers-a-one-two-punch-to-america--3",
         "region": "Rest of World",
-        "editorial_angle": "Robotics Manufacturing Line moving into practical use",
+        "editorial_angle": "Open-source Ai Model Competition moving into practical use",
         "image_type": "documentary_photo",
-        "primary_subject": "robotics manufacturing line",
-        "subject_action": "inspecting automated assembly",
-        "environment": "modern factory floor",
+        "primary_subject": "open-source AI model competition",
+        "subject_action": "comparing model performance",
+        "environment": "developer conference or AI research workspace",
         "supporting_elements": [
-          "robotic arm",
-          "inspection station",
-          "safety markings",
-          "parts tray",
-          "factory productivity",
-          "quality control",
-          "worker safety"
+          "model benchmark dashboard",
+          "developer laptops",
+          "conference demo screen",
+          "research notes",
+          "AI competition",
+          "developer tools",
+          "enterprise adoption"
         ],
         "composition": "wide editorial scene with the story subject dominant and a clean lower text-safe area",
         "camera_perspective": "eye-level documentary perspective, 35mm editorial feel",
         "lighting": "natural professional lighting",
         "mood": "credible, operational, human, practical",
         "regional_context": [
-          "authentic Rest of World business context where relevant"
+          "authentic China market context where relevant"
         ],
         "technology_signals": [
-          "industrial robots",
-          "computer vision",
-          "quality inspection"
+          "open-source AI models",
+          "developer ecosystem",
+          "model benchmarks",
+          "cloud AI tools"
         ],
         "must_show": [
-          "robotics manufacturing line",
-          "industrial robots",
-          "computer vision",
-          "quality inspection",
-          "inspecting automated assembly"
+          "open-source AI model competition",
+          "open-source AI models",
+          "developer ecosystem",
+          "model benchmarks",
+          "comparing model performance"
         ],
         "must_not_show": [
           "abstract screen",
@@ -396,24 +399,24 @@
           "visible text"
         ],
         "text_safe_area": "bottom",
-        "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: EU forces Google to share its toys with the other AI and search kids. Primary subject: robotics manufacturing line. Show a manufacturing engineer actively inspecting automated assembly in a modern factory floor. Story-specific technology: industrial robots, computer vision, quality inspection. Visible supporting details: robotic arm, inspection station, safety markings, parts tray, factory productivity, quality control, worker safety. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Rest of World business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+        "generation_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: China delivers a one-two punch to America's AI dominance. Primary subject: open-source AI model competition. Show a AI developer actively comparing model performance in a developer conference or AI research workspace. Story-specific technology: open-source AI models, developer ecosystem, model benchmarks, cloud AI tools. Visible supporting details: model benchmark dashboard, developer laptops, conference demo screen, research notes, AI competition, developer tools, enterprise adoption. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic China market context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
         "negative_prompt": "abstract screen, glowing ai brain, robot head, generic server room, generic city skyline, floating hologram, phone as the main subject, people standing beside a screen, decorative people, stereotype imagery, flags as the main subject, unlicensed logos, visible text",
         "visual_confidence": 0.86
       },
-      "image_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: EU forces Google to share its toys with the other AI and search kids. Primary subject: robotics manufacturing line. Show a manufacturing engineer actively inspecting automated assembly in a modern factory floor. Story-specific technology: industrial robots, computer vision, quality inspection. Visible supporting details: robotic arm, inspection station, safety markings, parts tray, factory productivity, quality control, worker safety. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic Rest of World business context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
-      "image_asset_path": "content\\visuals\\2026-07-20\\03-rest-of-world-eu-forces-google-to-share-its-toys-w\\raw-image.png",
+      "image_prompt": "Authentic editorial technology photography for a professional global newsroom. The image must communicate this story without requiring the headline: China delivers a one-two punch to America's AI dominance. Primary subject: open-source AI model competition. Show a AI developer actively comparing model performance in a developer conference or AI research workspace. Story-specific technology: open-source AI models, developer ecosystem, model benchmarks, cloud AI tools. Visible supporting details: model benchmark dashboard, developer laptops, conference demo screen, research notes, AI competition, developer tools, enterprise adoption. Composition: wide editorial image, subject dominates, one clean lower area reserved for slide copy. Lighting and mood: mature, credible, contemporary, practical, not glossy stock. Regional context: authentic China market context where relevant. No visible words, no logos, no watermarks, no fake branded interface, no decorative science-fiction elements.",
+      "image_asset_path": "content\\visuals\\2026-07-20\\03-rest-of-world-china-delivers-a-one-two-punch-to-am\\raw-image.png",
       "image_model": "openverse-editorial-photo",
       "generation_attempts": 1,
       "image_evaluation": {
         "story_alignment": 80,
         "technology_specificity": 76,
         "regional_authenticity": 78,
-        "editorial_credibility": 86,
+        "editorial_credibility": 80,
         "composition_quality": 86,
         "text_safe_area_quality": 86,
         "stereotype_risk": 8,
         "generic_stock_risk": 30,
-        "overall_score": 86,
+        "overall_score": 85,
         "failure_reasons": [],
         "retry_instructions": [],
         "decision": "accept",
@@ -423,20 +426,20 @@
       "fallback_used": false,
       "fallback_reason": "",
       "attribution": {
-        "title": "Tesla Robot Dance",
-        "source_url": "https://www.flickr.com/photos/44124348109@N01/7408451314",
-        "license": "by 2.0",
-        "artist": "jurvetson",
-        "search_term": "manufacturing engineer robot factory",
+        "title": "Fortune Global Forum 2017",
+        "source_url": "https://www.flickr.com/photos/137225243@N02/37999496095",
+        "license": "by-nc-nd 2.0",
+        "artist": "fortuneglobalforum",
+        "search_term": "Chinese technology conference developers artificial intelligence China",
         "provider": "flickr"
       },
-      "slide_asset_path": "content\\visuals\\2026-07-20\\03-rest-of-world-eu-forces-google-to-share-its-toys-w\\slide.png",
+      "slide_asset_path": "content\\visuals\\2026-07-20\\03-rest-of-world-china-delivers-a-one-two-punch-to-am\\slide.png",
       "publish_status": "review_required",
       "published_urls": [],
       "screenshots": [],
-      "timestamp": "2026-07-20T08:45:30.456Z"
+      "timestamp": "2026-07-20T12:50:17.476Z"
     }
   ],
   "contact_sheet": "content\\previews\\regional-news-preview-2026-07-20.png",
-  "createdAt": "2026-07-20T08:45:31.349Z"
+  "createdAt": "2026-07-20T12:50:18.480Z"
 }
