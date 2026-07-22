@@ -79,6 +79,9 @@ secrets/
 __pycache__/
 *.pyc
 
+# Private legal/court working material must stay outside source control.
+APPS/saywetin-extension/court-forms-working/
+
 # Job agent runtime/generated artifacts
 APPS/job-reply-agent/data/*.sqlite-shm
 APPS/job-reply-agent/data/*.db
