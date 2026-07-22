@@ -18,8 +18,8 @@ It is intentionally not a rewrite plan. PeacePad is still a React/Vite + Express
 | Archive | Created locally on the MacInCloud machine. | Observed archive path pattern: `APPS/peacepad/ios/App/PeacePad3.xcarchive`; archive contained `Products/Applications/App.app`. |
 | Archive validation | Validation succeeded. | Xcode Organizer showed `Validation succeeded` for `App`, version `1.0.9`, build `1`. |
 | App Store Connect app record | App record existed. | App Store Connect showed a PeacePad app record with Apple ID `6793350735`, SKU `PEACEPAD-IOS-001`, and app category/info fields. |
-| App Store Connect upload/TestFlight | Not fully verified in repo evidence. | Next developer must verify whether the validated archive was uploaded, processed, and attached to TestFlight/App Store review. Do not assume from local archive validation alone. |
-| Public App Store availability | Not verified. | User later requested public availability, but this handover has no final proof that the app was submitted, approved, or live. |
+| App Store Connect upload/TestFlight | Verified public beta ready. | App Store Connect/TestFlight showed version `1.0.9`, build `1`, status `Approved`, attached to internal and external groups. Public TestFlight link: `https://testflight.apple.com/join/7anZvZXj`. |
+| Public App Store availability | Not live yet. | The app is available through TestFlight, but it has not yet been verified as submitted for App Review, approved for App Store distribution, or searchable in the App Store. |
 
 ## What changed during this release push
 
@@ -32,25 +32,23 @@ It is intentionally not a rewrite plan. PeacePad is still a React/Vite + Express
 7. An FTC iOS App Store release skill/playbook was added at `skills/ftc-ios-app-store-release/SKILL.md` so future iOS releases can follow a cleaner checklist.
 8. The repo was cleaned and committed locally after the session.
 
-## Important distinction: validation is not availability
+## Important distinction: TestFlight is not App Store availability
 
-The last verified state is:
-
-```text
-simulator_ok + archive_validated + app_record_exists
-```
-
-That does not necessarily mean:
+The latest verified state is:
 
 ```text
-build_uploaded
-testflight_internal
-testflight_external
-submitted_for_review
-live_on_app_store
+simulator_ok + archive_validated + build_uploaded + testflight_external_ready
 ```
 
-The next developer should verify App Store Connect directly before doing more build work.
+Public TestFlight link:
+
+```text
+https://testflight.apple.com/join/7anZvZXj
+```
+
+That does not mean `submitted_for_review` or `live_on_app_store`.
+
+The next developer should continue in App Store Connect `Distribution`, complete the app version metadata/privacy/pricing checklist, select build `1.0.9 (1)`, and submit for Apple App Review.
 
 ## Known account and access notes
 
@@ -107,6 +105,12 @@ For personal testing:
 - Add the processed build to the selected tester group.
 - Confirm TestFlight status is active before telling the user to install.
 
+Current verified public beta link:
+
+```text
+https://testflight.apple.com/join/7anZvZXj
+```
+
 ### 4. Prepare public App Store submission
 
 Before submitting for public review, verify and complete:
@@ -153,12 +157,12 @@ Mark tracking as “No” unless PeacePad shares data across apps/sites for adve
 
 ## Recommended next work order
 
-1. Verify App Store Connect processing/build state.
-2. If no processed build exists, upload the validated archive or create a fresh archive only if the old one is missing/invalid.
-3. Get internal TestFlight install working on the user’s iPhone.
-4. Only after TestFlight install works, create external testing/public link if requested.
-5. Only after external testing and metadata are clean, submit for public App Store review.
-6. After Apple approval, update repo docs with the exact live version, build, approval date, and TestFlight/App Store URLs.
+1. Continue from the verified TestFlight public beta link and confirm a fresh install on an iPhone.
+2. Open App Store Connect `Distribution` for PeacePad.
+3. Select build `1.0.9 (1)` for the app version.
+4. Complete screenshots, description, support/privacy URLs, age rating, App Privacy, review contact/demo notes, pricing, and availability.
+5. Submit for Apple App Review only after the user confirms the final metadata/privacy answers.
+6. After Apple approval, update repo docs with the exact live version, build, approval date, and App Store URL.
 
 ## Stop conditions
 
@@ -172,4 +176,3 @@ Pause and ask the account holder to act if:
 - App Store Connect requests a privacy answer that cannot be verified from the app/repo.
 - A certificate must be revoked or replaced.
 - Public App Review submission would be triggered before the user confirms.
-
