@@ -145,7 +145,11 @@ Current available assets:
 - `store-assets/tablet-10inch-*.png`: 1200 x 1920
 - `store-assets/tablet-7inch-*.png`: 600 x 960
 
-Possible blocker: these are not the newest App Store iPhone screenshot slot sizes. If App Store Connect rejects them, capture or generate compliant iPhone screenshots from the simulator/exported app before submission.
+Possible blocker: these are not the newest App Store iPhone or iPad screenshot slot sizes. Apple's App Store Connect screenshot specification page lists 6.9-inch iPhone portrait sizes of `1260 x 2736`, `1290 x 2796`, or `1320 x 2868`, and 13-inch iPad portrait sizes of `2064 x 2752` or `2048 x 2732` if the app runs on iPad.
+
+Source checked 2026-07-22: `https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications/`
+
+If App Store Connect rejects the current assets, capture or generate compliant screenshots from the simulator/exported app before submission.
 
 ## App Store Connect work order
 
