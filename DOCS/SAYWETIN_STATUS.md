@@ -5,12 +5,12 @@ Auto-generated operational snapshot for SayWetin. This file is refreshed by scri
 ## Latest Snapshot
 
 <!-- AUTO:SAYWETIN_SNAPSHOT:START -->
-- Generated at: 2026-07-14T16:10:06.125Z
+- Generated at: 2026-07-22T04:10:05.209Z
 - Web origin: https://saywetin.app
 - API origin: https://api.saywetin.app
 - Smoke status: 3/3 checks passed
 - Test suite status: 13 tests across 3 files
-- Velocity status: 1 commits (14d), 2 commits (30d)
+- Velocity status: 0 commits (14d), 1 commits (30d)
 <!-- AUTO:SAYWETIN_SNAPSHOT:END -->
 
 ## Live Smoke Checks
@@ -34,7 +34,7 @@ Auto-generated operational snapshot for SayWetin. This file is refreshed by scri
 ## Velocity Metrics
 
 <!-- AUTO:SAYWETIN_VELOCITY:START -->
-- Commits (14d): 1
-- Commits (30d): 2
+- Commits (14d): 0
+- Commits (30d): 1
 - Last commit touching APPS/saywetin: c020c7da 2026-07-07 chore: checkpoint ops recovery and local billing hold
 <!-- AUTO:SAYWETIN_VELOCITY:END -->

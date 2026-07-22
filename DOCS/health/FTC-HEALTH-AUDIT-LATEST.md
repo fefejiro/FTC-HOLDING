@@ -1,12 +1,12 @@
 # FTC Health Audit
 
-Generated: 2026-07-14T20:05:32.096Z
+Generated: 2026-07-22T08:06:49.113Z
 Root: `C:\FTC HOLDING`
 
 ## Summary
 
-- PASS: 90
-- FAIL: 0
+- PASS: 89
+- FAIL: 1
 - WARN: 11
 - BLOCKED_EXTERNAL: 0
 - EXPECTED_PRIVATE: 2
@@ -48,7 +48,7 @@ Root: `C:\FTC HOLDING`
 | PASS | APPS/saywetin-extension | package.json found with 17 scripts. |
 | PASS | APPS/saywetin-native | package.json found with 32 scripts. |
 | PASS | APPS/una-labs-site | package.json found with 4 scripts. |
-| PASS | APPS/una-social-agent | package.json found with 34 scripts. |
+| PASS | APPS/una-social-agent | package.json found with 46 scripts. |
 | PASS | workers/ateam-edge | Worker folder inventory only. |
 | PASS | workers/ateam-ops | Worker folder inventory only. |
 | PASS | workers/dispatch-edge | Worker folder inventory only. |
@@ -71,14 +71,14 @@ Root: `C:\FTC HOLDING`
 | PASS | Garden quote | HTTP 200, content-type text/html; charset=utf-8 |
 | PASS | Garden contact | HTTP 200, content-type text/html; charset=utf-8 |
 | PASS | Garden services | HTTP 200, content-type text/html; charset=utf-8 |
-| PASS | Garden legacy portal redirect | HTTP 308 |
+| PASS | Garden legacy portal redirect | HTTP 200 |
 | PASS | CapSigma home | HTTP 200, content-type text/html; charset=utf-8 |
 | PASS | CapSigma session API | HTTP 200, content-type application/json |
 | PASS | PeacePad home | HTTP 200, content-type text/html; charset=utf-8 |
 | PASS | PeacePad API /health | HTTP 200, content-type application/json; charset=utf-8 |
 | PASS | PeacePad API /api/health | HTTP 200, content-type application/json; charset=utf-8 |
 | PASS | SayWetin home | HTTP 200, content-type text/html; charset=utf-8 |
-| PASS | SayWetin www home | HTTP 200, content-type text/html; charset=utf-8 |
+| FAIL | SayWetin www home | fetch failed |
 | PASS | SayWetin API /health | HTTP 200, content-type application/json; charset=utf-8 |
 | PASS | SayWetin API /api/status | HTTP 200, content-type application/json; charset=utf-8 |
 | PASS | Dispatch home | HTTP 200, content-type text/html; charset=UTF-8 |

@@ -11,11 +11,11 @@ This document tracks quality and delivery cadence for SayWetin.
 ## Snapshot
 
 <!-- AUTO:SAYWETIN_TEST_VELOCITY:START -->
-- Updated at: 2026-07-14T16:10:06.125Z
+- Updated at: 2026-07-22T04:10:05.209Z
 - Test files: 3
 - Test cases: 13
-- Commit velocity (14d): 1
-- Commit velocity (30d): 2
+- Commit velocity (14d): 0
+- Commit velocity (30d): 1
 - Canonical status source: DOCS/SAYWETIN_STATUS.md
 <!-- AUTO:SAYWETIN_TEST_VELOCITY:END -->
 
