@@ -206,3 +206,28 @@ Control note:
 - RDP input was unreliable for right-edge App Store Connect buttons and file picker dismissal.
 - VNC on port `5900` authenticated and captured proof screenshots, but click control timed out intermittently.
 - The best next control path is VNC for screenshots plus manual browser focus if needed, or a fresh remote browser session with Safari centered before pressing `Add for Review`.
+
+## App Review submission verified on 2026-07-22
+
+PeacePad iOS version `1.0` was added to App Review and submitted from the visible App Store Connect session.
+
+Verified final submission state:
+
+- App Store Connect status changed from `1.0 Prepare for Submission` to `1.0 Ready for Review`, then to `1.0 Waiting for Review`.
+- App Store Connect showed the confirmation message: `1 Item Submitted`.
+- Submitted item: `iOS App 1.0`, build/version `1.0.9 (1)`.
+- App Store Version Release remained set to automatic release after approval.
+- Pricing was configured as free (`$0.00`) across all listed countries or regions.
+- Availability was configured for all `175` countries or regions, with status `Available on App Release`.
+- iPad 13-inch screenshots were required before submission.
+
+Screenshot/upload lesson:
+
+- The original iPad screenshot PNGs were Apple-compliant dimensions (`2048 x 2732`) but included an alpha channel (`RGBA`), and App Store Connect left the upload in a failed/processing state.
+- Re-exporting the iPad screenshot as flat `RGB` JPEG resolved the media blocker.
+- The accepted replacement asset lives at `ios-prep/app-store-screenshots/ipad-13-2048x2732/rgb-jpeg/01-ipad-welcome.jpg`.
+
+Current release state after submission:
+
+- `submitted_for_review`
+- Not yet `live`: Apple App Review must approve the submission before PeacePad becomes searchable/downloadable from the public App Store.
