@@ -231,3 +231,27 @@ Current release state after submission:
 
 - `submitted_for_review`
 - Not yet `live`: Apple App Review must approve the submission before PeacePad becomes searchable/downloadable from the public App Store.
+
+## Follow-up readiness check on 2026-07-23
+
+Apple email confirmation was visible in Gmail with the message `We've received your app for review` for PeacePad iOS. This independently confirms Apple received the App Review submission.
+
+Current verified state:
+
+- Release state remains `submitted_for_review`.
+- Last visible App Store Connect state was `1.0 Waiting for Review`.
+- The App Store Connect web session on the Mac had expired back to Apple sign-in during the follow-up check, so exact live status (`Waiting for Review` vs `In Review`) requires fresh Apple authentication.
+- Do not upload a replacement build, remove the app from review, change screenshots, change bundle ID, revoke certificates, or configure Xcode Cloud unless Apple raises a specific issue or a verified critical release defect is found.
+
+Production readiness re-check:
+
+- `https://peacepad.ca` returned HTTP `200`.
+- `https://peacepad.ca/privacy` returned HTTP `200`.
+- `https://peacepad.ca/help` returned HTTP `200`.
+- `https://peacepad.ca/support` returned HTTP `200`.
+- `https://peacepad.ca/terms` returned HTTP `200`.
+- `https://api.peacepad.ca/api/health` returned HTTP `200`.
+
+Safe App Review positioning:
+
+> PeacePad is a co-parenting communication and organization tool. It helps users communicate calmly, manage parenting-related information, and organize records. It does not provide legal advice or determine legal outcomes.
