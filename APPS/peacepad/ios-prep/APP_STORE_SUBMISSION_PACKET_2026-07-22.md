@@ -167,3 +167,42 @@ If App Store Connect rejects the current assets, capture or generate compliant s
 ## Current blocker
 
 On 2026-07-22, the visible MacInCloud RDP session showed App Store Connect on the PeacePad TestFlight public beta page, but Safari did not accept remote click/keyboard input from Codex into the Distribution tab. The page is visible; input routing is the blocker, not the PeacePad build.
+
+## App Store Connect state verified later on 2026-07-22
+
+After the account holder manually opened the Distribution tab, the App Store Connect iOS app version page was inspected.
+
+Verified on the visible App Store Connect page:
+
+- App version page: `iOS App Version 1.0`
+- Status: `1.0 Prepare for Submission`
+- Screenshots: iPhone 6.5-inch display slot showed `2 of 10 Screenshots`
+- Promotional text: populated
+- Description: populated with PeacePad co-parenting / guest compose copy
+- Keywords: populated
+- Support URL: `https://peacepad.ca/help`
+- Marketing URL: `https://peacepad.ca`
+- Version: `1.0`
+- Copyright: `2026 PeacePad`
+- Build selected: build `1`, version `1.0.9`
+- Included assets: App Icon visible
+- App Review contact information: populated
+- Sign-in required: unchecked
+- App Review notes: populated with guest compose instructions and no-account review path
+- App Store Version Release: `Automatically release this version`
+
+Not yet verified complete from the visible page:
+
+- App Privacy final questionnaire state
+- Pricing and Availability final state
+- Age rating / ratings questionnaire final state
+- Export compliance final state
+- Whether App Store Connect will accept the current `2 of 10` iPhone screenshots or require at least one more screenshot/device slot
+- Whether `Add for Review` produces validation errors
+- Final `Submit to App Review` state
+
+Control note:
+
+- RDP input was unreliable for right-edge App Store Connect buttons and file picker dismissal.
+- VNC on port `5900` authenticated and captured proof screenshots, but click control timed out intermittently.
+- The best next control path is VNC for screenshots plus manual browser focus if needed, or a fresh remote browser session with Safari centered before pressing `Add for Review`.
