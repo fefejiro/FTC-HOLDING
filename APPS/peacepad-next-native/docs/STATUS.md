@@ -4,7 +4,14 @@ Last updated: 2026-07-23
 
 ## Current state
 
-React Native / Expo lab scaffold created.
+React Native / Expo lab scaffold created with a clickable mock flow:
+
+- Home.
+- Goal onboarding.
+- Calm Compose.
+- Parenting-time / child-call log concept.
+- Evidence Vault concept.
+- Source-linked timeline.
 
 ## Verified checks
 
@@ -14,11 +21,17 @@ npm --workspace=@ftc/peacepad-next-native run guardrails
 
 npm --workspace=@ftc/peacepad-next-native run typecheck
 -> passed
+
+npm --workspace=@ftc/peacepad-next-native exec expo -- --version
+-> 54.0.26
+
+npm --workspace=@ftc/peacepad-next-native exec expo -- config --type public
+-> resolved SDK 54 public config with bundle/package ca.peacepad.nextnative.lab
 ```
 
 ## Important caveat
 
-The lab app is scaffolded and typechecked. Expo runtime dependencies are declared, but a full device/simulator run still requires dependency installation and Expo launch validation.
+The lab app is scaffolded, typechecked, and Expo config resolves. A full device/simulator run is still pending.
 
 ## Next test steps
 
@@ -26,5 +39,4 @@ The lab app is scaffolded and typechecked. Expo runtime dependencies are declare
 2. Run `npm --workspace=@ftc/peacepad-next-native run start`.
 3. Open in Expo/web/iOS simulator.
 4. Capture screenshots for onboarding, modules, timeline, and guardrail copy.
-5. Expand the prototype into navigable screens.
-
+5. Test each tab and note confusing copy or layout.

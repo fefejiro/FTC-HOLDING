@@ -15,6 +15,20 @@ export type TimelineItem = {
   safetyLabel: string;
 };
 
+export type GoalOption = {
+  id: string;
+  title: string;
+  description: string;
+};
+
+export type EvidenceItem = {
+  id: string;
+  title: string;
+  kind: string;
+  linkedEvent: string;
+  integrityNote: string;
+};
+
 export const premiumModules: PremiumModule[] = [
   {
     id: "calm-compose",
@@ -73,3 +87,40 @@ export const timelineItems: TimelineItem[] = [
   }
 ];
 
+export const goalOptions: GoalOption[] = [
+  {
+    id: "calm-next-message",
+    title: "Prepare my next message",
+    description: "Get to a calmer draft before sending anything."
+  },
+  {
+    id: "log-parenting-time",
+    title: "Log parenting time",
+    description: "Record visits, public contact, calls, and missed/rescheduled moments."
+  },
+  {
+    id: "organize-records",
+    title: "Organize my records",
+    description: "Build a source-linked timeline from screenshots, PDFs, notes, and receipts."
+  }
+];
+
+export const evidenceItems: EvidenceItem[] = [
+  {
+    id: "mock-screen-001",
+    title: "Screenshot metadata sample",
+    kind: "PNG metadata",
+    linkedEvent: "Weekly child call",
+    integrityNote: "Mock hash shown after upload; original file remains user-controlled."
+  },
+  {
+    id: "mock-pdf-001",
+    title: "PDF index sample",
+    kind: "PDF",
+    linkedEvent: "Parenting arrangement",
+    integrityNote: "Draft summary links back to this source; no legal conclusion."
+  }
+];
+
+export const calmRewriteSample =
+  "Could we confirm the pickup time for Saturday? I want to keep the plan clear and child-focused. If the time needs to change, please let me know by Friday evening.";
