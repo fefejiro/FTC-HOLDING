@@ -10,10 +10,10 @@ VERIFIED: PeacePad iOS v1 has been submitted to Apple App Review. The submitted 
 
 ```text
 React Web Application
-→ Capacitor Native Shell
-→ Existing iOS Xcode Workspace
-→ App Store Connect
-→ TestFlight / App Store
+-> Capacitor Native Shell
+-> Existing iOS Xcode Workspace
+-> App Store Connect
+-> TestFlight / App Store
 ```
 
 VERIFIED: The active source under `APPS/peacepad` is:
@@ -143,11 +143,11 @@ Keep backend domain contracts stable while allowing multiple clients:
 
 ```text
 Current Web/Capacitor Client
-        ↓
+        v
 Shared API Contracts and Domain Models
-        ↓
+        v
 Express/API + Postgres + Object Storage
-        ↑
+        ^
 Future React Native Client / Professional Portal
 ```
 
