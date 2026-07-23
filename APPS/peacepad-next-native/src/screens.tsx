@@ -1,21 +1,33 @@
-import React from "react";
+import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { LabButton } from "./components/LabButton";
 import { ModuleCard } from "./components/ModuleCard";
 import { TimelineItemCard } from "./components/TimelineItemCard";
 import {
   binderMetrics,
+  binderSetupSteps,
   calmRewriteSample,
   evidenceItems,
+  exportChecklistItems,
   exportPackages,
   goalOptions,
+  parentingOutcomeOptions,
   premiumModules,
   premiumWorkflows,
   timelineItems
 } from "./data/mockPeacePad";
 import { colors, spacing, typography } from "./theme";
 
-export type LabScreen = "home" | "onboarding" | "compose" | "logs" | "vault" | "timeline" | "export";
+export type LabScreen =
+  | "home"
+  | "onboarding"
+  | "binder"
+  | "compose"
+  | "logs"
+  | "vault"
+  | "evidence-detail"
+  | "timeline"
+  | "export";
 
 type ScreenProps = {
   selectedGoal: string;
@@ -57,7 +69,7 @@ export function HomeScreen({ setScreen }: ScreenProps) {
           <Pressable
             accessibilityRole="button"
             key={workflow.id}
-            onPress={() => setScreen(workflow.id === "binder" ? "vault" : workflow.id === "contact-proof" ? "logs" : "export")}
+            onPress={() => setScreen(workflow.id === "binder" ? "binder" : workflow.id === "contact-proof" ? "logs" : "export")}
             style={styles.workflowCard}
           >
             <Text style={styles.choiceTitle}>{workflow.title}</Text>
@@ -94,9 +106,36 @@ export function OnboardingScreen({ selectedGoal, setSelectedGoal, setScreen }: S
         </Pressable>
       ))}
       <LabButton
-        label={selectedGoal === "calm-next-message" ? "Continue to compose" : "Continue to timeline"}
-        onPress={() => setScreen(selectedGoal === "calm-next-message" ? "compose" : "timeline")}
+        label={selectedGoal === "calm-next-message" ? "Continue to compose" : "Continue to binder"}
+        onPress={() => setScreen(selectedGoal === "calm-next-message" ? "compose" : "binder")}
       />
+    </View>
+  );
+}
+
+export function BinderScreen({ setScreen }: ScreenProps) {
+  return (
+    <View style={styles.stack}>
+      <Text style={styles.sectionTitle}>Case Binder setup</Text>
+      <Text style={styles.body}>
+        The binder is the Premium home base: one calm workspace for people, source types, logs, and export readiness.
+      </Text>
+      {binderSetupSteps.map((step) => (
+        <View key={step.id} style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.choiceTitle}>{step.title}</Text>
+            <Text style={[styles.statusPill, step.status === "locked" ? styles.lockedPill : null]}>{step.status}</Text>
+          </View>
+          <Text style={styles.body}>{step.description}</Text>
+        </View>
+      ))}
+      <View style={styles.cardPremium}>
+        <Text style={styles.choiceTitle}>Premium setup principle</Text>
+        <Text style={styles.body}>
+          Ask for the minimum needed to organize records. Let users add sensitive details later, deliberately.
+        </Text>
+      </View>
+      <LabButton label="Continue to evidence vault" onPress={() => setScreen("vault")} />
     </View>
   );
 }
@@ -130,18 +169,29 @@ export function ComposeScreen({ draft, setDraft, setScreen }: ScreenProps) {
 }
 
 export function LogsScreen({ setScreen }: ScreenProps) {
+  const [selectedOutcome, setSelectedOutcome] = useState("Completed");
+
   return (
     <View style={styles.stack}>
       <Text style={styles.sectionTitle}>Parenting-time and child-call logs</Text>
-      <Text style={styles.body}>
-        This screen tests neutral, factual logging language before building real storage.
-      </Text>
+      <Text style={styles.body}>This screen tests neutral, factual logging language before building real storage.</Text>
       <View style={styles.card}>
         <Text style={styles.choiceTitle}>New log prototype</Text>
         <Text style={styles.body}>Type: weekly child call</Text>
-        <Text style={styles.body}>Outcome: completed</Text>
+        <Text style={styles.body}>Selected outcome: {selectedOutcome}</Text>
         <Text style={styles.body}>Tone: factual, child-centred, non-accusatory</Text>
       </View>
+      {parentingOutcomeOptions.map((option) => (
+        <Pressable
+          accessibilityRole="button"
+          key={option.id}
+          onPress={() => setSelectedOutcome(option.label)}
+          style={[styles.choice, selectedOutcome === option.label ? styles.choiceActive : null]}
+        >
+          <Text style={styles.choiceTitle}>{option.label}</Text>
+          <Text style={styles.body}>{option.description}</Text>
+        </Pressable>
+      ))}
       <View style={styles.cardPremium}>
         <Text style={styles.choiceTitle}>Peace Calls proof-first design</Text>
         <Text style={styles.body}>Initial Premium focus is schedule + attempt + outcome + source note.</Text>
@@ -167,6 +217,7 @@ export function VaultScreen({ setScreen }: ScreenProps) {
           <Text style={styles.body}>Tag: {item.tag}</Text>
           <Text style={styles.body}>Linked event: {item.linkedEvent}</Text>
           <Text style={styles.caption}>{item.integrityNote}</Text>
+          <LabButton label="Open evidence detail" onPress={() => setScreen("evidence-detail")} variant="secondary" />
         </View>
       ))}
       <View style={styles.cardPremium}>
@@ -174,6 +225,38 @@ export function VaultScreen({ setScreen }: ScreenProps) {
         <Text style={styles.body}>3 call logs have no source attachment. 2 visit notes need date/source review.</Text>
       </View>
       <LabButton label="Review source-linked timeline" onPress={() => setScreen("timeline")} />
+    </View>
+  );
+}
+
+export function EvidenceDetailScreen({ setScreen }: ScreenProps) {
+  const item = evidenceItems[0];
+
+  return (
+    <View style={styles.stack}>
+      <Text style={styles.sectionTitle}>Evidence detail</Text>
+      <Text style={styles.body}>
+        This is the screen where Premium starts feeling serious: every source gets context before it becomes part of a
+        timeline or export package.
+      </Text>
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.choiceTitle}>{item.title}</Text>
+          <Text style={styles.statusPill}>{item.status}</Text>
+        </View>
+        <Text style={styles.body}>Source type: {item.kind}</Text>
+        <Text style={styles.body}>Tag: {item.tag}</Text>
+        <Text style={styles.body}>Linked event: {item.linkedEvent}</Text>
+        <Text style={styles.body}>Date/source/person fields: needs user review</Text>
+        <Text style={styles.caption}>{item.integrityNote}</Text>
+      </View>
+      <View style={styles.guardrail}>
+        <Text style={styles.guardrailTitle}>AI summary gate</Text>
+        <Text style={styles.body}>
+          AI can summarize this record only after extraction. The user reviews the summary before it is saved or exported.
+        </Text>
+      </View>
+      <LabButton label="Back to vault" onPress={() => setScreen("vault")} variant="secondary" />
     </View>
   );
 }
@@ -198,6 +281,14 @@ export function TimelineScreen({ setScreen }: ScreenProps) {
 }
 
 export function ExportScreen({ setScreen }: ScreenProps) {
+  const [included, setIncluded] = useState<Record<string, boolean>>(
+    Object.fromEntries(exportChecklistItems.map((item) => [item.id, item.includedByDefault]))
+  );
+
+  const toggle = (id: string) => {
+    setIncluded((current) => ({ ...current, [id]: !current[id] }));
+  };
+
   return (
     <View style={styles.stack}>
       <Text style={styles.sectionTitle}>Premium export preview</Text>
@@ -208,11 +299,25 @@ export function ExportScreen({ setScreen }: ScreenProps) {
         <View key={pack.id} style={styles.exportCard}>
           <Text style={styles.choiceTitle}>{pack.title}</Text>
           {pack.includes.map((item) => (
-            <Text key={item} style={styles.body}>• {item}</Text>
+            <Text key={item} style={styles.body}>- {item}</Text>
           ))}
           <Text style={styles.exportCaution}>{pack.caution}</Text>
         </View>
       ))}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Export checklist</Text>
+        {exportChecklistItems.map((item) => (
+          <Pressable
+            accessibilityRole="button"
+            key={item.id}
+            onPress={() => toggle(item.id)}
+            style={[styles.checkRow, included[item.id] ? styles.checkRowActive : null]}
+          >
+            <Text style={styles.checkMark}>{included[item.id] ? "✓" : "○"}</Text>
+            <Text style={styles.body}>{item.label}</Text>
+          </Pressable>
+        ))}
+      </View>
       <View style={styles.guardrail}>
         <Text style={styles.guardrailTitle}>Export review gate</Text>
         <Text style={styles.body}>
@@ -225,18 +330,9 @@ export function ExportScreen({ setScreen }: ScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  stack: {
-    gap: spacing.lg
-  },
-  hero: {
-    backgroundColor: colors.brand,
-    borderRadius: 28,
-    gap: spacing.md,
-    padding: spacing.xl
-  },
-  heroActions: {
-    gap: spacing.sm
-  },
+  stack: { gap: spacing.lg },
+  hero: { backgroundColor: colors.brand, borderRadius: 28, gap: spacing.md, padding: spacing.xl },
+  heroActions: { gap: spacing.sm },
   eyebrow: {
     color: colors.brandSoft,
     fontSize: 13,
@@ -244,40 +340,14 @@ const styles = StyleSheet.create({
     letterSpacing: 1.4,
     textTransform: "uppercase"
   },
-  eyebrowDark: {
-    ...typography.caption,
-    color: colors.brand,
-    fontWeight: "800",
-    textTransform: "uppercase"
-  },
-  title: {
-    ...typography.title,
-    color: colors.white
-  },
-  heroBody: {
-    ...typography.body,
-    color: colors.brandSoft
-  },
-  section: {
-    gap: spacing.md
-  },
-  sectionTitle: {
-    ...typography.heading,
-    color: colors.text
-  },
-  body: {
-    ...typography.body,
-    color: colors.muted
-  },
-  caption: {
-    ...typography.caption,
-    color: colors.muted
-  },
-  metricGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.md
-  },
+  eyebrowDark: { ...typography.caption, color: colors.brand, fontWeight: "800", textTransform: "uppercase" },
+  title: { ...typography.title, color: colors.white },
+  heroBody: { ...typography.body, color: colors.brandSoft },
+  section: { gap: spacing.md },
+  sectionTitle: { ...typography.heading, color: colors.text },
+  body: { ...typography.body, color: colors.muted },
+  caption: { ...typography.caption, color: colors.muted },
+  metricGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
   metricCard: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
@@ -288,16 +358,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     padding: spacing.lg
   },
-  metricValue: {
-    ...typography.title,
-    color: colors.brand
-  },
-  metricLabel: {
-    ...typography.caption,
-    color: colors.text,
-    fontWeight: "800",
-    textTransform: "uppercase"
-  },
+  metricValue: { ...typography.title, color: colors.brand },
+  metricLabel: { ...typography.caption, color: colors.text, fontWeight: "800", textTransform: "uppercase" },
   choice: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
@@ -306,14 +368,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     padding: spacing.lg
   },
-  choiceActive: {
-    borderColor: colors.brand,
-    borderWidth: 2
-  },
-  choiceTitle: {
-    ...typography.subheading,
-    color: colors.text
-  },
+  choiceActive: { borderColor: colors.brand, borderWidth: 2 },
+  choiceTitle: { ...typography.subheading, color: colors.text },
   workflowCard: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
@@ -322,11 +378,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.lg
   },
-  premiumSignal: {
-    ...typography.caption,
-    color: colors.brand,
-    fontWeight: "800"
-  },
+  premiumSignal: { ...typography.caption, color: colors.brand, fontWeight: "800" },
   input: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
@@ -337,12 +389,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     textAlignVertical: "top"
   },
-  suggestion: {
-    backgroundColor: colors.brandSoft,
-    borderRadius: 20,
-    gap: spacing.sm,
-    padding: spacing.lg
-  },
+  suggestion: { backgroundColor: colors.brandSoft, borderRadius: 20, gap: spacing.sm, padding: spacing.lg },
   premiumInsight: {
     backgroundColor: "#ECFDF7",
     borderColor: "#BFEBDD",
@@ -367,12 +414,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.lg
   },
-  cardHeader: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: spacing.md,
-    justifyContent: "space-between"
-  },
+  cardHeader: { alignItems: "center", flexDirection: "row", gap: spacing.md, justifyContent: "space-between" },
   statusPill: {
     ...typography.caption,
     backgroundColor: colors.brandSoft,
@@ -383,17 +425,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     textTransform: "uppercase"
   },
-  guardrail: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 22,
-    borderWidth: 1,
-    padding: spacing.lg
-  },
-  guardrailTitle: {
-    ...typography.subheading,
-    color: colors.text
-  },
+  lockedPill: { backgroundColor: "#F3F4F6", color: colors.muted },
+  guardrail: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 22, borderWidth: 1, padding: spacing.lg },
+  guardrailTitle: { ...typography.subheading, color: colors.text },
   exportCard: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
@@ -402,10 +436,17 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.lg
   },
-  exportCaution: {
-    ...typography.caption,
-    color: colors.warning,
-    fontWeight: "700",
-    marginTop: spacing.sm
-  }
+  exportCaution: { ...typography.caption, color: colors.warning, fontWeight: "700", marginTop: spacing.sm },
+  checkRow: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.md,
+    padding: spacing.lg
+  },
+  checkRowActive: { borderColor: colors.accent, backgroundColor: "#ECFDF7" },
+  checkMark: { color: colors.accent, fontSize: 22, fontWeight: "800" }
 });

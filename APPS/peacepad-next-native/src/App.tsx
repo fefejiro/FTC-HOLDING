@@ -3,6 +3,8 @@ import { SafeAreaView, ScrollView, StatusBar, StyleSheet } from "react-native";
 import { ScreenTabs } from "./components/ScreenTabs";
 import {
   ComposeScreen,
+  BinderScreen,
+  EvidenceDetailScreen,
   HomeScreen,
   LabScreen,
   LogsScreen,
@@ -33,9 +35,11 @@ export default function App() {
         <ScreenTabs active={screen} onSelect={setScreen} />
         {screen === "home" ? <HomeScreen {...screenProps} /> : null}
         {screen === "onboarding" ? <OnboardingScreen {...screenProps} /> : null}
+        {screen === "binder" ? <BinderScreen {...screenProps} /> : null}
         {screen === "compose" ? <ComposeScreen {...screenProps} /> : null}
         {screen === "logs" ? <LogsScreen {...screenProps} /> : null}
         {screen === "vault" ? <VaultScreen {...screenProps} /> : null}
+        {screen === "evidence-detail" ? <EvidenceDetailScreen {...screenProps} /> : null}
         {screen === "timeline" ? <TimelineScreen {...screenProps} /> : null}
         {screen === "export" ? <ExportScreen {...screenProps} /> : null}
       </ScrollView>

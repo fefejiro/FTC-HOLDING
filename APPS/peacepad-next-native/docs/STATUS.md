@@ -15,6 +15,10 @@ React Native / Expo lab scaffold created with a clickable mock flow:
 - Premium export preview.
 - Binder health metrics and readiness prompts.
 - Peace Calls proof-first screen copy.
+- Case Binder setup screen.
+- Evidence detail metadata/review screen.
+- Neutral parenting outcome selector.
+- Export checklist toggles.
 
 ## Verified checks
 

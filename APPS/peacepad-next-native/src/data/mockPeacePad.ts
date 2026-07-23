@@ -51,6 +51,25 @@ export type ExportPackage = {
   caution: string;
 };
 
+export type BinderSetupStep = {
+  id: string;
+  title: string;
+  description: string;
+  status: "ready" | "needs-review" | "locked";
+};
+
+export type ParentingOutcomeOption = {
+  id: string;
+  label: string;
+  description: string;
+};
+
+export type ExportChecklistItem = {
+  id: string;
+  label: string;
+  includedByDefault: boolean;
+};
+
 export const premiumModules: PremiumModule[] = [
   {
     id: "calm-compose",
@@ -208,5 +227,83 @@ export const exportPackages: ExportPackage[] = [
     title: "Lawyer-ready handoff package",
     includes: ["Timeline", "Document index", "Open questions", "Missing evidence prompts"],
     caution: "Designed to support a legal conversation, not replace one."
+  }
+];
+
+export const binderSetupSteps: BinderSetupStep[] = [
+  {
+    id: "case-purpose",
+    title: "Name the binder",
+    description: "Give the workspace a practical label, such as parenting contact, expenses, or schedule changes.",
+    status: "ready"
+  },
+  {
+    id: "people",
+    title: "Add people and roles",
+    description: "Track adult user, co-parent, child initials, lawyers, mediators, support workers, or trusted third parties.",
+    status: "needs-review"
+  },
+  {
+    id: "sources",
+    title: "Choose source types",
+    description: "Screenshots, PDFs, receipts, messages, call logs, visit notes, and professional letters.",
+    status: "ready"
+  },
+  {
+    id: "storage",
+    title: "Private storage review",
+    description: "Production evidence storage remains locked until the privacy/storage design is approved.",
+    status: "locked"
+  }
+];
+
+export const parentingOutcomeOptions: ParentingOutcomeOption[] = [
+  {
+    id: "completed",
+    label: "Completed",
+    description: "The planned visit or call happened."
+  },
+  {
+    id: "attempted-no-answer",
+    label: "Attempted, no answer",
+    description: "The user attempted contact and records the factual result."
+  },
+  {
+    id: "rescheduled",
+    label: "Rescheduled",
+    description: "The plan changed and the new proposed date/time should be attached."
+  },
+  {
+    id: "public-supervised",
+    label: "Public/supervised",
+    description: "The contact occurred with a public or supervised condition."
+  }
+];
+
+export const exportChecklistItems: ExportChecklistItem[] = [
+  {
+    id: "timeline",
+    label: "Source-linked timeline",
+    includedByDefault: true
+  },
+  {
+    id: "evidence-index",
+    label: "Evidence index",
+    includedByDefault: true
+  },
+  {
+    id: "weekly-summary",
+    label: "Weekly contact summary",
+    includedByDefault: true
+  },
+  {
+    id: "draft-lawyer-email",
+    label: "Draft lawyer email",
+    includedByDefault: false
+  },
+  {
+    id: "missing-evidence",
+    label: "Missing evidence checklist",
+    includedByDefault: true
   }
 ];

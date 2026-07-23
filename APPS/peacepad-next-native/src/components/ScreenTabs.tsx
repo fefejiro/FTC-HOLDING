@@ -10,7 +10,7 @@ type Props = {
 
 const tabs: Array<{ id: LabScreen; label: string }> = [
   { id: "home", label: "Premium" },
-  { id: "onboarding", label: "Onboard" },
+  { id: "binder", label: "Binder" },
   { id: "compose", label: "Compose" },
   { id: "logs", label: "Logs" },
   { id: "vault", label: "Vault" },

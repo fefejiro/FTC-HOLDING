@@ -29,6 +29,10 @@ Source docs:
 - Logs separate call/contact proof from risky recording/transcription.
 - Timeline has explicit source-link and legal-boundary copy.
 - Export screen frames the product as a clean review package, not file dumping.
+- Case Binder setup separates practical setup from sensitive details.
+- Evidence detail tests the metadata/review step before AI summaries.
+- Contact logs use neutral outcome labels instead of accusation-first labels.
+- Export checklist makes user confirmation explicit before sharing.
 
 ## Next premium screens to build
 
@@ -38,4 +42,3 @@ Source docs:
 4. Weekly child-call schedule and attempt log.
 5. Draft lawyer email / weekly summary preview with source citations.
 6. Export review checklist with include/exclude toggles.
-
