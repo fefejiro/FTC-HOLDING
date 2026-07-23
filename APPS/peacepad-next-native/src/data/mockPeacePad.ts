@@ -27,6 +27,28 @@ export type EvidenceItem = {
   kind: string;
   linkedEvent: string;
   integrityNote: string;
+  status: "raw" | "processed" | "reviewed" | "export-ready";
+  tag: string;
+};
+
+export type BinderMetric = {
+  label: string;
+  value: string;
+  note: string;
+};
+
+export type PremiumWorkflow = {
+  id: string;
+  title: string;
+  subtitle: string;
+  premiumSignal: string;
+};
+
+export type ExportPackage = {
+  id: string;
+  title: string;
+  includes: string[];
+  caution: string;
 };
 
 export const premiumModules: PremiumModule[] = [
@@ -111,16 +133,80 @@ export const evidenceItems: EvidenceItem[] = [
     title: "Screenshot metadata sample",
     kind: "PNG metadata",
     linkedEvent: "Weekly child call",
-    integrityNote: "Mock hash shown after upload; original file remains user-controlled."
+    integrityNote: "Mock hash shown after upload; original file remains user-controlled.",
+    status: "reviewed",
+    tag: "completed child call"
   },
   {
     id: "mock-pdf-001",
     title: "PDF index sample",
     kind: "PDF",
     linkedEvent: "Parenting arrangement",
-    integrityNote: "Draft summary links back to this source; no legal conclusion."
+    integrityNote: "Draft summary links back to this source; no legal conclusion.",
+    status: "processed",
+    tag: "court order"
   }
 ];
 
 export const calmRewriteSample =
   "Could we confirm the pickup time for Saturday? I want to keep the plan clear and child-focused. If the time needs to change, please let me know by Friday evening.";
+
+export const binderMetrics: BinderMetric[] = [
+  {
+    label: "Evidence items",
+    value: "24",
+    note: "Screenshots, PDFs, receipts, call notes"
+  },
+  {
+    label: "Parenting events",
+    value: "9",
+    note: "Visits, calls, changes, no-response logs"
+  },
+  {
+    label: "Export readiness",
+    value: "68%",
+    note: "12 records still need review"
+  }
+];
+
+export const premiumWorkflows: PremiumWorkflow[] = [
+  {
+    id: "binder",
+    title: "Build my case binder",
+    subtitle: "Upload, tag, review, and source-link records before export.",
+    premiumSignal: "Premium because it saves hours of document chaos."
+  },
+  {
+    id: "contact-proof",
+    title: "Protect parenting contact",
+    subtitle: "Log public visits, weekly child calls, missed attempts, and completed contact.",
+    premiumSignal: "Premium because repeated patterns become visible."
+  },
+  {
+    id: "lawyer-ready",
+    title: "Prepare a lawyer-ready package",
+    subtitle: "Generate an index, timeline, weekly summary, and source checklist.",
+    premiumSignal: "Premium because the user leaves with a clean handoff."
+  }
+];
+
+export const exportPackages: ExportPackage[] = [
+  {
+    id: "weekly-summary",
+    title: "Weekly parenting-contact summary",
+    includes: ["Completed child calls", "Missed/rescheduled attempts", "Attached source notes"],
+    caution: "Draft for user/professional review. Not a legal filing."
+  },
+  {
+    id: "binder-index",
+    title: "Case binder index",
+    includes: ["Evidence table", "Tags", "Dates", "Source references", "Review status"],
+    caution: "Original files stay separate from AI summaries."
+  },
+  {
+    id: "lawyer-handoff",
+    title: "Lawyer-ready handoff package",
+    includes: ["Timeline", "Document index", "Open questions", "Missing evidence prompts"],
+    caution: "Designed to support a legal conversation, not replace one."
+  }
+];

@@ -9,12 +9,13 @@ type Props = {
 };
 
 const tabs: Array<{ id: LabScreen; label: string }> = [
-  { id: "home", label: "Home" },
+  { id: "home", label: "Premium" },
   { id: "onboarding", label: "Onboard" },
   { id: "compose", label: "Compose" },
   { id: "logs", label: "Logs" },
   { id: "vault", label: "Vault" },
-  { id: "timeline", label: "Timeline" }
+  { id: "timeline", label: "Timeline" },
+  { id: "export", label: "Export" }
 ];
 
 export function ScreenTabs({ active, onSelect }: Props) {
@@ -61,4 +62,3 @@ const styles = StyleSheet.create({
     color: colors.white
   }
 });
-

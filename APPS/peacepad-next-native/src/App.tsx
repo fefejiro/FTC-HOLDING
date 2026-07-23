@@ -8,7 +8,8 @@ import {
   LogsScreen,
   OnboardingScreen,
   TimelineScreen,
-  VaultScreen
+  VaultScreen,
+  ExportScreen
 } from "./screens";
 import { colors, spacing } from "./theme";
 
@@ -36,6 +37,7 @@ export default function App() {
         {screen === "logs" ? <LogsScreen {...screenProps} /> : null}
         {screen === "vault" ? <VaultScreen {...screenProps} /> : null}
         {screen === "timeline" ? <TimelineScreen {...screenProps} /> : null}
+        {screen === "export" ? <ExportScreen {...screenProps} /> : null}
       </ScrollView>
     </SafeAreaView>
   );

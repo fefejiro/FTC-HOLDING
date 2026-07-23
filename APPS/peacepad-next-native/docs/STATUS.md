@@ -12,6 +12,9 @@ React Native / Expo lab scaffold created with a clickable mock flow:
 - Parenting-time / child-call log concept.
 - Evidence Vault concept.
 - Source-linked timeline.
+- Premium export preview.
+- Binder health metrics and readiness prompts.
+- Peace Calls proof-first screen copy.
 
 ## Verified checks
 
@@ -40,3 +43,4 @@ The lab app is scaffolded, typechecked, and Expo config resolves. A full device/
 3. Open in Expo/web/iOS simulator.
 4. Capture screenshots for onboarding, modules, timeline, and guardrail copy.
 5. Test each tab and note confusing copy or layout.
+6. Compare Premium Dashboard, Evidence Vault, Timeline, and Export Preview against the old Premium Delta PRD.
