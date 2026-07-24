@@ -16,7 +16,6 @@ function trackedFiles() {
 
 const forbiddenNames = [
   /(^|\/)(gmail_tokens|credentials|client_secret)[^/]*\.json$/i,
-  /(^|\/)\.env($|\.(?!example$))/i,
   /(^|\/)instances\/[^/]+\/secrets\//i
 ];
 const secretPatterns = [
@@ -27,7 +26,9 @@ const secretPatterns = [
 
 for (const relative of trackedFiles()) {
   const normalized = relative.replaceAll("\\", "/");
-  if (forbiddenNames.some((pattern) => pattern.test(normalized))) {
+  const trackedEnvironmentFile =
+    /(^|\/)\.env(?:\.|$)/i.test(normalized) && !/\.example$/i.test(normalized);
+  if (trackedEnvironmentFile || forbiddenNames.some((pattern) => pattern.test(normalized))) {
     failures.push(`Tracked secret-like filename: ${normalized}`);
     continue;
   }
