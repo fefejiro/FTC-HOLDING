@@ -47,6 +47,17 @@ type ScreenProps = {
 };
 
 export function HomeScreen({ setScreen }: ScreenProps) {
+  const quickActions: Array<{ label: string; screen: LabScreen }> = [
+    { label: "Goal Setup", screen: "onboarding" },
+    { label: "Case Binder", screen: "binder" },
+    { label: "Calm Compose", screen: "compose" },
+    { label: "Parenting Logs", screen: "logs" },
+    { label: "Evidence Vault", screen: "vault" },
+    { label: "Evidence Detail", screen: "evidence-detail" },
+    { label: "Timeline", screen: "timeline" },
+    { label: "Export Preview", screen: "export" }
+  ];
+
   return (
     <View style={styles.stack}>
       <View style={styles.hero}>
@@ -59,6 +70,7 @@ export function HomeScreen({ setScreen }: ScreenProps) {
         <View style={styles.heroActions}>
           <LabButton label="Start premium flow" onPress={() => setScreen("onboarding")} />
           <LabButton label="Review export" onPress={() => setScreen("export")} variant="secondary" />
+          <LabButton label="Open evidence detail" onPress={() => setScreen("evidence-detail")} variant="secondary" />
         </View>
       </View>
 
@@ -70,6 +82,25 @@ export function HomeScreen({ setScreen }: ScreenProps) {
             <Text style={styles.caption}>{metric.note}</Text>
           </View>
         ))}
+      </View>
+
+      <View style={styles.quickActions}>
+        <View style={styles.quickActionsHeader}>
+          <Text style={styles.sectionTitle}>Lab ops quick actions</Text>
+          <Text style={styles.caption}>Jump straight to a QA route</Text>
+        </View>
+        <View style={styles.quickActionGrid}>
+          {quickActions.map((action) => (
+            <Pressable
+              accessibilityRole="button"
+              key={action.screen}
+              onPress={() => setScreen(action.screen)}
+              style={styles.quickAction}
+            >
+              <Text style={styles.quickActionText}>{action.label}</Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
 
       <View style={styles.section}>
@@ -546,6 +577,25 @@ const styles = StyleSheet.create({
   },
   metricValue: { ...typography.title, color: colors.brand },
   metricLabel: { ...typography.caption, color: colors.text, fontWeight: "800", textTransform: "uppercase" },
+  quickActions: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 22,
+    borderWidth: 1,
+    gap: spacing.md,
+    padding: spacing.lg
+  },
+  quickActionsHeader: { gap: spacing.xs },
+  quickActionGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  quickAction: {
+    backgroundColor: colors.brandSoft,
+    borderRadius: 14,
+    flexBasis: "47%",
+    flexGrow: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md
+  },
+  quickActionText: { ...typography.caption, color: colors.brand, fontWeight: "800" },
   choice: {
     backgroundColor: colors.surface,
     borderColor: colors.border,

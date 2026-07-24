@@ -18,6 +18,7 @@ The current app is still a React Native / Expo lab. Passing this matrix does not
 | Standalone Expo Doctor on Mac | Pass | MacInCloud `.sim/peacepad-next-native-ios`, `18/18 checks passed` |
 | Mac iOS Simulator render | Pass | Premium dashboard rendered on iPhone 17 simulator |
 | Evidence Vault render | Pass | Vault metadata screen rendered on iPhone 17 simulator |
+| Home quick actions | Pass | Home screen now includes direct buttons for Goal Setup, Case Binder, Calm Compose, Parenting Logs, Evidence Vault, Evidence Detail, Timeline, and Export Preview |
 | Production API writes | Blocked by design | `app.json` extra must keep `productionApiWritesEnabled: false` |
 | App Store submission | Not allowed | Lab bundle ID remains `ca.peacepad.nextnative.lab` |
 
@@ -44,6 +45,7 @@ Captured screenshots:
 | Area | Current test target | Pass signal | Risk covered | Status |
 | --- | --- | --- | --- | --- |
 | Premium dashboard | Open the app on simulator | Hero, tabs, metrics, and actions render without blank screen | Basic iOS rendering and layout | Visual pass |
+| Home quick actions | Open Home screen and tap each route button | Buttons jump straight to the target screen without using tabs | Faster QA and lower simulator friction | Implemented; needs live tap verification |
 | Goal onboarding | Tap `Start premium flow`, select each goal | Selection state changes and continue route matches goal | Early value routing | Initial visual pass; goal variants still need interaction retest |
 | Case Binder setup | Edit binder name, child label, support contact, source types | Invalid data shows clear errors; valid data routes to Vault | User setup quality before evidence flow | Visual pass; validation interaction still needs retest |
 | Calm Compose | Edit draft text | Mock rewrite remains visible; no send action exists | No accidental messaging or automation | Visual pass; edit interaction still needs retest |
@@ -96,12 +98,13 @@ React Native PeacePad can become a serious migration candidate only when all of 
 
 Recommended next run:
 
-1. Evidence Detail path from Vault.
-2. Goal selection variants.
-3. Binder validation errors.
-4. Vault metadata validation errors.
-5. Compose text editing.
-6. Log outcome toggles.
-7. Export checklist toggles.
+1. Home quick actions for every lab route.
+2. Evidence Detail path from Vault.
+3. Goal selection variants.
+4. Binder validation errors.
+5. Vault metadata validation errors.
+6. Compose text editing.
+7. Log outcome toggles.
+8. Export checklist toggles.
 
 Capture one screenshot for each passed screen and record failures in `docs/STATUS.md`.

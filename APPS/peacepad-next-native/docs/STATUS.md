@@ -19,6 +19,7 @@ React Native / Expo lab scaffold created with a clickable mock flow:
 - Evidence detail metadata/review screen.
 - Neutral parenting outcome selector.
 - Export checklist toggles.
+- Home-screen lab ops quick actions for the highest-value QA routes.
 - Native-stack navigation.
 - Binder setup validation.
 - Evidence Vault metadata validation.
@@ -76,7 +77,8 @@ This is still not a production React Native migration. The app remains mock-data
 5. Retest Compose editing.
 6. Retest parenting outcome selection.
 7. Retest Export checklist toggles.
-8. Compare Premium Dashboard, Evidence Vault, Timeline, and Export Preview against the old Premium Delta PRD.
+8. Retest the Home-screen quick actions against every lab route.
+9. Compare Premium Dashboard, Evidence Vault, Timeline, and Export Preview against the old Premium Delta PRD.
 
 ## Simulator readiness note
 
