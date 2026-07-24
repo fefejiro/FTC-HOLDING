@@ -26,3 +26,10 @@ declare module "react-native" {
     create<T extends Record<string, unknown>>(styles: T): T;
   };
 }
+
+declare module "react-native-safe-area-context" {
+  import type { ComponentType, ReactNode } from "react";
+  import type { StyleProp } from "react-native";
+
+  export const SafeAreaView: ComponentType<{ style?: StyleProp<unknown>; children?: ReactNode }>;
+}
