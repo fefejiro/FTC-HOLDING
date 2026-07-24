@@ -21,25 +21,43 @@ The current app is still a React Native / Expo lab. Passing this matrix does not
 | Production API writes | Blocked by design | `app.json` extra must keep `productionApiWritesEnabled: false` |
 | App Store submission | Not allowed | Lab bundle ID remains `ca.peacepad.nextnative.lab` |
 
+## Latest simulator QA run
+
+Run date: 2026-07-24  
+Device: MacInCloud iPhone 17 simulator  
+Evidence folder: `.local/peacepad-rn-sim/qa-2026-07-24` on the Windows workstation
+
+Captured screenshots:
+
+- `01-dashboard.png`
+- `02-onboarding.png`
+- `03-binder.png`
+- `04-compose.png`
+- `05-logs.png`
+- `06-vault.png`
+- `08-timeline.png`
+- `09-export.png`
+- `contact-sheet.png`
+
 ## Screen-by-screen QA
 
 | Area | Current test target | Pass signal | Risk covered | Status |
 | --- | --- | --- | --- | --- |
-| Premium dashboard | Open the app on simulator | Hero, tabs, metrics, and actions render without blank screen | Basic iOS rendering and layout | Pass |
-| Goal onboarding | Tap `Start premium flow`, select each goal | Selection state changes and continue route matches goal | Early value routing | Needs retest after latest simulator fix |
-| Case Binder setup | Edit binder name, child label, support contact, source types | Invalid data shows clear errors; valid data routes to Vault | User setup quality before evidence flow | Local logic pass, visual retest needed |
-| Calm Compose | Edit draft text | Mock rewrite remains visible; no send action exists | No accidental messaging or automation | Needs simulator retest |
-| Parenting/contact logs | Select each outcome | Active state changes and copy remains factual | Neutral record language | Needs simulator retest |
-| Evidence Vault | Edit source metadata and status | Metadata form renders; valid data opens Evidence Detail | Context-first evidence intake | Visual render pass, interaction retest needed |
-| Evidence Detail | Open from Vault | Source context, status, and AI-summary gate are visible | Review-before-summary guardrail | Needs simulator retest |
-| Source-linked timeline | Open Timeline tab | Timeline cards show source counts and non-legal safety labels | Avoid legal conclusions | Needs simulator retest |
-| Export preview | Toggle checklist items | Included state changes; export warning remains visible | No unreviewed package sharing | Needs simulator retest |
+| Premium dashboard | Open the app on simulator | Hero, tabs, metrics, and actions render without blank screen | Basic iOS rendering and layout | Visual pass |
+| Goal onboarding | Tap `Start premium flow`, select each goal | Selection state changes and continue route matches goal | Early value routing | Initial visual pass; goal variants still need interaction retest |
+| Case Binder setup | Edit binder name, child label, support contact, source types | Invalid data shows clear errors; valid data routes to Vault | User setup quality before evidence flow | Visual pass; validation interaction still needs retest |
+| Calm Compose | Edit draft text | Mock rewrite remains visible; no send action exists | No accidental messaging or automation | Visual pass; edit interaction still needs retest |
+| Parenting/contact logs | Select each outcome | Active state changes and copy remains factual | Neutral record language | Visual pass; outcome interaction still needs retest |
+| Evidence Vault | Edit source metadata and status | Metadata form renders; valid data opens Evidence Detail | Context-first evidence intake | Visual pass; metadata interaction still needs retest |
+| Evidence Detail | Open from Vault | Source context, status, and AI-summary gate are visible | Review-before-summary guardrail | Not completed in latest pass; remote scroll/input control blocked reaching detail button |
+| Source-linked timeline | Open Timeline tab | Timeline cards show source counts and non-legal safety labels | Avoid legal conclusions | Visual pass |
+| Export preview | Toggle checklist items | Included state changes; export warning remains visible | No unreviewed package sharing | Visual pass; checklist toggle still needs retest |
 
 ## Device and accessibility matrix
 
 | Device condition | Required before migration? | Current status |
 | --- | --- | --- |
-| iPhone 17 simulator | Yes | Dashboard and Vault render pass |
+| iPhone 17 simulator | Yes | Dashboard, Onboarding, Binder, Compose, Logs, Vault, Timeline, and Export visual pass |
 | Small iPhone simulator | Yes | Not tested |
 | Large iPhone simulator | Yes | Not tested |
 | iPad simulator | Yes | Not tested |
@@ -78,12 +96,12 @@ React Native PeacePad can become a serious migration candidate only when all of 
 
 Recommended next run:
 
-1. Premium dashboard.
-2. Goal onboarding.
-3. Binder validation.
-4. Vault metadata validation.
-5. Evidence detail.
-6. Timeline.
-7. Export preview.
+1. Evidence Detail path from Vault.
+2. Goal selection variants.
+3. Binder validation errors.
+4. Vault metadata validation errors.
+5. Compose text editing.
+6. Log outcome toggles.
+7. Export checklist toggles.
 
 Capture one screenshot for each passed screen and record failures in `docs/STATUS.md`.

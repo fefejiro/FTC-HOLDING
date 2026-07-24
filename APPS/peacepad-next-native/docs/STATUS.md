@@ -53,6 +53,12 @@ MacInCloud simulator:
 -> Metro started from `.sim/peacepad-next-native-ios` without Watchman stall
 -> Premium dashboard rendered on iPhone 17 simulator
 -> Evidence Vault metadata form rendered on iPhone 17 simulator
+
+2026-07-24 simulator QA pass:
+-> pulled commit `134bd85d`
+-> captured visual screenshots for Dashboard, Onboarding, Binder, Compose, Logs, Vault, Timeline, and Export
+-> screenshot evidence stored locally at `.local/peacepad-rn-sim/qa-2026-07-24`
+-> Evidence Detail was not completed in this pass because remote scroll/input control blocked reaching the detail button
 ```
 
 ## Important caveat
@@ -63,13 +69,14 @@ This is still not a production React Native migration. The app remains mock-data
 
 ## Next test steps
 
-1. Run `npm install` from `C:\FTC HOLDING` if workspace dependencies are not installed.
-2. Run `npm --workspace=@ftc/peacepad-next-native run start`.
-3. Open in Expo/web/iOS simulator.
-4. Capture screenshots for onboarding, modules, timeline, and guardrail copy.
-5. Test each tab and note confusing copy or layout.
-6. Compare Premium Dashboard, Evidence Vault, Timeline, and Export Preview against the old Premium Delta PRD.
-7. Run the QA matrix in `docs/QA_MATRIX.md`.
+1. Complete the Evidence Detail simulator path from Vault.
+2. Retest goal selection variants.
+3. Retest Binder validation errors.
+4. Retest Vault metadata validation errors.
+5. Retest Compose editing.
+6. Retest parenting outcome selection.
+7. Retest Export checklist toggles.
+8. Compare Premium Dashboard, Evidence Vault, Timeline, and Export Preview against the old Premium Delta PRD.
 
 ## Simulator readiness note
 
