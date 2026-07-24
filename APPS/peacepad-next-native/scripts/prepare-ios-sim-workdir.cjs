@@ -9,6 +9,7 @@ const args = new Set(process.argv.slice(2));
 const copyEntries = [
   "app.json",
   "index.ts",
+  "metro.config.js",
   "package.json",
   "tsconfig.json",
   "README.md",
@@ -66,4 +67,3 @@ if (args.has("--doctor")) {
 if (args.has("--ios")) {
   run({ cmd: "npx", args: ["expo", "start", "--ios", "--clear"] });
 }
-
