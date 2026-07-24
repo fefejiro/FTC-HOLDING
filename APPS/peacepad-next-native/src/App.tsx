@@ -22,6 +22,14 @@ type RootStackParamList = Record<LabScreen, undefined>;
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+declare const process: {
+  env?: Record<string, string | undefined>;
+};
+
+const labEnv = process.env ?? {};
+const labStartScreen = labEnv.EXPO_PUBLIC_PEACEPAD_LAB_START_SCREEN;
+const initialRouteName: LabScreen = labStartScreen === "evidence-detail" ? "evidence-detail" : "home";
+
 const screenTitles: Record<LabScreen, string> = {
   home: "PeacePad Premium",
   onboarding: "Goal Setup",
@@ -59,7 +67,7 @@ export default function App() {
     <NavigationContainer>
       <StatusBar barStyle="dark-content" />
       <Stack.Navigator
-        initialRouteName="home"
+        initialRouteName={initialRouteName}
         screenOptions={{
           contentStyle: styles.screen,
           headerBackTitle: "Back",
