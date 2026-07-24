@@ -70,6 +70,12 @@ export type ExportChecklistItem = {
   includedByDefault: boolean;
 };
 
+export type SourceTypeOption = {
+  id: string;
+  label: string;
+  description: string;
+};
+
 export const premiumModules: PremiumModule[] = [
   {
     id: "calm-compose",
@@ -254,6 +260,29 @@ export const binderSetupSteps: BinderSetupStep[] = [
     title: "Private storage review",
     description: "Production evidence storage remains locked until the privacy/storage design is approved.",
     status: "locked"
+  }
+];
+
+export const sourceTypeOptions: SourceTypeOption[] = [
+  {
+    id: "screenshots",
+    label: "Screenshots",
+    description: "Message screenshots, calendar screenshots, receipts, and photo evidence metadata."
+  },
+  {
+    id: "call-logs",
+    label: "Call and contact logs",
+    description: "Weekly phone contact, missed attempts, rescheduled calls, and completed contact notes."
+  },
+  {
+    id: "pdfs",
+    label: "PDFs and letters",
+    description: "Court orders, school letters, support letters, and professional correspondence."
+  },
+  {
+    id: "visit-notes",
+    label: "Visit notes",
+    description: "Public or supervised visit notes written in factual, child-centred language."
   }
 ];
 

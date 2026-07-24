@@ -14,8 +14,10 @@ import {
   parentingOutcomeOptions,
   premiumModules,
   premiumWorkflows,
+  sourceTypeOptions,
   timelineItems
 } from "./data/mockPeacePad";
+import { hasBinderValidationErrors, validateBinderDraft, type BinderDraft, type BinderValidationErrors } from "./lib/binderValidation";
 import { colors, spacing, typography } from "./theme";
 
 export type LabScreen =
@@ -114,12 +116,93 @@ export function OnboardingScreen({ selectedGoal, setSelectedGoal, setScreen }: S
 }
 
 export function BinderScreen({ setScreen }: ScreenProps) {
+  const [binderDraft, setBinderDraft] = useState<BinderDraft>({
+    binderName: "Parenting contact record",
+    childInitials: "Child A",
+    supportContact: "",
+    selectedSourceTypes: ["screenshots", "call-logs"]
+  });
+  const [errors, setErrors] = useState<BinderValidationErrors>({});
+
+  const updateDraft = (field: keyof BinderDraft, value: string) => {
+    setBinderDraft((current) => ({ ...current, [field]: value }));
+    setErrors((current) => ({ ...current, [field]: undefined }));
+  };
+
+  const toggleSourceType = (sourceType: string) => {
+    setBinderDraft((current) => {
+      const selectedSourceTypes = current.selectedSourceTypes.includes(sourceType)
+        ? current.selectedSourceTypes.filter((item) => item !== sourceType)
+        : [...current.selectedSourceTypes, sourceType];
+
+      return { ...current, selectedSourceTypes };
+    });
+    setErrors((current) => ({ ...current, selectedSourceTypes: undefined }));
+  };
+
+  const continueToVault = () => {
+    const nextErrors = validateBinderDraft(binderDraft);
+    setErrors(nextErrors);
+    if (!hasBinderValidationErrors(nextErrors)) {
+      setScreen("vault");
+    }
+  };
+
   return (
     <View style={styles.stack}>
       <Text style={styles.sectionTitle}>Case Binder setup</Text>
       <Text style={styles.body}>
         The binder is the Premium home base: one calm workspace for people, source types, logs, and export readiness.
       </Text>
+      <View style={styles.card}>
+        <Text style={styles.choiceTitle}>Binder details</Text>
+        <Text style={styles.caption}>Lab form only. No data is saved or uploaded.</Text>
+        <Text style={styles.fieldLabel}>Binder name</Text>
+        <TextInput
+          onChangeText={(value) => updateDraft("binderName", value)}
+          placeholder="Example: parenting contact record"
+          style={[styles.input, styles.singleLineInput, errors.binderName ? styles.inputError : null]}
+          value={binderDraft.binderName}
+        />
+        {errors.binderName ? <Text style={styles.errorText}>{errors.binderName}</Text> : null}
+        <Text style={styles.fieldLabel}>Child label</Text>
+        <TextInput
+          onChangeText={(value) => updateDraft("childInitials", value)}
+          placeholder="Use initials or a neutral label"
+          style={[styles.input, styles.singleLineInput, errors.childInitials ? styles.inputError : null]}
+          value={binderDraft.childInitials}
+        />
+        {errors.childInitials ? <Text style={styles.errorText}>{errors.childInitials}</Text> : null}
+        <Text style={styles.fieldLabel}>Trusted reviewer or support contact optional</Text>
+        <TextInput
+          onChangeText={(value) => updateDraft("supportContact", value)}
+          placeholder="Example: lawyer, mediator, support worker"
+          style={[styles.input, styles.singleLineInput]}
+          value={binderDraft.supportContact}
+        />
+      </View>
+      <View style={styles.card}>
+        <Text style={styles.choiceTitle}>Source types to organize first</Text>
+        <Text style={styles.caption}>Pick the records PeacePad should help structure before anything gets exported.</Text>
+        {sourceTypeOptions.map((sourceType) => {
+          const selected = binderDraft.selectedSourceTypes.includes(sourceType.id);
+          return (
+            <Pressable
+              accessibilityRole="button"
+              key={sourceType.id}
+              onPress={() => toggleSourceType(sourceType.id)}
+              style={[styles.checkRow, selected ? styles.checkRowActive : null]}
+            >
+              <Text style={styles.checkMark}>{selected ? "✓" : "○"}</Text>
+              <View style={styles.checkText}>
+                <Text style={styles.choiceTitle}>{sourceType.label}</Text>
+                <Text style={styles.body}>{sourceType.description}</Text>
+              </View>
+            </Pressable>
+          );
+        })}
+        {errors.selectedSourceTypes ? <Text style={styles.errorText}>{errors.selectedSourceTypes}</Text> : null}
+      </View>
       {binderSetupSteps.map((step) => (
         <View key={step.id} style={styles.card}>
           <View style={styles.cardHeader}>
@@ -135,7 +218,7 @@ export function BinderScreen({ setScreen }: ScreenProps) {
           Ask for the minimum needed to organize records. Let users add sensitive details later, deliberately.
         </Text>
       </View>
-      <LabButton label="Continue to evidence vault" onPress={() => setScreen("vault")} />
+      <LabButton label="Validate and continue to evidence vault" onPress={continueToVault} />
     </View>
   );
 }
@@ -389,6 +472,16 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     textAlignVertical: "top"
   },
+  singleLineInput: {
+    minHeight: 52,
+    textAlignVertical: "center"
+  },
+  inputError: {
+    borderColor: "#DC2626",
+    borderWidth: 2
+  },
+  fieldLabel: { ...typography.caption, color: colors.text, fontWeight: "800", textTransform: "uppercase" },
+  errorText: { ...typography.caption, color: "#B91C1C", fontWeight: "700" },
   suggestion: { backgroundColor: colors.brandSoft, borderRadius: 20, gap: spacing.sm, padding: spacing.lg },
   premiumInsight: {
     backgroundColor: "#ECFDF7",
@@ -447,6 +540,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.lg
   },
+  checkText: { flex: 1, gap: spacing.xs },
   checkRowActive: { borderColor: colors.accent, backgroundColor: "#ECFDF7" },
   checkMark: { color: colors.accent, fontSize: 22, fontWeight: "800" }
 });
