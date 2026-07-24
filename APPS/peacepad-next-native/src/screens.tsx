@@ -8,6 +8,7 @@ import {
   binderSetupSteps,
   calmRewriteSample,
   evidenceItems,
+  evidencePrepStatuses,
   exportChecklistItems,
   exportPackages,
   goalOptions,
@@ -18,6 +19,12 @@ import {
   timelineItems
 } from "./data/mockPeacePad";
 import { hasBinderValidationErrors, validateBinderDraft, type BinderDraft, type BinderValidationErrors } from "./lib/binderValidation";
+import {
+  hasEvidenceValidationErrors,
+  validateEvidenceDraft,
+  type EvidenceDraft,
+  type EvidenceValidationErrors
+} from "./lib/evidenceValidation";
 import { colors, spacing, typography } from "./theme";
 
 export type LabScreen =
@@ -286,10 +293,106 @@ export function LogsScreen({ setScreen }: ScreenProps) {
 }
 
 export function VaultScreen({ setScreen }: ScreenProps) {
+  const [evidenceDraft, setEvidenceDraft] = useState<EvidenceDraft>({
+    title: "Weekly child call screenshot",
+    sourceType: "screenshots",
+    eventDate: "2026-07-21",
+    linkedEvent: "Weekly child call",
+    privateNote: ""
+  });
+  const [errors, setErrors] = useState<EvidenceValidationErrors>({});
+  const [prepStatus, setPrepStatus] = useState("metadata-ready");
+
+  const updateDraft = (field: keyof EvidenceDraft, value: string) => {
+    setEvidenceDraft((current) => ({ ...current, [field]: value }));
+    setErrors((current) => ({ ...current, [field]: undefined }));
+  };
+
+  const continueToDetail = () => {
+    const nextErrors = validateEvidenceDraft(evidenceDraft);
+    setErrors(nextErrors);
+    if (!hasEvidenceValidationErrors(nextErrors)) {
+      setScreen("evidence-detail");
+    }
+  };
+
   return (
     <View style={styles.stack}>
       <Text style={styles.sectionTitle}>Evidence Vault concept</Text>
       <Text style={styles.body}>Mock metadata only. No real court files, screenshots, or private records are stored here.</Text>
+      <View style={styles.card}>
+        <Text style={styles.choiceTitle}>Prepare a source before upload</Text>
+        <Text style={styles.caption}>Premium rule: context first, upload later. This keeps sensitive files deliberate.</Text>
+        <Text style={styles.fieldLabel}>Source title</Text>
+        <TextInput
+          onChangeText={(value) => updateDraft("title", value)}
+          placeholder="Example: weekly child call screenshot"
+          style={[styles.input, styles.singleLineInput, errors.title ? styles.inputError : null]}
+          value={evidenceDraft.title}
+        />
+        {errors.title ? <Text style={styles.errorText}>{errors.title}</Text> : null}
+        <Text style={styles.fieldLabel}>Source type</Text>
+        <View style={styles.inlineOptions}>
+          {sourceTypeOptions.map((sourceType) => {
+            const selected = evidenceDraft.sourceType === sourceType.id;
+            return (
+              <Pressable
+                accessibilityRole="button"
+                key={sourceType.id}
+                onPress={() => updateDraft("sourceType", sourceType.id)}
+                style={[styles.inlineOption, selected ? styles.inlineOptionActive : null]}
+              >
+                <Text style={[styles.inlineOptionText, selected ? styles.inlineOptionTextActive : null]}>
+                  {sourceType.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        {errors.sourceType ? <Text style={styles.errorText}>{errors.sourceType}</Text> : null}
+        <Text style={styles.fieldLabel}>Event date</Text>
+        <TextInput
+          onChangeText={(value) => updateDraft("eventDate", value)}
+          placeholder="YYYY-MM-DD"
+          style={[styles.input, styles.singleLineInput, errors.eventDate ? styles.inputError : null]}
+          value={evidenceDraft.eventDate}
+        />
+        {errors.eventDate ? <Text style={styles.errorText}>{errors.eventDate}</Text> : null}
+        <Text style={styles.fieldLabel}>Linked event</Text>
+        <TextInput
+          onChangeText={(value) => updateDraft("linkedEvent", value)}
+          placeholder="Example: public visit, child call, schedule change"
+          style={[styles.input, styles.singleLineInput, errors.linkedEvent ? styles.inputError : null]}
+          value={evidenceDraft.linkedEvent}
+        />
+        {errors.linkedEvent ? <Text style={styles.errorText}>{errors.linkedEvent}</Text> : null}
+        <Text style={styles.fieldLabel}>Private context note optional</Text>
+        <TextInput
+          multiline
+          onChangeText={(value) => updateDraft("privateNote", value)}
+          placeholder="Short factual note. No legal conclusions."
+          style={[styles.input, styles.noteInput, errors.privateNote ? styles.inputError : null]}
+          value={evidenceDraft.privateNote}
+        />
+        {errors.privateNote ? <Text style={styles.errorText}>{errors.privateNote}</Text> : null}
+      </View>
+      <View style={styles.cardPremium}>
+        <Text style={styles.choiceTitle}>Upload-readiness status</Text>
+        {evidencePrepStatuses.map((status) => (
+          <Pressable
+            accessibilityRole="button"
+            key={status.id}
+            onPress={() => setPrepStatus(status.id)}
+            style={[styles.checkRow, prepStatus === status.id ? styles.checkRowActive : null]}
+          >
+            <Text style={styles.checkMark}>{prepStatus === status.id ? "✓" : "○"}</Text>
+            <View style={styles.checkText}>
+              <Text style={styles.choiceTitle}>{status.label}</Text>
+              <Text style={styles.body}>{status.description}</Text>
+            </View>
+          </Pressable>
+        ))}
+      </View>
       {evidenceItems.map((item) => (
         <View key={item.id} style={styles.card}>
           <View style={styles.cardHeader}>
@@ -300,7 +403,7 @@ export function VaultScreen({ setScreen }: ScreenProps) {
           <Text style={styles.body}>Tag: {item.tag}</Text>
           <Text style={styles.body}>Linked event: {item.linkedEvent}</Text>
           <Text style={styles.caption}>{item.integrityNote}</Text>
-          <LabButton label="Open evidence detail" onPress={() => setScreen("evidence-detail")} variant="secondary" />
+          <LabButton label="Validate metadata and open detail" onPress={continueToDetail} variant="secondary" />
         </View>
       ))}
       <View style={styles.cardPremium}>
@@ -476,6 +579,9 @@ const styles = StyleSheet.create({
     minHeight: 52,
     textAlignVertical: "center"
   },
+  noteInput: {
+    minHeight: 88
+  },
   inputError: {
     borderColor: "#DC2626",
     borderWidth: 2
@@ -542,5 +648,17 @@ const styles = StyleSheet.create({
   },
   checkText: { flex: 1, gap: spacing.xs },
   checkRowActive: { borderColor: colors.accent, backgroundColor: "#ECFDF7" },
-  checkMark: { color: colors.accent, fontSize: 22, fontWeight: "800" }
+  checkMark: { color: colors.accent, fontSize: 22, fontWeight: "800" },
+  inlineOptions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  inlineOption: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm
+  },
+  inlineOptionActive: { backgroundColor: colors.brand, borderColor: colors.brand },
+  inlineOptionText: { ...typography.caption, color: colors.muted, fontWeight: "800" },
+  inlineOptionTextActive: { color: colors.white }
 });

@@ -76,6 +76,12 @@ export type SourceTypeOption = {
   description: string;
 };
 
+export type EvidencePrepStatus = {
+  id: string;
+  label: string;
+  description: string;
+};
+
 export const premiumModules: PremiumModule[] = [
   {
     id: "calm-compose",
@@ -283,6 +289,24 @@ export const sourceTypeOptions: SourceTypeOption[] = [
     id: "visit-notes",
     label: "Visit notes",
     description: "Public or supervised visit notes written in factual, child-centred language."
+  }
+];
+
+export const evidencePrepStatuses: EvidencePrepStatus[] = [
+  {
+    id: "metadata-ready",
+    label: "Metadata ready",
+    description: "The user has named the source, date, type, and linked event before upload."
+  },
+  {
+    id: "needs-review",
+    label: "Needs review",
+    description: "The source is useful, but date, context, or people labels need a second look."
+  },
+  {
+    id: "do-not-export",
+    label: "Do not export yet",
+    description: "The source should stay private until the user or a professional confirms it belongs."
   }
 ];
 
