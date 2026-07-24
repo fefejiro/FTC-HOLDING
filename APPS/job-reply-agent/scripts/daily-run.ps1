@@ -1,4 +1,7 @@
 param(
+  [Parameter(Mandatory=$true)]
+  [ValidatePattern("^[a-z0-9][a-z0-9_-]{1,31}$")]
+  [string]$InstanceId,
   [switch]$BrowserCycle
 )
 
@@ -7,10 +10,11 @@ param(
 # Use -BrowserCycle, or JOB_AGENT_BROWSER_CYCLE=1, for explicit laptop browser proof runs.
 $ErrorActionPreference = "Continue"
 $root = "C:\FTC HOLDING\APPS\job-reply-agent"
-$logDir = Join-Path $root "logs"
+$env:JOB_AGENT_INSTANCE_ID = $InstanceId
+$logDir = Join-Path $root "instances\$InstanceId\logs"
 New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 $stamp = Get-Date -Format "yyyy-MM-dd"
-$log = Join-Path $logDir "scheduler-$stamp.log"
+$log = Join-Path $logDir "$InstanceId-scheduler-$stamp.log"
 $lock = Join-Path $logDir "scheduler.lock"
 
 if (Test-Path $lock) {
@@ -48,6 +52,7 @@ function Run-Step($label, $cmd) {
 }
 
 "=== Scheduler start $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" | Tee-Object -FilePath $log -Append
+"Instance: $InstanceId" | Tee-Object -FilePath $log -Append
 "Working dir: $root" | Tee-Object -FilePath $log -Append
 $pausedSourcesRaw = if ($env:JOB_AGENT_PAUSED_SOURCES) { $env:JOB_AGENT_PAUSED_SOURCES } else { "dice,indeed,monster" }
 $pausedSources = @($pausedSourcesRaw -split "," | ForEach-Object { $_.Trim().ToLowerInvariant() } | Where-Object { $_ })

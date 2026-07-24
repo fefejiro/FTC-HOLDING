@@ -301,12 +301,17 @@ export function normalizeApplicationAnswers(args: {
   add("portfolio website", answers.portfolio_url || answers.defaults?.portfolio_url || "");
   add("city", answers.city || profile.location.split(",")[0] || "");
   add("location", answers.location || profile.location);
+  add("postal code", answers.postal_code || "");
+  add("postcode", answers.postal_code || "");
+  add("zip", answers.postal_code || "");
+  add("zip code", answers.postal_code || "");
   add("current title", answers.current_title || profile.target_titles[0] || "");
   add("current company", answers.current_company || "Una Labs");
   add("work authorization", answers.work_authorization_text || profile.work_authorization_note);
   add("authorization", answers.work_authorization_text || profile.work_authorization_note);
   add("visa", answers.work_authorization_text || profile.work_authorization_note);
-  add("sponsorship", answers.work_authorization_text || profile.work_authorization_note);
+  add("sponsorship", answers.sponsorship_required);
+  add("sponsorship required", answers.sponsorship_required);
   add("relocation", answers.relocation_preference || "Open to remote, hybrid, and Toronto-area roles");
   add("salary", answers.salary_expectation || "");
   add("salary expectation", answers.salary_expectation || "");
@@ -2089,6 +2094,19 @@ function resolveWorkAuthorizationChoice(
   if (!isYesNoField(field)) return null;
 
   const workAuthText = clean(args.answers.work_authorization_text || args.profile.work_authorization_note).toLowerCase();
+  const sponsorshipText = clean(args.answers.sponsorship_required).toLowerCase();
+  const asksSponsorship =
+    /(require|need|now|future|currently).{0,100}(sponsor|sponsorship|visa)/.test(fieldText) ||
+    /(sponsor|sponsorship|visa).{0,100}(require|need|now|future|currently)/.test(fieldText);
+  if (asksSponsorship && sponsorshipText) {
+    if (/\b(yes|required|require sponsorship|sponsorship required)\b/.test(sponsorshipText)) {
+      return { answer: "Yes", source: "saved_sponsorship_requirement" };
+    }
+    if (/\b(no|not required|do not require|without sponsorship)\b/.test(sponsorshipText)) {
+      return { answer: "No", source: "saved_sponsorship_requirement" };
+    }
+  }
+
   const canadianCitizen = /\bcanadian citizen\b/.test(workAuthText);
   if (!canadianCitizen) return null;
 

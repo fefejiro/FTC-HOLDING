@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import JSZip from "jszip";
 import { logger } from "./logger";
+import { loadUserInstance } from "./instance.js";
 import {
   buildTailoredResumeContent,
   canPlaceExperienceBulletUnderEmployer,
@@ -18,6 +19,7 @@ export interface TailorArgs {
   jdText: string;
   templatePath: string;
   outputDir: string;
+  candidateName?: string;
 }
 
 export interface TailoringTemplateSelectionArgs {
@@ -73,8 +75,7 @@ function cropDisplayPart(input: string, maxLen: number): string {
   return value || "Value";
 }
 
-function buildTailoredFileName(roleSlug: string, employerSlug: string): string {
-  const candidate = "Fejiro Efiuvwere";
+function buildTailoredFileName(roleSlug: string, employerSlug: string, candidate: string): string {
   const suffix = " Resume.docx";
   const separator = " - ";
   const roleName = displayPartFromSlug(roleSlug);
@@ -104,6 +105,10 @@ function normalizeTitle(raw: string): string {
     .replace(/[\u2013\u2014]/g, "-")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function escapeRegex(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function cleanVisibleRoleTitle(raw: string): string {
@@ -383,6 +388,7 @@ export function selectTailoringTemplatePath(args: TailoringTemplateSelectionArgs
  */
 export async function tailorResumeForJD(args: TailorArgs): Promise<TailorResult> {
   const { parsed, jdText, templatePath, outputDir } = args;
+  const candidateName = args.candidateName || loadUserInstance().candidateName;
 
   if (!fs.existsSync(templatePath)) {
     throw new Error(`Resume template not found: ${templatePath}`);
@@ -437,7 +443,8 @@ export async function tailorResumeForJD(args: TailorArgs): Promise<TailorResult>
     .map((paragraph, index) => ({ text: paragraphText(paragraph), index }))
     .filter((entry) => entry.index < summaryHeadingIdx && entry.text.length > 0)
     .map((entry) => entry.index);
-  const nameIdx = preambleIndexes.find((index) => /fejiro\s+efiuvwere/i.test(paragraphText(paragraphs[index]))) ?? -1;
+  const candidatePattern = new RegExp(candidateName.trim().split(/\s+/).map(escapeRegex).join("\\s+"), "i");
+  const nameIdx = preambleIndexes.find((index) => candidatePattern.test(paragraphText(paragraphs[index]))) ?? -1;
   const isContactLine = (text: string): boolean =>
     /(?:@|linkedin\.com|github\.com|\b\d{3}[.\-\s]\d{3}[.\-\s]\d{4}\b|\bwhitby\b|\btoronto\b|\boshawa\b|\bajax\b|\bpickering\b|\bcanada\b)/i.test(text);
   const subtitleCandidates = preambleIndexes.filter((index) => {
@@ -510,7 +517,7 @@ export async function tailorResumeForJD(args: TailorArgs): Promise<TailorResult>
     zip.file(fileName, sanitizeVisibleDocXml(await entry.async("string")));
   }));
 
-  const outName = buildTailoredFileName(roleSlug, employerSlug);
+  const outName = buildTailoredFileName(roleSlug, employerSlug, candidateName);
   const outPath = path.join(outputDir, outName);
   const outBuffer = await zip.generateAsync({ type: "nodebuffer" });
   fs.writeFileSync(outPath, outBuffer);

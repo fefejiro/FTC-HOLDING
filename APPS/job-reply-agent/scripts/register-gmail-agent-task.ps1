@@ -1,5 +1,8 @@
 param(
-  [string]$TaskName = "JobReplyAgent-Gmail",
+  [Parameter(Mandatory=$true)]
+  [ValidatePattern("^[a-z0-9][a-z0-9_-]{1,31}$")]
+  [string]$InstanceId,
+  [string]$TaskName = "",
   [int]$IntervalMinutes = 30
 )
 
@@ -8,9 +11,12 @@ if ($IntervalMinutes -lt 5) {
 }
 
 $projectPath = "C:\FTC HOLDING\APPS\job-reply-agent"
+$ready = & npm --prefix $projectPath run instance:ready -- --instance=$InstanceId
+if ($LASTEXITCODE -ne 0) { throw "Instance '$InstanceId' is not ready; scheduler was not registered.`n$ready" }
+if (-not $TaskName) { $TaskName = "JobReplyAgent-$InstanceId-Gmail" }
 $runnerPath = Join-Path $projectPath "scripts\gmail-run.ps1"
 $execute = "powershell.exe"
-$args = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$runnerPath`""
+$args = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$runnerPath`" -InstanceId `"$InstanceId`""
 
 $action = New-ScheduledTaskAction -Execute $execute -Argument $args -WorkingDirectory $projectPath
 $trigger = New-ScheduledTaskTrigger -Once -At ((Get-Date).AddMinutes(1)) -RepetitionInterval (New-TimeSpan -Minutes $IntervalMinutes) -RepetitionDuration (New-TimeSpan -Days 3650)

@@ -31,6 +31,8 @@ import { buildDailyReport, renderDailyReport } from "./reporter.js";
 import { seedSampleData } from "./seed.js";
 import { isHuntCommand, runHuntCommand } from "./hunt/cli.js";
 import { runAutoApplyQueueAndReport, runDicePreflight, syncApplicationProofFromMessages } from "./automation.js";
+import { assertInstanceReady, instanceBanner, loadUserInstance } from "./instance.js";
+import { evaluateOnboardingReadiness } from "./onboarding.js";
 
 function parseDateArg(argv: string[]): string | undefined {
   return parseOptionArg(argv, "date");
@@ -206,6 +208,7 @@ export function parseCommandArgs(argv: string[]): {
   jobIdArg: number | undefined;
   sourceArg: string | undefined;
   confirmArg: string | undefined;
+  instanceArg: string | undefined;
 } {
   const limitRaw = parseOptionArg(argv, "limit");
   const limitArg = limitRaw && /^\d+$/.test(limitRaw) ? Number(limitRaw) : undefined;
@@ -219,7 +222,8 @@ export function parseCommandArgs(argv: string[]): {
     limitArg,
     jobIdArg,
     sourceArg: parseOptionArg(argv, "source"),
-    confirmArg: parseOptionArg(argv, "confirm")
+    confirmArg: parseOptionArg(argv, "confirm"),
+    instanceArg: parseOptionArg(argv, "instance")
   };
 }
 
@@ -232,7 +236,11 @@ export async function runCommand(args: {
   jobIdArg?: number;
   sourceArg?: string;
   confirmArg?: string;
+  instanceArg?: string;
 }): Promise<void> {
+  if (args.instanceArg) {
+    process.env.JOB_AGENT_INSTANCE_ID = args.instanceArg;
+  }
   const command = args.command;
   const dateArg = args.dateArg;
   const codeArg = args.codeArg;
@@ -242,6 +250,24 @@ export async function runCommand(args: {
   const sourceArg = args.sourceArg;
   const confirmArg = args.confirmArg;
   const reportDate = dateArg || format(new Date(), "yyyy-MM-dd");
+  const instance = loadUserInstance(args.instanceArg);
+  logger.info(instanceBanner(instance), "JobAgent instance selected.");
+
+  if (command === "instance:status") {
+    return;
+  }
+  if (command === "instance:onboarding-status") {
+    const readiness = evaluateOnboardingReadiness(instance);
+    logger.info(readiness, "JobAgent onboarding readiness.");
+    if (!readiness.ready) process.exitCode = 1;
+    return;
+  }
+
+  assertInstanceReady(instance, command || "");
+  if (command === "instance:ready") {
+    logger.info(instanceBanner(instance), "JobAgent instance is approved and activated.");
+    return;
+  }
 
   if (command === "db:reset") {
     if (confirmArg !== "RESET") {
@@ -313,7 +339,7 @@ export async function runCommand(args: {
       profile: cfg.profile,
       rules: cfg.rules,
       resumeMap: cfg.resumeMap,
-      includeTnLine: true
+      includeTnLine: cfg.instance.proactiveWorkAuthorization
     });
 
     logger.info({ outcome }, "process:mock completed.");
@@ -359,7 +385,7 @@ export async function runCommand(args: {
       rules: cfg.rules,
       resumeMap: cfg.resumeMap,
       messages: inbox,
-      includeTnLine: true,
+      includeTnLine: cfg.instance.proactiveWorkAuthorization,
       onStatusChange: async (messageId, status) => {
         await applyStatusLabel({
           cfg: cfg.env,
@@ -421,7 +447,7 @@ export async function runCommand(args: {
       profile: cfg.profile,
       rules: cfg.rules,
       resumeMap: cfg.resumeMap,
-      includeTnLine: true
+      includeTnLine: cfg.instance.proactiveWorkAuthorization
     });
     const approved = approveAllDrafts(db);
     const sent = sendApprovedDrafts({ db, rules: cfg.rules });
@@ -449,7 +475,7 @@ export async function runCommand(args: {
       rules: cfg.rules,
       resumeMap: cfg.resumeMap,
       messages: inbox,
-      includeTnLine: true,
+      includeTnLine: cfg.instance.proactiveWorkAuthorization,
       onStatusChange: async (messageId, status) => {
         await applyStatusLabel({
           cfg: cfg.env,
@@ -531,7 +557,7 @@ export async function runCommand(args: {
       rules: cfg.rules,
       resumeMap: cfg.resumeMap,
       messages: inbox,
-      includeTnLine: true,
+      includeTnLine: cfg.instance.proactiveWorkAuthorization,
       onStatusChange: async (messageId, status) => {
         await applyStatusLabel({
           cfg: cfg.env,
@@ -649,7 +675,7 @@ export async function runCommand(args: {
   }
 
   logger.info(
-    "No command supplied. Use one of: auth:doctor, gmail:auth:url, gmail:auth:local, gmail:auth:save --code=..., gmail:status, db:reset --confirm=RESET, seed:sample, process:mock, process:gmail, approve:all, send:approved, send:approved:gmail, run:mock-cycle, run:gmail-cycle, run:laptop-cycle, run:production-cycle, report:daily, hunt:ingest, hunt:status, hunt:scout, hunt:score, hunt:package, hunt:apply-assist, hunt:premium-queue, hunt:prepare-artifacts, hunt:apply-one --job-id=..., hunt:approve-submit, hunt:interview-prep, hunt:report, hunt:export, hunt:scrape-dice, hunt:scrape-indeed, hunt:scrape-linkedin, hunt:scrape-all."
+    "No command supplied. Pass --instance=<id>. Use one of: instance:status, instance:onboarding-status, instance:ready, auth:doctor, gmail:auth:url, gmail:auth:local, gmail:auth:save --code=..., gmail:status, db:reset --confirm=RESET, seed:sample, process:mock, process:gmail, approve:all, send:approved, send:approved:gmail, run:mock-cycle, run:gmail-cycle, run:laptop-cycle, run:production-cycle, report:daily, hunt:ingest, hunt:status, hunt:scout, hunt:score, hunt:package, hunt:apply-assist, hunt:premium-queue, hunt:prepare-artifacts, hunt:apply-one --job-id=..., hunt:approve-submit, hunt:interview-prep, hunt:report, hunt:export, hunt:scrape-dice, hunt:scrape-indeed, hunt:scrape-linkedin, hunt:scrape-all."
   );
 }
 

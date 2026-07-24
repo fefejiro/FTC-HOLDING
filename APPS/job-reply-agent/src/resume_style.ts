@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import YAML from "yaml";
+import { loadUserInstance } from "./instance.js";
 
 export interface TailoredResumeContent {
   targetTitle: string;
@@ -57,6 +58,9 @@ interface ExperienceItem {
 }
 
 interface TruthBank {
+  identity?: {
+    name?: string;
+  };
   tracks?: Record<string, TruthTrack>;
   experience_pool?: ExperienceItem[];
   portfolio?: string[];
@@ -131,11 +135,14 @@ const DEFAULT_UNSUPPORTED_PATTERNS = [
   /\bsecurity clearance\b/i
 ];
 
-let cachedTruthBank: TruthBank | null = null;
-let cachedScoringRules: ScoringRules | null = null;
-
 function loadYaml<T>(fileName: string): T | null {
-  const filePath = path.join(process.cwd(), "config", fileName);
+  let configDir = path.join(process.cwd(), "config");
+  try {
+    configDir = loadUserInstance().paths.configDir;
+  } catch {
+    // Pure library tests can continue to use the legacy fixture config.
+  }
+  const filePath = path.join(configDir, fileName);
   if (!fs.existsSync(filePath)) {
     return null;
   }
@@ -147,15 +154,11 @@ function loadYaml<T>(fileName: string): T | null {
 }
 
 function getTruthBank(): TruthBank {
-  if (cachedTruthBank) return cachedTruthBank;
-  cachedTruthBank = loadYaml<TruthBank>("profile_truth_bank.yaml") || {};
-  return cachedTruthBank;
+  return loadYaml<TruthBank>("profile_truth_bank.yaml") || {};
 }
 
 function getScoringRules(): ScoringRules {
-  if (cachedScoringRules) return cachedScoringRules;
-  cachedScoringRules = loadYaml<ScoringRules>("scoring_rules.yaml") || {};
-  return cachedScoringRules;
+  return loadYaml<ScoringRules>("scoring_rules.yaml") || {};
 }
 
 function clean(input: string): string {
@@ -167,7 +170,19 @@ function escapeRegex(value: string): string {
 }
 
 export function isApprovedOrangeTemplatePath(templatePath: string): boolean {
-  return APPROVED_ORANGE_TEMPLATE_BASENAMES.has(path.basename(templatePath).toLowerCase());
+  if (APPROVED_ORANGE_TEMPLATE_BASENAMES.has(path.basename(templatePath).toLowerCase())) return true;
+  try {
+    const instance = loadUserInstance();
+    const relative = path.relative(instance.paths.resumeRoot, path.resolve(templatePath));
+    return Boolean(
+      relative &&
+      !relative.startsWith("..") &&
+      !path.isAbsolute(relative) &&
+      /golden template\.docx$/i.test(path.basename(templatePath))
+    );
+  } catch {
+    return false;
+  }
 }
 
 export function sanitizeVisibleResumeText(input: string): string {
@@ -214,31 +229,34 @@ function scoreTrack(track: TruthTrack | undefined, tokens: Set<string>): number 
 
 function detectTrack(title: string, company: string, jdText: string, truthBank: TruthBank): string {
   const corpus = `${title}\n${company}\n${jdText}`;
-  if (BUSINESS_ANALYSIS_TITLE_SIGNALS.test(title)) {
+  const hasTrack = (name: string) => Boolean(truthBank.tracks?.[name]);
+  const legacyFejiroProfile = /\bFejiro Efiuvwere\b/i.test(String(truthBank.identity?.name || ""));
+  const supportsTrack = (name: string) => hasTrack(name) || legacyFejiroProfile;
+  if (supportsTrack("business_analysis") && BUSINESS_ANALYSIS_TITLE_SIGNALS.test(title)) {
     return "business_analysis";
   }
-  if (/\b(wms|warehouse|erp|supply chain|logistics|inventory|fulfillment)\b/i.test(title)) {
+  if (supportsTrack("wms_erp_supply_chain") && /\b(wms|warehouse|erp|supply chain|logistics|inventory|fulfillment)\b/i.test(title)) {
     return "wms_erp_supply_chain";
   }
-  if (SALESFORCE_SIGNALS.test(corpus)) {
+  if (supportsTrack("salesforce_crm_delivery") && SALESFORCE_SIGNALS.test(corpus)) {
     return "salesforce_crm_delivery";
   }
-  if (AZURE_CLOUD_SIGNALS.test(corpus)) {
+  if (supportsTrack("azure_cloud") && AZURE_CLOUD_SIGNALS.test(corpus)) {
     return "azure_cloud";
   }
-  if (/\b(project manager|program manager|delivery manager|pmo)\b/i.test(title)) {
+  if (supportsTrack("project_program_management") && /\b(project manager|program manager|delivery manager|pmo)\b/i.test(title)) {
     return "project_program_management";
   }
-  if (WMS_ERP_SUPPLY_CHAIN_SIGNALS.test(corpus)) {
+  if (supportsTrack("wms_erp_supply_chain") && WMS_ERP_SUPPLY_CHAIN_SIGNALS.test(corpus)) {
     return "wms_erp_supply_chain";
   }
-  if (RETAIL_TECH_SIGNALS.test(corpus)) {
+  if (supportsTrack("retail_analytics") && RETAIL_TECH_SIGNALS.test(corpus)) {
     return "retail_analytics";
   }
-  if (PROJECT_PROGRAM_SIGNALS.test(corpus)) {
+  if (supportsTrack("project_program_management") && PROJECT_PROGRAM_SIGNALS.test(corpus)) {
     return "project_program_management";
   }
-  if (isBusinessAnalysisRole(title, jdText)) {
+  if (supportsTrack("business_analysis") && isBusinessAnalysisRole(title, jdText)) {
     return "business_analysis";
   }
   const tokens = new Set(tokenize(corpus));

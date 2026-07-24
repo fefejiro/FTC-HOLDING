@@ -1,0 +1,50 @@
+version: 1
+identity:
+  full_name: Fejiro Efiuvwere
+  phone: "+1 416 473 2732"
+  location: Toronto, Ontario, Canada
+  linkedin_url: https://www.linkedin.com/in/fejiro-efiuvwere
+  portfolio_url: https://unalabs.cloud
+  github_url: https://github.com/fefejiro
+preferences:
+  target_titles:
+    - Business Systems Analyst
+    - Business Analyst
+    - IT Manager
+    - IT Project Manager
+    - Technical Program Manager
+  excluded_titles:
+    - Junior Developer
+    - Commission-only Sales
+  locations:
+    - Canada
+    - Greater Toronto Area
+    - Remote
+  work_modes:
+    - remote
+    - hybrid
+    - onsite
+  employment_types:
+    - permanent
+    - contract
+  salary_or_rate: Use the approved application-answer profile and pause when a role requires an unapproved commitment.
+  relocation: Open to approved roles; use the stored application answer.
+  travel: Confirm role-specific travel requirements before committing.
+  start_date: Confirm when a form requires a binding date.
+eligibility:
+  work_authorization: Canadian citizen and legally authorized to work in Canada.
+  sponsorship_required: No sponsorship required for Canada.
+resumes:
+  source_files:
+    - C:/FTC HOLDING/DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes/Business Systems Analyst - Fejiro Efiuvwere Golden Template.docx
+  default_file: C:/FTC HOLDING/DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes/Business Systems Analyst - Fejiro Efiuvwere Golden Template.docx
+job_platforms:
+  - gmail
+  - linkedin
+consent:
+  profile_truth_confirmed: true
+  recruiter_drafts: true
+  recruiter_sends: true
+  assisted_applications: true
+  controlled_submissions: true
+  approved_at: "2026-07-23"

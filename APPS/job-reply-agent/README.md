@@ -1,6 +1,33 @@
-# Job Reply Agent
+# Una Labs JobAgent
 
-A local recruiter-response operations service designed for controlled automation:
+## Product Status
+
+JobAgent is being built as an Una Labs multi-user product. Fejiro and Chukwuma
+are tenant pilots used to prove isolation, onboarding, consent, resume
+generation, recruiter replies, job applications, and evidence-backed status.
+Candidate-specific files are test/pilot data, not the product architecture.
+
+The current interface is a responsive local web application. It is not yet a
+hosted multi-user SaaS, an iOS application, or an Android application. The
+target architecture is:
+
+1. Responsive cloud web application and installable PWA.
+2. Tenant-safe API and background-worker platform shared by every client.
+3. iOS and Android clients after the API, identity, consent, and approval
+   workflows are stable.
+
+Phone clients will control onboarding, recommendations, approvals, status,
+messages, and account settings. Gmail processing, resume generation, job
+discovery, browser assistance, scheduling, and proof reconciliation remain
+server-side. See `ops/PRODUCT_ARCHITECTURE.md`.
+
+> Multi-instance safety: operational commands now require
+> `--instance=<id>` (for example, `--instance=fejiro`). See
+> `ops/MULTI_INSTANCE_PILOT.md`. The `chukwuma` pilot is scaffolded but remains
+> inactive until onboarding, consent, resumes, Gmail identity, and browser
+> identity are verified.
+
+A recruiter-response and job-application service designed for controlled automation:
 
 - `draft_only` for safe onboarding
 - `approval_required` as the target steady-state operating mode

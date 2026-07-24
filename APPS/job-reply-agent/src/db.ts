@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 import { initHuntSchema } from "./hunt/db.js";
+import { loadUserInstance } from "./instance.js";
 
 const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -12,7 +13,7 @@ export function resolveProjectPath(...parts: string[]): string {
 
 export function resolveDbPath(dbPath?: string): string {
   if (!dbPath) {
-    return resolveProjectPath("data", "job_leads.sqlite");
+    return loadUserInstance().paths.database;
   }
 
   if (dbPath === ":memory:" || dbPath.startsWith("file:")) {
@@ -94,11 +95,27 @@ function initSchema(db: Database.Database): void {
       created_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS application_proofs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      instance_id TEXT NOT NULL,
+      job_id INTEGER NOT NULL,
+      status TEXT NOT NULL,
+      resume_version TEXT,
+      answers_json TEXT NOT NULL DEFAULT '{}',
+      final_url TEXT,
+      evidence_path TEXT,
+      verified_at TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(instance_id, job_id)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_messages_message_id ON messages (message_id);
     CREATE INDEX IF NOT EXISTS idx_decisions_created_at ON decisions (created_at);
     CREATE INDEX IF NOT EXISTS idx_decisions_status ON decisions (status);
     CREATE INDEX IF NOT EXISTS idx_opportunities_score ON opportunities (match_score DESC);
     CREATE INDEX IF NOT EXISTS idx_drafts_approved ON drafts (approved, sent);
+    CREATE INDEX IF NOT EXISTS idx_application_proofs_instance_status ON application_proofs (instance_id, status);
   `);
 }
 

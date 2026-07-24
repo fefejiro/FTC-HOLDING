@@ -88,6 +88,12 @@ APPS/job-reply-agent/data/*.db
 APPS/job-reply-agent/data/*.sqlite
 APPS/job-reply-agent/data/gmail_tokens*.json
 APPS/job-reply-agent/data/gmail_oauth_pkce.json
+APPS/job-reply-agent/instances/*/resumes/
+APPS/job-reply-agent/instances/*/secrets/
+APPS/job-reply-agent/instances/*/data/
+APPS/job-reply-agent/instances/*/logs/
+APPS/job-reply-agent/instances/*/proof/
+APPS/job-reply-agent/instances/*/browser/
 APPS/job-reply-agent/data/playwright-profile/
 APPS/job-reply-agent/client_secret_*.json
 APPS/job-reply-agent/config/application_answers.yaml

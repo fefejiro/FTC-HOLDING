@@ -1,11 +1,18 @@
+param(
+  [Parameter(Mandatory=$true)]
+  [ValidatePattern("^[a-z0-9][a-z0-9_-]{1,31}$")]
+  [string]$InstanceId
+)
+
 # Scheduled Gmail Job Agent Run
 # Scans recruiter email, drafts safe replies, and sends only approved Gmail drafts.
 $ErrorActionPreference = "Continue"
 $root = "C:\FTC HOLDING\APPS\job-reply-agent"
-$logDir = Join-Path $root "logs"
+$env:JOB_AGENT_INSTANCE_ID = $InstanceId
+$logDir = Join-Path $root "instances\$InstanceId\logs"
 New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 $stamp = Get-Date -Format "yyyy-MM-dd"
-$log = Join-Path $logDir "gmail-scheduler-$stamp.log"
+$log = Join-Path $logDir "$InstanceId-gmail-scheduler-$stamp.log"
 $lock = Join-Path $logDir "gmail-scheduler.lock"
 
 if (Test-Path $lock) {
@@ -42,6 +49,7 @@ try {
   }
 
   "=== Gmail scheduler start $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" | Tee-Object -FilePath $log -Append
+  "Instance: $InstanceId" | Tee-Object -FilePath $log -Append
   "Working dir: $root" | Tee-Object -FilePath $log -Append
 
   $statusExit = Run-Step "0. Gmail auth status" "npm run gmail:status"

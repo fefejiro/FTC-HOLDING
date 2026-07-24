@@ -87,6 +87,40 @@ describe("application plan sensitive answer resolution", () => {
     expect(plan.pauseReasons[0]?.reason).toMatch(/Missing answer/);
   });
 
+  it("uses a separately approved sponsorship answer for the friend instance", () => {
+    const plan = buildApplicationPlan({
+      url: "https://smartapply.indeed.com/example",
+      html: `
+        <label for="sponsor">Will you now or in the future require employer sponsorship?</label>
+        <select id="sponsor" name="sponsor" required>
+          <option></option><option>No</option><option>Yes</option>
+        </select>
+      `,
+      profile: {
+        ...profile,
+        name: "Chukwuma Mezie-Okoye",
+        work_authorization_note: "Currently based in Nigeria and available for remote roles."
+      },
+      answers: {
+        work_authorization_text: "Currently based in Nigeria and available for remote roles.",
+        sponsorship_required: "Yes"
+      },
+      job: {
+        title: "Product Manager",
+        company: "Example",
+        description: "Remote product role.",
+        apply_url: "https://example.com/apply",
+        source: "indeed"
+      },
+      packageRow: null
+    });
+
+    expect(plan.pauseReasons).toEqual([]);
+    expect(plan.entries).toContainEqual(
+      expect.objectContaining({ answer: "Yes", source: "saved_sponsorship_requirement" })
+    );
+  });
+
   it("pauses Dice apply-one when auth is only available through visible fallback without CDP", async () => {
     const db = getDb(":memory:");
     const now = new Date().toISOString();

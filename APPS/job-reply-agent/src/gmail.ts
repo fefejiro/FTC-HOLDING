@@ -204,9 +204,20 @@ export async function checkGmailAuthStatus(cfg: GmailAuthConfig): Promise<{
   try {
     const gmail = await getGmailClient(cfg);
     const profile = await gmail.users.getProfile({ userId: "me" });
+    const accountEmail = (profile.data.emailAddress || "").trim().toLowerCase();
+    const expectedEmail = (cfg.gmailAccountEmail || "").trim().toLowerCase();
+    if (expectedEmail && accountEmail !== expectedEmail) {
+      return {
+        ok: false,
+        accountEmail,
+        tokenPath: path.resolve(cfg.gmailTokensPath),
+        redirectUri: cfg.gmailRedirectUri,
+        message: `Gmail identity mismatch: expected ${expectedEmail}, authenticated as ${accountEmail || "(unknown)"}.`
+      };
+    }
     return {
       ok: true,
-      accountEmail: profile.data.emailAddress || "",
+      accountEmail,
       tokenPath: path.resolve(cfg.gmailTokensPath),
       redirectUri: cfg.gmailRedirectUri,
       message: "Gmail OAuth token is valid."

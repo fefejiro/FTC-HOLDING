@@ -26,6 +26,20 @@ import {
   scoreJobs
 } from "./hunt.js";
 import { buildApplicationQueueReport, runAutoApplyQueue, runAutoEmailQueue, runDailyHuntAutomation } from "./automation.js";
+import { instanceBanner, loadUserInstance } from "./instance.js";
+import {
+  evaluateOnboardingReadiness,
+  loadOnboardingRecord,
+  saveOnboardingSubmission,
+  type OnboardingReadiness
+} from "./onboarding.js";
+
+const instanceOption = process.argv.find((arg) => arg.startsWith("--instance="));
+if (instanceOption) {
+  process.env.JOB_AGENT_INSTANCE_ID = instanceOption.slice("--instance=".length);
+}
+const serverInstance = loadUserInstance();
+const setupOnly = !serverInstance.onboardingApproved || !serverInstance.activationEnabled;
 
 type ServerAction =
   | "auth-url"
@@ -111,7 +125,7 @@ function renderDashboard(state: {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Job Reply Agent</title>
+  <title>Una Labs JobAgent</title>
   <style>
     :root {
       color-scheme: light;
@@ -306,9 +320,9 @@ function renderDashboard(state: {
 <body>
   <main class="shell">
     <section class="hero">
-      <div class="eyebrow">Job Reply Agent</div>
-      <h1>Phone-first control for recruiter replies.</h1>
-      <p class="lede">Use the same interface on desktop and mobile. Process Gmail, approve drafts, send responses, and generate the daily report without touching the computer terminal.</p>
+      <div class="eyebrow">Una Labs JobAgent</div>
+      <h1>Your job search control centre.</h1>
+      <p class="lede">Review opportunities, approve recruiter replies, manage applications, and track verified outcomes from desktop or mobile.</p>
       <div class="statusbar">
         <div class="chip">Mode: ${escapeHtml(state.mode)}</div>
         <div class="chip">Auth: ${escapeHtml(state.authMode)}</div>
@@ -936,7 +950,17 @@ function renderApplicationCasesTable(cases: HuntDashboardApplicationCase[]): str
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return await new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
-    req.on("data", (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+    let size = 0;
+    req.on("data", (chunk) => {
+      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      size += buffer.length;
+      if (size > 12 * 1024 * 1024) {
+        reject(new Error("Request body exceeds 12 MB."));
+        req.destroy();
+        return;
+      }
+      chunks.push(buffer);
+    });
     req.on("end", () => {
       const raw = Buffer.concat(chunks).toString("utf8").trim();
       if (!raw) {
@@ -982,7 +1006,7 @@ async function handleAction(action: ServerAction, body: any): Promise<{ status: 
       rules: cfg.rules,
       resumeMap: cfg.resumeMap,
       messages: inbox,
-      includeTnLine: true,
+      includeTnLine: cfg.instance.proactiveWorkAuthorization,
       onStatusChange: async (messageId, status) => {
         await applyStatusLabel({
           cfg: cfg.env,
@@ -1043,7 +1067,7 @@ async function handleAction(action: ServerAction, body: any): Promise<{ status: 
       rules: cfg.rules,
       resumeMap: cfg.resumeMap,
       messages: inbox,
-      includeTnLine: true,
+      includeTnLine: cfg.instance.proactiveWorkAuthorization,
       onStatusChange: async (messageId, status) => {
         await applyStatusLabel({
           cfg: cfg.env,
@@ -1154,10 +1178,139 @@ function contentTypeFor(pathname: string): string {
   return "text/html; charset=utf-8";
 }
 
+function renderSetupDashboard(readiness: OnboardingReadiness): string {
+  const record = loadOnboardingRecord(serverInstance);
+  const lines = (values: string[] | undefined) => escapeHtml((values || []).join("\n"));
+  const checked = (value: boolean | undefined) => value ? " checked" : "";
+  const rows = readiness.checks.map((check) => `
+    <tr>
+      <td>${check.ready ? "Ready" : "Missing"}</td>
+      <td>${escapeHtml(check.detail)}</td>
+    </tr>
+  `).join("");
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Una Labs JobAgent Onboarding</title>
+  <style>
+    body{margin:0;background:#f4f6f8;color:#17202a;font:15px/1.5 system-ui,sans-serif}
+    header{background:#17202a;color:#fff;padding:22px 28px}
+    main{max-width:980px;margin:0 auto;padding:28px}
+    h1,h2{letter-spacing:0;margin:0 0 10px}
+    .status{display:flex;gap:24px;align-items:center;padding:18px 0;border-bottom:1px solid #cfd6dc}
+    .count{font-size:32px;font-weight:700;color:#d45113}
+    table{width:100%;border-collapse:collapse;background:#fff;margin-top:22px}
+    th,td{text-align:left;padding:12px;border-bottom:1px solid #e3e7ea}
+    td:first-child{width:110px;font-weight:700}
+    code{background:#e8ecef;padding:2px 5px}
+    form{margin-top:30px;background:#fff;border-top:4px solid #d45113;padding:24px}
+    fieldset{border:0;border-top:1px solid #d8dde2;margin:24px 0 0;padding:20px 0 0}
+    legend{font-weight:700;padding-right:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+    label{display:grid;gap:6px;font-weight:600}input,textarea,select{box-sizing:border-box;width:100%;padding:10px;border:1px solid #aeb8c2;font:inherit}
+    textarea{min-height:86px;resize:vertical}.wide{grid-column:1/-1}.checks{display:grid;gap:10px}
+    .checks label{display:flex;align-items:flex-start;gap:9px;font-weight:400}.checks input{width:auto;margin-top:4px}
+    button{border:0;background:#17202a;color:#fff;padding:11px 18px;font-weight:700;cursor:pointer}.secondary{background:#d45113}.steps{background:#fff;border-left:4px solid #d45113;padding:18px 22px;margin:22px 0}.steps li{margin:8px 0}#result{margin-left:12px;font-weight:600}
+    @media(max-width:700px){main{padding:18px}.grid{grid-template-columns:1fr}.wide{grid-column:auto}}
+  </style>
+</head>
+<body>
+  <header><h1>Una Labs JobAgent</h1><div>${escapeHtml(serverInstance.expectedGmailAccount)}</div></header>
+  <main>
+    <div class="status"><div class="count">${readiness.completed}/${readiness.total}</div><div><h2>Onboarding readiness</h2><div>Automation remains locked until every requirement is complete and approved.</div></div></div>
+    <section class="steps">
+      <h2>Finish setup</h2>
+      <ol>
+        <li>Review the profile, job preferences, eligibility answers, and resume.</li>
+        <li>Select only the permissions you approve and enter the consent date.</li>
+        <li>Save onboarding with the private access code provided by Una Labs.</li>
+        <li>Connect the Gmail account shown above with the same private access code.</li>
+      </ol>
+      <button class="secondary" id="connect-gmail" type="button">Connect Gmail</button>
+      <span id="gmail-result" aria-live="polite"></span>
+    </section>
+    <table><thead><tr><th>Status</th><th>Requirement</th></tr></thead><tbody>${rows}</tbody></table>
+    <p>Source record: <code>${escapeHtml(readiness.recordPath)}</code></p>
+    <form id="intake">
+      <h2>Candidate intake</h2>
+      <div class="grid">
+        <label>Full name<input name="full_name" required value="${escapeHtml(record?.identity.full_name || "")}"></label>
+        <label>Phone number<input name="phone" required value="${escapeHtml(record?.identity.phone || "")}"></label>
+        <label>City, state/province, country<input name="location" required value="${escapeHtml(record?.identity.location || "")}"></label>
+        <label>Postal code only<input name="postal_code" value="${escapeHtml(record?.identity.postal_code || "")}"></label>
+        <label>LinkedIn URL<input name="linkedin_url" type="url" required value="${escapeHtml(record?.identity.linkedin_url || "")}"></label>
+        <label>Portfolio URL<input name="portfolio_url" type="url" value="${escapeHtml(record?.identity.portfolio_url || "")}"></label>
+        <label>GitHub URL<input name="github_url" type="url" value="${escapeHtml(record?.identity.github_url || "")}"></label>
+      </div>
+      <fieldset><legend>Job preferences</legend><div class="grid">
+        <label>Target titles, one per line<textarea name="target_titles" required>${lines(record?.preferences.target_titles)}</textarea></label>
+        <label>Excluded titles, one per line<textarea name="excluded_titles">${lines(record?.preferences.excluded_titles)}</textarea></label>
+        <label>Preferred locations, one per line<textarea name="locations" required>${lines(record?.preferences.locations)}</textarea></label>
+        <label>Work modes<select name="work_modes" multiple size="3"><option value="remote"${record?.preferences.work_modes.includes("remote") ? " selected" : ""}>Remote</option><option value="hybrid"${record?.preferences.work_modes.includes("hybrid") ? " selected" : ""}>Hybrid</option><option value="onsite"${record?.preferences.work_modes.includes("onsite") ? " selected" : ""}>Onsite</option></select></label>
+        <label>Employment types, one per line<textarea name="employment_types" required>${lines(record?.preferences.employment_types)}</textarea></label>
+        <label>Salary or hourly rate<input name="salary_or_rate" required value="${escapeHtml(record?.preferences.salary_or_rate || "")}"></label>
+        <label>Relocation<input name="relocation" required value="${escapeHtml(record?.preferences.relocation || "")}"></label>
+        <label>Travel<input name="travel" required value="${escapeHtml(record?.preferences.travel || "")}"></label>
+        <label>Earliest start date<input name="start_date" required value="${escapeHtml(record?.preferences.start_date || "")}"></label>
+        <label>Job platforms, one per line<textarea name="job_platforms" required>${lines(record?.job_platforms)}</textarea></label>
+      </div></fieldset>
+      <fieldset><legend>Eligibility and resume</legend><div class="grid">
+        <label>Work authorization<input name="work_authorization" required value="${escapeHtml(record?.eligibility.work_authorization || "")}"></label>
+        <label>Sponsorship required?<input name="sponsorship_required" required value="${escapeHtml(record?.eligibility.sponsorship_required || "")}"></label>
+        <label class="wide">Resume (PDF, DOC, or DOCX; maximum 8 MB)<input name="resume" type="file" accept=".pdf,.doc,.docx"></label>
+      </div></fieldset>
+      <fieldset><legend>Consent</legend><div class="checks">
+        <label><input name="profile_truth_confirmed" type="checkbox"${checked(record?.consent.profile_truth_confirmed)}>I confirm that my professional information and resume are truthful.</label>
+        <label><input name="recruiter_drafts" type="checkbox"${checked(record?.consent.recruiter_drafts)}>Prepare recruiter email drafts.</label>
+        <label><input name="recruiter_sends" type="checkbox"${checked(record?.consent.recruiter_sends)}>Send recruiter replies that meet my approved policy.</label>
+        <label><input name="assisted_applications" type="checkbox"${checked(record?.consent.assisted_applications)}>Prepare and assist with suitable applications.</label>
+        <label><input name="controlled_submissions" type="checkbox"${checked(record?.consent.controlled_submissions)}>Submit only when every answer is covered by my approved policy.</label>
+        <label>Consent date<input name="approved_at" type="date" value="${escapeHtml(record?.consent.approved_at || "")}"></label>
+      </div></fieldset>
+      <fieldset><legend>Save securely</legend><label>Local control token<input name="control_token" type="password" autocomplete="off" required></label></fieldset>
+      <button type="submit">Save onboarding</button><span id="result" aria-live="polite"></span>
+    </form>
+  </main>
+  <script>
+    const form=document.getElementById("intake"),result=document.getElementById("result"),gmailResult=document.getElementById("gmail-result");
+    const list=(value)=>String(value||"").split(/\\r?\\n/).map((item)=>item.trim()).filter(Boolean);
+    form.addEventListener("submit",async(event)=>{
+      event.preventDefault();result.textContent="Saving...";
+      const data=new FormData(form);
+      const modes=Array.from(form.elements.work_modes.selectedOptions).map((option)=>option.value);
+      const record={version:1,identity:{full_name:data.get("full_name"),phone:data.get("phone"),location:data.get("location"),postal_code:data.get("postal_code"),linkedin_url:data.get("linkedin_url"),portfolio_url:data.get("portfolio_url"),github_url:data.get("github_url")},
+        preferences:{target_titles:list(data.get("target_titles")),excluded_titles:list(data.get("excluded_titles")),locations:list(data.get("locations")),work_modes:modes,employment_types:list(data.get("employment_types")),salary_or_rate:data.get("salary_or_rate"),relocation:data.get("relocation"),travel:data.get("travel"),start_date:data.get("start_date")},
+        eligibility:{work_authorization:data.get("work_authorization"),sponsorship_required:data.get("sponsorship_required")},
+        resumes:${JSON.stringify(record?.resumes || { source_files: [], default_file: "" })},job_platforms:list(data.get("job_platforms")),
+        consent:{profile_truth_confirmed:data.has("profile_truth_confirmed"),recruiter_drafts:data.has("recruiter_drafts"),recruiter_sends:data.has("recruiter_sends"),assisted_applications:data.has("assisted_applications"),controlled_submissions:data.has("controlled_submissions"),approved_at:data.get("approved_at")}};
+      const file=data.get("resume");let resume;
+      if(file&&file.size){const base64=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(",")[1]);reader.onerror=reject;reader.readAsDataURL(file)});resume={name:file.name,mimeType:file.type,base64}}
+      try{const response=await fetch("/api/onboarding",{method:"POST",headers:{"content-type":"application/json","x-job-agent-token":data.get("control_token")},body:JSON.stringify({record,resume})});const body=await response.json();if(!response.ok)throw new Error(body.error||"Unable to save onboarding.");result.textContent="Saved. Refreshing...";location.reload()}catch(error){result.textContent=error.message}
+    });
+    document.getElementById("connect-gmail").addEventListener("click",async()=>{
+      const token=form.elements.control_token.value;
+      if(!token){gmailResult.textContent=" Enter the private access code below first.";form.elements.control_token.focus();return}
+      gmailResult.textContent=" Connecting...";
+      try{const response=await fetch("/api/gmail/auth-url",{headers:{"x-job-agent-token":token}});const body=await response.json();if(!response.ok)throw new Error(body.error||"Unable to start Gmail connection.");location.assign(body.url)}catch(error){gmailResult.textContent=" "+error.message}
+    });
+  </script>
+</body>
+</html>`;
+}
+
 async function start(): Promise<void> {
   const server = createServer(async (req, res) => {
     try {
       const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+      const setupAllowed = new Set(["/", "/oauth2callback", "/api/gmail/auth-url", "/api/instance", "/api/onboarding"]);
+      if (setupOnly && !setupAllowed.has(url.pathname)) {
+        res.writeHead(423, { "content-type": "application/json" });
+        res.end(JSON.stringify({
+          error: `Instance '${serverInstance.id}' is setup-only until onboarding is approved and activation is enabled.`
+        }));
+        return;
+      }
       const token = getControlToken();
       const providedToken = String(url.searchParams.get("token") || req.headers["x-job-agent-token"] || "");
 
@@ -1184,7 +1337,33 @@ async function start(): Promise<void> {
         return;
       }
 
+      if (req.method === "GET" && url.pathname === "/api/instance") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({
+          instance: instanceBanner(serverInstance),
+          onboarding: evaluateOnboardingReadiness(serverInstance),
+          setupOnly
+        }));
+        return;
+      }
+
+      if (req.method === "POST" && url.pathname === "/api/onboarding") {
+        const body = await readJsonBody(req) as { record?: unknown; resume?: unknown };
+        const saved = saveOnboardingSubmission(serverInstance, {
+          record: body.record,
+          resume: body.resume
+        });
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify(saved));
+        return;
+      }
+
       if (req.method === "GET" && url.pathname === "/") {
+        if (setupOnly) {
+          res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+          res.end(renderSetupDashboard(evaluateOnboardingReadiness(serverInstance)));
+          return;
+        }
         const cfg = loadConfig();
         const db = getDb();
         const report = buildDailyReport(db, new Date());
@@ -1298,7 +1477,10 @@ async function start(): Promise<void> {
   });
 
   server.listen(PORT, HOST, () => {
-    logger.info({ host: HOST, port: PORT }, "Job Reply Agent control server running.");
+    logger.info(
+      { host: HOST, port: PORT, setupOnly, ...instanceBanner(serverInstance) },
+      "Una Labs JobAgent control server running."
+    );
   });
 }
 
