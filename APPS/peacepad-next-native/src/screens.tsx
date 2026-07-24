@@ -403,7 +403,6 @@ export function VaultScreen({ setScreen }: ScreenProps) {
           <Text style={styles.body}>Tag: {item.tag}</Text>
           <Text style={styles.body}>Linked event: {item.linkedEvent}</Text>
           <Text style={styles.caption}>{item.integrityNote}</Text>
-          <LabButton label="Validate metadata and open detail" onPress={continueToDetail} variant="secondary" />
         </View>
       ))}
       <View style={styles.cardPremium}>
