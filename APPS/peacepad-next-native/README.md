@@ -59,6 +59,14 @@ Install dependencies before running Expo if this workspace has not been installe
 npm install
 ```
 
+## QA and simulator proof
+
+- Current status: `docs/STATUS.md`
+- Feature QA matrix: `docs/QA_MATRIX.md`
+- iOS simulator runbook: `docs/IOS_SIMULATOR_RUNBOOK.md`
+
+The lab has rendered on MacInCloud iOS Simulator, but it is still mock-data only and not approved as the production PeacePad migration.
+
 ## Decision gate
 
 React Native migration can only be considered after:
@@ -67,4 +75,3 @@ React Native migration can only be considered after:
 2. PeacePad v1 is tested end to end on a real iPhone.
 3. This lab app demonstrates materially better UX or capability.
 4. Migration risks are documented and approved.
-

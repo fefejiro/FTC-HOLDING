@@ -1,6 +1,6 @@
 # PeacePad Next Native iOS Simulator Runbook
 
-Last updated: 2026-07-23
+Last updated: 2026-07-24
 
 ## Why this exists
 
@@ -25,6 +25,8 @@ APPS/peacepad-next-native/.sim/peacepad-next-native-ios
 
 That folder is ignored by Git.
 
+The simulator workdir also receives `metro.config.js`, which disables Watchman for this lab. This is intentional: MacInCloud Watchman has been flaky and previously caused Metro to stall before the app rendered.
+
 ## On MacInCloud
 
 Copy or pull the repo, then run:
@@ -42,6 +44,29 @@ npm --workspace=@ftc/peacepad-next-native run sim:ios
 
 This starts Expo from the standalone workdir and opens the iOS Simulator.
 
+## Confirmed MacInCloud path
+
+The lab has rendered successfully on MacInCloud with:
+
+```bash
+cd ~/Desktop/FTC-HOLDING
+npm --workspace=@ftc/peacepad-next-native run sim:doctor
+cd APPS/peacepad-next-native/.sim/peacepad-next-native-ios
+EXPO_NO_TYPESCRIPT_SETUP=1 npx expo start --localhost --clear
+```
+
+Then open the booted simulator with:
+
+```bash
+open -a Simulator
+xcrun simctl openurl booted exp://127.0.0.1:8081
+```
+
+Pass signal:
+
+- Premium dashboard renders in the iPhone simulator.
+- Vault tab opens and shows the Evidence Vault metadata form.
+
 ## If Simulator does not open
 
 Open Xcode once and accept any prompts, then run:
@@ -52,10 +77,25 @@ open -a Simulator
 npm --workspace=@ftc/peacepad-next-native run sim:ios
 ```
 
+## If Metro stalls
+
+Check that the generated simulator workdir contains:
+
+```text
+metro.config.js
+```
+
+That config sets:
+
+```js
+config.resolver.useWatchman = false;
+```
+
+If logs still mention a long Watchman wait, rerun `sim:doctor` so the standalone workdir is regenerated from the latest source.
+
 ## Safety boundaries
 
 - This is not the submitted App Store app.
 - Bundle ID remains `ca.peacepad.nextnative.lab`.
 - Production API writes remain disabled.
 - No private court files or real evidence should be imported.
-
