@@ -41,8 +41,13 @@ export async function closeProductPool(): Promise<void> {
 }
 
 export async function migrateProductDb(db = getProductPool()): Promise<void> {
-  const migration = fs.readFileSync(path.join(ROOT, "migrations", "001_product.sql"), "utf8");
-  await db.query(migration);
+  const migrationRoot = path.join(ROOT, "migrations");
+  const migrations = fs.readdirSync(migrationRoot)
+    .filter((name) => /^\d+_.+\.sql$/i.test(name))
+    .sort();
+  for (const name of migrations) {
+    await db.query(fs.readFileSync(path.join(migrationRoot, name), "utf8"));
+  }
 }
 
 export async function withTenant<T>(

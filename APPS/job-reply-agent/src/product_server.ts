@@ -12,12 +12,28 @@ import {
   verifyPassword
 } from "./product_auth.js";
 import { getProductPool, migrateProductDb } from "./product_db.js";
-import { getProductOnboarding, productAuditLog, saveProductOnboarding } from "./product_repository.js";
+import {
+  deleteProductResume,
+  decideProductApproval,
+  getCareerTruthBank,
+  getProductOnboarding,
+  getProductResumeContent,
+  listProductConnections,
+  listProductResumes,
+  productActivationReadiness,
+  productAuditLog,
+  productDashboard,
+  requestProductConnection,
+  saveCareerTruthBank,
+  saveProductOnboarding,
+  saveProductResume
+} from "./product_repository.js";
+import { validateResumeUpload } from "./product_resume.js";
 
 const HOST = process.env.HOST || "0.0.0.0";
 const PORT = Number(process.env.PORT || 3000);
 const CONSENT_VERSION = "2026-07-23";
-const MAX_BODY_BYTES = 512_000;
+const MAX_BODY_BYTES = 7_500_000;
 
 const registrationSchema = z.object({
   email: z.string().email().transform((value) => value.trim().toLowerCase()),
@@ -50,6 +66,29 @@ const onboardingSchema = z.object({
     assistedApplications: z.boolean(),
     controlledSubmissions: z.boolean()
   })
+});
+
+const resumeUploadSchema = z.object({
+  filename: z.string().min(1).max(180),
+  mimeType: z.string().min(1).max(150),
+  base64: z.string().min(1).max(7_100_000),
+  isDefault: z.boolean().default(false)
+});
+
+const careerTruthSchema = z.object({
+  facts: z.array(z.object({
+    category: z.string().min(2).max(80),
+    statement: z.string().min(3).max(1000),
+    sourceResumeId: z.string().uuid().optional()
+  })).min(1).max(300)
+});
+
+const connectionSchema = z.object({
+  provider: z.enum(["gmail", "linkedin", "indeed"])
+});
+
+const approvalDecisionSchema = z.object({
+  decision: z.enum(["approved", "rejected"])
 });
 
 const attempts = new Map<string, { count: number; resetAt: number }>();
@@ -94,6 +133,18 @@ function html(res: ServerResponse, status: number, body: string): void {
   securityHeaders(res);
   res.writeHead(status, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
   res.end(body);
+}
+
+function fileResponse(res: ServerResponse, file: { filename: string; mimeType: string; content: Buffer }): void {
+  securityHeaders(res);
+  const filename = file.filename.replace(/["\r\n]/g, "_");
+  res.writeHead(200, {
+    "content-type": file.mimeType,
+    "content-length": file.content.length,
+    "content-disposition": `attachment; filename="${filename}"`,
+    "cache-control": "private, no-store"
+  });
+  res.end(file.content);
 }
 
 async function readJson(req: IncomingMessage): Promise<unknown> {
@@ -142,6 +193,9 @@ function renderPage(authenticated: boolean): string {
     .checks{display:grid;gap:10px}.checks label{display:flex;align-items:flex-start;font-weight:450}.checks input{width:auto;margin:4px 9px 0 0}
     button{border:0;background:#17202a;color:#fff;padding:12px 16px;font:inherit;font-weight:750;cursor:pointer;width:max-content}
     button.accent{background:#d45113}.actions{display:flex;gap:10px;flex-wrap:wrap}.result{font-weight:650;min-height:24px}
+    .vault-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #d8dee3}
+    .vault-row a{color:#0b63a8;font-weight:650}.muted{font-size:14px;color:#68737d}
+    .status-list{display:grid;gap:8px;padding:0;list-style:none}.status-list li{padding:10px 0;border-bottom:1px solid #d8dee3}
     [hidden]{display:none!important}@media(max-width:680px){main{padding:18px}.grid{grid-template-columns:1fr}.wide{grid-column:auto}}
   </style>
 </head>
@@ -181,15 +235,64 @@ function renderPage(authenticated: boolean): string {
         <div id="result" class="result" aria-live="polite"></div>
       </form>
     </section>
+    <section id="vault" class="band"${authenticated ? "" : " hidden"}>
+      <h2>Resume vault</h2>
+      <form id="resume-upload">
+        <label>Resume file<input name="resume" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required></label>
+        <label class="checks"><span><input name="isDefault" type="checkbox">Use as my default resume</span></label>
+        <button class="accent" type="submit">Upload resume</button>
+      </form>
+      <div id="resume-result" class="result" aria-live="polite"></div>
+      <div id="resume-list"></div>
+    </section>
+    <section id="truth" class="band"${authenticated ? "" : " hidden"}>
+      <h2>Approved career facts</h2>
+      <form id="truth-form">
+        <label>One truthful fact per line<textarea name="facts" required></textarea></label>
+        <label class="checks"><span><input name="confirm" type="checkbox" required>I confirm these facts are accurate and may be used for resume tailoring.</span></label>
+        <button class="accent" type="submit">Approve facts</button>
+      </form>
+      <div id="truth-result" class="result" aria-live="polite"></div>
+    </section>
+    <section id="connections" class="band"${authenticated ? "" : " hidden"}>
+      <h2>Connections and activation</h2>
+      <div class="actions">
+        <button type="button" data-provider="gmail">Prepare Gmail connection</button>
+        <button type="button" data-provider="linkedin">Prepare LinkedIn connection</button>
+        <button type="button" data-provider="indeed">Prepare Indeed connection</button>
+      </div>
+      <p id="connection-result" class="result" aria-live="polite"></p>
+      <ul id="connection-list" class="status-list"></ul>
+      <ul id="readiness-list" class="status-list"></ul>
+    </section>
+    <section id="jobs" class="band"${authenticated ? "" : " hidden"}>
+      <h2>Recommended jobs</h2>
+      <ul id="job-list" class="status-list"></ul>
+      <h2>Needs approval</h2>
+      <ul id="approval-list" class="status-list"></ul>
+      <h2>Applications and proof</h2>
+      <ul id="application-list" class="status-list"></ul>
+    </section>
   </main>
   <script>
     const $=(id)=>document.getElementById(id),list=(value)=>String(value||"").split(/\\r?\\n/).map(v=>v.trim()).filter(Boolean);
     async function call(url,options={}){const response=await fetch(url,{...options,headers:{"content-type":"application/json",...(options.headers||{})}});const body=await response.json();if(!response.ok)throw new Error(body.error||"Request failed");return body}
-    function showAccount(){ $("auth").hidden=true;$("account").hidden=false;load() }
-    async function load(){try{const me=await call("/api/v1/me");$("identity").textContent=me.user.email+" - "+me.user.status;const saved=await call("/api/v1/onboarding");const r=saved.onboarding?.record||{},f=$("onboarding");for(const key of ["fullName","phone","location","linkedIn","compensationFloor","workAuthorization"]){if(r[key]!==undefined)f.elements[key].value=r[key]}for(const key of ["targetTitles","excludedTitles","locations","employmentTypes"]){if(r[key])f.elements[key].value=r[key].join("\\n")}if(r.workModes)Array.from(f.elements.workModes.options).forEach(o=>o.selected=r.workModes.includes(o.value));if(r.sponsorshipRequired!==undefined)f.elements.sponsorshipRequired.value=String(r.sponsorshipRequired);if(r.consent)for(const key of ["truthConfirmed","recruiterDrafts","recruiterSends","assistedApplications","controlledSubmissions"])f.elements[key].checked=Boolean(r.consent[key])}catch{ $("auth").hidden=false;$("account").hidden=true }}
+    const privateSections=["account","vault","truth","connections","jobs"];
+    function showAccount(){ $("auth").hidden=true;for(const id of privateSections)$(id).hidden=false;load() }
+    async function load(){try{const me=await call("/api/v1/me");$("identity").textContent=me.user.email+" - "+me.user.status;const saved=await call("/api/v1/onboarding");const r=saved.onboarding?.record||{},f=$("onboarding");for(const key of ["fullName","phone","location","linkedIn","compensationFloor","workAuthorization"]){if(r[key]!==undefined)f.elements[key].value=r[key]}for(const key of ["targetTitles","excludedTitles","locations","employmentTypes"]){if(r[key])f.elements[key].value=r[key].join("\\n")}if(r.workModes)Array.from(f.elements.workModes.options).forEach(o=>o.selected=r.workModes.includes(o.value));if(r.sponsorshipRequired!==undefined)f.elements.sponsorshipRequired.value=String(r.sponsorshipRequired);if(r.consent)for(const key of ["truthConfirmed","recruiterDrafts","recruiterSends","assistedApplications","controlledSubmissions"])f.elements[key].checked=Boolean(r.consent[key]);await loadResumes();const truth=await call("/api/v1/career-truth");$("truth-form").elements.facts.value=(truth.truthBank?.facts||[]).map(v=>v.statement).join("\\n");await Promise.all([loadConnections(),loadDashboard()])}catch{ $("auth").hidden=false;for(const id of privateSections)$(id).hidden=true }}
+    async function loadResumes(){const data=await call("/api/v1/resumes");$("resume-list").innerHTML=data.resumes.map(r=>'<div class="vault-row"><span><strong>'+escapeHtml(r.filename)+'</strong><br><span class="muted">'+Math.ceil(r.byteSize/1024)+' KB'+(r.isDefault?' - Default':'')+'</span></span><a href="/api/v1/resumes/'+r.id+'/download">Download</a><button type="button" data-delete-resume="'+r.id+'">Delete</button></div>').join("")||'<p class="muted">No resumes uploaded.</p>'}
+    function escapeHtml(value){const div=document.createElement("div");div.textContent=String(value);return div.innerHTML}
+    function safeUrl(value){try{const url=new URL(String(value));return ["http:","https:"].includes(url.protocol)?escapeHtml(url.href):"#"}catch{return "#"}}
+    async function loadConnections(){const [connections,readiness]=await Promise.all([call("/api/v1/connections"),call("/api/v1/activation-readiness")]);$("connection-list").innerHTML=connections.connections.map(c=>"<li><strong>"+escapeHtml(c.provider)+"</strong>: "+escapeHtml(c.status)+(c.providerAccount?" - "+escapeHtml(c.providerAccount):"")+"</li>").join("")||"<li>No connections prepared.</li>";$("readiness-list").innerHTML=readiness.checks.map(c=>"<li>"+(c.ready?"Ready: ":"Required: ")+escapeHtml(c.key.replaceAll("_"," "))+"</li>").join("")}
+    async function loadDashboard(){const d=await call("/api/v1/dashboard");$("job-list").innerHTML=d.recommendations.map(j=>'<li><a href="'+safeUrl(j.jobUrl)+'" target="_blank" rel="noopener"><strong>'+escapeHtml(j.title)+'</strong></a> at '+escapeHtml(j.company)+' - '+j.score+'%</li>').join("")||"<li>No recommended jobs yet.</li>";$("approval-list").innerHTML=d.approvals.map(a=>'<li><strong>'+escapeHtml(a.title||a.action)+'</strong> '+escapeHtml(a.company||"")+'<br>'+escapeHtml(a.reason)+'<div class="actions"><button type="button" data-approval="'+a.id+'" data-decision="approved">Approve</button><button type="button" data-approval="'+a.id+'" data-decision="rejected">Reject</button></div></li>').join("")||"<li>No approval requests.</li>";$("application-list").innerHTML=d.applications.map(a=>"<li><strong>"+escapeHtml(a.title)+"</strong> at "+escapeHtml(a.company)+" - "+escapeHtml(a.status)+(a.evidenceReference?" - Proof recorded":"")+"</li>").join("")||"<li>No applications recorded.</li>"}
     $("login").addEventListener("submit",async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.currentTarget));try{await call("/api/v1/auth/login",{method:"POST",body:JSON.stringify(d)});showAccount()}catch(error){alert(error.message)}});
     $("register").addEventListener("submit",async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.currentTarget));try{await call("/api/v1/auth/register",{method:"POST",body:JSON.stringify(d)});showAccount()}catch(error){alert(error.message)}});
     $("onboarding").addEventListener("submit",async e=>{e.preventDefault();const f=e.currentTarget,d=new FormData(f),record={fullName:d.get("fullName"),phone:d.get("phone"),location:d.get("location"),linkedIn:d.get("linkedIn"),targetTitles:list(d.get("targetTitles")),excludedTitles:list(d.get("excludedTitles")),locations:list(d.get("locations")),workModes:Array.from(f.elements.workModes.selectedOptions).map(o=>o.value),employmentTypes:list(d.get("employmentTypes")),compensationFloor:d.get("compensationFloor"),workAuthorization:d.get("workAuthorization"),sponsorshipRequired:d.get("sponsorshipRequired")==="true",consent:{truthConfirmed:d.has("truthConfirmed"),recruiterDrafts:d.has("recruiterDrafts"),recruiterSends:d.has("recruiterSends"),assistedApplications:d.has("assistedApplications"),controlledSubmissions:d.has("controlledSubmissions")}};try{await call("/api/v1/onboarding",{method:"PUT",body:JSON.stringify(record)});$("result").textContent="Saved with consent version ${CONSENT_VERSION}."}catch(error){$("result").textContent=error.message}});
+    $("resume-upload").addEventListener("submit",async e=>{e.preventDefault();const f=e.currentTarget,file=f.elements.resume.files[0];if(!file)return;try{const base64=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(",")[1]);reader.onerror=reject;reader.readAsDataURL(file)});await call("/api/v1/resumes",{method:"POST",body:JSON.stringify({filename:file.name,mimeType:file.type||(/\\.pdf$/i.test(file.name)?"application/pdf":"application/vnd.openxmlformats-officedocument.wordprocessingml.document"),base64,isDefault:f.elements.isDefault.checked})});$("resume-result").textContent="Resume stored privately.";f.reset();await loadResumes()}catch(error){$("resume-result").textContent=error.message}});
+    $("resume-list").addEventListener("click",async e=>{const id=e.target.dataset?.deleteResume;if(!id)return;try{await call("/api/v1/resumes/"+id,{method:"DELETE",body:"{}"});await loadResumes()}catch(error){$("resume-result").textContent=error.message}});
+    $("truth-form").addEventListener("submit",async e=>{e.preventDefault();const facts=list(new FormData(e.currentTarget).get("facts")).map(statement=>({category:"approved",statement}));try{await call("/api/v1/career-truth",{method:"PUT",body:JSON.stringify({facts})});$("truth-result").textContent="Career facts approved."}catch(error){$("truth-result").textContent=error.message}});
+    $("connections").addEventListener("click",async e=>{const provider=e.target.dataset?.provider;if(!provider)return;try{await call("/api/v1/connections",{method:"POST",body:JSON.stringify({provider})});$("connection-result").textContent="Connection prepared. Authentication is still required before activation.";await loadConnections()}catch(error){$("connection-result").textContent=error.message}});
+    $("approval-list").addEventListener("click",async e=>{const id=e.target.dataset?.approval,decision=e.target.dataset?.decision;if(!id||!decision)return;try{await call("/api/v1/approvals/"+id,{method:"POST",body:JSON.stringify({decision})});await loadDashboard()}catch(error){alert(error.message)}});
     $("logout").addEventListener("click",async()=>{await call("/api/v1/auth/logout",{method:"POST",body:"{}"});location.reload()});
     $("pause").addEventListener("click",async()=>{await call("/api/v1/account/pause",{method:"POST",body:"{}"});location.reload()});
     $("export").addEventListener("click",async()=>{const data=await call("/api/v1/account/export");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:"application/json"}));a.download="jobagent-account-export.json";a.click();URL.revokeObjectURL(a.href)});
@@ -287,6 +390,58 @@ export async function createProductServer() {
       if (req.method === "GET" && url.pathname === "/api/v1/me") return json(res, 200, { user });
       if (req.method === "GET" && url.pathname === "/api/v1/onboarding") {
         return json(res, 200, { onboarding: await getProductOnboarding(db, user.id) });
+      }
+      if (req.method === "GET" && url.pathname === "/api/v1/resumes") {
+        return json(res, 200, { resumes: await listProductResumes(db, user.id) });
+      }
+      if (req.method === "POST" && url.pathname === "/api/v1/resumes") {
+        if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
+        const input = resumeUploadSchema.parse(await readJson(req));
+        const resume = validateResumeUpload(input);
+        return json(res, 201, {
+          resume: await saveProductResume(db, user.id, { ...resume, isDefault: input.isDefault })
+        });
+      }
+      const resumeDownload = url.pathname.match(/^\/api\/v1\/resumes\/([0-9a-f-]{36})\/download$/i);
+      if (req.method === "GET" && resumeDownload) {
+        const file = await getProductResumeContent(db, user.id, resumeDownload[1]);
+        if (!file) return json(res, 404, { error: "Resume not found." });
+        return fileResponse(res, file);
+      }
+      const resumeDelete = url.pathname.match(/^\/api\/v1\/resumes\/([0-9a-f-]{36})$/i);
+      if (req.method === "DELETE" && resumeDelete) {
+        if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
+        const deleted = await deleteProductResume(db, user.id, resumeDelete[1]);
+        return deleted ? json(res, 200, { deleted: true }) : json(res, 404, { error: "Resume not found." });
+      }
+      if (req.method === "GET" && url.pathname === "/api/v1/career-truth") {
+        return json(res, 200, { truthBank: await getCareerTruthBank(db, user.id) });
+      }
+      if (req.method === "PUT" && url.pathname === "/api/v1/career-truth") {
+        if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
+        const input = careerTruthSchema.parse(await readJson(req));
+        return json(res, 200, { truthBank: await saveCareerTruthBank(db, user.id, input.facts) });
+      }
+      if (req.method === "GET" && url.pathname === "/api/v1/connections") {
+        return json(res, 200, { connections: await listProductConnections(db, user.id) });
+      }
+      if (req.method === "POST" && url.pathname === "/api/v1/connections") {
+        if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
+        const input = connectionSchema.parse(await readJson(req));
+        return json(res, 202, { connection: await requestProductConnection(db, user.id, input.provider) });
+      }
+      if (req.method === "GET" && url.pathname === "/api/v1/activation-readiness") {
+        return json(res, 200, await productActivationReadiness(db, user.id));
+      }
+      if (req.method === "GET" && url.pathname === "/api/v1/dashboard") {
+        return json(res, 200, await productDashboard(db, user.id));
+      }
+      const approvalDecision = url.pathname.match(/^\/api\/v1\/approvals\/([0-9a-f-]{36})$/i);
+      if (req.method === "POST" && approvalDecision) {
+        if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
+        const input = approvalDecisionSchema.parse(await readJson(req));
+        const approval = await decideProductApproval(db, user.id, approvalDecision[1], input.decision);
+        return approval ? json(res, 200, { approval }) : json(res, 404, { error: "Pending approval not found." });
       }
       if (req.method === "PUT" && url.pathname === "/api/v1/onboarding") {
         if (user.status === "paused") return json(res, 423, { error: "Account is paused." });

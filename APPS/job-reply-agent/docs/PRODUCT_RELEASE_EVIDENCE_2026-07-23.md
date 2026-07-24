@@ -6,7 +6,7 @@ Date: 2026-07-23
 
 - Pilot/multi-instance foundation commit: `e21b9d7e`
 - TypeScript build: passed
-- Test suite: 14 files, 109 tests passed
+- Test suite: 15 files, 112 tests passed
 - Static production security gate: passed
 - Tracked Gmail token removed from the Git index
 - Isolated production install from `package-lock.json`: passed
@@ -17,6 +17,12 @@ Date: 2026-07-23
 - Tenant-owned PostgreSQL tables use both `ENABLE ROW LEVEL SECURITY` and
   `FORCE ROW LEVEL SECURITY`
 - Registration establishes tenant context before writing RLS-protected records
+- Tenant-owned PDF/DOCX resume vault with authenticated download and deletion
+- File extension, MIME type, size, and binary signature validation
+- Approved Career Truth Bank with provenance-ready source resume identifiers
+- Gmail, LinkedIn, and Indeed connection-state records
+- Consent-gated activation readiness checks
+- Tenant-owned recommendations, approvals, applications, and proof references
 
 ## Not Yet Verifiable
 

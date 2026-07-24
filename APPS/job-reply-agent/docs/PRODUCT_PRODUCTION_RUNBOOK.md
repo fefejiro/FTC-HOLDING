@@ -25,6 +25,10 @@ APIs, consent records, and audit logs. A request cannot select another tenant.
 6. Start `npm run product:start`, then verify `/healthz` and `/readyz`.
 7. Create an invited test account, complete onboarding, export its data, pause
    it, and confirm the old session no longer works.
+8. Upload a PDF and DOCX resume, select a default, approve Career Truth Bank
+   facts, and verify another invited user cannot list or download either file.
+9. Verify connection preparation does not report a provider as connected until
+   the provider identity has been authenticated and reconciled.
 
 `AUTO_MIGRATE` remains `false` in production. Database migration is an explicit
 release operation.
