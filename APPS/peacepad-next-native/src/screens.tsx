@@ -376,6 +376,7 @@ export function VaultScreen({ setScreen }: ScreenProps) {
         />
         {errors.privateNote ? <Text style={styles.errorText}>{errors.privateNote}</Text> : null}
       </View>
+      <LabButton label="Validate metadata and open detail" onPress={continueToDetail} variant="secondary" />
       <View style={styles.cardPremium}>
         <Text style={styles.choiceTitle}>Upload-readiness status</Text>
         {evidencePrepStatuses.map((status) => (
@@ -385,7 +386,7 @@ export function VaultScreen({ setScreen }: ScreenProps) {
             onPress={() => setPrepStatus(status.id)}
             style={[styles.checkRow, prepStatus === status.id ? styles.checkRowActive : null]}
           >
-            <Text style={styles.checkMark}>{prepStatus === status.id ? "✓" : "○"}</Text>
+            <Text style={styles.checkMark}>{prepStatus === status.id ? "On" : "Off"}</Text>
             <View style={styles.checkText}>
               <Text style={styles.choiceTitle}>{status.label}</Text>
               <Text style={styles.body}>{status.description}</Text>
@@ -661,3 +662,4 @@ const styles = StyleSheet.create({
   inlineOptionText: { ...typography.caption, color: colors.muted, fontWeight: "800" },
   inlineOptionTextActive: { color: colors.white }
 });
+
