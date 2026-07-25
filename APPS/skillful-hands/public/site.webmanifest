@@ -1,0 +1,9 @@
+{
+  "name": "Skillful Hands CIC",
+  "short_name": "Skillful Hands",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8f4ec",
+  "theme_color": "#40243f",
+  "icons": []
+}

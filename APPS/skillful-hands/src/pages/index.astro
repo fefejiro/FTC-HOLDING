@@ -1,0 +1,143 @@
+---
+import Header from "../components/Header.astro";
+import ProgrammeCard from "../components/ProgrammeCard.astro";
+import { site } from "../content/site";
+import "../styles/global.css";
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: site.name,
+  url: site.canonical,
+  email: site.email,
+  description: site.description
+};
+---
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Skillful Hands CIC | Creating Skills. Building Futures.</title>
+    <meta name="description" content={site.description} />
+    <link rel="canonical" href={site.canonical} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={`${site.name} | ${site.tagline}`} />
+    <meta property="og:description" content={site.description} />
+    <meta property="og:url" content={site.canonical} />
+    <meta property="og:image" content={`${site.canonical}images/workshop.webp`} />
+    <meta name="theme-color" content="#40243f" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  </head>
+  <body id="top">
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <Header />
+    <main id="main-content">
+      <section class="hero">
+        <img src="/images/workshop.webp" width="1800" height="1200" alt="Hands carefully braiding hair during practical training" />
+        <div class="hero-overlay"></div>
+        <div class="container hero-content">
+          <p class="eyebrow">Community skills and personal development</p>
+          <h1>Skillful Hands CIC</h1>
+          <p class="hero-line">{site.tagline}</p>
+          <p class="hero-copy">{site.description}</p>
+          <div class="button-row">
+            <a class="button" href="#programmes">Explore our programmes</a>
+            <a class="text-link light" href={`mailto:${site.email}`}>Start a conversation <span aria-hidden="true">&rarr;</span></a>
+          </div>
+        </div>
+        <a class="hero-next" href="#about"><span>Discover our approach</span><span aria-hidden="true">&darr;</span></a>
+      </section>
+
+      <section class="outcomes" aria-label="Our focus">
+        <div class="container outcome-grid">{site.outcomes.map((item, index) => <p><span>0{index + 1}</span>{item}</p>)}</div>
+      </section>
+
+      <section id="about" class="section about">
+        <div class="container two-column">
+          <div>
+            <p class="eyebrow">About Skillful Hands</p>
+            <h2>Practical learning with purpose.</h2>
+          </div>
+          <div class="large-copy">
+            <p>Skillful Hands CIC is a Community Interest Company dedicated to helping people build confidence, practical skills, and brighter futures through hair education and personal development.</p>
+            <p>Our programmes combine technical hair training with life skills, employability, wellbeing, and entrepreneurship, creating pathways into education, employment, and self-employment.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="programmes" class="section programmes">
+        <div class="container">
+          <div class="section-heading">
+            <div><p class="eyebrow">Our programmes</p><h2>Skills that travel beyond the classroom.</h2></div>
+            <p>Each programme brings practical learning together with confidence, wellbeing, and future-focused support.</p>
+          </div>
+          <div class="programme-grid">
+            {site.programmes.map((programme) => <ProgrammeCard {...programme} />)}
+          </div>
+        </div>
+      </section>
+
+      <section class="section pathway">
+        <div class="container">
+          <p class="eyebrow">How change takes shape</p>
+          <h2>Learn. Grow. Move forward.</h2>
+          <div class="pathway-grid">
+            <article><span>01</span><h3>Learn by doing</h3><p>Participants develop practical hair skills through guided, hands-on learning.</p></article>
+            <article><span>02</span><h3>Build confidence</h3><p>Personal development and wellbeing sit alongside every technical skill.</p></article>
+            <article><span>03</span><h3>See new routes</h3><p>Employability and enterprise thinking help turn learning into next steps.</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section id="founder" class="section founder">
+        <div class="container founder-grid">
+          <div class="founder-portrait" role="img" aria-label="Founder photography placeholder">
+            <span>Founder photography<br />to be confirmed</span>
+          </div>
+          <div>
+            <p class="eyebrow">Meet the founder</p>
+            <h2>{site.founder.name}</h2>
+            <p class="founder-title">{site.founder.title}</p>
+            {site.founder.paragraphs.map((paragraph) => <p>{paragraph}</p>)}
+          </div>
+        </div>
+      </section>
+
+      <section id="partners" class="section partners">
+        <div class="container">
+          <div class="section-heading">
+            <div><p class="eyebrow">Partner with us</p><h2>Bring practical opportunity closer.</h2></div>
+            <p>We welcome conversations with organisations that care about skills, confidence, wellbeing, and economic opportunity.</p>
+          </div>
+          <div class="partner-grid">{site.partners.map((partner) => <article><h3>{partner.title}</h3><p>{partner.text}</p><a href={`mailto:${site.email}?subject=Partnership enquiry`}>Start a conversation <span aria-hidden="true">&rarr;</span></a></article>)}</div>
+        </div>
+      </section>
+
+      <section class="vision">
+        <div class="container vision-inner">
+          <p class="eyebrow">Our direction</p>
+          <blockquote>&ldquo;A future where practical skills unlock confidence, connection, and opportunity.&rdquo;</blockquote>
+          <p>Skillful Hands CIC is building a thoughtful platform for learning and personal development. Our next chapter will be shaped with participants, communities, and partners.</p>
+        </div>
+      </section>
+
+      <section class="contact">
+        <div class="container contact-inner">
+          <div><p class="eyebrow">Let's make something meaningful</p><h2>Start with a conversation.</h2></div>
+          <div><p>Interested in a programme, partnership, or community collaboration?</p><a class="button button-gold" href={`mailto:${site.email}`}>Email Skillful Hands CIC</a></div>
+        </div>
+      </section>
+    </main>
+    <footer>
+      <div class="container footer-grid">
+        <div><a class="brand footer-brand" href="#top"><span class="brand-mark">SH</span><span>{site.name}</span></a><p>{site.tagline}</p></div>
+        <div><p class="footer-label">Contact</p><a href={`mailto:${site.email}`}>{site.email}</a></div>
+        <div><p class="footer-label">Navigate</p>{site.nav.slice(0, 3).map((item) => <a href={item.href}>{item.label}</a>)}</div>
+      </div>
+      <div class="container footer-bottom"><p>&copy; {new Date().getFullYear()} Skillful Hands CIC</p><p>Community interest. Practical opportunity.</p></div>
+    </footer>
+  </body>
+</html>

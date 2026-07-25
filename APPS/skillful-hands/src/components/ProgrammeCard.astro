@@ -1,0 +1,16 @@
+---
+interface Props {
+  number: string;
+  title: string;
+  audience: string;
+  description: string;
+  focus: readonly string[];
+}
+const { number, title, audience, description, focus } = Astro.props;
+---
+<article class="programme-card">
+  <div class="programme-top"><span>{number}</span><p>{audience}</p></div>
+  <h3>{title}</h3>
+  <p>{description}</p>
+  <ul>{focus.map((item) => <li>{item}</li>)}</ul>
+</article>
