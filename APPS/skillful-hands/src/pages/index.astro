@@ -25,7 +25,10 @@ const jsonLd = {
     <meta property="og:title" content={`${site.name} | ${site.tagline}`} />
     <meta property="og:description" content={site.description} />
     <meta property="og:url" content={site.canonical} />
-    <meta property="og:image" content={`${site.canonical}images/workshop.webp`} />
+    <meta property="og:image" content={`${site.canonical}images/og-workshop.webp`} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Hands carefully braiding hair during practical training" />
     <meta name="theme-color" content="#40243f" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="manifest" href="/site.webmanifest" />
@@ -36,7 +39,16 @@ const jsonLd = {
     <Header />
     <main id="main-content" tabindex="-1">
       <section class="hero">
-        <img src="/images/workshop.webp" width="1800" height="1200" alt="Hands carefully braiding hair during practical training" />
+        <img
+          src="/images/workshop.webp"
+          srcset="/images/workshop-640.webp 640w, /images/workshop-960.webp 960w, /images/workshop-1200.webp 1200w, /images/workshop.webp 1800w"
+          sizes="100vw"
+          width="1800"
+          height="2400"
+          fetchpriority="high"
+          decoding="async"
+          alt="Hands carefully braiding hair during practical training"
+        />
         <div class="hero-overlay"></div>
         <div class="container hero-content">
           <p class="eyebrow">Community skills and personal development</p>

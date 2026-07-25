@@ -138,7 +138,7 @@ footer { padding: 68px 0 24px; color: white; background: var(--plum-deep); }
   .outcome-grid p { min-height: auto; border: 0; border-bottom: 1px solid rgba(255,255,255,.18); }
   .two-column, .section-heading, .founder-grid, .contact-inner { grid-template-columns: 1fr; gap: 34px; }
   .programme-grid { grid-template-columns: 1fr; }
-  .programme-card { min-height: 410px; }
+  .programme-card { min-height: 340px; }
   .pathway-grid { grid-template-columns: 1fr; }
   .pathway-grid article + article { border-left: 1px solid rgba(255,255,255,.18); border-top: 0; }
   .founder-portrait { max-width: 540px; }
