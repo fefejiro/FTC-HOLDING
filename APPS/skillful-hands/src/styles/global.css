@@ -30,7 +30,12 @@ p { text-wrap: pretty; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .skip-link { position: fixed; z-index: 200; top: 8px; left: 8px; padding: 10px 16px; color: white; background: var(--plum-deep); transform: translateY(-150%); }
 .skip-link:focus { transform: translateY(0); }
-:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
+:focus-visible {
+  outline: 3px solid white;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px var(--plum-deep);
+}
+#main-content:focus { outline: 0; box-shadow: none; }
 
 .site-header { position: sticky; z-index: 100; top: 0; color: white; background: rgba(41, 22, 41, .97); border-bottom: 1px solid rgba(255,255,255,.13); }
 .nav-wrap { min-height: 76px; display: flex; align-items: center; justify-content: space-between; }
