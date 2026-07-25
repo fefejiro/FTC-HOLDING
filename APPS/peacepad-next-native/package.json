@@ -1,0 +1,54 @@
+{
+  "name": "@ftc/peacepad-next-native",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo run:ios",
+    "android": "expo run:android",
+    "web": "expo start --web",
+    "guardrails": "node scripts/check-lab-guardrails.cjs",
+    "test": "jest --runInBand",
+    "typecheck": "tsc --noEmit",
+    "sim:prepare": "node scripts/prepare-ios-sim-workdir.cjs",
+    "sim:doctor": "node scripts/prepare-ios-sim-workdir.cjs --install --doctor",
+    "sim:ios": "node scripts/prepare-ios-sim-workdir.cjs --install --ios"
+  },
+  "dependencies": {
+    "@expo-google-fonts/playfair-display": "^0.4.2",
+    "@react-navigation/native": "^7.2.3",
+    "@react-navigation/native-stack": "^7.14.11",
+    "expo": "~54.0.33",
+    "expo-status-bar": "~3.0.9",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.16.0"
+  },
+  "devDependencies": {
+    "@testing-library/react-native": "^13.3.3",
+    "@types/jest": "^29.5.14",
+    "@types/react": "~19.1.0",
+    "jest": "^29.7.0",
+    "jest-expo": "~54.0.17",
+    "react-test-renderer": "19.1.0",
+    "typescript": "~5.9.2"
+  },
+  "jest": {
+    "preset": "jest-expo",
+    "roots": [
+      "<rootDir>/src"
+    ],
+    "modulePathIgnorePatterns": [
+      "<rootDir>/.sim/"
+    ],
+    "moduleNameMapper": {
+      "^react$": "<rootDir>/node_modules/react",
+      "^react/(.*)$": "<rootDir>/node_modules/react/$1"
+    },
+    "transformIgnorePatterns": [
+      "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|expo-modules-core|@expo(nent)?/.*|@expo-google-fonts/.*|@react-navigation/.*|react-native-safe-area-context|react-native-screens)/)"
+    ]
+  }
+}
