@@ -65,6 +65,8 @@ Direct monorepo Expo Doctor reports the unrelated root React 18 beside the lab's
 
 The screenshots in `.local/peacepad-rn-sim/qa-2026-07-24` document the earlier clickable mock only. They do not prove the 2026-07-25 stateful vertical slice and are not relabelled as current evidence.
 
+One controlled attempt plus one retry was made on 2026-07-25. Commit `7a713fb61834f4b7b32c1538882cf666d128b4f9` rendered its Home screen on an iPhone 17 simulator running iOS 26.5. The first in-app tap and the single retry were both misrouted into the Mac TV application instead of Simulator. The vertical-slice pass is recorded as `BLOCKED`; no startup-only image is claimed as six-screen proof.
+
 Required new screenshots remain:
 
 - Goal Setup.
@@ -87,6 +89,10 @@ Stop after one controlled simulator pass. If remote input is unreliable, record 
 - The submitted Capacitor app remains untouched.
 
 ## Architecture decision gate
+
+See [`ARCHITECTURE_DECISION_GATE.md`](./ARCHITECTURE_DECISION_GATE.md). The current recommendation is to adopt selected native concepts into Capacitor after approval, while retaining this React Native work as a non-production lab.
+
+See [`WORKFLOW_SCOPING_NOTE.md`](./WORKFLOW_SCOPING_NOTE.md) for the unrelated Garden workflow trigger caused by the shared root lockfile.
 
 Continue the native lab through one controlled simulator proof and then assess:
 

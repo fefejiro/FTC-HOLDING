@@ -52,14 +52,25 @@ Status vocabulary:
 
 | Screen | Status | Current evidence |
 | --- | --- | --- |
-| Goal Setup | BLOCKED | No 2026-07-25 controlled simulator session |
-| Case Binder | BLOCKED | No 2026-07-25 controlled simulator session |
-| Evidence Metadata | BLOCKED | No 2026-07-25 controlled simulator session |
-| Evidence Detail | BLOCKED | No 2026-07-25 controlled simulator session |
-| Timeline | BLOCKED | No 2026-07-25 controlled simulator session |
-| Export Preview | BLOCKED | No 2026-07-25 controlled simulator session |
+| Goal Setup | BLOCKED | RDP input did not load tested commit; no current screenshot |
+| Case Binder | BLOCKED | RDP input did not load tested commit; no current screenshot |
+| Evidence Metadata | BLOCKED | RDP input did not load tested commit; no current screenshot |
+| Evidence Detail | BLOCKED | RDP input did not load tested commit; no current screenshot |
+| Timeline | BLOCKED | RDP input did not load tested commit; no current screenshot |
+| Export Preview | BLOCKED | RDP input did not load tested commit; no current screenshot |
 
 The July 24 screenshots are historical visual evidence for the earlier mock. They are not evidence for this stateful batch.
+
+### 2026-07-25 controlled attempt
+
+- Target commit: `7a713fb61834f4b7b32c1538882cf666d128b4f9`.
+- Visible simulator: iPhone 17, iOS 26.5.
+- Clean lab session: Home rendered from the exact target commit.
+- Result: `BLOCKED`.
+- Reason: the exact build rendered, but the first in-app tap was intercepted by the Mac Dock and opened Apple TV. After closing it and explicitly focusing Simulator, the single allowed retry was again routed into Apple TV instead of the simulated app.
+- Screenshots accepted as current evidence: none.
+- Synthetic-data confirmation: no new record was entered.
+- Production-write confirmation: automated config/guardrail proof remains passed; no production action occurred.
 
 ## Remaining architecture evidence
 
