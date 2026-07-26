@@ -623,7 +623,7 @@ export default function ChatInterface() {
   // AI-first: Preview tone BEFORE sending
   const previewTone = useMutation({
     mutationFn: async (content: string) => {
-      console.log('[AI] Tone analysis started for message:', content.substring(0, 50) + (content.length > 50 ? '...' : ''));
+      console.log('[AI] Tone analysis started');
       const res = await apiRequest("POST", "/api/messages/preview", { content });
       const data = await res.json();
       console.log('[AI] Tone analysis completed:', { tone: data.tone, conflictScore: data.conflictScore });

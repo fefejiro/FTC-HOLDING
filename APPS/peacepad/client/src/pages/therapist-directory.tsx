@@ -49,8 +49,6 @@ export default function TherapistDirectoryPage() {
   const [isGettingLocation, setIsGettingLocation] = useState<boolean>(false);
   const [resourceType, setResourceType] = useState<string>("all");
   const [genderFocus, setGenderFocus] = useState<string>("all");
-  const [hasCheckedSavedLocation, setHasCheckedSavedLocation] = useState<boolean>(false);
-  const [hasAttemptedAutoLocation, setHasAttemptedAutoLocation] = useState<boolean>(false);
   const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
   const [isFetchingSuggestions, setIsFetchingSuggestions] = useState<boolean>(false);
@@ -126,22 +124,12 @@ export default function TherapistDirectoryPage() {
         try {
           const location = JSON.parse(savedLocation);
           setUserLocation(location);
-          setHasAttemptedAutoLocation(true);
         } catch (error) {
           console.error('Failed to parse saved location:', error);
         }
       }
     }
-    setHasCheckedSavedLocation(true);
   }, [isPrivacyMode]);
-
-  // Auto-detect location on page load (only once, after checking localStorage, skip if privacy mode)
-  useEffect(() => {
-    if (hasCheckedSavedLocation && !hasAttemptedAutoLocation && !userLocation && navigator.geolocation && !isPrivacyMode) {
-      setHasAttemptedAutoLocation(true);
-      handleUseMyLocation();
-    }
-  }, [hasCheckedSavedLocation, hasAttemptedAutoLocation, userLocation, isPrivacyMode]);
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -266,8 +254,6 @@ export default function TherapistDirectoryPage() {
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
           
-          console.log(`[Location] Found coordinates: ${lat}, ${lng}`);
-          
           try {
             const response = await fetch(`/api/geocode/reverse?lat=${lat}&lng=${lng}`, {
               credentials: 'include',
@@ -276,7 +262,6 @@ export default function TherapistDirectoryPage() {
             let location;
             if (response.ok) {
               const data = await response.json();
-              console.log(`[Location] Reverse geocoding result:`, data);
               const countryCode = data.countryCode?.toUpperCase() || getCountryCode(data.country || '');
               location = {
                 lat,
@@ -345,40 +330,6 @@ export default function TherapistDirectoryPage() {
         },
         async (error) => {
           console.error('[Location] GPS error:', error.code, error.message);
-          
-          // Try IP-based fallback, but mark as approximate
-          try {
-            const ipResponse = await fetch('/api/geocode/ip', { credentials: 'include' });
-            if (ipResponse.ok) {
-              const ipData = await ipResponse.json();
-              if (ipData.lat && ipData.lng) {
-                const countryCode = ipData.countryCode?.toUpperCase() || 'INT';
-                const location = {
-                  lat: ipData.lat,
-                  lng: ipData.lng,
-                  address: ipData.displayName || `${ipData.city || ''}, ${ipData.country || ''}`,
-                  isCanada: ipData.countryCode?.toUpperCase() === 'CA',
-                  countryCode,
-                  source: 'ip' as const,
-                };
-                setUserLocation(location);
-                if (!isPrivacyMode) {
-                  localStorage.setItem('peacepad_last_location', JSON.stringify(location));
-                }
-                setPostalCode(location.address);
-                setIsGettingLocation(false);
-                toast({
-                  title: "Approximate location found",
-                  description: "Based on your network. Enter your city or postal code for more accurate results.",
-                  duration: 5000,
-                });
-                return;
-              }
-            }
-          } catch (ipError) {
-            console.error('[Location] IP fallback also failed:', ipError);
-          }
-          
           setIsGettingLocation(false);
           
           let errorMessage = "Please enter your location manually instead.";

@@ -1,5 +1,6 @@
 import type { User } from "@shared/schema";
 import { getApiUrl, queryClient } from "./queryClient";
+import { readStoredConsent } from "./consentState";
 
 type GuestAuthResponse = {
   success?: boolean;
@@ -18,10 +19,6 @@ function cacheGuestSession(data: GuestAuthResponse): void {
   if (typeof window === "undefined") {
     return;
   }
-
-  localStorage.setItem("hasSeenIntro", "true");
-  localStorage.setItem("hasAcceptedConsent", "true");
-  localStorage.setItem("aiMessageConsent", "true");
 
   if (typeof data.sessionId === "string" && data.sessionId.length > 0) {
     localStorage.setItem("peacepad_session_id", data.sessionId);
@@ -76,13 +73,16 @@ export async function ensureGuestSession(): Promise<User | null> {
 
   inFlightGuestBootstrap = (async () => {
     const sessionId = localStorage.getItem("peacepad_session_id");
+    const consent = readStoredConsent();
     const response = await fetch(getApiUrl("/api/auth/guest"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({
         sessionId: sessionId || undefined,
-        hasAcceptedConsent: true,
+        hasAcceptedConsent: consent.requiredAccepted,
+        aiMessageConsent: consent.aiMessageConsent,
+        aiCallConsent: consent.aiCallConsent,
       }),
     });
 

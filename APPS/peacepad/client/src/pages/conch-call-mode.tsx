@@ -254,15 +254,6 @@ export default function ConchModePage() {
     }
   }, [activeSession]);
   
-  // Request notification permission on mount
-  useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission().then(permission => {
-        console.log('[Conch] Notification permission:', permission);
-      });
-    }
-  }, []);
-
   // Determine if user is holding conch from server state
   const isHoldingConch = session?.conchHolderUserId === user?.id;
   
@@ -430,7 +421,7 @@ export default function ConchModePage() {
                 const intervention = await res.json();
                 
                 if (intervention.shouldIntervene) {
-                  console.log('[Conch AI] Intervention triggered locally:', intervention.message);
+                  console.log('[Conch] Local intervention triggered');
                   // Note: Server will broadcast via WebSocket, so we just log here
                 }
               } catch (error) {
@@ -472,7 +463,7 @@ export default function ConchModePage() {
   // For now, we'll use a simple fetch-based approach to send messages
   const sendWebSocketMessage = (message: any) => {
     // This is a placeholder - in production, use WebRTCContext.sendMessage
-    console.log('[ConchMode] Would send WebSocket message:', message);
+    console.log('[ConchMode] WebSocket send requested');
   };
 
   // Subscribe to WebSocket events
@@ -545,7 +536,7 @@ export default function ConchModePage() {
         try {
           const reg = await navigator.serviceWorker.ready;
           reg.showNotification('Conch Session Active', {
-            body: `${partner?.displayName || 'Your partner'} has joined the session`,
+            body: "Open PeacePad to continue the structured conversation.",
             icon: '/favicon.ico',
             tag: 'conch-session-active',
           });
@@ -582,7 +573,7 @@ export default function ConchModePage() {
 
     const handleAIIntervention = (event: CustomEvent) => {
       const { interventionType, message, suggestion, severity } = event.detail;
-      console.log('[Conch AI] Intervention received:', interventionType, message);
+      console.log('[Conch] Intervention received:', interventionType);
       
       // Clear any existing intervention timer
       if (interventionTimerRef.current) {

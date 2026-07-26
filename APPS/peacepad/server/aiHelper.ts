@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import NodeCache from "node-cache";
 
 /**
@@ -369,9 +370,9 @@ export function mockSessionSummary(emotionCount: number): string {
  * Create cache key from content
  */
 export function createCacheKey(prefix: string, content: string): string {
-  // Normalize content for better cache hits
-  const normalized = content.toLowerCase().trim().substring(0, 200);
-  return `${prefix}:${normalized}`;
+  const normalized = content.toLowerCase().trim();
+  const digest = createHash("sha256").update(normalized, "utf8").digest("hex");
+  return `${prefix}:${digest}`;
 }
 
 /**

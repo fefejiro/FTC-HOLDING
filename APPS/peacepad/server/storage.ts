@@ -174,20 +174,19 @@ import {
   type InsertAgentSettings,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, or, and, count, sql, lt } from "drizzle-orm";
+import { eq, desc, or, and, count, sql, lt, isNull, ne, like } from "drizzle-orm";
 import { getEncryptionService } from "./services/encryption";
+import { randomInt } from "node:crypto";
 
 export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
-  getDeactivatedUserByEmail(email: string): Promise<User | undefined>;
-  getDeactivatedUserById(id: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
   upsertUser(user: UpsertUser): Promise<{ user: User; isNewUser: boolean }>;
   setActivePartnership(userId: string, partnershipId: string | null): Promise<User | undefined>;
   getOtherUsers(currentUserId: string): Promise<User[]>;
-  deactivateUser(userId: string): Promise<void>;
-  reactivateUser(userId: string): Promise<void>;
+  getUserByProfileImagePath(profilePath: string): Promise<User | undefined>;
+  getUserOwnedUploadReferences(userId: string): Promise<string[]>;
   deleteUser(userId: string): Promise<void>;
   exportUserData(userId: string): Promise<any>;
   incrementUserUsage(userId: string, metrics: { messages?: number; actions?: number }): Promise<void>;
@@ -219,6 +218,7 @@ export interface IStorage {
   getMessages(): Promise<Message[]>;
   getMessagesByUser(userId: string): Promise<any[]>;
   getMessage(messageId: string): Promise<Message | undefined>;
+  getMessageByFileUrl(fileUrl: string): Promise<Message | undefined>;
   createMessage(message: InsertMessage): Promise<Message>;
   updateMessageStatus(messageId: string, status: 'sent' | 'delivered' | 'read'): Promise<void>;
   
@@ -239,6 +239,7 @@ export interface IStorage {
   deletePartnership(partnershipId: string): Promise<void>;
   getUserByInviteCode(inviteCode: string): Promise<User | undefined>;
   generateInviteCode(): Promise<string>;
+  consumeInviteCode(userId: string, expectedCode: string): Promise<boolean>;
   regenerateInviteCode(userId: string): Promise<string>;
   
   // Conversation operations
@@ -253,6 +254,7 @@ export interface IStorage {
   
   // Note operations
   getNotes(userId: string): Promise<Note[]>;
+  getNote(id: string): Promise<Note | undefined>;
   createNote(note: InsertNote): Promise<Note>;
   updateNote(id: string, note: Partial<InsertNote>): Promise<Note>;
   deleteNote(id: string): Promise<void>;
@@ -266,6 +268,7 @@ export interface IStorage {
   
   // Child update operations
   getChildUpdates(userId: string): Promise<ChildUpdate[]>;
+  getChildUpdate(id: string): Promise<ChildUpdate | undefined>;
   createChildUpdate(update: InsertChildUpdate): Promise<ChildUpdate>;
   deleteChildUpdate(id: string): Promise<void>;
   
@@ -283,6 +286,7 @@ export interface IStorage {
   // Expense operations
   getExpenses(userId: string): Promise<Expense[]>;
   getExpense(expenseId: string): Promise<Expense | undefined>;
+  getExpenseByReceiptUrl(receiptUrl: string): Promise<Expense | undefined>;
   createExpense(expense: InsertExpense): Promise<Expense>;
   updateExpense(expenseId: string, updates: Partial<Expense>): Promise<Expense>;
   
@@ -320,6 +324,7 @@ export interface IStorage {
   // New direct calling operations
   createCall(call: InsertCall): Promise<Call>;
   getCall(id: string): Promise<Call | undefined>;
+  getCallBySessionId(sessionId: string): Promise<Call | undefined>;
   getCalls(userId: string, filter?: string): Promise<Call[]>;
   getAllCalls(): Promise<Call[]>;
   getStuckRingingCalls(timeoutSeconds: number): Promise<Call[]>;
@@ -335,6 +340,7 @@ export interface IStorage {
   createCallRecording(recording: InsertCallRecording): Promise<CallRecording>;
   getCallRecordings(userId: string): Promise<CallRecording[]>;
   getCallRecordingById(id: string): Promise<CallRecording | undefined>;
+  getCallRecordingByUrl(recordingUrl: string): Promise<CallRecording | undefined>;
   
   // Call follow-up operations
   createCallFollowup(followup: InsertCallFollowup): Promise<CallFollowup>;
@@ -482,6 +488,7 @@ export interface IStorage {
   // Agent Intervention operations
   createAgentIntervention(intervention: InsertAgentIntervention): Promise<AgentIntervention>;
   getAgentInterventions(partnershipId: string, limit?: number): Promise<AgentIntervention[]>;
+  getAgentIntervention(id: string): Promise<AgentIntervention | undefined>;
   updateAgentIntervention(id: string, updates: Partial<AgentIntervention>): Promise<AgentIntervention>;
   
   // Conflict Pattern operations
@@ -507,18 +514,11 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async getDeactivatedUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(and(eq(users.email, email), eq(users.isDeactivated, true)));
-    return user;
-  }
-
-  async getDeactivatedUserById(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(and(eq(users.id, id), eq(users.isDeactivated, true)));
-    return user;
-  }
-
   async getAllUsers(): Promise<User[]> {
-    const allUsers = await db.select().from(users);
+    const allUsers = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.isDeactivated, false), isNull(users.deletedAt)));
     return allUsers;
   }
 
@@ -529,13 +529,16 @@ export class DatabaseStorage implements IStorage {
     if (userData.id) {
       existingUser = await this.getUser(userData.id);
     }
+
+    if (existingUser?.isDeactivated || existingUser?.deletedAt) {
+      throw new Error("Deleted accounts cannot be updated or reactivated");
+    }
     
     const isNewUser = !existingUser;
     
     // Generate invite code only for truly new users
     if (!userData.inviteCode && !existingUser) {
       const newCode = await this.generateInviteCode();
-      console.log(`[Storage] Generated invite code for new user: ${newCode}`);
       userData.inviteCode = newCode;
       userData.inviteCodeGeneratedAt = new Date(); // Set timestamp for 14-day expiration
     }
@@ -559,10 +562,15 @@ export class DatabaseStorage implements IStorage {
           ...cleanedData,
           updatedAt: new Date(),
         },
+        setWhere: sql`${users.isDeactivated} = false AND ${users.deletedAt} IS NULL`,
       })
       .returning() as any);
+
+    if (!user) {
+      throw new Error("Deleted accounts cannot be updated or reactivated");
+    }
     
-    console.log(`[Storage] User ${isNewUser ? 'created' : 'updated'} - ID: ${user.id}, Invite Code: ${user.inviteCode}, Display Name: ${user.displayName}`);
+    console.log(`[Storage] User ${isNewUser ? "created" : "updated"}`);
     return { user, isNewUser };
   }
 
@@ -573,45 +581,50 @@ export class DatabaseStorage implements IStorage {
         activePartnershipId: partnershipId,
         updatedAt: new Date(),
       })
-      .where(eq(users.id, userId))
+      .where(
+        and(
+          eq(users.id, userId),
+          eq(users.isDeactivated, false),
+          isNull(users.deletedAt),
+        ),
+      )
       .returning();
     return user;
   }
 
 
   async getOtherUsers(currentUserId: string): Promise<User[]> {
-    const { ne } = await import("drizzle-orm");
-    const otherUsers = await db.select().from(users).where(ne(users.id, currentUserId));
+    const otherUsers = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          ne(users.id, currentUserId),
+          eq(users.isDeactivated, false),
+          isNull(users.deletedAt),
+        ),
+      );
     return otherUsers;
   }
 
-  async deactivateUser(userId: string): Promise<void> {
-    await db.update(users)
-      .set({ 
-        isDeactivated: true, 
-        deletedAt: new Date() 
-      })
-      .where(eq(users.id, userId));
-    
-    // Also cleanup guest sessions immediately on deactivation
-    await db.delete(guestSessions).where(eq(guestSessions.userId, userId));
-    
-    console.log(`[Storage] User ${userId} deactivated (soft-delete)`);
-  }
-
-  async reactivateUser(userId: string): Promise<void> {
-    await db.update(users)
-      .set({ 
-        isDeactivated: false, 
-        deletedAt: null 
-      })
-      .where(eq(users.id, userId));
-    console.log(`[Storage] User ${userId} reactivated`);
+  async getUserByProfileImagePath(profilePath: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          or(eq(users.profileImageUrl, profilePath), like(users.profileImageUrl, `%${profilePath}`)),
+          eq(users.isDeactivated, false),
+          isNull(users.deletedAt),
+        ),
+      )
+      .limit(1);
+    return user;
   }
 
   async incrementUserUsage(userId: string, metrics: { messages?: number; actions?: number }): Promise<void> {
     const user = await this.getUser(userId);
-    if (!user) return;
+    if (!user || user.isDeactivated || user.deletedAt) return;
 
     await db.update(users)
       .set({
@@ -624,7 +637,7 @@ export class DatabaseStorage implements IStorage {
 
   async updateUserActiveDays(userId: string): Promise<void> {
     const user = await this.getUser(userId);
-    if (!user) return;
+    if (!user || user.isDeactivated || user.deletedAt) return;
 
     const now = new Date();
     const lastActive = user.lastActiveAt ? new Date(user.lastActiveAt) : null;
@@ -641,50 +654,379 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getUserOwnedUploadReferences(userId: string): Promise<string[]> {
+    const [
+      userRows,
+      sentMessageRows,
+      childRows,
+      expenseRows,
+      recordingRows,
+      storybookRows,
+      storyPageRows,
+    ] = await Promise.all([
+      db.select({ value: users.profileImageUrl }).from(users).where(eq(users.id, userId)),
+      db.select({ value: messages.fileUrl }).from(messages).where(eq(messages.senderId, userId)),
+      db.select({ value: children.photoUrl }).from(children).where(eq(children.userId, userId)),
+      db.select({ value: expenses.receiptUrl }).from(expenses).where(eq(expenses.paidBy, userId)),
+      db
+        .select({ value: callRecordings.recordingUrl })
+        .from(callRecordings)
+        .where(eq(callRecordings.recordedBy, userId)),
+      db
+        .select({ value: storybooks.coverImageUrl })
+        .from(storybooks)
+        .where(eq(storybooks.createdBy, userId)),
+      db
+        .select({ value: storyPages.imageUrl })
+        .from(storyPages)
+        .where(eq(storyPages.createdBy, userId)),
+    ]);
+
+    return [
+      ...userRows,
+      ...sentMessageRows,
+      ...childRows,
+      ...expenseRows,
+      ...recordingRows,
+      ...storybookRows,
+      ...storyPageRows,
+    ]
+      .map((row) => row.value)
+      .filter((value): value is string => typeof value === "string" && value.length > 0);
+  }
+
   async deleteUser(userId: string): Promise<void> {
-    // Execute all deletes in a single transaction for atomicity
-    // Either all deletes succeed or all are rolled back
+    // Account deletion is immediate and atomic. Records owned only by the
+    // requester are removed. Shared records are preserved for the surviving
+    // participant and remain linked only to a permanently disabled, scrubbed
+    // tombstone row so foreign keys cannot expose or recreate the old account.
     await db.transaction(async (tx) => {
-      // Delete all user data in the correct order (respecting foreign key constraints)
-      // Start with dependent tables first, then parent tables
-      
-      // Delete audit logs
-      await tx.delete(auditLogs).where(eq(auditLogs.userId, userId));
-      
-      // Delete call recordings
-      await tx.delete(callRecordings).where(eq(callRecordings.recordedBy, userId));
-      
-      // Delete call follow-ups before calls
-      await tx.execute(sql`DELETE FROM call_followups WHERE call_id IN (SELECT id FROM calls WHERE caller_id = ${userId} OR receiver_id = ${userId})`);
+      const optionalRelationResult = await tx.execute(sql`
+        SELECT
+          to_regclass('pp_v2_module_runs') IS NOT NULL AS has_module_runs,
+          to_regclass('pp_v2_launcher_state') IS NOT NULL AS has_launcher_state,
+          to_regclass('pp_v2_conversation_sessions') IS NOT NULL AS has_conversation_sessions,
+          to_regclass('pp_v2_coparent_profiles') IS NOT NULL AS has_coparent_profiles
+      `);
+      const optionalRelations =
+        (optionalRelationResult as unknown as {
+          rows?: Array<{
+            has_module_runs?: boolean;
+            has_launcher_state?: boolean;
+            has_conversation_sessions?: boolean;
+            has_coparent_profiles?: boolean;
+          }>;
+        }).rows?.[0] || {};
 
-      // Delete calls where user is caller or receiver
-      await tx.delete(calls).where(or(eq(calls.callerId, userId), eq(calls.receiverId, userId)));
+      const partnershipIds = sql`
+        SELECT id FROM partnerships WHERE user1_id = ${userId} OR user2_id = ${userId}
+      `;
 
-      // Delete call sessions
-      await tx.delete(callSessions).where(eq(callSessions.hostId, userId));
-      
-      // Delete scheduled calls (both as scheduler and participant)
-      
-      // Delete partnerships
-      await tx.delete(partnerships).where(or(eq(partnerships.user1Id, userId), eq(partnerships.user2Id, userId)));
-      
-      // Delete contacts
-      await tx.delete(contacts).where(or(eq(contacts.userId, userId), eq(contacts.peerUserId, userId)));
-      
-      // Delete push subscriptions
-      await tx.delete(pushSubscriptions).where(eq(pushSubscriptions.userId, userId));
-      
-      // Delete usage metrics
-      await tx.delete(usageMetrics).where(eq(usageMetrics.userId, userId));
-      
-      // Delete guest sessions
-      await tx.delete(guestSessions).where(eq(guestSessions.userId, userId));
-      
-      // Finally, delete the user
-      await tx.delete(users).where(eq(users.id, userId));
-      
-      console.log(`[Storage] User ${userId} and all associated data deleted successfully in transaction`);
+      // Keep the surviving participant's history reachable, while disabling
+      // call/AI permissions and removing only the deleted participant's
+      // personality fields from the shared partnership record.
+      await tx.execute(sql`
+        UPDATE partnerships
+        SET
+          allow_audio = false,
+          allow_video = false,
+          allow_recording = false,
+          allow_ai_tone = false,
+          user1_personality_confirmed =
+            CASE WHEN user1_id = ${userId} THEN NULL ELSE user1_personality_confirmed END,
+          user2_personality_confirmed =
+            CASE WHEN user2_id = ${userId} THEN NULL ELSE user2_personality_confirmed END,
+          user1_personality_guess = NULL,
+          user2_personality_guess = NULL,
+          updated_at = NOW()
+        WHERE id IN (${partnershipIds})
+      `);
+
+      // Private AI, listening, and safety data belongs only to this user.
+      await tx.execute(sql`DELETE FROM message_summaries WHERE created_by = ${userId}`);
+      await tx.execute(sql`DELETE FROM message_summaries WHERE partnership_id IN (${partnershipIds})`);
+      await tx.execute(sql`DELETE FROM relationship_memories WHERE partnership_id IN (${partnershipIds})`);
+      await tx.execute(sql`DELETE FROM conflict_patterns WHERE partnership_id IN (${partnershipIds})`);
+      await tx.execute(sql`DELETE FROM agent_interventions WHERE partnership_id IN (${partnershipIds})`);
+      await tx.execute(sql`DELETE FROM prep_chat_sessions WHERE user_id = ${userId}`);
+
+      // Remove owned collaboration records without deleting another
+      // participant's records merely because they share a partnership.
+      await tx.execute(sql`
+        UPDATE tasks
+        SET assigned_to = NULL
+        WHERE assigned_to = ${userId}
+      `);
+      await tx.execute(sql`DELETE FROM events WHERE created_by = ${userId}`);
+      await tx.execute(sql`DELETE FROM schedule_templates WHERE created_by = ${userId}`);
+      await tx.execute(sql`
+        DELETE FROM children
+        WHERE user_id = ${userId} AND partnership_id IS NULL
+      `);
+      await tx.execute(sql`
+        UPDATE children
+        SET photo_url = NULL, notes = NULL, updated_at = NOW()
+        WHERE user_id = ${userId}
+      `);
+
+      await tx.execute(sql`
+        UPDATE story_pages
+        SET image_url = NULL, updated_at = NOW()
+        WHERE created_by = ${userId}
+      `);
+      await tx.execute(sql`
+        UPDATE storybooks
+        SET cover_image_url = NULL, updated_at = NOW()
+        WHERE created_by = ${userId}
+      `);
+      await tx.execute(sql`
+        UPDATE shopping_items
+        SET checked_by = NULL, checked = false, checked_at = NULL, updated_at = NOW()
+        WHERE checked_by = ${userId}
+      `);
+      await tx.execute(sql`
+        UPDATE shopping_lists
+        SET updated_at = NOW()
+        WHERE created_by = ${userId}
+      `);
+
+      // Preserve shared financial history, but remove the deleted participant's
+      // membership/balance records and all owned receipt references.
+      await tx.execute(sql`
+        DELETE FROM expenses
+        WHERE paid_by = ${userId} AND partnership_id IS NULL
+      `);
+      await tx.execute(sql`
+        UPDATE expenses
+        SET receipt_url = NULL, file_name = NULL, file_size = NULL, updated_at = NOW()
+        WHERE paid_by = ${userId}
+      `);
+      await tx.execute(sql`DELETE FROM partnership_balances WHERE user_id = ${userId}`);
+      await tx.execute(sql`
+        UPDATE settlements
+        SET payment_link = NULL, updated_at = NOW()
+        WHERE payer_id = ${userId} OR receiver_id = ${userId}
+      `);
+
+      // Calls and their history are shared records. End live sessions, cancel
+      // future reminders, and strip user-owned recordings/live payloads.
+      await tx.execute(sql`DELETE FROM call_recordings WHERE recorded_by = ${userId}`);
+      await tx.execute(sql`
+        UPDATE call_recordings
+        SET participants = array_remove(participants, ${userId})
+        WHERE ${userId} = ANY(participants)
+      `);
+      await tx.execute(sql`
+        UPDATE calls
+        SET status = 'ended', ended_at = COALESCE(ended_at, NOW())
+        WHERE (caller_id = ${userId} OR receiver_id = ${userId})
+          AND status NOT IN ('ended', 'missed', 'declined')
+      `);
+      await tx.execute(sql`
+        UPDATE scheduled_calls
+        SET status = 'cancelled', reminder_sent = true
+        WHERE (scheduler_id = ${userId} OR participant_id = ${userId})
+          AND status IN ('pending', 'confirmed')
+      `);
+      await tx.execute(sql`
+        UPDATE call_sessions
+        SET is_active = false, ended_at = COALESCE(ended_at, NOW())
+        WHERE host_id = ${userId}
+          OR id IN (
+            SELECT session_id
+            FROM calls
+            WHERE session_id IS NOT NULL
+              AND (caller_id = ${userId} OR receiver_id = ${userId})
+          )
+      `);
+      await tx.execute(sql`
+        UPDATE call_sessions_v2
+        SET status = 'ended',
+            ended_at = COALESCE(ended_at, NOW()),
+            end_reason = COALESCE(end_reason, 'account_deleted')
+        WHERE created_by_user_id = ${userId}
+          OR partnership_id IN (${partnershipIds})
+          OR id IN (
+            SELECT call_id FROM call_participants_v2 WHERE user_id = ${userId}
+          )
+      `);
+      await tx.execute(sql`
+        UPDATE call_participants_v2
+        SET
+          left_at = COALESCE(left_at, NOW()),
+          is_muted = true,
+          has_video = false,
+          connection_state = 'closed'
+        WHERE user_id = ${userId}
+      `);
+      await tx.execute(sql`
+        UPDATE call_events_v2
+        SET payload = '{}'::jsonb
+        WHERE user_id = ${userId}
+      `);
+      await tx.execute(sql`
+        DELETE FROM conch_state_v2
+        WHERE holder_user_id = ${userId}
+          OR call_id IN (
+            SELECT id FROM call_sessions_v2
+            WHERE created_by_user_id = ${userId}
+              OR partnership_id IN (${partnershipIds})
+          )
+      `);
+      await tx.execute(sql`
+        UPDATE conch_session_participants
+        SET left_at = COALESCE(left_at, NOW())
+        WHERE user_id = ${userId}
+      `);
+      await tx.execute(sql`
+        UPDATE conch_sessions
+        SET
+          status = 'ended',
+          conch_holder_user_id = NULL,
+          current_turn_ends_at = NULL,
+          pending_extra_time_request = NULL,
+          strike_counts = '{}'::jsonb,
+          mood_data = '{}'::jsonb,
+          ended_at = COALESCE(ended_at, NOW()),
+          updated_at = NOW()
+        WHERE initiator_user_id = ${userId}
+          OR conch_holder_user_id = ${userId}
+          OR partnership_id IN (${partnershipIds})
+      `);
+      await tx.execute(sql`
+        DELETE FROM session_mood_summaries
+        WHERE ${userId} = ANY(participants)
+      `);
+
+      // Sent messages remain available to their recipients, but owned file
+      // attachments are removed. Unsaved/orphan drafts can be deleted safely.
+      await tx.execute(sql`
+        UPDATE messages
+        SET
+          file_url = NULL,
+          file_name = NULL,
+          file_size = NULL,
+          mime_type = NULL,
+          duration = NULL,
+          transcript = NULL,
+          tone = NULL,
+          tone_summary = NULL,
+          tone_emoji = NULL,
+          rewording_suggestion = NULL
+        WHERE sender_id = ${userId}
+      `);
+      await tx.execute(sql`
+        DELETE FROM messages
+        WHERE sender_id = ${userId}
+          AND recipient_id IS NULL
+          AND conversation_id IS NULL
+      `);
+      await tx.execute(sql`DELETE FROM conversation_members WHERE user_id = ${userId}`);
+
+      // Remaining private preferences, metrics, and account/session records.
+      await tx.execute(sql`DELETE FROM call_preferences WHERE user_id = ${userId}`);
+      await tx.execute(sql`DELETE FROM user_stats WHERE user_id = ${userId}`);
+      await tx.execute(sql`DELETE FROM streaks WHERE user_id = ${userId}`);
+      await tx.execute(sql`DELETE FROM user_achievements WHERE user_id = ${userId}`);
+      await tx.execute(sql`DELETE FROM feedback WHERE user_id = ${userId}`);
+      await tx.execute(sql`DELETE FROM safety_plans WHERE user_id = ${userId}`);
+      await tx.execute(sql`DELETE FROM listening_settings WHERE user_id = ${userId}`);
+      await tx.execute(sql`DELETE FROM agent_settings WHERE user_id = ${userId}`);
+      if (optionalRelations.has_module_runs) {
+        await tx.execute(sql`DELETE FROM pp_v2_module_runs WHERE user_id = ${userId}`);
+      }
+      if (optionalRelations.has_launcher_state) {
+        await tx.execute(sql`DELETE FROM pp_v2_launcher_state WHERE user_id = ${userId}`);
+      }
+      if (optionalRelations.has_conversation_sessions) {
+        await tx.execute(sql`DELETE FROM pp_v2_conversation_sessions WHERE user_id = ${userId}`);
+      }
+      if (optionalRelations.has_coparent_profiles) {
+        await tx.execute(sql`DELETE FROM pp_v2_coparent_profiles WHERE user_id = ${userId}`);
+      }
+      await tx.execute(sql`DELETE FROM audit_logs WHERE user_id = ${userId}`);
+      await tx.execute(sql`DELETE FROM push_subscriptions WHERE user_id = ${userId}`);
+      await tx.execute(sql`DELETE FROM mobile_auth_tokens WHERE user_id = ${userId}`);
+      await tx.execute(sql`DELETE FROM contacts WHERE user_id = ${userId}`);
+
+      await tx.execute(sql`
+        DELETE FROM guest_session_data
+        WHERE guest_session_id IN (
+          SELECT session_id FROM guest_sessions
+          WHERE user_id = ${userId} OR upgraded_to_user_id = ${userId}
+        )
+      `);
+      await tx.execute(sql`DELETE FROM usage_metrics WHERE user_id = ${userId}`);
+      await tx.execute(sql`
+        DELETE FROM guest_sessions
+        WHERE user_id = ${userId} OR upgraded_to_user_id = ${userId}
+      `);
+
+      await tx.execute(sql`
+        DELETE FROM sessions
+        WHERE sess ->> 'userId' = ${userId}
+          OR sess #>> '{passport,user,id}' = ${userId}
+          OR sess #>> '{passport,user}' = ${userId}
+          OR sess #>> '{passport,user,claims,sub}' = ${userId}
+      `);
+
+      // The row is no longer an account: all login, profile, consent, billing,
+      // and personalization fields are irreversibly scrubbed. Keeping only the
+      // opaque internal id preserves shared records without exposing identity.
+      await tx.execute(sql`
+        UPDATE users
+        SET
+          email = NULL,
+          first_name = NULL,
+          last_name = NULL,
+          profile_image_url = NULL,
+          display_name = 'Deleted PeacePad user',
+          phone_number = NULL,
+          share_phone_with_contacts = false,
+          invite_code = NULL,
+          invite_code_generated_at = NULL,
+          relationship_type = NULL,
+          child_name = NULL,
+          consent_accepted_at = NULL,
+          terms_accepted_at = NULL,
+          privacy_accepted = false,
+          ai_message_consent = false,
+          ai_call_consent = false,
+          personality_type = NULL,
+          communication_style = NULL,
+          conflict_resolution_style = NULL,
+          stress_triggers = NULL,
+          parenting_philosophy = NULL,
+          active_partnership_id = NULL,
+          is_guest = false,
+          guest_id = NULL,
+          onboarding_completed_at = NULL,
+          onboarding_step = 0,
+          is_admin = false,
+          last_login_at = NULL,
+          last_user_agent = NULL,
+          is_deactivated = true,
+          deleted_at = NOW(),
+          subscription_tier = 'free',
+          trial_started_at = NULL,
+          subscription_active_until = NULL,
+          total_messages_sent = 0,
+          total_structured_actions = 0,
+          distinct_days_active = 0,
+          last_active_at = NULL,
+          session_count = 0,
+          prep_chat_session_count = 0,
+          draft_to_send_count = 0,
+          first_prep_chat_at = NULL,
+          first_message_sent_at = NULL,
+          first_tone_check_at = NULL,
+          last_re_engagement_at = NULL,
+          updated_at = NOW()
+        WHERE id = ${userId}
+      `);
     });
+
+    console.log("[Storage] Account deletion completed");
   }
 
   async exportUserData(userId: string): Promise<any> {
@@ -891,7 +1233,7 @@ export class DatabaseStorage implements IStorage {
       new Map(allShoppingLists.map(list => [list.id, list])).values()
     );
 
-    // Include ALL user fields for complete GDPR compliance
+    // Include all available account fields in the user-requested export.
     // Only exclude internal session/auth tokens if any
     const completeUserData = {
       id: userData.id,
@@ -922,6 +1264,16 @@ export class DatabaseStorage implements IStorage {
     const allReceivedMessages = [...receivedMessagesInConversations, ...receivedDirectMessages];
     const uniqueReceivedMessages = Array.from(
       new Map(allReceivedMessages.map(msg => [msg.id, msg])).values()
+    );
+    const userCallIds = new Set(userCalls.map(call => call.id));
+    const userMessageIds = new Set(
+      [...sentMessages, ...uniqueReceivedMessages].map(message => message.id),
+    );
+    const scopedCallFollowups = userCallFollowups.filter(
+      followup => userCallIds.has(followup.callId) || userMessageIds.has(followup.messageId),
+    );
+    const scopedMoodSummaries = userSessionMoodSummaries.filter(
+      summary => Array.isArray(summary.participants) && summary.participants.includes(userId),
     );
 
     // Combine and deduplicate Conch sessions (hosted + participated)
@@ -959,14 +1311,14 @@ export class DatabaseStorage implements IStorage {
         callHistory: userCalls,
         scheduledCalls: userScheduledCalls,
         recordings: userCallRecordings,
-        followups: userCallFollowups,
+        followups: scopedCallFollowups,
         preferences: userCallPreferences,
         sessions: userCallSessions,
       },
       conchMode: {
         sessions: uniqueConchSessions,
         participations: userConchParticipations,
-        moodSummaries: userSessionMoodSummaries,
+        moodSummaries: scopedMoodSummaries,
       },
       scheduleTemplates: userScheduleTemplates,
       auditLogs: userAuditLogs,
@@ -1397,6 +1749,11 @@ export class DatabaseStorage implements IStorage {
     return message;
   }
 
+  async getMessageByFileUrl(fileUrl: string): Promise<Message | undefined> {
+    const [message] = await db.select().from(messages).where(eq(messages.fileUrl, fileUrl)).limit(1);
+    return message;
+  }
+
   async updateMessageStatus(messageId: string, status: 'sent' | 'delivered' | 'read'): Promise<void> {
     const updates: any = { status };
     
@@ -1571,18 +1928,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByInviteCode(inviteCode: string): Promise<User | undefined> {
-    console.log(`[Storage] Looking up user by invite code: ${inviteCode}`);
-    const [user] = await db.select().from(users).where(eq(users.inviteCode, inviteCode));
-    
-    if (user) {
-      console.log(`[Storage] Found user with invite code ${inviteCode}: ${user.displayName} (ID: ${user.id})`);
-    } else {
-      console.log(`[Storage] No user found with invite code: ${inviteCode}`);
-      // Debug: Let's see all invite codes in the database
-      const allUsers = await db.select({ id: users.id, displayName: users.displayName, inviteCode: users.inviteCode }).from(users);
-      console.log(`[Storage] All users in database:`, allUsers);
-    }
-    
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.inviteCode, inviteCode),
+          eq(users.isDeactivated, false),
+          isNull(users.deletedAt),
+        ),
+      );
     return user;
   }
 
@@ -1596,7 +1951,7 @@ export class DatabaseStorage implements IStorage {
     while (!isUnique) {
       code = '';
       for (let i = 0; i < 6; i++) {
-        code += characters.charAt(Math.floor(Math.random() * characters.length));
+        code += characters.charAt(randomInt(characters.length));
       }
       
       // Check if code is unique
@@ -1609,16 +1964,46 @@ export class DatabaseStorage implements IStorage {
     return code;
   }
 
+  async consumeInviteCode(userId: string, expectedCode: string): Promise<boolean> {
+    const [consumed] = await db
+      .update(users)
+      .set({
+        inviteCode: null,
+        inviteCodeGeneratedAt: null,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(users.id, userId),
+          eq(users.inviteCode, expectedCode),
+          eq(users.isDeactivated, false),
+          isNull(users.deletedAt),
+        ),
+      )
+      .returning({ id: users.id });
+    return Boolean(consumed);
+  }
+
   async regenerateInviteCode(userId: string): Promise<string> {
     const newCode = await this.generateInviteCode();
-    await db
+    const [updatedUser] = await db
       .update(users)
       .set({ 
         inviteCode: newCode, 
         inviteCodeGeneratedAt: new Date(), // Reset expiration timer (14 days)
         updatedAt: new Date() 
       })
-      .where(eq(users.id, userId));
+      .where(
+        and(
+          eq(users.id, userId),
+          eq(users.isDeactivated, false),
+          isNull(users.deletedAt),
+        ),
+      )
+      .returning({ id: users.id });
+    if (!updatedUser) {
+      throw new Error("Invite code cannot be regenerated for this account");
+    }
     return newCode;
   }
 
@@ -1646,7 +2031,6 @@ export class DatabaseStorage implements IStorage {
               displayName: user?.displayName,
               firstName: user?.firstName,
               lastName: user?.lastName,
-              email: user?.email,
               profileImageUrl: user?.profileImageUrl,
             };
           })
@@ -1813,6 +2197,11 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(notes.createdAt));
   }
 
+  async getNote(id: string): Promise<Note | undefined> {
+    const [note] = await db.select().from(notes).where(eq(notes.id, id));
+    return note;
+  }
+
   async createNote(noteData: InsertNote): Promise<Note> {
     const [note] = await db.insert(notes).values(noteData).returning();
     return note;
@@ -1880,6 +2269,14 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(childUpdates)
       .where(eq(childUpdates.partnershipId, partnershipId))
       .orderBy(desc(childUpdates.createdAt));
+  }
+
+  async getChildUpdate(id: string): Promise<ChildUpdate | undefined> {
+    const [update] = await db
+      .select()
+      .from(childUpdates)
+      .where(eq(childUpdates.id, id));
+    return update;
   }
 
   async createChildUpdate(updateData: InsertChildUpdate): Promise<ChildUpdate> {
@@ -1974,6 +2371,15 @@ export class DatabaseStorage implements IStorage {
 
   async getExpense(expenseId: string): Promise<Expense | undefined> {
     const [expense] = await db.select().from(expenses).where(eq(expenses.id, expenseId));
+    return expense;
+  }
+
+  async getExpenseByReceiptUrl(receiptUrl: string): Promise<Expense | undefined> {
+    const [expense] = await db
+      .select()
+      .from(expenses)
+      .where(eq(expenses.receiptUrl, receiptUrl))
+      .limit(1);
     return expense;
   }
 
@@ -2188,6 +2594,11 @@ export class DatabaseStorage implements IStorage {
     return call;
   }
 
+  async getCallBySessionId(sessionId: string): Promise<Call | undefined> {
+    const [call] = await db.select().from(calls).where(eq(calls.sessionId, sessionId));
+    return call;
+  }
+
   async getCalls(userId: string, filter?: string): Promise<Call[]> {
     // Get all calls where user is either caller or receiver
     const userCalls = await db.select().from(calls)
@@ -2280,6 +2691,15 @@ export class DatabaseStorage implements IStorage {
 
   async getCallRecordingById(id: string): Promise<CallRecording | undefined> {
     const [recording] = await db.select().from(callRecordings).where(eq(callRecordings.id, id));
+    return recording;
+  }
+
+  async getCallRecordingByUrl(recordingUrl: string): Promise<CallRecording | undefined> {
+    const [recording] = await db
+      .select()
+      .from(callRecordings)
+      .where(eq(callRecordings.recordingUrl, recordingUrl))
+      .limit(1);
     return recording;
   }
 
@@ -2867,7 +3287,12 @@ export class DatabaseStorage implements IStorage {
       .orderBy(storyPages.pageNumber);
     return pages;
   }
-  
+
+  async getStoryPage(id: string): Promise<StoryPage | undefined> {
+    const [page] = await db.select().from(storyPages).where(eq(storyPages.id, id));
+    return page;
+  }
+
   async createStoryPage(page: InsertStoryPage): Promise<StoryPage> {
     const [newPage] = await db.insert(storyPages).values(page).returning();
     return newPage;
@@ -2921,7 +3346,12 @@ export class DatabaseStorage implements IStorage {
       .orderBy(shoppingItems.createdAt);
     return items;
   }
-  
+
+  async getShoppingItem(id: string): Promise<ShoppingItem | undefined> {
+    const [item] = await db.select().from(shoppingItems).where(eq(shoppingItems.id, id));
+    return item;
+  }
+
   async createShoppingItem(item: InsertShoppingItem): Promise<ShoppingItem> {
     const [newItem] = await db.insert(shoppingItems).values(item).returning();
     return newItem;
@@ -3517,6 +3947,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(agentInterventions.partnershipId, partnershipId))
       .orderBy(desc(agentInterventions.createdAt))
       .limit(limit);
+  }
+
+  async getAgentIntervention(id: string): Promise<AgentIntervention | undefined> {
+    const [intervention] = await db
+      .select()
+      .from(agentInterventions)
+      .where(eq(agentInterventions.id, id));
+    return intervention;
   }
 
   async updateAgentIntervention(id: string, updates: Partial<AgentIntervention>): Promise<AgentIntervention> {

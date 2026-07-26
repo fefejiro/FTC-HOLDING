@@ -65,7 +65,8 @@ export default function MessagingFeaturePage() {
                   <Shield className="h-10 w-10 text-primary mb-4" />
                   <CardTitle>Private & Secure</CardTitle>
                   <CardDescription>
-                    End-to-end encrypted conversations between you and your co-parent. No public profiles, no social feeds, just focused communication.
+                    Authenticated, partnership-scoped conversations with transport encryption. No
+                    public profiles or social feed. Messages are not end-to-end encrypted.
                   </CardDescription>
                 </CardHeader>
               </Card>

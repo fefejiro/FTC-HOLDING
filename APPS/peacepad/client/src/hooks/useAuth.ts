@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Capacitor } from "@capacitor/core";
 import { getApiUrl, queryClient } from "@/lib/queryClient";
+import { purgePeacePadBrowserCaches } from "@/lib/privacyCache";
 import {
   AUTH_BOOTSTRAP_LOADER_GRACE_MS,
   clearLastAuthBootstrapIssue,
@@ -11,9 +11,6 @@ import {
 } from "@/lib/authBootstrap";
 import {
   clearSupabaseSession,
-  hasSupabaseAuthConfig,
-  rememberAuthRedirectState,
-  startGoogleOAuthSignIn,
 } from "@/lib/supabaseAuth";
 import type { User } from "@shared/schema";
 
@@ -79,24 +76,10 @@ export function useAuth() {
   }, [isLoggingOut, status]);
 
   const login = () => {
-    const isNative = Capacitor.isNativePlatform();
-    console.log('[Auth] Login initiated - isNative:', isNative);
-    
-    rememberAuthRedirectState(
-      `${window.location.pathname}${window.location.search}${window.location.hash}`,
-    );
-
-    if (hasSupabaseAuthConfig()) {
-      startGoogleOAuthSignIn().catch((error) => {
-        const message = error instanceof Error ? error.message : String(error);
-        console.error("[Auth] Supabase OAuth start failed, falling back:", message);
-        window.location.href = isNative ? getApiUrl("/api/login/mobile") : getApiUrl("/api/login");
-      });
-      return;
-    }
-
-    // Fallback to existing server login endpoints if Supabase env is missing.
-    window.location.href = isNative ? getApiUrl("/api/login/mobile") : getApiUrl("/api/login");
+    // Public social sign-in is intentionally hidden for this review-recovery
+    // release. The isolated account-access route is the only advertised
+    // account entry until a Guideline 4.8-compliant option is ready.
+    window.location.href = "/account-access";
   };
 
   const logout = async () => {
@@ -108,11 +91,13 @@ export function useAuth() {
     
     // Clear all query data to prevent any refetches
     queryClient.clear();
+    await purgePeacePadBrowserCaches().catch(() => undefined);
     
-    // Clear all local storage for a completely fresh start
+    // Clear session-specific state. Keep the first-run welcome preference so
+    // signing out does not replay an installation-level introduction.
     const keysToRemove = [
-      "hasSeenIntro",
       "hasAcceptedConsent",
+      "peacepad_required_consent_v2",
       "aiMessageConsent",
       "aiCallConsent",
       "peacepad_session_id",
@@ -141,8 +126,8 @@ export function useAuth() {
     // Small delay for smoother visual transition
     await new Promise(resolve => setTimeout(resolve, 150));
     
-    // Redirect to onboarding for a fresh start
-    window.location.href = '/onboarding';
+    // Return to the public home. Returning installations skip the intro.
+    window.location.href = '/';
   };
 
   // Keep loading state true until query status is settled (success or error)

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { WeatherActivity } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,51 +33,6 @@ export default function WeatherActivitiesPage() {
   const [currentWeather, setCurrentWeather] = useState<string>("");
   const [weatherCondition, setWeatherCondition] = useState("all");
 
-  useEffect(() => {
-    const getLocationAndWeather = async () => {
-      // Try GPS first with a 5-second timeout
-      if (navigator.geolocation) {
-        try {
-          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-            const timeoutId = setTimeout(() => reject(new Error('GPS timeout')), 5000);
-            navigator.geolocation.getCurrentPosition(
-              (pos) => {
-                clearTimeout(timeoutId);
-                resolve(pos);
-              },
-              (err) => {
-                clearTimeout(timeoutId);
-                reject(err);
-              },
-              { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
-            );
-          });
-          fetchWeather(position.coords.latitude, position.coords.longitude);
-          return;
-        } catch (gpsError) {
-          console.log("[Weather] GPS failed, trying IP fallback...", gpsError);
-        }
-      }
-
-      // Fallback to IP-based geolocation
-      try {
-        const res = await fetch('/api/geocode/ip', { credentials: 'include' });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.lat && data.lng) {
-            console.log("[Weather] Using IP location:", data.displayName);
-            fetchWeather(data.lat, data.lng);
-            return;
-          }
-        }
-      } catch (ipError) {
-        console.log("[Weather] IP geolocation also failed:", ipError);
-      }
-    };
-
-    getLocationAndWeather();
-  }, []);
-
   const fetchWeather = async (lat: number, lon: number) => {
     try {
       const response = await fetch(
@@ -100,6 +55,17 @@ export default function WeatherActivitiesPage() {
     } catch (error) {
       console.error("Weather fetch failed:", error);
     }
+  };
+
+  const useCurrentWeather = () => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        void fetchWeather(position.coords.latitude, position.coords.longitude);
+      },
+      () => undefined,
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 },
+    );
   };
 
   const {
@@ -137,6 +103,16 @@ export default function WeatherActivitiesPage() {
               </div>
               <h1 className="text-3xl font-semibold text-foreground tracking-tight">Activity Suggestions</h1>
             </div>
+            {navigator.geolocation && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={useCurrentWeather}
+                data-testid="button-use-current-weather"
+              >
+                Use current weather
+              </Button>
+            )}
           </div>
 
           {currentWeather && (

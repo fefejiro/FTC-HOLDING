@@ -11,7 +11,7 @@ export interface LocationData {
   country?: string;
   countryCode?: string;
   postalCode?: string;
-  source: "gps" | "ip" | "manual" | "cached" | "ai-enhanced";
+  source: "gps" | "manual" | "cached" | "ai-enhanced";
   accuracy?: number;
   timestamp: number;
 }
@@ -38,18 +38,17 @@ const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours for confirmed locations
 
 /**
  * Unified location hook for PeacePad
- * Uses a 4-tier detection system:
+ * Uses a consent-respecting detection system:
  * 1. GPS (with 5s timeout)
- * 2. IP-based geolocation
- * 3. AI-enhanced refinement (optional)
- * 4. Cached location fallback
+ * 2. Optional server refinement (disabled by default in this release)
+ * 3. Confirmed cached location fallback
  */
 export function useLocation(options: UseLocationOptions = {}): UseLocationReturn {
   const {
     autoDetect = false,
     cacheKey = CACHE_KEY,
     gpsTimeout = 5000,
-    useAiEnhancement = true,
+    useAiEnhancement = false,
   } = options;
 
   const [location, setLocation] = useState<LocationData | null>(null);
@@ -135,7 +134,7 @@ export function useLocation(options: UseLocationOptions = {}): UseLocationReturn
                 accuracy,
                 timestamp: Date.now(),
               };
-              console.log("[useLocation] GPS success:", locationData.displayName);
+              console.log("[useLocation] GPS location acquired");
               resolve(locationData);
               return;
             }
@@ -164,37 +163,8 @@ export function useLocation(options: UseLocationOptions = {}): UseLocationReturn
     });
   }, [gpsTimeout]);
 
-  // Tier 2: IP-based geolocation
-  const getIPLocation = useCallback(async (): Promise<LocationData | null> => {
-    try {
-      console.log("[useLocation] Trying IP-based geolocation...");
-      const res = await fetch("/api/geocode/ip", { credentials: "include" });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.lat && data.lng) {
-          const locationData: LocationData = {
-            displayName: data.displayName || `${data.city || ""}, ${data.country || ""}`,
-            address: data.displayName || "",
-            lat: data.lat,
-            lng: data.lng,
-            city: data.city,
-            state: data.state,
-            country: data.country,
-            countryCode: data.countryCode,
-            source: "ip",
-            timestamp: Date.now(),
-          };
-          console.log("[useLocation] IP geolocation success:", locationData.displayName);
-          return locationData;
-        }
-      }
-    } catch (e) {
-      console.error("[useLocation] IP geolocation failed:", e);
-    }
-    return null;
-  }, []);
-
-  // Tier 3: AI-enhanced location refinement
+  // Optional server-side refinement. The release server currently returns the
+  // supplied location unchanged and never sends it to a third-party AI service.
   const enhanceWithAI = useCallback(async (baseLocation: LocationData): Promise<LocationData> => {
     if (!useAiEnhancement) return baseLocation;
 
@@ -221,26 +191,20 @@ export function useLocation(options: UseLocationOptions = {}): UseLocationReturn
     return baseLocation;
   }, [useAiEnhancement]);
 
-  // Main detection function with 4-tier fallback
+  // Main detection function: GPS, then a previously confirmed cached value.
   const detectLocation = useCallback(async (): Promise<LocationData | null> => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Tier 1: Try GPS first
       let result = await getGPSLocation();
-      
-      // Tier 2: Fall back to IP if GPS fails
-      if (!result) {
-        result = await getIPLocation();
-      }
 
-      // Tier 3: Try AI enhancement if we have a result
+      // Optional refinement is off by default for this release.
       if (result && useAiEnhancement) {
         result = await enhanceWithAI(result);
       }
 
-      // Tier 4: Use cached location as last resort
+      // Use a previously confirmed cached location as the fallback.
       if (!result) {
         result = loadCachedLocation(cacheKey);
         if (result) {
@@ -264,7 +228,7 @@ export function useLocation(options: UseLocationOptions = {}): UseLocationReturn
     } finally {
       setIsLoading(false);
     }
-  }, [getGPSLocation, getIPLocation, enhanceWithAI, saveLocation, cacheKey, useAiEnhancement]);
+  }, [getGPSLocation, enhanceWithAI, saveLocation, cacheKey, useAiEnhancement]);
 
   // Manual location search
   const setManualLocation = useCallback(async (query: string): Promise<LocationData | null> => {

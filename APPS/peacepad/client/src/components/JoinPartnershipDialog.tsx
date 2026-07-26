@@ -27,7 +27,7 @@ export function JoinPartnershipDialog({ trigger }: JoinPartnershipDialogProps) {
       return await res.json();
     },
     onSuccess: (response: any) => {
-      console.log("[JoinPartnershipDialog] Success response:", response);
+      console.log("[JoinPartnershipDialog] Partnership join succeeded");
       
       // Update local storage to trigger WelcomeFlow on the next page
       localStorage.setItem("just_joined_partnership", JSON.stringify({
@@ -96,7 +96,7 @@ export function JoinPartnershipDialog({ trigger }: JoinPartnershipDialogProps) {
   };
 
   const handleScan = (code: string) => {
-    console.log("[JoinPartnershipDialog] handleScan called with code:", code);
+    console.log("[JoinPartnershipDialog] QR invite accepted");
     setInviteCode(code);
     setShowScanner(false);
     console.log("[JoinPartnershipDialog] Calling mutation to join partnership");

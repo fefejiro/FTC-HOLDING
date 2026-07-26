@@ -51,7 +51,10 @@ export default function BetaFAQ() {
                   Is my data secure?
                 </AccordionTrigger>
                 <AccordionContent className="text-sm text-muted-foreground">
-                  Yes! All messages and data are encrypted. Only you and your co-parent can see your conversations. We never sell or share your data. As a beta tester, you've signed an NDA, and we take your privacy seriously.
+                  PeacePad uses transport encryption and authenticated, partnership-scoped access
+                  controls. Messages are not end-to-end encrypted. See the Privacy Policy for how
+                  service providers process information and the limited circumstances in which it
+                  may be disclosed.
                 </AccordionContent>
               </AccordionItem>
 

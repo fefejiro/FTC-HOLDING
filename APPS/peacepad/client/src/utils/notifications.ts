@@ -41,11 +41,11 @@ export async function initPushNotifications(): Promise<PushSubscriptionData | nu
       await navigator.serviceWorker.ready;
     }
 
-    // Request notification permission
-    const permission = await Notification.requestPermission();
-    
-    if (permission !== 'granted') {
-      console.log('[notifications] Notification permission denied');
+    // Initialization can occur outside a user gesture. Never trigger a
+    // permission prompt here; Settings and the contextual notification banner
+    // own the explicit request flow.
+    if (Notification.permission !== 'granted') {
+      console.log('[notifications] Notification permission has not been granted');
       return null;
     }
 

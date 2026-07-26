@@ -60,7 +60,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const acceptCall = useCallback((sessionCode?: string) => {
-    console.log('[CallContext] Accepting call', sessionCode ? `with sessionCode ${sessionCode}` : '');
+    console.log('[CallContext] Accepting call', { hasSessionCode: Boolean(sessionCode) });
     dispatch({ type: 'CALL_ACCEPTED', sessionCode });
   }, []);
 

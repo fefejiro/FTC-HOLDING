@@ -1,4 +1,4 @@
-import { useCallback, lazy, Suspense, useEffect, useMemo, useRef } from "react";
+import { useCallback, lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
@@ -47,6 +47,8 @@ import HealthPanelPage from "@/pages/health-panel";
 import NotFound from "@/pages/not-found";
 import PrepChatPage from "@/pages/prep-chat";
 import ComposePage from "@/pages/compose";
+import SingleSlideWelcome from "@/components/SingleSlideWelcome";
+import { readStoredConsent } from "@/lib/consentState";
 
 // Lazy load heavy/infrequently used pages for better performance
 const SchedulingPage = lazy(() => import("@/pages/scheduling"));
@@ -63,6 +65,7 @@ const AdminPartnershipsPage = lazy(() => import("@/pages/admin-partnerships"));
 const AdminMessagesPage = lazy(() => import("@/pages/admin-messages"));
 const HelpPage = lazy(() => import("@/pages/help"));
 const JoinPartnershipPage = lazy(() => import("@/pages/join-partnership"));
+const AccountAccessPage = lazy(() => import("@/pages/account-access"));
 
 // Loading fallback component - uses skeleton for native feel
 function PageLoader() {
@@ -106,39 +109,69 @@ function HomeResolverPage() {
   return <PageLoader />;
 }
 
+function PublicConsentGate({ children }: { children: React.ReactNode }) {
+  const [requiredConsentAccepted, setRequiredConsentAccepted] = useState(
+    () => readStoredConsent().requiredAccepted,
+  );
+
+  if (!requiredConsentAccepted) {
+    return (
+      <div className="min-h-[100dvh] bg-background">
+        <TermsAcceptanceDialog
+          open={true}
+          localOnly={true}
+          onAccepted={() => setRequiredConsentAccepted(true)}
+        />
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
+function PublicComposeEntryPage() {
+  return (
+    <PublicConsentGate>
+      <ComposePage />
+    </PublicConsentGate>
+  );
+}
+
+function PublicPrepChatEntryPage() {
+  return (
+    <PublicConsentGate>
+      <PrepChatPage />
+    </PublicConsentGate>
+  );
+}
+
+function PublicHomePage() {
+  const [, setLocation] = useLocation();
+  const [hasSeenIntro, setHasSeenIntro] = useState(
+    () => typeof window !== "undefined" && localStorage.getItem("hasSeenIntro") === "true",
+  );
+
+  const completeIntro = (destination: "/compose" | "/account-access") => {
+    localStorage.setItem("hasSeenIntro", "true");
+    setHasSeenIntro(true);
+    setLocation(destination);
+  };
+
+  if (hasSeenIntro) {
+    return <PublicComposeEntryPage />;
+  }
+
+  return (
+    <SingleSlideWelcome
+      onTryPeacePad={() => completeIntro("/compose")}
+      onExistingAccount={() => completeIntro("/account-access")}
+    />
+  );
+}
+
 function Router() {
   const { isAuthenticated, isLoading, user, authBootstrapIssue, retryAuth } = useAuth();
   const [location, setLocation] = useLocation();
-  const consentSyncedRef = useRef(false);
-
-  useEffect(() => {
-    if (!isAuthenticated || !user || consentSyncedRef.current) return;
-    
-    const hasAcceptedConsent = localStorage.getItem("hasAcceptedConsent") === "true";
-    const needsSync = hasAcceptedConsent && !user.termsAcceptedAt;
-    
-    if (needsSync) {
-      consentSyncedRef.current = true;
-      fetch("/api/user/consent", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          privacyAccepted: true,
-          ndaAccepted: true,
-          aiMessageConsent: localStorage.getItem("aiMessageConsent") === "true",
-          aiCallConsent: false,
-        }),
-      })
-        .then(() => {
-          queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-        })
-        .catch((err) => {
-          console.error("[Router] Failed to sync consent:", err);
-          consentSyncedRef.current = false;
-        });
-    }
-  }, [isAuthenticated, user]);
 
   if (isLoading) {
     return <AuthLoadingSkeleton />;
@@ -146,10 +179,9 @@ function Router() {
 
   if (isAuthenticated && user) {
     const pendingCode = localStorage.getItem("pending_join_code");
-    const hasSeenIntro = localStorage.getItem("hasSeenIntro");
     const hasAcceptedConsent = localStorage.getItem("hasAcceptedConsent");
 
-    if (pendingCode && hasSeenIntro && hasAcceptedConsent && location !== `/join/${pendingCode}`) {
+    if (pendingCode && hasAcceptedConsent && location !== `/join/${pendingCode}`) {
       setLocation(`/join/${pendingCode}`);
       return null;
     }
@@ -167,7 +199,9 @@ function Router() {
       return null;
     }
 
-    const needsTermsAcceptance = !user.termsAcceptedAt && !localStorage.getItem("hasAcceptedConsent");
+    // Registered-account consent belongs to the authenticated identity. Never
+    // transfer a previous guest's device-local choices to another account.
+    const needsTermsAcceptance = !user.termsAcceptedAt || !user.privacyAccepted;
 
     return (
       <>
@@ -179,6 +213,7 @@ function Router() {
             <Route path="/onboarding" component={OnboardingPage} />
             <Route path="/auth/callback" component={AuthCallbackPage} />
             <Route path="/auth/mobile-callback" component={MobileAuthCallbackPage} />
+            <Route path="/account-access" component={AccountAccessPage} />
             <Route path="/health-panel" component={HealthPanelPage} />
             <Route path="/scheduling" component={SchedulingPage} />
             <Route path="/prep-chat" component={PrepChatPage} />
@@ -234,12 +269,13 @@ function Router() {
           </div>
         )}
         <Switch>
-          <Route path="/" component={ComposePage} />
-          <Route path="/compose" component={ComposePage} />
-          <Route path="/prep-chat" component={PrepChatPage} />
+          <Route path="/" component={PublicHomePage} />
+          <Route path="/compose" component={PublicComposeEntryPage} />
+          <Route path="/prep-chat" component={PublicPrepChatEntryPage} />
           <Route path="/onboarding" component={OnboardingPage} />
           <Route path="/auth/callback" component={AuthCallbackPage} />
           <Route path="/auth/mobile-callback" component={MobileAuthCallbackPage} />
+          <Route path="/account-access" component={AccountAccessPage} />
           <Route path="/health-panel" component={HealthPanelPage} />
           <Route path="/join/:code" component={JoinPartnershipPage} />
           <Route path="/resources" component={ResourcesPage} />
@@ -707,7 +743,9 @@ function PromptSurfaceLayer() {
   }, [location]);
 
   const blocksPromptSurfaces =
+    path === "/" ||
     path.startsWith("/onboarding") ||
+    path.startsWith("/account-access") ||
     path.startsWith("/auth/") ||
     path.startsWith("/join/");
 

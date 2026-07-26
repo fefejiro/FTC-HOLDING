@@ -35,7 +35,7 @@ export function useConchAudio({ sessionCode, partnerId, enabled, videoEnabled = 
   // Log initialization
   useEffect(() => {
     if (enabled && sessionCode && partnerId) {
-      console.log('[ConchMedia] init sessionCode=' + sessionCode);
+      console.log('[ConchMedia] Initializing authenticated call media');
       console.log(`[ConchMedia] bitrateCap=${MEDIA_MAX_BITRATE / 1000}kbps fps=${VIDEO_FRAMERATE}`);
       console.log(`[ConchMedia] audioOnly=${isAudioOnly}`);
     }
@@ -73,7 +73,7 @@ export function useConchAudio({ sessionCode, partnerId, enabled, videoEnabled = 
       return;
     }
 
-    console.log('[ConchAudio] Initializing audio connection for session:', sessionCode);
+    console.log('[ConchAudio] Initializing audio connection');
     initializeAudio();
 
     return () => {

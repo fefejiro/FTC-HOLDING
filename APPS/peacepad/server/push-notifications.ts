@@ -230,14 +230,16 @@ export async function sendPushNotification(userId: string, notification: {
           }
 
           await admin.messaging().send(message);
-          console.log(`Native push notification sent to ${sub.platform} device: ${sub.deviceToken}`);
+          console.log(`Native push notification sent to ${sub.platform} device`);
         } catch (error: any) {
-          console.error(`Error sending native push to ${sub.platform}:`, error);
+          console.error(`Error sending native push to ${sub.platform}`, {
+            code: typeof error?.code === 'string' ? error.code : undefined,
+          });
           
           // If token is invalid/expired, remove it by deviceToken
           if (error.code === 'messaging/invalid-registration-token' || 
               error.code === 'messaging/registration-token-not-registered') {
-            console.log(`Removing invalid ${sub.platform} token: ${sub.deviceToken}`);
+            console.log(`Removing invalid ${sub.platform} token`);
             await storage.deletePushSubscription({ deviceToken: sub.deviceToken || '' });
           }
         }

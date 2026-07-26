@@ -13,7 +13,6 @@ function getSafeSessionErrorCopy(error: unknown): string {
 import { useLocation } from "wouter";
 import { ArrowRight, CheckCircle, Copy, Mail, MessageSquare, RefreshCw, Sparkles, Upload } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { rememberAuthRedirectState } from "@/lib/supabaseAuth";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,6 +23,8 @@ import { Label } from "@/components/ui/label";
 import { SEOHead } from "@/components/SEOHead";
 import { trackEvent } from "@/lib/analytics";
 import { ensureGuestSession } from "@/lib/guestSession";
+import { readStoredConsent } from "@/lib/consentState";
+import { TermsAcceptanceDialog } from "@/components/TermsAcceptanceDialog";
 
 type PathChoice = "prep_chat" | "invite" | null;
 
@@ -52,9 +53,9 @@ export default function OnboardingPage() {
   const { toast } = useToast();
   const [step, setStep] = useState<1 | 1.5 | 2 | 3 | 4 | 5>(1);
   const [authEmail, setAuthEmail] = useState("");
-  const [authError, setAuthError] = useState<string | null>(null);
+  const [authError] = useState<string | null>(null);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
-  const [isSendingLink, setIsSendingLink] = useState(false);
+  const [isSendingLink] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null);
@@ -63,6 +64,7 @@ export default function OnboardingPage() {
   const [pathChoice, setPathChoice] = useState<PathChoice>(null);
   const [inviteCopied, setInviteCopied] = useState(false);
   const [trackedStart, setTrackedStart] = useState(false);
+  const [showRequiredConsent, setShowRequiredConsent] = useState(false);
   const authIntent = useMemo(() => {
     if (typeof window === "undefined") {
       return null;
@@ -198,7 +200,7 @@ export default function OnboardingPage() {
     return;
   };
 
-  const handleContinueFromTour = async () => {
+  const continueAfterRequiredConsent = async () => {
     try {
       await bootstrapGuestSession();
       setStep(3);
@@ -211,22 +213,17 @@ export default function OnboardingPage() {
     }
   };
 
-  const handleStartAccountSignIn = async () => {
-    setIsSendingLink(true);
-    setAuthError(null);
-    try {
-      rememberAuthRedirectState("/onboarding");
-      login();
-    } catch (error) {
-      const description = error instanceof Error ? error.message : "Please try again.";
-      setAuthError(description);
-      toast({
-        title: "Could not start sign-in",
-        description,
-        variant: "destructive",
-      });
-      setIsSendingLink(false);
+  const handleContinueFromTour = async () => {
+    if (!readStoredConsent().requiredAccepted) {
+      setShowRequiredConsent(true);
+      return;
     }
+
+    await continueAfterRequiredConsent();
+  };
+
+  const handleStartAccountSignIn = () => {
+    login();
   };
 
   const handleSendMagicLink = handleStartAccountSignIn;
@@ -636,6 +633,14 @@ export default function OnboardingPage() {
           </Card>
         </div>
       </div>
+      <TermsAcceptanceDialog
+        open={showRequiredConsent}
+        localOnly={true}
+        onAccepted={async () => {
+          setShowRequiredConsent(false);
+          await continueAfterRequiredConsent();
+        }}
+      />
     </>
   );
 }

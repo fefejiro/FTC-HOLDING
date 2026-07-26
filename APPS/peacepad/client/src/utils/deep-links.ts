@@ -97,7 +97,7 @@ function handleDeepLinkUrl(urlString: string): boolean {
     if (path.startsWith('/join/')) {
       const code = path.split('/join/')[1];
       if (code) {
-        console.log('[DeepLink] Partnership join code:', code);
+        console.log('[DeepLink] Partnership join link received');
         localStorage.setItem('pending_join_code', code);
         window.location.href = `/join/${code}`;
         return true;

@@ -34,6 +34,11 @@ interface DispatchOptions {
   sendBeacon?: (url: string, data: BodyInit) => boolean;
 }
 
+// App Store review release: product-interaction telemetry is disabled. Keep
+// the payload helpers for deterministic update behavior tests, but do not
+// transmit update interactions from the shipped client.
+export const WEB_UPDATE_TELEMETRY_ENABLED = false;
+
 function normalizeKnownBuildId(value?: string | null): string | undefined {
   if (!value) {
     return undefined;
@@ -77,6 +82,10 @@ export function sendWebUpdateTelemetryPayload(
   payload: WebUpdateTelemetryPayload,
   options: DispatchOptions = {},
 ): void {
+  if (!WEB_UPDATE_TELEMETRY_ENABLED) {
+    return;
+  }
+
   const endpoint = options.endpoint || WEB_UPDATE_TELEMETRY_ENDPOINT;
   const body = JSON.stringify(payload);
   const sendBeacon = options.sendBeacon || (typeof navigator !== "undefined" ? navigator.sendBeacon?.bind(navigator) : undefined);

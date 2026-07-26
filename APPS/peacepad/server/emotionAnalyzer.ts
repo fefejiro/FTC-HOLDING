@@ -8,6 +8,9 @@ const openai = apiKey ? new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 }) : null;
 
+// Incoming/shared message analysis remains deterministic and local for iOS 1.0.
+const EXTERNAL_EMOTION_AI_ENABLED = false;
+
 export interface EmotionResult {
   emotion: 'calm' | 'cooperative' | 'neutral' | 'frustrated' | 'tense' | 'defensive';
   confidence: number; // 0-100
@@ -66,14 +69,6 @@ const COMMON_CONFLICT_PATTERNS = {
   past_issues: ['last time', 'you always', 'remember when', 'never forget', 'still', 'again']
 };
 
-const VALID_LANGUAGE_CODES = ['en', 'fr', 'es', 'de', 'it', 'pt', 'zh', 'ja', 'ko', 'ar', 'hi', 'ru', 'nl', 'pl', 'sv', 'da', 'no', 'fi', 'mf'];
-
-function normalizeLanguageCode(code: string | undefined | null): string {
-  if (!code) return 'en';
-  const normalized = code.toLowerCase().trim().substring(0, 2);
-  return VALID_LANGUAGE_CODES.includes(normalized) ? normalized : 'en';
-}
-
 function safeJsonParse<T>(content: string, fallback: T): T {
   try {
     const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -82,7 +77,7 @@ function safeJsonParse<T>(content: string, fallback: T): T {
     }
     return JSON.parse(content) as T;
   } catch {
-    console.warn('[EmotionAnalyzer] Failed to parse JSON response:', content.substring(0, 100));
+    console.warn('[EmotionAnalyzer] Failed to parse AI JSON response');
     return fallback;
   }
 }
@@ -92,27 +87,7 @@ function safeJsonParse<T>(content: string, fallback: T): T {
  */
 export async function detectLanguage(text: string): Promise<string> {
   if (!text || text.length < 10) return 'en';
-  
-  if (!openai) {
-    return detectLanguageSimple(text);
-  }
-
-  try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: "Detect the language of the text. Respond with ONLY the 2-letter ISO 639-1 code (e.g., 'en', 'fr', 'es', 'zh', 'ar'). No other text." },
-        { role: "user", content: text.substring(0, 200) }
-      ],
-      temperature: 0,
-      max_tokens: 5,
-    });
-    
-    const rawLang = response.choices[0]?.message?.content?.trim() || 'en';
-    return normalizeLanguageCode(rawLang);
-  } catch {
-    return detectLanguageSimple(text);
-  }
+  return detectLanguageSimple(text);
 }
 
 function detectLanguageSimple(text: string): string {
@@ -141,7 +116,7 @@ export async function analyzeEmotion(
   transcript: string,
   context?: string
 ): Promise<EmotionResult> {
-  if (isDevMode()) {
+  if (!EXTERNAL_EMOTION_AI_ENABLED || isDevMode()) {
     return mockEmotionAnalysis(transcript);
   }
 
@@ -253,7 +228,7 @@ export async function analyzeConflict(
     language: lang,
   };
 
-  if (isDevMode() || !openai) {
+  if (!EXTERNAL_EMOTION_AI_ENABLED || isDevMode() || !openai) {
     const lowerMessage = message.toLowerCase();
     for (const [type, patterns] of Object.entries(COMMON_CONFLICT_PATTERNS)) {
       if (patterns.some(p => lowerMessage.includes(p))) {
@@ -362,7 +337,7 @@ export async function generateSuggestedResponse(
 ): Promise<string> {
   const lang = emotion.language || conflictAnalysis?.language || 'en';
   
-  if (isDevMode() || !openai) {
+  if (!EXTERNAL_EMOTION_AI_ENABLED || isDevMode() || !openai) {
     const tips: Record<string, string> = {
       en: "I understand your concern. Let's work together to find a solution that works for both of us.",
       fr: "Je comprends votre préoccupation. Travaillons ensemble pour trouver une solution qui convient à nous deux.",
@@ -547,7 +522,7 @@ export async function generateSessionSummary(
     return "No emotional data recorded for this session.";
   }
 
-  if (isDevMode()) {
+  if (!EXTERNAL_EMOTION_AI_ENABLED || isDevMode()) {
     return mockSessionSummary(emotionTimeline.length);
   }
 
@@ -647,7 +622,7 @@ export async function generateEmotionIntervention(
     defensive: 'high',
   };
   
-  if (isDevMode()) {
+  if (!EXTERNAL_EMOTION_AI_ENABLED || isDevMode()) {
     return {
       shouldIntervene: true,
       type: 'tone_alert',
@@ -799,7 +774,7 @@ export async function generateTurnSummary(
   
   const lang = await detectLanguage(transcript);
   
-  if (isDevMode()) {
+  if (!EXTERNAL_EMOTION_AI_ENABLED || isDevMode()) {
     return {
       keyPoints: ["Discussed scheduling for next weekend", "Mentioned child's school event"],
       unaddressedConcerns: ["Pickup time still unclear"],

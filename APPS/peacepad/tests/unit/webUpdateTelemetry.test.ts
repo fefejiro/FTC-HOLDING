@@ -27,7 +27,7 @@ describe("web update telemetry payload", () => {
     });
   });
 
-  it("uses sendBeacon when available", () => {
+  it("does not use sendBeacon in the App Store review release", () => {
     const sendBeacon = vi.fn(() => true);
     const fetchImpl = vi.fn();
 
@@ -47,11 +47,11 @@ describe("web update telemetry payload", () => {
       },
     );
 
-    expect(sendBeacon).toHaveBeenCalledTimes(1);
+    expect(sendBeacon).not.toHaveBeenCalled();
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it("falls back to fetch when sendBeacon is unavailable", () => {
+  it("does not fall back to fetch in the App Store review release", () => {
     const fetchImpl = vi.fn(async () => ({
       ok: true,
     })) as unknown as typeof fetch;
@@ -71,6 +71,6 @@ describe("web update telemetry payload", () => {
       },
     );
 
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });

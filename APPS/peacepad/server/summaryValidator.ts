@@ -8,6 +8,9 @@ const openai = apiKey ? new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 }) : null;
 
+// Validation can involve another participant's words, so it stays local in iOS 1.0.
+const EXTERNAL_SHARED_MESSAGE_AI_ENABLED = false;
+
 export interface SummaryValidationResult {
   isValid: boolean;
   score: number;
@@ -63,7 +66,7 @@ function getMockValidation(summary: string): SummaryValidationResult {
 export async function validateSummary(input: SummaryValidationInput): Promise<SummaryValidationResult> {
   const { originalContent, summaryText, context } = input;
   
-  if (!openai || isDevMode()) {
+  if (!EXTERNAL_SHARED_MESSAGE_AI_ENABLED || !openai || isDevMode()) {
     console.log('[SummaryValidator] Using mock validation (dev mode or no API key)');
     return getMockValidation(summaryText);
   }
@@ -145,7 +148,7 @@ Evaluate how well the listener captured what was said. Focus on:
 }
 
 export async function detectEmotionalMessage(content: string): Promise<{ isEmotional: boolean; intensity: number; emotions: string[] }> {
-  if (!openai || isDevMode()) {
+  if (!EXTERNAL_SHARED_MESSAGE_AI_ENABLED || !openai || isDevMode()) {
     const lowerContent = content.toLowerCase();
     const emotionalKeywords = ['frustrated', 'angry', 'hurt', 'worried', 'scared', 'upset', 'disappointed', 'anxious', 'stressed', 'overwhelmed'];
     const matchedEmotions = emotionalKeywords.filter(kw => lowerContent.includes(kw));
