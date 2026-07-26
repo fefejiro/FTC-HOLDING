@@ -95,7 +95,12 @@ async function ensureGuestUser(page: Page): Promise<PeacePadUser> {
   if (!existingUser?.inviteCode) {
     await apiFetch<{ user?: PeacePadUser }>(page, "/api/auth/guest", {
       method: "POST",
-      body: { source: "human-workflow-e2e" },
+      body: {
+        source: "human-workflow-e2e",
+        hasAcceptedConsent: true,
+        aiMessageConsent: false,
+        aiCallConsent: false,
+      },
       expectedStatus: [200, 201],
     }).catch(() => null);
   }

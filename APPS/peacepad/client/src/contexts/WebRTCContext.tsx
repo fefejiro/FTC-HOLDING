@@ -425,7 +425,7 @@ export function WebRTCProvider({ children, websocket, sendMessage }: WebRTCProvi
         constraints: { audio: true, video: false } 
       });
       
-      console.log(`[WebRTC] Creating peer connection for ${peerId} with token:`, token);
+      console.log(`[WebRTC] Creating peer connection for ${peerId}`);
       
       // Create RTCPeerConnection
       const configuration: RTCConfiguration = {
@@ -526,11 +526,11 @@ export function WebRTCProvider({ children, websocket, sendMessage }: WebRTCProvi
   const joinSession = useCallback((sessionCode: string) => {
     // CRITICAL: Prevent joining the same session multiple times
     if (joinedSessionsRef.current.has(sessionCode)) {
-      console.log(`[WebRTCContext] ⏭️ SKIPPING duplicate join for session: ${sessionCode} (already joined)`);
+      console.log('[WebRTCContext] ⏭️ SKIPPING duplicate session join');
       return;
     }
     
-    console.log('[WebRTCContext] Joining session:', sessionCode);
+    console.log('[WebRTCContext] Joining call session');
     joinedSessionsRef.current.add(sessionCode);
     setCurrentSessionId(sessionCode);
     
@@ -548,7 +548,7 @@ export function WebRTCProvider({ children, websocket, sendMessage }: WebRTCProvi
   }, [sendMessage]);
 
   const leaveSession = useCallback((sessionCode: string) => {
-    console.log('[WebRTCContext] Leaving session:', sessionCode);
+    console.log('[WebRTCContext] Leaving call session');
     
     // Remove from joined sessions set
     joinedSessionsRef.current.delete(sessionCode);
@@ -565,7 +565,6 @@ export function WebRTCProvider({ children, websocket, sendMessage }: WebRTCProvi
   }, [sendMessage, currentSessionId]);
 
   const processMessage = useCallback((event: MessageEvent) => {
-    console.log('[WebRTCContext] 🎯 processMessage CALLED with raw data:', event.data?.substring?.(0, 200));
     try {
       const data = JSON.parse(event.data);
       console.log('[WebRTCContext] 🎯 Parsed message type:', data.type);
@@ -622,7 +621,7 @@ export function WebRTCProvider({ children, websocket, sendMessage }: WebRTCProvi
     }
 
     const handleMessage = (event: MessageEvent) => {
-      console.log('[WebRTCContext] 🎯 handleMessage CALLED! Ready:', isReadyRef.current, 'Data:', event.data?.substring?.(0, 100));
+      console.log('[WebRTCContext] Message received. Ready:', isReadyRef.current);
       // Buffer messages until WebSocket is fully ready
       if (!isReadyRef.current) {
         console.log('[WebRTCContext] Buffering message (not ready yet)');
@@ -658,10 +657,7 @@ export function WebRTCProvider({ children, websocket, sendMessage }: WebRTCProvi
             });
             break;
           case 'ice-candidate':
-            console.log('[SIGNAL_DEBUG] ICE-CANDIDATE received', {
-              from: data.from,
-              candidate: data.payload?.candidate?.candidate?.substring(0, 50) + '...'
-            });
+            console.log('[SIGNAL_DEBUG] ICE-CANDIDATE received');
             break;
           default:
             // Other message types handled by main handler

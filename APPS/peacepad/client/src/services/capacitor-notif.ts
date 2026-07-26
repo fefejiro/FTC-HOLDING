@@ -92,7 +92,7 @@ async function setupNativeListeners() {
 
   try {
     PushNotifications.addListener('registration', async (token: Token) => {
-      console.log('[Notifications] Device token:', token.value);
+      console.log('[Notifications] Native device registration completed');
       try {
         await fetch('/api/push/register-native', {
           method: 'POST',
@@ -110,11 +110,11 @@ async function setupNativeListeners() {
     });
 
     PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
-      console.log('[Notifications] Push received:', notification);
+      console.log('[Notifications] Push received');
     });
 
     PushNotifications.addListener('pushNotificationActionPerformed', (action: ActionPerformed) => {
-      console.log('[Notifications] Notification action:', action);
+      console.log('[Notifications] Notification action received');
       const data = action.notification.data;
       if (data.url) window.location.href = data.url;
       else if (data.conversationId) window.location.href = '/messages';

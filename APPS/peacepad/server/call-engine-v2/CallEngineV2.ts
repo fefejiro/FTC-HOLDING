@@ -294,7 +294,7 @@ export class CallEngineV2 {
    * CRITICAL FIX: Made idempotent - won't overwrite existing session with connected participants
    */
   public registerLegacySession(sessionCode: string, callId: string, hostId: string) {
-    console.log(`[CallEngineV2] Registering legacy session: ${sessionCode} → ${callId} (host: ${hostId})`);
+    console.log("[CallEngineV2] Registering legacy call session");
     
     // CRITICAL FIX: Check if session already exists to preserve participant state
     const existingSession = this.activeSessions.get(callId);
@@ -304,7 +304,7 @@ export class CallEngineV2 {
       // Update sessionsByCode mapping in case it's missing (defensive)
       if (!this.sessionsByCode.has(sessionCode)) {
         this.sessionsByCode.set(sessionCode, callId);
-        console.log(`[CallEngineV2] ✅ Added missing sessionCode mapping: ${sessionCode} → ${callId}`);
+        console.log("[CallEngineV2] Restored missing legacy session mapping");
       }
       return; // Skip initialization to preserve participant state
     }
@@ -554,7 +554,7 @@ export class CallEngineV2 {
    * Handle incoming V2 event from client
    */
   public async handleEvent(event: CallV2Event, userId: string, connectionId: string) {
-    console.log(`[CallEngineV2] Event from ${userId}: ${event.type}`, event.payload);
+    console.log(`[CallEngineV2] Event received: ${event.type}`);
 
     try {
       switch (event.type) {
@@ -690,7 +690,7 @@ export class CallEngineV2 {
       sessionCode
     });
 
-    console.log(`[CallEngineV2] Call created: ${callSession.id} (${sessionCode})`);
+    console.log("[CallEngineV2] Call session created");
   }
 
   /**
@@ -859,7 +859,7 @@ export class CallEngineV2 {
       });
     }
 
-    console.log(`[CallEngineV2] User ${userId} joined session ${sessionCode}`);
+    console.log("[CallEngineV2] Participant joined call session");
   }
 
   /**
@@ -1437,7 +1437,7 @@ export class CallEngineV2 {
   private async handleLeaveSession(userId: string, sessionCode: string) {
     const callId = this.sessionsByCode.get(sessionCode);
     if (!callId) {
-      console.warn(`[CallEngineV2] handleLeaveSession: unknown session code ${sessionCode}`);
+      console.warn("[CallEngineV2] Leave requested for an unknown session");
       return;
     }
 
@@ -1509,7 +1509,7 @@ export class CallEngineV2 {
       console.log(`[CallEngineV2] Call ${callId} ended — only one participant remaining after leave`);
     }
 
-    console.log(`[CallEngineV2] User ${userId} left session ${sessionCode} (${remaining} remaining)`);
+    console.log(`[CallEngineV2] Participant left call session (${remaining} remaining)`);
   }
 
   private async handleConchRelease(payload: any, userId: string) {

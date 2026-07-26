@@ -128,6 +128,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Authenticated uploads must never enter Cache Storage. A cached private
+  // response could otherwise survive logout or an account switch.
+  if (url.pathname.startsWith('/uploads/')) {
+    event.respondWith(
+      fetch(request, {
+        cache: 'no-store',
+        credentials: 'include',
+      })
+    );
+    return;
+  }
+
   // Handle offline crisis resources request (critical for DV victims)
   if (url.pathname === '/offline-crisis-numbers' || url.pathname === '/api/offline-crisis-numbers') {
     event.respondWith(

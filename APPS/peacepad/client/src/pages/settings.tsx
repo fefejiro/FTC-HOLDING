@@ -1,7 +1,7 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, Copy, Download, ExternalLink, LogOut, Mail, MessageSquare, Upload, Users } from "lucide-react";
+import { ChevronDown, Copy, Download, ExternalLink, LogOut, Mail, MessageSquare, Sparkles, Trash2, Upload, Users } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -11,10 +11,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { SEOHead } from "@/components/SEOHead";
 import { JoinPartnershipDialog } from "@/components/JoinPartnershipDialog";
 import { trackEvent } from "@/lib/analytics";
-import { markGuestUpgradeIntent } from "@/lib/guestUpgrade";
 
 function isDemoPartnerName(value: string | null): boolean {
   return Boolean(value && /demo co-parent/i.test(value));
@@ -31,6 +31,7 @@ export default function SettingsPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [inviteCopied, setInviteCopied] = useState(false);
   const [inviteExpanded, setInviteExpanded] = useState(false);
+  const [isSavingAiConsent, setIsSavingAiConsent] = useState(false);
 
   const { data: partnerships = [] } = useQuery<any[]>({
     queryKey: ["/api/partnerships"],
@@ -68,8 +69,7 @@ export default function SettingsPage() {
   const visiblePartnerName = isDemoPartnerName(partnerName) ? null : partnerName;
 
   const handleGuestUpgrade = () => {
-    markGuestUpgradeIntent();
-    setLocation("/onboarding?auth=upgrade");
+    setLocation("/account-access");
   };
 
   const copyGuestInviteLink = async () => {
@@ -373,6 +373,30 @@ export default function SettingsPage() {
     }
   };
 
+  const updateAiMessageConsent = async (enabled: boolean) => {
+    setIsSavingAiConsent(true);
+    try {
+      await apiRequest("PATCH", "/api/user/consent", {
+        aiMessageConsent: enabled,
+      });
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({
+        title: enabled ? "Optional AI processing enabled" : "Optional AI processing disabled",
+        description: enabled
+          ? "Messages are sent to our disclosed AI processor only when you choose an AI feature."
+          : "Rule-based message guidance remains available without third-party AI processing.",
+      });
+    } catch {
+      toast({
+        title: "Privacy choice not saved",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingAiConsent(false);
+    }
+  };
+
   return (
     <>
       <SEOHead title="You - PeacePad" description="Profile, invite, support, privacy, and help." noindex />
@@ -524,6 +548,44 @@ export default function SettingsPage() {
 
           <Card className="border-border/60">
             <CardHeader>
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Optional AI processing</CardTitle>
+              </div>
+              <CardDescription>
+                Control whether selected message-assistance features may send text to the
+                third-party AI processor described in the Privacy Policy.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-start justify-between gap-4 rounded-2xl border border-border/70 p-4">
+                <div className="space-y-1">
+                  <Label htmlFor="ai-message-consent" className="text-sm font-medium">
+                    Allow third-party AI message processing
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Off by default. You can turn this off at any time. Local rule-based
+                    message guidance continues to work when it is off.
+                  </p>
+                </div>
+                <Switch
+                  id="ai-message-consent"
+                  checked={user?.aiMessageConsent === true}
+                  disabled={isSavingAiConsent}
+                  onCheckedChange={(checked) => void updateAiMessageConsent(checked)}
+                  aria-label="Allow third-party AI message processing"
+                  data-testid="switch-ai-message-consent"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Call analysis remains off in this release. PeacePad never enables either AI
+                option merely because you sign in.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/60">
+            <CardHeader>
               <CardTitle className="text-lg">Privacy, data, and help</CardTitle>
               <CardDescription>Consent, exports, help, feedback, and sign out.</CardDescription>
             </CardHeader>
@@ -554,6 +616,12 @@ export default function SettingsPage() {
                   <Mail className="mr-2 h-4 w-4" />
                   Help & feedback
                 </a>
+              </Button>
+              <Button asChild type="button" variant="outline" className="w-full justify-start text-destructive">
+                <Link href="/delete-account" data-testid="link-delete-account">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete my account
+                </Link>
               </Button>
               <Button type="button" variant="ghost" className="w-full justify-start text-destructive" onClick={() => void logout()}>
                 <LogOut className="mr-2 h-4 w-4" />

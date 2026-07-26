@@ -220,7 +220,7 @@ export async function broadcastCalendarConflict(partnershipId: string, actorId: 
 // Notify caller that their call was successfully created (V2 engine needs this)
 export async function notifyCallerAccepted(callerId: string, callId: string, sessionCode: string) {
   console.log(`[notifyCallerAccepted] ======================================`);
-  console.log(`[notifyCallerAccepted] Notifying caller ${callerId} of accepted call ${callId} with session ${sessionCode}`);
+  console.log("[notifyCallerAccepted] Sending accepted-call notification");
   
   let notified = false;
   clients.forEach((client) => {
@@ -269,24 +269,17 @@ export async function notifyIncomingCall(receiverId: string, callId: string, cal
   if (call?.sessionId) {
     const session = await storage.getCallSessionById(call.sessionId);
     sessionCode = session?.sessionCode;
-    console.log(`[notifyIncomingCall] Call linked to session: ${sessionCode}`);
+    console.log("[notifyIncomingCall] Call session resolved");
   } else {
-    console.warn(`[notifyIncomingCall] ⚠️ Call ${callId} has no sessionId (legacy call)`);
+    console.warn("[notifyIncomingCall] Incoming call has no session (legacy call)");
   }
-
-  console.log(`[notifyIncomingCall] Caller info: ${callerName}, profile: ${callerProfileImageUrl}, reason: ${reason}, emergency: ${isEmergency}, sessionCode: ${sessionCode}`);
-
-  // Log all connected clients for debugging
-  clients.forEach((client) => {
-    console.log(`[notifyIncomingCall] Connected client: userId=${client.userId}, connectionId=${client.connectionId}, state=${client.ws.readyState}`);
-  });
 
   // Notify all active connections for the receiver
   let activeConnections = 0;
   clients.forEach((client) => {
     if (client.userId === receiverId) {
       activeConnections++;
-      console.log(`[notifyIncomingCall] Found receiver connection: ${client.connectionId}, state: ${client.ws.readyState}`);
+      console.log("[notifyIncomingCall] Found receiver connection");
       
       const notificationPayload = {
         type: "incoming-call",
@@ -301,8 +294,6 @@ export async function notifyIncomingCall(receiverId: string, callId: string, cal
         sessionCode  // Critical: enables callee to join WebRTC session before answering
       };
       
-      console.log(`[notifyIncomingCall] 🚨 NOTIFICATION PAYLOAD:`, JSON.stringify(notificationPayload, null, 2));
-      
       const sent = safeSend(
         client.ws,
         notificationPayload,
@@ -311,31 +302,30 @@ export async function notifyIncomingCall(receiverId: string, callId: string, cal
       );
       
       if (sent) {
-        console.log(`[notifyIncomingCall] ✅ Sent notification to ${receiverId} (connection ${client.connectionId})`);
+        console.log("[notifyIncomingCall] Sent realtime incoming-call notification");
         notified = true;
       } else {
-        console.log(`[notifyIncomingCall] ❌ Failed to send to ${receiverId} (connection ${client.connectionId})`);
+        console.log("[notifyIncomingCall] Failed to send realtime incoming-call notification");
       }
     }
   });
 
-  console.log(`[notifyIncomingCall] Found ${activeConnections} connections for ${receiverId}, notified: ${notified}`);
+  console.log(
+    `[notifyIncomingCall] Active receiver connections: ${activeConnections}; notified: ${notified}`,
+  );
 
   // Always send push notification for incoming calls (rings phone even if app is in background)
   try {
-    console.log(`[notifyIncomingCall] Sending push notification to ${receiverId}`);
+    console.log("[notifyIncomingCall] Sending generic push notification");
     await sendPushNotification(receiverId, {
-      title: isEmergency ? 'Emergency Call' : 'Incoming Call',
-      body: reason ? `${callerName}: ${reason}` : `${callerName} is calling you (${callType} call)`,
+      title: isEmergency ? 'Emergency PeacePad call' : 'Incoming PeacePad call',
+      body: "Open PeacePad to review the incoming call.",
       channel: 'conch', // High priority channel for calls
       data: {
         type: 'incoming-call',
         callId,
         callerId,
-        callerName,
-        callerProfileImageUrl,
         callType,
-        reason,
         isEmergency,
         sessionCode,  // Critical: enables callee to join WebRTC session from push notification
       },
@@ -536,14 +526,13 @@ export async function broadcastConchSessionCreated(sessionId: string, partnershi
   const partnerId = partnership.user1Id === initiatorUserId ? partnership.user2Id : partnership.user1Id;
   await sendPushNotification(partnerId, {
     title: 'Conch Session Invitation',
-    body: `${initiatorName} wants to start a Conch session`,
+    body: "Open PeacePad to review a structured-conversation invitation.",
     channel: 'conch', // High priority channel for Conch Mode
     data: {
       url: '/conch-mode',
       sessionId,
       partnershipId,
       initiatorUserId,
-      initiatorName,
       type: 'conch_session_invitation',
     },
     actions: [
@@ -686,12 +675,9 @@ export async function broadcastConchExtraTimeRequest(
   
   // Send push notification to partner (the one who can approve)
   const partnerId = partnership.user1Id === requesterUserId ? partnership.user2Id : partnership.user1Id;
-  const requester = await storage.getUser(requesterUserId);
-  const requesterName = requester?.displayName || 'Your co-parent';
-  
   await sendPushNotification(partnerId, {
     title: 'Extra Time Requested',
-    body: `${requesterName} requested ${seconds} more seconds to speak`,
+    body: "Open PeacePad to review a structured-conversation request.",
     channel: 'conch', // Conch Mode notifications
     data: {
       url: '/conch-mode',
@@ -852,7 +838,7 @@ export async function broadcastConchInviteDeclined(sessionId: string, partnershi
   // Also send push notification to initiator
   await sendPushNotification(initiatorUserId, {
     title: 'Conch Invite Declined',
-    body: `${declinerName} declined your Conch session invite`,
+    body: "Open PeacePad to review a structured-conversation update.",
     channel: 'conch', // Conch Mode notifications
     data: {
       type: 'conch_invite_declined',
@@ -1014,7 +1000,7 @@ export function setupWebRTCSignaling(server: Server) {
 
         switch (type) {
           case "join-session":
-            console.log(`[WS] 🎯 Processing join-session from ${userId} for session ${payload.sessionCode}`);
+            console.log("[WS] Processing authenticated call-session join");
             // User joins a call session
             const callSessionCode = payload.sessionCode;
             client.callSessionCode = callSessionCode;

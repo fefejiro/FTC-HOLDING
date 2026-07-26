@@ -8,6 +8,9 @@ const openai = apiKey ? new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 }) : null;
 
+// Shared-call transcripts stay on PeacePad for the iOS 1.0 release.
+const EXTERNAL_CONCH_AI_ENABLED = false;
+
 export interface ContentAnalysisResult {
   hasManipulation: boolean;
   manipulationType: 'gaslighting' | 'blame_shifting' | 'guilt_tripping' | 'threat' | 'intimidation' | 'financial_control' | 'isolation' | 'none';
@@ -161,7 +164,7 @@ export async function analyzeConchContent(
 
   const patternMatches = detectManipulationPatterns(transcript);
   
-  if (isDevMode() || !openai) {
+  if (!EXTERNAL_CONCH_AI_ENABLED || isDevMode() || !openai) {
     if (patternMatches.length > 0) {
       const primaryMatch = patternMatches[0];
       const allMatches = patternMatches.flatMap(m => m.matches);
@@ -388,7 +391,7 @@ export async function generateTurnSummary(
 }> {
   const combinedText = turnTranscripts.join(' ');
   
-  if (isDevMode() || !openai || combinedText.length < 20) {
+  if (!EXTERNAL_CONCH_AI_ENABLED || isDevMode() || !openai || combinedText.length < 20) {
     return {
       keyPoints: ['Turn completed'],
       unaddressedConcerns: [],
@@ -478,7 +481,7 @@ export async function generateConchSessionSummary(
 ): Promise<ConchSessionSummary> {
   const turnCount = turnSummaries.length;
   
-  if (isDevMode() || !openai || turnCount === 0) {
+  if (!EXTERNAL_CONCH_AI_ENABLED || isDevMode() || !openai || turnCount === 0) {
     return {
       overallTone: 'neutral',
       keyTopicsDiscussed: ['Session completed'],

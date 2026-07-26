@@ -886,7 +886,7 @@ export async function sendDataExportEmail(userEmail: string, userName: string, t
           </p>
           
           <p style="color: #666; font-size: 14px; margin-top: 30px;">
-            This is an automated security notification for data privacy compliance (GDPR).
+            This is an automated PeacePad privacy and security notification.
           </p>
         </div>
         <div class="footer">

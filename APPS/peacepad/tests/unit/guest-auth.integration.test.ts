@@ -26,14 +26,17 @@ const storageMock = {
   async upsertUser(input: any) {
     const id = input.id || `guest-user-${++mockState.userCounter}`;
     const now = new Date();
+    const existing = mockState.users.get(id) || {};
     const user = {
+      ...existing,
       id,
-      displayName: input.displayName || `Guest${mockState.userCounter}`,
-      isGuest: Boolean(input.isGuest),
-      guestId: input.guestId || null,
-      profileImageUrl: input.profileImageUrl || null,
+      ...input,
+      displayName: input.displayName || existing.displayName || `Guest${mockState.userCounter}`,
+      isGuest: input.isGuest ?? existing.isGuest ?? false,
+      guestId: input.guestId ?? existing.guestId ?? null,
+      profileImageUrl: input.profileImageUrl ?? existing.profileImageUrl ?? null,
       expires_at: null,
-      createdAt: now,
+      createdAt: existing.createdAt || now,
       updatedAt: now,
     };
     mockState.users.set(id, user);
@@ -250,7 +253,7 @@ describe("Guest auth integration", () => {
       headers: {
         "x-forwarded-for": "198.51.100.10",
       },
-      body: { displayName: "Guest Tester" },
+      body: { displayName: "Guest Tester", hasAcceptedConsent: true },
       originalUrl: "/api/auth/guest",
     });
     const res = createRes();
@@ -262,6 +265,8 @@ describe("Guest auth integration", () => {
     expect(res.body.guestId).toBeTruthy();
     expect(res.body.guestSessionId).toBeTruthy();
     expect(res.body.sessionId).toBe(res.body.guestSessionId);
+    expect(res.body.user.privacyAccepted).toBe(true);
+    expect(res.body.user.aiMessageConsent).toBe(false);
 
     const ttlMs = new Date(res.body.expiresAt).getTime() - Date.now();
     expect(ttlMs).toBeGreaterThan(13 * 24 * 60 * 60 * 1000);
@@ -284,7 +289,7 @@ describe("Guest auth integration", () => {
       headers: {
         "x-forwarded-for": "198.51.100.20",
       },
-      body: { displayName: "Guest Session User" },
+      body: { displayName: "Guest Session User", hasAcceptedConsent: true },
       originalUrl: "/api/auth/guest",
     });
     const createResObj = createRes();
@@ -353,7 +358,7 @@ describe("Guest auth integration", () => {
       headers: {
         "x-forwarded-for": "198.51.100.30",
       },
-      body: { displayName: "Expiring Guest" },
+      body: { displayName: "Expiring Guest", hasAcceptedConsent: true },
       originalUrl: "/api/auth/guest",
     });
     const createResObj = createRes();
@@ -419,5 +424,22 @@ describe("Guest auth integration", () => {
 
     expect(nextCalled).toBe(false);
     expect(blockedRes.statusCode).toBe(429);
+  });
+
+  it("stores nothing when required consent is missing", async () => {
+    const req = createReq({
+      method: "POST",
+      body: { displayName: "No Consent" },
+      originalUrl: "/api/auth/guest",
+    });
+    const res = createRes();
+
+    await guestLegacyStartHandler(req, res, () => undefined);
+
+    expect(res.statusCode).toBe(428);
+    expect(res.body.code).toBe("CONSENT_REQUIRED");
+    expect(mockState.users.size).toBe(0);
+    expect(mockState.sessions.size).toBe(0);
+    expect(mockState.guestDataBySessionId.size).toBe(0);
   });
 });

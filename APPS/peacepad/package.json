@@ -24,6 +24,7 @@
         "db:push": "drizzle-kit push",
         "test:report": "node scripts/generateTestSummary.cjs",
         "smoke:guest-auth": "node scripts/smoke-guest-auth.mjs",
+        "seed:reviewer-account": "tsx server/seedReviewerAccount.ts",
         "test:e2e:human-workflow": "playwright test --project=human-workflow-chromium",
         "test:e2e:human-workflow:mobile": "playwright test --project=human-workflow-mobile-pixel-7",
         "smoke:e2e:update-lifecycle": "playwright test tests/e2e/p1-critical/update-lifecycle.spec.ts --project=p1-critical-chromium --project=mobile-pixel-7",

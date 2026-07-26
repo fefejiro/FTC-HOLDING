@@ -196,14 +196,12 @@ export default function SchedulingDashboard() {
   });
 
   const handleSaveEvent = () => {
-    console.log('[Calendar] handleSaveEvent called - title:', title, 'startDate:', startDate);
     if (!title.trim() || !startDate) {
       console.log('[Calendar] Validation failed - missing title or startDate');
       toast({ title: "Error", description: "Please fill in required fields", variant: "destructive", duration: 5000 });
       return;
     }
     const data = { title, type, startDate, endDate: endDate || undefined, description, location, childName, recurring: recurring !== "none" ? recurring : undefined, notes };
-    console.log('[Calendar] Creating event with data:', JSON.stringify(data));
     if (editingEvent) updateEvent.mutate({ id: editingEvent.id, ...data });
     else createEvent.mutate(data);
   };

@@ -1,21 +1,5 @@
-import OpenAI from 'openai';
 import { storage } from '../storage';
-import { getRelationshipSummary, findSimilarMemories } from './embeddingService';
-
-// Use AI_INTEGRATIONS key first (Replit managed), fallback to manual OPENAI_API_KEY
-const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
-
-const openai = apiKey ? new OpenAI({ 
-  apiKey: apiKey,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-}) : null;
-
-function getOpenAIClient(): OpenAI {
-  if (!openai) {
-    throw new Error('OpenAI client is not configured');
-  }
-  return openai;
-}
+import { getRelationshipSummary } from './embeddingService';
 
 export interface DailySummary {
   date: string;
@@ -186,31 +170,17 @@ export async function generateCourtReadyLog(
 
   incidents.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  let summaryText = '';
-  try {
-    const response = await getOpenAIClient().chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: `You are generating a professional, factual summary for legal documentation purposes.
-Be objective, use neutral language, and focus only on documented facts.
-Do not make assumptions or judgments. Maximum 3-4 sentences.`,
-        },
-        {
-          role: 'user',
-          content: `Summarize the following communication incidents for the period ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}:
-${incidents.map(i => `- ${i.date}: ${i.description}`).join('\n')}`,
-        },
-      ],
-      max_tokens: 200,
-      temperature: 0.3,
-    });
-    summaryText = response.choices[0].message.content || 'Summary generation failed.';
-  } catch (error) {
-    console.error('[SummaryService] Failed to generate court summary:', error);
-    summaryText = `During the specified period, ${incidents.length} notable incidents were recorded.`;
-  }
+  const typeCounts = incidents.reduce<Record<string, number>>((counts, incident) => {
+    counts[incident.type] = (counts[incident.type] || 0) + 1;
+    return counts;
+  }, {});
+  const typeSummary = Object.entries(typeCounts)
+    .map(([type, count]) => `${count} ${type.replace(/_/g, " ")}`)
+    .join(", ");
+  const summaryText =
+    incidents.length === 0
+      ? `No qualifying incidents were recorded from ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}.`
+      : `${incidents.length} qualifying incident${incidents.length === 1 ? " was" : "s were"} recorded from ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}${typeSummary ? ` (${typeSummary})` : ""}. This summary is generated locally from the system records listed below and does not add conclusions or legal analysis.`;
 
   return {
     generatedAt: new Date().toISOString(),
@@ -259,13 +229,9 @@ export async function generateNegotiationProposal(
   proposalType: NegotiationTemplate['type'],
   details: Record<string, string>
 ): Promise<string> {
-  const user = await storage.getUser(userId);
   const partnership = await storage.getPartnership(partnershipId);
   
   if (!partnership) throw new Error('Partnership not found');
-  
-  const coParentId = partnership.user1Id === userId ? partnership.user2Id : partnership.user1Id;
-  const coParent = coParentId ? await storage.getUser(coParentId) : null;
 
   const templates: Record<string, string> = {
     schedule_change: `I'd like to propose a schedule adjustment. ${details.reason || 'I have a scheduling conflict'} and would like to ${details.request || 'swap our time on [date]'}. Would you be open to discussing this? I'm flexible on the details.`,
@@ -276,30 +242,5 @@ export async function generateNegotiationProposal(
 
   const baseTemplate = templates[proposalType] || templates.schedule_change;
 
-  try {
-    const response = await getOpenAIClient().chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: `You are helping a co-parent draft a calm, respectful proposal. 
-Tone: ${details.tone || 'neutral'}
-Keep it brief (2-4 sentences max), child-focused, and non-confrontational.
-User's personality: ${user?.personalityType || 'unknown'}
-Co-parent's personality: ${coParent?.personalityType || 'unknown'}`,
-        },
-        {
-          role: 'user',
-          content: `Refine this proposal to be more effective:\n${baseTemplate}`,
-        },
-      ],
-      max_tokens: 200,
-      temperature: 0.7,
-    });
-
-    return response.choices[0].message.content || baseTemplate;
-  } catch (error) {
-    console.error('[SummaryService] Failed to generate negotiation proposal:', error);
-    return baseTemplate;
-  }
+  return baseTemplate;
 }

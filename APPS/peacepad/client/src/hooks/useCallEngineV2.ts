@@ -99,7 +99,7 @@ export function useCallEngineV2(
     stateRef.current = state;
     console.log('[V2] 🔄 stateRef updated:', {
       callId: state.currentCallId,
-      sessionCode: state.sessionCode,
+      hasSessionCode: Boolean(state.sessionCode),
       phase: state.phase
     });
   }, [state]);
@@ -119,7 +119,7 @@ export function useCallEngineV2(
 
   // Process messages in sequence order
   const processMessage = useCallback((message: V2Message) => {
-    console.log('[V2] 📩 processMessage called with:', message.type, message);
+    console.log('[V2] processMessage called:', message.type);
     const { type, payload } = message;
 
     switch (type) {
@@ -139,7 +139,7 @@ export function useCallEngineV2(
         // Handle incoming call notification (both legacy and v2 formats)
         console.log('[V2] 🔔 Incoming call notification received!', { 
           callId: payload.call?.id || payload.callId,
-          sessionCode: payload.call?.sessionCode || payload.sessionCode
+          hasSessionCode: Boolean(payload.call?.sessionCode || payload.sessionCode)
         });
         
         // CRITICAL FIX: Set role to "answerer" for callee
@@ -159,7 +159,9 @@ export function useCallEngineV2(
           }]
         }));
         
-        console.log('[V2] ✅ V2 state updated with sessionCode:', payload.call?.sessionCode || payload.sessionCode);
+        console.log('[V2] ✅ V2 state updated', {
+          hasSessionCode: Boolean(payload.call?.sessionCode || payload.sessionCode),
+        });
         
         toast({
           title: "Incoming Call",
@@ -177,10 +179,11 @@ export function useCallEngineV2(
         const currentState = stateRef.current;
         const callSessionCode = currentState.sessionCode || payload.sessionCode || payload.call?.sessionCode;
         
-        console.log('[V2] SessionCode for join:', callSessionCode, {
-          fromState: currentState.sessionCode,
-          fromPayload: payload.sessionCode,
-          fromCallObj: payload.call?.sessionCode
+        console.log('[V2] Session credential resolved for join', {
+          hasSessionCode: Boolean(callSessionCode),
+          fromState: Boolean(currentState.sessionCode),
+          fromPayload: Boolean(payload.sessionCode),
+          fromCallObj: Boolean(payload.call?.sessionCode)
         });
         
         setState(prev => ({
@@ -191,7 +194,7 @@ export function useCallEngineV2(
         
         // CRITICAL: Caller must join the session (just like callee does in answerCall)
         if (callSessionCode) {
-          console.log('[V2] Caller joining session after call accepted. SessionCode:', callSessionCode);
+          console.log('[V2] Caller joining session after call accepted');
           sendMessage({
             type: "v2:call:join-session",
             payload: {
@@ -201,8 +204,9 @@ export function useCallEngineV2(
           console.log('[V2] ✅ v2:call:join-session message sent for caller');
         } else {
           console.error('[V2] ❌ Cannot join session - missing sessionCode!', {
-            currentState,
-            payload
+            callId: currentState.currentCallId || payload.call?.id || payload.callId,
+            phase: currentState.phase,
+            role: currentState.role,
           });
         }
         break;
@@ -390,7 +394,7 @@ export function useCallEngineV2(
         break;
 
       case "v2:error":
-        console.error("V2 call error:", payload);
+        console.error("V2 call error received");
         setState(prev => ({
           ...prev,
           errors: [...prev.errors, payload.message || "Unknown error"]
@@ -676,7 +680,7 @@ export function useCallEngineV2(
         break;
 
       case "session-users":
-        console.log(`[V2] Session users received:`, payload.users);
+        console.log(`[V2] Session participant list received (${payload.users?.length || 0})`);
         // Create peer connections for all existing users in the session
         if (payload.users && Array.isArray(payload.users)) {
           payload.users.forEach((sessionUser: any) => {
@@ -886,10 +890,9 @@ export function useCallEngineV2(
 
     console.log('[V2] ✅ Setting up WebSocket message listener');
     const handleMessage = (event: MessageEvent) => {
-      console.log('[V2] 🎯 handleMessage received event:', event.data);
       try {
         const data = JSON.parse(event.data);
-        console.log('[V2] 📨 Parsed message:', data.type, data);
+        console.log('[V2] Parsed message:', data.type);
         
         // Process v2 messages and WebRTC signaling messages
         const isV2Message = data.type?.startsWith("v2:");
@@ -970,23 +973,12 @@ export function useCallEngineV2(
     console.log(`[V2] 🔧 Creating new peer connection for ${peerId}`);
     
     try {
-      // Get TURN servers from environment
+      // Never ship long-lived TURN credentials in the web bundle. Production
+      // calling remains disabled for this release; future calling must obtain
+      // short-lived ICE credentials from an authorized server endpoint.
       const iceServers: RTCIceServer[] = [
         { urls: 'stun:stun.l.google.com:19302' }
       ];
-      
-      // Add TURN server if configured
-      const turnUrl = import.meta.env.VITE_TURN_URL;
-      const turnUser = import.meta.env.VITE_TURN_USER;
-      const turnPass = import.meta.env.VITE_TURN_PASS;
-      
-      if (turnUrl && turnUser && turnPass) {
-        iceServers.push({
-          urls: turnUrl,
-          username: turnUser,
-          credential: turnPass
-        });
-      }
       
       const configuration: RTCConfiguration = {
         iceServers,
@@ -1176,7 +1168,9 @@ export function useCallEngineV2(
       ws.send(JSON.stringify(message));
       console.log(`[V2 sendMessage] ✅ Message sent: ${message.type}`);
     } else {
-      console.error(`[V2 sendMessage] ❌ WebSocket not ready (state: ${stateLabel}), cannot send message:`, message);
+      console.error(
+        `[V2 sendMessage] WebSocket not ready (state: ${stateLabel}); message type ${message.type} was not sent`,
+      );
     }
   }, [wsRef]); // Depend on ref not its contents
 
@@ -1219,18 +1213,26 @@ export function useCallEngineV2(
       const currentState = stateRef.current;
       console.log('[V2] Current state from ref:', { 
         callId: currentState.currentCallId, 
-        sessionCode: currentState.sessionCode,
+        hasSessionCode: Boolean(currentState.sessionCode),
         phase: currentState.phase,
         role: currentState.role
       });
       
       if (!currentState.currentCallId) {
-        console.error('[V2] ❌ Cannot answer call - missing callId!', currentState);
+        console.error('[V2] ❌ Cannot answer call - missing callId!', {
+          phase: currentState.phase,
+          role: currentState.role,
+          hasSessionCode: Boolean(currentState.sessionCode),
+        });
         return;
       }
       
       if (!currentState.sessionCode) {
-        console.error('[V2] ❌ Cannot answer call - missing sessionCode!', currentState);
+        console.error('[V2] ❌ Cannot answer call - missing sessionCode!', {
+          callId: currentState.currentCallId,
+          phase: currentState.phase,
+          role: currentState.role,
+        });
         console.error('[V2] This means the incoming-call message was not processed correctly!');
         return;
       }
@@ -1249,7 +1251,7 @@ export function useCallEngineV2(
       console.log('[V2] ✅ v2:answer_call message sent');
       
       // CRITICAL: Also join the WebRTC session so we can receive offers!
-      console.log('[V2] Callee joining session after accepting. SessionCode:', currentState.sessionCode);
+      console.log('[V2] Callee joining session after accepting');
       console.log('[V2] Sending v2:call:join-session message...');
       sendMessage({
         type: "v2:call:join-session",

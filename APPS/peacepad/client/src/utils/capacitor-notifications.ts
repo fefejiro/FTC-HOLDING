@@ -77,9 +77,11 @@ async function initWebPush(): Promise<void> {
     throw new Error('Web push not supported in this browser');
   }
 
-  const permission = await Notification.requestPermission();
-  if (permission !== 'granted') {
-    throw new Error('Notification permission denied');
+  // Initialization may run during app startup. It must never trigger the
+  // browser permission prompt; only an explicit user action may do that.
+  if (Notification.permission !== 'granted') {
+    console.log('[Notifications] Web permission has not been granted; skipping auto-init');
+    return;
   }
 
   const registration = await navigator.serviceWorker.register('/sw.js');
@@ -170,7 +172,7 @@ async function setupNativeListeners() {
 
   try {
     PushNotifications.addListener('registration', async (token: Token) => {
-      console.log('[Notifications] Device token:', token.value);
+      console.log('[Notifications] Native device registration completed');
       try {
         await fetch('/api/push/register-native', {
           method: 'POST',
@@ -188,11 +190,11 @@ async function setupNativeListeners() {
     });
 
     PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
-      console.log('[Notifications] Push received:', notification);
+      console.log('[Notifications] Push received');
     });
 
     PushNotifications.addListener('pushNotificationActionPerformed', (action: ActionPerformed) => {
-      console.log('[Notifications] Notification action:', action);
+      console.log('[Notifications] Notification action received');
       const data = action.notification.data;
       if (data.url) window.location.href = data.url;
       else if (data.conversationId) window.location.href = '/messages';

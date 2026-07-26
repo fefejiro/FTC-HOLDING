@@ -89,7 +89,7 @@ async function upsertUser(
   // Send admin notification for new user signups
   if (isNewUser) {
     const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'New User';
-    console.log(`[Auth] New user signed up: ${userName} (${user.email})`);
+    console.log("[Auth] New user signup completed");
     
     // Send admin notification email asynchronously (don't block auth flow)
     sendNewUserAdminNotification(
@@ -235,7 +235,10 @@ export async function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  const oidcEnabled = appConfig.auth.oidcEnabled;
+  // Public OIDC/Supabase sign-in is intentionally unavailable in the focused
+  // App Review recovery release. Reviewer access is isolated in softAuth.
+  const legacyPublicAuthDisabled = process.env.NODE_ENV === "production";
+  const oidcEnabled = appConfig.auth.oidcEnabled && !legacyPublicAuthDisabled;
   let oidcProviderConfig: Awaited<ReturnType<typeof getOidcConfig>> | null = null;
 
   const verify: VerifyFunction = async (
@@ -290,6 +293,9 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", async (req, res, next) => {
+    if (legacyPublicAuthDisabled) {
+      return res.status(404).json({ message: "Not found" });
+    }
     if (!oidcEnabled) {
       return res.status(503).json({ message: "OIDC authentication is not configured." });
     }
@@ -308,13 +314,16 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/callback", async (req, res, next) => {
+    if (legacyPublicAuthDisabled) {
+      return res.status(404).send("Not found");
+    }
     if (!oidcEnabled) {
       return res.status(503).send("OIDC authentication is not configured.");
     }
     try {
       const stateParam = req.query.state as string | undefined;
       const codeParam = req.query.code as string | undefined;
-      console.log(`[Auth] Callback received - hostname: ${req.hostname}, state: ${stateParam?.substring(0, 8)}...`);
+      console.log(`[Auth] Callback received - hostname: ${req.hostname}`);
       
       // Check if this is a mobile app OAuth flow by matching state against database
       const mobileState = stateParam ? await getMobileAuthState(stateParam) : null;
@@ -377,7 +386,7 @@ export async function setupAuth(app: Express) {
             expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 min expiry
           });
           
-          console.log("[Auth] Mobile auth - generated one-time token for user:", claims.sub);
+          console.log("[Auth] Mobile auth generated a one-time token");
           
           // Redirect to custom scheme - this always triggers the Android intent-filter
           // The app's deep link handler will exchange this token for a session in the WebView
@@ -432,6 +441,9 @@ export async function setupAuth(app: Express) {
   // Uses the standard /api/callback but stores state to detect mobile flow
   // (session doesn't persist across external browser → app WebView)
   app.get("/api/login/mobile", async (req, res, next) => {
+    if (legacyPublicAuthDisabled) {
+      return res.status(404).json({ message: "Not found" });
+    }
     if (!oidcEnabled) {
       return res.status(503).json({ message: "OIDC authentication is not configured." });
     }
@@ -465,7 +477,7 @@ export async function setupAuth(app: Express) {
         console.error("[Auth] Failed to cleanup expired mobile auth states:", err)
       );
       
-      console.log(`[Auth] Mobile state created: ${mobileState.substring(0, 8)}... with PKCE verifier stored`);
+      console.log("[Auth] Mobile state created with PKCE verifier stored");
       
       // Manually construct the OIDC authorization URL
       // This avoids passport storing PKCE in session (which Chrome can't access)
@@ -491,6 +503,9 @@ export async function setupAuth(app: Express) {
   // Mobile auth completion page - served as HTML inside the WebView
   // After OAuth callback creates the session, this page redirects to the app
   app.get("/api/auth/mobile-complete", (req, res) => {
+    if (legacyPublicAuthDisabled) {
+      return res.status(404).send("Not found");
+    }
     const success = req.query.success === 'true';
     const error = req.query.error as string | undefined;
     
@@ -548,6 +563,9 @@ a{display:inline-block;padding:0.75rem 2rem;background:#7c3aed;color:#fff;border
   // to peacepad://auth-success?token=xxx. The app's deep link handler calls this endpoint
   // to create a proper session cookie inside the WebView.
   app.post("/api/auth/exchange-token", async (req, res) => {
+    if (legacyPublicAuthDisabled) {
+      return res.status(404).json({ message: "Not found" });
+    }
     try {
       const { token } = req.body;
       
@@ -592,11 +610,16 @@ a{display:inline-block;padding:0.75rem 2rem;background:#7c3aed;color:#fff;border
       // Fallback: get user from database (won't have OAuth tokens but better than nothing)
       if (!sessionUser) {
         const user = await storage.getUser(tokenRecord.userId);
-        if (!user) {
-          console.log("[Auth] Token exchange failed - user not found:", tokenRecord.userId);
+        if (!user || user.isDeactivated || user.deletedAt) {
+          console.log("[Auth] Token exchange failed because the account is unavailable");
           return res.status(401).json({ message: "User not found" });
         }
         sessionUser = user;
+      }
+
+      const storedUser = await storage.getUser(tokenRecord.userId);
+      if (!storedUser || storedUser.isDeactivated || storedUser.deletedAt) {
+        return res.status(401).json({ message: "User not found" });
       }
       
       // Log user in - creates session cookie in WebView context
@@ -606,7 +629,7 @@ a{display:inline-block;padding:0.75rem 2rem;background:#7c3aed;color:#fff;border
           return res.status(500).json({ message: "Failed to create session" });
         }
         
-        console.log("[Auth] Token exchange successful for user:", tokenRecord.userId);
+        console.log("[Auth] Token exchange completed");
         return res.json({ success: true });
       });
     } catch (error) {
@@ -618,6 +641,9 @@ a{display:inline-block;padding:0.75rem 2rem;background:#7c3aed;color:#fff;border
   // Exchange a Supabase access token for the existing server-side session cookie.
   // This keeps the current middleware and route auth model unchanged.
   app.post("/api/auth/supabase/exchange", async (req, res) => {
+    if (legacyPublicAuthDisabled) {
+      return res.status(404).json({ message: "Not found" });
+    }
     try {
       const accessToken = getStringValue(req.body?.accessToken);
       if (!accessToken) {
@@ -748,6 +774,16 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
+  const userId = user?.claims?.sub || user?.id;
+  try {
+    const storedUser = userId ? await storage.getUser(userId) : undefined;
+    if (!storedUser || storedUser.isDeactivated || storedUser.deletedAt) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+  } catch {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
   const now = Math.floor(Date.now() / 1000);
   if (now <= user.expires_at) {
     return next();
@@ -785,7 +821,7 @@ export const isAdmin: RequestHandler = async (req: any, res, next) => {
   // Check if user has admin flag
   try {
     const dbUser = await storage.getUser(user.claims?.sub);
-    if (!dbUser?.isAdmin) {
+    if (!dbUser?.isAdmin || dbUser.isDeactivated || dbUser.deletedAt) {
       return res.status(403).json({ message: "Admin access required" });
     }
     return next();

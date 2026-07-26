@@ -135,18 +135,20 @@ export default function HelpPage() {
                 <AccordionContent>
                   <div className="space-y-2 text-sm">
                     <p>
-                      <strong>Yes, your conversations are private.</strong> Only you and your family members
-                      can see messages in your partnership.
+                      PeacePad limits in-app message access to authenticated conversation
+                      participants. Authorized service providers may process information only as
+                      described in the Privacy Policy.
                     </p>
                     <p>Security features:</p>
                     <ul className="list-disc list-inside space-y-1 ml-2">
-                      <li>End-to-end encryption for messages</li>
+                      <li>Transport encryption for data in transit</li>
                       <li>Secure authentication</li>
                       <li>Partnership-scoped conversations</li>
-                      <li>No third-party access</li>
+                      <li>Authenticated, record-aware access controls</li>
                     </ul>
                     <p className="text-muted-foreground mt-2">
-                      Note: If you opt in to tone analysis, messages are analyzed to provide feedback
+                      PeacePad messages are not end-to-end encrypted. Optional AI processing stays
+                      off unless you choose it.
                     </p>
                   </div>
                 </AccordionContent>
@@ -298,12 +300,12 @@ export default function HelpPage() {
                     <p>To disable tone analysis:</p>
                     <ol className="list-decimal list-inside space-y-1 ml-2">
                       <li>Go to Settings</li>
-                      <li>Find "Privacy & Consent"</li>
-                      <li>Toggle off "Message Tone Analysis"</li>
-                      <li>Save your preferences</li>
+                      <li>Find "Optional AI processing"</li>
+                      <li>Turn off "Allow third-party AI message processing"</li>
                     </ol>
                     <p className="text-muted-foreground mt-2">
-                      Your choice is respected and can be changed anytime
+                      The change is saved immediately. Rule-based message guidance remains
+                      available while third-party AI processing is off.
                     </p>
                   </div>
                 </AccordionContent>

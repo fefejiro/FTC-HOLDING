@@ -6,17 +6,38 @@ import { storage } from "./storage";
 import { nanoid } from "nanoid";
 import { pool } from "./db";
 import { createRateLimiter } from "./rateLimiter";
+import {
+  getReviewerAuthConfig,
+  reviewerCredentialsMatch,
+  reviewerLoginRateLimiter,
+} from "./reviewerAuth";
 
 export const GUEST_COOKIE_NAME = "peacepad_guest";
 const GUEST_TRIAL_MS = 14 * 24 * 60 * 60 * 1000;
+const REVIEWER_SESSION_MS = 30 * 24 * 60 * 60 * 1000;
 const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const isDevLogging = process.env.NODE_ENV !== "production";
 
 function getClientIp(req: any): string {
-  const forwarded = String(req?.headers?.["x-forwarded-for"] || "")
-    .split(",")[0]
-    .trim();
-  return forwarded || req?.ip || req?.socket?.remoteAddress || "unknown";
+  // Express resolves req.ip according to the configured trusted-proxy policy.
+  // Never trust a caller-controlled X-Forwarded-For header directly.
+  return req?.ip || req?.socket?.remoteAddress || "unknown";
+}
+
+function isValidGuestProfileImage(value: unknown): boolean {
+  if (value === undefined || value === null || value === "") {
+    return true;
+  }
+  if (typeof value !== "string") {
+    return false;
+  }
+  if (/^avatar:[a-z0-9_-]{1,64}$/i.test(value)) {
+    return true;
+  }
+  return (
+    value.length <= 350_000 &&
+    /^data:image\/jpeg;base64,[a-z0-9+/]+={0,2}$/i.test(value)
+  );
 }
 
 const guestCreationRateLimiter = createRateLimiter({
@@ -176,7 +197,7 @@ export async function resolveGuestIdentity(
   }
 
   const user = await storage.getUser(sessionRecord.userId);
-  if (!user) {
+  if (!user || user.isDeactivated || user.deletedAt) {
     return null;
   }
 
@@ -201,6 +222,8 @@ async function createGuestSession(req: any, payload: any) {
     typeof payload?.displayName === "string" ? payload.displayName.trim().slice(0, 80) : "";
   const profileImageUrl = payload?.profileImageUrl;
   const hasAcceptedConsent = Boolean(payload?.hasAcceptedConsent);
+  const aiMessageConsent = payload?.aiMessageConsent === true;
+  const aiCallConsent = payload?.aiCallConsent === true;
 
   const shortGuestId = nanoid(6);
   const sessionId = payload?.sessionId || nanoid(16);
@@ -215,6 +238,9 @@ async function createGuestSession(req: any, payload: any) {
     guestId: shortGuestId,
     profileImageUrl: profileImageUrl || undefined,
     termsAcceptedAt: hasAcceptedConsent ? now : undefined,
+    privacyAccepted: hasAcceptedConsent,
+    aiMessageConsent,
+    aiCallConsent,
   });
 
   const session = await storage.createGuestSession({
@@ -284,7 +310,7 @@ async function startOrRestoreGuest(req: any, payload: any) {
     const isExpired = expiresAtDate.getTime() <= Date.now();
     const user = await storage.getUser(existingSession.userId);
 
-    if (!user) {
+    if (!user || user.isDeactivated || user.deletedAt) {
       throw new Error("Guest user not found for existing session");
     }
 
@@ -314,7 +340,28 @@ async function startOrRestoreGuest(req: any, payload: any) {
 
 async function handleGuestStart(req: any, res: any, mode: "contract" | "legacy") {
   try {
+    if (req.body?.hasAcceptedConsent !== true) {
+      return res.status(428).json({
+        code: "CONSENT_REQUIRED",
+        message: "Accept the Terms and acknowledge the Privacy Policy before creating a guest session.",
+      });
+    }
+    if (!isValidGuestProfileImage(req.body?.profileImageUrl)) {
+      return res.status(400).json({ message: "Invalid guest profile image" });
+    }
+
     const result = await startOrRestoreGuest(req, req.body || {});
+
+    // Required consent is the gate for all guest storage. Optional AI choices
+    // are persisted separately and remain false unless explicitly selected.
+    const { user: consentedUser } = await storage.upsertUser({
+      id: result.user.id,
+      termsAcceptedAt: result.user.termsAcceptedAt || new Date(),
+      privacyAccepted: true,
+      aiMessageConsent: req.body?.aiMessageConsent === true,
+      aiCallConsent: req.body?.aiCallConsent === true,
+    });
+    result.user = consentedUser;
 
     if (result.status === "expired") {
       const expiresAt = new Date(result.session.expiresAt);
@@ -410,12 +457,12 @@ export function getSession() {
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
     name: "peacepad.sid",
     cookie: {
       httpOnly: true,
       secure: isProduction,
-      sameSite: isProduction ? "none" : "lax",
+      sameSite: "lax",
       maxAge: sessionTtl,
       path: "/",
     },
@@ -584,6 +631,84 @@ export async function setupSoftAuth(app: Express, options: SetupSoftAuthOptions 
   // Backward-compatible endpoint used by current client code.
   app.post("/api/auth/guest", guestCreationLimiter, guestLegacyStartHandler);
 
+  // App Review access is deliberately isolated from public OAuth. The endpoint
+  // is inert unless all secret-backed reviewer settings are explicitly enabled.
+  app.post(
+    "/api/auth/reviewer-session",
+    reviewerLoginRateLimiter,
+    async (req: any, res: any) => {
+      try {
+        const config = getReviewerAuthConfig();
+        if (!config) {
+          return res.status(404).json({ message: "Account access is unavailable." });
+        }
+
+        const email = typeof req.body?.email === "string" ? req.body.email : "";
+        const password = typeof req.body?.password === "string" ? req.body.password : "";
+        if (
+          email.length < 3 ||
+          email.length > 254 ||
+          password.length < 1 ||
+          password.length > 512 ||
+          !(await reviewerCredentialsMatch(config, email, password))
+        ) {
+          return res.status(401).json({ message: "The email or password is incorrect." });
+        }
+
+        const now = new Date();
+        const expiresAt = new Date(now.getTime() + REVIEWER_SESSION_MS);
+        const user = await storage.getUser(config.userId);
+        if (
+          !user ||
+          user.email?.trim().toLowerCase() !== config.email ||
+          user.isGuest ||
+          user.isAdmin ||
+          user.isDeactivated ||
+          user.deletedAt
+        ) {
+          // The account is seeded as a separate deployment step. Never recreate
+          // it during sign-in: if the reviewer deletes it, deletion stays final.
+          return res.status(503).json({ message: "Account access is temporarily unavailable." });
+        }
+
+        const sessionRecord = await storage.createGuestSession({
+          guestId: randomUUID(),
+          sessionId: nanoid(32),
+          userId: user.id,
+          displayName: user.displayName || "Apple App Review",
+          lastActive: now,
+          lastSeenAt: now,
+          expiresAt,
+        });
+
+        setGuestCookie(req, res, sessionRecord.guestId, expiresAt);
+        attachGuestIdentityToRequest(req, {
+          session: sessionRecord,
+          user,
+          trial: {
+            expiresAt: expiresAt.toISOString(),
+            daysRemaining: 30,
+            isExpired: false,
+          },
+        });
+
+        return res.json({
+          success: true,
+          user,
+          sessionId: sessionRecord.sessionId,
+          expiresAt: expiresAt.toISOString(),
+        });
+      } catch (error) {
+        // Do not log submitted credentials or echo secret configuration.
+        console.error(
+          "[Reviewer Auth] Sign-in failed:",
+          error instanceof Error ? error.message : "Unknown error",
+        );
+        return res.status(500).json({ message: "Account access is temporarily unavailable." });
+      }
+    },
+  );
+
   app.get("/api/auth/me", async (req: any, res) => {
     const guestIdentity = await resolveGuestIdentity(req);
     if (!guestIdentity) {
@@ -637,9 +762,14 @@ export const isSoftAuthenticated: RequestHandler = async (req: any, res, next) =
 
 export const requireSession: RequestHandler = async (req: any, res, next) => {
   if (req.isAuthenticated && req.isAuthenticated() && req.user?.expires_at) {
-    req.guest = null;
-    req.identityMode = "user";
-    return next();
+    const userId = req.user?.claims?.sub || req.user?.id;
+    const storedUser = userId ? await storage.getUser(userId) : undefined;
+    if (storedUser && !storedUser.isDeactivated && !storedUser.deletedAt) {
+      req.guest = null;
+      req.identityMode = "user";
+      return next();
+    }
+    return res.status(401).json({ message: "Unauthorized" });
   }
 
   try {
@@ -664,7 +794,11 @@ export const requireAnyIdentity: RequestHandler = requireSession;
 
 export const requireAuthOnly: RequestHandler = async (req: any, res, next) => {
   if (req.isAuthenticated && req.isAuthenticated() && req.user?.expires_at) {
-    return next();
+    const userId = req.user?.claims?.sub || req.user?.id;
+    const storedUser = userId ? await storage.getUser(userId) : undefined;
+    if (storedUser && !storedUser.isDeactivated && !storedUser.deletedAt) {
+      return next();
+    }
   }
   return res.status(401).json({ message: "Unauthorized" });
 };
@@ -679,13 +813,28 @@ export const trialEnforcer: RequestHandler = async (req: any, res, next) => {
   if (
     originalUrl.startsWith("/api/guest/start") ||
     originalUrl.startsWith("/api/auth/guest") ||
+    originalUrl.startsWith("/api/auth/reviewer-session") ||
     originalUrl.startsWith("/api/auth/upgrade") ||
-    originalUrl.startsWith("/api/auth/logout")
+    originalUrl.startsWith("/api/auth/logout") ||
+    originalUrl.startsWith("/api/user/consent") ||
+    originalUrl.startsWith("/api/users/accept-terms") ||
+    originalUrl.startsWith("/api/user/account")
   ) {
     return next();
   }
 
   if (req.isAuthenticated && req.isAuthenticated() && req.user?.expires_at) {
+    const userId = req.user?.claims?.sub || req.user?.id;
+    const storedUser = userId ? await storage.getUser(userId) : undefined;
+    if (!storedUser || storedUser.isDeactivated || storedUser.deletedAt) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    if (!storedUser.termsAcceptedAt || storedUser.privacyAccepted !== true) {
+      return res.status(428).json({
+        code: "CONSENT_REQUIRED",
+        message: "Accept the Terms and acknowledge the Privacy Policy before saving data.",
+      });
+    }
     return next();
   }
 
@@ -696,6 +845,16 @@ export const trialEnforcer: RequestHandler = async (req: any, res, next) => {
 
     if (!guestIdentity) {
       return next();
+    }
+
+    if (
+      !guestIdentity.user.termsAcceptedAt ||
+      guestIdentity.user.privacyAccepted !== true
+    ) {
+      return res.status(428).json({
+        code: "CONSENT_REQUIRED",
+        message: "Accept the Terms and acknowledge the Privacy Policy before saving data.",
+      });
     }
 
     if (guestIdentity.trial.isExpired) {

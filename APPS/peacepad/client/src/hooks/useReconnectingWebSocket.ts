@@ -60,7 +60,7 @@ export function useReconnectingWebSocket({
         data,
         timestamp: Date.now(),
       });
-      console.log('Message queued (WebSocket disconnected):', data.substring(0, 50));
+      console.log('Message queued while WebSocket is disconnected');
       return false;
     }
   }, []);
@@ -134,7 +134,7 @@ export function useReconnectingWebSocket({
 
       const handleMessage = (event: Event) => {
         const messageEvent = event as MessageEvent;
-        console.log('[WS_HOOK] Message received, calling handler:', messageEvent.data?.substring?.(0, 100));
+        console.log('[WS_HOOK] Message received; calling handler');
         onMessageRef.current(messageEvent);
         console.log('[WS_HOOK] Handler called successfully');
       };

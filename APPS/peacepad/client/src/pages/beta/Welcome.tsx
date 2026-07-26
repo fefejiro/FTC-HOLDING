@@ -89,7 +89,9 @@ export default function BetaWelcome() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              All conversations and data in PeacePad are private and encrypted. As a beta tester, you've agreed to our NDA. We take your trust seriously and will never share your personal information or conversations.
+              PeacePad uses authenticated access controls and transport encryption. Review the
+              Privacy Policy for the processors and limited disclosures involved in providing the
+              service.
             </p>
           </CardContent>
         </Card>

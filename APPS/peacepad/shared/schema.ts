@@ -1406,7 +1406,7 @@ export const agentSettings = pgTable("agent_settings", {
   dailySummaryTime: varchar("daily_summary_time").default('20:00'),
   weeklyReportDay: varchar("weekly_report_day").default('sunday'),
   // Privacy
-  allowPatternLearning: boolean("allow_pattern_learning").notNull().default(true),
+  allowPatternLearning: boolean("allow_pattern_learning").notNull().default(false),
   dataRetentionMonths: integer("data_retention_months").default(12),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

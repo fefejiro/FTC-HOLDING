@@ -1,125 +1,194 @@
+import { useState } from "react";
+import { AlertTriangle, ArrowLeft, LockKeyhole, Mail, Trash2 } from "lucide-react";
+import { Link } from "wouter";
 import { SEOHead } from "@/components/SEOHead";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Trash2, AlertTriangle, Mail, Shield, LogIn } from "lucide-react";
-import { Link } from "wouter";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { queryClient } from "@/lib/queryClient";
+import { purgePeacePadBrowserCaches } from "@/lib/privacyCache";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function DeleteAccountPage() {
+  const { user, isLoading } = useAuth();
+  const [confirmation, setConfirmation] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const deleteAccount = async (confirmedValue = confirmation) => {
+    if (confirmedValue !== "DELETE") {
+      setError('Enter "DELETE" exactly to confirm.');
+      return;
+    }
+
+    setError(null);
+    setIsDeleting(true);
+    try {
+      const response = await fetch("/api/user/account", {
+        method: "DELETE",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmation: confirmedValue }),
+      });
+      const data = (await response.json().catch(() => null)) as { message?: string } | null;
+      if (!response.ok) {
+        throw new Error(data?.message || "PeacePad could not delete this account.");
+      }
+
+      const hasSeenIntro = localStorage.getItem("hasSeenIntro");
+      localStorage.clear();
+      if (hasSeenIntro === "true") {
+        localStorage.setItem("hasSeenIntro", "true");
+      }
+      queryClient.clear();
+      await purgePeacePadBrowserCaches().catch(() => undefined);
+      window.location.href = "/";
+    } catch (deletionError) {
+      setError(
+        deletionError instanceof Error
+          ? deletionError.message
+          : "PeacePad could not delete this account.",
+      );
+      setIsDeleting(false);
+    }
+  };
+
+  const renderAction = () => {
+    if (isLoading) {
+      return <p className="text-sm text-muted-foreground">Checking your account…</p>;
+    }
+
+    if (!user) {
+      return (
+        <div className="space-y-4">
+          <p className="text-sm leading-6 text-muted-foreground">
+            Sign in to the account you want to delete. PeacePad must verify the active session
+            before deleting account data.
+          </p>
+          <Button asChild className="w-full sm:w-auto">
+            <Link href="/account-access">
+              <LockKeyhole className="mr-2 h-4 w-4" />
+              Open account access
+            </Link>
+          </Button>
+        </div>
+      );
+    }
+
+    if (user.isGuest) {
+      return (
+        <div className="space-y-4">
+          <p className="text-sm leading-6 text-muted-foreground">
+            This is a temporary guest session, not a registered account. Deleting it immediately
+            removes its server-side guest data and signs this installation out.
+          </p>
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={isDeleting}
+            onClick={() => void deleteAccount("DELETE")}
+            data-testid="button-delete-guest-data"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            {isDeleting ? "Deleting guest data…" : "Delete guest data"}
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-5">
+        <div className="rounded-2xl border border-destructive/25 bg-destructive/5 p-4">
+          <p className="font-medium">This cannot be undone.</p>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            PeacePad will immediately remove your account, profile, private records, sessions,
+            tokens, and uploaded files. Shared messages and workspace history that your co-parent
+            must still be able to access are retained without your identity and linked only to a
+            permanently disabled “Deleted PeacePad user” record. You cannot recover the account by
+            signing in again.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="delete-confirmation">
+            Enter <strong>DELETE</strong> to confirm
+          </Label>
+          <Input
+            id="delete-confirmation"
+            value={confirmation}
+            onChange={(event) => setConfirmation(event.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+            data-testid="input-delete-confirmation"
+          />
+        </div>
+
+        {error && (
+          <p
+            role="alert"
+            className="rounded-xl border border-destructive/25 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+            data-testid="delete-account-error"
+          >
+            {error}
+          </p>
+        )}
+
+        <Button
+          type="button"
+          variant="destructive"
+          disabled={confirmation !== "DELETE" || isDeleting}
+          onClick={() => void deleteAccount()}
+          data-testid="button-delete-account-permanently"
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          {isDeleting ? "Deleting account…" : "Permanently delete my account"}
+        </Button>
+      </div>
+    );
+  };
+
   return (
     <>
       <SEOHead
         title="Delete Account — PeacePad"
-        description="Learn how to delete your PeacePad account and all associated data. Your privacy matters to us."
+        description="Permanently delete a PeacePad account and associated account data."
       />
-      <div className="min-h-screen-dvh bg-background flex flex-col">
-        <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+      <div className="flex min-h-screen-dvh flex-col bg-background">
+        <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="container flex h-14 items-center gap-4 px-4">
-            <Link href="/">
-              <Button variant="ghost" size="sm" data-testid="button-back-home">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to PeacePad
-              </Button>
-            </Link>
-            <h1 className="text-lg font-semibold">Delete Account</h1>
+            <Button asChild variant="ghost" size="sm">
+              <Link href={user ? "/settings" : "/"}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+              </Link>
+            </Button>
+            <h1 className="text-lg font-semibold">Delete account</h1>
           </div>
         </header>
-        
-        <main className="flex-1 w-full max-w-4xl mx-auto p-6">
-          <div className="space-y-8">
-            <div className="text-center py-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-destructive/10 mb-4">
-                <Trash2 className="h-8 w-8 text-destructive" />
+
+        <main className="mx-auto w-full max-w-2xl flex-1 p-5 sm:p-8">
+          <Card className="border-destructive/20 shadow-lg">
+            <CardHeader>
+              <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10">
+                <AlertTriangle className="h-7 w-7 text-destructive" />
               </div>
-              <h2 className="text-2xl font-bold mb-2">Delete Your PeacePad Account</h2>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                We're sorry to see you go. Follow the steps below to permanently delete your account and all associated data.
-              </p>
-            </div>
+              <CardTitle className="text-2xl">Delete your PeacePad account</CardTitle>
+              <CardDescription>
+                Review the impact and confirm directly in the app. Emailing support is not required.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>{renderAction()}</CardContent>
+          </Card>
 
-            <Card className="border-destructive/20 shadow-lg">
-              <CardHeader className="bg-destructive/5 border-b border-destructive/10 pb-6">
-                <CardTitle className="text-2xl flex items-center gap-3 text-destructive">
-                  <Shield className="w-8 h-8" />
-                  30-Day Recovery & Data Retention
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-8 space-y-6">
-                <div className="grid gap-6">
-                  <div className="flex gap-4">
-                    <div className="flex-none w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center">
-                      <Shield className="w-6 h-6 text-primary" />
-                    </div>
-                    <div className="space-y-1">
-                      <h3 className="font-bold text-lg">Immediate Account Deactivation</h3>
-                      <p className="text-muted-foreground leading-relaxed">Your profile, messages, and all active partnership data are hidden from view immediately after you confirm deletion.</p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4">
-                    <div className="flex-none w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center">
-                      <Shield className="w-6 h-6 text-primary" />
-                    </div>
-                    <div className="space-y-1">
-                      <h3 className="font-bold text-lg">30-Day Recovery Period</h3>
-                      <p className="text-muted-foreground leading-relaxed">We hold your data in a secure, deactivated state for 30 days. You can cancel the deletion and restore all data simply by signing back in during this time.</p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4">
-                    <div className="flex-none w-12 h-12 bg-destructive/10 rounded-2xl flex items-center justify-center">
-                      <Trash2 className="w-6 h-6 text-destructive" />
-                    </div>
-                    <div className="space-y-1">
-                      <h3 className="font-bold text-lg">Permanent Purge</h3>
-                      <p className="text-muted-foreground leading-relaxed">After 30 days, all personal data, messages, records, and files are permanently purged from our servers. This action is final and non-reversible.</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-8 border-t">
-                  <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                    <Trash2 className="w-6 h-6 text-destructive" />
-                    How to delete your account
-                  </h3>
-                  <div className="space-y-6">
-                    <div className="flex gap-4 items-start">
-                      <div className="flex-none w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">1</div>
-                      <p className="text-muted-foreground pt-1 italic font-medium">Log in to PeacePad at peacepad.ca or via the mobile app.</p>
-                    </div>
-                    <div className="flex gap-4 items-start">
-                      <div className="flex-none w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">2</div>
-                      <p className="text-muted-foreground pt-1 italic font-medium">Navigate to Settings &rarr; Privacy & Data &rarr; Delete Account.</p>
-                    </div>
-                    <div className="flex gap-4 items-start">
-                      <div className="flex-none w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">3</div>
-                      <p className="text-muted-foreground pt-1 italic font-medium">Review the warning and confirm by tapping "Permanently Delete My Data".</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-8 flex flex-col sm:flex-row gap-4">
-                  <Button asChild className="flex-1 min-h-12 text-lg rounded-xl" size="lg">
-                    <Link href="/settings">Open Settings Now</Link>
-                  </Button>
-                  <Button variant="outline" asChild className="flex-1 min-h-12 text-lg rounded-xl" size="lg">
-                    <a href="mailto:peacepad@peacepad.ca">Email Support Request</a>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-
-            <div className="text-center pt-4 border-t">
-              <p className="text-sm text-muted-foreground mb-4">
-                Have questions about data deletion?
-              </p>
-              <a href="mailto:peacepad@peacepad.ca">
-                <Button variant="outline" data-testid="button-contact-support">
-                  <Mail className="h-4 w-4 mr-2" />
-                  Contact Support
-                </Button>
-              </a>
-            </div>
+          <div className="mt-6 text-center">
+            <a
+              href="mailto:peacepad@peacepad.ca?subject=PeacePad account deletion question"
+              className="inline-flex items-center gap-2 text-sm text-muted-foreground underline"
+            >
+              <Mail className="h-4 w-4" />
+              Ask a deletion question
+            </a>
           </div>
         </main>
       </div>

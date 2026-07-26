@@ -576,7 +576,7 @@ If the original is already calm, still improve clarity/collaboration and avoid r
   }
 
   try {
-    console.log('[PrepChat] Analyzing draft:', draft.substring(0, 50) + '...');
+    console.log('[PrepChat] Analyzing consented draft', { characterCount: draft.length });
     
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',

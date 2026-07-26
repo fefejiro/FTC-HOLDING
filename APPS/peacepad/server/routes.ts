@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isAdmin } from "./replitAuth";
@@ -7,7 +7,6 @@ import {
   getUserId,
   isAuthenticatedEither,
   requireSession,
-  requireAuthOnly,
   createDemoPartnership,
   clearGuestCookie,
   resolveGuestIdentity,
@@ -33,6 +32,10 @@ import {
   insertSafetyPlanSchema,
   insertMessageSummarySchema,
   insertListeningSettingsSchema,
+  insertStorybookSchema,
+  insertStoryPageSchema,
+  insertShoppingListSchema,
+  insertShoppingItemSchema,
   type Partnership,
   type InsertPartnership,
 } from "@shared/schema";
@@ -92,12 +95,8 @@ import {
   callEngineV2, // CRITICAL FIX: Import V2 engine to register legacy sessions
 } from "./webrtc-signaling";
 import OpenAI from "openai";
-import { transcribeFromBase64 } from "./whisperService";
 import {
   analyzeEmotion,
-  generateSessionSummary,
-  generateEmotionIntervention,
-  generateTurnSummary,
   analyzeConflict,
   analyzeMessageComprehensive,
   generateSuggestedResponse,
@@ -145,6 +144,7 @@ import { createV2Router } from "./v2/routes/index";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import crypto from "node:crypto";
 import {
   buildParentingTipFallbackCatalog,
   buildWeatherActivityFallbackCatalog,
@@ -159,6 +159,27 @@ import {
   parseWebUpdateTelemetryPayload,
   recordWebUpdateTelemetry,
 } from "./lib/webUpdateTelemetry";
+import {
+  AI_CALL_CONSENT_REQUIRED_CODE,
+  AI_MESSAGE_CONSENT_REQUIRED_CODE,
+  buildPrivateMessageNotificationBody,
+  hasPersistedAiCallConsent,
+  hasPersistedAiMessageConsent,
+} from "./lib/privacyControls";
+import {
+  collectUserOwnedUploadPaths,
+  commitQuarantinedUploadDeletion,
+  quarantineUserOwnedUploadFiles,
+  reconcileQuarantinedUploadFiles,
+  restoreQuarantinedUploadFiles,
+} from "./userDataDeletion";
+import {
+  buildOwnerScopedUploadPath,
+  getUploadOwnerKey,
+  isOwnerScopedUploadReference,
+  listOwnerScopedUploadPaths,
+  type PeacePadUploadCategory,
+} from "./uploadOwnership";
 
 // Initialize OpenAI with proper error checking
 // Prioritize OPENAI_API_KEY (user's own key) over AI_INTEGRATIONS key which may have incorrect values
@@ -220,24 +241,91 @@ function extractActionsApiKey(req: any): string | null {
 }
 
 // Configure multer for call recordings
+const SAFE_UPLOAD_EXTENSION_BY_MIME: Record<string, string> = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/gif": ".gif",
+  "image/webp": ".webp",
+  "video/mp4": ".mp4",
+  "video/webm": ".webm",
+  "video/ogg": ".ogv",
+  "audio/mp3": ".mp3",
+  "audio/mpeg": ".mp3",
+  "audio/mp4": ".m4a",
+  "audio/m4a": ".m4a",
+  "audio/x-m4a": ".m4a",
+  "audio/wav": ".wav",
+  "audio/webm": ".webm",
+  "audio/ogg": ".ogg",
+  "application/pdf": ".pdf",
+  "text/plain": ".txt",
+  "text/csv": ".csv",
+  "application/msword": ".doc",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+  "application/vnd.ms-excel": ".xls",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+};
+
+function buildSafeUploadFilename(file: Express.Multer.File): string {
+  const safeExtension = SAFE_UPLOAD_EXTENSION_BY_MIME[file.mimetype];
+  if (!safeExtension) {
+    throw new Error("Unsupported upload type");
+  }
+  return `${Date.now()}-${crypto.randomBytes(18).toString("hex")}${safeExtension}`;
+}
+
+function buildOwnerUploadDestination(root: string) {
+  return (req: any, _file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) => {
+    const userId = getUserId(req);
+    if (!userId) {
+      cb(new Error("Authenticated upload owner is required"), "");
+      return;
+    }
+    const destination = path.join(root, getUploadOwnerKey(userId));
+    try {
+      fs.mkdirSync(destination, { recursive: true });
+      cb(null, destination);
+    } catch (error) {
+      cb(error as Error, "");
+    }
+  };
+}
+
 const uploadDir = path.join(process.cwd(), "uploads", "recordings");
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
 const uploadStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
+  destination: buildOwnerUploadDestination(uploadDir),
   filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
+    try {
+      cb(null, buildSafeUploadFilename(file));
+    } catch (error) {
+      cb(error as Error, "");
+    }
   },
 });
 
 const upload = multer({
   storage: uploadStorage,
   limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
+  fileFilter: (_req, file, cb) => {
+    const allowedMimeTypes = [
+      "video/mp4",
+      "video/webm",
+      "video/ogg",
+      "audio/mp3",
+      "audio/mpeg",
+      "audio/mp4",
+      "audio/m4a",
+      "audio/x-m4a",
+      "audio/wav",
+      "audio/webm",
+      "audio/ogg",
+    ];
+    cb(null, allowedMimeTypes.includes(file.mimetype));
+  },
 });
 
 // Configure multer for chat attachments
@@ -247,12 +335,13 @@ if (!fs.existsSync(chatAttachmentsDir)) {
 }
 
 const chatUploadStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, chatAttachmentsDir);
-  },
+  destination: buildOwnerUploadDestination(chatAttachmentsDir),
   filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
+    try {
+      cb(null, buildSafeUploadFilename(file));
+    } catch (error) {
+      cb(error as Error, "");
+    }
   },
 });
 
@@ -266,12 +355,14 @@ const chatUpload = multer({
       "image/png",
       "image/gif",
       "image/webp",
-      "image/svg+xml",
       "video/mp4",
       "video/webm",
       "video/ogg",
       "audio/mp3",
       "audio/mpeg",
+      "audio/mp4",
+      "audio/m4a",
+      "audio/x-m4a",
       "audio/wav",
       "audio/webm",
       "audio/ogg",
@@ -299,12 +390,13 @@ if (!fs.existsSync(receiptsDir)) {
 }
 
 const receiptUploadStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, receiptsDir);
-  },
+  destination: buildOwnerUploadDestination(receiptsDir),
   filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
+    try {
+      cb(null, buildSafeUploadFilename(file));
+    } catch (error) {
+      cb(error as Error, "");
+    }
   },
 });
 
@@ -336,12 +428,13 @@ if (!fs.existsSync(profilePhotosDir)) {
 }
 
 const profileUploadStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, profilePhotosDir);
-  },
+  destination: buildOwnerUploadDestination(profilePhotosDir),
   filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
+    try {
+      cb(null, buildSafeUploadFilename(file));
+    } catch (error) {
+      cb(error as Error, "");
+    }
   },
 });
 
@@ -355,13 +448,12 @@ const profileUpload = multer({
       "image/png",
       "image/gif",
       "image/webp",
-      "image/svg+xml",
     ];
 
     if (allowedMimeTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error(`Only image files (JPEG, PNG, GIF, WebP, SVG) are allowed for profile photos`));
+      cb(new Error(`Only image files (JPEG, PNG, GIF, WebP) are allowed for profile photos`));
     }
   },
 });
@@ -415,11 +507,7 @@ async function getUserPreferencesWithCoParent(userId: string): Promise<UserPrefe
   return prefs;
 }
 
-async function analyzeTone(
-  content: string,
-  userPrefs?: UserPreferences,
-  conversationHistory?: string[]
-): Promise<{
+async function analyzeTone(content: string): Promise<{
   tone: string;
   summary: string;
   emoji: string;
@@ -428,12 +516,7 @@ async function analyzeTone(
   translationToPlainEnglish?: string;
 }> {
   try {
-    console.log(`[Tone Analysis] ========== START ==========`);
-    console.log(`[Tone Analysis] Content: "${content}"`);
-    console.log(`[Tone Analysis] Content length: ${content.length}`);
-    if (userPrefs) {
-      console.log(`[Tone Analysis] User preferences:`, JSON.stringify(userPrefs));
-    }
+    console.log(`[Tone Analysis] Starting analysis for ${content.length} characters`);
 
     // Dev mode protection - return mock response to avoid token usage
     const devMode = isDevMode() && process.env.ALLOW_DEV_AI !== "true";
@@ -443,8 +526,7 @@ async function analyzeTone(
 
     if (devMode) {
       console.log(`[Tone Analysis] ✓ Using MOCK analysis (dev mode enabled)`);
-      const mockResult = mockToneAnalysis(content, userPrefs);
-      console.log(`[Tone Analysis] Mock result:`, JSON.stringify(mockResult));
+      const mockResult = mockToneAnalysis(content);
       console.log(`[Tone Analysis] ========== END (MOCK) ==========`);
       return mockResult;
     }
@@ -458,11 +540,11 @@ async function analyzeTone(
       console.error(
         `[Tone Analysis] Falling back to mock analysis. Set API_KEY environment variable to enable real AI.`
       );
-      return mockToneAnalysis(content, userPrefs);
+      return mockToneAnalysis(content);
     }
 
     // Check cache first to reduce duplicate API calls
-    const cacheKey = createCacheKey("tone", content + JSON.stringify(userPrefs || {}) + (conversationHistory?.join("|") || ""));
+    const cacheKey = createCacheKey("tone", content);
     const cached = aiCache.get<{
       tone: string;
       summary: string;
@@ -475,32 +557,6 @@ async function analyzeTone(
       return cached;
     }
     const maxTokens = getMaxTokens(250); // Increased for multi-language + manipulation detection
-
-    // Build personalized context based on user preferences (Myers-Briggs, communication style)
-    let personalizationContext = "";
-    if (userPrefs) {
-      const parts = [];
-      if (userPrefs.personalityType) {
-        parts.push(`My Myers-Briggs: ${userPrefs.personalityType}`);
-      }
-      if (userPrefs.coParentPersonalityType) {
-        parts.push(`Co-parent Myers-Briggs: ${userPrefs.coParentPersonalityType}${userPrefs.isCoParentPersonalityGuessed ? " (estimated)" : " (confirmed)"}`);
-      }
-      if (userPrefs.communicationStyle) {
-        parts.push(`Communication style: ${userPrefs.communicationStyle}`);
-      }
-      if (userPrefs.conflictResolutionStyle) {
-        parts.push(`Conflict resolution: ${userPrefs.conflictResolutionStyle}`);
-      }
-      if (parts.length > 0) {
-        personalizationContext = `\n\nUSER PROFILE:\n${parts.join("\n")}\nUse this to provide more accurate tone analysis and personality-tailored suggestions. If both personalities are known, tailor suggestions to bridge communication gaps between different personality types.`;
-      }
-    }
-
-    // Add conversation history to context if available
-    const historyContext = conversationHistory && conversationHistory.length > 0
-      ? `\n\nRECENT CONVERSATION HISTORY (for context):\n${conversationHistory.join("\n")}`
-      : "";
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -574,15 +630,9 @@ Respond ONLY with a JSON object.
     if (error instanceof Error && error.message.includes("API")) {
       console.error("[Tone Analysis] 🔑 API KEY ISSUE DETECTED - Check OpenAI credentials!");
     }
-    console.error(
-      "[Tone Analysis] Error stack:",
-      error instanceof Error ? error.stack : "no stack"
-    );
     console.error("[Tone Analysis] ========== FALLING BACK TO MOCK ANALYSIS ==========");
     // Use pattern matching fallback instead of generic "neutral"
-    const mockResult = mockToneAnalysis(content, userPrefs);
-    console.error("[Tone Analysis] Returned mock result:", JSON.stringify(mockResult));
-    return mockResult;
+    return mockToneAnalysis(content);
   }
 }
 
@@ -609,7 +659,6 @@ async function buildMessagePreviewPayload(
   const userPrefs = userId ? await getUserPreferencesWithCoParent(userId) : undefined;
 
   // Get recent conversation history for context (for both tone and CES analysis)
-  let conversationHistory: string[] | undefined;
   let conversationHistoryFull: Array<{
     content: string;
     senderId: string;
@@ -621,7 +670,6 @@ async function buildMessagePreviewPayload(
     const messages = await storage.getMessagesByUser(userId);
     const convMessages = messages.filter((m) => m.conversationId === conversationId).slice(-10); // CES trajectory
 
-    conversationHistory = convMessages.map((m) => m.content);
     conversationHistoryFull = convMessages.map((m) => ({
       content: m.content,
       senderId: m.senderId,
@@ -630,15 +678,15 @@ async function buildMessagePreviewPayload(
     }));
   }
 
-  // Run tone analysis
-  const {
-    tone,
-    summary,
-    emoji,
-    rewordingSuggestion,
-    manipulationFlags,
-    translationToPlainEnglish,
-  } = await analyzeTone(content, userPrefs, conversationHistory);
+  // Keep preflight deterministic and local. This path must not send message
+  // content to a third-party AI service.
+  const ruleBasedTone = analyzeRuleBasedTone(content);
+  const tone = ruleBasedTone.category;
+  const summary = ruleBasedTone.summary;
+  const emoji = ruleBasedTone.emoji;
+  const rewordingSuggestion = ruleBasedTone.rewordingSuggestion ?? null;
+  const manipulationFlags = ruleBasedTone.flags;
+  const translationToPlainEnglish = undefined;
 
   // Calculate Conflict Escalation Score (CES)
   let cesResult: CESResult | null = null;
@@ -698,8 +746,152 @@ async function getTranscribedText(filePath: string): Promise<string> {
   return transcription.text;
 }
 
+async function checkAiMessageConsent(userId: string): Promise<boolean> {
+  try {
+    return hasPersistedAiMessageConsent(await storage.getUser(userId));
+  } catch {
+    return false;
+  }
+}
+
+async function checkAiCallConsent(userId: string): Promise<boolean> {
+  try {
+    return hasPersistedAiCallConsent(await storage.getUser(userId));
+  } catch {
+    return false;
+  }
+}
+
+const PATTERN_LEARNING_ENABLED_FOR_RELEASE =
+  process.env.PEACEPAD_ENABLE_PATTERN_LEARNING === "true";
+const PATTERN_LEARNING_DISABLED_CODE = "PATTERN_LEARNING_DISABLED";
+
+async function checkPatternLearningConsent(userId: string): Promise<boolean> {
+  if (!PATTERN_LEARNING_ENABLED_FOR_RELEASE) {
+    return false;
+  }
+
+  try {
+    const [user, settings] = await Promise.all([
+      storage.getUser(userId),
+      storage.getAgentSettings(userId),
+    ]);
+    return hasPersistedAiMessageConsent(user) && settings?.allowPatternLearning === true;
+  } catch {
+    return false;
+  }
+}
+
+function buildLocalCallIntervention(currentEmotion: any) {
+  const emotion =
+    typeof currentEmotion?.emotion === "string"
+      ? currentEmotion.emotion.toLowerCase()
+      : "neutral";
+  const confidence = Number(currentEmotion?.confidence) || 0;
+  const interventionMessages: Record<string, string> = {
+    frustrated: "I notice tension rising—take a breath.",
+    tense: "This feels challenging—let's pause and refocus.",
+    defensive: "I hear a protective response—take a moment before continuing.",
+  };
+
+  if (!interventionMessages[emotion] || confidence < 60) {
+    return {
+      shouldIntervene: false,
+      type: null,
+      message: "",
+      suggestion: undefined,
+      severity: "low" as const,
+      aiProcessed: false,
+    };
+  }
+
+  return {
+    shouldIntervene: true,
+    type: "tone_alert" as const,
+    message: interventionMessages[emotion],
+    suggestion: undefined,
+    severity: emotion === "defensive" ? ("high" as const) : ("medium" as const),
+    language: typeof currentEmotion?.language === "string" ? currentEmotion.language : "en",
+    aiProcessed: false,
+  };
+}
+
+function buildLocalCallSessionSummary(emotionTimeline: unknown[]): string {
+  const count = emotionTimeline.length;
+  return count === 0
+    ? "No emotional data recorded for this session."
+    : `${count} local mood check${count === 1 ? " was" : "s were"} recorded for this session. Review the timeline directly for details.`;
+}
+
+function partnershipIncludesUser(
+  partnership: Pick<Partnership, "user1Id" | "user2Id"> | undefined,
+  userId: string,
+): boolean {
+  return Boolean(
+    partnership &&
+      (partnership.user1Id === userId || partnership.user2Id === userId),
+  );
+}
+
+async function getAuthorizedPartnership(
+  userId: string,
+  partnershipId: string | null | undefined,
+): Promise<Partnership | undefined> {
+  if (!partnershipId) {
+    return undefined;
+  }
+  const partnership = await storage.getPartnership(partnershipId);
+  return partnershipIncludesUser(partnership, userId) ? partnership : undefined;
+}
+
+async function getPartnershipBetweenUsers(
+  userId: string,
+  peerUserId: string,
+): Promise<Partnership | undefined> {
+  if (!userId || !peerUserId || userId === peerUserId) {
+    return undefined;
+  }
+
+  const partnerships = await storage.getPartnerships(userId);
+  return partnerships.find(
+    (partnership) =>
+      (partnership.user1Id === userId && partnership.user2Id === peerUserId) ||
+      (partnership.user2Id === userId && partnership.user1Id === peerUserId),
+  );
+}
+
+async function getAuthorizedPeerIds(userId: string): Promise<Set<string>> {
+  const authorized = new Set<string>([userId]);
+  const partnerships = await storage.getPartnerships(userId);
+  for (const partnership of partnerships) {
+    if (partnership.user1Id === userId) {
+      authorized.add(partnership.user2Id);
+    } else if (partnership.user2Id === userId) {
+      authorized.add(partnership.user1Id);
+    }
+  }
+  return authorized;
+}
+
+async function conversationMembersAreAuthorized(
+  userId: string,
+  members: Array<{ userId: string }>,
+): Promise<boolean> {
+  const authorized = await getAuthorizedPeerIds(userId);
+  return (
+    members.some((member) => member.userId === userId) &&
+    members.every((member) => authorized.has(member.userId))
+  );
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
+  await reconcileQuarantinedUploadFiles(async (accountId) => {
+    const account = await storage.getUser(accountId);
+    return Boolean(account && !account.isDeactivated && !account.deletedAt);
+  }).catch(() => {
+    console.error("[Account Deletion] Quarantine reconciliation requires operator review");
+  });
   const upgradeFromGuestHandler = createUpgradeFromGuestHandler({
     storage,
     resolveGuestIdentity,
@@ -716,6 +908,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Enforce guest trial expiry on write operations without affecting authenticated users.
   app.use("/api", trialEnforcer);
+  const V2_EXTERNAL_AI_ENABLED_FOR_RELEASE =
+    process.env.PEACEPAD_ENABLE_V2_EXTERNAL_AI === "true";
+  const requireV2AiMessageConsent: RequestHandler = async (req: any, res, next) => {
+    if (!V2_EXTERNAL_AI_ENABLED_FOR_RELEASE) {
+      return res.status(404).json({ message: "This AI route is unavailable in this release." });
+    }
+
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const requestedUserId =
+      req.body?.user?.userId ??
+      req.body?.context?.user_id ??
+      null;
+    if (requestedUserId && requestedUserId !== userId) {
+      return res.status(403).json({ message: "Authenticated user does not match request user" });
+    }
+
+    if (!(await checkAiMessageConsent(userId))) {
+      return res.status(403).json({
+        message: "AI message consent is required for this operation.",
+        code: AI_MESSAGE_CONSENT_REQUIRED_CODE,
+      });
+    }
+
+    next();
+  };
+  app.use(
+    "/v2/conversation/orchestrate",
+    isAuthenticatedEither,
+    requireV2AiMessageConsent,
+  );
+  app.use(
+    "/v2/modules/rewrite-message",
+    isAuthenticatedEither,
+    requireV2AiMessageConsent,
+  );
   app.use("/v2", createV2Router());
 
   // Geocoding routes moved to comprehensive route below (line ~6740)
@@ -760,7 +991,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? displayParts.join(', ') 
         : data.display_name;
 
-      console.log(`[Geocode] Reverse: (${lat}, ${lng}) -> ${preciseDisplayName}`);
+      console.log("[Geocode] Reverse lookup completed");
 
       res.json({
         displayName: preciseDisplayName,
@@ -778,147 +1009,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // IP-based geolocation fallback (uses client's real IP)
-  app.get("/api/geocode/ip", async (req, res) => {
-    try {
-      // Get client's real IP from headers (Replit/proxy sets these)
-      const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() 
-                    || (req.headers['x-real-ip'] as string)
-                    || req.socket.remoteAddress
-                    || '';
-      
-      console.log(`[IP Geolocation] Client IP: ${clientIp}`);
-      
-      // Use ip-api.com (free, no API key required, 45 requests/minute)
-      const ipApiUrl = `http://ip-api.com/json/${clientIp}?fields=status,message,country,countryCode,region,regionName,city,lat,lon,timezone`;
-      const response = await fetch(ipApiUrl);
-      
-      if (!response.ok) throw new Error('IP geolocation request failed');
-      const data = await response.json();
-      
-      if (data.status === 'fail') {
-        console.log(`[IP Geolocation] Failed: ${data.message}`);
-        return res.status(404).json({ error: data.message || "Could not determine location from IP" });
-      }
-      
-      const displayName = data.city 
-        ? `${data.city}, ${data.regionName || data.region}, ${data.country}`
-        : `${data.regionName || data.region}, ${data.country}`;
-      
-      console.log(`[IP Geolocation] Found: ${displayName} (${data.lat}, ${data.lon})`);
-      
-      res.json({
-        lat: data.lat,
-        lng: data.lon,
-        displayName,
-        city: data.city,
-        state: data.regionName || data.region,
-        country: data.country,
-        countryCode: data.countryCode,
-        timezone: data.timezone,
-      });
-    } catch (error) {
-      console.error('[IP Geolocation] Error:', error);
-      res.status(500).json({ error: "Failed to geolocate IP" });
-    }
+  // Privacy hardening: never forward a user's IP address to an external geolocation service.
+  app.get("/api/geocode/ip", (_req, res) => {
+    res.status(404).json({
+      error: "IP-based location is disabled. Use device location or enter a location manually.",
+    });
   });
 
-  // AI-enhanced location refinement endpoint
+  // Location AI is disabled for this release. Keep the endpoint as a stable,
+  // local pass-through so existing clients do not send coordinates externally.
   app.post("/api/location/ai-enhance", isAuthenticatedEither, async (req: any, res) => {
     try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
       const { location } = req.body;
       
       if (!location || !location.lat || !location.lng) {
         return res.status(400).json({ error: "Invalid location data" });
       }
 
-      // Use AI to enhance/validate location data
-      const prompt = `Given this location data, provide a refined and validated location response.
-
-Input location:
-- Display name: ${location.displayName || "Unknown"}
-- City: ${location.city || "Unknown"}
-- State/Province: ${location.state || "Unknown"}
-- Country: ${location.country || "Unknown"}
-- Coordinates: ${location.lat}, ${location.lng}
-
-Tasks:
-1. Validate the location makes sense geographically
-2. If the city/state/country seem incorrect for the coordinates, provide corrected values
-3. Create a clean, user-friendly display name
-4. Determine the country code (2-letter ISO)
-5. For Canadian locations, include the province abbreviation
-
-Respond ONLY with valid JSON (no markdown):
-{
-  "displayName": "Clean, formatted location name",
-  "city": "City name",
-  "state": "State or Province",
-  "country": "Country name",
-  "countryCode": "XX",
-  "isValid": true/false,
-  "confidence": 0.0-1.0
-}`;
-
-      const openai = (await import("openai")).default;
-      const client = new openai();
-      
-      const completion = await client.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: "You are a precise location data validator. Always respond with valid JSON only, no markdown formatting." },
-          { role: "user", content: prompt }
-        ],
-        max_tokens: 200,
-        temperature: 0.1,
-      });
-
-      const responseText = completion.choices[0]?.message?.content?.trim() || "";
-      
-      // Parse JSON response
-      let enhanced;
-      try {
-        // Remove any markdown code blocks if present
-        const cleanJson = responseText.replace(/```json\n?|\n?```/g, '').trim();
-        enhanced = JSON.parse(cleanJson);
-      } catch (parseError) {
-        console.log("[AI Location] Failed to parse response, returning original:", responseText);
-        return res.json(location);
-      }
-
-      console.log(`[AI Location] Enhanced: ${location.displayName} -> ${enhanced.displayName}`);
-
-      res.json({
+      return res.json({
         ...location,
-        displayName: enhanced.displayName || location.displayName,
-        city: enhanced.city || location.city,
-        state: enhanced.state || location.state,
-        country: enhanced.country || location.country,
-        countryCode: enhanced.countryCode || location.countryCode,
-        aiConfidence: enhanced.confidence,
+        aiProcessed: false,
+        aiDisabled: true,
       });
     } catch (error) {
-      console.error("[AI Location] Error:", error);
-      // Return original location on error
+      console.error("[Location] Error returning local location data:", error);
       res.json(req.body.location || {});
     }
   });
 
   // Whisper transcription endpoint
-  app.post("/api/openai/transcribe", upload.single("file"), async (req, res) => {
+  app.post(
+    "/api/openai/transcribe",
+    isAuthenticatedEither,
+    upload.single("file"),
+    async (req: any, res) => {
     try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
       if (!req.file) {
         return res.status(400).json({ error: "No audio file provided" });
+      }
+
+      if (!(await checkAiMessageConsent(userId))) {
+        fs.rmSync(req.file.path, { force: true });
+        return res.status(403).json({
+          error: "AI message consent is required for transcription.",
+          code: AI_MESSAGE_CONSENT_REQUIRED_CODE,
+        });
       }
 
       const transcription = await getTranscribedText(req.file.path);
 
       // Cleanup uploaded file
-      fs.unlinkSync(req.file.path);
+      fs.rmSync(req.file.path, { force: true });
 
       res.json({ text: transcription });
     } catch (error) {
       console.error("[Transcription Error]:", error);
+      if (req.file?.path) {
+        fs.rmSync(req.file.path, { force: true });
+      }
       res.status(500).json({ error: "Failed to transcribe audio" });
     }
   });
@@ -1074,6 +1232,9 @@ Crawl-delay: 1
   // Get WebRTC ICE servers (TURN/STUN) for reliable mobile connections
   // SECURITY: Requires authentication to prevent TURN credential abuse
   app.get("/api/webrtc/ice-servers", isAuthenticatedEither, async (req: any, res) => {
+    if (process.env.NODE_ENV === "production") {
+      return res.status(404).json({ message: "Not found" });
+    }
     try {
       // Always include STUN servers as baseline
       const iceServers = [
@@ -1082,9 +1243,9 @@ Crawl-delay: 1
       ];
 
       // Option 1: Simple TURN server configuration (for free/self-hosted TURN)
-      const turnUrl = process.env.VITE_TURN_URL;
-      const turnUser = process.env.VITE_TURN_USER;
-      const turnPass = process.env.VITE_TURN_PASS;
+      const turnUrl = process.env.TURN_URL;
+      const turnUser = process.env.TURN_USERNAME;
+      const turnPass = process.env.TURN_PASSWORD;
 
       if (turnUrl && turnUser && turnPass) {
         iceServers.push({
@@ -1151,6 +1312,20 @@ Crawl-delay: 1
     }
   });
 
+  // Test monitoring can contain operational diagnostics and must never be
+  // reachable in the production App Store release. Development access also
+  // requires an explicit opt-in so a local server does not expose it by
+  // accident.
+  const testMonitorEnabled =
+    process.env.NODE_ENV !== "production" &&
+    process.env.PEACEPAD_ENABLE_TEST_MONITOR === "true";
+  app.use("/api/test-monitor", (req, res, next) => {
+    if (!testMonitorEnabled) {
+      return res.status(404).json({ message: "Not found" });
+    }
+    return next();
+  });
+
   // Test monitoring endpoints
   app.get("/api/test-monitor/summary", (req, res) => {
     res.json(testMonitor.getSummary());
@@ -1207,6 +1382,10 @@ Crawl-delay: 1
   });
 
   app.post("/api/telemetry/web-update", (req, res) => {
+    if (process.env.NODE_ENV === "production") {
+      return res.status(404).json({ message: "Not found" });
+    }
+
     const parsed = parseWebUpdateTelemetryPayload(req.body);
     if (!parsed.ok) {
       return res.status(400).json({
@@ -1275,9 +1454,9 @@ Crawl-delay: 1
   // These endpoints allow Playwright tests to set up required test data like partnerships
   
   app.post("/api/test/seed-partnership", async (req: any, res) => {
-    // Only allow in development/test environments
-    if (process.env.NODE_ENV === 'production' && !process.env.ALLOW_TEST_SEEDING) {
-      return res.status(403).json({ message: "Test seeding not allowed in production" });
+    // Never allow test-data creation in the production App Store service.
+    if (process.env.NODE_ENV === "production") {
+      return res.status(404).json({ message: "Not found" });
     }
     
     try {
@@ -1363,9 +1542,9 @@ Crawl-delay: 1
   });
   
   app.get("/api/test/check-partnership", async (req: any, res) => {
-    // Only allow in development/test environments
-    if (process.env.NODE_ENV === 'production' && !process.env.ALLOW_TEST_SEEDING) {
-      return res.status(403).json({ message: "Test endpoints not allowed in production" });
+    // Never expose test-account discovery in the production App Store service.
+    if (process.env.NODE_ENV === "production") {
+      return res.status(404).json({ message: "Not found" });
     }
     
     try {
@@ -1488,13 +1667,6 @@ Crawl-delay: 1
       }
 
       let user = await storage.getUser(userId);
-
-      // Handle restoration if user is deactivated
-      if (user && user.isDeactivated) {
-        await storage.reactivateUser(userId);
-        user.isDeactivated = false;
-        user.deletedAt = null;
-      }
 
       // Ensure user has an invite code (for legacy users)
       if (user && !user.inviteCode) {
@@ -1674,13 +1846,17 @@ Crawl-delay: 1
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
+      const authorizedIds = await getAuthorizedPeerIds(userId);
       const users = await storage.getAllUsers();
-      // Return only basic user info for privacy - NO phone numbers to non-contacts
-      const basicUserInfo = users.map((u) => ({
-        id: u.id,
-        displayName: u.displayName,
-        profileImageUrl: u.profileImageUrl,
-      }));
+      // Discovery is limited to the current account and explicitly connected
+      // co-parents. PeacePad never exposes a global account directory.
+      const basicUserInfo = users
+        .filter((user) => authorizedIds.has(user.id))
+        .map((user) => ({
+          id: user.id,
+          displayName: user.displayName,
+          profileImageUrl: user.profileImageUrl,
+        }));
       res.json(basicUserInfo);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -1696,6 +1872,10 @@ Crawl-delay: 1
         return res.status(401).json({ message: "Unauthorized" });
       }
       const { userId } = req.params;
+      const authorizedIds = await getAuthorizedPeerIds(currentUserId);
+      if (!authorizedIds.has(userId)) {
+        return res.status(404).json({ message: "User not found" });
+      }
       const user = await storage.getUser(userId);
 
       if (!user) {
@@ -1706,8 +1886,6 @@ Crawl-delay: 1
       const basicUserInfo = {
         id: user.id,
         displayName: user.displayName,
-        firstName: user.firstName,
-        lastName: user.lastName,
         profileImageUrl: user.profileImageUrl,
       };
 
@@ -1736,8 +1914,30 @@ Crawl-delay: 1
         activePartnershipId,
       } = req.body;
 
+      const existingUser = await storage.getUser(userId);
       const updateData: any = {};
-      if (profileImageUrl !== undefined) updateData.profileImageUrl = profileImageUrl;
+      if (profileImageUrl !== undefined) {
+        const isBuiltInProfile =
+          (typeof profileImageUrl === "string" &&
+            /^avatar:[a-z0-9_-]{1,64}$/i.test(profileImageUrl)) ||
+          (typeof profileImageUrl === "string" &&
+            profileImageUrl.startsWith("emoji:") &&
+            profileImageUrl.length <= 40 &&
+            !/[\u0000-\u001f\u007f]/.test(profileImageUrl));
+        const isUnchangedLegacyProfile =
+          typeof profileImageUrl === "string" &&
+          existingUser?.profileImageUrl === profileImageUrl;
+        if (
+          profileImageUrl !== null &&
+          profileImageUrl !== "" &&
+          !isBuiltInProfile &&
+          !isUnchangedLegacyProfile &&
+          !isOwnerScopedUploadReference("profiles", userId, profileImageUrl)
+        ) {
+          return res.status(400).json({ message: "Invalid profile image reference" });
+        }
+        updateData.profileImageUrl = profileImageUrl || null;
+      }
       if (displayName !== undefined) updateData.displayName = displayName;
       if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
       if (sharePhoneWithContacts !== undefined)
@@ -1745,10 +1945,17 @@ Crawl-delay: 1
       if (childName !== undefined) updateData.childName = childName;
       if (relationshipType !== undefined) updateData.relationshipType = relationshipType;
       if (personalityType !== undefined) updateData.personalityType = personalityType;
-      if (activePartnershipId !== undefined) updateData.activePartnershipId = activePartnershipId;
+      if (activePartnershipId !== undefined) {
+        if (activePartnershipId !== null && activePartnershipId !== "") {
+          const selectedPartnership = await storage.getPartnership(activePartnershipId);
+          if (!partnershipIncludesUser(selectedPartnership, userId)) {
+            return res.status(403).json({ message: "Partnership not found" });
+          }
+        }
+        updateData.activePartnershipId = activePartnershipId || null;
+      }
 
       // Check if this is a new user completing onboarding (setting displayName for first time)
-      const existingUser = await storage.getUser(userId);
       const isFirstTimeOnboarding = !existingUser?.displayName && displayName;
 
       const { user: updatedUser } = await storage.upsertUser({
@@ -1808,14 +2015,76 @@ Crawl-delay: 1
       }
       const { privacyAccepted, aiMessageConsent, aiCallConsent, ndaAccepted } = req.body;
 
-      const updateData: any = {};
-      if (privacyAccepted !== undefined) updateData.privacyAccepted = privacyAccepted;
-      if (aiMessageConsent !== undefined) updateData.aiMessageConsent = aiMessageConsent;
-      if (aiCallConsent !== undefined) updateData.aiCallConsent = aiCallConsent;
+      const suppliedValues = {
+        privacyAccepted,
+        aiMessageConsent,
+        aiCallConsent,
+        ndaAccepted,
+      };
+      if (
+        Object.values(suppliedValues).some(
+          (value) => value !== undefined && typeof value !== "boolean",
+        )
+      ) {
+        return res.status(400).json({ message: "Consent values must be boolean." });
+      }
 
-      // When consent is accepted, mark terms as accepted
-      if (privacyAccepted && ndaAccepted) {
-        updateData.termsAcceptedAt = new Date();
+      const currentUser = await storage.getUser(userId);
+      if (!currentUser || currentUser.isDeactivated || currentUser.deletedAt) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const acceptingRequiredConsent =
+        privacyAccepted === true && ndaAccepted === true;
+      const revokingTerms = ndaAccepted === false;
+      const nextPrivacyAccepted =
+        privacyAccepted === undefined
+          ? currentUser.privacyAccepted === true
+          : privacyAccepted === true;
+      const nextTermsAcceptedAt = revokingTerms
+        ? null
+        : acceptingRequiredConsent
+          ? currentUser.termsAcceptedAt || new Date()
+          : currentUser.termsAcceptedAt;
+      const hasRequiredConsent = Boolean(
+        nextPrivacyAccepted && nextTermsAcceptedAt,
+      );
+
+      if (
+        !hasRequiredConsent &&
+        (aiMessageConsent === true || aiCallConsent === true)
+      ) {
+        return res.status(400).json({
+          message:
+            "Accept the Terms and acknowledge the Privacy Policy before enabling optional AI processing.",
+          code: "REQUIRED_CONSENT_MISSING",
+        });
+      }
+
+      const updateData: any = {
+        privacyAccepted: nextPrivacyAccepted,
+        termsAcceptedAt: nextTermsAcceptedAt,
+      };
+      if (acceptingRequiredConsent) {
+        updateData.consentAcceptedAt =
+          currentUser.consentAcceptedAt || nextTermsAcceptedAt;
+      } else if (revokingTerms) {
+        updateData.consentAcceptedAt = null;
+      }
+
+      // Revoking either required agreement immediately disables optional
+      // third-party AI processing. Otherwise update only values the user
+      // explicitly supplied.
+      if (!hasRequiredConsent) {
+        updateData.aiMessageConsent = false;
+        updateData.aiCallConsent = false;
+      } else {
+        if (aiMessageConsent !== undefined) {
+          updateData.aiMessageConsent = aiMessageConsent === true;
+        }
+        if (aiCallConsent !== undefined) {
+          updateData.aiCallConsent = aiCallConsent === true;
+        }
       }
 
       const { user: updatedUser } = await storage.upsertUser({
@@ -1823,12 +2092,7 @@ Crawl-delay: 1
         ...updateData,
       });
 
-      console.log(`[Consent] User ${userId} consent preferences updated:`, {
-        privacyAccepted,
-        aiMessageConsent,
-        aiCallConsent,
-        termsAcceptedAt: updateData.termsAcceptedAt,
-      });
+      console.log("[Consent] Preferences updated");
 
       res.json(updatedUser);
     } catch (error) {
@@ -1837,8 +2101,9 @@ Crawl-delay: 1
     }
   });
 
-  // Export user data (GDPR compliance)
-  app.get("/api/user/export", requireAuthOnly, async (req: any, res) => {
+  // Export the active user's data. Reviewer sessions use the same account
+  // controls as other authenticated sessions.
+  app.get("/api/user/export", isAuthenticatedEither, async (req: any, res) => {
     try {
       const userId = getUserId(req);
       if (!userId) {
@@ -1870,56 +2135,78 @@ Crawl-delay: 1
     }
   });
 
-  // Delete user account - supports both OAuth and Guest users
+  // Permanently delete the active account and invalidate its sessions.
   app.delete("/api/user/account", isAuthenticatedEither, async (req: any, res) => {
+    let accountDeleted = false;
+
+    const clearDeletedSession = async () => {
+      if (typeof req.logout === "function") {
+        await new Promise<void>((resolve) => {
+          req.logout(() => resolve());
+        });
+      }
+      if (req.session && typeof req.session.destroy === "function") {
+        await new Promise<void>((resolve) => {
+          req.session.destroy(() => resolve());
+        });
+      }
+
+      clearGuestCookie(req, res);
+      res.clearCookie("peacepad.sid", { path: "/" });
+      res.clearCookie("connect.sid", { path: "/" });
+    };
+
     try {
       const userId = getUserId(req);
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      // Check if user is already deactivated (restoration flow)
-      const user = await storage.getUser(userId);
-      if (user?.isDeactivated) {
-        // Hard delete after grace period or if user explicitly requests immediate deletion while deactivated
-        await storage.deleteUser(userId);
-        req.logout((err: any) => {
-          if (req.session) {
-            req.session.destroy(() => {
-              res.json({ success: true, message: "Account permanently deleted" });
-            });
-          } else {
-            res.json({ success: true, message: "Account permanently deleted" });
-          }
+      if (req.body?.confirmation !== "DELETE") {
+        return res.status(400).json({
+          message: 'Enter "DELETE" exactly to confirm permanent account deletion.',
         });
-        return;
       }
 
-      // Standard flow: Deactivate user and mark for deletion (30-day grace period)
-      await storage.deactivateUser(userId);
+      // Fail closed before the database transaction if owned uploads cannot be
+      // resolved safely. Files are first moved out of their public paths; if
+      // database deletion fails, that move is rolled back.
+      const ownedUploadReferences = await storage.getUserOwnedUploadReferences(userId);
+      const ownerScopedUploads = await listOwnerScopedUploadPaths(userId);
+      const uploadPaths = collectUserOwnedUploadPaths([
+        ownedUploadReferences,
+        ownerScopedUploads,
+      ]);
+      const quarantinedUploads = await quarantineUserOwnedUploadFiles(
+        uploadPaths,
+        path.resolve(process.cwd(), "uploads"),
+        userId,
+      );
 
-      // Clear session with proper error handling
-      req.logout((err: any) => {
-        if (err) {
-          console.error("Error logging out during account deletion:", err);
-        }
+      try {
+        await storage.deleteUser(userId);
+        accountDeleted = true;
+      } catch (error) {
+        await restoreQuarantinedUploadFiles(quarantinedUploads);
+        throw error;
+      }
 
-        // Destroy session
-        if (req.session) {
-          req.session.destroy((sessionErr: any) => {
-            if (sessionErr) {
-              console.error("Error destroying session during account deletion:", sessionErr);
-            }
-            // Send success response regardless of logout/session errors
-            res.json({ success: true, message: "Account deleted successfully" });
-          });
-        } else {
-          // If no session, just send response
-          res.json({ success: true, message: "Account deleted successfully" });
-        }
+      const filesDeleted = await commitQuarantinedUploadDeletion(quarantinedUploads);
+      await clearDeletedSession();
+      return res.json({
+        success: true,
+        message: "Account permanently deleted",
+        filesDeleted,
       });
     } catch (error) {
       console.error("Error deleting account:", error);
+      if (accountDeleted) {
+        await clearDeletedSession().catch(() => undefined);
+        return res.status(500).json({
+          message:
+            "The account was deleted, but PeacePad could not confirm final uploaded-file cleanup. Contact support.",
+        });
+      }
       res.status(500).json({ message: "Failed to delete account" });
     }
   });
@@ -2104,10 +2391,34 @@ Crawl-delay: 1
         if (!isMember) {
           return res.status(403).json({ message: "You are not a member of this conversation" });
         }
+        if (!(await conversationMembersAreAuthorized(userId, members))) {
+          return res.status(403).json({
+            message: "This conversation is unavailable because its membership is no longer authorized.",
+          });
+        }
+
+        const peerAccounts = await Promise.all(
+          members
+            .filter((member) => member.userId !== userId)
+            .map((member) => storage.getUser(member.userId)),
+        );
+        const hasActivePeer = peerAccounts.some(
+          (peer) => peer && !peer.isDeactivated && !peer.deletedAt,
+        );
+        if (!hasActivePeer) {
+          return res.status(409).json({
+            message: "This conversation is read-only because the other account is no longer active.",
+          });
+        }
       } else if (recipientId) {
         // Legacy: recipientId provided - find or create direct conversation
+        if (!(await getPartnershipBetweenUsers(userId, recipientId))) {
+          return res.status(403).json({
+            message: "Messages can only be sent to an explicitly connected co-parent.",
+          });
+        }
         const recipient = await storage.getUser(recipientId);
-        if (!recipient) {
+        if (!recipient || recipient.isDeactivated || recipient.deletedAt) {
           return res.status(400).json({ message: "Invalid recipient" });
         }
 
@@ -2146,15 +2457,25 @@ Crawl-delay: 1
         conversationId,
         recipientId, // Keep for backward compatibility
       });
+      if (
+        parsed.fileUrl &&
+        !isOwnerScopedUploadReference("chat", userId, parsed.fileUrl)
+      ) {
+        return res.status(400).json({ message: "Invalid attachment reference" });
+      }
+      const hasAiConsent = await checkAiMessageConsent(userId);
+      const ruleBasedTone = analyzeRuleBasedTone(parsed.content);
 
       // INSTANT DELIVERY: Create message immediately with "analyzing" tone
       // Then analyze tone in background and update via WebSocket
       const message = await storage.createMessage({
         ...parsed,
-        tone: "analyzing",
-        toneSummary: "Analyzing tone...",
-        toneEmoji: null,
-        rewordingSuggestion: null,
+        tone: hasAiConsent ? "analyzing" : ruleBasedTone.category,
+        toneSummary: hasAiConsent ? "Analyzing tone..." : ruleBasedTone.summary,
+        toneEmoji: hasAiConsent ? null : ruleBasedTone.emoji,
+        rewordingSuggestion: hasAiConsent
+          ? null
+          : ruleBasedTone.rewordingSuggestion ?? null,
       });
 
       // Track usage
@@ -2186,8 +2507,8 @@ Crawl-delay: 1
       for (const member of members) {
         if (member.userId !== userId) {
           await sendPushNotification(member.userId, {
-            title: parsed.isUrgent ? `Urgent: ${senderName}` : senderName,
-            body: parsed.content.substring(0, 100) + (parsed.content.length > 100 ? "..." : ""),
+            title: parsed.isUrgent ? "Urgent PeacePad message" : "PeacePad message",
+            body: buildPrivateMessageNotificationBody(Boolean(parsed.isUrgent)),
             channel: 'messages', // High priority for chat messages
             data: {
               url: "/chat",
@@ -2205,21 +2526,20 @@ Crawl-delay: 1
       // BACKGROUND: Analyze tone asynchronously (don't await - fire and forget)
       (async () => {
         try {
-          // Fetch user preferences for personalized AI analysis
-          const userPrefs = await getUserPreferencesWithCoParent(userId);
+          let tone: string = ruleBasedTone.category;
+          let summary: string = ruleBasedTone.summary;
+          let emoji: string = ruleBasedTone.emoji;
+          let rewordingSuggestion: string | null =
+            ruleBasedTone.rewordingSuggestion ?? null;
 
-          // Get recent conversation history for context
-          const recentMessages = await storage.getMessagesByUser(userId);
-          const conversationHistory = recentMessages
-            .filter(m => m.conversationId === conversationId)
-            .slice(-5)
-            .map(m => m.content);
-
-          const { tone, summary, emoji, rewordingSuggestion } = await analyzeTone(
-            parsed.content,
-            userPrefs,
-            conversationHistory
-          );
+          if (hasAiConsent) {
+            // Only the consenting sender's current message may leave the service.
+            const aiTone = await analyzeTone(parsed.content);
+            tone = aiTone.tone;
+            summary = aiTone.summary;
+            emoji = aiTone.emoji;
+            rewordingSuggestion = aiTone.rewordingSuggestion;
+          }
 
           // Update message with analyzed tone
           await storage.updateMessageTone(message.id, {
@@ -2334,12 +2654,28 @@ Crawl-delay: 1
         if (!isMember) {
           return res.status(403).json({ message: "You are not a member of this conversation" });
         }
+        if (!(await conversationMembersAreAuthorized(userId, members))) {
+          return res.status(403).json({ message: "Conversation membership is not authorized" });
+        }
 
-        // Get user's partnership for validation
-        const partnerships = await storage.getPartnerships(userId);
-        const partnership = partnerships[0];
+        // Bind the share to the user's explicitly selected partnership and
+        // require every conversation member to be one of its participants.
+        const user = await storage.getUser(userId);
+        const partnership = await getAuthorizedPartnership(
+          userId,
+          user?.activePartnershipId,
+        );
         if (!partnership) {
           return res.status(400).json({ message: "No active partnership found" });
+        }
+        const partnershipMembers = new Set([
+          partnership.user1Id,
+          partnership.user2Id,
+        ]);
+        if (!members.every((member) => partnershipMembers.has(member.userId))) {
+          return res.status(403).json({
+            message: "Conversation does not belong to the active partnership",
+          });
         }
 
         // Fetch and validate the shared item belongs to user's partnership
@@ -2432,8 +2768,8 @@ Crawl-delay: 1
         for (const member of members) {
           if (member.userId !== userId) {
             await sendPushNotification(member.userId, {
-              title: senderName,
-              body: notificationText,
+              title: "PeacePad message",
+              body: buildPrivateMessageNotificationBody(),
               channel: 'messages', // Messages channel for shared items
               data: {
                 url: "/chat",
@@ -2562,7 +2898,7 @@ Crawl-delay: 1
           return res.status(400).json({ message: "No file uploaded" });
         }
 
-        const fileUrl = `/uploads/chat/${file.filename}`;
+        const fileUrl = buildOwnerScopedUploadPath("chat", userId, file.filename);
         const messageType = req.body.messageType || "document"; // text, image, audio, video, document
         const duration = req.body.duration || null; // For audio/video
 
@@ -2582,7 +2918,9 @@ Crawl-delay: 1
     }
   );
 
-  // Voice note upload and transcription endpoint
+  // Voice-note upload endpoint. Automatic third-party transcription is
+  // disabled for this release because sending a voice note is not, by itself,
+  // an explicit request to submit its audio to an AI processor.
   app.post(
     "/api/voice-notes",
     isAuthenticatedEither,
@@ -2600,73 +2938,29 @@ Crawl-delay: 1
           return res.status(400).json({ message: "No audio file uploaded" });
         }
 
-        console.log("[Voice Note] Processing upload:", {
-          filename: file.filename,
+        console.log("[Voice Note] Processing authenticated upload:", {
           size: file.size,
           mimetype: file.mimetype,
         });
 
-        const fileUrl = `/uploads/chat/${file.filename}`;
+        const fileUrl = buildOwnerScopedUploadPath("chat", userId, file.filename);
         const duration = req.body.duration || "0";
 
-        // Transcribe using Whisper API
-        let transcript = "";
-        let tone = "neutral";
-        let toneSummary = "Voice note sent";
-        let toneEmoji = "🎤";
-        let rewordingSuggestion: string | null = null;
-
-        try {
-          console.log("[Voice Note] Starting Whisper transcription...");
-          const filePath = path.join(chatAttachmentsDir, file.filename);
-
-          // Create a read stream and send to Whisper
-          const transcription = await openai.audio.transcriptions.create({
-            file: fs.createReadStream(filePath),
-            model: "whisper-1",
-            language: "en", // Can be removed to auto-detect
-          });
-
-          transcript = transcription.text;
-          console.log("[Voice Note] Transcription complete:", transcript);
-
-          // Analyze tone of transcript
-          if (transcript && transcript !== "[Transcription unavailable]") {
-            try {
-              console.log("[Voice Note] Analyzing tone of transcript...");
-
-              // Fetch user preferences including co-parent personality for personalized AI analysis
-              const userPrefs = await getUserPreferencesWithCoParent(userId);
-
-              const toneAnalysis = await analyzeTone(transcript, userPrefs);
-              tone = toneAnalysis.tone;
-              toneSummary = toneAnalysis.summary;
-              toneEmoji = toneAnalysis.emoji;
-              rewordingSuggestion = toneAnalysis.rewordingSuggestion;
-              console.log("[Voice Note] Tone analysis complete:", tone);
-            } catch (error: any) {
-              console.error("[Voice Note] Tone analysis failed:", error);
-              // Continue with defaults if tone analysis fails
-            }
-          }
-        } catch (error: any) {
-          console.error("[Voice Note] Whisper transcription failed:", error);
-          // Continue without transcript if transcription fails
-          transcript = "[Transcription unavailable]";
-        }
-
-        // Return file information, transcript, and tone analysis
+        // Return only storage metadata. The separate /api/openai/transcribe
+        // route represents an explicit transcription action and has its own
+        // persisted-consent check.
         res.json({
           fileUrl,
           fileName: file.originalname,
           fileSize: file.size.toString(),
           mimeType: file.mimetype,
           duration,
-          transcript,
-          tone,
-          toneSummary,
-          toneEmoji,
-          rewordingSuggestion,
+          transcript: "",
+          tone: "neutral",
+          toneSummary: "Voice note sent",
+          toneEmoji: "🎤",
+          rewordingSuggestion: null,
+          aiProcessed: false,
           messageType: "audio",
         });
       } catch (error: any) {
@@ -2695,7 +2989,7 @@ Crawl-delay: 1
           return res.status(400).json({ message: "No file uploaded" });
         }
 
-        const fileUrl = `/uploads/receipts/${file.filename}`;
+        const fileUrl = buildOwnerScopedUploadPath("receipts", userId, file.filename);
 
         // Return file information to be used when creating the expense
         res.json({
@@ -2723,23 +3017,16 @@ Crawl-delay: 1
           return res.status(401).json({ message: "Unauthorized" });
         }
 
-        console.log("[Profile Upload] Starting upload for user:", userId);
-        console.log("[Profile Upload] Content-Type:", req.headers["content-type"]);
+        console.log("[Profile Upload] Starting authenticated upload");
 
         const file = req.file;
 
-        console.log(
-          "[Profile Upload] File received:",
-          file
-            ? {
-                filename: file.filename,
-                originalname: file.originalname,
-                mimetype: file.mimetype,
-                size: file.size,
-                path: file.path,
-              }
-            : "NO FILE"
-        );
+        if (file) {
+          console.log("[Profile Upload] File received", {
+            mimetype: file.mimetype,
+            size: file.size,
+          });
+        }
 
         if (!file) {
           console.error("[Profile Upload] No file in request");
@@ -2753,17 +3040,20 @@ Crawl-delay: 1
         }
 
         const baseUrl = (process.env.PUBLIC_BASE_URL || "").replace(/\/+$/, "");
-        const profileImageUrl = `${baseUrl}/uploads/profiles/${file.filename}`;
+        const profileImagePath = buildOwnerScopedUploadPath("profiles", userId, file.filename);
+        const profileImageUrl = `${baseUrl}${profileImagePath}`;
 
-        console.log("[Profile Upload] Success! File saved at:", profileImageUrl);
+        console.log("[Profile Upload] Upload completed");
         res.json({
           url: profileImageUrl, // Frontend expects 'url'
           fileName: file.originalname,
           fileSize: file.size.toString(),
         });
       } catch (error: any) {
-        console.error("[Profile Upload] Error:", error);
-        console.error("[Profile Upload] Error stack:", error.stack);
+        console.error("[Profile Upload] Failed", {
+          name: typeof error?.name === "string" ? error.name : "Error",
+          code: typeof error?.code === "string" ? error.code : undefined,
+        });
         res.status(400).json({ message: error.message || "Failed to upload profile photo" });
       }
     }
@@ -2915,7 +3205,11 @@ Crawl-delay: 1
     }
   });
 
-  app.post("/api/partnerships/join", isAuthenticatedEither, async (req: any, res) => {
+  app.post(
+    "/api/partnerships/join",
+    isAuthenticatedEither,
+    rateLimiters.strict,
+    async (req: any, res) => {
     try {
       const userId = getUserId(req);
       if (!userId) {
@@ -2933,8 +3227,6 @@ Crawl-delay: 1
       // Normalize invite code to uppercase for case-insensitive matching
       const inviteCode = rawCode.toUpperCase().trim();
 
-      console.log(`[Partnership Join] User ${userId} attempting to join with code: ${inviteCode}`);
-
       if (inviteCode.length !== 6) {
         console.log(`[Partnership Join] Invalid code length: ${inviteCode.length}`);
         return res.status(400).json({ message: "Invalid invite code" });
@@ -2944,13 +3236,9 @@ Crawl-delay: 1
       const coParent = await storage.getUserByInviteCode(inviteCode);
 
       if (!coParent) {
-        console.log(`[Partnership Join] No user found with invite code: ${inviteCode}`);
+        console.log("[Partnership Join] No active user found for supplied invite code");
         return res.status(404).json({ message: "Invalid invite code" });
       }
-
-      console.log(
-        `[Partnership Join] Found co-parent: ${coParent.displayName} (ID: ${coParent.id})`
-      );
 
       // Check if invite code has expired (14 days)
       if (coParent.inviteCodeGeneratedAt) {
@@ -2990,21 +3278,39 @@ Crawl-delay: 1
       // Get current user before creating partnership (needed for auto-select logic)
       const currentUser = await storage.getUser(userId);
 
+      // Consume before creating the partnership so a code can succeed only
+      // once, including when two requests race.
+      const inviteConsumed = await storage.consumeInviteCode(coParent.id, inviteCode);
+      if (!inviteConsumed) {
+        return res.status(409).json({
+          message: "This invite code has already been used or replaced. Please request a new one.",
+        });
+      }
+
       // Create partnership
-      console.log(`[Partnership Join] Creating partnership between ${userId} and ${coParent.id}`);
+      console.log("[Partnership Join] Creating partnership");
       // Note: Using 'as any' to bypass Drizzle ORM type inference bug with .references() fields
       // Runtime types are correct (all strings match schema), TypeScript inference is broken
-      const partnership = await storage.createPartnership({
-        user1Id: userId,
-        user2Id: coParent.id,
-        inviteCode: inviteCode,
-      } as any);
-      console.log(`[Partnership Join] ✅ Partnership created successfully! ID: ${partnership.id}`);
+      let partnership;
+      try {
+        partnership = await storage.createPartnership({
+          user1Id: userId,
+          user2Id: coParent.id,
+          inviteCode: inviteCode,
+        } as any);
+      } catch (error) {
+        // The consumed value cannot be safely restored after a failed write;
+        // issue a fresh code for the owner instead.
+        await storage.regenerateInviteCode(coParent.id).catch(() => undefined);
+        throw error;
+      }
+      await storage.regenerateInviteCode(coParent.id);
+      console.log("[Partnership Join] Partnership created successfully");
 
       // Notify the co-parent that the partnership has been joined
       try {
         notifyPartnershipJoin(coParent.id, currentUser?.displayName || "Your co-parent");
-        console.log(`[Partnership Join] Sent real-time notification to co-parent ${coParent.id}`);
+        console.log("[Partnership Join] Sent real-time notification to co-parent");
       } catch (wsError) {
         console.error(`[Partnership Join] Failed to send real-time notification to co-parent:`, wsError);
       }
@@ -3012,27 +3318,21 @@ Crawl-delay: 1
       // Notify the joining user as well
       try {
         notifyPartnershipJoin(userId, coParent.displayName || "Your co-parent");
-        console.log(`[Partnership Join] Sent real-time notification to joining user ${userId}`);
+        console.log("[Partnership Join] Sent real-time notification to joining user");
       } catch (wsError) {
         console.error(`[Partnership Join] Failed to notify joining user:`, wsError);
       }
 
       // Set new partnership as primary for BOTH users for seamless experience
-      console.log(
-        `[Partnership Join] 🎯 Setting new partnership ${partnership.id} as primary for both users...`
-      );
+      console.log("[Partnership Join] Setting new partnership as primary for both users");
       try {
         // Set for joining user
         await storage.setActivePartnership(userId, partnership.id);
-        console.log(
-          `[Partnership Join] ✅ Partnership ${partnership.id} set as primary for user ${userId}`
-        );
+        console.log("[Partnership Join] Partnership set as primary for joining user");
 
         // Set for co-parent (partner) - smooth experience so they see partnership immediately
         await storage.setActivePartnership(coParent.id, partnership.id);
-        console.log(
-          `[Partnership Join] ✅ Partnership ${partnership.id} set as primary for co-parent ${coParent.id}`
-        );
+        console.log("[Partnership Join] Partnership set as primary for co-parent");
       } catch (err) {
         console.error(`[Partnership Join] ⚠️ Error setting active partnership:`, err);
         // Don't fail here - partnership is created, just log the error
@@ -3044,7 +3344,7 @@ Crawl-delay: 1
 
       // Welcome email to joining user
       if (currentUser?.email) {
-        console.log(`[Partnership Join] 📧 Queuing welcome email for ${currentUser.displayName}`);
+        console.log("[Partnership Join] Queuing welcome email");
         emailPromises.push(
           sendInviteAcceptanceEmail(
             currentUser.email,
@@ -3052,22 +3352,17 @@ Crawl-delay: 1
             coParent.displayName || "your co-parent"
           )
             .then(() => {
-              console.log(`[Partnership Join] ✅ Welcome email sent to ${currentUser.email}`);
+              console.log("[Partnership Join] Welcome email sent");
             })
             .catch((err) => {
-              console.error(
-                `[Partnership Join] ❌ Failed to send welcome email to ${currentUser.email}:`,
-                err.message
-              );
+              console.error("[Partnership Join] Failed to send welcome email:", err.message);
             })
         );
       }
 
       // Partnership connected notification to joining user
       if (currentUser?.email) {
-        console.log(
-          `[Partnership Join] 📧 Queuing partnership notification for ${currentUser.displayName}`
-        );
+        console.log("[Partnership Join] Queuing partnership notification");
         const userName =
           `${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim() ||
           currentUser.displayName ||
@@ -3079,24 +3374,17 @@ Crawl-delay: 1
         emailPromises.push(
           sendPartnershipConnectedEmail(currentUser.email, userName, partnerName, timestamp)
             .then(() => {
-              console.log(
-                `[Partnership Join] ✅ Partnership notification sent to ${currentUser.email}`
-              );
+              console.log("[Partnership Join] Partnership notification sent");
             })
             .catch((err) => {
-              console.error(
-                `[Partnership Join] ❌ Failed to send partnership notification to ${currentUser.email}:`,
-                err.message
-              );
+              console.error("[Partnership Join] Failed to send partnership notification:", err.message);
             })
         );
       }
 
       // Partnership connected notification to co-parent
       if (coParent.email) {
-        console.log(
-          `[Partnership Join] 📧 Queuing partnership notification for co-parent ${coParent.displayName}`
-        );
+        console.log("[Partnership Join] Queuing co-parent partnership notification");
         const coParentName =
           `${coParent.firstName || ""} ${coParent.lastName || ""}`.trim() ||
           coParent.displayName ||
@@ -3108,13 +3396,11 @@ Crawl-delay: 1
         emailPromises.push(
           sendPartnershipConnectedEmail(coParent.email, coParentName, userDisplayName, timestamp)
             .then(() => {
-              console.log(
-                `[Partnership Join] ✅ Partnership notification sent to ${coParent.email}`
-              );
+              console.log("[Partnership Join] Co-parent partnership notification sent");
             })
             .catch((err) => {
               console.error(
-                `[Partnership Join] ❌ Failed to send partnership notification to ${coParent.email}:`,
+                "[Partnership Join] Failed to send co-parent partnership notification:",
                 err.message
               );
             })
@@ -3160,69 +3446,6 @@ Crawl-delay: 1
         console.log(
           `[Partnership Join] 1:1 conversation already exists (ID: ${directConversation.id})`
         );
-      }
-
-      // Auto-create family group conversation if 3+ people are connected
-      const allPartnerships = await storage.getPartnerships(userId);
-      const coParentPartnerships = await storage.getPartnerships(coParent.id);
-
-      // Collect all unique user IDs in the partnership network
-      const allUserIds = new Set<string>();
-      allUserIds.add(userId);
-      allUserIds.add(coParent.id);
-
-      [...allPartnerships, ...coParentPartnerships].forEach((p) => {
-        allUserIds.add(p.user1Id);
-        allUserIds.add(p.user2Id);
-      });
-
-      const uniqueUserIds = Array.from(allUserIds);
-
-      // If 3+ people are connected, create/ensure family group exists
-      if (uniqueUserIds.length >= 3) {
-        // Check if a group conversation already exists with these exact members
-        const userConversations = await storage.getConversations(userId);
-        const existingGroup = userConversations.find((conv) => {
-          if (conv.type !== "group") return false;
-          const memberIds = conv.members.map((m: any) => m.id).sort();
-          const expectedIds = uniqueUserIds.sort();
-          return (
-            memberIds.length === expectedIds.length &&
-            memberIds.every((id: string, i: number) => id === expectedIds[i])
-          );
-        });
-
-        if (!existingGroup) {
-          const groupConversation = await storage.createConversation({
-            name: "Family Group",
-            type: "group",
-            createdBy: userId,
-          });
-
-          // Add all connected users as members
-          await Promise.all(
-            uniqueUserIds.map((uid) =>
-              storage.addConversationMember({
-                conversationId: groupConversation.id,
-                userId: uid,
-              })
-            )
-          );
-
-          // Create audit log for family group creation
-          await storage.createAuditLog({
-            userId,
-            actionType: "conversation_created",
-            resourceId: groupConversation.id,
-            resourceType: "conversation",
-            details: {
-              conversationType: "group",
-              conversationName: "Family Group",
-              memberCount: uniqueUserIds.length,
-              trigger: "auto_created_on_partnership",
-            },
-          });
-        }
       }
 
       // Notify BOTH users that the partnership was established
@@ -3461,7 +3684,16 @@ Crawl-delay: 1
       }
 
       const conversations = await storage.getConversations(userId);
-      res.json(conversations);
+      const authorizedIds = await getAuthorizedPeerIds(userId);
+      const authorizedConversations = conversations.filter(
+        (conversation) =>
+          Array.isArray(conversation.members) &&
+          conversation.members.some((member: any) => member.id === userId) &&
+          conversation.members.every(
+            (member: any) => typeof member.id === "string" && authorizedIds.has(member.id),
+          ),
+      );
+      res.json(authorizedConversations);
     } catch (error) {
       console.error("Error fetching conversations:", error);
       res.status(500).json({ message: "Failed to fetch conversations" });
@@ -3479,6 +3711,25 @@ Crawl-delay: 1
       if (!type || !memberIds || !Array.isArray(memberIds)) {
         return res.status(400).json({ message: "Missing required fields: type, memberIds" });
       }
+      if (!["direct", "group"].includes(type)) {
+        return res.status(400).json({ message: "Invalid conversation type" });
+      }
+
+      const uniqueMemberIds = Array.from(
+        new Set<string>([userId, ...memberIds.filter((id: unknown) => typeof id === "string")]),
+      );
+      const authorizedIds = await getAuthorizedPeerIds(userId);
+      if (uniqueMemberIds.some((memberId) => !authorizedIds.has(memberId))) {
+        return res.status(403).json({
+          message: "Conversations can include only explicitly connected co-parents.",
+        });
+      }
+      if (type === "direct" && uniqueMemberIds.length !== 2) {
+        return res.status(400).json({ message: "Direct conversations require exactly two members" });
+      }
+      if (type === "group" && uniqueMemberIds.length < 3) {
+        return res.status(400).json({ message: "Group conversations require at least three members" });
+      }
 
       // Create conversation
       const conversation = await storage.createConversation({
@@ -3488,7 +3739,7 @@ Crawl-delay: 1
       });
 
       // Add members to conversation
-      const memberPromises = memberIds.map((memberId: string) =>
+      const memberPromises = uniqueMemberIds.map((memberId: string) =>
         storage.addConversationMember({
           conversationId: conversation.id,
           userId: memberId,
@@ -3506,7 +3757,7 @@ Crawl-delay: 1
           details: {
             conversationType: type,
             conversationName: name,
-            memberCount: memberIds.length,
+            memberCount: uniqueMemberIds.length,
           },
         });
       }
@@ -3533,6 +3784,11 @@ Crawl-delay: 1
       if (!isMember) {
         return res.status(403).json({ message: "You are not a member of this conversation" });
       }
+      if (!(await conversationMembersAreAuthorized(userId, members))) {
+        return res.status(403).json({
+          message: "This conversation is unavailable because its membership is no longer authorized.",
+        });
+      }
 
       const messages = await storage.getConversationMessages(conversationId);
       res.json(messages);
@@ -3550,24 +3806,36 @@ Crawl-delay: 1
         return res.status(401).json({ message: "Unauthorized" });
       }
 
+      if (!(await checkAiMessageConsent(userId))) {
+        return res.status(403).json({
+          message: "AI message consent is required for tone re-analysis.",
+          code: AI_MESSAGE_CONSENT_REQUIRED_CODE,
+        });
+      }
+
       console.log("[Tone Re-analysis] Starting re-analysis of old messages...");
 
       // Fetch messages with unavailable tone analysis
-      const messagesToUpdate = await storage.getMessagesWithUnavailableTone();
+      const messagesToUpdate = (await storage.getMessagesWithUnavailableTone()).filter(
+        (message) => message.senderId === userId,
+      );
 
       console.log(`[Tone Re-analysis] Found ${messagesToUpdate.length} messages to update`);
 
       let updated = 0;
       let failed = 0;
+      let skippedWithoutConsent = 0;
 
       // Re-analyze each message
       for (const message of messagesToUpdate) {
         try {
-          // Get user preferences including co-parent personality for personalized analysis
-          const userPrefs = await getUserPreferencesWithCoParent(message.senderId);
+          if (!(await checkAiMessageConsent(message.senderId))) {
+            skippedWithoutConsent++;
+            continue;
+          }
 
           // Analyze tone
-          const toneAnalysis = await analyzeTone(message.content, userPrefs);
+          const toneAnalysis = await analyzeTone(message.content);
 
           // Update message with new tone data
           await storage.updateMessageTone(message.id, {
@@ -3595,6 +3863,7 @@ Crawl-delay: 1
         total: messagesToUpdate.length,
         updated,
         failed,
+        skippedWithoutConsent,
       });
     } catch (error: any) {
       console.error("Error re-analyzing message tones:", error);
@@ -3618,7 +3887,15 @@ Crawl-delay: 1
         return res.status(403).json({ message: "You are not a member of this conversation" });
       }
 
-      // Delete the conversation (cascade will delete members and messages)
+      // A shared conversation contains records owned by more than one person.
+      // Until per-user archive/leave semantics exist, do not let one member
+      // cascade-delete the other member's message history.
+      if (members.some((member) => member.userId !== userId)) {
+        return res.status(409).json({
+          message: "Shared conversations cannot be deleted by one participant.",
+        });
+      }
+
       await storage.deleteConversation(conversationId);
 
       // Audit log
@@ -3651,7 +3928,11 @@ Crawl-delay: 1
 
       // SECURITY: Get user's active partnership to filter notes
       const user = await storage.getUser(userId);
-      const partnershipId = user?.activePartnershipId || undefined;
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        user?.activePartnershipId,
+      );
+      const partnershipId = partnership?.id;
 
       const notes = await storage.getNotes(userId, partnershipId);
       res.json(notes);
@@ -3670,7 +3951,11 @@ Crawl-delay: 1
 
       // SECURITY: Require active partnership to create notes
       const user = await storage.getUser(userId);
-      if (!user?.activePartnershipId) {
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        user?.activePartnershipId,
+      );
+      if (!partnership) {
         return res
           .status(400)
           .json({ message: "No active partnership. Please join or create a partnership first." });
@@ -3678,12 +3963,12 @@ Crawl-delay: 1
 
       const parsed = insertNoteSchema.parse({
         ...req.body,
-        partnershipId: user.activePartnershipId,
+        partnershipId: partnership.id,
         createdBy: userId,
       });
       const note = await storage.createNote(parsed);
 
-      broadcastNoteUpdate(user.activePartnershipId, "created", userId, parsed.title);
+      broadcastNoteUpdate(partnership.id, "created", userId, parsed.title);
 
       res.json(note);
     } catch (error: any) {
@@ -3698,12 +3983,22 @@ Crawl-delay: 1
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      const note = await storage.updateNote(req.params.id, req.body);
-
-      const user = await storage.getUser(userId);
-      if (user?.activePartnershipId) {
-        broadcastNoteUpdate(user.activePartnershipId, "updated", userId, req.body.title);
+      const existingNote = await storage.getNote(req.params.id);
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        existingNote?.partnershipId,
+      );
+      if (!existingNote || !partnership) {
+        return res.status(404).json({ message: "Note not found" });
       }
+
+      const updates = insertNoteSchema.partial().parse({
+        ...req.body,
+        partnershipId: existingNote.partnershipId,
+        createdBy: existingNote.createdBy,
+      });
+      const note = await storage.updateNote(req.params.id, updates);
+      broadcastNoteUpdate(partnership.id, "updated", userId, note.title);
 
       res.json(note);
     } catch (error) {
@@ -3719,12 +4014,17 @@ Crawl-delay: 1
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      const user = await storage.getUser(userId);
-      await storage.deleteNote(req.params.id);
-
-      if (user?.activePartnershipId) {
-        broadcastNoteUpdate(user.activePartnershipId, "deleted", userId);
+      const existingNote = await storage.getNote(req.params.id);
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        existingNote?.partnershipId,
+      );
+      if (!existingNote || !partnership) {
+        return res.status(404).json({ message: "Note not found" });
       }
+
+      await storage.deleteNote(req.params.id);
+      broadcastNoteUpdate(partnership.id, "deleted", userId);
 
       res.json({ success: true });
     } catch (error) {
@@ -3743,7 +4043,11 @@ Crawl-delay: 1
 
       // SECURITY: Get user's active partnership to filter tasks
       const user = await storage.getUser(userId);
-      const partnershipId = user?.activePartnershipId || undefined;
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        user?.activePartnershipId,
+      );
+      const partnershipId = partnership?.id;
 
       const tasks = await storage.getTasks(userId, partnershipId);
       res.json(tasks);
@@ -3762,7 +4066,11 @@ Crawl-delay: 1
 
       // SECURITY: Require active partnership to create tasks
       const user = await storage.getUser(userId);
-      if (!user?.activePartnershipId) {
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        user?.activePartnershipId,
+      );
+      if (!partnership) {
         return res
           .status(400)
           .json({ message: "No active partnership. Please join or create a partnership first." });
@@ -3777,7 +4085,7 @@ Crawl-delay: 1
 
       const parsed = insertTaskSchema.parse({
         ...sanitizedBody,
-        partnershipId: user.activePartnershipId,
+        partnershipId: partnership.id,
         createdBy: userId,
       });
       const task = await storage.createTask(parsed);
@@ -3796,22 +4104,35 @@ Crawl-delay: 1
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      // Get user's active partnership for filtering
-      const user = await storage.getUser(userId);
-      const partnershipId = user?.activePartnershipId;
+      const oldTask = await storage.getTask(req.params.id);
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        oldTask?.partnershipId,
+      );
+      if (!oldTask || !partnership) {
+        return res.status(404).json({ message: "Task not found" });
+      }
 
-      // Get the old task state before updating (fetch tasks from active partnership)
-      const allTasks = await storage.getTasks(userId, partnershipId ?? undefined);
-      const oldTask = allTasks.find((t) => t.id === req.params.id);
+      if (req.body.assignedTo) {
+        const authorizedIds = await getAuthorizedPeerIds(userId);
+        if (!authorizedIds.has(req.body.assignedTo)) {
+          return res.status(400).json({ message: "Invalid task assignee" });
+        }
+      }
 
-      const task = await storage.updateTask(req.params.id, req.body);
+      const updates = insertTaskSchema.partial().parse({
+        ...req.body,
+        partnershipId: oldTask.partnershipId,
+        createdBy: oldTask.createdBy,
+      });
+      const task = await storage.updateTask(req.params.id, updates);
 
       // Gamification: Track task completion
       try {
         // Check if task was just completed (not completed before, completed now)
-        if (oldTask && !oldTask.completed && task.completed) {
+        if (!oldTask.completed && task.completed) {
           // Use task's partnershipId for gamification tracking
-          const taskPartnershipId = task.partnershipId || partnershipId;
+          const taskPartnershipId = task.partnershipId;
 
           // Increment tasks completed
           await storage.incrementUserStat(
@@ -3848,6 +4169,11 @@ Crawl-delay: 1
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
+      const task = await storage.getTask(req.params.id);
+      const partnership = await getAuthorizedPartnership(userId, task?.partnershipId);
+      if (!task || !partnership) {
+        return res.status(404).json({ message: "Task not found" });
+      }
       await storage.deleteTask(req.params.id);
       broadcastTaskUpdate(userId); // Notify other users
       res.json({ success: true });
@@ -3867,7 +4193,11 @@ Crawl-delay: 1
 
       // SECURITY: Get user's active partnership to filter child updates
       const user = await storage.getUser(userId);
-      const partnershipId = user?.activePartnershipId || undefined;
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        user?.activePartnershipId,
+      );
+      const partnershipId = partnership?.id;
 
       const updates = await storage.getChildUpdates(userId, partnershipId);
       res.json(updates);
@@ -3886,7 +4216,11 @@ Crawl-delay: 1
 
       // SECURITY: Require active partnership to create child updates
       const user = await storage.getUser(userId);
-      if (!user?.activePartnershipId) {
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        user?.activePartnershipId,
+      );
+      if (!partnership) {
         return res
           .status(400)
           .json({ message: "No active partnership. Please join or create a partnership first." });
@@ -3894,7 +4228,7 @@ Crawl-delay: 1
 
       const parsed = insertChildUpdateSchema.parse({
         ...req.body,
-        partnershipId: user.activePartnershipId,
+        partnershipId: partnership.id,
         createdBy: userId,
       });
       const update = await storage.createChildUpdate(parsed);
@@ -3907,6 +4241,15 @@ Crawl-delay: 1
 
   app.delete("/api/child-updates/:id", isAuthenticatedEither, async (req: any, res) => {
     try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const update = await storage.getChildUpdate(req.params.id);
+      const partnership = await getAuthorizedPartnership(userId, update?.partnershipId);
+      if (!update || !partnership) {
+        return res.status(404).json({ message: "Child update not found" });
+      }
       await storage.deleteChildUpdate(req.params.id);
       res.json({ success: true });
     } catch (error) {
@@ -3936,6 +4279,12 @@ Crawl-delay: 1
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
+      if (
+        req.body.partnershipId &&
+        !(await getAuthorizedPartnership(userId, req.body.partnershipId))
+      ) {
+        return res.status(404).json({ message: "Partnership not found" });
+      }
       const parsed = insertChildSchema.parse({
         ...req.body,
         userId,
@@ -3959,7 +4308,12 @@ Crawl-delay: 1
       if (!existingChild || existingChild.userId !== userId) {
         return res.status(404).json({ message: "Child not found" });
       }
-      const child = await storage.updateChild(req.params.id, req.body);
+      const updates = insertChildSchema.partial().parse({
+        ...req.body,
+        userId: existingChild.userId,
+        partnershipId: existingChild.partnershipId,
+      });
+      const child = await storage.updateChild(req.params.id, updates);
       res.json(child);
     } catch (error: any) {
       console.error("Error updating child:", error);
@@ -4040,7 +4394,11 @@ Crawl-delay: 1
 
       // SECURITY: Get user's active partnership to filter pets
       const user = await storage.getUser(userId);
-      const partnershipId = user?.activePartnershipId || undefined;
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        user?.activePartnershipId,
+      );
+      const partnershipId = partnership?.id;
 
       const pets = await storage.getPets(userId, partnershipId);
       res.json(pets);
@@ -4059,7 +4417,11 @@ Crawl-delay: 1
 
       // SECURITY: Require active partnership to create pets
       const user = await storage.getUser(userId);
-      if (!user?.activePartnershipId) {
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        user?.activePartnershipId,
+      );
+      if (!partnership) {
         return res
           .status(400)
           .json({ message: "No active partnership. Please join or create a partnership first." });
@@ -4067,7 +4429,7 @@ Crawl-delay: 1
 
       const parsed = insertPetSchema.parse({
         ...req.body,
-        partnershipId: user.activePartnershipId,
+        partnershipId: partnership.id,
         createdBy: userId,
       });
       const pet = await storage.createPet(parsed);
@@ -4088,7 +4450,11 @@ Crawl-delay: 1
 
       // SECURITY: Get user's active partnership to filter expenses
       const user = await storage.getUser(userId);
-      const partnershipId = user?.activePartnershipId || undefined;
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        user?.activePartnershipId,
+      );
+      const partnershipId = partnership?.id;
 
       const expenses = await storage.getExpenses(userId, partnershipId);
 
@@ -4164,6 +4530,48 @@ Crawl-delay: 1
         ...sanitizedBody,
         paidBy: userId,
       });
+      if (
+        parsed.receiptUrl &&
+        !isOwnerScopedUploadReference("receipts", userId, parsed.receiptUrl)
+      ) {
+        return res.status(400).json({ message: "Invalid receipt reference" });
+      }
+
+      let authorizedPartnership: Partnership | undefined;
+      let validatedSplitPercentages: { user1: number; user2: number } | undefined;
+      if (parsed.partnershipId) {
+        authorizedPartnership = await getAuthorizedPartnership(
+          userId,
+          parsed.partnershipId,
+        );
+        if (!authorizedPartnership) {
+          return res.status(403).json({ message: "Partnership not found" });
+        }
+        if (splitPercentages) {
+          const user1Percentage = Number(
+            splitPercentages[authorizedPartnership.user1Id],
+          );
+          const user2Percentage = Number(
+            splitPercentages[authorizedPartnership.user2Id],
+          );
+          if (
+            !Number.isFinite(user1Percentage) ||
+            !Number.isFinite(user2Percentage) ||
+            user1Percentage < 0 ||
+            user2Percentage < 0 ||
+            Math.abs(user1Percentage + user2Percentage - 100) > 0.01
+          ) {
+            return res.status(400).json({
+              message: "Expense split percentages must be non-negative and total 100.",
+            });
+          }
+          validatedSplitPercentages = {
+            user1: user1Percentage,
+            user2: user2Percentage,
+          };
+        }
+      }
+
       const expense = await storage.createExpense(parsed);
 
       // Gamification: Track expense logging
@@ -4187,11 +4595,7 @@ Crawl-delay: 1
 
       // Solo mode: skip partnership-related operations if no partnershipId
       if (parsed.partnershipId) {
-        // Get partnership to determine both parents
-        const partnership = await storage.getPartnership(parsed.partnershipId);
-        if (!partnership) {
-          throw new Error("Partnership not found");
-        }
+        const partnership = authorizedPartnership!;
 
         // Determine split percentages (default to 50/50 if not provided)
         const totalAmount = parseFloat(parsed.amount);
@@ -4201,9 +4605,9 @@ Crawl-delay: 1
         let user1Percentage = 50;
         let user2Percentage = 50;
 
-        if (splitPercentages) {
-          user1Percentage = splitPercentages[user1Id] || 50;
-          user2Percentage = splitPercentages[user2Id] || 50;
+        if (validatedSplitPercentages) {
+          user1Percentage = validatedSplitPercentages.user1;
+          user2Percentage = validatedSplitPercentages.user2;
         }
 
         // Create expense participants for both users
@@ -4259,11 +4663,17 @@ Crawl-delay: 1
         return res.status(400).json({ message: "This expense has already been fully settled" });
       }
 
-      // SOLO EXPENSE: If no partnershipId, this is a solo expense - mark as settled directly
-      if (!partnershipId) {
+      // SOLO EXPENSE: only the authenticated owner may settle it directly.
+      if (!expense.partnershipId) {
+        if (expense.paidBy !== userId) {
+          return res.status(404).json({ message: "Expense not found" });
+        }
+        if (partnershipId) {
+          return res.status(400).json({ message: "Invalid partnership for this expense" });
+        }
         // For solo expenses, just mark as settled immediately
         await storage.updateExpense(expenseId, { status: "settled" });
-        console.log(`[Expense] Solo expense ${expenseId} marked as settled`);
+        console.log("[Expense] Solo expense marked as settled");
         return res.json({ 
           message: "Expense marked as settled",
           soloMode: true,
@@ -4271,16 +4681,17 @@ Crawl-delay: 1
         });
       }
 
-      // PARTNERSHIP EXPENSE: Verify user is part of the partnership
-      const partnership = await storage.getPartnership(partnershipId);
-      if (!partnership) {
-        return res.status(404).json({ message: "Partnership not found" });
+      if (partnershipId && partnershipId !== expense.partnershipId) {
+        return res.status(400).json({ message: "Invalid partnership for this expense" });
       }
 
-      const isPartOfPartnership = partnership.user1Id === userId || partnership.user2Id === userId;
-      if (!isPartOfPartnership) {
-        return res.status(403).json({ message: "You are not part of this partnership" });
+      // PARTNERSHIP EXPENSE: derive authority from the stored expense, never
+      // from a client-supplied partnership identifier.
+      const partnership = await getAuthorizedPartnership(userId, expense.partnershipId);
+      if (!partnership) {
+        return res.status(404).json({ message: "Expense not found" });
       }
+      const resolvedPartnershipId = partnership.id;
 
       // Verify user is a participant in the expense
       const participants = await storage.getExpenseParticipants(expenseId);
@@ -4327,7 +4738,7 @@ Crawl-delay: 1
         expenseId,
         payerId: userId, // Always use authenticated user
         receiverId: derivedReceiverId,
-        partnershipId,
+        partnershipId: resolvedPartnershipId,
         amount: Math.min(paymentAmount, remainingOwed).toFixed(2), // Cap at remaining owed
         method,
         paymentLink,
@@ -4340,19 +4751,13 @@ Crawl-delay: 1
       // This prevents pending settlements from inflating the paid amount
 
       // Recalculate partnership balances
-      await storage.calculatePartnershipBalances(partnershipId);
+      await storage.calculatePartnershipBalances(resolvedPartnershipId);
 
       // Send push notification to co-parent about the payment
       try {
-        const expense = await storage.getExpense(expenseId);
-        const payer = await storage.getUser(userId);
-        const payerName = payer?.displayName || payer?.firstName || "Your co-parent";
-        const expenseDescription = expense?.description || "an expense";
-        const formattedAmount = parseFloat(amount).toFixed(2);
-
         await sendPushNotification(derivedReceiverId, {
-          title: "Payment Logged",
-          body: `${payerName} logged a $${formattedAmount} payment for ${expenseDescription}`,
+          title: "PeacePad payment update",
+          body: "A payment update is ready in PeacePad.",
           channel: 'general', // General notifications for expenses
           data: {
             type: "expense_payment",
@@ -4494,6 +4899,10 @@ Crawl-delay: 1
         return res.status(401).json({ message: "Unauthorized" });
       }
       const partnershipId = req.params.id;
+      const partnership = await getAuthorizedPartnership(userId, partnershipId);
+      if (!partnership) {
+        return res.status(404).json({ message: "Partnership not found" });
+      }
 
       const balance = await storage.getPartnershipBalance(partnershipId, userId);
       res.json(balance || { partnershipId, userId, netBalance: "0", lastUpdated: new Date() });
@@ -4527,11 +4936,15 @@ Crawl-delay: 1
       }
 
       const user = await storage.getUser(userId);
-      if (!user?.activePartnershipId) {
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        user?.activePartnershipId,
+      );
+      if (!partnership) {
         return res.json([]);
       }
 
-      const expenses = await storage.getExpenses(userId, user.activePartnershipId);
+      const expenses = await storage.getExpenses(userId, partnership.id);
       
       // Filter to pending expenses and extract relevant info for AI
       const pendingExpenses = expenses
@@ -4578,6 +4991,18 @@ Crawl-delay: 1
         return res.status(401).json({ message: "Unauthorized" });
       }
       const expenseId = req.params.id;
+      const expense = await storage.getExpense(expenseId);
+      if (!expense) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      if (expense.partnershipId) {
+        const partnership = await getAuthorizedPartnership(userId, expense.partnershipId);
+        if (!partnership) {
+          return res.status(404).json({ message: "Expense not found" });
+        }
+      } else if (expense.paidBy !== userId) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
       const settlements = await storage.getExpenseSettlements(expenseId);
       res.json(settlements);
     } catch (error) {
@@ -4729,11 +5154,10 @@ Crawl-delay: 1
         );
 
         if (partnerIds.length > 0) {
-          const eventTitle = event.title || "New event";
           for (const partnerId of partnerIds) {
             await sendPushNotification(partnerId, {
-              title: `Urgent: ${eventTitle}`,
-              body: `Your co-parent scheduled an urgent event`,
+              title: "Urgent PeacePad calendar update",
+              body: "Open PeacePad to review the calendar update.",
               channel: 'general', // Calendar notifications
               data: { type: "event", eventId: event.id },
             });
@@ -4811,11 +5235,10 @@ Crawl-delay: 1
         );
 
         if (partnerIds.length > 0) {
-          const eventTitle = event.title || "Event updated";
           for (const partnerId of partnerIds) {
             await sendPushNotification(partnerId, {
-              title: `Urgent: ${eventTitle}`,
-              body: `Your co-parent updated an urgent event`,
+              title: "Urgent PeacePad calendar update",
+              body: "Open PeacePad to review the calendar update.",
               channel: 'general', // Calendar notifications
               data: { type: "event", eventId: event.id },
             });
@@ -4875,9 +5298,11 @@ Crawl-delay: 1
       const icalContent = generateICalFromEvents(events, calendarName);
 
       // Get filename from query or use default
+      const requestedFilename =
+        typeof req.query.filename === "string" ? req.query.filename : "";
       const filename =
-        (req.query.filename as string) ||
-        `peacepad-custody-${new Date().toISOString().split("T")[0]}.ics`;
+        requestedFilename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 96) ||
+        `peacepad-calendar-${new Date().toISOString().split("T")[0]}.ics`;
 
       // Set headers for file download (force download, don't display in browser)
       res.setHeader("Content-Type", "text/calendar; charset=utf-8");
@@ -4941,6 +5366,9 @@ Crawl-delay: 1
       if (!template) {
         return res.status(404).json({ message: "Template not found" });
       }
+      if (!template.isPublic && template.createdBy !== userId) {
+        return res.status(404).json({ message: "Template not found" });
+      }
 
       // Parse the template pattern (JSON) and generate events
       const pattern = JSON.parse(template.pattern);
@@ -4989,6 +5417,10 @@ Crawl-delay: 1
         return res.status(401).json({ message: "Unauthorized" });
       }
       const templateId = req.params.id;
+      const template = await storage.getScheduleTemplate(templateId);
+      if (!template || template.createdBy !== userId || template.isPublic) {
+        return res.status(404).json({ message: "Template not found" });
+      }
       await storage.deleteScheduleTemplate(templateId);
       res.json({ message: "Template deleted successfully" });
     } catch (error) {
@@ -5008,49 +5440,12 @@ Crawl-delay: 1
       const conflicts = findScheduleConflicts(events);
       const suggestions: string[] = [];
 
-      // Dev mode protection - use mock suggestions to avoid token usage
+      // Keep schedule analysis local for this release.
       if (isDevMode()) {
         const mockSuggestions = mockCalendarSuggestions();
         suggestions.push(...mockSuggestions.map((s) => s.reason));
-      } else {
-        // Use AI to analyze scheduling patterns (production only)
-        if (events.length > 0) {
-          try {
-            const eventSummary = events
-              .map((e) => `${e.type}: ${e.title} at ${new Date(e.startDate).toLocaleString()}`)
-              .join("\n");
-
-            const response = await openai.chat.completions.create({
-              model: "gpt-4o-mini",
-              messages: [
-                {
-                  role: "system",
-                  content:
-                    "You are a co-parenting scheduling assistant. Analyze the schedule and identify potential conflicts or provide helpful suggestions for better coordination.",
-                },
-                {
-                  role: "user",
-                  content: `Analyze this co-parenting schedule:\n${eventSummary}\n\nProvide 1-3 brief suggestions for better coordination (max 50 words each).`,
-                },
-              ],
-              temperature: 0.7,
-              max_tokens: 150,
-            });
-
-            const aiSuggestions = response.choices[0]?.message?.content
-              ?.split("\n")
-              .filter((s) => s.trim());
-            if (aiSuggestions) {
-              suggestions.push(...aiSuggestions.slice(0, 3));
-            }
-          } catch (error) {
-            console.error("AI analysis error:", error);
-            // Fallback suggestions if AI fails
-            if (conflicts.length > 0) {
-              suggestions.push("Consider adjusting overlapping events to avoid conflicts");
-            }
-          }
-        }
+      } else if (conflicts.length > 0) {
+        suggestions.push("Consider adjusting overlapping events to avoid conflicts");
       }
 
       res.json({
@@ -5065,7 +5460,11 @@ Crawl-delay: 1
   });
 
   // Call session routes - supports both auth methods
-  app.post("/api/call-sessions", isAuthenticatedEither, async (req: any, res) => {
+  app.post(
+    "/api/call-sessions",
+    isAuthenticatedEither,
+    rateLimiters.strict,
+    async (req: any, res) => {
     try {
       const userId = getUserId(req);
       if (!userId) {
@@ -5077,14 +5476,14 @@ Crawl-delay: 1
       const validCallTypes = ["audio", "video"];
       const finalCallType = validCallTypes.includes(callType) ? callType : "audio";
 
-      // Generate a 6-digit session code with retry on collision
+      // Generate an unguessable session code with retry on collision.
       let session;
       let attempts = 0;
       const maxAttempts = 5;
 
       while (attempts < maxAttempts) {
         try {
-          const sessionCode = Math.floor(100000 + Math.random() * 900000).toString();
+          const sessionCode = crypto.randomBytes(24).toString("base64url");
 
           session = await storage.createCallSession({
             sessionCode,
@@ -5110,9 +5509,16 @@ Crawl-delay: 1
     }
   });
 
-  // Public endpoint - no auth required to view session details
-  app.get("/api/call-sessions/:code", async (req, res) => {
+  app.get(
+    "/api/call-sessions/:code",
+    isAuthenticatedEither,
+    rateLimiters.strict,
+    async (req: any, res) => {
     try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const { code } = req.params;
       const session = await storage.getCallSessionByCode(code);
 
@@ -5120,20 +5526,44 @@ Crawl-delay: 1
         return res.status(404).json({ message: "Call session not found or ended" });
       }
 
-      res.json(session);
+      if (
+        session.hostId !== userId &&
+        !(await getPartnershipBetweenUsers(userId, session.hostId))
+      ) {
+        return res.status(404).json({ message: "Call session not found or ended" });
+      }
+
+      res.json({
+        id: session.id,
+        sessionCode: session.sessionCode,
+        callType: session.callType,
+        isActive: session.isActive,
+        createdAt: session.createdAt,
+      });
     } catch (error) {
       console.error("Error fetching call session:", error);
       res.status(500).json({ message: "Failed to fetch call session" });
     }
   });
 
-  app.post("/api/call-sessions/:code/end", isAuthenticatedEither, async (req, res) => {
+  app.post(
+    "/api/call-sessions/:code/end",
+    isAuthenticatedEither,
+    rateLimiters.strict,
+    async (req: any, res) => {
     try {
       const userId = getUserId(req);
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
       const { code } = req.params;
+      const session = await storage.getCallSessionByCode(code);
+      if (!session) {
+        return res.status(404).json({ message: "Call session not found" });
+      }
+      if (session.hostId !== userId) {
+        return res.status(403).json({ message: "Only the call host can end this session" });
+      }
       await storage.endCallSession(code);
       res.json({ message: "Call ended successfully" });
     } catch (error) {
@@ -5219,6 +5649,9 @@ Crawl-delay: 1
       if (!call) {
         return res.status(404).json({ message: "Call not found" });
       }
+      if (call.callerId !== userId && call.receiverId !== userId) {
+        return res.status(404).json({ message: "Call not found" });
+      }
 
       res.json(call);
     } catch (error) {
@@ -5259,9 +5692,19 @@ Crawl-delay: 1
         return res.status(400).json({ message: "Invalid call type. Must be 'audio' or 'video'" });
       }
 
+      const partnership = await getPartnershipBetweenUsers(userId, participantId);
+      if (!partnership) {
+        return res.status(403).json({
+          message: "Calls can be scheduled only with an explicitly connected co-parent.",
+        });
+      }
+      if (partnershipId && partnershipId !== partnership.id) {
+        return res.status(400).json({ message: "Partnership does not match this participant" });
+      }
+
       // Verify participant exists
       const participant = await storage.getUser(participantId);
-      if (!participant) {
+      if (!participant || participant.isDeactivated || participant.deletedAt) {
         return res.status(404).json({ message: "Participant not found" });
       }
 
@@ -5274,7 +5717,7 @@ Crawl-delay: 1
       const scheduledCall = await storage.createScheduledCall({
         schedulerId: userId,
         participantId,
-        partnershipId: partnershipId || null,
+        partnershipId: partnership.id,
         callType,
         scheduledFor: scheduledDate,
         title: title || "Scheduled Call",
@@ -5383,6 +5826,12 @@ Crawl-delay: 1
         }
         const { partnerId } = req.params;
         const { isEmergency } = req.query;
+        if (
+          partnerId !== userId &&
+          !(await getPartnershipBetweenUsers(userId, partnerId))
+        ) {
+          return res.status(404).json({ message: "Call preferences not found" });
+        }
 
         const preferences = await storage.getCallPreference(partnerId);
 
@@ -5518,14 +5967,14 @@ Crawl-delay: 1
 
       // CRITICAL FIX: Create CallSession with sessionCode IMMEDIATELY on creation
       // This ensures both users have sessionCode for WebRTC connection from the start
-      const sessionCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const sessionCode = crypto.randomBytes(24).toString("base64url");
       const callSession = await storage.createCallSession({
         sessionCode,
         hostId: userId, // Initiator is the host
         callType: "audio", // Conch Mode uses audio primarily
         isActive: true, // Active while waiting for partner to join
       });
-      console.log(`[Conch Create] CallSession created with code: ${sessionCode}`);
+      console.log("[Conch Create] Call session created");
 
       // Create a Call record to link the Conch session to WebRTC
       const coParentId = partnership.user1Id === userId ? partnership.user2Id : partnership.user1Id;
@@ -5554,9 +6003,7 @@ Crawl-delay: 1
 
       // Register with CallEngineV2 for signaling (host is the initiator)
       callEngineV2.registerLegacySession(sessionCode, call.id, userId);
-      console.log(
-        `[Conch Create] ✅ Session registered with CallEngineV2: ${sessionCode} → ${call.id}`
-      );
+      console.log("[Conch Create] Session registered with the call engine");
 
       // Add initiator as first participant
       await storage.addConchSessionParticipant({
@@ -5568,12 +6015,9 @@ Crawl-delay: 1
       await broadcastConchSessionCreated(session.id, partnershipId, userId);
 
       // Send push notification to co-parent (important if app is backgrounded)
-      const initiator = await storage.getUser(userId);
-      const initiatorName = initiator?.displayName || "Your co-parent";
-
       await sendPushNotification(coParentId, {
         title: "Conch Mode Invitation",
-        body: `${initiatorName} is inviting you to a structured conversation`,
+        body: "Open PeacePad to review a structured-conversation invitation.",
         channel: 'conch', // High priority for Conch invitations
         data: {
           type: "conch_invite",
@@ -5583,9 +6027,7 @@ Crawl-delay: 1
         },
       });
 
-      console.log(
-        `[Conch] User ${userId} created session ${session.id} for partnership ${partnershipId} with sessionCode ${sessionCode}`
-      );
+      console.log("[Conch] Structured conversation session created");
 
       // Return session with sessionCode so initiator can connect to WebRTC immediately
       res.json({
@@ -5716,7 +6158,7 @@ Crawl-delay: 1
           });
         }
 
-        console.log(`[Conch Join] Using existing sessionCode: ${callSession.sessionCode}`);
+        console.log("[Conch Join] Reusing the existing call session");
 
         // Update call to active status
         await storage.updateCall(call.id, {
@@ -5745,9 +6187,7 @@ Crawl-delay: 1
         };
         notifyCallAccepted(callWithSessionCode);
 
-        console.log(
-          `[Conch] Session ${id} activated with call ${call.id}, sessionCode ${callSession.sessionCode}`
-        );
+        console.log("[Conch] Structured conversation session activated");
 
         // Return session data WITH sessionCode for WebRTC connection
         res.json({
@@ -5775,9 +6215,7 @@ Crawl-delay: 1
 
               // CRITICAL FIX: Register existing session with CallEngineV2 for re-joins
               callEngineV2.registerLegacySession(existingCallSession.sessionCode, call.id, hostId);
-              console.log(
-                `[Conch Join] ✅ Existing session re-registered with CallEngineV2: ${existingCallSession.sessionCode} → ${call.id} (host: ${hostId})`
-              );
+              console.log("[Conch Join] Existing session re-registered with the call engine");
 
               res.json({
                 ...session,
@@ -5955,6 +6393,9 @@ Crawl-delay: 1
       // Generate session summary from turn history
       let sessionSummary: ConchSessionSummary | null = null;
       try {
+        const participantsConsentToCallAi =
+          (await checkAiCallConsent(partnership.user1Id)) &&
+          (await checkAiCallConsent(partnership.user2Id));
         const moodData = (session.moodData || {}) as any;
         const turnHistory = moodData.turnHistory || [];
         const detectedLanguage = moodData.detectedLanguage || "en";
@@ -5964,7 +6405,7 @@ Crawl-delay: 1
           ? Math.round((Date.now() - new Date(session.startedAt).getTime()) / 60000)
           : 0;
 
-        if (turnHistory.length > 0) {
+        if (turnHistory.length > 0 && participantsConsentToCallAi) {
           sessionSummary = await generateConchSessionSummary(
             turnHistory,
             sessionDurationMinutes,
@@ -6144,6 +6585,9 @@ Crawl-delay: 1
       // Get speaker info synchronously before any async operations
       const speakerUser = await storage.getUser(userId);
       const speakerName = speakerUser?.displayName || "Speaker";
+      const participantsConsentToCallAi =
+        (await checkAiCallConsent(partnership.user1Id)) &&
+        (await checkAiCallConsent(partnership.user2Id));
 
       // Store basic turn info synchronously in turnHistory BEFORE clearing transcripts
       // This ensures session summary has data even if async AI analysis fails
@@ -6158,14 +6602,13 @@ Crawl-delay: 1
         unaddressedConcerns: [],
         overallSentiment: "neutral",
         timestamp: new Date().toISOString(),
-        rawTranscript: turnTranscripts.join(" ").substring(0, 500), // Store snippet for reference
       };
       existingTurnHistory.push(turnRecord);
       const turnIndex = existingTurnHistory.length - 1; // Track index for async update
 
       // Run content analysis asynchronously (don't block the pass action)
       // Analysis runs in background and broadcasts results via WebSocket
-      if (turnTranscripts.length > 0) {
+      if (turnTranscripts.length > 0 && participantsConsentToCallAi) {
         const capturedTranscripts = [...turnTranscripts]; // Capture before clearing
         (async () => {
           try {
@@ -6269,12 +6712,9 @@ Crawl-delay: 1
       await broadcastConchPassed(id, session.partnershipId, newHolderUserId, newTurnEndsAt);
 
       // Send push notification to new conch holder (helpful if app is backgrounded)
-      const previousHolder = await storage.getUser(userId);
-      const previousHolderName = previousHolder?.displayName || "Your co-parent";
-
       await sendPushNotification(newHolderUserId, {
         title: "It's Your Turn",
-        body: `${previousHolderName} passed the conch to you`,
+        body: "Open PeacePad to continue the structured conversation.",
         channel: 'conch', // High priority for Conch turns
         data: {
           type: "conch_turn",
@@ -6582,10 +7022,19 @@ Crawl-delay: 1
       if (!speaker) {
         return res.status(404).json({ message: "User not found" });
       }
+      const participantsConsentToCallAi =
+        (await checkAiCallConsent(partnership.user1Id)) &&
+        (await checkAiCallConsent(partnership.user2Id));
+      if (!participantsConsentToCallAi) {
+        return res.status(403).json({
+          message: "Both participants must enable AI call consent for turn summaries.",
+          code: AI_CALL_CONSENT_REQUIRED_CODE,
+        });
+      }
       const speakerName = speaker.displayName || speaker.firstName || "Speaker";
 
-      // Generate AI counselor summary
-      const summary = await generateTurnSummary(transcript, speakerName);
+      // Shared-call transcripts remain local for this release.
+      const summary = await generateConchTurnSummary([transcript], speakerName);
 
       console.log(`[Conch AI] Generated turn summary for ${speakerName} in session ${id}`);
       res.json(summary);
@@ -6606,7 +7055,7 @@ Crawl-delay: 1
           return res.status(401).json({ message: "Unauthorized" });
         }
         const { id } = req.params;
-        const { currentEmotion, previousEmotion, recentTranscript } = req.body;
+        const { currentEmotion } = req.body;
 
         if (!currentEmotion) {
           return res.status(400).json({ message: "Current emotion data is required" });
@@ -6627,13 +7076,18 @@ Crawl-delay: 1
             .status(403)
             .json({ message: "Unauthorized: You are not a member of this partnership" });
         }
+        const participantsConsentToCallAi =
+          (await checkAiCallConsent(partnership.user1Id)) &&
+          (await checkAiCallConsent(partnership.user2Id));
+        if (!participantsConsentToCallAi) {
+          return res.status(403).json({
+            message: "Both participants must enable AI call consent for intervention analysis.",
+            code: AI_CALL_CONSENT_REQUIRED_CODE,
+          });
+        }
 
-        // Generate AI counselor intervention
-        const intervention = await generateEmotionIntervention(
-          currentEmotion,
-          previousEmotion,
-          recentTranscript
-        );
+        // Shared-call transcript content is not sent to an external provider in this release.
+        const intervention = buildLocalCallIntervention(currentEmotion);
 
         console.log(
           `[Conch AI] Checked intervention for session ${id}: ${intervention.shouldIntervene ? "YES" : "NO"}`
@@ -6724,16 +7178,6 @@ Crawl-delay: 1
 
   // ============ AI-POWERED MESSAGE ANALYSIS ============
 
-  // Helper function to check AI message consent
-  async function checkAiMessageConsent(userId: string): Promise<boolean> {
-    try {
-      const user = await storage.getUser(userId);
-      return user?.aiMessageConsent === true;
-    } catch {
-      return false;
-    }
-  }
-
   // Comprehensive message analysis with conflict detection and communication coaching
   app.post(
     "/api/analyze-message",
@@ -6749,24 +7193,19 @@ Crawl-delay: 1
         // Check if user has consented to AI message analysis
         const hasConsent = await checkAiMessageConsent(userId);
         if (!hasConsent) {
-          console.log(`[AI Analysis] User ${userId} has not consented to AI analysis - skipping`);
-          return res.json({
-            emotion: { emotion: "neutral", confidence: 0, language: "en" },
-            conflictAnalysis: { hasConflict: false },
-            coaching: null,
-            aiDisabled: true,
-            message:
-              "AI analysis is disabled. Enable it in your settings to receive tone suggestions.",
+          return res.status(403).json({
+            message: "AI message consent is required for message analysis.",
+            code: AI_MESSAGE_CONSENT_REQUIRED_CODE,
           });
         }
 
-        const { message, conversationHistory, context } = req.body;
+        const { message } = req.body;
 
         if (!message || typeof message !== "string") {
           return res.status(400).json({ message: "Message is required" });
         }
 
-        const analysis = await analyzeMessageComprehensive(message, conversationHistory, context);
+        const analysis = await analyzeMessageComprehensive(message);
 
         console.log(
           `[AI Analysis] Message analyzed for user ${userId}: emotion=${analysis.emotion.emotion}, conflict=${analysis.conflictAnalysis?.hasConflict || false}`
@@ -6795,19 +7234,19 @@ Crawl-delay: 1
         // Check if user has consented to AI message analysis
         const hasConsent = await checkAiMessageConsent(userId);
         if (!hasConsent) {
-          return res.json({
-            hasConflict: false,
-            aiDisabled: true,
+          return res.status(403).json({
+            message: "AI message consent is required for conflict analysis.",
+            code: AI_MESSAGE_CONSENT_REQUIRED_CODE,
           });
         }
 
-        const { message, conversationHistory } = req.body;
+        const { message } = req.body;
 
         if (!message || typeof message !== "string") {
           return res.status(400).json({ message: "Message is required" });
         }
 
-        const conflictAnalysis = await analyzeConflict(message, conversationHistory);
+        const conflictAnalysis = await analyzeConflict(message);
 
         res.json(conflictAnalysis);
       } catch (error) {
@@ -6832,10 +7271,9 @@ Crawl-delay: 1
         // Check if user has consented to AI message analysis
         const hasConsent = await checkAiMessageConsent(userId);
         if (!hasConsent) {
-          return res.json({
-            suggestion: null,
-            aiDisabled: true,
-            message: "AI suggestions are disabled. Enable AI analysis in your settings.",
+          return res.status(403).json({
+            message: "AI message consent is required for response suggestions.",
+            code: AI_MESSAGE_CONSENT_REQUIRED_CODE,
           });
         }
 
@@ -6869,6 +7307,11 @@ Crawl-delay: 1
     rateLimiters.aiAnalysis,
     async (req: any, res) => {
       try {
+        const userId = getUserId(req);
+        if (!userId) {
+          return res.status(401).json({ message: "Unauthorized" });
+        }
+
         const { text } = req.body;
 
         if (!text || typeof text !== "string") {
@@ -6887,32 +7330,148 @@ Crawl-delay: 1
 
   // ============ END AI-POWERED MESSAGE ANALYSIS ============
 
-  // Authenticated file serving for uploads
-  app.get("/uploads/recordings/:filename", isAuthenticated, (req: any, res) => {
-    const { filename } = req.params;
-    const filePath = path.join(uploadDir, filename);
+  const resolveProtectedUpload = (root: string, relativeUploadPath: string): string | null => {
+    const pathSegments = relativeUploadPath.split(/[\\/]/).filter(Boolean);
+    if (
+      pathSegments.length < 1 ||
+      pathSegments.length > 2 ||
+      pathSegments.some((segment) => path.basename(segment) !== segment)
+    ) {
+      return null;
+    }
 
-    // Validate file exists and is within uploads directory
-    if (!fs.existsSync(filePath) || !filePath.startsWith(uploadDir)) {
+    let canonicalRoot: string;
+    try {
+      canonicalRoot = fs.realpathSync(path.resolve(root));
+    } catch {
+      return null;
+    }
+
+    const candidate = path.resolve(canonicalRoot, ...pathSegments);
+    const relative = path.relative(canonicalRoot, candidate);
+    if (
+      !relative ||
+      relative === ".." ||
+      relative.startsWith(`..${path.sep}`) ||
+      path.isAbsolute(relative)
+    ) {
+      return null;
+    }
+
+    const allowedExtensions = new Set([
+      ...Object.values(SAFE_UPLOAD_EXTENSION_BY_MIME),
+      ".jpeg",
+    ]);
+    if (!allowedExtensions.has(path.extname(candidate).toLowerCase())) {
+      return null;
+    }
+
+    try {
+      const fileStat = fs.lstatSync(candidate);
+      if (!fileStat.isFile() || fileStat.isSymbolicLink()) {
+        return null;
+      }
+
+      const realCandidate = fs.realpathSync(candidate);
+      const realRelative = path.relative(canonicalRoot, realCandidate);
+      if (
+        !realRelative ||
+        realRelative === ".." ||
+        realRelative.startsWith(`..${path.sep}`) ||
+        path.isAbsolute(realRelative)
+      ) {
+        return null;
+      }
+      return realCandidate;
+    } catch {
+      return null;
+    }
+  };
+
+  const sendProtectedUpload = (res: any, filePath: string) => {
+    res.setHeader("Cache-Control", "private, no-store");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Content-Security-Policy", "sandbox");
+    if ([".pdf", ".txt", ".csv", ".doc", ".docx", ".xls", ".xlsx"].includes(
+      path.extname(filePath).toLowerCase(),
+    )) {
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${path.basename(filePath).replace(/["\r\n]/g, "_")}"`,
+      );
+    }
+    return res.sendFile(filePath);
+  };
+
+  const getProtectedUploadRequest = (
+    req: any,
+    category: PeacePadUploadCategory,
+  ): { relativePath: string; publicPath: string; ownerKey: string | null; filename: string } => {
+    const filename = String(req.params.filename || "");
+    const ownerKey =
+      typeof req.params.ownerKey === "string" && req.params.ownerKey
+        ? req.params.ownerKey
+        : null;
+    const relativePath = ownerKey ? `${ownerKey}/${filename}` : filename;
+    return {
+      relativePath,
+      publicPath: `/uploads/${category}/${relativePath}`,
+      ownerKey,
+      filename,
+    };
+  };
+
+  // Every user upload is served through an authenticated, record-aware route.
+  // There is intentionally no broad express.static("/uploads") mount.
+  app.get(
+    ["/uploads/recordings/:filename", "/uploads/recordings/:ownerKey/:filename"],
+    isAuthenticatedEither,
+    async (req: any, res) => {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const uploadRequest = getProtectedUploadRequest(req, "recordings");
+    const filePath = resolveProtectedUpload(uploadDir, uploadRequest.relativePath);
+    const recording = await storage.getCallRecordingByUrl(uploadRequest.publicPath);
+    const participants = Array.isArray(recording?.participants) ? recording.participants : [];
+    const canView = recording?.recordedBy === userId || participants.includes(userId);
+
+    if (!filePath || !recording || !fs.existsSync(filePath)) {
+      return res.status(404).json({ message: "File not found" });
+    }
+    if (!canView) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+    if (
+      uploadRequest.ownerKey &&
+      recording &&
+      uploadRequest.publicPath !==
+        buildOwnerScopedUploadPath("recordings", recording.recordedBy, uploadRequest.filename)
+    ) {
       return res.status(404).json({ message: "File not found" });
     }
 
-    res.sendFile(filePath);
+    return sendProtectedUpload(res, filePath);
   });
 
   // Protected chat file serving with ownership verification
-  app.get("/uploads/chat/:filename", isAuthenticatedEither, async (req: any, res) => {
+  app.get(
+    ["/uploads/chat/:filename", "/uploads/chat/:ownerKey/:filename"],
+    isAuthenticatedEither,
+    async (req: any, res) => {
     try {
       const userId = getUserId(req);
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      const { filename } = req.params;
+      const uploadRequest = getProtectedUploadRequest(req, "chat");
 
       // Secure path validation - prevent directory traversal
-      const safePath = path.resolve(chatAttachmentsDir, path.basename(filename));
-      if (!safePath.startsWith(path.resolve(chatAttachmentsDir))) {
+      const safePath = resolveProtectedUpload(chatAttachmentsDir, uploadRequest.relativePath);
+      if (!safePath) {
         return res.status(403).json({ message: "Invalid file path" });
       }
 
@@ -6921,63 +7480,176 @@ Crawl-delay: 1
         return res.status(404).json({ message: "File not found" });
       }
 
-      // Verify user has at least one partnership (authorized to view chat files)
-      const partnerships = await storage.getPartnerships(userId);
-      if (!partnerships || partnerships.length === 0) {
-        return res.status(403).json({ message: "Access denied - no active partnership" });
+      const message = await storage.getMessageByFileUrl(uploadRequest.publicPath);
+      if (!message) {
+        return res.status(404).json({ message: "File not found" });
       }
 
-      // User is in a partnership, serve the file
-      res.sendFile(safePath);
+      let canView = message.senderId === userId || message.recipientId === userId;
+      if (!canView && message.conversationId) {
+        const members = await storage.getConversationMembers(message.conversationId);
+        canView = members.some((member) => member.userId === userId);
+      }
+      if (!canView) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      if (
+        uploadRequest.ownerKey &&
+        uploadRequest.publicPath !==
+          buildOwnerScopedUploadPath("chat", message.senderId, uploadRequest.filename)
+      ) {
+        return res.status(404).json({ message: "File not found" });
+      }
+
+      return sendProtectedUpload(res, safePath);
     } catch (error) {
       console.error("[Chat Files] Error verifying file ownership:", error);
       res.status(500).json({ message: "Error serving file" });
     }
   });
 
+  app.get(
+    ["/uploads/receipts/:filename", "/uploads/receipts/:ownerKey/:filename"],
+    isAuthenticatedEither,
+    async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const uploadRequest = getProtectedUploadRequest(req, "receipts");
+      const filePath = resolveProtectedUpload(receiptsDir, uploadRequest.relativePath);
+      const expense = await storage.getExpenseByReceiptUrl(uploadRequest.publicPath);
+      if (!filePath || !expense || !fs.existsSync(filePath)) {
+        return res.status(404).json({ message: "File not found" });
+      }
+
+      let canView = expense.paidBy === userId;
+      if (!canView && expense.partnershipId) {
+        const partnership = await storage.getPartnership(expense.partnershipId);
+        canView =
+          partnership?.user1Id === userId ||
+          partnership?.user2Id === userId;
+      }
+      if (!canView) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      if (
+        uploadRequest.ownerKey &&
+        uploadRequest.publicPath !==
+          buildOwnerScopedUploadPath("receipts", expense.paidBy, uploadRequest.filename)
+      ) {
+        return res.status(404).json({ message: "File not found" });
+      }
+
+      return sendProtectedUpload(res, filePath);
+    } catch (error) {
+      console.error("[Receipt Files] Error verifying file ownership:", error);
+      return res.status(500).json({ message: "Error serving file" });
+    }
+  });
+
+  app.get(
+    ["/uploads/profiles/:filename", "/uploads/profiles/:ownerKey/:filename"],
+    isAuthenticatedEither,
+    async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const uploadRequest = getProtectedUploadRequest(req, "profiles");
+      const filePath = resolveProtectedUpload(profilePhotosDir, uploadRequest.relativePath);
+      const owner = await storage.getUserByProfileImagePath(uploadRequest.publicPath);
+      if (!filePath || !owner || !fs.existsSync(filePath)) {
+        return res.status(404).json({ message: "File not found" });
+      }
+
+      let canView = owner.id === userId;
+      const requestingUser = await storage.getUser(userId);
+      if (!canView && requestingUser?.isAdmin) {
+        canView = true;
+      }
+      if (!canView) {
+        const partnerships = await storage.getPartnerships(userId);
+        canView = partnerships.some(
+          (partnership) =>
+            partnership.user1Id === owner.id || partnership.user2Id === owner.id,
+        );
+      }
+      if (!canView) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      if (
+        uploadRequest.ownerKey &&
+        uploadRequest.publicPath !==
+          buildOwnerScopedUploadPath("profiles", owner.id, uploadRequest.filename)
+      ) {
+        return res.status(404).json({ message: "File not found" });
+      }
+
+      return sendProtectedUpload(res, filePath);
+    } catch (error) {
+      console.error("[Profile Files] Error verifying file ownership:", error);
+      return res.status(500).json({ message: "Error serving file" });
+    }
+  });
+
   // Call recording routes
   app.post(
     "/api/call-recordings",
-    isAuthenticated,
+    isAuthenticatedEither,
+    rateLimiters.standard,
     upload.single("file"),
     async (req: any, res) => {
+      const file = req.file;
       try {
-        const userId = req.user.claims.sub;
-        const file = req.file;
-
+        const userId = getUserId(req);
+        if (!userId) {
+          if (file?.path) fs.rmSync(file.path, { force: true });
+          return res.status(401).json({ message: "Unauthorized" });
+        }
         if (!file) {
           return res.status(400).json({ message: "No file uploaded" });
         }
 
-        const recordingUrl = `/uploads/recordings/${file.filename}`;
-        const sessionCode = req.body.sessionCode || `recording-${Date.now()}`;
+        const recordingUrl = buildOwnerScopedUploadPath("recordings", userId, file.filename);
+        const sessionCode =
+          typeof req.body.sessionCode === "string" ? req.body.sessionCode.trim() : "";
+        if (!sessionCode || sessionCode.length > 128) {
+          fs.rmSync(file.path, { force: true });
+          return res.status(400).json({ message: "A valid call session is required" });
+        }
 
-        // Create or find call session
-        let sessionId = sessionCode;
-        try {
-          const existingSession = await storage.getCallSessionByCode(sessionCode);
-          if (existingSession) {
-            sessionId = existingSession.id;
-          } else {
-            // Create a new session for this recording
-            const newSession = await storage.createCallSession({
-              sessionCode: sessionCode,
-              hostId: userId,
-              callType: req.body.recordingType || "video",
-            });
-            sessionId = newSession.id;
-          }
-        } catch {
-          // If session operations fail, use sessionCode as sessionId
-          sessionId = sessionCode;
+        const existingSession = await storage.getCallSessionByCode(sessionCode);
+        if (!existingSession) {
+          fs.rmSync(file.path, { force: true });
+          return res.status(404).json({ message: "Call session not found" });
+        }
+        const call = await storage.getCallBySessionId(existingSession.id);
+        const canRecord = call?.callerId === userId || call?.receiverId === userId;
+        if (!call || !canRecord) {
+          fs.rmSync(file.path, { force: true });
+          return res.status(404).json({ message: "Call session not found" });
+        }
+        const partnership = call.partnershipId
+          ? await getAuthorizedPartnership(userId, call.partnershipId)
+          : await getPartnershipBetweenUsers(call.callerId, call.receiverId);
+        if (!partnership || !partnership.allowRecording) {
+          fs.rmSync(file.path, { force: true });
+          return res.status(403).json({
+            message: "Recording is not enabled for this partnership.",
+          });
         }
 
         const parsed = insertCallRecordingSchema.parse({
-          sessionId,
+          sessionId: existingSession.id,
           recordingUrl,
           recordingType: req.body.recordingType || "video",
           duration: req.body.duration?.toString() || "0",
-          participants: [userId],
+          participants: Array.from(new Set([call.callerId, call.receiverId])),
           recordedBy: userId,
         });
 
@@ -6994,6 +7666,9 @@ Crawl-delay: 1
 
         res.json(recording);
       } catch (error: any) {
+        if (file?.path) {
+          fs.rmSync(file.path, { force: true });
+        }
         console.error("Error creating call recording:", error);
         res.status(400).json({ message: error.message || "Failed to create call recording" });
       }
@@ -7097,14 +7772,16 @@ Crawl-delay: 1
         auth: null,
       });
 
-      console.log(`[Push] Registered ${platform} token for user ${userId}`);
+      console.log(`[Push] Registered ${platform} token`);
       res.json({ success: true, subscription });
     } catch (error: any) {
       // Handle duplicate token error
       if (error.code === "23505") {
         return res.json({ success: true, message: "Token already registered" });
       }
-      console.error("Error registering native push token:", error);
+      console.error("Error registering native push token", {
+        code: typeof error?.code === "string" ? error.code : undefined,
+      });
       res.status(500).json({ message: "Failed to register push token" });
     }
   });
@@ -7160,7 +7837,7 @@ Crawl-delay: 1
         : searchTerm.toLowerCase().trim();
       const cached = geocodeCache.get(cacheKey);
       if (cached && Date.now() - cached.timestamp < GEOCODE_CACHE_TTL) {
-        testMonitor.log("P3", "Performance", `Geocode cache hit for: ${searchTerm}`);
+        testMonitor.log("P3", "Performance", "Geocode cache hit");
         return res.json({ results: cached.results });
       }
 
@@ -7196,8 +7873,8 @@ Crawl-delay: 1
               ],
             });
           }
-        } catch (geocoderError) {
-          console.log("Geocoder.ca failed, falling back to Nominatim:", geocoderError);
+        } catch {
+          console.log("Primary geocoder failed; using the configured fallback");
         }
       } else if (canadianPostalPartialRegex.test(addressStr.trim())) {
         // Handle partial Canadian postal code (first 3 characters like "L1N")
@@ -7980,7 +8657,7 @@ Crawl-delay: 1
   });
 
   // Keep old therapists endpoint for backward compatibility
-  app.get("/api/therapists", isAuthenticated, async (req, res) => {
+  app.get("/api/therapists", isAuthenticatedEither, async (req, res) => {
     // Redirect to support-resources with therapist filter
     req.query.resourceType = "therapist";
     return app._router.handle(
@@ -7990,7 +8667,7 @@ Crawl-delay: 1
     );
   });
 
-  app.post("/api/therapists", isAuthenticated, async (req, res) => {
+  app.post("/api/therapists", isAdmin, async (req, res) => {
     try {
       const parsed = insertTherapistSchema.parse(req.body);
       const therapist = await storage.createTherapist(parsed);
@@ -8002,9 +8679,12 @@ Crawl-delay: 1
   });
 
   // Audit log and export routes
-  app.get("/api/audit-trail", isAuthenticated, async (req: any, res) => {
+  app.get("/api/audit-trail", isAuthenticatedEither, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const { startDate, endDate, format } = req.query;
 
       const auditTrail = await storage.getUserAuditTrail(
@@ -8012,6 +8692,10 @@ Crawl-delay: 1
         startDate ? new Date(startDate as string) : undefined,
         endDate ? new Date(endDate as string) : undefined
       );
+      const safeAuditTrail = {
+        ...auditTrail,
+        calls: auditTrail.calls.map(({ sessionCode: _sessionCode, ...call }: any) => call),
+      };
 
       // Create audit log for export
       await storage.createAuditLog({
@@ -8021,20 +8705,20 @@ Crawl-delay: 1
         details: {
           format,
           itemCount:
-            auditTrail.summary.totalMessages +
-            auditTrail.summary.totalEvents +
-            auditTrail.summary.totalCalls,
+            safeAuditTrail.summary.totalMessages +
+            safeAuditTrail.summary.totalEvents +
+            safeAuditTrail.summary.totalCalls,
         },
       });
 
       // If format is CSV or PDF, convert the data
       if (format === "json") {
-        res.json(auditTrail);
+        res.json(safeAuditTrail);
       } else if (format === "csv") {
-        // Generate FRO-compliant CSV with conversation metadata
+        // Generate a structured user export with conversation metadata.
         let csv = "Type,Content,Date,Conversation Type,Participants,Tone,Details\n";
 
-        auditTrail.messages.forEach((m: any) => {
+        safeAuditTrail.messages.forEach((m: any) => {
           const content = (m.content || "").replace(/"/g, '""'); // Escape quotes
           const conversationType = m.conversationType || "Unknown";
           const participants = (m.participants || "Unknown").replace(/"/g, '""');
@@ -8043,20 +8727,20 @@ Crawl-delay: 1
           csv += `Message,"${content}",${m.timestamp},"${conversationType}","${participants}","${tone}","${details}"\n`;
         });
 
-        auditTrail.events.forEach((e: any) => {
+        safeAuditTrail.events.forEach((e: any) => {
           const title = (e.title || "").replace(/"/g, '""');
           csv += `Event,"${title}",${e.startDate},"N/A","N/A","N/A","Type: ${e.type}"\n`;
         });
 
-        auditTrail.calls.forEach((c: any) => {
-          csv += `Call,"${c.callType} call",${c.createdAt},"N/A","N/A","N/A","Code: ${c.sessionCode}"\n`;
+        safeAuditTrail.calls.forEach((c: any) => {
+          csv += `Call,"${c.callType} call",${c.createdAt},"N/A","N/A","N/A","Call record"\n`;
         });
 
         res.setHeader("Content-Type", "text/csv");
         res.setHeader("Content-Disposition", 'attachment; filename="audit-trail.csv"');
         res.send(csv);
       } else {
-        res.json(auditTrail);
+        res.json(safeAuditTrail);
       }
     } catch (error) {
       console.error("Error fetching audit trail:", error);
@@ -8064,9 +8748,12 @@ Crawl-delay: 1
     }
   });
 
-  app.get("/api/audit-logs", isAuthenticated, async (req: any, res) => {
+  app.get("/api/audit-logs", isAuthenticatedEither, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const logs = await storage.getAuditLogs(userId);
       res.json(logs);
     } catch (error) {
@@ -8076,29 +8763,31 @@ Crawl-delay: 1
   });
 
   // AI Listening - Emotion analysis from audio
-  app.post("/api/analyze-emotion", isAuthenticated, async (req: any, res) => {
+  app.post("/api/analyze-emotion", isAuthenticatedEither, async (req: any, res) => {
     try {
-      const { sessionId, audioData, mimeType, timestamp } = req.body;
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      if (!(await checkAiCallConsent(userId))) {
+        return res.status(403).json({
+          message: "AI call consent is required for audio analysis.",
+          code: AI_CALL_CONSENT_REQUIRED_CODE,
+        });
+      }
+
+      const { audioData } = req.body;
 
       if (!audioData) {
         return res.status(400).json({ message: "Audio data required" });
       }
 
-      // Transcribe audio using Whisper
-      const transcription = await transcribeFromBase64(audioData, mimeType);
-
-      if (!transcription.text || transcription.text.trim().length === 0) {
-        return res.json({
-          emotion: "neutral",
-          confidence: 0,
-          summary: "No speech detected",
-        });
-      }
-
-      // Analyze emotion from transcript
-      const emotionResult = await analyzeEmotion(transcription.text);
-
-      res.json(emotionResult);
+      res.json({
+        emotion: "neutral",
+        confidence: 0,
+        summary: "Live audio analysis is unavailable in this release.",
+        aiDisabled: true,
+      });
     } catch (error) {
       console.error("Error analyzing emotion:", error);
       res.status(500).json({
@@ -8110,9 +8799,20 @@ Crawl-delay: 1
   });
 
   // AI Listening - Generate session summary
-  app.post("/api/session-summary", isAuthenticated, async (req: any, res) => {
+  app.post("/api/session-summary", isAuthenticatedEither, async (req: any, res) => {
     try {
-      const { sessionId, emotionTimeline } = req.body;
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      if (!(await checkAiCallConsent(userId))) {
+        return res.status(403).json({
+          message: "AI call consent is required for session summaries.",
+          code: AI_CALL_CONSENT_REQUIRED_CODE,
+        });
+      }
+
+      const { emotionTimeline } = req.body;
 
       if (!emotionTimeline || emotionTimeline.length === 0) {
         return res.json({
@@ -8120,17 +8820,8 @@ Crawl-delay: 1
         });
       }
 
-      const summary = await generateSessionSummary(emotionTimeline);
-
-      // Save to database
-      await storage.createSessionMoodSummary({
-        sessionId,
-        participants: [req.user.claims.sub], // Will be updated with actual participants
-        emotionsTimeline: emotionTimeline,
-        summary,
-      });
-
-      res.json({ summary });
+      const summary = buildLocalCallSessionSummary(emotionTimeline);
+      res.json({ summary, aiProcessed: false });
     } catch (error) {
       console.error("Error generating session summary:", error);
       res.status(500).json({
@@ -8141,12 +8832,16 @@ Crawl-delay: 1
   });
 
   // Get session mood summary
-  app.get("/api/session-mood/:sessionId", isAuthenticated, async (req: any, res) => {
+  app.get("/api/session-mood/:sessionId", isAuthenticatedEither, async (req: any, res) => {
     try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const { sessionId } = req.params;
       const summary = await storage.getSessionMoodSummary(sessionId);
 
-      if (!summary) {
+      if (!summary || !summary.participants.includes(userId)) {
         return res.status(404).json({ message: "Summary not found" });
       }
 
@@ -8288,9 +8983,20 @@ Crawl-delay: 1
   // Storybooks API
   app.get("/api/storybooks", isAuthenticatedEither, async (req: any, res) => {
     try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const { partnershipId } = req.query;
       if (!partnershipId) {
         return res.status(400).json({ message: "Partnership ID required" });
+      }
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        partnershipId as string,
+      );
+      if (!partnership) {
+        return res.status(404).json({ message: "Partnership not found" });
       }
       const books = await storage.getStorybooks(partnershipId as string);
       res.json(books);
@@ -8302,7 +9008,23 @@ Crawl-delay: 1
 
   app.post("/api/storybooks", isAuthenticatedEither, async (req: any, res) => {
     try {
-      const book = await storage.createStorybook(req.body);
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        req.body.partnershipId,
+      );
+      if (!partnership) {
+        return res.status(404).json({ message: "Partnership not found" });
+      }
+      const parsed = insertStorybookSchema.parse({
+        ...req.body,
+        partnershipId: partnership.id,
+        createdBy: userId,
+      });
+      const book = await storage.createStorybook(parsed);
       res.json(book);
     } catch (error) {
       console.error("Error creating storybook:", error);
@@ -8312,6 +9034,18 @@ Crawl-delay: 1
 
   app.get("/api/storybooks/:id/pages", isAuthenticatedEither, async (req: any, res) => {
     try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const book = await storage.getStorybook(req.params.id);
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        book?.partnershipId,
+      );
+      if (!book || !partnership) {
+        return res.status(404).json({ message: "Storybook not found" });
+      }
       const pages = await storage.getStoryPages(req.params.id);
       res.json(pages);
     } catch (error) {
@@ -8322,7 +9056,24 @@ Crawl-delay: 1
 
   app.post("/api/storybooks/:id/pages", isAuthenticatedEither, async (req: any, res) => {
     try {
-      const page = await storage.createStoryPage({ ...req.body, storyId: req.params.id });
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const book = await storage.getStorybook(req.params.id);
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        book?.partnershipId,
+      );
+      if (!book || !partnership) {
+        return res.status(404).json({ message: "Storybook not found" });
+      }
+      const parsed = insertStoryPageSchema.parse({
+        ...req.body,
+        storyId: book.id,
+        createdBy: userId,
+      });
+      const page = await storage.createStoryPage(parsed);
       // Update storybook timestamp
       await storage.updateStorybook(req.params.id, {});
       res.json(page);
@@ -8334,7 +9085,27 @@ Crawl-delay: 1
 
   app.patch("/api/story-pages/:id", isAuthenticatedEither, async (req: any, res) => {
     try {
-      const page = await storage.updateStoryPage(req.params.id, req.body);
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const existingPage = await storage.getStoryPage(req.params.id);
+      const book = existingPage
+        ? await storage.getStorybook(existingPage.storyId)
+        : undefined;
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        book?.partnershipId,
+      );
+      if (!existingPage || !book || !partnership) {
+        return res.status(404).json({ message: "Story page not found" });
+      }
+      const updates = insertStoryPageSchema.partial().parse({
+        ...req.body,
+        storyId: existingPage.storyId,
+        createdBy: existingPage.createdBy,
+      });
+      const page = await storage.updateStoryPage(req.params.id, updates);
       res.json(page);
     } catch (error) {
       console.error("Error updating story page:", error);
@@ -8353,6 +9124,13 @@ Crawl-delay: 1
       if (!partnershipId) {
         return res.status(400).json({ message: "Partnership ID required" });
       }
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        partnershipId as string,
+      );
+      if (!partnership) {
+        return res.status(404).json({ message: "Partnership not found" });
+      }
       const lists = await storage.getShoppingLists(partnershipId as string);
       res.json(lists);
     } catch (error) {
@@ -8367,7 +9145,19 @@ Crawl-delay: 1
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      const list = await storage.createShoppingList(req.body);
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        req.body.partnershipId,
+      );
+      if (!partnership) {
+        return res.status(404).json({ message: "Partnership not found" });
+      }
+      const parsed = insertShoppingListSchema.parse({
+        ...req.body,
+        partnershipId: partnership.id,
+        createdBy: userId,
+      });
+      const list = await storage.createShoppingList(parsed);
       res.json(list);
     } catch (error) {
       console.error("Error creating shopping list:", error);
@@ -8380,6 +9170,14 @@ Crawl-delay: 1
       const userId = getUserId(req);
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
+      }
+      const list = await storage.getShoppingList(req.params.id);
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        list?.partnershipId,
+      );
+      if (!list || !partnership) {
+        return res.status(404).json({ message: "Shopping list not found" });
       }
       const items = await storage.getShoppingItems(req.params.id);
       res.json(items);
@@ -8395,7 +9193,21 @@ Crawl-delay: 1
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      const item = await storage.createShoppingItem({ ...req.body, listId: req.params.id });
+      const list = await storage.getShoppingList(req.params.id);
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        list?.partnershipId,
+      );
+      if (!list || !partnership) {
+        return res.status(404).json({ message: "Shopping list not found" });
+      }
+      const parsed = insertShoppingItemSchema.parse({
+        ...req.body,
+        listId: list.id,
+        addedBy: userId,
+        checkedBy: req.body.checked ? userId : null,
+      });
+      const item = await storage.createShoppingItem(parsed);
       res.json(item);
     } catch (error) {
       console.error("Error creating shopping item:", error);
@@ -8409,7 +9221,34 @@ Crawl-delay: 1
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      const item = await storage.updateShoppingItem(req.params.id, req.body);
+      const existingItem = await storage.getShoppingItem(req.params.id);
+      const list = existingItem
+        ? await storage.getShoppingList(existingItem.listId)
+        : undefined;
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        list?.partnershipId,
+      );
+      if (!existingItem || !list || !partnership) {
+        return res.status(404).json({ message: "Shopping item not found" });
+      }
+      const updates = insertShoppingItemSchema.partial().parse({
+        ...req.body,
+        listId: existingItem.listId,
+        addedBy: existingItem.addedBy,
+        checkedBy:
+          typeof req.body.checked === "boolean"
+            ? req.body.checked
+              ? userId
+              : null
+            : existingItem.checkedBy,
+      });
+      const item = await storage.updateShoppingItem(req.params.id, {
+        ...updates,
+        ...(typeof req.body.checked === "boolean"
+          ? { checkedAt: req.body.checked ? new Date() : null }
+          : {}),
+      });
       res.json(item);
     } catch (error) {
       console.error("Error updating shopping item:", error);
@@ -8422,6 +9261,15 @@ Crawl-delay: 1
       const userId = getUserId(req);
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
+      }
+      const item = await storage.getShoppingItem(req.params.id);
+      const list = item ? await storage.getShoppingList(item.listId) : undefined;
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        list?.partnershipId,
+      );
+      if (!item || !list || !partnership) {
+        return res.status(404).json({ message: "Shopping item not found" });
       }
       await storage.deleteShoppingItem(req.params.id);
       res.json({ success: true });
@@ -8771,6 +9619,12 @@ Crawl-delay: 1
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
+      if (!(await checkAiMessageConsent(userId))) {
+        return res.status(403).json({
+          message: "AI message consent is required for summary validation.",
+          code: AI_MESSAGE_CONSENT_REQUIRED_CODE,
+        });
+      }
 
       const { originalContent, summaryText, context } = req.body;
 
@@ -9051,6 +9905,12 @@ Crawl-delay: 1
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
+      if (!(await checkAiMessageConsent(userId))) {
+        return res.status(403).json({
+          message: "AI message consent is required for emotional-message analysis.",
+          code: AI_MESSAGE_CONSENT_REQUIRED_CODE,
+        });
+      }
 
       const { content } = req.body;
 
@@ -9083,10 +9943,23 @@ Crawl-delay: 1
         return res.status(400).json({ message: "No active partnership" });
       }
 
+      if (!(await checkPatternLearningConsent(userId))) {
+        return res.status(403).json({
+          message: "Pattern learning is disabled for this release.",
+          code: PATTERN_LEARNING_DISABLED_CODE,
+        });
+      }
+
       const { query, limit = 10 } = req.query;
       const embeddingService = await import('./services/embeddingService');
       
       if (query) {
+        if (!hasPersistedAiMessageConsent(user)) {
+          return res.status(403).json({
+            message: "AI message consent is required for semantic memory search.",
+            code: AI_MESSAGE_CONSENT_REQUIRED_CODE,
+          });
+        }
         const memories = await embeddingService.findSimilarMemories(
           user.activePartnershipId,
           String(query),
@@ -9117,7 +9990,12 @@ Crawl-delay: 1
       if (!user?.activePartnershipId) {
         return res.status(400).json({ message: "No active partnership" });
       }
-
+      if (!(await checkPatternLearningConsent(userId))) {
+        return res.status(403).json({
+          message: "Pattern learning is disabled for this release.",
+          code: PATTERN_LEARNING_DISABLED_CODE,
+        });
+      }
       const { dayOfWeek, timeOfDay, memoryType, minConflictScore } = req.query;
       
       const memories = await storage.getRelationshipMemoriesByPattern(
@@ -9149,7 +10027,12 @@ Crawl-delay: 1
       if (!user?.activePartnershipId) {
         return res.status(400).json({ message: "No active partnership" });
       }
-
+      if (!(await checkPatternLearningConsent(userId))) {
+        return res.status(403).json({
+          message: "Pattern learning is disabled for this release.",
+          code: PATTERN_LEARNING_DISABLED_CODE,
+        });
+      }
       const patterns = await storage.getConflictPatterns(user.activePartnershipId);
       res.json(patterns);
     } catch (error) {
@@ -9170,7 +10053,6 @@ Crawl-delay: 1
       if (!user?.activePartnershipId) {
         return res.status(400).json({ message: "No active partnership" });
       }
-
       const { limit = 50 } = req.query;
       const interventions = await storage.getAgentInterventions(
         user.activePartnershipId,
@@ -9193,6 +10075,18 @@ Crawl-delay: 1
 
       const { id } = req.params;
       const { userResponse, responseDetails } = req.body;
+      const intervention = await storage.getAgentIntervention(id);
+      const partnership = await getAuthorizedPartnership(
+        userId,
+        intervention?.partnershipId,
+      );
+      if (
+        !intervention ||
+        !partnership ||
+        (intervention.targetUserId && intervention.targetUserId !== userId)
+      ) {
+        return res.status(404).json({ message: "Intervention not found" });
+      }
 
       const updated = await storage.updateAgentIntervention(id, {
         userResponse,
@@ -9257,6 +10151,20 @@ Crawl-delay: 1
         return res.status(400).json({ message: "No active partnership" });
       }
 
+      if (!hasPersistedAiMessageConsent(user)) {
+        return res.status(403).json({
+          message: "AI message consent is required for agent recommendations.",
+          code: AI_MESSAGE_CONSENT_REQUIRED_CODE,
+        });
+      }
+
+      if (!(await checkPatternLearningConsent(userId))) {
+        return res.status(403).json({
+          message: "Pattern learning is disabled for this release.",
+          code: PATTERN_LEARNING_DISABLED_CODE,
+        });
+      }
+
       const agentOrchestrator = await import('./services/agentOrchestrator');
       const recommendations = await agentOrchestrator.getAgentRecommendations(
         user.activePartnershipId,
@@ -9318,35 +10226,12 @@ Crawl-delay: 1
     }
   });
 
-  // Generate court-ready log
+  // Legal-document generation is intentionally outside this release. User
+  // exports remain available through /api/audit-trail without legal claims.
   app.post("/api/summaries/court-log", isAuthenticatedEither, async (req: any, res) => {
-    try {
-      const userId = getUserId(req);
-      if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user?.activePartnershipId) {
-        return res.status(400).json({ message: "No active partnership" });
-      }
-
-      const { startDate, endDate } = req.body;
-      const start = new Date(startDate || Date.now() - 30 * 24 * 60 * 60 * 1000);
-      const end = new Date(endDate || Date.now());
-
-      const summaryService = await import('./services/summaryService');
-      const log = await summaryService.generateCourtReadyLog(
-        user.activePartnershipId,
-        userId,
-        start,
-        end
-      );
-      res.json(log);
-    } catch (error) {
-      console.error("Error generating court-ready log:", error);
-      res.status(500).json({ message: "Failed to generate court-ready log" });
-    }
+    return res.status(404).json({
+      message: "Legal-document generation is unavailable in this release.",
+    });
   });
 
   // Generate negotiation proposal
@@ -9511,16 +10396,12 @@ Crawl-delay: 1
 
       const { content } = req.body;
       const user = await storage.getUser(userId);
-      const partnership = user?.activePartnershipId 
-        ? await storage.getPartnership(user.activePartnershipId) 
-        : null;
-
-      // Get co-parent info for personalized coaching
-      const coParentId = partnership?.user1Id === userId 
-        ? partnership?.user2Id 
-        : partnership?.user1Id;
-      const coParent = coParentId ? await storage.getUser(coParentId) : null;
-
+      if (!hasPersistedAiMessageConsent(user)) {
+        return res.status(403).json({
+          message: "AI message consent is required for Prep Chat coaching.",
+          code: AI_MESSAGE_CONSENT_REQUIRED_CODE,
+        });
+      }
       const messages = (session.messages as Array<{role: "user" | "coach"; content: string; timestamp: string}>) || [];
       
       // Add user message
@@ -9531,15 +10412,14 @@ Crawl-delay: 1
       });
 
       // Generate AI coach response
-      // Use session-stored personality for solo mode, or partnership co-parent's personality
+      // Only the requester's own context is sent to the provider in this release.
       const userPersonality = session.userPersonalityType || user?.personalityType || undefined;
-      const coParentPersonality = session.coParentPersonalityType || coParent?.personalityType || undefined;
       
       const coachResponse = await generatePrepChatCoaching(
         session.topic,
         messages,
         userPersonality,
-        coParentPersonality
+        undefined
       );
 
       messages.push({
@@ -9572,23 +10452,20 @@ Crawl-delay: 1
       }
 
       const user = await storage.getUser(userId);
-      const partnership = user?.activePartnershipId
-        ? await storage.getPartnership(user.activePartnershipId)
-        : null;
-      const coParentId = partnership?.user1Id === userId
-        ? partnership?.user2Id
-        : partnership?.user1Id;
-      const coParent = coParentId ? await storage.getUser(coParentId) : null;
-
+      if (!hasPersistedAiMessageConsent(user)) {
+        return res.status(403).json({
+          message: "AI message consent is required for Prep Chat drafts.",
+          code: AI_MESSAGE_CONSENT_REQUIRED_CODE,
+        });
+      }
       const messages = (session.messages as Array<{role: "user" | "coach"; content: string; timestamp: string}>) || [];
       const userPersonality = session.userPersonalityType || user?.personalityType || undefined;
-      const coParentPersonality = session.coParentPersonalityType || coParent?.personalityType || undefined;
 
       const result = await generatePrepChatDraft(
         session.customTopic || session.topic,
         messages,
         userPersonality,
-        coParentPersonality,
+        undefined,
       );
 
       const updated = await storage.updatePrepChatSession(req.params.id, {
@@ -9613,27 +10490,29 @@ Crawl-delay: 1
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
+      if (!(await checkAiMessageConsent(userId))) {
+        return res.status(403).json({
+          message: "AI message consent is required for draft analysis.",
+          code: AI_MESSAGE_CONSENT_REQUIRED_CODE,
+        });
+      }
 
-      const { draft, coParentPersonality, userPersonality } = req.body;
+      const { draft, userPersonality } = req.body;
       const normalizePersonalityPayload = (value: unknown): string | undefined => {
         if (typeof value !== "string") return undefined;
         const normalized = value.trim().toUpperCase();
         return /^[EI][NS][TF][JP]$/.test(normalized) ? normalized : undefined;
       };
 
-      const normalizedCoParentPersonality = normalizePersonalityPayload(coParentPersonality);
       const normalizedUserPersonality = normalizePersonalityPayload(userPersonality);
 
-      if (typeof coParentPersonality === "string" && coParentPersonality.trim() && !normalizedCoParentPersonality) {
-        console.warn("[PrepChat] Ignoring invalid coParentPersonality payload", { userId, coParentPersonality });
-      }
       if (typeof userPersonality === "string" && userPersonality.trim() && !normalizedUserPersonality) {
-        console.warn("[PrepChat] Ignoring invalid userPersonality payload", { userId, userPersonality });
+        console.warn("[PrepChat] Ignoring invalid requester personality payload", { userId });
       }
 
       const analysis = await analyzeDraftTone(
         sanitizeInput(draft),
-        normalizedCoParentPersonality,
+        undefined,
         normalizedUserPersonality
       );
 

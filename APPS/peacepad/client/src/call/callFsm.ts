@@ -109,7 +109,7 @@ export function reduceCall(state: CallState, action: CallAction): CallState {
     case 'CALL_ACCEPTED':
       // Stop all audio when call is accepted
       stopAllAudio();
-      console.log('[CallFSM] → connecting', action.sessionCode ? `with sessionCode ${action.sessionCode}` : '');
+      console.log('[CallFSM] → connecting', { hasSessionCode: Boolean(action.sessionCode) });
       
       return {
         ...state,

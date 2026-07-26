@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { ExternalLink, MessageSquare, Shield } from "lucide-react";
+import { Link } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { persistStoredConsent } from "@/lib/consentState";
 import {
   Dialog,
   DialogContent,
@@ -13,132 +16,166 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Lock, MessageSquare, ExternalLink, AlertCircle } from "lucide-react";
-import { Link } from "wouter";
 
 interface TermsAcceptanceDialogProps {
   open: boolean;
-  userId: string;
+  userId?: string;
+  localOnly?: boolean;
+  onAccepted?: () => void | Promise<void>;
 }
 
-export function TermsAcceptanceDialog({ open, userId }: TermsAcceptanceDialogProps) {
-  const [agreed, setAgreed] = useState(false);
+export function TermsAcceptanceDialog({
+  open,
+  userId,
+  localOnly = false,
+  onAccepted,
+}: TermsAcceptanceDialogProps) {
+  const [termsAgreed, setTermsAgreed] = useState(false);
+  const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
+  const [aiMessageConsent, setAiMessageConsent] = useState(false);
   const { toast } = useToast();
 
-  const acceptTermsMutation = useMutation({
+  const acceptConsentMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/users/accept-terms");
+      if (localOnly || !userId) {
+        return null;
+      }
+
+      const res = await apiRequest("PATCH", "/api/user/consent", {
+        privacyAccepted: true,
+        ndaAccepted: true,
+        aiMessageConsent,
+        aiCallConsent: false,
+      });
       return await res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    onSuccess: async () => {
+      persistStoredConsent({
+        requiredAccepted: true,
+        aiMessageConsent,
+        aiCallConsent: false,
+      });
+
+      if (!localOnly && userId) {
+        await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      }
+
+      await onAccepted?.();
       toast({
-        title: "Terms Accepted",
-        description: "Welcome to PeacePad!",
+        title: "Preferences saved",
+        description: aiMessageConsent
+          ? "You can change optional AI processing later in Settings."
+          : "Optional AI processing remains off.",
       });
     },
     onError: (error) => {
       toast({
-        title: "Error",
-        description: "Failed to accept terms. Please try again.",
+        title: "Could not save your choices",
+        description: "Please try again.",
         variant: "destructive",
       });
-      console.error("Error accepting terms:", error);
+      console.error("Error saving consent:", error);
     },
   });
 
-  const handleAccept = () => {
-    if (!agreed) {
-      toast({
-        title: "Agreement Required",
-        description: "Please check the box to agree to the terms.",
-        variant: "destructive",
-      });
-      return;
-    }
-    acceptTermsMutation.mutate();
-  };
+  const requiredAccepted = termsAgreed && privacyAcknowledged;
 
   return (
     <Dialog open={open} modal>
-      <DialogContent className="max-w-md mx-4">
-        <DialogHeader className="text-center pb-2">
-          <div className="mx-auto mb-3 w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+      <DialogContent className="mx-4 max-h-[90dvh] max-w-md overflow-y-auto">
+        <DialogHeader className="pb-2 text-center">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
             <Shield className="h-7 w-7 text-primary" />
           </div>
-          <DialogTitle className="text-xl">Terms of Service & Privacy</DialogTitle>
+          <DialogTitle className="text-xl">Before we save anything</DialogTitle>
           <DialogDescription className="text-center">
-            Please review and accept our terms to continue
+            Review the required policies separately. Optional AI processing stays off unless you choose it.
           </DialogDescription>
         </DialogHeader>
 
-        {/* Key Points Summary */}
         <div className="space-y-3 py-2">
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
-            <AlertCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-            <div>
-              <p className="font-medium text-sm">Secure Sign-In</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                PeacePad uses secure account protection.
-                Account access is managed securely while rollout continues.
-              </p>
-            </div>
+          <div className="rounded-xl border border-border/70 bg-muted/30 p-3 text-sm text-muted-foreground">
+            PeacePad helps you review co-parenting messages. It does not provide legal advice, make decisions,
+            or send a message without you choosing to do so.
           </div>
 
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-            <Lock className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-            <div>
-              <p className="font-medium text-sm">Confidentiality</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Communications are confidential between you and your co-parent.
-              </p>
-            </div>
+          <div className="flex items-start gap-3 rounded-xl border border-border/70 p-3">
+            <Checkbox
+              id="agree-terms"
+              checked={termsAgreed}
+              onCheckedChange={(checked) => setTermsAgreed(checked === true)}
+              className="mt-0.5"
+              data-testid="checkbox-accept-terms"
+            />
+            <Label htmlFor="agree-terms" className="cursor-pointer text-sm leading-relaxed">
+              I agree to the{" "}
+              <Link
+                href="/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                data-testid="link-view-terms"
+              >
+                Terms of Service
+                <ExternalLink className="h-3 w-3" />
+              </Link>
+              .
+            </Label>
           </div>
 
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-            <MessageSquare className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-            <div>
-              <p className="font-medium text-sm">AI-Powered Communication</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Tone analysis helps promote constructive dialogue.
-              </p>
-            </div>
+          <div className="flex items-start gap-3 rounded-xl border border-border/70 p-3">
+            <Checkbox
+              id="acknowledge-privacy"
+              checked={privacyAcknowledged}
+              onCheckedChange={(checked) => setPrivacyAcknowledged(checked === true)}
+              className="mt-0.5"
+              data-testid="checkbox-acknowledge-privacy"
+            />
+            <Label htmlFor="acknowledge-privacy" className="cursor-pointer text-sm leading-relaxed">
+              I have read and acknowledge the{" "}
+              <Link
+                href="/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                data-testid="link-view-privacy"
+              >
+                Privacy Policy
+                <ExternalLink className="h-3 w-3" />
+              </Link>
+              .
+            </Label>
           </div>
-        </div>
 
-        {/* Checkbox Agreement */}
-        <div className="flex items-start gap-3 pt-2 border-t">
-          <Checkbox
-            id="agree-terms"
-            checked={agreed}
-            onCheckedChange={(checked) => setAgreed(checked as boolean)}
-            className="mt-1"
-            data-testid="checkbox-agree-terms"
-          />
-          <Label 
-            htmlFor="agree-terms" 
-            className="text-sm leading-relaxed cursor-pointer"
-          >
-            I agree to the{" "}
-            <Link 
-              href="/terms" 
-              className="text-primary hover:underline inline-flex items-center gap-1"
-              data-testid="link-view-terms"
-            >
-              Terms & Conditions
-              <ExternalLink className="h-3 w-3" />
-            </Link>
-          </Label>
+          <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
+            <Checkbox
+              id="allow-ai-message-processing"
+              checked={aiMessageConsent}
+              onCheckedChange={(checked) => setAiMessageConsent(checked === true)}
+              className="mt-0.5"
+              data-testid="checkbox-ai-message-consent"
+            />
+            <Label htmlFor="allow-ai-message-processing" className="cursor-pointer text-sm leading-relaxed">
+              <span className="flex items-center gap-1.5 font-medium">
+                <MessageSquare className="h-4 w-4 text-primary" />
+                Allow optional third-party AI message processing
+              </span>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                When enabled, message text may be sent to an AI service to generate optional suggestions.
+                Leave this unchecked to keep the feature off.
+              </span>
+            </Label>
+          </div>
         </div>
 
         <DialogFooter className="pt-2">
           <Button
-            onClick={handleAccept}
-            disabled={!agreed || acceptTermsMutation.isPending}
+            onClick={() => acceptConsentMutation.mutate()}
+            disabled={!requiredAccepted || acceptConsentMutation.isPending}
             className="w-full"
             data-testid="button-accept-terms"
           >
-            {acceptTermsMutation.isPending ? "Accepting..." : "Accept & Continue"}
+            {acceptConsentMutation.isPending ? "Saving..." : "Agree & Continue"}
           </Button>
         </DialogFooter>
       </DialogContent>

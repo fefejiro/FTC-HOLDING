@@ -31,7 +31,7 @@ export const AI_BOUNDARIES = {
     "You are always in control — I suggest, never block",
     "Clarity over calm — the goal is understanding, not suppression",
     "No judgment — I help with the words, not the feelings behind them",
-    "Privacy first — your messages are processed securely and not stored for AI training",
+    "Privacy first — only process content for the requested feature when the required AI consent is enabled",
   ],
 };
 

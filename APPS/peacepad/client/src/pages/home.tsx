@@ -22,7 +22,7 @@ export default function HomePage() {
     {
       icon: Shield,
       title: "Secure & Private",
-      description: "Your family communications are encrypted and protected",
+      description: "Authenticated access and transport encryption help protect communications",
     },
     {
       icon: TrendingUp,

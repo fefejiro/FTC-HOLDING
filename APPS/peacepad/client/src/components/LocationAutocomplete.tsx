@@ -91,25 +91,6 @@ export function LocationAutocomplete({
     enabled: debouncedQuery.length >= 2,
   });
 
-  // IP geolocation is too inaccurate (shows ISP location, not user location)
-  // Instead of auto-filling with wrong data, we'll just use it for biasing search results
-  const getIpLocationForBias = async (): Promise<{lat: number; lng: number} | null> => {
-    try {
-      console.log('[Location] Getting IP location for search bias only...');
-      const res = await fetch('/api/geocode/ip', { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.lat && data.lng) {
-          console.log('[Location] IP location for bias:', data.city, data.country);
-          return { lat: data.lat, lng: data.lng };
-        }
-      }
-    } catch (error) {
-      console.error('[Location] IP geolocation failed:', error);
-    }
-    return null;
-  };
-
   // Get user's current location using GPS only (no inaccurate IP fallback)
   const handleUseMyLocation = async () => {
     setIsGettingLocation(true);
@@ -118,9 +99,6 @@ export function LocationAutocomplete({
     if (!navigator.geolocation) {
       console.log('[Location] Geolocation not available');
       setSearchQuery('');
-      // Get IP location just for search bias, not for display
-      const ipLoc = await getIpLocationForBias();
-      if (ipLoc) setUserLocation(ipLoc);
       setIsGettingLocation(false);
       setShowSuggestions(true); // Keep dropdown open so user can type
       return;
@@ -148,7 +126,7 @@ export function LocationAutocomplete({
     try {
       const position = await getGPSLocation;
       const { latitude, longitude, accuracy } = position.coords;
-      console.log(`[Location] GPS success: (${latitude}, ${longitude}) accuracy: ${accuracy}m`);
+      console.log("[Location] GPS coordinates acquired");
       setUserLocation({ lat: latitude, lng: longitude });
       
       // Reverse geocode to get address
@@ -174,7 +152,7 @@ export function LocationAutocomplete({
               lng: longitude,
               address: data.displayName,
             }));
-            console.log('[Location] GPS location successful:', data.displayName);
+            console.log("[Location] GPS location resolved");
           }
         }
       } catch (error) {
@@ -189,11 +167,6 @@ export function LocationAutocomplete({
       setShowSuggestions(false);
     } catch (gpsError) {
       console.log('[Location] GPS failed:', gpsError);
-      // Don't auto-fill with IP location - it's too inaccurate
-      // Just get IP location for search bias and let user type their location
-      const ipLoc = await getIpLocationForBias();
-      if (ipLoc) setUserLocation(ipLoc);
-      
       // Clear and let user type manually with helpful message
       setSearchQuery('');
       setIsGettingLocation(false);

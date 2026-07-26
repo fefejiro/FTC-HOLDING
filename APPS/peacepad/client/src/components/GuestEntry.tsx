@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Upload, User, Shield, Lock, ChevronRight, Heart, Check } from "lucide-react";
 import { getApiUrl, queryClient } from "@/lib/queryClient";
+import { readStoredConsent } from "@/lib/consentState";
 
 interface GuestEntryProps {
   onAuthenticated: () => void;
@@ -181,7 +182,7 @@ export default function GuestEntry({ onAuthenticated }: GuestEntryProps) {
     setIsLoading(true);
     try {
       const sessionId = localStorage.getItem("peacepad_session_id");
-      const hasAcceptedConsent = localStorage.getItem("hasAcceptedConsent") === "true";
+      const consent = readStoredConsent();
       
       // Convert avatar selection to profile image format
       let profileImage = customImage;
@@ -193,7 +194,9 @@ export default function GuestEntry({ onAuthenticated }: GuestEntryProps) {
         displayName: displayName || undefined,
         profileImageUrl: profileImage,
         sessionId: sessionId || undefined,
-        hasAcceptedConsent,
+        hasAcceptedConsent: consent.requiredAccepted,
+        aiMessageConsent: consent.aiMessageConsent,
+        aiCallConsent: consent.aiCallConsent,
       };
       
       const response = await fetch(getApiUrl("/api/auth/guest"), {
@@ -298,7 +301,8 @@ export default function GuestEntry({ onAuthenticated }: GuestEntryProps) {
           <div className="flex items-center gap-3 px-4 py-3 bg-muted/30 rounded-xl border border-border/50">
             <Shield className="h-4 w-4 text-primary flex-shrink-0" />
             <p className="text-xs text-muted-foreground">
-              Your data stays private. Access sessions are managed internally during private beta.
+              Access sessions are managed internally. Review the Privacy Policy for how PeacePad
+              handles information.
             </p>
           </div>
 
@@ -406,7 +410,7 @@ export default function GuestEntry({ onAuthenticated }: GuestEntryProps) {
           <div className="pt-4 pb-6 text-center">
             <div className="inline-flex items-center gap-2 text-xs text-muted-foreground">
               <Lock className="h-3 w-3" />
-              <span>End-to-end encrypted communications</span>
+              <span>Session-protected, partnership-scoped communications</span>
             </div>
           </div>
         </div>

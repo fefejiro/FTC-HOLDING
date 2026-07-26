@@ -239,7 +239,7 @@ export default function AuditTrailPage() {
         currentY += 8;
         
         const callRows = data.calls.map((call: any) => [
-          call.sessionCode || 'N/A',
+          call.callType || 'Call',
           new Date(call.startTime).toLocaleString(),
           call.duration ? `${Math.floor(call.duration / 60)}m ${call.duration % 60}s` : 'N/A',
           call.status || 'Completed'
@@ -247,7 +247,7 @@ export default function AuditTrailPage() {
         
         autoTable(doc, {
           startY: currentY,
-          head: [['Session Code', 'Start Time', 'Duration', 'Status']],
+          head: [['Call Type', 'Start Time', 'Duration', 'Status']],
           body: callRows,
           theme: 'striped',
           headStyles: { fillColor: [66, 139, 202] },
@@ -266,7 +266,7 @@ export default function AuditTrailPage() {
         doc.setFontSize(8);
         doc.setTextColor(150);
         doc.text(
-          `Page ${i} of ${pageCount} | PeacePad Audit Trail | Immutable Record`,
+          `Page ${i} of ${pageCount} | PeacePad User Export`,
           pageWidth / 2,
           doc.internal.pageSize.getHeight() - 10,
           { align: 'center' }
@@ -277,7 +277,7 @@ export default function AuditTrailPage() {
       
       toast({
         title: "PDF exported successfully",
-        description: "Your court-ready audit trail has been downloaded",
+        description: "Your PeacePad record export has been downloaded",
         duration: 3000,
       });
     } catch (error) {
@@ -308,7 +308,7 @@ export default function AuditTrailPage() {
           <div>
             <h1 className="text-3xl font-bold text-foreground">Audit Trail & Export</h1>
             <p className="text-muted-foreground mt-1">
-              Legal-friendly documentation of all your communications and activities
+              Review and export the PeacePad records available to your account
             </p>
           </div>
         </div>
@@ -369,7 +369,7 @@ export default function AuditTrailPage() {
           <CardHeader>
             <CardTitle>Export Options</CardTitle>
             <CardDescription>
-              Download your complete audit trail for legal documentation or sharing
+              Download your available records for your own files or sharing
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -380,7 +380,7 @@ export default function AuditTrailPage() {
                 data-testid="button-export-pdf"
               >
                 <FileCheck className="h-4 w-4 mr-2" />
-                Download PDF (Court-Ready)
+                Download PDF
               </Button>
 
               <Button
@@ -419,15 +419,16 @@ export default function AuditTrailPage() {
               <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
                 <li>All chat messages with timestamps and tone analysis</li>
                 <li>Scheduled events and appointments</li>
-                <li>Call logs with session codes and durations</li>
+                <li>Call logs with type, time, and duration</li>
                 <li>Recording transcripts (if available)</li>
-                <li>Activity audit logs for legal compliance</li>
+                <li>Account activity logs</li>
               </ul>
               <div className="mt-3 p-3 bg-background rounded-md border">
-                <p className="text-sm font-medium text-foreground">Court Admissibility</p>
+                <p className="text-sm font-medium text-foreground">Record keeping</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Messages cannot be edited or deleted after sending. PDF exports include timestamps, 
-                  sender information, and page numbering for legal documentation.
+                  PDF exports include timestamps, sender information, and page
+                  numbering. PeacePad does not guarantee that an export will be
+                  accepted for any legal purpose.
                 </p>
               </div>
             </div>

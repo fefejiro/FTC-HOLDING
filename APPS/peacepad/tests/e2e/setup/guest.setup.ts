@@ -6,7 +6,10 @@ setup.setTimeout(90_000);
 setup('bootstrap onboarding session', async ({ page }) => {
   console.log('[Setup] Starting onboarding bootstrap flow...');
 
-  await page.goto('/onboarding');
+  await page.addInitScript(() => {
+    localStorage.setItem("lastSeenChangelogVersion", "1.0.9");
+  });
+  await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
 
   // Hide Replit dev banner if present (it can intercept clicks)
@@ -15,16 +18,15 @@ setup('bootstrap onboarding session', async ({ page }) => {
     if (banner) banner.style.display = 'none';
   });
 
-  await expect(page.getByTestId("button-start-conversation")).toBeVisible({ timeout: 15000 });
-  await page.getByTestId("button-start-conversation").click();
+  await expect(page.getByTestId("button-try-peacepad")).toBeVisible({ timeout: 15000 });
+  await page.getByTestId("button-try-peacepad").click();
 
   await expect(page.getByTestId("button-accept-terms")).toBeVisible({ timeout: 15000 });
   await page.waitForTimeout(750);
 
   const requiredCheckboxes = [
     "checkbox-accept-terms",
-    "checkbox-accept-privacy",
-    "checkbox-accept-nda",
+    "checkbox-acknowledge-privacy",
   ];
 
   for (const testId of requiredCheckboxes) {
@@ -35,7 +37,7 @@ setup('bootstrap onboarding session', async ({ page }) => {
   await page.getByTestId("button-accept-terms").click();
 
   try {
-    await page.waitForURL(/prep-chat|chat|dashboard/, { timeout: 30000 });
+    await page.waitForURL(/compose|prep-chat|chat|dashboard/, { timeout: 30000 });
     console.log('[Setup] Successfully reached app shell:', page.url());
   } catch {
     console.log('[Setup] Did not reach expected URL, current URL:', page.url());

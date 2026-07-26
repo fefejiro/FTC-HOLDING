@@ -194,7 +194,7 @@ function VideoCallDialog({
   // This ensures V2 engine has sessionCode when callee accepts call
   useEffect(() => {
     if (callContext.call?.sessionCode && !sessionCode) {
-      console.log('[VideoCallDialog] 🔑 Syncing sessionCode from CallContext:', callContext.call.sessionCode);
+      console.log('[VideoCallDialog] Syncing call-session credential from active call state');
       setSessionCode(callContext.call.sessionCode);
     }
   }, [callContext.call?.sessionCode, sessionCode]);
@@ -246,7 +246,9 @@ function VideoCallDialog({
     // CRITICAL FIX: Create adapter immediately when dialog opens (not just when sessionCode exists)
     // This ensures callee can send join-session message when accepting call
     if (isOpen && !wsAdapterRef.current) {
-      console.log('[V2] Setting up WebSocket adapter for V2 engine (session:', sessionCodeProp || 'pending', ')');
+      console.log('[V2] Setting up WebSocket adapter', {
+        hasSessionCredential: Boolean(sessionCodeProp),
+      });
       console.log('[V2] 🔍 Debug - Checking catch-up conditions:', {
         hasSessionCode: !!callContext.call?.sessionCode,
         hasCallId: !!callContext.call?.callId,
@@ -259,7 +261,7 @@ function VideoCallDialog({
       // CRITICAL FIX: If there's already a sessionCode in CallContext (incoming call), 
       // manually trigger incoming-call processing since the window event already fired before dialog opened
       if (callContext.call?.sessionCode && callContext.call?.callId && isIncoming && v2Actions.processMessage) {
-        console.log('[V2] 🔥 CRITICAL FIX: Processing missed incoming-call event for sessionCode:', callContext.call.sessionCode);
+        console.log('[V2] Processing a pending incoming-call event');
         
         // Directly call V2 engine's processMessage with incoming-call data
         v2Actions.processMessage({
@@ -282,7 +284,7 @@ function VideoCallDialog({
         console.log('[V2 Adapter] 🎯 messageHandler called! Has handler:', !!v2MessageHandlerRef.current);
         const customEvent = event as CustomEvent;
         const message = customEvent.detail;
-        console.log('[V2 Adapter] Received webrtc-signal event:', message.type, message);
+        console.log('[V2 Adapter] Received WebRTC signal event:', message.type);
         
         // Transform legacy messages to V2 format
         let v2Message: any = null;
@@ -296,7 +298,7 @@ function VideoCallDialog({
               payload: message,
               sequence: Date.now()
             };
-            console.log('[V2] Forwarding incoming-call to V2 engine:', message);
+            console.log('[V2] Forwarding incoming call to V2 engine');
             break;
           case 'call-accepted':
             // Forward call-accepted to V2 engine
@@ -305,7 +307,7 @@ function VideoCallDialog({
               payload: message,
               sequence: Date.now()
             };
-            console.log('[V2] Forwarding call-accepted to V2 engine:', message);
+            console.log('[V2] Forwarding accepted call to V2 engine');
             break;
           case 'offer':
             v2Message = { 
@@ -330,7 +332,7 @@ function VideoCallDialog({
             break;
           case 'session-users':
             console.log('[V2 Adapter] 🔄 Transforming session-users to v2:session_joined');
-            console.log('[V2 Adapter] Users in session:', message.payload.users);
+            console.log('[V2 Adapter] Session participant list received');
             v2Message = {
               type: 'v2:session_joined',
               payload: { users: message.payload.users || [], sessionCode: sessionCode || sessionCodeProp },
@@ -386,7 +388,7 @@ function VideoCallDialog({
         readyState: WebSocket.OPEN,
         send: (data: string) => {
           const parsed = JSON.parse(data);
-          console.log('[V2] Sending via adapter:', parsed.type, 'payload:', parsed.payload);
+          console.log('[V2] Sending via adapter:', parsed.type);
           
           // CRITICAL FIX: Read from v2StateRef.current to get LIVE state (not stale closure)
           const liveV2State = v2StateRef.current as any;
@@ -881,7 +883,7 @@ function VideoCallDialog({
 
     // Use the session code provided via props (from backend /api/calls response or incoming-call notification)
     if (sessionCodeProp) {
-      console.log(`[VideoCallDialog] Using sessionCode from props: ${sessionCodeProp}`);
+      console.log('[VideoCallDialog] Using supplied call-session credential');
       setSessionCode(sessionCodeProp);
       return;
     }
@@ -1097,9 +1099,9 @@ function VideoCallDialog({
     const handleCallAcceptedSignal = (event: Event) => {
       const customEvent = event as CustomEvent;
       const data = customEvent.detail;
-      console.log("[VideoCallDialog] 🎉 Received call-accepted event:", data);
+      console.log("[VideoCallDialog] Received call-accepted event");
       console.log("[VideoCallDialog] Current state - isIncoming:", isIncoming, "recipientId:", recipientId, "callRole:", callRole, "callStatus:", callStatus);
-      console.log("[VideoCallDialog] SessionCode from event:", data.sessionCode);
+      console.log("[VideoCallDialog] Call-accepted event included a session credential");
 
       // CRITICAL: Ignore call-accepted if we're already ending/ended the call
       if (callStatus === "ended" || shouldCleanupRef.current) {
@@ -1118,7 +1120,7 @@ function VideoCallDialog({
         console.log(
           `[VideoCallDialog] ✅ I am CALLER - Joining WebRTC session after acceptance`,
         );
-        console.log(`[VideoCallDialog] SessionCode: ${data.sessionCode}`);
+        console.log("[VideoCallDialog] Caller received the call-session credential");
 
         // Stop outgoing ring tone
         stopOutgoingRing();
@@ -1150,7 +1152,7 @@ function VideoCallDialog({
         
         // CRITICAL FIX: Callee must also join the WebRTC session!
         if (data.sessionCode) {
-          console.log(`[VideoCallDialog] 📞 CALLEE session code: ${data.sessionCode}`);
+          console.log("[VideoCallDialog] Callee received the call-session credential");
           setSessionCode(data.sessionCode);
           
           // UNIFIED: V2 engine handles session joining
@@ -2529,7 +2531,7 @@ function VideoCallDialog({
       return;
     }
 
-    console.log('[VideoCallDialog] Setting up WebRTC connection for session:', sessionCode);
+    console.log('[VideoCallDialog] Setting up WebRTC connection');
 
     // Create peer connection with recipient
     // CRITICAL: Caller creates offer (shouldOffer = true)

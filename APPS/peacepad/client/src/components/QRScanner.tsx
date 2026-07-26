@@ -32,9 +32,11 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
               return;
             }
             
-            console.log("[QRScanner] Decoded text:", decodedText);
             const code = extractCodeFromUrl(decodedText);
-            console.log("[QRScanner] Extracted code:", code, "Length:", code?.length);
+            console.log("[QRScanner] Scan decoded", {
+              hasInviteCode: Boolean(code),
+              codeLength: code?.length ?? 0,
+            });
             if (code && code.length === 6) {
               console.log("[QRScanner] Valid 6-char code found, calling onScan");
               hasScannedRef.current = true;

@@ -11,7 +11,7 @@ export interface LocationData {
   country?: string;
   countryCode?: string;
   postalCode?: string;
-  source: "gps" | "ip" | "manual" | "cached" | "ai-enhanced";
+  source: "gps" | "manual" | "cached" | "ai-enhanced";
   accuracy?: number;
   timestamp: number;
   isCanada?: boolean;
@@ -39,7 +39,7 @@ interface LocationProviderProps {
   useAiEnhancement?: boolean;
 }
 
-export function LocationProvider({ children, useAiEnhancement = true }: LocationProviderProps) {
+export function LocationProvider({ children, useAiEnhancement = false }: LocationProviderProps) {
   const [location, setLocation] = useState<LocationData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +53,7 @@ export function LocationProvider({ children, useAiEnhancement = true }: Location
     const cached = loadCachedLocation();
     if (cached) {
       setLocation(cached);
-      console.log("[LocationProvider] Loaded cached location:", cached.displayName);
+      console.log("[LocationProvider] Loaded cached location");
     }
   }, []);
 
@@ -119,7 +119,7 @@ export function LocationProvider({ children, useAiEnhancement = true }: Location
                 timestamp: Date.now(),
                 isCanada: data.country === "Canada" || data.countryCode?.toUpperCase() === "CA",
               };
-              console.log("[LocationProvider] GPS success:", locationData.displayName);
+              console.log("[LocationProvider] GPS location acquired");
               resolve(locationData);
               return;
             }
@@ -147,38 +147,7 @@ export function LocationProvider({ children, useAiEnhancement = true }: Location
     });
   }, []);
 
-  // Tier 2: IP-based geolocation
-  const getIPLocation = useCallback(async (): Promise<LocationData | null> => {
-    try {
-      console.log("[LocationProvider] Trying IP-based geolocation...");
-      const res = await fetch("/api/geocode/ip", { credentials: "include" });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.lat && data.lng) {
-          const locationData: LocationData = {
-            displayName: data.displayName || `${data.city || ""}, ${data.country || ""}`,
-            address: data.displayName || "",
-            lat: data.lat,
-            lng: data.lng,
-            city: data.city,
-            state: data.state,
-            country: data.country,
-            countryCode: data.countryCode?.toUpperCase(),
-            source: "ip",
-            timestamp: Date.now(),
-            isCanada: data.country === "Canada" || data.countryCode?.toUpperCase() === "CA",
-          };
-          console.log("[LocationProvider] IP geolocation success:", locationData.displayName);
-          return locationData;
-        }
-      }
-    } catch (e) {
-      console.error("[LocationProvider] IP geolocation failed:", e);
-    }
-    return null;
-  }, []);
-
-  // Tier 3: AI-enhanced location refinement
+  // Optional server-side refinement. It is disabled by default for this release.
   const enhanceWithAI = useCallback(async (baseLocation: LocationData): Promise<LocationData> => {
     if (!useAiEnhancement) return baseLocation;
 
@@ -202,7 +171,7 @@ export function LocationProvider({ children, useAiEnhancement = true }: Location
             timestamp: Date.now(),
             isCanada: enhanced.country === "Canada" || enhanced.countryCode?.toUpperCase() === "CA",
           };
-          console.log("[LocationProvider] AI enhanced:", result.displayName);
+          console.log("[LocationProvider] Location enhancement completed");
           return result;
         }
       }
@@ -212,26 +181,20 @@ export function LocationProvider({ children, useAiEnhancement = true }: Location
     return baseLocation;
   }, [useAiEnhancement]);
 
-  // Main detection function with 4-tier fallback
+  // Main detection function: GPS, then a previously confirmed cached value.
   const detectLocation = useCallback(async (): Promise<LocationData | null> => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Tier 1: Try GPS first
       let result = await getGPSLocation();
 
-      // Tier 2: Fall back to IP if GPS fails
-      if (!result) {
-        result = await getIPLocation();
-      }
-
-      // Tier 3: Try AI enhancement if we have a result
+      // Optional refinement is off by default for this release.
       if (result && useAiEnhancement) {
         result = await enhanceWithAI(result);
       }
 
-      // Tier 4: Use cached location as last resort
+      // Use a previously confirmed cached location as the fallback.
       if (!result) {
         result = loadCachedLocation();
         if (result) {
@@ -255,7 +218,7 @@ export function LocationProvider({ children, useAiEnhancement = true }: Location
     } finally {
       setIsLoading(false);
     }
-  }, [getGPSLocation, getIPLocation, enhanceWithAI, saveLocation, useAiEnhancement]);
+  }, [getGPSLocation, enhanceWithAI, saveLocation, useAiEnhancement]);
 
   // Manual location search
   const setManualLocation = useCallback(async (query: string): Promise<LocationData | null> => {

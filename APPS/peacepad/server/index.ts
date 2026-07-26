@@ -10,7 +10,6 @@ import { initializeWeeklyReportScheduler } from "./weeklyReport";
 import { initializeReEngagementScheduler } from "./services/reEngagementScheduler";
 import { setupSoftAuth } from "./softAuth";
 import { killProcessOnPort, HealthMonitor, setupAutoCleanup } from "./autoRecovery";
-import path from "path";
 import { config } from "./config";
 
 // Detect build mode for Play Store APK/AAB builds
@@ -298,7 +297,7 @@ app.use((req, res, next) => {
     [
       "default-src 'self' blob: data:;",
       "connect-src 'self' wss: https:;",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://*.firebaseio.com;",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.firebaseio.com;",
       "img-src 'self' data: blob: https:;",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;",
       "font-src 'self' https://fonts.gstatic.com;",
@@ -317,13 +316,6 @@ app.use((req, res, next) => {
   app.use((req: any, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
 
   res.on("finish", () => {
     const duration = Date.now() - start;
@@ -339,35 +331,14 @@ app.use((req, res, next) => {
       // Note: User tracking moved to routes.ts after auth middleware
       // so req.user is populated
       
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "...";
-      }
-
-      log(logLine);
+      // Never append response payloads here: API responses can contain private
+      // family messages, profile data, transcripts, or tokens.
+      log(`${req.method} ${path} ${res.statusCode} in ${duration}ms`);
     }
   });
 
   next();
 });
-
-// Serve uploaded files statically with proper MIME types
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), {
-  setHeaders: (res, filePath) => {
-    // Ensure proper MIME types for audio files
-    if (filePath.endsWith('.webm')) {
-      res.setHeader('Content-Type', 'audio/webm');
-    } else if (filePath.endsWith('.m4a')) {
-      res.setHeader('Content-Type', 'audio/mp4');
-    } else if (filePath.endsWith('.ogg')) {
-      res.setHeader('Content-Type', 'audio/ogg');
-    }
-  }
-}));
 
 (async () => {
   // Setup guest authentication (must be before registerRoutes)
@@ -377,7 +348,8 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), {
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    const message =
+      status >= 500 ? "Internal Server Error" : err.message || "Request failed";
 
     // Only send response if headers haven't been sent yet
     if (!res.headersSent) {
@@ -386,7 +358,11 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), {
 
     // Log the error but don't throw it (prevents double-sending headers)
     if (status >= 500) {
-      console.error('Server error:', err);
+      console.error("Server error", {
+        status,
+        name: typeof err?.name === "string" ? err.name : "Error",
+        code: typeof err?.code === "string" ? err.code : undefined,
+      });
     }
   });
 
