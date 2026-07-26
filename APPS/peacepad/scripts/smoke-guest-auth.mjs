@@ -78,7 +78,7 @@ async function runSmokeTest() {
   assert(health.json && typeof health.json === "object", "[Smoke] GET /api/health did not return JSON object");
   console.log("[Smoke] GET /api/health OK");
 
-  const guest = await requestJson(apiBaseUrl, "/api/auth/guest", {
+  const guestWithoutConsent = await requestJson(apiBaseUrl, "/api/auth/guest", {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -88,8 +88,41 @@ async function runSmokeTest() {
       displayName: "SmokeGuest",
     }),
   });
+  assert(
+    guestWithoutConsent.response.status === 428,
+    `[Smoke] Expected consent-free guest creation to return 428, got ${guestWithoutConsent.response.status}`,
+  );
+  assert(
+    guestWithoutConsent.json?.code === "CONSENT_REQUIRED",
+    `[Smoke] Expected CONSENT_REQUIRED, got ${JSON.stringify(guestWithoutConsent.json)}`,
+  );
+  assert(
+    !guestWithoutConsent.setCookies.some((cookie) =>
+      cookie.toLowerCase().startsWith("peacepad_guest="),
+    ),
+    "[Smoke] Consent-free guest creation must not set a PeacePad session cookie",
+  );
+  console.log("[Smoke] POST /api/auth/guest without explicit consent rejected OK");
+
+  const guest = await requestJson(apiBaseUrl, "/api/auth/guest", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      displayName: "SmokeGuest",
+      hasAcceptedConsent: true,
+      aiMessageConsent: false,
+      aiCallConsent: false,
+    }),
+  });
   assert(guest.response.ok, `[Smoke] POST /api/auth/guest failed with status ${guest.response.status}`);
-  console.log("[Smoke] POST /api/auth/guest OK");
+  assert(guest.json?.user?.privacyAccepted === true, "[Smoke] Guest privacy acknowledgement was not stored");
+  assert(Boolean(guest.json?.user?.termsAcceptedAt), "[Smoke] Guest Terms acceptance was not stored");
+  assert(guest.json?.user?.aiMessageConsent === false, "[Smoke] Optional message AI consent must default off");
+  assert(guest.json?.user?.aiCallConsent === false, "[Smoke] Optional call AI consent must default off");
+  console.log("[Smoke] POST /api/auth/guest with explicit consent OK");
 
   const guestCookie = guest.setCookies.find((cookie) =>
     cookie.toLowerCase().startsWith("peacepad_guest="),
@@ -113,7 +146,34 @@ async function runSmokeTest() {
   );
   console.log("[Smoke] GET /api/session OK");
 
-  console.log("[Smoke] PASS: guest auth smoke test completed successfully.");
+  const deleted = await requestJson(apiBaseUrl, "/api/user/account", {
+    method: "DELETE",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Cookie: sessionCookieHeader,
+    },
+    body: JSON.stringify({ confirmation: "DELETE" }),
+  });
+  assert(
+    deleted.response.ok && deleted.json?.success === true,
+    `[Smoke] DELETE /api/user/account failed with status ${deleted.response.status}`,
+  );
+
+  const deletedSession = await requestJson(apiBaseUrl, "/api/auth/user", {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      Cookie: sessionCookieHeader,
+    },
+  });
+  assert(
+    deletedSession.response.status === 401,
+    `[Smoke] Deleted guest session remained usable with status ${deletedSession.response.status}`,
+  );
+  console.log("[Smoke] DELETE /api/user/account and session invalidation OK");
+
+  console.log("[Smoke] PASS: guest consent, auth, and deletion smoke test completed successfully.");
 }
 
 runSmokeTest().catch((error) => {
