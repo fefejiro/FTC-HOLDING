@@ -1,5 +1,20 @@
 # App Store Metadata for PeacePad
 
+## Current submission status
+
+Verified in App Store Connect on 2026-07-26:
+
+```text
+Version/build: 1.0.9 (1)
+Submission: Waiting for Review
+Release: Automatically release this version
+```
+
+The isolated synthetic reviewer credentials and testing notes were saved, the
+Guideline 2.1 response was sent, and the existing binary was resubmitted. See
+`IOS_APP_REVIEW_HANDOVER_2026-07-26.md` for the evidence and next-owner actions.
+Never add the raw reviewer password to this file.
+
 ## App Name (30 character limit)
 ```
 PeacePad Co-Parenting
