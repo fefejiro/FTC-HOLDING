@@ -892,7 +892,8 @@ export const insertFeedbackSchema = createInsertSchema(feedback).omit({
 export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
 
 // Safety Plans for domestic violence victims
-// SECURITY: All sensitive data is encrypted at rest using AES-256-GCM
+// Safety-plan payloads are stored as ciphertext; this does not describe encryption
+// guarantees for unrelated PeacePad tables or third-party processors.
 export const safetyPlans = pgTable("safety_plans", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
