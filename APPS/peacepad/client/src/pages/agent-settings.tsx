@@ -236,14 +236,14 @@ export default function AgentSettingsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="minimal">Minimal - Basic features only</SelectItem>
-                  <SelectItem value="standard">Standard - Pattern detection enabled</SelectItem>
-                  <SelectItem value="enhanced">Enhanced - Full AI coaching</SelectItem>
+                  <SelectItem value="standard">Standard - Optional smart assistance</SelectItem>
+                  <SelectItem value="enhanced">Enhanced - Personalized assistance</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
                 {mergedSettings.privacyMode === 'minimal' && 'AI features are limited. No pattern analysis or proactive suggestions.'}
-                {mergedSettings.privacyMode === 'standard' && 'AI analyzes patterns to help prevent conflicts. Messages are processed locally.'}
-                {mergedSettings.privacyMode === 'enhanced' && 'Full AI coaching with personalized suggestions based on communication history.'}
+                {mergedSettings.privacyMode === 'standard' && 'Optional smart assistance is available only after you enable AI processing.'}
+                {mergedSettings.privacyMode === 'enhanced' && 'Personalized assistance uses the AI-processing consent and settings you choose.'}
               </p>
             </div>
 
