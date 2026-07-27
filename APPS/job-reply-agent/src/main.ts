@@ -4,12 +4,15 @@ import { getDb, resetDb, resolveDbPath } from "./db.js";
 import { sendEmail } from "./email_sender.js";
 import {
   applyStatusLabel,
+  applyStatusLabelToThreads,
   checkGmailAuthStatus,
   createDraftFromStoredContent,
   createReplyDraftInThread,
   exchangeCodeAndSaveTokens,
   getGmailConsentUrl,
+  listSentMessagesForThreads,
   listRecruiterInboundMessages,
+  removeInboundLabelFromProcessedMessages,
   sendDraftById,
   sendPlainTextEmail,
   scanInboxForRecruiters,
@@ -17,8 +20,11 @@ import {
 import { logger } from "./logger.js";
 import {
   getApprovedPendingDrafts,
+  getPendingDraftsForReconciliation,
+  getSentDraftThreadsPendingLabelSync,
   insertDecision,
-  markDraftSent,
+  markSentDraftThreadLabelSynced,
+  markDraftSentWithProof,
   updateDraftTransportMeta
 } from "./message_store.js";
 import {
@@ -33,6 +39,7 @@ import { isHuntCommand, runHuntCommand } from "./hunt/cli.js";
 import { runAutoApplyQueueAndReport, runDicePreflight, syncApplicationProofFromMessages } from "./automation.js";
 import { assertInstanceReady, instanceBanner, loadUserInstance } from "./instance.js";
 import { evaluateOnboardingReadiness } from "./onboarding.js";
+import { matchSentDraftProofs } from "./sent_reconciliation.js";
 
 function parseDateArg(argv: string[]): string | undefined {
   return parseOptionArg(argv, "date");
@@ -143,9 +150,10 @@ async function sendApprovedDraftsViaGmail(params: {
   for (const draft of pending) {
     try {
       let draftId = await ensureSendableDraftId({ db: params.db, cfg: params.cfg, draft });
+      let sentProof: { messageId: string; threadId: string; sentAt: string };
 
       try {
-        await sendDraftById(params.cfg, draftId);
+        sentProof = await sendDraftById(params.cfg, draftId);
       } catch (sendError) {
         if (!isStaleDraftError(sendError)) {
           throw sendError;
@@ -172,17 +180,27 @@ async function sendApprovedDraftsViaGmail(params: {
         });
 
         draftId = rebuilt.draftId;
-        await sendDraftById(params.cfg, draftId);
+        sentProof = await sendDraftById(params.cfg, draftId);
       }
 
-      if (markDraftSent(params.db, draft.message_id)) {
+      if (markDraftSentWithProof(params.db, draft.message_id, {
+        sentMessageId: sentProof.messageId,
+        sentAt: sentProof.sentAt,
+        manual: false
+      })) {
         insertDecision(params.db, draft.message_id, "sent", "Approved Gmail draft sent");
-        await applyStatusLabel({
+        const labelResult = await applyStatusLabelToThreads({
           cfg: params.cfg,
-          messageId: draft.message_id,
+          threadIds: [draft.thread_id],
           labels: params.labels,
           status: "sent"
         });
+        if (labelResult.updatedThreadIds.includes(draft.thread_id)) {
+          markSentDraftThreadLabelSynced(params.db, draft.thread_id);
+        }
+        if (labelResult.errors.length > 0) {
+          throw new Error(labelResult.errors[0].error);
+        }
         sent += 1;
       }
     } catch (error) {
@@ -197,6 +215,80 @@ async function sendApprovedDraftsViaGmail(params: {
   }
 
   return { sent, errors, considered: pending.length };
+}
+
+function processedGmailLabelNames(labels: any): string[] {
+  return [
+    labels.drafted,
+    labels.needs_review,
+    labels.sent,
+    labels.skipped,
+    labels.blocked,
+    labels.approved,
+    labels.error
+  ].filter((label): label is string => Boolean(label));
+}
+
+async function reconcileManuallySentDrafts(params: {
+  db: any;
+  cfg: any;
+  labels: any;
+  lookbackDays?: number;
+}): Promise<{ considered: number; matched: number; unmatched: number; labelErrors: number }> {
+  const lookbackDays = params.lookbackDays ?? 30;
+  const pending = getPendingDraftsForReconciliation(params.db, lookbackDays);
+  if (pending.length === 0) {
+    return { considered: 0, matched: 0, unmatched: 0, labelErrors: 0 };
+  }
+
+  const proofs = await listSentMessagesForThreads(
+    params.cfg,
+    Array.from(new Set(pending.map((draft) => draft.thread_id))),
+    lookbackDays
+  );
+  const reconciliation = matchSentDraftProofs(pending, proofs);
+  let matched = 0;
+  let labelErrors = 0;
+
+  for (const { draft, proof } of reconciliation.matches) {
+    if (!markDraftSentWithProof(params.db, draft.message_id, {
+      sentMessageId: proof.messageId,
+      sentAt: proof.sentAt,
+      manual: true
+    })) {
+      continue;
+    }
+
+    matched += 1;
+    insertDecision(
+      params.db,
+      draft.message_id,
+      "sent",
+      `Manual Gmail send reconciled with sent message ${proof.messageId}`
+    );
+  }
+
+  const threadsNeedingLabelSync = getSentDraftThreadsPendingLabelSync(params.db);
+  const labelResult = await applyStatusLabelToThreads({
+    cfg: params.cfg,
+    threadIds: threadsNeedingLabelSync,
+    labels: params.labels,
+    status: "sent"
+  });
+  for (const threadId of labelResult.updatedThreadIds) {
+    markSentDraftThreadLabelSynced(params.db, threadId);
+  }
+  labelErrors = labelResult.errors.length;
+  for (const failure of labelResult.errors) {
+    logger.warn(failure, "Sent Gmail thread label could not be synchronized.");
+  }
+
+  return {
+    considered: pending.length,
+    matched,
+    unmatched: reconciliation.unmatched.length,
+    labelErrors
+  };
 }
 
 export function parseCommandArgs(argv: string[]): {
@@ -353,14 +445,32 @@ export async function runCommand(args: {
     }
     if (!(await requireGmailAuth(command, cfg.env))) return;
 
+      const reconciliation = await reconcileManuallySentDrafts({
+        db,
+        cfg: cfg.env,
+        labels: cfg.rules.filters.labels
+      });
+      logger.info(reconciliation, "Manual Gmail send reconciliation completed.");
+
       const scanLimit = limitArg ?? cfg.rules.automation.max_drafts_per_day * 3;
       const fetchLimit = limitArg ?? cfg.rules.automation.max_drafts_per_day;
+      const processedLabels = processedGmailLabelNames(cfg.rules.filters.labels);
+      const recruiterLookbackDays = cfg.rules.filters.recruiter_lookback_days ?? 14;
+
+      const cleanupResult = await removeInboundLabelFromProcessedMessages(
+        cfg.env,
+        cfg.rules.filters.labels.inbound,
+        processedLabels
+      );
+      logger.info(cleanupResult, "Processed recruiter-label cleanup completed.");
 
       // Step 1: auto-scan inbox and label recruiter emails
       const scanResult = await scanInboxForRecruiters(
         cfg.env,
         cfg.rules.filters.labels.inbound,
-        scanLimit
+        scanLimit,
+        processedLabels,
+        recruiterLookbackDays
       );
       logger.info(scanResult, "Inbox scan complete.");
 
@@ -368,7 +478,8 @@ export async function runCommand(args: {
       const inbox = await listRecruiterInboundMessages(
       cfg.env,
       cfg.rules.filters.labels.inbound,
-      fetchLimit
+      fetchLimit,
+      recruiterLookbackDays
     );
 
     if (inbox.length === 0) {
@@ -436,6 +547,17 @@ export async function runCommand(args: {
     return;
   }
 
+  if (command === "gmail:reconcile-sent") {
+    if (!(await requireGmailAuth(command, cfg.env))) return;
+    const result = await reconcileManuallySentDrafts({
+      db,
+      cfg: cfg.env,
+      labels: cfg.rules.filters.labels
+    });
+    logger.info(result, "gmail:reconcile-sent completed.");
+    return;
+  }
+
   if (command === "run:mock-cycle") {
     if (!cfg.rules.automation.enabled || cfg.rules.automation.mode === "disabled") {
       logger.warn("Automation disabled. Skipping run:mock-cycle.");
@@ -462,6 +584,12 @@ export async function runCommand(args: {
       return;
     }
     if (!(await requireGmailAuth(command, cfg.env))) return;
+
+    const reconciliation = await reconcileManuallySentDrafts({
+      db,
+      cfg: cfg.env,
+      labels: cfg.rules.filters.labels
+    });
 
     const inbox = await listRecruiterInboundMessages(
       cfg.env,
@@ -503,7 +631,10 @@ export async function runCommand(args: {
       labels: cfg.rules.filters.labels
     });
 
-    logger.info({ processOutcome, sent: sendOutcome.sent, sendErrors: sendOutcome.errors }, "run:gmail-cycle completed (only pre-approved drafts sent).");
+    logger.info(
+      { reconciliation, processOutcome, sent: sendOutcome.sent, sendErrors: sendOutcome.errors },
+      "run:gmail-cycle completed (only pre-approved drafts sent)."
+    );
     return;
   }
 
@@ -544,6 +675,12 @@ export async function runCommand(args: {
     }
     if (!(await requireGmailAuth(command, cfg.env))) return;
 
+    const reconciliation = await reconcileManuallySentDrafts({
+      db,
+      cfg: cfg.env,
+      labels: cfg.rules.filters.labels
+    });
+
     const inbox = await listRecruiterInboundMessages(
       cfg.env,
       cfg.rules.filters.labels.inbound,
@@ -583,7 +720,10 @@ export async function runCommand(args: {
       labels: cfg.rules.filters.labels
     });
 
-    logger.info({ proof, processOutcome, sent: sendOutcome.sent, sendErrors: sendOutcome.errors }, "run:cloud-cycle completed.");
+    logger.info(
+      { reconciliation, proof, processOutcome, sent: sendOutcome.sent, sendErrors: sendOutcome.errors },
+      "run:cloud-cycle completed."
+    );
     return;
   }
 
@@ -675,7 +815,7 @@ export async function runCommand(args: {
   }
 
   logger.info(
-    "No command supplied. Pass --instance=<id>. Use one of: instance:status, instance:onboarding-status, instance:ready, auth:doctor, gmail:auth:url, gmail:auth:local, gmail:auth:save --code=..., gmail:status, db:reset --confirm=RESET, seed:sample, process:mock, process:gmail, approve:all, send:approved, send:approved:gmail, run:mock-cycle, run:gmail-cycle, run:laptop-cycle, run:production-cycle, report:daily, hunt:ingest, hunt:status, hunt:scout, hunt:score, hunt:package, hunt:apply-assist, hunt:premium-queue, hunt:prepare-artifacts, hunt:apply-one --job-id=..., hunt:approve-submit, hunt:interview-prep, hunt:report, hunt:export, hunt:scrape-dice, hunt:scrape-indeed, hunt:scrape-linkedin, hunt:scrape-all."
+    "No command supplied. Pass --instance=<id>. Use one of: instance:status, instance:onboarding-status, instance:ready, auth:doctor, gmail:auth:url, gmail:auth:local, gmail:auth:save --code=..., gmail:status, gmail:reconcile-sent, db:reset --confirm=RESET, seed:sample, process:mock, process:gmail, approve:all, send:approved, send:approved:gmail, run:mock-cycle, run:gmail-cycle, run:laptop-cycle, run:production-cycle, report:daily, hunt:ingest, hunt:status, hunt:scout, hunt:score, hunt:package, hunt:apply-assist, hunt:premium-queue, hunt:prepare-artifacts, hunt:apply-one --job-id=..., hunt:approve-submit, hunt:interview-prep, hunt:report, hunt:export, hunt:scrape-dice, hunt:scrape-indeed, hunt:scrape-linkedin, hunt:scrape-all."
   );
 }
 

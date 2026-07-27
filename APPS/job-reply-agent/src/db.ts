@@ -81,6 +81,9 @@ function initSchema(db: Database.Database): void {
       resume_path TEXT NOT NULL,
       gmail_draft_id TEXT,
       recipient_email TEXT,
+      sent_message_id TEXT,
+      sent_at TEXT,
+      sent_label_synced_at TEXT,
       approved INTEGER NOT NULL DEFAULT 0,
       sent INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL,
@@ -126,6 +129,9 @@ function migrateSchema(db: Database.Database): void {
   ensureColumn(db, "opportunities", "parser_confidence", "INTEGER");
   ensureColumn(db, "drafts", "gmail_draft_id", "TEXT");
   ensureColumn(db, "drafts", "recipient_email", "TEXT");
+  ensureColumn(db, "drafts", "sent_message_id", "TEXT");
+  ensureColumn(db, "drafts", "sent_at", "TEXT");
+  ensureColumn(db, "drafts", "sent_label_synced_at", "TEXT");
 }
 
 function ensureColumn(

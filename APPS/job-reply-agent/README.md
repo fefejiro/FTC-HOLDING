@@ -53,6 +53,7 @@ This initial implementation includes:
 - `npm run gmail:auth:local`
 - `npm run gmail:auth:save -- --code=YOUR_CODE`
 - `npm run gmail:status`
+- `npm run gmail:reconcile-sent`
 - `npm run auth:doctor`
 - `npm run process:mock`
 - `npm run process:gmail`
@@ -120,6 +121,11 @@ Use only when you explicitly want SMTP mode.
 Or one command:
 
 `npm run run:gmail-cycle`
+
+The Gmail cycle reconciles drafts that were reviewed and sent manually. It
+records the sent message id and timestamp, updates the thread status, excludes
+completed messages from future scans, and only considers recruiter mail inside
+the configured recent-mail window.
 
 ## Dice Browser Auth
 

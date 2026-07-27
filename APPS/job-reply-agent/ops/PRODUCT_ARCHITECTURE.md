@@ -51,6 +51,9 @@ runtime:
 - Low-fit messages below the configured match threshold are skipped without
   creating reply drafts.
 - Automated alerts and no-reply newsletters are skipped.
+- Recruiter inbox processing is limited to the configurable recent-mail
+  window, currently 14 days, so stale labeled backlog cannot generate new
+  application packages.
 - A Gmail thread can create at most one reply package.
 - Sensitive-language or parser-uncertain opportunities require review.
 - Resume-tailoring failure stops draft creation instead of attaching a static
@@ -63,6 +66,10 @@ runtime:
   rows, mojibake, punctuation collisions, and trailing blank pages.
 - Recruiter replies cannot send unless a draft is explicitly placed in the
   approved-send label. Both approved-send labels were empty at verification.
+- Manually reviewed and sent Gmail drafts are reconciled back into the local
+  ledger using the Gmail thread, recipient, draft creation time, sent message
+  id, and sent timestamp. Reconciliation records manual approval without
+  enabling autonomous sends.
 
 This validates the local Fejiro pilot workflow, not public-product readiness.
 Hosted identity, PostgreSQL tenancy, private object storage, queue workers,

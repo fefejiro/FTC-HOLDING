@@ -20,6 +20,7 @@
     "gmail:auth:local": "tsx src/main.ts gmail:auth:local",
     "gmail:auth:save": "tsx src/main.ts gmail:auth:save",
     "gmail:status": "tsx src/main.ts gmail:status",
+    "gmail:reconcile-sent": "tsx src/main.ts gmail:reconcile-sent",
     "instance:status": "tsx src/main.ts instance:status",
     "instance:onboarding-status": "tsx src/main.ts instance:onboarding-status",
     "instance:ready": "tsx src/main.ts instance:ready",

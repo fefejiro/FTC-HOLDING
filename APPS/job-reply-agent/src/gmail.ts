@@ -14,15 +14,44 @@ export interface GmailAuthConfig {
 }
 
 export interface GmailStatusLabelConfig {
+  inbound: string;
   drafted: string;
   needs_review: string;
   sent: string;
   skipped: string;
   blocked: string;
   approved: string;
+  error?: string;
 }
 
-export type GmailStatusLabelState = keyof GmailStatusLabelConfig;
+export type GmailStatusLabelState =
+  | "drafted"
+  | "needs_review"
+  | "sent"
+  | "skipped"
+  | "blocked"
+  | "approved";
+
+export interface GmailSentMessageProof {
+  messageId: string;
+  threadId: string;
+  recipientHeader: string;
+  subject: string;
+  sentAt: string;
+}
+
+export function getManagedGmailStatusLabelNames(labels: GmailStatusLabelConfig): string[] {
+  return [
+    labels.inbound,
+    labels.drafted,
+    labels.needs_review,
+    labels.sent,
+    labels.skipped,
+    labels.blocked,
+    labels.approved,
+    labels.error
+  ].filter((label): label is string => Boolean(label));
+}
 
 function ensureOauthConfigured(cfg: GmailAuthConfig): void {
   if (!cfg.gmailClientId || !cfg.gmailClientSecret || !cfg.gmailRedirectUri) {
@@ -305,10 +334,90 @@ const RECRUITER_QUERY =
   "OR from:(recruiter OR staffing OR talent OR \"talent acquisition\" OR hiring)) " +
   "in:inbox";
 
+export function buildRecruiterScanQuery(
+  inboundLabelName: string,
+  processedLabelNames: string[] = [],
+  lookbackDays = 14,
+  accountEmail = ""
+): string {
+  const excludedLabels = Array.from(
+    new Set([inboundLabelName, ...processedLabelNames].map((label) => label.trim()).filter(Boolean))
+  );
+  const exclusions = excludedLabels
+    .map((label) => `-label:"${label.replace(/"/g, "\\\"")}"`)
+    .join(" ");
+  const selfExclusion = accountEmail.trim() ? `-from:"${accountEmail.trim()}"` : "";
+  return `${RECRUITER_QUERY} newer_than:${lookbackDays}d ${selfExclusion} ${exclusions}`.trim();
+}
+
+export function buildRecruiterInboundQuery(accountEmail: string, lookbackDays = 14): string {
+  const selfExclusion = accountEmail.trim() ? ` -from:"${accountEmail.trim()}"` : "";
+  return `in:inbox newer_than:${lookbackDays}d${selfExclusion}`;
+}
+
+export function buildProcessedInboundCleanupQuery(
+  inboundLabelName: string,
+  processedLabelNames: string[]
+): string {
+  const processed = Array.from(
+    new Set(processedLabelNames.map((label) => label.trim()).filter(Boolean))
+  );
+  if (processed.length === 0) return "";
+  const processedClause = processed
+    .map((label) => `label:"${label.replace(/"/g, "\\\"")}"`)
+    .join(" ");
+  return `label:"${inboundLabelName.replace(/"/g, "\\\"")}" {${processedClause}}`;
+}
+
+export async function removeInboundLabelFromProcessedMessages(
+  cfg: GmailAuthConfig,
+  inboundLabelName: string,
+  processedLabelNames: string[],
+  maxResults = 1000
+): Promise<{ found: number; removed: number }> {
+  const query = buildProcessedInboundCleanupQuery(inboundLabelName, processedLabelNames);
+  if (!query) return { found: 0, removed: 0 };
+
+  const gmail = await getGmailClient(cfg);
+  const inboundLabelId = await resolveLabelId(gmail, inboundLabelName);
+  if (!inboundLabelId) return { found: 0, removed: 0 };
+
+  const ids: string[] = [];
+  let pageToken: string | undefined;
+  do {
+    const remaining = Math.max(1, maxResults - ids.length);
+    const list = await gmail.users.messages.list({
+      userId: "me",
+      q: query,
+      maxResults: Math.min(500, remaining),
+      pageToken
+    });
+    ids.push(
+      ...(list.data.messages ?? [])
+        .map((message) => message.id)
+        .filter((id): id is string => Boolean(id))
+    );
+    pageToken = list.data.nextPageToken || undefined;
+  } while (pageToken && ids.length < maxResults);
+
+  if (ids.length > 0) {
+    await gmail.users.messages.batchModify({
+      userId: "me",
+      requestBody: {
+        ids,
+        removeLabelIds: [inboundLabelId]
+      }
+    });
+  }
+  return { found: ids.length, removed: ids.length };
+}
+
 export async function scanInboxForRecruiters(
   cfg: GmailAuthConfig,
   inboundLabelName: string,
-  maxScan = 50
+  maxScan = 50,
+  processedLabelNames: string[] = [],
+  lookbackDays = 14
 ): Promise<{ scanned: number; labeled: number }> {
   const gmail = await getGmailClient(cfg);
   const labelId = await getOrCreateLabel(gmail, inboundLabelName);
@@ -316,7 +425,12 @@ export async function scanInboxForRecruiters(
   // Search inbox for recruiter-like emails not already labeled
   const list = await gmail.users.messages.list({
     userId: "me",
-    q: `${RECRUITER_QUERY} -label:"${inboundLabelName}"`,
+    q: buildRecruiterScanQuery(
+      inboundLabelName,
+      processedLabelNames,
+      lookbackDays,
+      cfg.gmailAccountEmail
+    ),
     maxResults: maxScan
   });
 
@@ -377,7 +491,8 @@ export async function exchangeCodeAndSaveTokens(cfg: GmailAuthConfig, code: stri
 export async function listRecruiterInboundMessages(
   cfg: GmailAuthConfig,
   inboundLabelName: string,
-  maxResults = 20
+  maxResults = 20,
+  lookbackDays = 14
 ): Promise<RecruiterMessage[]> {
   const gmail = await getGmailClient(cfg);
   const labelId = await resolveLabelId(gmail, inboundLabelName);
@@ -388,6 +503,7 @@ export async function listRecruiterInboundMessages(
   const list = await gmail.users.messages.list({
     userId: "me",
     labelIds: [labelId],
+    q: buildRecruiterInboundQuery(cfg.gmailAccountEmail, lookbackDays),
     maxResults
   });
 
@@ -431,6 +547,66 @@ export async function listRecruiterInboundMessages(
       references: references || undefined
     });
   }
+
+  return output;
+}
+
+export async function listSentMessagesForThreads(
+  cfg: GmailAuthConfig,
+  threadIds: string[],
+  lookbackDays = 30,
+  maxResults = 500
+): Promise<GmailSentMessageProof[]> {
+  if (threadIds.length === 0) return [];
+
+  const gmail = await getGmailClient(cfg);
+  const targetThreads = new Set(threadIds);
+  const output: GmailSentMessageProof[] = [];
+  let pageToken: string | undefined;
+  let inspected = 0;
+
+  do {
+    const remaining = Math.max(1, maxResults - inspected);
+    const list = await gmail.users.messages.list({
+      userId: "me",
+      q: `in:sent newer_than:${lookbackDays}d`,
+      maxResults: Math.min(500, remaining),
+      pageToken
+    });
+
+    const messages = list.data.messages ?? [];
+    inspected += messages.length;
+
+    for (const message of messages) {
+      if (!message.id || !message.threadId || !targetThreads.has(message.threadId)) continue;
+
+      const metadata = await gmail.users.messages.get({
+        userId: "me",
+        id: message.id,
+        format: "metadata",
+        metadataHeaders: ["To", "Subject", "Date"]
+      });
+      const headers = metadata.data.payload?.headers;
+      const internalDate = Number(metadata.data.internalDate || 0);
+      const dateHeader = getHeaderValue(headers, "Date");
+      const headerDate = dateHeader ? new Date(dateHeader) : null;
+      const sentAt = internalDate > 0
+        ? new Date(internalDate).toISOString()
+        : headerDate && !Number.isNaN(headerDate.getTime())
+          ? headerDate.toISOString()
+          : new Date().toISOString();
+
+      output.push({
+        messageId: message.id,
+        threadId: message.threadId,
+        recipientHeader: getHeaderValue(headers, "To"),
+        subject: getHeaderValue(headers, "Subject"),
+        sentAt
+      });
+    }
+
+    pageToken = list.data.nextPageToken || undefined;
+  } while (pageToken && inspected < maxResults);
 
   return output;
 }
@@ -565,14 +741,27 @@ export async function createReplyDraftInThread(params: {
   };
 }
 
-export async function sendDraftById(cfg: GmailAuthConfig, draftId: string): Promise<void> {
+export async function sendDraftById(
+  cfg: GmailAuthConfig,
+  draftId: string
+): Promise<{ messageId: string; threadId: string; sentAt: string }> {
   const gmail = await getGmailClient(cfg);
-  await gmail.users.drafts.send({
+  const sent = await gmail.users.drafts.send({
     userId: "me",
     requestBody: {
       id: draftId
     }
   });
+  if (!sent.data.id) {
+    throw new Error("Gmail sent the draft but did not return a sent message id.");
+  }
+  return {
+    messageId: sent.data.id,
+    threadId: sent.data.threadId || "",
+    sentAt: sent.data.internalDate
+      ? new Date(Number(sent.data.internalDate)).toISOString()
+      : new Date().toISOString()
+  };
 }
 
 export async function createDraftFromStoredContent(params: {
@@ -643,7 +832,7 @@ export async function applyStatusLabel(params: {
   const desiredLabelId = await getOrCreateLabel(gmail, desiredLabelName);
 
   const managedLabelIds: string[] = [];
-  for (const labelName of Object.values(params.labels)) {
+  for (const labelName of getManagedGmailStatusLabelNames(params.labels)) {
     const labelId = await getOrCreateLabel(gmail, labelName);
     managedLabelIds.push(labelId);
   }
@@ -658,4 +847,49 @@ export async function applyStatusLabel(params: {
       removeLabelIds
     }
   });
+}
+
+export async function applyStatusLabelToThreads(params: {
+  cfg: GmailAuthConfig;
+  threadIds: string[];
+  labels: GmailStatusLabelConfig;
+  status: GmailStatusLabelState;
+}): Promise<{ updatedThreadIds: string[]; errors: Array<{ threadId: string; error: string }> }> {
+  const threadIds = Array.from(new Set(params.threadIds.filter(Boolean)));
+  if (threadIds.length === 0) {
+    return { updatedThreadIds: [], errors: [] };
+  }
+
+  const gmail = await getGmailClient(params.cfg);
+  const desiredLabelName = params.labels[params.status];
+  const desiredLabelId = await getOrCreateLabel(gmail, desiredLabelName);
+  const managedLabelIds: string[] = [];
+  for (const labelName of getManagedGmailStatusLabelNames(params.labels)) {
+    const labelId = await getOrCreateLabel(gmail, labelName);
+    managedLabelIds.push(labelId);
+  }
+  const removeLabelIds = managedLabelIds.filter((labelId) => labelId !== desiredLabelId);
+  const updatedThreadIds: string[] = [];
+  const errors: Array<{ threadId: string; error: string }> = [];
+
+  for (const threadId of threadIds) {
+    try {
+      await gmail.users.threads.modify({
+        userId: "me",
+        id: threadId,
+        requestBody: {
+          addLabelIds: [desiredLabelId],
+          removeLabelIds
+        }
+      });
+      updatedThreadIds.push(threadId);
+    } catch (error) {
+      errors.push({
+        threadId,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
+  return { updatedThreadIds, errors };
 }

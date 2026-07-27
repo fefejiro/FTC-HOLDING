@@ -15,6 +15,7 @@ automation:
 
 filters:
   min_match_score: 70
+  recruiter_lookback_days: 14
   score_bands:
     auto_send_min: 85
     draft_min: 70

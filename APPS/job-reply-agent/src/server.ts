@@ -4,6 +4,7 @@ import { loadConfig } from "./config.js";
 import { getDb } from "./db.js";
 import {
   applyStatusLabel,
+  applyStatusLabelToThreads,
   createReplyDraftInThread,
   exchangeCodeAndSaveTokens,
   getGmailConsentUrl,
@@ -11,7 +12,12 @@ import {
   sendDraftById
 } from "./gmail.js";
 import { logger } from "./logger.js";
-import { getApprovedPendingDrafts, insertDecision, markDraftSent } from "./message_store.js";
+import {
+  getApprovedPendingDrafts,
+  insertDecision,
+  markDraftSentWithProof,
+  markSentDraftThreadLabelSynced
+} from "./message_store.js";
 import { approveAllDrafts, processGmailInbox } from "./processor.js";
 import { buildDailyReport, renderDailyReport } from "./reporter.js";
 import {
@@ -1040,15 +1046,22 @@ async function handleAction(action: ServerAction, body: any): Promise<{ status: 
 
     let sent = 0;
     for (const draft of pending) {
-      await sendDraftById(cfg.env, draft.gmail_draft_id as string);
-      if (markDraftSent(db, draft.message_id)) {
+      const proof = await sendDraftById(cfg.env, draft.gmail_draft_id as string);
+      if (markDraftSentWithProof(db, draft.message_id, {
+        sentMessageId: proof.messageId,
+        sentAt: proof.sentAt,
+        manual: false
+      })) {
         insertDecision(db, draft.message_id, "sent", "Approved Gmail draft sent");
-        await applyStatusLabel({
+        const labelResult = await applyStatusLabelToThreads({
           cfg: cfg.env,
-          messageId: draft.message_id,
+          threadIds: [draft.thread_id],
           labels: cfg.rules.filters.labels,
           status: "sent"
         });
+        if (labelResult.updatedThreadIds.includes(draft.thread_id)) {
+          markSentDraftThreadLabelSynced(db, draft.thread_id);
+        }
         sent += 1;
       }
     }
@@ -1091,15 +1104,22 @@ async function handleAction(action: ServerAction, body: any): Promise<{ status: 
 
     let sent = 0;
     for (const draft of pending) {
-      await sendDraftById(cfg.env, draft.gmail_draft_id as string);
-      if (markDraftSent(db, draft.message_id)) {
+      const proof = await sendDraftById(cfg.env, draft.gmail_draft_id as string);
+      if (markDraftSentWithProof(db, draft.message_id, {
+        sentMessageId: proof.messageId,
+        sentAt: proof.sentAt,
+        manual: false
+      })) {
         insertDecision(db, draft.message_id, "sent", "Approved Gmail draft sent");
-        await applyStatusLabel({
+        const labelResult = await applyStatusLabelToThreads({
           cfg: cfg.env,
-          messageId: draft.message_id,
+          threadIds: [draft.thread_id],
           labels: cfg.rules.filters.labels,
           status: "sent"
         });
+        if (labelResult.updatedThreadIds.includes(draft.thread_id)) {
+          markSentDraftThreadLabelSynced(db, draft.thread_id);
+        }
         sent += 1;
       }
     }

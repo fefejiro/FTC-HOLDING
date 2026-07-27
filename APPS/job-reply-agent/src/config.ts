@@ -48,6 +48,7 @@ const rulesSchema = z.object({
   }),
   filters: z.object({
     min_match_score: z.number().int().min(0).max(100),
+    recruiter_lookback_days: z.number().int().positive().max(90).optional(),
     score_bands: z
       .object({
         auto_send_min: z.number().int().min(0).max(100),

@@ -118,6 +118,7 @@ export interface RulesConfig {
   };
   filters: {
     min_match_score: number;
+    recruiter_lookback_days?: number;
     score_bands?: {
       auto_send_min: number;
       draft_min: number;
