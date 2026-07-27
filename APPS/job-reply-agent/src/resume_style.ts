@@ -100,6 +100,7 @@ const SALESFORCE_SIGNALS = /\b(salesforce|crm|service cloud|sales cloud|salesfor
 const AZURE_CLOUD_SIGNALS = /\b(azure|cloud enterprise architect|landing zone|cloud migration|cloud governance|devsecops|enterprise architecture)\b/i;
 const MAXIMO_EWMS_SIGNALS = /\b(maximo|ewms|enterprise work management|asset management|work orders?|preventative maintenance|preventive maintenance|service requests?|facilities maintenance|mobile field workflows?)\b/i;
 const WMS_ERP_SUPPLY_CHAIN_SIGNALS = /\b(maximo|ewms|enterprise work management|wms|warehouse|warehouse management|erp|supply chain|logistics|inventory|distribution center|distribution centres?|fulfillment|blue yonder|manhattan|sap|oracle|pos integration|warehouse operations)\b/i;
+const BA_WMS_SUPPLY_CHAIN_SIGNALS = /\b(wms|warehouse(?: management)?|supply chain|logistics|inventory|distribution centers?|distribution centres?|fulfillment|manhattan wmos?)\b/i;
 const RETAIL_TECH_SIGNALS = /\b(pos|store systems|store operations|retail operations|merchandising|omni[- ]?channel|loyalty|retail technology)\b/i;
 const PROJECT_PROGRAM_SIGNALS = /\b(project manager|program manager|delivery manager|pmo|portfolio|raid|risk register|budget|governance|executive reporting|implementation planning|release readiness)\b/i;
 const BUSINESS_ANALYSIS_TITLE_SIGNALS = /\b(business analyst|systems analyst|business systems analyst|iit business analyst|i&it business analyst)\b/i;
@@ -338,6 +339,30 @@ function businessAnalysisContent(jdText = ""): Pick<TailoredResumeContent, "subt
         "Jira, Confluence, SQL, Postman, WMS, POS, and reporting validation",
         "Stakeholder workshops, approvals, signoffs, and implementation support",
         "AODA-aware documentation and information management"
+      ]
+    };
+  }
+
+  if (BA_WMS_SUPPLY_CHAIN_SIGNALS.test(jdText)) {
+    return {
+      subtitle: "IT Business Analysis | WMS & Supply Chain | Agile Delivery | UAT Governance",
+      summaryBullets: [
+        "Senior IT Business Analyst experienced in requirements discovery, stakeholder alignment, process analysis, QA/UAT, and implementation support for warehouse, retail, and enterprise systems.",
+        "Translates warehouse and supply-chain needs into current-state and future-state process maps, business requirements, user stories, acceptance criteria, test scenarios, and delivery-ready documentation.",
+        "Brings verified WMS and logistics experience across Talize, LCBO, and SCI Logistics, including Manhattan WMOS, SAP fulfillment workflows, EDI, inventory, distribution, and warehouse operations.",
+        "Supports Agile delivery through backlog refinement, UAT planning, integration and data validation, defect triage, release readiness, vendor coordination, and stakeholder signoffs.",
+        "Works across Jira, Confluence, SQL, Postman, API workflows, WMS/POS contexts, and operational reporting while keeping business and technical teams aligned."
+      ],
+      coreStrengths: [
+        "IT business analysis and requirements discovery",
+        "WMS, warehouse, logistics, and supply-chain workflows",
+        "Current-state and future-state process mapping",
+        "Business requirements, user stories, and acceptance criteria",
+        "UAT planning, test scenarios, defect triage, and release readiness",
+        "Manhattan WMOS, SAP fulfillment, EDI, inventory, and distribution context",
+        "Jira, Confluence, SQL, Postman, and API validation",
+        "Stakeholder workshops, vendor coordination, and signoffs",
+        "Agile delivery, integration support, and operational reporting"
       ]
     };
   }

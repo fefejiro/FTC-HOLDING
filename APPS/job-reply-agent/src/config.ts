@@ -211,9 +211,18 @@ export function loadConfig(): {
   const rules = rulesSchema.parse(readYaml<RulesConfig>(configPath("rules.yaml")));
   const resumeMap = resumeMapSchema.parse(readYaml<ResumeMapConfig>(configPath("resume_map.yaml")));
   const configuredAnswersPath = (process.env.JOB_AGENT_APPLICATION_ANSWERS_PATH || "").trim();
+  const sourceAnswersPath = configPath("application_answers.yaml");
+  const stateRoot = (process.env.JOB_AGENT_STATE_ROOT || "").trim();
+  const stateAnswersPath = stateRoot
+    ? path.join(
+      path.resolve(stateRoot),
+      path.relative(resolveProjectPath("."), instance.paths.configDir),
+      "application_answers.yaml"
+    )
+    : sourceAnswersPath;
   const applicationAnswersPath = configuredAnswersPath
     ? resolveStatePath(configuredAnswersPath)
-    : configPath("application_answers.yaml");
+    : (fs.existsSync(sourceAnswersPath) ? sourceAnswersPath : stateAnswersPath);
   const applicationAnswers = readOptionalYaml<ApplicationAnswersConfig>(applicationAnswersPath, {});
 
   const authMode = process.env.GMAIL_AUTH_MODE === "smtp" ? "smtp" : "oauth";

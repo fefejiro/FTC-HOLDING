@@ -371,6 +371,8 @@ describe("Resume Tailoring Engine", () => {
     expect(text).toContain("Publishing Analyst - BA");
     expect(text).not.toMatch(/Urgent opening|98988|\/\/|TCS/i);
     expect(text).not.toMatch(/ÃƒÂ¢|Ã¢â‚¬Â¢|â€¢/);
+    expect(text).not.toMatch(/\.{2,}/);
+    expect(text).not.toMatch(/\.([A-Z][a-z])/);
 
     const documentXml = await extractDocumentXml(result.docxPath);
     expect(emptyListParagraphsFromXml(documentXml)).toHaveLength(0);
@@ -423,6 +425,38 @@ describe("Resume Tailoring Engine", () => {
     expect(rowText(tableXmls[0])).toMatch(/EXPERIENCE/i);
   });
 
+  it("uses verified WMS and supply-chain emphasis for IT Business Analyst roles", async () => {
+    const result = await tailorResumeForJD({
+      parsed: {
+        roleTitle: "IT Business Analyst",
+        company: "Kubota Canada Ltd",
+        location: "Pickering, ON",
+        employmentType: "Contract-to-hire",
+        summary: "",
+        recruiterName: "",
+        parserConfidence: 90,
+        cleanBody: "",
+        cleanRoleTitle: "IT Business Analyst",
+        alignmentKeywords: [],
+        salaryOrRate: "",
+        isUsRole: false
+      },
+      jdText: [
+        "IT Business Analyst supporting warehouse management, supply chain, ERP, and inventory workflows.",
+        "Gather requirements, write user stories and acceptance criteria, coordinate UAT, validate APIs and SQL data, and work with Jira and Confluence."
+      ].join(" "),
+      templatePath: businessAnalystTemplatePath,
+      outputDir
+    });
+
+    expect(result.subtitle).toBe("IT Business Analysis | WMS & Supply Chain | Agile Delivery | UAT Governance");
+    const text = await extractDocText(result.docxPath);
+    expect(text).toMatch(/verified WMS and logistics experience across Talize, LCBO, and SCI Logistics/i);
+    expect(text).toMatch(/Manhattan WMOS, SAP fulfillment workflows, EDI, inventory, distribution, and warehouse operations/i);
+    expect(text).not.toMatch(/Public Sector Systems/i);
+    expect(text).not.toMatch(/\.([A-Z][a-z])/);
+  });
+
   it("creates a structurally valid DOCX package", async () => {
     const result = await tailorResumeForJD({
       parsed: {
@@ -447,6 +481,15 @@ describe("Resume Tailoring Engine", () => {
     const zip = await JSZip.loadAsync(fs.readFileSync(result.docxPath));
     expect(zip.file("[Content_Types].xml")).toBeTruthy();
     expect(zip.file("word/document.xml")).toBeTruthy();
+    const documentXml = await extractDocumentXml(result.docxPath);
+    expect(documentXml.match(/<w:p(?:\s|>)/g)?.length).toBe(
+      documentXml.match(/<\/w:p>/g)?.length
+    );
+    const sectionStart = documentXml.lastIndexOf("<w:sectPr");
+    const paragraphEnd = documentXml.lastIndexOf("</w:p>", sectionStart);
+    const paragraphStart = documentXml.lastIndexOf("<w:p", paragraphEnd);
+    const finalParagraph = documentXml.slice(paragraphStart, paragraphEnd + 6);
+    expect(rowText(finalParagraph)).not.toBe("");
     expect(result.provenanceStats?.selectedBulletCount).toBeGreaterThan(0);
     expect(result.provenanceStats?.placedEmployerBulletCount).toBeGreaterThan(0);
     expect(result.provenanceStats?.rejectedEmployerPlacementCount).toBeGreaterThan(0);

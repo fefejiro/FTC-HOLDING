@@ -297,6 +297,22 @@ function cleanResumeLine(input: string): string {
     .trim();
 }
 
+function normalizeVisibleResumePunctuation(input: string): string {
+  return input
+    .replace(/\.{2,}/g, ".")
+    .replace(/\.([A-Z][a-z])/g, ". $1");
+}
+
+function normalizeVisibleTextNodes(input: string): string {
+  const normalizedNodes = input.replace(/(<w:t\b[^>]*>)([\s\S]*?)(<\/w:t>)/g, (_match, open, text, close) =>
+    `${open}${normalizeVisibleResumePunctuation(text)}${close}`
+  );
+  return normalizedNodes.replace(
+    /(\.<\/w:t>(?:(?!<w:t\b|<\/w:p>)[\s\S])*?<w:t\b[^>]*>)([A-Z][a-z])/g,
+    "$1 $2"
+  );
+}
+
 function stripLegacyBulletPrefixesFromXml(input: string): string {
   return input
     .replace(/\u00c3\u00a2\u00e2\u201a\u00ac\u00c2\u00a2\s*/g, "")
@@ -319,6 +335,26 @@ function stripEmptyListParagraphs(input: string): string {
     const looksLikeListParagraph = /<w:numPr\b|<w:pStyle\b[^>]*w:val="[^"]*(?:List|Bullet)[^"]*"/i.test(paragraphXml);
     return looksLikeListParagraph ? "" : paragraphXml;
   });
+}
+
+function stripTrailingEmptyBodyParagraphs(input: string): string {
+  let output = input;
+  while (true) {
+    const sectionStart = output.lastIndexOf("<w:sectPr");
+    if (sectionStart < 0) return output;
+    const paragraphEnd = output.lastIndexOf("</w:p>", sectionStart);
+    if (paragraphEnd < 0 || output.slice(paragraphEnd + 6, sectionStart).trim()) return output;
+    const paragraphStarts = [...output.slice(0, paragraphEnd).matchAll(/<w:p(?:\s|>)/g)];
+    const paragraphStart = paragraphStarts.at(-1)?.index ?? -1;
+    if (paragraphStart < 0) return output;
+
+    const paragraphXml = output.slice(paragraphStart, paragraphEnd + 6);
+    const hasVisibleContent =
+      Boolean(paragraphText(paragraphXml)) ||
+      /<w:(?:drawing|object|pict|tab|br|fldChar|instrText|footnoteReference|endnoteReference)\b/.test(paragraphXml);
+    if (hasVisibleContent) return output;
+    output = output.slice(0, paragraphStart) + output.slice(paragraphEnd + 6);
+  }
 }
 
 function isBusinessAnalysisTemplateMatch(parsed: Pick<ParsedOpportunity, "roleTitle" | "cleanRoleTitle" | "company">, jdText: string): boolean {
@@ -505,7 +541,11 @@ export async function tailorResumeForJD(args: TailorArgs): Promise<TailorResult>
     }
   }
 
-  const updatedXml = stripEmptyTableRowsAndTables(stripEmptyListParagraphs(stripLegacyBulletPrefixesFromXml(joinParagraphs(xml, paragraphs))));
+  const updatedXml = stripTrailingEmptyBodyParagraphs(
+    stripEmptyTableRowsAndTables(
+      stripEmptyListParagraphs(stripLegacyBulletPrefixesFromXml(joinParagraphs(xml, paragraphs)))
+    )
+  );
   zip.file("word/document.xml", sanitizeVisibleDocXml(updatedXml));
 
   const visibleXmlEntries = Object.keys(zip.files).filter((fileName) =>
@@ -545,7 +585,7 @@ export async function tailorResumeForJD(args: TailorArgs): Promise<TailorResult>
 }
 
 function sanitizeVisibleDocXml(xml: string): string {
-  return xml.replace(/<w:p\b[\s\S]*?<\/w:p>/g, (paragraphXml) => {
+  return normalizeVisibleTextNodes(xml).replace(/<w:p\b[\s\S]*?<\/w:p>/g, (paragraphXml) => {
     const text = paragraphText(paragraphXml);
     if (!text) return paragraphXml;
     const hasForbiddenText = FORBIDDEN_VISIBLE_RESUME_PHRASES.some((phrase) =>

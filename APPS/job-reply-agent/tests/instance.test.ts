@@ -67,6 +67,8 @@ describe("JobAgent instance isolation", () => {
     const fejiro = loadUserInstance("fejiro");
     const chukwuma = loadUserInstance("chukwuma");
 
+    expect(fejiro.paths.configDir).not.toContain(stateRoot);
+    expect(chukwuma.paths.configDir).not.toContain(stateRoot);
     expect(fejiro.paths.database).toBe(path.join(stateRoot, "data", "job_leads.sqlite"));
     expect(fejiro.paths.gmailTokens).toBe(path.join(stateRoot, "data", "gmail_tokens.json"));
     expect(chukwuma.paths.database).toBe(

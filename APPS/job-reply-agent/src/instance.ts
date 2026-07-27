@@ -148,8 +148,8 @@ export function loadUserInstance(explicit?: string): UserInstanceConfig {
     throw new Error(`Instance manifest mismatch: requested '${id}', manifest declares '${parsed.id}'.`);
   }
 
-  const stateRoot = resolveStateRoot();
-  const manifestDir = path.join(stateRoot, "instances", id);
+  const manifestDir = path.dirname(manifestPath);
+  const stateManifestDir = path.join(resolveStateRoot(), "instances", id);
   return {
     id,
     candidateName: parsed.candidate_name.trim(),
@@ -161,12 +161,12 @@ export function loadUserInstance(explicit?: string): UserInstanceConfig {
     manifestPath,
     paths: {
       configDir: resolveFromManifest(manifestDir, parsed.paths.config_dir),
-      database: resolveFromManifest(manifestDir, parsed.paths.database),
-      gmailTokens: resolveFromManifest(manifestDir, parsed.paths.gmail_tokens),
-      resumeRoot: resolveFromManifest(manifestDir, parsed.paths.resume_root),
-      browserProfile: resolveFromManifest(manifestDir, parsed.paths.browser_profile),
-      logs: resolveFromManifest(manifestDir, parsed.paths.logs),
-      proof: resolveFromManifest(manifestDir, parsed.paths.proof)
+      database: resolveFromManifest(stateManifestDir, parsed.paths.database),
+      gmailTokens: resolveFromManifest(stateManifestDir, parsed.paths.gmail_tokens),
+      resumeRoot: resolveFromManifest(stateManifestDir, parsed.paths.resume_root),
+      browserProfile: resolveFromManifest(stateManifestDir, parsed.paths.browser_profile),
+      logs: resolveFromManifest(stateManifestDir, parsed.paths.logs),
+      proof: resolveFromManifest(stateManifestDir, parsed.paths.proof)
     }
   };
 }
