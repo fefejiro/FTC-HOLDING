@@ -85,3 +85,29 @@ to retry pending and failed deletions. The command fails its process status if
 any object still cannot be removed. Account deletion purges all private resume
 objects before deleting the database account and fails closed if storage is
 unavailable.
+
+## Product Gmail OAuth
+
+Create a Google OAuth web client with the exact redirect URI:
+
+`https://<product-host>/api/v1/oauth/gmail/callback`
+
+Set `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, and either
+`OAUTH_TOKEN_ENCRYPTION_KEYS` or the single-key
+`OAUTH_TOKEN_ENCRYPTION_KEY`. Encryption keys must be base64-encoded 32-byte
+values. Set `OAUTH_TOKEN_ACTIVE_KEY_VERSION` when using the key ring.
+
+The connection flow uses a one-use, ten-minute state and PKCE. The Gmail
+profile address must exactly match the signed-in JobAgent account email.
+Refresh tokens are encrypted with AES-256-GCM and authenticated metadata binds
+the ciphertext to the user and provider.
+
+Keep old key versions configured during rotation. New connections use the
+active version. Removing an old key before its stored tokens are rotated makes
+those connections unreadable.
+
+Disconnect attempts Google token revocation and always removes the local
+encrypted secret. Account deletion also attempts provider revocation before
+destroying local data. Provider revocation failure must be surfaced in the
+audit/status result, but it must not prevent a user from deleting their local
+account.

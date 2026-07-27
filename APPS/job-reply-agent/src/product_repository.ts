@@ -281,7 +281,7 @@ export async function requestProductConnection(db: pg.Pool, userId: string, prov
        ON CONFLICT (user_id, provider) DO UPDATE SET
          status=CASE WHEN product_connections.status='connected' THEN 'connected' ELSE 'pending' END,
          updated_at=now()
-       RETURNING provider, provider_account AS "providerAccount", status,
+       RETURNING id, provider, provider_account AS "providerAccount", status,
                  connected_at AS "connectedAt", updated_at AS "updatedAt"`,
       [userId, provider]
     );
@@ -295,8 +295,127 @@ export async function requestProductConnection(db: pg.Pool, userId: string, prov
   }, db);
 }
 
+export async function saveProductOAuthState(
+  db: pg.Pool,
+  userId: string,
+  input: {
+    provider: "gmail";
+    stateHash: string;
+    encryptedCodeVerifier: string;
+    keyVersion: string;
+    redirectUri: string;
+    expiresAt: Date;
+  }
+): Promise<void> {
+  await withTenant(userId, async (client) => {
+    await client.query(
+      "DELETE FROM product_oauth_states WHERE user_id=$1 AND (expires_at <= now() OR consumed_at IS NOT NULL)",
+      [userId]
+    );
+    await client.query(
+      `INSERT INTO product_oauth_states
+         (user_id, provider, state_hash, encrypted_code_verifier,
+          key_version, redirect_uri, expires_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [
+        userId, input.provider, input.stateHash, input.encryptedCodeVerifier,
+        input.keyVersion, input.redirectUri, input.expiresAt
+      ]
+    );
+  }, db);
+}
+
+export async function consumeProductOAuthState(
+  db: pg.Pool,
+  userId: string,
+  provider: "gmail",
+  stateHash: string
+): Promise<{
+  encryptedCodeVerifier: string;
+  keyVersion: string;
+  redirectUri: string;
+} | null> {
+  return withTenant(userId, async (client) => {
+    const result = await client.query(
+      `UPDATE product_oauth_states
+          SET consumed_at=now()
+        WHERE user_id=$1 AND provider=$2 AND state_hash=$3
+          AND consumed_at IS NULL AND expires_at > now()
+        RETURNING encrypted_code_verifier AS "encryptedCodeVerifier",
+                  key_version AS "keyVersion", redirect_uri AS "redirectUri"`,
+      [userId, provider, stateHash]
+    );
+    return result.rows[0] || null;
+  }, db);
+}
+
+export async function saveConnectedGmailAccount(
+  db: pg.Pool,
+  userId: string,
+  input: {
+    mailbox: string;
+    encryptedPayload: string;
+    keyVersion: string;
+  }
+): Promise<unknown> {
+  return withTenant(userId, async (client) => {
+    const connection = await client.query(
+      `INSERT INTO product_connections
+         (user_id, provider, provider_account, status, connected_at, updated_at)
+       VALUES ($1,'gmail',$2,'connected',now(),now())
+       ON CONFLICT (user_id, provider) DO UPDATE SET
+         provider_account=excluded.provider_account, status='connected',
+         connected_at=now(), updated_at=now()
+       RETURNING id, provider, provider_account AS "providerAccount", status,
+                 connected_at AS "connectedAt", updated_at AS "updatedAt"`,
+      [userId, input.mailbox]
+    );
+    const secret = await client.query(
+      `INSERT INTO product_connection_secrets
+         (user_id, connection_id, provider, encrypted_payload, key_version, updated_at)
+       VALUES ($1,$2,'gmail',$3,$4,now())
+       ON CONFLICT (user_id, provider) DO UPDATE SET
+         connection_id=excluded.connection_id, encrypted_payload=excluded.encrypted_payload,
+         key_version=excluded.key_version, updated_at=now()
+       RETURNING id`,
+      [userId, connection.rows[0].id, input.encryptedPayload, input.keyVersion]
+    );
+    await client.query(
+      "UPDATE product_connections SET secret_reference=$3 WHERE user_id=$1 AND id=$2",
+      [userId, connection.rows[0].id, `database:${secret.rows[0].id}`]
+    );
+    await client.query(
+      `INSERT INTO product_audit_logs
+         (user_id, actor_user_id, action, target_type, target_id, metadata)
+       VALUES ($1,$1,'connection.connected','connection','gmail',$2::jsonb)`,
+      [userId, JSON.stringify({ mailbox: input.mailbox })]
+    );
+    return connection.rows[0];
+  }, db);
+}
+
+export async function getProductConnectionSecret(
+  db: pg.Pool,
+  userId: string,
+  provider: "gmail"
+): Promise<{ encryptedPayload: string; keyVersion: string } | null> {
+  return withTenant(userId, async (client) => {
+    const result = await client.query(
+      `SELECT encrypted_payload AS "encryptedPayload", key_version AS "keyVersion"
+         FROM product_connection_secrets
+        WHERE user_id=$1 AND provider=$2`,
+      [userId, provider]
+    );
+    return result.rows[0] || null;
+  }, db);
+}
+
 export async function revokeProductConnection(db: pg.Pool, userId: string, provider: string): Promise<unknown | null> {
   return withTenant(userId, async (client) => {
+    await client.query(
+      "DELETE FROM product_connection_secrets WHERE user_id=$1 AND provider=$2",
+      [userId, provider]
+    );
     const result = await client.query(
       `UPDATE product_connections
           SET provider_account=NULL, status='revoked', secret_reference=NULL,

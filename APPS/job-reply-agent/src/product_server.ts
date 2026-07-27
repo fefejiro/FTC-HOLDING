@@ -15,6 +15,12 @@ import {
 import { assertProductDatabaseRole, getProductPool, migrateProductDb } from "./product_db.js";
 import { executeIdempotentMutation, normalizeIdempotencyKey, type MutationResponse } from "./product_idempotency.js";
 import {
+  beginProductGmailOAuth,
+  completeProductGmailOAuth,
+  productGmailOAuthConfig,
+  revokeProductGmailOAuth
+} from "./product_gmail_oauth.js";
+import {
   completeProductObjectDeletion,
   deleteProductAccount,
   deleteProductResume,
@@ -44,6 +50,7 @@ import {
   type ProductObjectStorage
 } from "./product_object_storage.js";
 import { validateResumeUpload } from "./product_resume.js";
+import { productSecretKeyring } from "./product_secret_crypto.js";
 
 const HOST = process.env.HOST || "0.0.0.0";
 const PORT = Number(process.env.PORT || 3000);
@@ -346,7 +353,7 @@ function renderPage(authenticated: boolean): string {
     $("resume-upload").addEventListener("submit",async e=>{e.preventDefault();const f=e.currentTarget,file=f.elements.resume.files[0];if(!file)return;try{const base64=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(",")[1]);reader.onerror=reject;reader.readAsDataURL(file)});await call("/api/v1/resumes",{method:"POST",body:JSON.stringify({filename:file.name,mimeType:file.type||(/\\.pdf$/i.test(file.name)?"application/pdf":"application/vnd.openxmlformats-officedocument.wordprocessingml.document"),base64,isDefault:f.elements.isDefault.checked})});$("resume-result").textContent="Resume stored privately.";f.reset();await loadResumes()}catch(error){$("resume-result").textContent=error.message}});
     $("resume-list").addEventListener("click",async e=>{const id=e.target.dataset?.deleteResume;if(!id)return;try{await call("/api/v1/resumes/"+id,{method:"DELETE",body:"{}"});await loadResumes()}catch(error){$("resume-result").textContent=error.message}});
     $("truth-form").addEventListener("submit",async e=>{e.preventDefault();const facts=list(new FormData(e.currentTarget).get("facts")).map(statement=>({category:"approved",statement}));try{await call("/api/v1/career-truth",{method:"PUT",body:JSON.stringify({facts})});$("truth-result").textContent="Career facts approved."}catch(error){$("truth-result").textContent=error.message}});
-    $("connections").addEventListener("click",async e=>{const provider=e.target.dataset?.provider;if(!provider)return;try{await call("/api/v1/connections",{method:"POST",body:JSON.stringify({provider})});$("connection-result").textContent="Connection prepared. Authentication is still required before activation.";await loadConnections()}catch(error){$("connection-result").textContent=error.message}});
+    $("connections").addEventListener("click",async e=>{const provider=e.target.dataset?.provider;if(!provider)return;try{const result=await call("/api/v1/connections",{method:"POST",body:JSON.stringify({provider})});if(result.authorizationUrl){location.assign(result.authorizationUrl);return}$("connection-result").textContent="Connection prepared. Authentication is still required before activation.";await loadConnections()}catch(error){$("connection-result").textContent=error.message}});
     $("connection-list").addEventListener("click",async e=>{const provider=e.target.dataset?.revokeProvider;if(!provider)return;try{await call("/api/v1/connections/"+provider,{method:"DELETE",body:"{}"});$("connection-result").textContent="Connection revoked.";await loadConnections()}catch(error){$("connection-result").textContent=error.message}});
     $("approval-list").addEventListener("click",async e=>{const id=e.target.dataset?.approval,decision=e.target.dataset?.decision;if(!id||!decision)return;try{await call("/api/v1/approvals/"+id,{method:"POST",body:JSON.stringify({decision})});await loadDashboard()}catch(error){alert(error.message)}});
     $("logout").addEventListener("click",async()=>{await call("/api/v1/auth/logout",{method:"POST",body:"{}"});location.reload()});
@@ -365,6 +372,8 @@ export async function createProductServer(storage: ProductObjectStorage = create
   if (process.env.NODE_ENV === "production") {
     await assertProductDatabaseRole(db);
     await storage.assertReady();
+    productSecretKeyring();
+    productGmailOAuthConfig();
   }
   return createServer(async (req, res) => {
     try {
@@ -447,6 +456,27 @@ export async function createProductServer(storage: ProductObjectStorage = create
       }
 
       const user = await authenticatedUser(req, db);
+      if (req.method === "GET" && url.pathname === "/api/v1/oauth/gmail/callback") {
+        if (!user) return html(res, 401, "<h1>Sign in required</h1><p>Return to JobAgent and start the Gmail connection again.</p>");
+        const providerError = url.searchParams.get("error");
+        const code = String(url.searchParams.get("code") || "");
+        const state = String(url.searchParams.get("state") || "");
+        if (providerError || !code || !state || code.length > 4096 || state.length > 512) {
+          return html(res, 400, "<h1>Gmail connection was not completed</h1><p>Return to JobAgent and try again.</p>");
+        }
+        try {
+          await completeProductGmailOAuth(db, {
+            userId: user.id,
+            expectedMailbox: user.email,
+            code,
+            state
+          });
+          return html(res, 200, '<h1>Gmail connected</h1><p><a href="/">Return to JobAgent</a></p>');
+        } catch (error) {
+          console.error(error);
+          return html(res, 400, "<h1>Gmail connection was not completed</h1><p>The mailbox identity or authorization could not be verified.</p>");
+        }
+      }
       if (req.method === "GET" && url.pathname === "/") return html(res, 200, renderPage(Boolean(user)));
       if (!user && url.pathname.startsWith("/api/v1/")) return json(res, 401, { error: "Authentication required." });
       if (!user) return json(res, 404, { error: "Not found." });
@@ -579,10 +609,12 @@ export async function createProductServer(storage: ProductObjectStorage = create
         const input = connectionSchema.parse(body);
         return idempotentMutation(req, res, {
           db, userId: user.id, requestPath: url.pathname, body,
-          action: async () => ({
-            status: 202,
-            body: { connection: await requestProductConnection(db, user.id, input.provider) }
-          })
+          action: async () => {
+            const connection = await requestProductConnection(db, user.id, input.provider);
+            if (input.provider !== "gmail") return { status: 202, body: { connection } };
+            const authorization = await beginProductGmailOAuth(db, user.id);
+            return { status: 202, body: { connection, ...authorization } };
+          }
         });
       }
       const connectionRevoke = url.pathname.match(/^\/api\/v1\/connections\/(gmail|linkedin|indeed)$/);
@@ -591,9 +623,12 @@ export async function createProductServer(storage: ProductObjectStorage = create
         return idempotentMutation(req, res, {
           db, userId: user.id, requestPath: url.pathname, body: {},
           action: async () => {
+            const providerRevocation = connectionRevoke[1] === "gmail"
+              ? await revokeProductGmailOAuth(db, user.id).catch(() => ({ providerRevoked: false }))
+              : { providerRevoked: true };
             const connection = await revokeProductConnection(db, user.id, connectionRevoke[1]);
             return connection
-              ? { status: 200, body: { connection } }
+              ? { status: 200, body: { connection, ...providerRevocation } }
               : { status: 404, body: { error: "Connection not found." } };
           }
         });
@@ -676,9 +711,15 @@ export async function createProductServer(storage: ProductObjectStorage = create
         } catch {
           return json(res, 503, { error: "Private files could not be purged. Account deletion was not completed." });
         }
+        const providerRevocation = await revokeProductGmailOAuth(db, user.id)
+          .catch(() => ({ providerRevoked: false }));
         const deleted = await deleteProductAccount(db, user.id);
         clearSessionCookie(res);
-        return json(res, deleted ? 200 : 404, deleted ? { deleted: true } : { error: "Account not found." });
+        return json(
+          res,
+          deleted ? 200 : 404,
+          deleted ? { deleted: true, ...providerRevocation } : { error: "Account not found." }
+        );
       }
       if (req.method === "GET" && url.pathname === "/api/v1/audit-logs") {
         return json(res, 200, { auditLogs: await productAuditLog(db, user.id, Number(url.searchParams.get("limit") || 50)) });

@@ -223,10 +223,10 @@ mailboxes, paths, or answer defaults to shared business logic.
 
 Before public onboarding:
 
-1. Replace filesystem tenant selection with authenticated user ownership.
-2. Replace SQLite with PostgreSQL and private object storage.
-3. Add account authentication, recovery, and session management.
-4. Add per-user OAuth connections and encrypted token storage.
+1. Replace filesystem tenant selection with authenticated user ownership. **Implemented.**
+2. Replace SQLite with PostgreSQL and private object storage. **Implemented for the product API.**
+3. Add account authentication, recovery, and session management. **Password authentication and sessions implemented; email verification and recovery remain.**
+4. Add per-user OAuth connections and encrypted token storage. **Gmail PKCE, exact-mailbox verification, AES-GCM token storage, and revocation implemented; live provider provisioning remains.**
 5. Add consent versioning and revocation.
 6. Add background queues, retries, rate limits, and quiet hours.
 7. Add responsive user and admin experiences.
@@ -236,11 +236,11 @@ Before public onboarding:
 
 ## Near-Term Build Order
 
-1. Finish Chukwuma as an isolated first-friend pilot.
-2. Extract candidate-neutral domain services from local operator commands.
-3. Define `/api/v1` schemas and tenant authorization tests.
-4. Introduce PostgreSQL and object-storage adapters behind repositories.
-5. Build self-service web onboarding and approval queues.
-6. Deploy the web application and workers.
+1. Provision hosted PostgreSQL, private object storage, and a Google OAuth client.
+2. Add email verification, password recovery, and account security controls.
+3. Move Gmail intake and job discovery into queue-backed per-user workers.
+4. Complete consent versioning, approvals, rate limits, and quiet hours.
+5. Deploy the web application and workers with observability and incident alerts.
+6. Run Chukwuma as an isolated first-friend pilot for two reliable weeks.
 7. Add PWA installation and notifications.
-8. Build and distribute iOS and Android beta clients.
+8. Build and distribute iOS and Android beta clients after the web workflow is proven.

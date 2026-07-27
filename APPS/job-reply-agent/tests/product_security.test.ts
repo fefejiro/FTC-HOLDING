@@ -19,13 +19,13 @@ describe("product security", () => {
     expect(constantEqual("same-value", "different-value")).toBe(false);
   });
 
-  it("clears sessions with hardened cookie attributes", () => {
+  it("uses OAuth-compatible hardened cookie attributes", () => {
     const headers = new Map<string, unknown>();
     const response = { setHeader: (name: string, value: unknown) => headers.set(name, value) };
     clearSessionCookie(response as any);
     const cookie = String(headers.get("Set-Cookie"));
     expect(cookie).toContain("HttpOnly");
-    expect(cookie).toContain("SameSite=Strict");
+    expect(cookie).toContain("SameSite=Lax");
     expect(cookie).toContain("Max-Age=0");
   });
 
@@ -63,7 +63,9 @@ describe("product security", () => {
       ["product_approval_requests", "product_approval_requests_tenant_policy"],
       ["product_applications", "product_applications_tenant_policy"],
       ["product_idempotency_keys", "product_idempotency_tenant_policy"],
-      ["product_object_deletions", "product_object_deletions_tenant_policy"]
+      ["product_object_deletions", "product_object_deletions_tenant_policy"],
+      ["product_oauth_states", "product_oauth_states_tenant_policy"],
+      ["product_connection_secrets", "product_connection_secrets_tenant_policy"]
     ]);
     for (const [table, policy] of policies) {
       expect(migration).toContain(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY`);

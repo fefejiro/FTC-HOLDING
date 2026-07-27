@@ -51,6 +51,28 @@ if (strict) {
   if (process.env.OBJECT_STORAGE_ENDPOINT && !/^https:\/\//.test(process.env.OBJECT_STORAGE_ENDPOINT)) failures.push("OBJECT_STORAGE_ENDPOINT must use HTTPS.");
   if (process.env.OBJECT_STORAGE_SSE === "aws:kms" && !(process.env.OBJECT_STORAGE_KMS_KEY_ID || "").trim()) failures.push("OBJECT_STORAGE_KMS_KEY_ID is required for KMS encryption.");
   if (process.env.ALLOW_LOCAL_OBJECT_STORAGE === "true") failures.push("ALLOW_LOCAL_OBJECT_STORAGE cannot be enabled in production.");
+  if (!(process.env.GMAIL_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "").trim()) failures.push("GMAIL_CLIENT_ID or GOOGLE_CLIENT_ID is required.");
+  if (!(process.env.GMAIL_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET || "").trim()) failures.push("GMAIL_CLIENT_SECRET or GOOGLE_CLIENT_SECRET is required.");
+
+  const activeKeyVersion = (process.env.OAUTH_TOKEN_ACTIVE_KEY_VERSION || "v1").trim();
+  let oauthKeys = {};
+  try {
+    if (process.env.OAUTH_TOKEN_ENCRYPTION_KEYS) {
+      oauthKeys = JSON.parse(process.env.OAUTH_TOKEN_ENCRYPTION_KEYS);
+    } else if (process.env.OAUTH_TOKEN_ENCRYPTION_KEY) {
+      oauthKeys = { [activeKeyVersion]: process.env.OAUTH_TOKEN_ENCRYPTION_KEY };
+    }
+  } catch {
+    failures.push("OAUTH_TOKEN_ENCRYPTION_KEYS must be valid JSON.");
+  }
+  const activeKey = typeof oauthKeys === "object" && oauthKeys !== null
+    ? oauthKeys[activeKeyVersion]
+    : undefined;
+  if (!activeKey) {
+    failures.push(`OAuth encryption key version ${activeKeyVersion} is required.`);
+  } else if (Buffer.from(activeKey, "base64").length !== 32) {
+    failures.push(`OAuth encryption key version ${activeKeyVersion} must decode to 32 bytes.`);
+  }
 } else {
   warnings.push("Runtime environment checks skipped. Run production:check:strict in the deployment environment.");
 }
