@@ -1,0 +1,77 @@
+[
+  {
+    "id": "ai-output-review-loop",
+    "category": "AI workflow",
+    "title": "Do not trust the first AI answer",
+    "hook": "AI is useful, but the first answer is usually a draft.",
+    "tip": "Ask for the answer, then ask the model to check what could be wrong, missing, or risky before you use it.",
+    "why": "That second pass catches weak logic, missing context, and confident mistakes.",
+    "steps": [
+      "Give the model the real task.",
+      "Ask for the first draft.",
+      "Ask it to review its own answer.",
+      "Make the final call yourself."
+    ],
+    "hashtags": ["#ArtificialIntelligence", "#ChatGPT", "#ClaudeAI", "#Workflow", "#AITools"]
+  },
+  {
+    "id": "chatgpt-context-before-prompt",
+    "category": "ChatGPT tip",
+    "title": "Context beats clever prompts",
+    "hook": "A simple prompt with good context beats a fancy prompt with no background.",
+    "tip": "Before asking ChatGPT or Claude for help, give it the role, the audience, the current situation, and what good output looks like.",
+    "why": "The model performs better when it knows what problem it is solving and who the answer is for.",
+    "steps": [
+      "Say what you are working on.",
+      "Name the audience.",
+      "Share the constraints.",
+      "Show one example if you have it."
+    ],
+    "hashtags": ["#ChatGPT", "#ClaudeAI", "#Prompting", "#Automation", "#Productivity"]
+  },
+  {
+    "id": "small-business-first-automation",
+    "category": "Automation tip",
+    "title": "Automate the repeat work first",
+    "hook": "The best first automation is usually not the flashy one.",
+    "tip": "Start with the task your team repeats every week: status updates, inbox sorting, lead follow-up, report drafts, or document cleanup.",
+    "why": "Small repeatable wins build trust faster than one big risky automation project.",
+    "steps": [
+      "Pick one repeat task.",
+      "Write the exact steps.",
+      "Automate the draft.",
+      "Keep a human review step."
+    ],
+    "hashtags": ["#Automation", "#SmallBusiness", "#Workflow", "#AITools", "#DigitalTransformation"]
+  },
+  {
+    "id": "claude-for-long-docs",
+    "category": "Claude tip",
+    "title": "Use Claude for long documents",
+    "hook": "For long documents, use AI like a careful reader, not a magic answer machine.",
+    "tip": "Ask Claude to summarize the document, pull out decisions, list risks, and identify follow-up questions.",
+    "why": "This turns a long read into a review workflow while keeping you in control of the final judgment.",
+    "steps": [
+      "Upload or paste the document.",
+      "Ask for the key points.",
+      "Ask for risks and missing details.",
+      "Review before sending."
+    ],
+    "hashtags": ["#ClaudeAI", "#AIWorkflow", "#Documents", "#Productivity", "#BusinessAnalysis"]
+  },
+  {
+    "id": "proof-before-automation",
+    "category": "AI operations",
+    "title": "Keep proof before you scale AI",
+    "hook": "If an AI workflow matters, keep proof of what it did.",
+    "tip": "Save inputs, outputs, decisions, screenshots, and approvals for important automated work.",
+    "why": "Proof makes automation safer because you can check what happened when something goes wrong.",
+    "steps": [
+      "Record the input.",
+      "Save the output.",
+      "Track who approved it.",
+      "Review failures weekly."
+    ],
+    "hashtags": ["#AI", "#Operations", "#Workflow", "#Automation", "#Governance"]
+  }
+]

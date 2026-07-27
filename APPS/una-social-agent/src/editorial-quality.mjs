@@ -1,124 +1,183 @@
-import { createHash } from 'node:crypto';
+import { createHash } from 'node:crypto'
 
-const ELLIPSIS_RE = /(?:\.{3}|…)+\s*$/u;
+const ELLIPSIS_RE = /(?:\.{3}|…)+\s*$/u
+const TRAILING_FRAGMENT_RE = /(?:[,;:–—-]|\b(?:and|or|but|with|for|to|before|after|while|where|that|the|a|an))$/iu
 const AI_CLICHES = [
-  /\b(ai is changing|technology is changing|moving fast|game[- ]changer|revolutioni[sz]ing)\b/i,
-  /\bin today'?s (?:fast[- ]paced|digital) world\b/i,
-  /\bunlock(?:ing)? the (?:power|potential)\b/i,
-  /\bthe future is here\b/i
-];
+  /\b(ai is changing|technology is changing|moving fast|game[- ]changer|revolutioni[sz]ing)\b/gi,
+  /\bin today'?s (?:fast[- ]paced|digital) world\b/gi,
+  /\bunlock(?:ing)? the (?:power|potential)\b/gi,
+  /\bthe future is here\b/gi,
+  /\bdelve(?:s|d)?\b/gi,
+  /\bleverage(?:s|d|ing)?\b/gi,
+  /\butili[sz]e(?:s|d|ing)?\b/gi,
+  /\bseamless(?:ly)?\b/gi,
+]
+const VAGUE_FILLER = [
+  /why it matters:\s*daily operations,\s*decision support\.?/i,
+  /^daily operations,\s*decision support\.?$/i,
+  /ai is moving fast\.?/i,
+  /technology is changing quickly\.?/i,
+  /this changes everything\.?/i,
+]
 
 function clean(value = '') {
-  return String(value).replace(/\s+/g, ' ').trim();
+  return String(value)
+    .replace(/Ã¢â‚¬â„¢|â€™/g, "'")
+    .replace(/Ã¢â‚¬Ëœ|â€˜/g, "'")
+    .replace(/Ã¢â‚¬Å“|Ã¢â‚¬ï¿½|â€œ|â€�/g, '"')
+    .replace(/Ã¢â‚¬â€œ|Ã¢â‚¬â€|â€“|â€”/g, '-')
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/[–—]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function trimBrokenEnding(value = '') {
+  let text = clean(value).replace(ELLIPSIS_RE, '').replace(/[.:;,\-–—]+\s*$/u, '').trim()
+  while (TRAILING_FRAGMENT_RE.test(text)) {
+    text = text.replace(/\s+\S+$/, '').replace(/[.:;,\-–—]+\s*$/u, '').trim()
+  }
+  return text
+}
+
+function limitWordsAndChars(value, maxWords, maxChars) {
+  let text = trimBrokenEnding(value)
+  const words = text.split(' ').filter(Boolean)
+  if (words.length > maxWords) text = words.slice(0, maxWords).join(' ')
+  if (text.length > maxChars) text = text.slice(0, maxChars + 1).replace(/\s+\S*$/, '').trim()
+  return trimBrokenEnding(text)
 }
 
 export function assetFingerprint(buffer) {
-  if (!Buffer.isBuffer(buffer) || buffer.length === 0) return '';
-  return createHash('sha256').update(buffer).digest('hex');
+  if (!Buffer.isBuffer(buffer) || buffer.length === 0) return ''
+  return createHash('sha256').update(buffer).digest('hex')
 }
 
 export function sanitizeHeadline(value, { maxWords = 13, maxChars = 78 } = {}) {
-  let text = clean(value)
-    .replace(ELLIPSIS_RE, '')
-    .replace(/[.:;,\-–—]+\s*$/u, '')
-    .replace(/^(breaking|exclusive|just in)\s*[:|-]\s*/i, '');
-
-  const words = text.split(' ').filter(Boolean);
-  if (words.length > maxWords) text = words.slice(0, maxWords).join(' ');
-  if (text.length > maxChars) {
-    text = text.slice(0, maxChars + 1).replace(/\s+\S*$/, '').trim();
-  }
-  return text.replace(/[.:;,\-–—]+\s*$/u, '').trim();
+  const withoutPrefix = clean(value).replace(/^(breaking|exclusive|just in)\s*[:|-]\s*/i, '')
+  return limitWordsAndChars(withoutPrefix, maxWords, maxChars)
 }
 
 export function sanitizeDeck(value, { maxWords = 34, maxChars = 210 } = {}) {
   let text = clean(value)
-    .replace(ELLIPSIS_RE, '')
     .replace(/\bwhy it matters:\s*/i, '')
-    .replace(/\s+[.…]{2,}$/u, '');
-  for (const phrase of AI_CLICHES) text = text.replace(phrase, '').replace(/^[,.;:\s]+/, '');
+    .replace(ELLIPSIS_RE, '')
+  for (const phrase of AI_CLICHES) text = text.replace(phrase, '')
+  for (const filler of VAGUE_FILLER) text = text.replace(filler, '')
 
-  const sentences = text.match(/[^.!?]+[.!?]?/g) || [];
-  text = clean(sentences.slice(0, 2).join(' '));
-  const words = text.split(' ').filter(Boolean);
-  if (words.length > maxWords) text = words.slice(0, maxWords).join(' ');
-  if (text.length > maxChars) text = text.slice(0, maxChars + 1).replace(/\s+\S*$/, '').trim();
-  return text.replace(/[.…]{2,}$/u, '').replace(/[,:;\-–—]+\s*$/u, '').trim();
+  const sentences = text.match(/[^.!?]+[.!?]?/g) || []
+  const sentenceText = clean(sentences.slice(0, 2).join(' '))
+  return limitWordsAndChars(sentenceText || text, maxWords, maxChars)
 }
 
 export function humanizeCaption(value) {
-  let text = clean(value);
-  for (const phrase of AI_CLICHES) text = text.replace(phrase, '');
+  let text = clean(value)
+  for (const phrase of AI_CLICHES) text = text.replace(phrase, (match) => {
+    const lower = match.toLowerCase()
+    if (lower.startsWith('delve')) return 'look'
+    if (lower.startsWith('leverage') || lower.startsWith('utilize') || lower.startsWith('utilise')) return 'use'
+    if (lower.startsWith('seamless')) return 'smooth'
+    return ''
+  })
   return clean(text)
-    .replace(/\bdelve(?:s|d)?\b/gi, 'look')
-    .replace(/\bleverage(?:s|d|ing)?\b/gi, 'use')
-    .replace(/\butili[sz]e(?:s|d|ing)?\b/gi, 'use')
-    .replace(/\bseamless(?:ly)?\b/gi, 'smooth')
-    .replace(/\s+([,.!?])/g, '$1');
+    .replace(/\s+([,.!?])/g, '$1')
+    .replace(/\n{3,}/g, '\n\n')
 }
 
-export function buildEditorialImagePrompt(story) {
-  const subject = clean(story.primarySubject || story.headline);
-  const action = clean(story.subjectAction || 'being used in a real operational setting');
-  const environment = clean(story.environment || 'a credible contemporary workplace');
-  const signals = (story.technologySignals || story.visibleObjects || []).map(clean).filter(Boolean).slice(0, 6);
-  const context = (story.regionalContext || []).map(clean).filter(Boolean).slice(0, 4);
+export function buildEditorialImagePrompt(story = {}) {
+  const subject = clean(story.primarySubject || story.headline)
+  const action = clean(story.subjectAction || 'being used in a real operational setting')
+  const environment = clean(story.environment || 'a credible contemporary workplace')
+  const signals = (story.technologySignals || story.visibleObjects || []).map(clean).filter(Boolean).slice(0, 6)
+  const context = (story.regionalContext || []).map(clean).filter(Boolean).slice(0, 4)
+  const mustShow = (story.mustShow || []).map(clean).filter(Boolean).slice(0, 6)
+  const mustNotShow = (story.mustNotShow || []).map(clean).filter(Boolean).slice(0, 10)
+  const textSafeArea = clean(story.textSafeArea || 'lower third')
 
   return [
     'Premium editorial technology photograph, art-directed for a respected international business magazine.',
     `Primary subject: ${subject}.`,
     `Show ${action} inside ${environment}.`,
-    signals.length ? `Visible, story-specific details: ${signals.join(', ')}.` : '',
+    signals.length ? `Visible story-specific details: ${signals.join(', ')}.` : '',
+    mustShow.length ? `Must show: ${mustShow.join(', ')}.` : '',
     context.length ? `Use restrained, authentic regional context: ${context.join(', ')}.` : '',
-    'Natural human posture and believable equipment. Documentary realism with deliberate Photoshop-style art direction, strong composition, subtle texture, controlled contrast, and realistic lighting.',
-    'The scene must explain the news without relying on the headline. Leave a calm text-safe area in the lower third.',
-    'No words, logos, watermarks, fake interface text, generic AI brain, robot head, floating holograms, duplicated people, distorted hands, cartoon illustration, clip-art, plastic skin, or generic stock-photo posing.'
-  ].filter(Boolean).join(' ');
+    `Leave a calm text-safe area in the ${textSafeArea}.`,
+    'Documentary realism, mature composition, believable equipment, natural human posture, controlled contrast, realistic lighting, and restrained Photoshop-style polish.',
+    [
+      'Do not include words, logos, watermarks, fake interface text, generic AI brains, robot heads, floating holograms, duplicated people, distorted hands, cartoon styling, vector art, plastic skin, or generic stock-photo posing.',
+      mustNotShow.length ? `Also avoid: ${mustNotShow.join(', ')}.` : '',
+    ].filter(Boolean).join(' '),
+  ].filter(Boolean).join(' ')
 }
 
 export function selectUniqueAssets(candidates, { required = 3, recentFingerprints = [] } = {}) {
-  const used = new Set(recentFingerprints.filter(Boolean));
-  const selected = [];
-  const rejected = [];
+  const used = new Set(recentFingerprints.filter(Boolean))
+  const selected = []
+  const rejected = []
 
   for (const candidate of candidates || []) {
-    const fingerprint = clean(candidate.fingerprint || (candidate.buffer ? assetFingerprint(candidate.buffer) : ''));
-    const problems = [];
-    if (!fingerprint) problems.push('missing_fingerprint');
-    if (!candidate.path && !candidate.url && !candidate.buffer) problems.push('missing_asset');
-    if (candidate.placeholder || candidate.fallback === 'blank') problems.push('placeholder_asset');
-    if (candidate.width && candidate.width < 1000) problems.push('low_resolution');
-    if (candidate.height && candidate.height < 700) problems.push('low_resolution');
-    if (fingerprint && used.has(fingerprint)) problems.push('duplicate_asset');
-    if (Number(candidate.qualityScore || 0) < 78) problems.push('quality_below_78');
-    if (Number(candidate.storyAlignment || 0) < 80) problems.push('story_alignment_below_80');
+    const fingerprint = clean(candidate.fingerprint || (candidate.buffer ? assetFingerprint(candidate.buffer) : ''))
+    const problems = []
+    const qualityScore = Number(candidate.qualityScore ?? candidate.overallScore ?? 0)
+    const storyAlignment = Number(candidate.storyAlignment ?? 0)
+    const editorialCredibility = Number(candidate.editorialCredibility ?? 0)
+    const genericStockRisk = Number(candidate.genericStockRisk ?? 100)
+    const aiArtifactRisk = Number(candidate.aiArtifactRisk ?? 100)
+    const width = Number(candidate.width ?? 0)
+    const height = Number(candidate.height ?? 0)
+
+    if (!fingerprint) problems.push('missing_fingerprint')
+    if (!candidate.path && !candidate.url && !candidate.buffer) problems.push('missing_asset')
+    if (candidate.missing === true || candidate.exists === false) problems.push('missing_image')
+    if (candidate.blank === true || candidate.placeholder === true || candidate.fallback === 'blank') problems.push('blank_or_placeholder_asset')
+    if (candidate.fallbackUsed === true || candidate.fallback_used === true) problems.push('fallback_asset')
+    if (/deterministic|template|placeholder|fallback/i.test(String(candidate.imageModel || candidate.image_model || ''))) {
+      problems.push('non_editorial_generated_asset')
+    }
+    if (!width || !height) problems.push('missing_image_dimensions')
+    if (width && width < 1000) problems.push('low_resolution')
+    if (height && height < 700) problems.push('low_resolution')
+    if (fingerprint && used.has(fingerprint)) problems.push('duplicate_asset')
+    if (qualityScore < 78) problems.push('quality_below_78')
+    if (storyAlignment < 80) problems.push('story_alignment_below_80')
+    if (editorialCredibility < 75) problems.push('editorial_credibility_below_75')
+    if (genericStockRisk >= 35) problems.push('generic_stock_risk_too_high')
+    if (aiArtifactRisk >= 20) problems.push('ai_artifact_risk_too_high')
 
     if (problems.length) {
-      rejected.push({ ...candidate, rejectionReasons: problems });
-      continue;
+      rejected.push({ ...candidate, fingerprint, rejectionReasons: [...new Set(problems)] })
+      continue
     }
-    used.add(fingerprint);
-    selected.push({ ...candidate, fingerprint });
-    if (selected.length === required) break;
+    used.add(fingerprint)
+    selected.push({ ...candidate, fingerprint })
+    if (selected.length === required) break
   }
 
   return {
     ok: selected.length === required,
     selected,
     rejected,
-    missing: Math.max(0, required - selected.length)
-  };
+    missing: Math.max(0, required - selected.length),
+  }
 }
 
 export function validateSlideCopy(slide) {
-  const headline = sanitizeHeadline(slide.headline);
-  const deck = sanitizeDeck(slide.deck || slide.summary);
-  const errors = [];
-  if (!headline) errors.push('headline_missing');
-  if (!deck) errors.push('deck_missing');
-  if (ELLIPSIS_RE.test(clean(slide.headline))) errors.push('headline_trailing_ellipsis');
-  if (ELLIPSIS_RE.test(clean(slide.deck || slide.summary))) errors.push('deck_trailing_ellipsis');
-  if (headline.split(' ').length > 13) errors.push('headline_too_long');
-  if (deck.split(' ').length > 34) errors.push('deck_too_long');
-  return { ok: errors.length === 0, headline, deck, errors };
+  const headline = sanitizeHeadline(slide.headline)
+  const deck = sanitizeDeck(slide.deck || slide.summary)
+  const errors = []
+  const regionLabel = clean(slide.region)
+  const categoryLabel = clean(slide.category || slide.label || '')
+  if (!regionLabel) errors.push('region_missing')
+  if (regionLabel.split(' ').filter(Boolean).length > 3) errors.push('region_too_long')
+  if (categoryLabel && categoryLabel.split(' ').filter(Boolean).length > 3) errors.push('category_too_long')
+  if (!headline) errors.push('headline_missing')
+  if (!deck) errors.push('deck_missing')
+  if (ELLIPSIS_RE.test(headline) || ELLIPSIS_RE.test(deck)) errors.push('trailing_ellipsis')
+  if (headline.split(' ').filter(Boolean).length > 13 || headline.length > 78) errors.push('headline_too_long')
+  if (deck.split(' ').filter(Boolean).length > 34 || deck.length > 210) errors.push('deck_too_long')
+  if (TRAILING_FRAGMENT_RE.test(headline)) errors.push('headline_incomplete')
+  if (TRAILING_FRAGMENT_RE.test(deck)) errors.push('deck_incomplete')
+  if (VAGUE_FILLER.some((pattern) => pattern.test(deck))) errors.push('vague_deck')
+  return { ok: errors.length === 0, headline, deck, errors: [...new Set(errors)] }
 }
