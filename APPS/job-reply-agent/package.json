@@ -105,5 +105,8 @@
     "tsx": "^4.21.0",
     "typescript": "^5.6.3",
     "vitest": "^4.1.6"
+  },
+  "overrides": {
+    "gaxios": "7.1.4"
   }
 }
