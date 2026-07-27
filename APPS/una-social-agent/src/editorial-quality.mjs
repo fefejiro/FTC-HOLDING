@@ -19,6 +19,17 @@ const VAGUE_FILLER = [
   /technology is changing quickly\.?/i,
   /this changes everything\.?/i,
 ]
+const BOILERPLATE_COPY = [
+  /this story originally appeared in [^.?!]+[.?!]?/gi,
+  /to get stories like this in your inbox first,\s*sign up here[.?!]?/gi,
+  /sign up here[.?!]?/gi,
+]
+const INCOMPLETE_PHRASES = [
+  /\bwe(?:'|’)ve been here$/i,
+  /\bwe have been here$/i,
+  /\bbeen here$/i,
+  /\bhere$/i,
+]
 
 function clean(value = '') {
   return String(value)
@@ -41,6 +52,20 @@ function trimBrokenEnding(value = '') {
   return text
 }
 
+function looksIncomplete(value = '') {
+  const text = trimBrokenEnding(value)
+  return TRAILING_FRAGMENT_RE.test(text) || INCOMPLETE_PHRASES.some((pattern) => pattern.test(text))
+}
+
+function firstCompleteSentence(value = '') {
+  const sentences = clean(value).match(/[^.!?]+[.!?]?/g) || []
+  for (const sentence of sentences) {
+    const candidate = trimBrokenEnding(sentence)
+    if (candidate && !looksIncomplete(candidate)) return candidate
+  }
+  return ''
+}
+
 function limitWordsAndChars(value, maxWords, maxChars) {
   let text = trimBrokenEnding(value)
   const words = text.split(' ').filter(Boolean)
@@ -56,13 +81,25 @@ export function assetFingerprint(buffer) {
 
 export function sanitizeHeadline(value, { maxWords = 13, maxChars = 78 } = {}) {
   const withoutPrefix = clean(value).replace(/^(breaking|exclusive|just in)\s*[:|-]\s*/i, '')
-  return limitWordsAndChars(withoutPrefix, maxWords, maxChars)
+  if (withoutPrefix.length > maxChars || withoutPrefix.split(' ').filter(Boolean).length > maxWords) {
+    const firstSentence = firstCompleteSentence(withoutPrefix)
+    if (firstSentence && firstSentence.length <= maxChars && firstSentence.split(' ').filter(Boolean).length <= maxWords) {
+      return firstSentence
+    }
+  }
+  const limited = limitWordsAndChars(withoutPrefix, maxWords, maxChars)
+  if (looksIncomplete(limited)) {
+    const firstSentence = firstCompleteSentence(withoutPrefix)
+    if (firstSentence && firstSentence !== limited) return limitWordsAndChars(firstSentence, maxWords, maxChars)
+  }
+  return limited
 }
 
 export function sanitizeDeck(value, { maxWords = 34, maxChars = 210 } = {}) {
   let text = clean(value)
     .replace(/\bwhy it matters:\s*/i, '')
     .replace(ELLIPSIS_RE, '')
+  for (const boilerplate of BOILERPLATE_COPY) text = text.replace(boilerplate, '')
   for (const phrase of AI_CLICHES) text = text.replace(phrase, '')
   for (const filler of VAGUE_FILLER) text = text.replace(filler, '')
 
@@ -118,6 +155,10 @@ export function selectUniqueAssets(candidates, { required = 3, recentFingerprint
 
   for (const candidate of candidates || []) {
     const fingerprint = clean(candidate.fingerprint || (candidate.buffer ? assetFingerprint(candidate.buffer) : ''))
+    const rawFingerprint = clean(candidate.rawFingerprint || candidate.raw_fingerprint || '')
+    const sourceUrl = clean(candidate.sourceUrl || candidate.assetSourceUrl || candidate.attributionSourceUrl || '')
+    const sourceIdentity = sourceUrl ? `source:${sourceUrl.toLowerCase()}` : ''
+    const identities = [fingerprint, rawFingerprint, sourceIdentity].filter(Boolean)
     const problems = []
     const qualityScore = Number(candidate.qualityScore ?? candidate.overallScore ?? 0)
     const storyAlignment = Number(candidate.storyAlignment ?? 0)
@@ -138,7 +179,7 @@ export function selectUniqueAssets(candidates, { required = 3, recentFingerprint
     if (!width || !height) problems.push('missing_image_dimensions')
     if (width && width < 1000) problems.push('low_resolution')
     if (height && height < 700) problems.push('low_resolution')
-    if (fingerprint && used.has(fingerprint)) problems.push('duplicate_asset')
+    if (identities.some((identity) => used.has(identity))) problems.push('duplicate_asset')
     if (qualityScore < 78) problems.push('quality_below_78')
     if (storyAlignment < 80) problems.push('story_alignment_below_80')
     if (editorialCredibility < 75) problems.push('editorial_credibility_below_75')
@@ -146,11 +187,11 @@ export function selectUniqueAssets(candidates, { required = 3, recentFingerprint
     if (aiArtifactRisk >= 20) problems.push('ai_artifact_risk_too_high')
 
     if (problems.length) {
-      rejected.push({ ...candidate, fingerprint, rejectionReasons: [...new Set(problems)] })
+      rejected.push({ ...candidate, fingerprint, rawFingerprint, sourceUrl, sourceIdentity, rejectionReasons: [...new Set(problems)] })
       continue
     }
-    used.add(fingerprint)
-    selected.push({ ...candidate, fingerprint })
+    for (const identity of identities) used.add(identity)
+    selected.push({ ...candidate, fingerprint, rawFingerprint, sourceUrl, sourceIdentity })
     if (selected.length === required) break
   }
 
@@ -176,8 +217,8 @@ export function validateSlideCopy(slide) {
   if (ELLIPSIS_RE.test(headline) || ELLIPSIS_RE.test(deck)) errors.push('trailing_ellipsis')
   if (headline.split(' ').filter(Boolean).length > 13 || headline.length > 78) errors.push('headline_too_long')
   if (deck.split(' ').filter(Boolean).length > 34 || deck.length > 210) errors.push('deck_too_long')
-  if (TRAILING_FRAGMENT_RE.test(headline)) errors.push('headline_incomplete')
-  if (TRAILING_FRAGMENT_RE.test(deck)) errors.push('deck_incomplete')
+  if (looksIncomplete(headline)) errors.push('headline_incomplete')
+  if (looksIncomplete(deck)) errors.push('deck_incomplete')
   if (VAGUE_FILLER.some((pattern) => pattern.test(deck))) errors.push('vague_deck')
   return { ok: errors.length === 0, headline, deck, errors: [...new Set(errors)] }
 }

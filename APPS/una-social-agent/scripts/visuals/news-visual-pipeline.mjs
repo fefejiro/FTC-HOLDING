@@ -1,6 +1,10 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { buildEditorialImagePrompt, sanitizeDeck, sanitizeHeadline } from '../../src/editorial-quality.mjs'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const root = path.resolve(__dirname, '..', '..')
 
 const ACCEPTANCE = {
   overallScore: 78,
@@ -720,8 +724,69 @@ function curatedImageCandidatesForFacts(facts) {
 }
 
 function imageCandidateRejected(candidate) {
-  const text = `${candidate.title || ''} ${candidate.url || ''}`.toLowerCase()
+  const text = `${candidate.title || ''} ${candidate.url || ''} ${candidate.source || ''} ${candidate.artist || ''}`.toLowerCase()
   return /logo|icon|diagram|clipart|flag|seal|map only|cartoon|illustration|screenshot|poster|infographic|museum|disney|historic house|estate|mansion|castle/.test(text)
+}
+
+async function blockedImageSources() {
+  const blockPath = path.join(root, 'config', 'blocked-image-sources.json')
+  try {
+    const config = JSON.parse(await fs.readFile(blockPath, 'utf8'))
+    return {
+      sourceUrls: new Set((config.sourceUrls || []).map((url) => String(url).trim().toLowerCase())),
+      artists: new Set((config.artists || []).map((artist) => String(artist).trim().toLowerCase())),
+    }
+  } catch {
+    return { sourceUrls: new Set(), artists: new Set() }
+  }
+}
+
+async function usedImageSourceUrls(limit = 80) {
+  const ledgerPath = path.join(root, 'content', 'ledger', 'social-ledger.jsonl')
+  const used = new Set()
+  try {
+    const lines = (await fs.readFile(ledgerPath, 'utf8')).split(/\r?\n/).reverse()
+    for (const line of lines) {
+      if (!line.trim()) continue
+      let entry
+      try {
+        entry = JSON.parse(line)
+      } catch {
+        continue
+      }
+      for (const result of Object.values(entry.results || {})) {
+        for (const sourceUrl of result?.assetProof?.sourceUrls || []) {
+          if (sourceUrl) used.add(String(sourceUrl).trim().toLowerCase())
+        }
+      }
+      for (const slide of entry.slides || []) {
+        if (slide.assetSourceUrl) used.add(String(slide.assetSourceUrl).trim().toLowerCase())
+      }
+      if (used.size >= limit) break
+    }
+  } catch {
+    // Continue with visual proof ledgers below.
+  }
+  try {
+    const visualsRoot = path.join(root, 'content', 'visuals')
+    const dates = await fs.readdir(visualsRoot)
+    for (const date of dates.sort().reverse()) {
+      const proofPath = path.join(visualsRoot, date, 'visual-proof-ledger.json')
+      try {
+        const proof = JSON.parse(await fs.readFile(proofPath, 'utf8'))
+        for (const record of proof.records || []) {
+          const sourceUrl = record.attribution?.source_url
+          if (sourceUrl) used.add(String(sourceUrl).trim().toLowerCase())
+        }
+      } catch {
+        continue
+      }
+      if (used.size >= limit) break
+    }
+  } catch {
+    return used
+  }
+  return used
 }
 
 async function downloadImage(candidate, outPath) {
@@ -740,6 +805,8 @@ async function downloadImage(candidate, outPath) {
 
 async function fetchOpenverseImage(facts, outPath) {
   const terms = searchTermsForFacts(facts)
+  const usedSources = await usedImageSourceUrls()
+  const blockedSources = await blockedImageSources()
   for (const term of terms) {
     const api = new URL('https://api.openverse.org/v1/images/')
     api.searchParams.set('q', term)
@@ -765,6 +832,9 @@ async function fetchOpenverseImage(facts, outPath) {
         provider: item.provider || 'openverse',
       }))
       .filter((item) => item.url && !imageCandidateRejected(item))
+      .filter((item) => !usedSources.has(String(item.source || item.url || '').trim().toLowerCase()))
+      .filter((item) => !blockedSources.sourceUrls.has(String(item.source || item.url || '').trim().toLowerCase()))
+      .filter((item) => !blockedSources.artists.has(String(item.artist || '').trim().toLowerCase()))
     for (const candidate of candidates) {
       try {
         const saved = await downloadImage(candidate, outPath)

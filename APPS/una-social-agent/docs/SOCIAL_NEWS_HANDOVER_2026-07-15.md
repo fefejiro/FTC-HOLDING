@@ -620,3 +620,70 @@ Operator expectation:
 - If publishing fails, the monitor report should name the failed stage and
   point to the proof/logs instead of silently leaving the owner to discover it
   hours later.
+
+## July 27 Duplicate Image and LinkedIn Recovery
+
+Root cause:
+
+- The duplicate guard was checking final rendered image hashes, but the same
+  source photo could be reused through a different crop or render and look
+  different at the file-hash level.
+- A LinkedIn retry selected a logged-out Chrome window because the correct
+  Una Labs Page Posts window temporarily had a `UNA_RECT` diagnostic title
+  instead of a normal LinkedIn title.
+- The copy sanitizer removed ellipses but still allowed an incomplete headline
+  such as `OpenAI called the Hugging Face attack unprecedented. But we've been
+  here`.
+
+Fixes added:
+
+- Source URL identities are now loaded from the social ledger and visual proof
+  ledgers and passed into the publish guard as `source:<url>` identities.
+- Approved payloads now carry `rawFingerprint` and `assetSourceUrl` for every
+  slide, and visible publishing records those identities in `assetProof`.
+- Known repeated/generic image sources are blocked in
+  `config/blocked-image-sources.json`.
+- Openverse image selection filters out recently used source URLs and blocked
+  artists/sources before downloading.
+- The headline sanitizer now falls back to the first complete sentence when a
+  title would otherwise be cut into an incomplete thought.
+- Newsletter boilerplate such as "this story originally appeared..." and
+  "sign up here" is removed from decks; if nothing concrete remains, the copy
+  gate blocks the slide.
+- LinkedIn window scoring now penalizes Sign Up/Authwall windows and boosts
+  our own `UNA_RECT` diagnostic window so the signed-in Una Labs Page Posts
+  surface is selected.
+- LinkedIn composer opening now retries the same Page Posts control and has a
+  Page Posts coordinate fallback when LinkedIn does not expose the visible
+  `Start a post` text through accessibility.
+
+Validation:
+
+- `npm --prefix APPS/una-social-agent run check` passed.
+- Test count increased to 30.
+- New coverage proves:
+  - same source photo URL fails even when rendered file hashes differ,
+  - truncated headlines fall back to complete sentences,
+  - newsletter boilerplate decks are rejected instead of published.
+
+Live proof on July 27:
+
+- Instagram posted a new three-slide carousel from fresh source URLs:
+  - `content/proof/2026-07-27/visible-instagram-profile-verify.png`
+  - status: `posted_unverified`
+  - image count: 3
+- LinkedIn posted the same approved three-image briefing:
+  - `content/proof/2026-07-27/visible-linkedin-posts-verify.png`
+  - status: `posted_unverified`
+  - image count: 3
+- LinkedIn is still marked unverified because the post text and media preview
+  were visible on Page Posts, but the script could not open the post detail to
+  perform deep media verification.
+
+Remaining improvement:
+
+- Add a stronger LinkedIn post-detail verifier so Page Posts proof with images
+  can be upgraded from `posted_unverified` to `posted_verified`.
+- Continue improving visual selection taste; the current guard prevents repeats
+  and broken posts, but source-photo editorial quality still benefits from
+  better source ranking over time.

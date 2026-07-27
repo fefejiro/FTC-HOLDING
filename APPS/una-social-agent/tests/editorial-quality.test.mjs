@@ -46,6 +46,17 @@ test('recent 30-post window fingerprint fails', () => {
   assert.ok(result.rejectedAssets.some((asset) => asset.rejectionReasons.includes('duplicate_asset')))
 })
 
+test('same source photo URL fails even when rendered file hashes differ', () => {
+  const run = validRun(['a', 'b', 'c'])
+  run.slides[1].asset.sourceUrl = 'https://www.flickr.com/photos/example/reused-photo'
+  run.slides[1].asset.assetSourceUrl = 'https://www.flickr.com/photos/example/reused-photo'
+  const result = prepareCarouselForPublish(run, {
+    recentFingerprints: ['source:https://www.flickr.com/photos/example/reused-photo'],
+  })
+  assert.equal(result.publishable, false)
+  assert.ok(result.rejectedAssets.some((asset) => asset.rejectionReasons.includes('duplicate_asset')))
+})
+
 test('missing image fails', () => {
   const result = selectUniqueAssets([validAsset({ exists: false, missing: true })])
   assert.equal(result.ok, false)
@@ -154,10 +165,28 @@ test('long headline is shortened cleanly', () => {
   assert.doesNotMatch(headline, /(?:and|with|for|to)$/i)
 })
 
+test('headline truncation falls back to a complete sentence', () => {
+  assert.equal(
+    sanitizeHeadline("OpenAI called the Hugging Face attack unprecedented. But we've been here before."),
+    'OpenAI called the Hugging Face attack unprecedented',
+  )
+})
+
 test('long deck ends as a complete thought', () => {
   const deck = sanitizeDeck('The company announced a long update about AI systems, operator review, team workflows, policy checks, compliance reviews, and')
   assert.ok(deck.length <= 210)
   assert.doesNotMatch(deck, /\b(and|or|but|with|for|to)$/i)
+})
+
+test('newsletter boilerplate deck is rejected instead of posted', () => {
+  const copy = validateSlideCopy({
+    region: 'North America',
+    headline: "OpenAI called the Hugging Face attack unprecedented. But we've been here before.",
+    deck: 'This story originally appeared in The Algorithm, our weekly newsletter on AI. To get stories like this in your inbox first, sign up here.',
+  })
+  assert.equal(copy.headline, 'OpenAI called the Hugging Face attack unprecedented')
+  assert.equal(copy.deck, '')
+  assert.ok(copy.errors.includes('deck_missing'))
 })
 
 test('empty Instagram caption fails', () => {

@@ -199,14 +199,29 @@ def find_chrome_window():
     if not candidates:
         raise RuntimeError("No visible Google Chrome window found.")
 
-    fejiro = []
-    for window in candidates:
+    def window_score(window) -> int:
         label = profile_label(window).lower()
         title = (window.window_text() or "").lower()
-        if "fejiro" in label or "linkedin" in title or "instagram" in title:
-            fejiro.append(window)
+        score = 0
+        if "sign up | linkedin" in title or "join linkedin" in title or "authwall" in title:
+            score -= 500
+        if "una_rect:" in title:
+            score += 130
+        if "unalabs" in title or "una labs" in title:
+            score += 120
+        if "linkedin" in title:
+            score += 100
+        if "instagram" in title:
+            score += 95
+        if "company page" in title or "page posts" in title:
+            score += 40
+        if "fejiro" in label:
+            score += 20
+        if "dice" in title or "gmail" in title or "jobs | linkedin" in title:
+            score -= 60
+        return score
 
-    selected = fejiro[0] if fejiro else candidates[0]
+    selected = sorted(candidates, key=window_score, reverse=True)[0]
     ensure_window_visible(selected)
     return selected
 
@@ -698,13 +713,34 @@ def open_linkedin_post_composer(window, proof_dir: Path) -> dict:
                 detail["steps"].append({"action": "clicked_start_post"})
                 started = True
         if not started:
-            detail["start_post_missing"] = screenshot(window, proof_dir / "visible-linkedin-start-post-missing.png")
-            return {"ok": False, "reason": "LinkedIn Start a post control was not visible on Page Posts.", **detail}
+            try:
+                coords = click_relative(window, 0.49, 0.405, 2.0)
+                detail["steps"].append({"action": "clicked_start_post_page_posts_coordinate", "coords": coords})
+                started = True
+            except Exception as exc:
+                detail["start_post_missing"] = screenshot(window, proof_dir / "visible-linkedin-start-post-missing.png")
+                detail["steps"].append({"action": "start_post_coordinate_failed", "error": str(exc)})
+                return {"ok": False, "reason": "LinkedIn Start a post control was not visible on Page Posts.", **detail}
 
     for _ in range(8):
         if linkedin_composer_is_open(window):
             break
         time.sleep(1.0)
+
+    if not linkedin_composer_is_open(window) and started:
+        # LinkedIn sometimes acknowledges the physical click without opening the
+        # modal on the first attempt. Retry the same Page Posts control once,
+        # then wait longer before blocking.
+        retry = click_dom(window, r"Start a post", 2.0)
+        detail["steps"].append({"action": "retry_start_post_dom", "detail": retry})
+        if not retry.get("ok"):
+            retry_physical = click_dom_physical(window, r"Start a post", 2.0)
+            detail["steps"].append({"action": "retry_start_post_physical", "detail": retry_physical})
+        for _ in range(10):
+            if linkedin_composer_is_open(window):
+                break
+            time.sleep(1.0)
+
     if not linkedin_composer_is_open(window):
         detail["composer_missing"] = screenshot(window, proof_dir / "visible-linkedin-composer-missing.png")
         return {"ok": False, "reason": "LinkedIn composer did not open.", **detail}
@@ -1038,6 +1074,16 @@ def image_hashes(paths: list[Path]) -> list[str]:
     return [file_hash(path) for path in paths if path.exists()]
 
 
+def approval_asset_proof(approval: dict, image_paths: list[Path]) -> dict:
+    slides = approval.get("slides") or []
+    return {
+        "imageHashes": image_hashes(image_paths),
+        "rawImageHashes": [slide.get("rawFingerprint") for slide in slides if slide.get("rawFingerprint")],
+        "sourceUrls": [slide.get("assetSourceUrl") for slide in slides if slide.get("assetSourceUrl")],
+        "images": [str(path) for path in image_paths],
+    }
+
+
 def load_ledger_entries() -> list[dict]:
     ledger = ROOT / "content" / "ledger" / "social-ledger.jsonl"
     if not ledger.exists():
@@ -1055,26 +1101,31 @@ def load_ledger_entries() -> list[dict]:
     return entries
 
 
-def already_posted_same_images(run_date: str, slot: str, channel: str, hashes: list[str]) -> dict:
+def already_posted_same_images(run_date: str, slot: str, channel: str, proof: dict) -> dict:
     if os.environ.get("UNA_ALLOW_REPOST") == "1":
         return {"duplicate": False, "reason": "repost override enabled"}
-    if not hashes:
-        return {"duplicate": False, "reason": "no hashes"}
-    wanted = set(hashes)
+    hashes = proof.get("imageHashes") or []
+    raw_hashes = proof.get("rawImageHashes") or []
+    source_urls = proof.get("sourceUrls") or []
+    wanted = set(hashes + raw_hashes + [f"source:{url}".lower() for url in source_urls if url])
+    if not wanted:
+        return {"duplicate": False, "reason": "no hashes or source URLs"}
     for entry in reversed(load_ledger_entries()):
         if entry.get("runDate") != run_date or entry.get("slot", "news") != slot or entry.get("dryRun"):
             continue
         result = (entry.get("results") or {}).get(channel) or {}
         if not str(result.get("status", "")).startswith("posted"):
             continue
-        previous = set((((result.get("assetProof") or {}).get("imageHashes")) or []))
+        previous_proof = result.get("assetProof") or {}
+        previous = set((previous_proof.get("imageHashes") or []) + (previous_proof.get("rawImageHashes") or []))
+        previous.update(f"source:{url}".lower() for url in previous_proof.get("sourceUrls") or [] if url)
         if previous and wanted.intersection(previous):
             return {
                 "duplicate": True,
-                "reason": f"{channel} already posted one of these image hashes for {run_date}.",
+                "reason": f"{channel} already posted one of these image/source identities for {run_date}.",
                 "previousRunId": entry.get("id"),
             }
-    return {"duplicate": False, "reason": "no matching posted hashes"}
+    return {"duplicate": False, "reason": "no matching posted image/source identities"}
 
 
 def approved_image_paths(approval: dict) -> list[Path]:
@@ -1164,8 +1215,8 @@ def main() -> int:
     linkedin_post = (approved_captions.get("linkedin") or (draft_dir / "linkedin-post.md").read_text(encoding="utf-8")).strip()
     image_paths = instagram_image_paths(run_date, asset_dir, args.slot, approval)
     linkedin_images = linkedin_image_paths(run_date, args.slot, approval)
-    instagram_hashes = image_hashes(image_paths)
-    linkedin_hashes = image_hashes(linkedin_images)
+    instagram_asset_proof = approval_asset_proof(approval, image_paths)
+    linkedin_asset_proof = approval_asset_proof(approval, linkedin_images)
 
     if "instagram" in [item.strip().lower() for item in args.channels.split(",") if item.strip()]:
         caption_issues = validate_instagram_caption(instagram_caption)
@@ -1178,33 +1229,33 @@ def main() -> int:
         window.set_focus()
         results = {}
         if "instagram" in channels:
-            duplicate = already_posted_same_images(run_date, args.slot, "instagram", instagram_hashes)
+            duplicate = already_posted_same_images(run_date, args.slot, "instagram", instagram_asset_proof)
             if duplicate.get("duplicate"):
                 results["instagram"] = {
                     "channel": "instagram",
                     "status": "blocked_duplicate_asset",
                     "reason": duplicate["reason"],
-                    "assetProof": {"imageHashes": instagram_hashes, "images": [str(path) for path in image_paths]},
+                    "assetProof": instagram_asset_proof,
                     "details": duplicate,
                 }
             else:
                 results["instagram"] = publish_instagram(window, run_date, image_paths, instagram_caption, proof_dir, args.dry_run)
                 results["instagram"].setdefault("assetProof", {})
-                results["instagram"]["assetProof"].update({"imageHashes": instagram_hashes, "images": [str(path) for path in image_paths]})
+                results["instagram"]["assetProof"].update(instagram_asset_proof)
         if "linkedin" in channels:
-            duplicate = already_posted_same_images(run_date, args.slot, "linkedin", linkedin_hashes)
+            duplicate = already_posted_same_images(run_date, args.slot, "linkedin", linkedin_asset_proof)
             if duplicate.get("duplicate"):
                 results["linkedin"] = {
                     "channel": "linkedin",
                     "status": "blocked_duplicate_asset",
                     "reason": duplicate["reason"],
-                    "assetProof": {"imageHashes": linkedin_hashes, "images": [str(path) for path in linkedin_images]},
+                    "assetProof": linkedin_asset_proof,
                     "details": duplicate,
                 }
             else:
                 results["linkedin"] = publish_linkedin(window, linkedin_post, linkedin_images, proof_dir, args.dry_run)
                 results["linkedin"].setdefault("assetProof", {})
-                results["linkedin"]["assetProof"].update({"imageHashes": linkedin_hashes, "images": [str(path) for path in linkedin_images]})
+                results["linkedin"]["assetProof"].update(linkedin_asset_proof)
 
     statuses = [item.get("status") for item in results.values()]
     if args.dry_run:

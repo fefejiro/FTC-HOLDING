@@ -103,30 +103,54 @@ function normalizeEval(evaluation = {}) {
 
 async function loadRecentImageFingerprints(limit = 30) {
   const ledgerPath = path.join(root, 'content', 'ledger', 'social-ledger.jsonl')
-  if (!(await exists(ledgerPath))) return []
-  const lines = (await readText(ledgerPath)).split(/\r?\n/)
   const fingerprints = []
-  for (const line of lines.reverse()) {
-    if (!line.trim()) continue
-    let entry
-    try {
-      entry = JSON.parse(line)
-    } catch {
-      continue
+  if (await exists(ledgerPath)) {
+    const lines = (await readText(ledgerPath)).split(/\r?\n/)
+    for (const line of lines.reverse()) {
+      if (!line.trim()) continue
+      let entry
+      try {
+        entry = JSON.parse(line)
+      } catch {
+        continue
+      }
+      if (entry.dryRun) continue
+      const results = entry.results || {}
+      for (const channel of ['instagram', 'linkedin']) {
+        const result = results[channel] || {}
+        if (!String(result.status || '').startsWith('posted')) continue
+        const hashes = result.assetProof?.imageHashes || []
+        for (const hash of hashes) fingerprints.push(hash)
+        const rawHashes = result.assetProof?.rawImageHashes || []
+        for (const hash of rawHashes) fingerprints.push(hash)
+        const sourceUrls = result.assetProof?.sourceUrls || []
+        for (const sourceUrl of sourceUrls) fingerprints.push(`source:${String(sourceUrl).trim().toLowerCase()}`)
+      }
+      for (const slide of entry.slides || []) {
+        if (slide.assetFingerprint) fingerprints.push(slide.assetFingerprint)
+        if (slide.slideFingerprint) fingerprints.push(slide.slideFingerprint)
+        if (slide.rawFingerprint) fingerprints.push(slide.rawFingerprint)
+        if (slide.assetSourceUrl) fingerprints.push(`source:${String(slide.assetSourceUrl).trim().toLowerCase()}`)
+      }
+      if (fingerprints.length >= limit) break
     }
-    if (entry.dryRun) continue
-    const results = entry.results || {}
-    for (const channel of ['instagram', 'linkedin']) {
-      const result = results[channel] || {}
-      if (!String(result.status || '').startsWith('posted')) continue
-      const hashes = result.assetProof?.imageHashes || []
-      for (const hash of hashes) fingerprints.push(hash)
+  }
+  const visualsRoot = path.join(root, 'content', 'visuals')
+  try {
+    const dates = await fs.readdir(visualsRoot)
+    for (const date of dates.sort().reverse()) {
+      if (date === runDate) continue
+      const proofPath = path.join(visualsRoot, date, 'visual-proof-ledger.json')
+      if (!(await exists(proofPath))) continue
+      const proof = JSON.parse(await readText(proofPath))
+      for (const record of proof.records || []) {
+        const sourceUrl = record.attribution?.source_url
+        if (sourceUrl) fingerprints.push(`source:${String(sourceUrl).trim().toLowerCase()}`)
+      }
+      if (fingerprints.length >= limit) break
     }
-    for (const slide of entry.slides || []) {
-      if (slide.assetFingerprint) fingerprints.push(slide.assetFingerprint)
-      if (slide.slideFingerprint) fingerprints.push(slide.slideFingerprint)
-    }
-    if (fingerprints.length >= limit) break
+  } catch {
+    // Visual proof history is best-effort; the social ledger remains primary.
   }
   return [...new Set(fingerprints.filter(Boolean))].slice(0, limit)
 }
@@ -142,6 +166,11 @@ async function writeJson(filePath, payload) {
   await fs.writeFile(filePath, JSON.stringify(payload, null, 2), 'utf8')
 }
 
+async function writeText(filePath, value) {
+  await fs.mkdir(path.dirname(filePath), { recursive: true })
+  await fs.writeFile(filePath, value, 'utf8')
+}
+
 async function buildRenderedRun({ topic, sources, instagram, linkedin, visualLedger }) {
   const records = Array.isArray(visualLedger?.records) ? visualLedger.records : []
   const slides = []
@@ -152,6 +181,8 @@ async function buildRenderedRun({ topic, sources, instagram, linkedin, visualLed
     const dims = (await exists(slidePath)) ? await pngDimensions(slidePath) : { width: 0, height: 0, byteLength: 0 }
     const assetDims = (await exists(assetPath)) ? await pngDimensions(assetPath) : { width: 0, height: 0, byteLength: 0 }
     const evaluation = normalizeEval(record.image_evaluation)
+    const rawFingerprint = (await exists(assetPath)) ? await sha256File(assetPath) : ''
+    const attributionSourceUrl = record.attribution?.source_url || ''
     slides.push({
       storyId: record.story_id,
       region: record.region,
@@ -165,10 +196,14 @@ async function buildRenderedRun({ topic, sources, instagram, linkedin, visualLed
       asset: {
         path: relative(slidePath),
         rawPath: relative(assetPath),
+        sourceUrl: attributionSourceUrl,
+        assetSourceUrl: attributionSourceUrl,
+        attributionSourceUrl,
         exists: await exists(slidePath),
         missing: !(await exists(slidePath)),
         blank: dims.byteLength < 50_000,
-        fingerprint: (await exists(assetPath)) ? await sha256File(assetPath) : '',
+        fingerprint: rawFingerprint,
+        rawFingerprint,
         slideFingerprint: (await exists(slidePath)) ? await sha256File(slidePath) : '',
         width: dims.width || assetDims.width,
         height: dims.height || assetDims.height,
@@ -272,7 +307,9 @@ function approvedPayloadFrom(approved, {
         sourceUrl: slide.sourceUrl,
         assetPath: slide.asset?.path,
         assetFingerprint: approved.assets[index]?.fingerprint || slide.asset?.fingerprint || '',
+        rawFingerprint: approved.assets[index]?.rawFingerprint || slide.asset?.rawFingerprint || '',
         slideFingerprint: slide.asset?.slideFingerprint || '',
+        assetSourceUrl: approved.assets[index]?.assetSourceUrl || approved.assets[index]?.sourceUrl || slide.asset?.assetSourceUrl || '',
         generationAttempt: record.generation_attempts || 0,
         qualityScore: slide.asset?.qualityScore,
         storyAlignment: slide.asset?.storyAlignment,
@@ -421,7 +458,9 @@ if (!issues.length) {
             sourceUrl: slide.sourceUrl,
             assetPath: slide.asset?.path,
             assetFingerprint: slide.asset?.fingerprint,
+            rawFingerprint: slide.asset?.rawFingerprint,
             slideFingerprint: slide.asset?.slideFingerprint,
+            assetSourceUrl: slide.asset?.assetSourceUrl,
             generationAttempt: 0,
             qualityScore: slide.asset?.qualityScore,
             storyAlignment: slide.asset?.storyAlignment,
@@ -458,7 +497,9 @@ if (!issues.length) {
         sourceUrl: slide.sourceUrl,
         assetPath: slide.asset?.path,
         assetFingerprint: slide.asset?.fingerprint,
+        rawFingerprint: slide.asset?.rawFingerprint,
         slideFingerprint: slide.asset?.slideFingerprint,
+        assetSourceUrl: slide.asset?.assetSourceUrl,
         generationAttempt: 0,
         qualityScore: slide.asset?.qualityScore,
         storyAlignment: slide.asset?.storyAlignment,
