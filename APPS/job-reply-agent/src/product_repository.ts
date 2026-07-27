@@ -44,7 +44,7 @@ export async function saveProductOnboarding(
     await client.query(
       `INSERT INTO product_audit_logs
          (user_id, actor_user_id, action, target_type, target_id, metadata)
-       VALUES ($1, $1, 'onboarding.updated', 'onboarding', $1::text, $2::jsonb)`,
+       VALUES ($1::uuid, $1::uuid, 'onboarding.updated', 'onboarding', $1::text, $2::jsonb)`,
       [userId, JSON.stringify({ completed: input.completed, consentVersion: input.consentVersion })]
     );
     return result.rows[0];
@@ -155,7 +155,7 @@ export async function saveCareerTruthBank(
     await client.query(
       `INSERT INTO product_audit_logs
          (user_id, actor_user_id, action, target_type, target_id, metadata)
-       VALUES ($1,$1,'career_truth.approved','career_truth_bank',$1::text,$2::jsonb)`,
+       VALUES ($1::uuid,$1::uuid,'career_truth.approved','career_truth_bank',$1::text,$2::jsonb)`,
       [userId, JSON.stringify({ factCount: facts.length })]
     );
     return result.rows[0];
@@ -194,6 +194,76 @@ export async function requestProductConnection(db: pg.Pool, userId: string, prov
     );
     return result.rows[0];
   }, db);
+}
+
+export async function revokeProductConnection(db: pg.Pool, userId: string, provider: string): Promise<unknown | null> {
+  return withTenant(userId, async (client) => {
+    const result = await client.query(
+      `UPDATE product_connections
+          SET provider_account=NULL, status='revoked', secret_reference=NULL,
+              connected_at=NULL, updated_at=now()
+        WHERE user_id=$1 AND provider=$2
+        RETURNING provider, status, updated_at AS "updatedAt"`,
+      [userId, provider]
+    );
+    if (!result.rows[0]) return null;
+    await client.query(
+      `INSERT INTO product_audit_logs
+         (user_id, actor_user_id, action, target_type, target_id, metadata)
+       VALUES ($1,$1,'connection.revoked','connection',$2,'{}'::jsonb)`,
+      [userId, provider]
+    );
+    return result.rows[0];
+  }, db);
+}
+
+export async function setProductAccountStatus(
+  db: pg.Pool,
+  userId: string,
+  status: "onboarding" | "active" | "paused"
+): Promise<void> {
+  await withTenant(userId, async (client) => {
+    await client.query("UPDATE product_users SET status=$2, updated_at=now() WHERE id=$1", [userId, status]);
+    await client.query(
+      `INSERT INTO product_audit_logs
+         (user_id, actor_user_id, action, target_type, target_id, metadata)
+       VALUES ($1::uuid,$1::uuid,$2,'user',$1::text,$3::jsonb)`,
+      [userId, `account.${status}`, JSON.stringify({ status })]
+    );
+  }, db);
+}
+
+export async function exportProductAccount(db: pg.Pool, userId: string): Promise<Record<string, unknown>> {
+  return withTenant(userId, async (client) => {
+    const queries = await Promise.all([
+      client.query("SELECT email, status, created_at AS \"createdAt\", updated_at AS \"updatedAt\" FROM product_users WHERE id=$1", [userId]),
+      client.query("SELECT record, completed, consent_version AS \"consentVersion\", consented_at AS \"consentedAt\", updated_at AS \"updatedAt\" FROM product_onboarding WHERE user_id=$1", [userId]),
+      client.query("SELECT id, filename, mime_type AS \"mimeType\", byte_size AS \"byteSize\", sha256, is_default AS \"isDefault\", created_at AS \"createdAt\" FROM product_resumes WHERE user_id=$1 ORDER BY created_at", [userId]),
+      client.query("SELECT facts, approved_at AS \"approvedAt\", updated_at AS \"updatedAt\" FROM product_career_truth_banks WHERE user_id=$1", [userId]),
+      client.query("SELECT provider, provider_account AS \"providerAccount\", status, connected_at AS \"connectedAt\", updated_at AS \"updatedAt\" FROM product_connections WHERE user_id=$1 ORDER BY provider", [userId]),
+      client.query("SELECT id, source, external_id AS \"externalId\", title, company, location, job_url AS \"jobUrl\", score, status, reasons, discovered_at AS \"discoveredAt\", updated_at AS \"updatedAt\" FROM product_job_matches WHERE user_id=$1 ORDER BY discovered_at", [userId]),
+      client.query("SELECT id, job_match_id AS \"jobMatchId\", action, reason, payload, status, decided_at AS \"decidedAt\", created_at AS \"createdAt\" FROM product_approval_requests WHERE user_id=$1 ORDER BY created_at", [userId]),
+      client.query("SELECT id, job_match_id AS \"jobMatchId\", resume_id AS \"resumeId\", status, final_url AS \"finalUrl\", evidence_reference AS \"evidenceReference\", answers, verified_at AS \"verifiedAt\", created_at AS \"createdAt\", updated_at AS \"updatedAt\" FROM product_applications WHERE user_id=$1 ORDER BY created_at", [userId]),
+      client.query("SELECT action, target_type AS \"targetType\", target_id AS \"targetId\", metadata, created_at AS \"createdAt\" FROM product_audit_logs WHERE user_id=$1 ORDER BY created_at", [userId])
+    ]);
+    return {
+      exportedAt: new Date().toISOString(),
+      user: queries[0].rows[0] || null,
+      onboarding: queries[1].rows[0] || null,
+      resumes: queries[2].rows,
+      careerTruthBank: queries[3].rows[0] || null,
+      connections: queries[4].rows,
+      jobMatches: queries[5].rows,
+      approvalRequests: queries[6].rows,
+      applications: queries[7].rows,
+      auditLogs: queries[8].rows
+    };
+  }, db);
+}
+
+export async function deleteProductAccount(db: pg.Pool, userId: string): Promise<boolean> {
+  const result = await db.query("DELETE FROM product_users WHERE id=$1 RETURNING id", [userId]);
+  return Boolean(result.rowCount);
 }
 
 export async function productActivationReadiness(db: pg.Pool, userId: string): Promise<{

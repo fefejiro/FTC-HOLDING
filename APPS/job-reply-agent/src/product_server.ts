@@ -6,15 +6,19 @@ import {
   authenticatedUser,
   clearSessionCookie,
   createSession,
+  hasRecentAuthentication,
   hashPassword,
   revokeCurrentSession,
   setSessionCookie,
   verifyPassword
 } from "./product_auth.js";
-import { getProductPool, migrateProductDb } from "./product_db.js";
+import { assertProductDatabaseRole, getProductPool, migrateProductDb } from "./product_db.js";
+import { executeIdempotentMutation, normalizeIdempotencyKey, type MutationResponse } from "./product_idempotency.js";
 import {
+  deleteProductAccount,
   deleteProductResume,
   decideProductApproval,
+  exportProductAccount,
   getCareerTruthBank,
   getProductOnboarding,
   getProductResumeContent,
@@ -24,9 +28,11 @@ import {
   productAuditLog,
   productDashboard,
   requestProductConnection,
+  revokeProductConnection,
   saveCareerTruthBank,
   saveProductOnboarding,
-  saveProductResume
+  saveProductResume,
+  setProductAccountStatus
 } from "./product_repository.js";
 import { validateResumeUpload } from "./product_resume.js";
 
@@ -91,6 +97,11 @@ const approvalDecisionSchema = z.object({
   decision: z.enum(["approved", "rejected"])
 });
 
+const accountDeletionSchema = z.object({
+  password: z.string().min(1).max(200),
+  confirmation: z.literal("DELETE")
+});
+
 const attempts = new Map<string, { count: number; resetAt: number }>();
 
 function clientKey(req: IncomingMessage): string {
@@ -153,11 +164,40 @@ async function readJson(req: IncomingMessage): Promise<unknown> {
   for await (const chunk of req) {
     const buffer = Buffer.from(chunk);
     total += buffer.length;
-    if (total > MAX_BODY_BYTES) throw new Error("Request body exceeds 500 KB.");
+    if (total > MAX_BODY_BYTES) throw new Error("Request body exceeds the allowed size.");
     chunks.push(buffer);
   }
   if (chunks.length === 0) return {};
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+}
+
+async function idempotentMutation(
+  req: IncomingMessage,
+  res: ServerResponse,
+  input: {
+    db: ReturnType<typeof getProductPool>;
+    userId: string;
+    requestPath: string;
+    body: unknown;
+    action: () => Promise<MutationResponse>;
+  }
+): Promise<void> {
+  let key: string;
+  try {
+    key = normalizeIdempotencyKey(req.headers["idempotency-key"] || req.headers["x-idempotency-key"]);
+  } catch (error) {
+    return json(res, 400, { error: error instanceof Error ? error.message : "Invalid idempotency key." });
+  }
+  const response = await executeIdempotentMutation(input.db, {
+    userId: input.userId,
+    key,
+    method: req.method || "POST",
+    requestPath: input.requestPath,
+    body: input.body,
+    action: input.action
+  });
+  if (response.replayed) res.setHeader("Idempotency-Replayed", "true");
+  return json(res, response.status, response.body);
 }
 
 export function mutationOriginAllowed(req: IncomingMessage): boolean {
@@ -231,8 +271,13 @@ function renderPage(authenticated: boolean): string {
           <label><input name="assistedApplications" type="checkbox">Prepare and assist with applications.</label>
           <label><input name="controlledSubmissions" type="checkbox">Submit only when every answer is covered by my policy.</label>
         </div>
-        <div class="actions"><button class="accent" type="submit">Save onboarding</button><button id="export" type="button">Export my data</button><button id="pause" type="button">Pause account</button><button id="logout" type="button">Sign out</button></div>
+        <div class="actions"><button class="accent" type="submit">Save onboarding</button><button id="export" type="button">Export my data</button><button id="resume-account" type="button">Resume account</button><button id="pause" type="button">Pause account</button><button id="logout" type="button">Sign out</button></div>
         <div id="result" class="result" aria-live="polite"></div>
+      </form>
+      <form id="delete-account">
+        <label>Current password<input name="password" type="password" autocomplete="current-password" required></label>
+        <label class="checks"><span><input name="confirmation" type="checkbox" required>Permanently delete my account and stored data.</span></label>
+        <button type="submit">Delete account</button>
       </form>
     </section>
     <section id="vault" class="band"${authenticated ? "" : " hidden"}>
@@ -276,14 +321,15 @@ function renderPage(authenticated: boolean): string {
   </main>
   <script>
     const $=(id)=>document.getElementById(id),list=(value)=>String(value||"").split(/\\r?\\n/).map(v=>v.trim()).filter(Boolean);
-    async function call(url,options={}){const response=await fetch(url,{...options,headers:{"content-type":"application/json",...(options.headers||{})}});const body=await response.json();if(!response.ok)throw new Error(body.error||"Request failed");return body}
+    function mutationKey(){return crypto.randomUUID()}
+    async function call(url,options={}){const method=String(options.method||"GET").toUpperCase(),headers={"content-type":"application/json",...(options.headers||{})};if(["PUT","PATCH","DELETE"].includes(method)||(method==="POST"&&!url.startsWith("/api/v1/auth/")&&!url.startsWith("/api/v1/account/")))headers["Idempotency-Key"]=headers["Idempotency-Key"]||mutationKey();const response=await fetch(url,{...options,headers});const body=await response.json();if(!response.ok)throw new Error(body.error||"Request failed");return body}
     const privateSections=["account","vault","truth","connections","jobs"];
     function showAccount(){ $("auth").hidden=true;for(const id of privateSections)$(id).hidden=false;load() }
     async function load(){try{const me=await call("/api/v1/me");$("identity").textContent=me.user.email+" - "+me.user.status;const saved=await call("/api/v1/onboarding");const r=saved.onboarding?.record||{},f=$("onboarding");for(const key of ["fullName","phone","location","linkedIn","compensationFloor","workAuthorization"]){if(r[key]!==undefined)f.elements[key].value=r[key]}for(const key of ["targetTitles","excludedTitles","locations","employmentTypes"]){if(r[key])f.elements[key].value=r[key].join("\\n")}if(r.workModes)Array.from(f.elements.workModes.options).forEach(o=>o.selected=r.workModes.includes(o.value));if(r.sponsorshipRequired!==undefined)f.elements.sponsorshipRequired.value=String(r.sponsorshipRequired);if(r.consent)for(const key of ["truthConfirmed","recruiterDrafts","recruiterSends","assistedApplications","controlledSubmissions"])f.elements[key].checked=Boolean(r.consent[key]);await loadResumes();const truth=await call("/api/v1/career-truth");$("truth-form").elements.facts.value=(truth.truthBank?.facts||[]).map(v=>v.statement).join("\\n");await Promise.all([loadConnections(),loadDashboard()])}catch{ $("auth").hidden=false;for(const id of privateSections)$(id).hidden=true }}
     async function loadResumes(){const data=await call("/api/v1/resumes");$("resume-list").innerHTML=data.resumes.map(r=>'<div class="vault-row"><span><strong>'+escapeHtml(r.filename)+'</strong><br><span class="muted">'+Math.ceil(r.byteSize/1024)+' KB'+(r.isDefault?' - Default':'')+'</span></span><a href="/api/v1/resumes/'+r.id+'/download">Download</a><button type="button" data-delete-resume="'+r.id+'">Delete</button></div>').join("")||'<p class="muted">No resumes uploaded.</p>'}
     function escapeHtml(value){const div=document.createElement("div");div.textContent=String(value);return div.innerHTML}
     function safeUrl(value){try{const url=new URL(String(value));return ["http:","https:"].includes(url.protocol)?escapeHtml(url.href):"#"}catch{return "#"}}
-    async function loadConnections(){const [connections,readiness]=await Promise.all([call("/api/v1/connections"),call("/api/v1/activation-readiness")]);$("connection-list").innerHTML=connections.connections.map(c=>"<li><strong>"+escapeHtml(c.provider)+"</strong>: "+escapeHtml(c.status)+(c.providerAccount?" - "+escapeHtml(c.providerAccount):"")+"</li>").join("")||"<li>No connections prepared.</li>";$("readiness-list").innerHTML=readiness.checks.map(c=>"<li>"+(c.ready?"Ready: ":"Required: ")+escapeHtml(c.key.replaceAll("_"," "))+"</li>").join("")}
+    async function loadConnections(){const [connections,readiness]=await Promise.all([call("/api/v1/connections"),call("/api/v1/activation-readiness")]);$("connection-list").innerHTML=connections.connections.map(c=>'<li><strong>'+escapeHtml(c.provider)+'</strong>: '+escapeHtml(c.status)+(c.providerAccount?' - '+escapeHtml(c.providerAccount):'')+' <button type="button" data-revoke-provider="'+escapeHtml(c.provider)+'">Revoke</button></li>').join("")||"<li>No connections prepared.</li>";$("readiness-list").innerHTML=readiness.checks.map(c=>"<li>"+(c.ready?"Ready: ":"Required: ")+escapeHtml(c.key.replaceAll("_"," "))+"</li>").join("")}
     async function loadDashboard(){const d=await call("/api/v1/dashboard");$("job-list").innerHTML=d.recommendations.map(j=>'<li><a href="'+safeUrl(j.jobUrl)+'" target="_blank" rel="noopener"><strong>'+escapeHtml(j.title)+'</strong></a> at '+escapeHtml(j.company)+' - '+j.score+'%</li>').join("")||"<li>No recommended jobs yet.</li>";$("approval-list").innerHTML=d.approvals.map(a=>'<li><strong>'+escapeHtml(a.title||a.action)+'</strong> '+escapeHtml(a.company||"")+'<br>'+escapeHtml(a.reason)+'<div class="actions"><button type="button" data-approval="'+a.id+'" data-decision="approved">Approve</button><button type="button" data-approval="'+a.id+'" data-decision="rejected">Reject</button></div></li>').join("")||"<li>No approval requests.</li>";$("application-list").innerHTML=d.applications.map(a=>"<li><strong>"+escapeHtml(a.title)+"</strong> at "+escapeHtml(a.company)+" - "+escapeHtml(a.status)+(a.evidenceReference?" - Proof recorded":"")+"</li>").join("")||"<li>No applications recorded.</li>"}
     $("login").addEventListener("submit",async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.currentTarget));try{await call("/api/v1/auth/login",{method:"POST",body:JSON.stringify(d)});showAccount()}catch(error){alert(error.message)}});
     $("register").addEventListener("submit",async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.currentTarget));try{await call("/api/v1/auth/register",{method:"POST",body:JSON.stringify(d)});showAccount()}catch(error){alert(error.message)}});
@@ -292,10 +338,13 @@ function renderPage(authenticated: boolean): string {
     $("resume-list").addEventListener("click",async e=>{const id=e.target.dataset?.deleteResume;if(!id)return;try{await call("/api/v1/resumes/"+id,{method:"DELETE",body:"{}"});await loadResumes()}catch(error){$("resume-result").textContent=error.message}});
     $("truth-form").addEventListener("submit",async e=>{e.preventDefault();const facts=list(new FormData(e.currentTarget).get("facts")).map(statement=>({category:"approved",statement}));try{await call("/api/v1/career-truth",{method:"PUT",body:JSON.stringify({facts})});$("truth-result").textContent="Career facts approved."}catch(error){$("truth-result").textContent=error.message}});
     $("connections").addEventListener("click",async e=>{const provider=e.target.dataset?.provider;if(!provider)return;try{await call("/api/v1/connections",{method:"POST",body:JSON.stringify({provider})});$("connection-result").textContent="Connection prepared. Authentication is still required before activation.";await loadConnections()}catch(error){$("connection-result").textContent=error.message}});
+    $("connection-list").addEventListener("click",async e=>{const provider=e.target.dataset?.revokeProvider;if(!provider)return;try{await call("/api/v1/connections/"+provider,{method:"DELETE",body:"{}"});$("connection-result").textContent="Connection revoked.";await loadConnections()}catch(error){$("connection-result").textContent=error.message}});
     $("approval-list").addEventListener("click",async e=>{const id=e.target.dataset?.approval,decision=e.target.dataset?.decision;if(!id||!decision)return;try{await call("/api/v1/approvals/"+id,{method:"POST",body:JSON.stringify({decision})});await loadDashboard()}catch(error){alert(error.message)}});
     $("logout").addEventListener("click",async()=>{await call("/api/v1/auth/logout",{method:"POST",body:"{}"});location.reload()});
     $("pause").addEventListener("click",async()=>{await call("/api/v1/account/pause",{method:"POST",body:"{}"});location.reload()});
+    $("resume-account").addEventListener("click",async()=>{await call("/api/v1/account/resume",{method:"POST",body:"{}"});location.reload()});
     $("export").addEventListener("click",async()=>{const data=await call("/api/v1/account/export");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:"application/json"}));a.download="jobagent-account-export.json";a.click();URL.revokeObjectURL(a.href)});
+    $("delete-account").addEventListener("submit",async e=>{e.preventDefault();const d=new FormData(e.currentTarget);try{await call("/api/v1/account",{method:"DELETE",body:JSON.stringify({password:d.get("password"),confirmation:d.has("confirmation")?"DELETE":""})});location.reload()}catch(error){$("result").textContent=error.message}});
     if(${authenticated ? "true" : "false"})load();if("serviceWorker"in navigator)navigator.serviceWorker.register("/sw.js");
   </script>
 </body></html>`;
@@ -304,6 +353,7 @@ function renderPage(authenticated: boolean): string {
 export async function createProductServer() {
   const db = getProductPool();
   if (process.env.AUTO_MIGRATE === "true") await migrateProductDb(db);
+  if (process.env.NODE_ENV === "production") await assertProductDatabaseRole(db);
   return createServer(async (req, res) => {
     try {
       const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
@@ -313,8 +363,9 @@ export async function createProductServer() {
       if (req.method === "GET" && url.pathname === "/healthz") return json(res, 200, { ok: true });
       if (req.method === "GET" && url.pathname === "/readyz") {
         try {
+          if (process.env.NODE_ENV === "production") await assertProductDatabaseRole(db);
           await db.query("SELECT 1 FROM product_users LIMIT 1");
-          return json(res, 200, { ready: true, database: "connected" });
+          return json(res, 200, { ready: true, database: "connected", tenantIsolationRole: "enforced" });
         } catch {
           return json(res, 503, { ready: false, database: "unavailable" });
         }
@@ -348,7 +399,7 @@ export async function createProductServer() {
             [inserted.rows[0].id]
           );
           await client.query(
-            "INSERT INTO product_audit_logs (user_id, actor_user_id, action, target_type, target_id) VALUES ($1,$1,'account.created','user',$1::text)",
+            "INSERT INTO product_audit_logs (user_id, actor_user_id, action, target_type, target_id) VALUES ($1::uuid,$1::uuid,'account.created','user',$1::text)",
             [inserted.rows[0].id]
           );
           await client.query("COMMIT");
@@ -396,10 +447,15 @@ export async function createProductServer() {
       }
       if (req.method === "POST" && url.pathname === "/api/v1/resumes") {
         if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
-        const input = resumeUploadSchema.parse(await readJson(req));
+        const body = await readJson(req);
+        const input = resumeUploadSchema.parse(body);
         const resume = validateResumeUpload(input);
-        return json(res, 201, {
-          resume: await saveProductResume(db, user.id, { ...resume, isDefault: input.isDefault })
+        return idempotentMutation(req, res, {
+          db, userId: user.id, requestPath: url.pathname, body,
+          action: async () => ({
+            status: 201,
+            body: { resume: await saveProductResume(db, user.id, { ...resume, isDefault: input.isDefault }) }
+          })
         });
       }
       const resumeDownload = url.pathname.match(/^\/api\/v1\/resumes\/([0-9a-f-]{36})\/download$/i);
@@ -411,24 +467,58 @@ export async function createProductServer() {
       const resumeDelete = url.pathname.match(/^\/api\/v1\/resumes\/([0-9a-f-]{36})$/i);
       if (req.method === "DELETE" && resumeDelete) {
         if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
-        const deleted = await deleteProductResume(db, user.id, resumeDelete[1]);
-        return deleted ? json(res, 200, { deleted: true }) : json(res, 404, { error: "Resume not found." });
+        return idempotentMutation(req, res, {
+          db, userId: user.id, requestPath: url.pathname, body: {},
+          action: async () => {
+            const deleted = await deleteProductResume(db, user.id, resumeDelete[1]);
+            return deleted
+              ? { status: 200, body: { deleted: true } }
+              : { status: 404, body: { error: "Resume not found." } };
+          }
+        });
       }
       if (req.method === "GET" && url.pathname === "/api/v1/career-truth") {
         return json(res, 200, { truthBank: await getCareerTruthBank(db, user.id) });
       }
       if (req.method === "PUT" && url.pathname === "/api/v1/career-truth") {
         if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
-        const input = careerTruthSchema.parse(await readJson(req));
-        return json(res, 200, { truthBank: await saveCareerTruthBank(db, user.id, input.facts) });
+        const body = await readJson(req);
+        const input = careerTruthSchema.parse(body);
+        return idempotentMutation(req, res, {
+          db, userId: user.id, requestPath: url.pathname, body,
+          action: async () => ({
+            status: 200,
+            body: { truthBank: await saveCareerTruthBank(db, user.id, input.facts) }
+          })
+        });
       }
       if (req.method === "GET" && url.pathname === "/api/v1/connections") {
         return json(res, 200, { connections: await listProductConnections(db, user.id) });
       }
       if (req.method === "POST" && url.pathname === "/api/v1/connections") {
         if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
-        const input = connectionSchema.parse(await readJson(req));
-        return json(res, 202, { connection: await requestProductConnection(db, user.id, input.provider) });
+        const body = await readJson(req);
+        const input = connectionSchema.parse(body);
+        return idempotentMutation(req, res, {
+          db, userId: user.id, requestPath: url.pathname, body,
+          action: async () => ({
+            status: 202,
+            body: { connection: await requestProductConnection(db, user.id, input.provider) }
+          })
+        });
+      }
+      const connectionRevoke = url.pathname.match(/^\/api\/v1\/connections\/(gmail|linkedin|indeed)$/);
+      if (req.method === "DELETE" && connectionRevoke) {
+        if (!hasRecentAuthentication(user)) return json(res, 401, { error: "Sign in again before revoking a connection." });
+        return idempotentMutation(req, res, {
+          db, userId: user.id, requestPath: url.pathname, body: {},
+          action: async () => {
+            const connection = await revokeProductConnection(db, user.id, connectionRevoke[1]);
+            return connection
+              ? { status: 200, body: { connection } }
+              : { status: 404, body: { error: "Connection not found." } };
+          }
+        });
       }
       if (req.method === "GET" && url.pathname === "/api/v1/activation-readiness") {
         return json(res, 200, await productActivationReadiness(db, user.id));
@@ -439,35 +529,66 @@ export async function createProductServer() {
       const approvalDecision = url.pathname.match(/^\/api\/v1\/approvals\/([0-9a-f-]{36})$/i);
       if (req.method === "POST" && approvalDecision) {
         if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
-        const input = approvalDecisionSchema.parse(await readJson(req));
-        const approval = await decideProductApproval(db, user.id, approvalDecision[1], input.decision);
-        return approval ? json(res, 200, { approval }) : json(res, 404, { error: "Pending approval not found." });
+        const body = await readJson(req);
+        const input = approvalDecisionSchema.parse(body);
+        return idempotentMutation(req, res, {
+          db, userId: user.id, requestPath: url.pathname, body,
+          action: async () => {
+            const approval = await decideProductApproval(db, user.id, approvalDecision[1], input.decision);
+            return approval
+              ? { status: 200, body: { approval } }
+              : { status: 404, body: { error: "Pending approval not found." } };
+          }
+        });
       }
       if (req.method === "PUT" && url.pathname === "/api/v1/onboarding") {
         if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
-        const record = onboardingSchema.parse(await readJson(req));
+        const body = await readJson(req);
+        const record = onboardingSchema.parse(body);
         const completed = record.consent.truthConfirmed && record.consent.assistedApplications;
-        const onboarding = await saveProductOnboarding(db, user.id, {
-          record,
-          completed,
-          consentVersion: CONSENT_VERSION,
-          consentedAt: new Date().toISOString()
+        return idempotentMutation(req, res, {
+          db, userId: user.id, requestPath: url.pathname, body,
+          action: async () => ({
+            status: 200,
+            body: {
+              onboarding: await saveProductOnboarding(db, user.id, {
+                record,
+                completed,
+                consentVersion: CONSENT_VERSION,
+                consentedAt: new Date().toISOString()
+              })
+            }
+          })
         });
-        return json(res, 200, { onboarding });
       }
       if (req.method === "POST" && url.pathname === "/api/v1/account/pause") {
-        await db.query("UPDATE product_users SET status='paused', updated_at=now() WHERE id=$1", [user.id]);
+        if (!hasRecentAuthentication(user)) return json(res, 401, { error: "Sign in again before pausing the account." });
+        await setProductAccountStatus(db, user.id, "paused");
         await db.query("DELETE FROM product_sessions WHERE user_id=$1", [user.id]);
         clearSessionCookie(res);
         return json(res, 200, { paused: true });
       }
+      if (req.method === "POST" && url.pathname === "/api/v1/account/resume") {
+        if (!hasRecentAuthentication(user)) return json(res, 401, { error: "Sign in again before resuming the account." });
+        const onboarding = await getProductOnboarding(db, user.id);
+        const status = onboarding?.completed ? "active" : "onboarding";
+        await setProductAccountStatus(db, user.id, status);
+        return json(res, 200, { resumed: true, status });
+      }
       if (req.method === "GET" && url.pathname === "/api/v1/account/export") {
-        return json(res, 200, {
-          exportedAt: new Date().toISOString(),
-          user,
-          onboarding: await getProductOnboarding(db, user.id),
-          auditLogs: await productAuditLog(db, user.id, 100)
-        });
+        if (!hasRecentAuthentication(user)) return json(res, 401, { error: "Sign in again before exporting account data." });
+        return json(res, 200, await exportProductAccount(db, user.id));
+      }
+      if (req.method === "DELETE" && url.pathname === "/api/v1/account") {
+        if (!hasRecentAuthentication(user)) return json(res, 401, { error: "Sign in again before deleting the account." });
+        const input = accountDeletionSchema.parse(await readJson(req));
+        const found = await db.query("SELECT password_hash FROM product_users WHERE id=$1", [user.id]);
+        if (!found.rows[0] || !verifyPassword(input.password, found.rows[0].password_hash)) {
+          return json(res, 401, { error: "Current password is incorrect." });
+        }
+        const deleted = await deleteProductAccount(db, user.id);
+        clearSessionCookie(res);
+        return json(res, deleted ? 200 : 404, deleted ? { deleted: true } : { error: "Account not found." });
       }
       if (req.method === "GET" && url.pathname === "/api/v1/audit-logs") {
         return json(res, 200, { auditLogs: await productAuditLog(db, user.id, Number(url.searchParams.get("limit") || 50)) });

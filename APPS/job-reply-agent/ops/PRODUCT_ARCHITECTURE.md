@@ -76,6 +76,28 @@ Hosted identity, PostgreSQL tenancy, private object storage, queue workers,
 encrypted per-user OAuth, self-service onboarding, production deployment, and
 the two-week Chukwuma pilot remain release gates.
 
+## SaaS Foundation Status - 2026-07-27
+
+The first hosted-product boundary is implemented:
+
+- Invite-only account registration and password sessions
+- Authenticated user-derived tenant scope on every current `/api/v1` request
+- PostgreSQL repositories and forced row-level security
+- Runtime refusal of superuser or `BYPASSRLS` database roles in production
+- Separate migration-owner and restricted runtime-role deployment credentials
+- Tenant-scoped idempotency keys for retry-safe user mutations
+- Resume vault, Career Truth Bank, connection, dashboard, approval, and proof APIs
+- Recent-authentication gates for connection revocation, pause, resume, export,
+  and deletion
+- Complete metadata export and password-confirmed account deletion
+- Live PostgreSQL tests proving cross-tenant read, update, delete, and
+  idempotency isolation
+
+This is a verified foundation, not a hosted release. Private object storage,
+email verification and recovery, encrypted OAuth connection completion, queue
+workers, production observability, deployment, and the two-week friend pilot
+remain open.
+
 ## Target Platform
 
 ### Client layer

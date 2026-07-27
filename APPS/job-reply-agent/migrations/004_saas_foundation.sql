@@ -41,7 +41,7 @@ AS $$
      )
 $$;
 
-REVOKE ALL ON FUNCTION app_has_organization_access(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION app_has_organization_access(uuid) TO PUBLIC;
 
 CREATE TABLE IF NOT EXISTS user_profiles (
   user_id uuid PRIMARY KEY REFERENCES product_users(id) ON DELETE CASCADE,

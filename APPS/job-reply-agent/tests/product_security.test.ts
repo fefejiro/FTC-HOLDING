@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { clearSessionCookie, hashPassword, verifyPassword } from "../src/product_auth.js";
+import { clearSessionCookie, hasRecentAuthentication, hashPassword, verifyPassword } from "../src/product_auth.js";
+import { normalizeIdempotencyKey, requestFingerprint } from "../src/product_idempotency.js";
 import { constantEqual } from "../src/product_server.js";
 
 describe("product security", () => {
@@ -28,6 +29,24 @@ describe("product security", () => {
     expect(cookie).toContain("Max-Age=0");
   });
 
+  it("requires a recent session for destructive account actions", () => {
+    const base = { id: "user-a", email: "user@example.com", status: "active" as const };
+    expect(hasRecentAuthentication({ ...base, authenticatedAt: new Date().toISOString() })).toBe(true);
+    expect(hasRecentAuthentication({
+      ...base,
+      authenticatedAt: new Date(Date.now() - 16 * 60_000).toISOString()
+    })).toBe(false);
+  });
+
+  it("binds reusable idempotency keys to the canonical request payload", () => {
+    expect(normalizeIdempotencyKey("request-1234567890")).toBe("request-1234567890");
+    expect(() => normalizeIdempotencyKey("short")).toThrow(/Idempotency-Key/);
+    expect(requestFingerprint("put", "/api/v1/onboarding", { b: 2, a: 1 }))
+      .toBe(requestFingerprint("PUT", "/api/v1/onboarding", { a: 1, b: 2 }));
+    expect(requestFingerprint("PUT", "/api/v1/onboarding", { a: 1 }))
+      .not.toBe(requestFingerprint("PUT", "/api/v1/onboarding", { a: 2 }));
+  });
+
   it("enables row-level security for every tenant-owned product table", () => {
     const migration = fs.readdirSync(path.resolve("migrations"))
       .filter((name) => name.endsWith(".sql"))
@@ -42,7 +61,8 @@ describe("product security", () => {
       ["product_career_truth_banks", "product_career_truth_banks_tenant_policy"],
       ["product_job_matches", "product_job_matches_tenant_policy"],
       ["product_approval_requests", "product_approval_requests_tenant_policy"],
-      ["product_applications", "product_applications_tenant_policy"]
+      ["product_applications", "product_applications_tenant_policy"],
+      ["product_idempotency_keys", "product_idempotency_tenant_policy"]
     ]);
     for (const [table, policy] of policies) {
       expect(migration).toContain(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY`);

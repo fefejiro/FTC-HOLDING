@@ -52,3 +52,14 @@ Report always includes:
 1. Weekly: tune rules and resume mappings.
 2. Bi-weekly: review blocked reasons for policy updates.
 3. Monthly: role-family scoring calibration from response outcomes.
+
+## Product Database Roles
+
+Run `npm run product:migrate` with:
+
+- `MIGRATION_DATABASE_URL`: schema owner used only for migrations and grants
+- `DATABASE_URL`: restricted `NOSUPERUSER NOBYPASSRLS` application role
+
+The production server refuses to start with a superuser or `BYPASSRLS` role.
+This is required because privileged PostgreSQL roles bypass tenant row-level
+security. Never use the migration credential in the web server or workers.

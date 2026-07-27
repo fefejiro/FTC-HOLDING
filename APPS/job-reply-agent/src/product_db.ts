@@ -21,16 +21,20 @@ export function productDbConfig(): ProductDbConfig {
 
 let pool: pg.Pool | null = null;
 
-export function getProductPool(): pg.Pool {
-  if (pool) return pool;
+export function createProductPool(connectionString?: string): pg.Pool {
   const cfg = productDbConfig();
-  pool = new Pool({
-    connectionString: cfg.connectionString,
+  return new Pool({
+    connectionString: connectionString || cfg.connectionString,
     ssl: cfg.ssl ? { rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== "false" } : false,
     max: Number(process.env.DATABASE_POOL_MAX || 10),
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 10_000
   });
+}
+
+export function getProductPool(): pg.Pool {
+  if (pool) return pool;
+  pool = createProductPool();
   return pool;
 }
 
@@ -47,6 +51,20 @@ export async function migrateProductDb(db = getProductPool()): Promise<void> {
     .sort();
   for (const name of migrations) {
     await db.query(fs.readFileSync(path.join(migrationRoot, name), "utf8"));
+  }
+}
+
+export async function assertProductDatabaseRole(db = getProductPool()): Promise<void> {
+  const result = await db.query<{ rolname: string; rolsuper: boolean; rolbypassrls: boolean }>(
+    `SELECT rolname, rolsuper, rolbypassrls
+       FROM pg_roles
+      WHERE rolname=current_user`
+  );
+  const role = result.rows[0];
+  if (!role || role.rolsuper || role.rolbypassrls) {
+    throw new Error(
+      "The product server must use a non-superuser PostgreSQL role without BYPASSRLS."
+    );
   }
 }
 

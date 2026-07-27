@@ -9,6 +9,7 @@ export interface ProductUser {
   id: string;
   email: string;
   status: "onboarding" | "active" | "paused" | "deleted";
+  authenticatedAt: string;
 }
 
 function encode(value: Buffer): string {
@@ -74,7 +75,7 @@ export async function authenticatedUser(req: IncomingMessage, db: pg.Pool): Prom
   const token = cookies(req)[SESSION_COOKIE];
   if (!token) return null;
   const result = await db.query<ProductUser>(
-    `SELECT u.id, u.email, u.status
+    `SELECT u.id, u.email, u.status, s.created_at AS "authenticatedAt"
        FROM product_sessions s
        JOIN product_users u ON u.id=s.user_id
       WHERE s.token_hash=$1 AND s.expires_at > now() AND u.status <> 'deleted'
@@ -87,6 +88,12 @@ export async function authenticatedUser(req: IncomingMessage, db: pg.Pool): Prom
     [sessionHash(token)]
   );
   return result.rows[0];
+}
+
+export function hasRecentAuthentication(user: ProductUser, maximumAgeMinutes = 15): boolean {
+  const authenticatedAt = new Date(user.authenticatedAt).getTime();
+  return Number.isFinite(authenticatedAt)
+    && Date.now() - authenticatedAt <= maximumAgeMinutes * 60_000;
 }
 
 export async function revokeCurrentSession(req: IncomingMessage, db: pg.Pool): Promise<void> {
