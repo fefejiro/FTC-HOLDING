@@ -15,14 +15,17 @@ import {
 import { assertProductDatabaseRole, getProductPool, migrateProductDb } from "./product_db.js";
 import { executeIdempotentMutation, normalizeIdempotencyKey, type MutationResponse } from "./product_idempotency.js";
 import {
+  completeProductObjectDeletion,
   deleteProductAccount,
   deleteProductResume,
   decideProductApproval,
   exportProductAccount,
   getCareerTruthBank,
   getProductOnboarding,
-  getProductResumeContent,
+  getProductResumeBySha,
+  getProductResumeObject,
   listProductConnections,
+  listProductResumeStorageObjects,
   listProductResumes,
   productActivationReadiness,
   productAuditLog,
@@ -34,6 +37,12 @@ import {
   saveProductResume,
   setProductAccountStatus
 } from "./product_repository.js";
+import {
+  assertResumeStorageOwnership,
+  buildResumeStorageKey,
+  createProductObjectStorage,
+  type ProductObjectStorage
+} from "./product_object_storage.js";
 import { validateResumeUpload } from "./product_resume.js";
 
 const HOST = process.env.HOST || "0.0.0.0";
@@ -350,10 +359,13 @@ function renderPage(authenticated: boolean): string {
 </body></html>`;
 }
 
-export async function createProductServer() {
+export async function createProductServer(storage: ProductObjectStorage = createProductObjectStorage()) {
   const db = getProductPool();
   if (process.env.AUTO_MIGRATE === "true") await migrateProductDb(db);
-  if (process.env.NODE_ENV === "production") await assertProductDatabaseRole(db);
+  if (process.env.NODE_ENV === "production") {
+    await assertProductDatabaseRole(db);
+    await storage.assertReady();
+  }
   return createServer(async (req, res) => {
     try {
       const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
@@ -364,8 +376,14 @@ export async function createProductServer() {
       if (req.method === "GET" && url.pathname === "/readyz") {
         try {
           if (process.env.NODE_ENV === "production") await assertProductDatabaseRole(db);
+          await storage.assertReady();
           await db.query("SELECT 1 FROM product_users LIMIT 1");
-          return json(res, 200, { ready: true, database: "connected", tenantIsolationRole: "enforced" });
+          return json(res, 200, {
+            ready: true,
+            database: "connected",
+            tenantIsolationRole: "enforced",
+            objectStorage: storage.driver
+          });
         } catch {
           return json(res, 503, { ready: false, database: "unavailable" });
         }
@@ -450,19 +468,65 @@ export async function createProductServer() {
         const body = await readJson(req);
         const input = resumeUploadSchema.parse(body);
         const resume = validateResumeUpload(input);
+        const storageKey = buildResumeStorageKey(user.id, resume.sha256);
         return idempotentMutation(req, res, {
           db, userId: user.id, requestPath: url.pathname, body,
-          action: async () => ({
-            status: 201,
-            body: { resume: await saveProductResume(db, user.id, { ...resume, isDefault: input.isDefault }) }
-          })
+          action: async () => {
+            const existing = await getProductResumeBySha(db, user.id, resume.sha256);
+            assertResumeStorageOwnership(user.id, storageKey);
+            await storage.putObject({
+              key: storageKey,
+              content: resume.content,
+              mimeType: resume.mimeType,
+              filename: resume.filename
+            });
+            try {
+              const saved = await saveProductResume(db, user.id, {
+                filename: resume.filename,
+                mimeType: resume.mimeType,
+                byteSize: resume.content.length,
+                sha256: resume.sha256,
+                storageKey,
+                storageDriver: storage.driver,
+                isDefault: input.isDefault
+              });
+              return { status: 201, body: { resume: saved } };
+            } catch (error) {
+              if (!existing?.storageKey) {
+                await storage.deleteObject(storageKey).catch(() => undefined);
+              }
+              throw error;
+            }
+          }
         });
       }
       const resumeDownload = url.pathname.match(/^\/api\/v1\/resumes\/([0-9a-f-]{36})\/download$/i);
       if (req.method === "GET" && resumeDownload) {
-        const file = await getProductResumeContent(db, user.id, resumeDownload[1]);
+        const file = await getProductResumeObject(db, user.id, resumeDownload[1]);
         if (!file) return json(res, 404, { error: "Resume not found." });
-        return fileResponse(res, file);
+        if (file.storageKey) {
+          assertResumeStorageOwnership(user.id, file.storageKey);
+          if (file.storageDriver !== storage.driver) {
+            return json(res, 503, { error: "Resume storage is temporarily unavailable." });
+          }
+          const signedUrl = await storage.signedDownloadUrl(file.storageKey, file.filename);
+          if (signedUrl) {
+            securityHeaders(res);
+            res.writeHead(302, { location: signedUrl, "cache-control": "private, no-store" });
+            return res.end();
+          }
+          return fileResponse(res, {
+            filename: file.filename,
+            mimeType: file.mimeType,
+            content: await storage.getObject(file.storageKey)
+          });
+        }
+        if (!file.legacyContent) return json(res, 410, { error: "Resume content is unavailable." });
+        return fileResponse(res, {
+          filename: file.filename,
+          mimeType: file.mimeType,
+          content: file.legacyContent
+        });
       }
       const resumeDelete = url.pathname.match(/^\/api\/v1\/resumes\/([0-9a-f-]{36})$/i);
       if (req.method === "DELETE" && resumeDelete) {
@@ -471,9 +535,23 @@ export async function createProductServer() {
           db, userId: user.id, requestPath: url.pathname, body: {},
           action: async () => {
             const deleted = await deleteProductResume(db, user.id, resumeDelete[1]);
-            return deleted
-              ? { status: 200, body: { deleted: true } }
-              : { status: 404, body: { error: "Resume not found." } };
+            if (!deleted) return { status: 404, body: { error: "Resume not found." } };
+            if (!deleted.storageKey || !deleted.deletionId) {
+              return { status: 200, body: { deleted: true, storageCleanup: "not_required" } };
+            }
+            try {
+              assertResumeStorageOwnership(user.id, deleted.storageKey);
+              if (deleted.storageDriver !== storage.driver) {
+                throw new Error("Configured storage does not match the stored object.");
+              }
+              await storage.deleteObject(deleted.storageKey);
+              await completeProductObjectDeletion(db, user.id, deleted.deletionId);
+              return { status: 200, body: { deleted: true, storageCleanup: "completed" } };
+            } catch (error) {
+              const reason = error instanceof Error ? error.message : "Object deletion failed.";
+              await completeProductObjectDeletion(db, user.id, deleted.deletionId, reason);
+              return { status: 202, body: { deleted: true, storageCleanup: "pending_retry" } };
+            }
           }
         });
       }
@@ -585,6 +663,18 @@ export async function createProductServer() {
         const found = await db.query("SELECT password_hash FROM product_users WHERE id=$1", [user.id]);
         if (!found.rows[0] || !verifyPassword(input.password, found.rows[0].password_hash)) {
           return json(res, 401, { error: "Current password is incorrect." });
+        }
+        const storedObjects = await listProductResumeStorageObjects(db, user.id);
+        try {
+          for (const object of storedObjects) {
+            assertResumeStorageOwnership(user.id, object.storageKey);
+            if (object.storageDriver !== storage.driver) {
+              throw new Error("Configured storage does not match an account object.");
+            }
+            await storage.deleteObject(object.storageKey);
+          }
+        } catch {
+          return json(res, 503, { error: "Private files could not be purged. Account deletion was not completed." });
         }
         const deleted = await deleteProductAccount(db, user.id);
         clearSessionCookie(res);

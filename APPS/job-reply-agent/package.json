@@ -13,6 +13,8 @@
     "product:dev": "tsx src/product_server.ts",
     "product:start": "node dist/product_server.js",
     "product:migrate": "tsx src/product_migrate.ts",
+    "product:storage:migrate": "tsx src/product_storage_migrate.ts",
+    "product:storage:cleanup": "tsx src/product_storage_cleanup.ts",
     "production:check": "node scripts/product-release-check.mjs",
     "production:check:strict": "node scripts/product-release-check.mjs --strict",
     "report": "tsx src/main.ts report:daily",
@@ -85,6 +87,8 @@
   "type": "module",
   "private": true,
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1096.0",
+    "@aws-sdk/s3-request-presigner": "^3.1096.0",
     "better-sqlite3": "^11.7.0",
     "date-fns": "^4.1.0",
     "dotenv": "^16.5.0",

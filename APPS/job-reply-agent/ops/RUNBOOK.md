@@ -63,3 +63,25 @@ Run `npm run product:migrate` with:
 The production server refuses to start with a superuser or `BYPASSRLS` role.
 This is required because privileged PostgreSQL roles bypass tenant row-level
 security. Never use the migration credential in the web server or workers.
+
+## Private Resume Storage
+
+Production requires `OBJECT_STORAGE_DRIVER=s3`, a private bucket, and its
+region. S3-compatible endpoints are supported. Resume keys are derived from
+the authenticated user UUID and content digest; filenames are never used as
+object paths.
+
+After deploying migration `006_private_object_storage.sql`, run:
+
+`npm run product:storage:migrate`
+
+This copies legacy PostgreSQL resume blobs into object storage and clears the
+database content only after each object upload succeeds. Resume deletions are
+recorded in `product_object_deletions` so failed object cleanup remains
+traceable and retryable.
+
+Run `npm run product:storage:cleanup` from the worker or operations environment
+to retry pending and failed deletions. The command fails its process status if
+any object still cannot be removed. Account deletion purges all private resume
+objects before deleting the database account and fails closed if storage is
+unavailable.

@@ -15,6 +15,7 @@ describeDatabase("PostgreSQL tenant isolation", () => {
   let userB = "";
   let resumeB = "";
   let profileB = "";
+  let deletionB = 0;
 
   beforeAll(async () => {
     if (!pool) return;
@@ -53,6 +54,16 @@ describeDatabase("PostgreSQL tenant isolation", () => {
       );
       return result.rows[0].user_id;
     }, appPool);
+    deletionB = await withTenant(userB, async (client) => {
+      const result = await client.query(
+        `INSERT INTO product_object_deletions
+           (user_id, storage_key, storage_driver)
+         VALUES ($1,$2,'s3')
+         RETURNING id`,
+        [userB, buildStorageKey(userB)]
+      );
+      return result.rows[0].id;
+    }, appPool);
   });
 
   afterAll(async () => {
@@ -89,6 +100,14 @@ describeDatabase("PostgreSQL tenant isolation", () => {
     if (!appPool) return;
     const rows = await withTenant(userA, async (client) => {
       return client.query("SELECT user_id FROM user_profiles WHERE user_id=$1", [profileB]);
+    }, appPool);
+    expect(rows.rowCount).toBe(0);
+  });
+
+  it("keeps private-object deletion work scoped to its owning tenant", async () => {
+    if (!appPool) return;
+    const rows = await withTenant(userA, async (client) => {
+      return client.query("SELECT id FROM product_object_deletions WHERE id=$1", [deletionB]);
     }, appPool);
     expect(rows.rowCount).toBe(0);
   });
@@ -136,3 +155,7 @@ describeDatabase("PostgreSQL tenant isolation", () => {
     await expect(assertProductDatabaseRole(pool)).rejects.toThrow(/non-superuser/);
   });
 });
+
+function buildStorageKey(userId: string): string {
+  return `users/${userId}/resumes/${"b".repeat(64)}`;
+}

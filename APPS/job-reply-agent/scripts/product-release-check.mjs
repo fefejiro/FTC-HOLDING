@@ -45,6 +45,12 @@ if (strict) {
   if (!/^postgres(?:ql)?:\/\//.test(process.env.DATABASE_URL || "")) failures.push("DATABASE_URL must be a PostgreSQL URL.");
   if (!/^https:\/\//.test(process.env.APP_ORIGIN || "")) failures.push("APP_ORIGIN must be an HTTPS origin.");
   if ((process.env.JOB_AGENT_INVITE_CODE || "").length < 24) failures.push("JOB_AGENT_INVITE_CODE must be at least 24 characters.");
+  if (process.env.OBJECT_STORAGE_DRIVER !== "s3") failures.push("OBJECT_STORAGE_DRIVER must equal s3.");
+  if (!(process.env.OBJECT_STORAGE_BUCKET || "").trim()) failures.push("OBJECT_STORAGE_BUCKET is required.");
+  if (!(process.env.OBJECT_STORAGE_REGION || "").trim()) failures.push("OBJECT_STORAGE_REGION is required.");
+  if (process.env.OBJECT_STORAGE_ENDPOINT && !/^https:\/\//.test(process.env.OBJECT_STORAGE_ENDPOINT)) failures.push("OBJECT_STORAGE_ENDPOINT must use HTTPS.");
+  if (process.env.OBJECT_STORAGE_SSE === "aws:kms" && !(process.env.OBJECT_STORAGE_KMS_KEY_ID || "").trim()) failures.push("OBJECT_STORAGE_KMS_KEY_ID is required for KMS encryption.");
+  if (process.env.ALLOW_LOCAL_OBJECT_STORAGE === "true") failures.push("ALLOW_LOCAL_OBJECT_STORAGE cannot be enabled in production.");
 } else {
   warnings.push("Runtime environment checks skipped. Run production:check:strict in the deployment environment.");
 }

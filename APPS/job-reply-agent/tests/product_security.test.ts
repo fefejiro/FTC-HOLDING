@@ -62,7 +62,8 @@ describe("product security", () => {
       ["product_job_matches", "product_job_matches_tenant_policy"],
       ["product_approval_requests", "product_approval_requests_tenant_policy"],
       ["product_applications", "product_applications_tenant_policy"],
-      ["product_idempotency_keys", "product_idempotency_tenant_policy"]
+      ["product_idempotency_keys", "product_idempotency_tenant_policy"],
+      ["product_object_deletions", "product_object_deletions_tenant_policy"]
     ]);
     for (const [table, policy] of policies) {
       expect(migration).toContain(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY`);

@@ -68,7 +68,9 @@ export async function listProductResumes(db: pg.Pool, userId: string): Promise<u
   return withTenant(userId, async (client) => {
     const result = await client.query(
       `SELECT id, filename, mime_type AS "mimeType", byte_size AS "byteSize",
-              sha256, is_default AS "isDefault", created_at AS "createdAt"
+              sha256, is_default AS "isDefault",
+              CASE WHEN storage_key IS NOT NULL THEN 'private_object' ELSE 'legacy_database' END AS "storageStatus",
+              created_at AS "createdAt"
          FROM product_resumes WHERE user_id=$1 ORDER BY is_default DESC, created_at DESC`,
       [userId]
     );
@@ -79,20 +81,36 @@ export async function listProductResumes(db: pg.Pool, userId: string): Promise<u
 export async function saveProductResume(
   db: pg.Pool,
   userId: string,
-  resume: { filename: string; mimeType: string; content: Buffer; sha256: string; isDefault: boolean }
+  resume: {
+    filename: string;
+    mimeType: string;
+    byteSize: number;
+    sha256: string;
+    storageKey: string;
+    storageDriver: "local" | "s3";
+    isDefault: boolean;
+  }
 ): Promise<unknown> {
   return withTenant(userId, async (client) => {
     if (resume.isDefault) await client.query("UPDATE product_resumes SET is_default=false WHERE user_id=$1", [userId]);
     const result = await client.query(
       `INSERT INTO product_resumes
-         (user_id, filename, mime_type, byte_size, sha256, content, is_default)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)
+         (user_id, filename, mime_type, byte_size, sha256, content,
+          storage_key, storage_driver, is_default)
+       VALUES ($1,$2,$3,$4,$5,NULL,$6,$7,$8)
        ON CONFLICT (user_id, sha256) DO UPDATE SET
          filename=excluded.filename,
+         storage_key=COALESCE(product_resumes.storage_key, excluded.storage_key),
+         storage_driver=COALESCE(product_resumes.storage_driver, excluded.storage_driver),
+         content=CASE WHEN product_resumes.storage_key IS NULL THEN NULL ELSE product_resumes.content END,
          is_default=CASE WHEN excluded.is_default THEN true ELSE product_resumes.is_default END
        RETURNING id, filename, mime_type AS "mimeType", byte_size AS "byteSize",
-                 sha256, is_default AS "isDefault", created_at AS "createdAt"`,
-      [userId, resume.filename, resume.mimeType, resume.content.length, resume.sha256, resume.content, resume.isDefault]
+                 sha256, storage_key AS "storageKey", storage_driver AS "storageDriver",
+                 is_default AS "isDefault", created_at AS "createdAt"`,
+      [
+        userId, resume.filename, resume.mimeType, resume.byteSize, resume.sha256,
+        resume.storageKey, resume.storageDriver, resume.isDefault
+      ]
     );
     await client.query(
       `INSERT INTO product_audit_logs
@@ -104,27 +122,108 @@ export async function saveProductResume(
   }, db);
 }
 
-export async function getProductResumeContent(db: pg.Pool, userId: string, resumeId: string): Promise<any | null> {
+export async function getProductResumeObject(db: pg.Pool, userId: string, resumeId: string): Promise<any | null> {
   return withTenant(userId, async (client) => {
     const result = await client.query(
-      "SELECT filename, mime_type AS \"mimeType\", content FROM product_resumes WHERE user_id=$1 AND id=$2",
+      `SELECT filename, mime_type AS "mimeType", byte_size AS "byteSize", sha256,
+              storage_key AS "storageKey", storage_driver AS "storageDriver",
+              content AS "legacyContent"
+         FROM product_resumes WHERE user_id=$1 AND id=$2`,
       [userId, resumeId]
     );
     return result.rows[0] || null;
   }, db);
 }
 
-export async function deleteProductResume(db: pg.Pool, userId: string, resumeId: string): Promise<boolean> {
+export async function getProductResumeBySha(
+  db: pg.Pool,
+  userId: string,
+  sha256: string
+): Promise<{ id: string; storageKey: string | null } | null> {
   return withTenant(userId, async (client) => {
-    const result = await client.query("DELETE FROM product_resumes WHERE user_id=$1 AND id=$2 RETURNING filename", [userId, resumeId]);
-    if (!result.rowCount) return false;
+    const result = await client.query(
+      `SELECT id, storage_key AS "storageKey"
+         FROM product_resumes
+        WHERE user_id=$1 AND sha256=$2`,
+      [userId, sha256]
+    );
+    return result.rows[0] || null;
+  }, db);
+}
+
+export async function listProductResumeStorageObjects(
+  db: pg.Pool,
+  userId: string
+): Promise<Array<{ storageKey: string; storageDriver: "local" | "s3" }>> {
+  return withTenant(userId, async (client) => {
+    const result = await client.query(
+      `SELECT storage_key AS "storageKey", storage_driver AS "storageDriver"
+         FROM product_resumes
+        WHERE user_id=$1 AND storage_key IS NOT NULL`,
+      [userId]
+    );
+    return result.rows;
+  }, db);
+}
+
+export async function deleteProductResume(
+  db: pg.Pool,
+  userId: string,
+  resumeId: string
+): Promise<{
+  filename: string;
+  storageKey: string | null;
+  storageDriver: "local" | "s3" | null;
+  deletionId: number | null;
+} | null> {
+  return withTenant(userId, async (client) => {
+    const result = await client.query(
+      `DELETE FROM product_resumes
+        WHERE user_id=$1 AND id=$2
+        RETURNING filename, storage_key AS "storageKey", storage_driver AS "storageDriver"`,
+      [userId, resumeId]
+    );
+    if (!result.rowCount) return null;
+    let deletionId: number | null = null;
+    if (result.rows[0].storageKey) {
+      const deletion = await client.query(
+        `INSERT INTO product_object_deletions
+           (user_id, storage_key, storage_driver)
+         VALUES ($1,$2,$3)
+         RETURNING id`,
+        [userId, result.rows[0].storageKey, result.rows[0].storageDriver]
+      );
+      deletionId = deletion.rows[0].id;
+    }
     await client.query(
       `INSERT INTO product_audit_logs
          (user_id, actor_user_id, action, target_type, target_id, metadata)
        VALUES ($1,$1,'resume.deleted','resume',$2,$3::jsonb)`,
       [userId, resumeId, JSON.stringify({ filename: result.rows[0].filename })]
     );
-    return true;
+    return {
+      filename: result.rows[0].filename,
+      storageKey: result.rows[0].storageKey,
+      storageDriver: result.rows[0].storageDriver,
+      deletionId
+    };
+  }, db);
+}
+
+export async function completeProductObjectDeletion(
+  db: pg.Pool,
+  userId: string,
+  deletionId: number,
+  error?: string
+): Promise<void> {
+  await withTenant(userId, async (client) => {
+    await client.query(
+      `UPDATE product_object_deletions
+          SET status=$3, attempts=attempts+1, last_error=$4,
+              completed_at=CASE WHEN $3='completed' THEN now() ELSE NULL END
+        WHERE user_id=$1 AND id=$2`,
+      [userId, deletionId, error ? "failed" : "completed", error?.slice(0, 500) || null]
+    );
   }, db);
 }
 
@@ -238,7 +337,11 @@ export async function exportProductAccount(db: pg.Pool, userId: string): Promise
     const queries = await Promise.all([
       client.query("SELECT email, status, created_at AS \"createdAt\", updated_at AS \"updatedAt\" FROM product_users WHERE id=$1", [userId]),
       client.query("SELECT record, completed, consent_version AS \"consentVersion\", consented_at AS \"consentedAt\", updated_at AS \"updatedAt\" FROM product_onboarding WHERE user_id=$1", [userId]),
-      client.query("SELECT id, filename, mime_type AS \"mimeType\", byte_size AS \"byteSize\", sha256, is_default AS \"isDefault\", created_at AS \"createdAt\" FROM product_resumes WHERE user_id=$1 ORDER BY created_at", [userId]),
+      client.query(`SELECT id, filename, mime_type AS "mimeType", byte_size AS "byteSize",
+                           sha256, is_default AS "isDefault",
+                           CASE WHEN storage_key IS NOT NULL THEN 'private_object' ELSE 'legacy_database' END AS "storageStatus",
+                           created_at AS "createdAt"
+                      FROM product_resumes WHERE user_id=$1 ORDER BY created_at`, [userId]),
       client.query("SELECT facts, approved_at AS \"approvedAt\", updated_at AS \"updatedAt\" FROM product_career_truth_banks WHERE user_id=$1", [userId]),
       client.query("SELECT provider, provider_account AS \"providerAccount\", status, connected_at AS \"connectedAt\", updated_at AS \"updatedAt\" FROM product_connections WHERE user_id=$1 ORDER BY provider", [userId]),
       client.query("SELECT id, source, external_id AS \"externalId\", title, company, location, job_url AS \"jobUrl\", score, status, reasons, discovered_at AS \"discoveredAt\", updated_at AS \"updatedAt\" FROM product_job_matches WHERE user_id=$1 ORDER BY discovered_at", [userId]),

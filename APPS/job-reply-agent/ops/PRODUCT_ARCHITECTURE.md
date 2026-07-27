@@ -92,11 +92,15 @@ The first hosted-product boundary is implemented:
 - Complete metadata export and password-confirmed account deletion
 - Live PostgreSQL tests proving cross-tenant read, update, delete, and
   idempotency isolation
+- Private S3-compatible resume storage with tenant-bound object keys,
+  short-lived signed downloads, encrypted-at-rest uploads, deletion outbox,
+  and a legacy database-blob migration command
 
 This is a verified foundation, not a hosted release. Private object storage,
 email verification and recovery, encrypted OAuth connection completion, queue
 workers, production observability, deployment, and the two-week friend pilot
-remain open.
+remain open. The object-storage adapter is implemented and locally verified;
+provisioning the production bucket remains an external deployment gate.
 
 ## Target Platform
 
