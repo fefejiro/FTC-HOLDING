@@ -52,11 +52,22 @@ def draft_key(run_date: str, slot: str) -> str:
     return run_date if slot == "news" else f"{run_date}-{slot}"
 
 
-def assert_publish_approved(draft_dir: Path, dry_run: bool) -> None:
+def load_publish_approval(draft_dir: Path) -> dict:
+    approval_path = draft_dir / "publish-approved.json"
+    if not approval_path.exists():
+        return {}
+    try:
+        return json.loads(approval_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"Invalid publish approval file: {approval_path}") from exc
+
+
+def assert_publish_approved(draft_dir: Path, dry_run: bool) -> dict:
+    approval = load_publish_approval(draft_dir)
     if dry_run:
-        return
+        return approval
     if os.environ.get("UNA_ALLOW_UNAPPROVED_POST") == "1":
-        return
+        return approval
     approval_path = draft_dir / "publish-approved.json"
     if not approval_path.exists():
         raise RuntimeError(
@@ -64,12 +75,9 @@ def assert_publish_approved(draft_dir: Path, dry_run: bool) -> None:
             f"Create {approval_path} with {{\"approved\": true}} after review, "
             "or set UNA_ALLOW_UNAPPROVED_POST=1 for an intentional override."
         )
-    try:
-        approval = json.loads(approval_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(f"Invalid publish approval file: {approval_path}") from exc
     if approval.get("approved") is not True:
         raise RuntimeError(f"Publish approval file does not contain approved=true: {approval_path}")
+    return approval
 
 
 def profile_label(window) -> str:
@@ -1069,7 +1077,24 @@ def already_posted_same_images(run_date: str, slot: str, channel: str, hashes: l
     return {"duplicate": False, "reason": "no matching posted hashes"}
 
 
-def instagram_image_paths(run_date: str, asset_dir: Path, slot: str = "news") -> list[Path]:
+def approved_image_paths(approval: dict) -> list[Path]:
+    paths = []
+    for slide in approval.get("slides") or []:
+        asset_path = slide.get("assetPath") or ""
+        if not asset_path:
+            continue
+        path = Path(asset_path)
+        if not path.is_absolute():
+            path = ROOT / path
+        if path.exists():
+            paths.append(path)
+    return paths
+
+
+def instagram_image_paths(run_date: str, asset_dir: Path, slot: str = "news", approval: dict | None = None) -> list[Path]:
+    approved_paths = approved_image_paths(approval or {})
+    if approved_paths:
+        return approved_paths
     preview_dir = ROOT / "content" / "previews"
     if slot != "news":
         evergreen = [preview_dir / f"evergreen-tip-{run_date}-{slot}-slide-{index}.png" for index in range(1, 4)]
@@ -1087,7 +1112,10 @@ def instagram_image_paths(run_date: str, asset_dir: Path, slot: str = "news") ->
     raise RuntimeError(f"Instagram image not found. Tried regional carousel, editorial carousel, and {fallback}")
 
 
-def linkedin_image_paths(run_date: str, slot: str = "news") -> list[Path]:
+def linkedin_image_paths(run_date: str, slot: str = "news", approval: dict | None = None) -> list[Path]:
+    approved_paths = approved_image_paths(approval or {})
+    if approved_paths:
+        return approved_paths
     preview_dir = ROOT / "content" / "previews"
     if slot != "news":
         evergreen = preview_dir / f"evergreen-tip-{run_date}-{slot}.png"
@@ -1121,7 +1149,7 @@ def main() -> int:
     if args.slot != "news":
         proof_dir = proof_dir / args.slot
     proof_dir.mkdir(parents=True, exist_ok=True)
-    assert_publish_approved(draft_dir, args.dry_run)
+    approval = assert_publish_approved(draft_dir, args.dry_run)
 
     topic = json.loads((draft_dir / "topic.json").read_text(encoding="utf-8"))
     sources_path = draft_dir / "sources.json"
@@ -1131,10 +1159,11 @@ def main() -> int:
             sources = json.loads(sources_path.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             sources = []
-    instagram_caption = (draft_dir / "instagram-caption.md").read_text(encoding="utf-8").strip()
-    linkedin_post = (draft_dir / "linkedin-post.md").read_text(encoding="utf-8").strip()
-    image_paths = instagram_image_paths(run_date, asset_dir, args.slot)
-    linkedin_images = linkedin_image_paths(run_date, args.slot)
+    approved_captions = approval.get("captions") or {}
+    instagram_caption = (approved_captions.get("instagram") or (draft_dir / "instagram-caption.md").read_text(encoding="utf-8")).strip()
+    linkedin_post = (approved_captions.get("linkedin") or (draft_dir / "linkedin-post.md").read_text(encoding="utf-8")).strip()
+    image_paths = instagram_image_paths(run_date, asset_dir, args.slot, approval)
+    linkedin_images = linkedin_image_paths(run_date, args.slot, approval)
     instagram_hashes = image_hashes(image_paths)
     linkedin_hashes = image_hashes(linkedin_images)
 

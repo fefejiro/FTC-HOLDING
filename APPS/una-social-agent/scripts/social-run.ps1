@@ -57,7 +57,7 @@ try {
   }
 
   if ($AllowScheduledPublish) {
-    "[$(Get-Date -Format o)] Scheduled publish requested. Publish still requires the premium guard to approve exactly three unique editorial slides." | Tee-Object -FilePath $logPath -Append
+    "[$(Get-Date -Format o)] Scheduled publish requested. Publish requires premium guard approval: three unique editorial slides first, or one approved quality-rescue slide if the carousel cannot be trusted." | Tee-Object -FilePath $logPath -Append
   }
 
   if ($CaptionOnly) {

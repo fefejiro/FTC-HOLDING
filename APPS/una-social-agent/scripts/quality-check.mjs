@@ -2,12 +2,13 @@ import { createHash } from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { assertPublishable } from '../src/publish-guard.mjs'
+import { assertPublishable, assertSingleSlidePublishable } from '../src/publish-guard.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(__dirname, '..')
 const runDate = readArg('--date') || todayInTimeZone()
 const maxSourceAgeDays = Number(readArg('--max-source-age-days') || 7)
+const allowSingleRescue = !process.argv.includes('--no-single-rescue')
 
 function readArg(name) {
   const index = process.argv.indexOf(name)
@@ -205,6 +206,87 @@ function platformFlags(approved) {
   }
 }
 
+function sourceForSlide(slide, sources = []) {
+  return (
+    sources.find((source) => source.url && source.url === slide.sourceUrl) ||
+    sources.find((source) => source.region && String(source.region).toLowerCase() === String(slide.region).toLowerCase()) ||
+    {}
+  )
+}
+
+function buildSingleSlideCaptions(slide, sources = []) {
+  const source = sourceForSlide(slide, sources)
+  const sourceName = source.sourceName || source.source || source.name || 'the source'
+  const headline = slide.headline || 'A tech story worth watching'
+  const deck = slide.deck || slide.summary || 'This one has enough signal to watch closely.'
+  const region = slide.region || 'Today'
+
+  return {
+    instagram: [
+      `Today’s cleanest tech signal: ${headline}.`,
+      '',
+      `${region}: ${deck}`,
+      '',
+      'Quality note: this is the story that passed the visual and copy checks today. Better to post one strong brief than push a weak carousel.',
+      '',
+      `Source: ${sourceName}`,
+      '',
+      '#TechNews #ArtificialIntelligence #DigitalTransformation #Workflow #BusinessTech',
+    ].join('\n'),
+    linkedin: [
+      `A useful tech update today: ${headline}.`,
+      '',
+      `The fact: ${deck}`,
+      '',
+      `Why I am watching it: this was the strongest approved story in today’s newsroom run. The full regional carousel did not clear the quality bar, so the system kept the post smaller instead of forcing weak images or repeated assets into the feed.`,
+      '',
+      `Source: ${sourceName}${source.url ? ` (${source.url})` : ''}`,
+      '',
+      'For operators and builders, that is the better habit: ship the part that is clear, useful, and checked. Hold the rest until the proof is good.',
+      '',
+      'Would you rather see one clean update or a bigger carousel with weaker visuals?',
+      '',
+      '#TechNews #AI #DigitalTransformation',
+    ].join('\n'),
+  }
+}
+
+function approvedPayloadFrom(approved, {
+  renderedRun,
+  visualLedger,
+  mode = 'three_region_carousel',
+  recoveryFrom = [],
+} = {}) {
+  return {
+    approved: true,
+    runDate,
+    approvedAt: new Date().toISOString(),
+    gate: mode === 'single_slide_rescue' ? 'assertSingleSlidePublishable' : 'assertPublishable',
+    mode,
+    recoveryFrom,
+    slides: approved.slides.map((slide, index) => {
+      const record = (visualLedger?.records || []).find((item) => item.story_id === slide.storyId) || visualLedger?.records?.[index] || {}
+      return {
+        storyId: slide.storyId,
+        region: slide.region,
+        sourceUrl: slide.sourceUrl,
+        assetPath: slide.asset?.path,
+        assetFingerprint: approved.assets[index]?.fingerprint || slide.asset?.fingerprint || '',
+        slideFingerprint: slide.asset?.slideFingerprint || '',
+        generationAttempt: record.generation_attempts || 0,
+        qualityScore: slide.asset?.qualityScore,
+        storyAlignment: slide.asset?.storyAlignment,
+        editorialCredibility: slide.asset?.editorialCredibility,
+        genericStockRisk: slide.asset?.genericStockRisk,
+        aiArtifactRisk: slide.asset?.aiArtifactRisk,
+        rejectionReasons: [],
+        copyValidation: slide.copyValidation,
+      }
+    }),
+    captions: approved.captions || renderedRun?.captions || {},
+  }
+}
+
 const draftDir = path.join(root, 'content', 'drafts', runDate)
 const proofDir = path.join(root, 'content', 'proof', runDate)
 const paths = {
@@ -281,29 +363,7 @@ if (!issues.length) {
   recentFingerprints = await loadRecentImageFingerprints()
   try {
     approved = assertPublishable(renderedRun, { recentFingerprints })
-    const approvedPayload = {
-      approved: true,
-      runDate,
-      approvedAt: new Date().toISOString(),
-      gate: 'assertPublishable',
-      slides: approved.slides.map((slide, index) => ({
-        storyId: slide.storyId,
-        region: slide.region,
-        sourceUrl: slide.sourceUrl,
-        assetPath: slide.asset?.path,
-        assetFingerprint: approved.assets[index]?.fingerprint || slide.asset?.fingerprint || '',
-        slideFingerprint: slide.asset?.slideFingerprint || '',
-        generationAttempt: visualLedger.records[index]?.generation_attempts || 0,
-        qualityScore: slide.asset?.qualityScore,
-        storyAlignment: slide.asset?.storyAlignment,
-        editorialCredibility: slide.asset?.editorialCredibility,
-        genericStockRisk: slide.asset?.genericStockRisk,
-        aiArtifactRisk: slide.asset?.aiArtifactRisk,
-        rejectionReasons: [],
-        copyValidation: slide.copyValidation,
-      })),
-      captions: approved.captions,
-    }
+    const approvedPayload = approvedPayloadFrom(approved, { renderedRun, visualLedger })
     await writeJson(path.join(draftDir, 'publish-approved.json'), approvedPayload)
     await writeJson(path.join(proofDir, 'publish-guard-report.json'), {
       status: 'ready',
@@ -314,6 +374,71 @@ if (!issues.length) {
     })
   } catch (error) {
     if (error.code !== 'UNA_SOCIAL_PUBLISH_BLOCKED') throw error
+    if (allowSingleRescue) {
+      try {
+        const firstPass = assertSingleSlidePublishable(renderedRun, { recentFingerprints })
+        const rescueCaptions = buildSingleSlideCaptions(firstPass.slides[0], sources)
+        const rescueRun = { ...renderedRun, slides: firstPass.slides, captions: rescueCaptions }
+        approved = assertSingleSlidePublishable(rescueRun, { recentFingerprints })
+        const approvedPayload = approvedPayloadFrom(approved, {
+          renderedRun: rescueRun,
+          visualLedger,
+          mode: 'single_slide_rescue',
+          recoveryFrom: error.details?.failures || [error.message],
+        })
+        await writeText(paths.instagram, approvedPayload.captions.instagram)
+        await writeText(paths.linkedin, approvedPayload.captions.linkedin)
+        await writeJson(path.join(draftDir, 'publish-approved.json'), approvedPayload)
+        await writeJson(path.join(proofDir, 'publish-guard-report.json'), {
+          status: 'ready',
+          runDate,
+          ...platformFlags({ failures: [] }),
+          recentFingerprintCount: recentFingerprints.length,
+          ...approvedPayload,
+        })
+      } catch (rescueError) {
+        if (rescueError.code !== 'UNA_SOCIAL_PUBLISH_BLOCKED') throw rescueError
+        const details = rescueError.details || error.details || {}
+        const holdPayload = {
+          id: `una-social-quality-hold-${runDate}-${Date.now()}`,
+          runDate,
+          status: 'quality_hold',
+          dryRun: true,
+          mode: 'publish_guard',
+          attemptedRecovery: 'single_slide_rescue',
+          publishBlockedReasons: [
+            ...(error.details?.failures || [error.message]),
+            ...(rescueError.details?.failures || [rescueError.message]),
+          ],
+          rejectedAssets: details.rejectedAssets || [],
+          instagramPublished: false,
+          linkedinPublished: false,
+          publishedUrls: [],
+          screenshots: [],
+          slides: (renderedRun?.slides || []).map((slide) => ({
+            storyId: slide.storyId,
+            region: slide.region,
+            sourceUrl: slide.sourceUrl,
+            assetPath: slide.asset?.path,
+            assetFingerprint: slide.asset?.fingerprint,
+            slideFingerprint: slide.asset?.slideFingerprint,
+            generationAttempt: 0,
+            qualityScore: slide.asset?.qualityScore,
+            storyAlignment: slide.asset?.storyAlignment,
+            editorialCredibility: slide.asset?.editorialCredibility,
+            genericStockRisk: slide.asset?.genericStockRisk,
+            aiArtifactRisk: slide.asset?.aiArtifactRisk,
+            rejectionReasons: details.rejectedAssets?.find((asset) => asset.region === slide.region)?.rejectionReasons || [],
+            copyValidation: details.slides?.find((item) => item.region === slide.region)?.copyValidation || { errors: [] },
+          })),
+          createdAt: new Date().toISOString(),
+        }
+        await writeJson(path.join(draftDir, 'quality-hold.json'), holdPayload)
+        await writeJson(path.join(proofDir, 'publish-guard-report.json'), holdPayload)
+        await appendLedger(holdPayload)
+        issues.push(...holdPayload.publishBlockedReasons.map((reason) => `Publish guard blocked: ${reason}`))
+      }
+    } else {
     const details = error.details || {}
     const holdPayload = {
       id: `una-social-quality-hold-${runDate}-${Date.now()}`,
@@ -349,6 +474,7 @@ if (!issues.length) {
     await writeJson(path.join(proofDir, 'publish-guard-report.json'), holdPayload)
     await appendLedger(holdPayload)
     issues.push(...holdPayload.publishBlockedReasons.map((reason) => `Publish guard blocked: ${reason}`))
+    }
   }
 }
 

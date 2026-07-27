@@ -545,3 +545,39 @@ Unattended publishing status:
   LinkedIn publishing.
 - LinkedIn unattended live posting should stay paused until the composer
   dry-run issue above is fixed and verified.
+
+## July 27 Quality-First Recovery Update
+
+Owner feedback:
+
+- The guard should not simply find errors and stop.
+- The preferred behaviour is to correct or recover when possible.
+- If the full carousel cannot be trusted, one strong image/post is better than
+  two or three weak slides.
+
+Policy now implemented:
+
+- The default standard is still a full three-region carousel.
+- If the three-slide guard fails, `scripts/quality-check.mjs` now attempts a
+  single-slide quality rescue before writing `quality_hold`.
+- The rescue slide must still pass the same asset, score, copy, caption, and
+  recent-fingerprint checks.
+- The rescue path rewrites Instagram and LinkedIn captions so the post does not
+  describe a three-region carousel when only one slide is approved.
+- If no single slide clears the bar, the run still stops as `quality_hold`.
+
+Publisher alignment:
+
+- `scripts/visible-social-post.py` now reads `publish-approved.json` and uses
+  the exact approved asset paths and captions.
+- This prevents the browser publisher from falling back to stale three-slide
+  filename patterns after the guard approves a one-slide rescue.
+
+Validation:
+
+- `npm --prefix APPS/una-social-agent run check` passed.
+- Test count increased to 27.
+- New coverage proves:
+  - a failed carousel can produce an approved one-slide rescue,
+  - a weak one-slide rescue is still blocked,
+  - the original strict carousel rules remain intact.

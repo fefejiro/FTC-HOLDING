@@ -8,7 +8,13 @@ import {
   selectUniqueAssets,
   validateSlideCopy,
 } from '../src/editorial-quality.mjs'
-import { assertPublishable, prepareCarouselForPublish, publishApprovedRun } from '../src/publish-guard.mjs'
+import {
+  assertPublishable,
+  assertSingleSlidePublishable,
+  prepareCarouselForPublish,
+  prepareSingleSlideForPublish,
+  publishApprovedRun,
+} from '../src/publish-guard.mjs'
 
 test('three unique valid images pass', () => {
   const result = prepareCarouselForPublish(validRun())
@@ -114,6 +120,24 @@ test('two slides fail', () => {
   const result = prepareCarouselForPublish(run)
   assert.equal(result.publishable, false)
   assert.ok(result.failures.includes('expected_3_slides:received_2'))
+})
+
+test('single-slide rescue can approve one strong slide from a failed carousel', () => {
+  const run = validRun(['a', 'a', 'c'])
+  const full = prepareCarouselForPublish(run)
+  assert.equal(full.publishable, false)
+  const rescue = assertSingleSlidePublishable(run)
+  assert.equal(rescue.mode, 'single_slide_rescue')
+  assert.equal(rescue.slides.length, 1)
+  assert.equal(rescue.assets.length, 1)
+})
+
+test('single-slide rescue still fails when no image clears quality', () => {
+  const run = validRun()
+  for (const slide of run.slides) slide.asset.qualityScore = 60
+  const rescue = prepareSingleSlideForPublish(run)
+  assert.equal(rescue.publishable, false)
+  assert.ok(rescue.failures.includes('no_single_slide_rescue_candidate'))
 })
 
 test('trailing ellipsis is removed', () => {
