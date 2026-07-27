@@ -8,6 +8,13 @@ export function hasMessage(db: Database.Database, messageId: string): boolean {
   return Boolean(row?.ok);
 }
 
+export function hasThread(db: Database.Database, threadId: string): boolean {
+  const row = db.prepare("SELECT 1 AS ok FROM messages WHERE thread_id = ? LIMIT 1").get(threadId) as
+    | { ok: number }
+    | undefined;
+  return Boolean(row?.ok);
+}
+
 export function insertMessage(db: Database.Database, message: RecruiterMessage): void {
   db.prepare(
     `INSERT OR IGNORE INTO messages (message_id, thread_id, sender, subject, received_at, created_at)

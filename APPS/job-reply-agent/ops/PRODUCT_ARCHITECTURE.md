@@ -40,6 +40,35 @@ This is a working pilot/operator system. It is not currently:
 - Suitable for arbitrary users without operator-created instance files
 - Ready for App Store or Play Store distribution
 
+## Verified Pilot Status - 2026-07-27
+
+Fejiro's local pilot has been revalidated against the isolated-instance
+runtime:
+
+- Gmail OAuth resolves exactly to `fejiro.efiuvwere@gmail.com`.
+- Recruiter processing runs in `approval_required` mode with resume
+  `auto_send` disabled.
+- Low-fit messages below the configured match threshold are skipped without
+  creating reply drafts.
+- Automated alerts and no-reply newsletters are skipped.
+- A Gmail thread can create at most one reply package.
+- Sensitive-language or parser-uncertain opportunities require review.
+- Resume-tailoring failure stops draft creation instead of attaching a static
+  fallback resume.
+- BA/BSA jobs use the approved orange golden template; IT-management jobs use
+  the approved IT Business Systems Manager template.
+- WMS/supply-chain BA roles receive verified domain emphasis from the job
+  description while preserving approved career facts.
+- Generated DOCX output is audited for malformed titles, empty bullets and
+  rows, mojibake, punctuation collisions, and trailing blank pages.
+- Recruiter replies cannot send unless a draft is explicitly placed in the
+  approved-send label. Both approved-send labels were empty at verification.
+
+This validates the local Fejiro pilot workflow, not public-product readiness.
+Hosted identity, PostgreSQL tenancy, private object storage, queue workers,
+encrypted per-user OAuth, self-service onboarding, production deployment, and
+the two-week Chukwuma pilot remain release gates.
+
 ## Target Platform
 
 ### Client layer

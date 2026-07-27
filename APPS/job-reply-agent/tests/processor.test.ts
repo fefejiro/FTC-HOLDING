@@ -40,7 +40,7 @@ describe("mock processing pipeline", () => {
     }
   });
 
-  it("creates a needs-review draft for low-scoring recruiter email instead of skipping it", async () => {
+  it("skips low-scoring recruiter email without creating a reply draft", async () => {
     const tmpDb = path.join(os.tmpdir(), `job-reply-agent-low-score-${Date.now()}.sqlite`);
     try {
       const cfg = loadConfig();
@@ -79,12 +79,124 @@ describe("mock processing pipeline", () => {
         }
       });
 
-      expect(outcome.skipped).toBe(0);
-      expect(outcome.needsReview).toBe(1);
-      expect(statuses).toContain("needs_review");
+      expect(outcome.skipped).toBe(1);
+      expect(outcome.needsReview).toBe(0);
+      expect(statuses).toContain("skipped");
       const draft = db.prepare("SELECT resume_path, recipient_email FROM drafts WHERE message_id=?").get("low-score-1") as any;
-      expect(draft?.resume_path).toBeTruthy();
-      expect(draft?.recipient_email).toBe("jobs@example-recruiter.test");
+      expect(draft).toBeUndefined();
+    } finally {
+      if (fs.existsSync(tmpDb)) {
+        try {
+          fs.rmSync(tmpDb, { force: true });
+        } catch {
+          // no-op for test cleanup
+        }
+      }
+    }
+  });
+
+  it("creates at most one reply package for messages in the same Gmail thread", async () => {
+    const tmpDb = path.join(os.tmpdir(), `job-reply-agent-thread-dedupe-${Date.now()}.sqlite`);
+    try {
+      const cfg = loadConfig();
+      const db = getDb(tmpDb);
+      let draftCalls = 0;
+
+      const outcome = await processGmailInbox({
+        db,
+        profile: cfg.profile,
+        resumeMap: cfg.resumeMap,
+        rules: {
+          ...cfg.rules,
+          resume_tailoring: { ...cfg.rules.resume_tailoring!, enabled: false }
+        },
+        messages: [
+          {
+            messageId: "thread-message-1",
+            threadId: "shared-recruiter-thread",
+            from: "Recruiter <jobs@example-recruiter.test>",
+            subject: "Senior Business Systems Analyst",
+            body: "Senior Business Systems Analyst role in Toronto with requirements gathering, Jira, SQL, UAT, and stakeholder management.",
+            receivedAt: new Date().toISOString()
+          },
+          {
+            messageId: "thread-message-2",
+            threadId: "shared-recruiter-thread",
+            from: "Recruiter <jobs@example-recruiter.test>",
+            subject: "Re: Senior Business Systems Analyst",
+            body: "Following up on the Senior Business Systems Analyst role in Toronto.",
+            receivedAt: new Date().toISOString()
+          }
+        ],
+        createDraft: async () => {
+          draftCalls += 1;
+          return { draftId: "one-draft", recipientEmail: "jobs@example-recruiter.test" };
+        }
+      });
+
+      expect(outcome.processed).toBe(1);
+      expect(draftCalls).toBe(1);
+      const count = db
+        .prepare("SELECT COUNT(*) AS count FROM drafts WHERE thread_id=?")
+        .get("shared-recruiter-thread") as { count: number };
+      expect(count.count).toBe(1);
+    } finally {
+      if (fs.existsSync(tmpDb)) {
+        try {
+          fs.rmSync(tmpDb, { force: true });
+        } catch {
+          // no-op for test cleanup
+        }
+      }
+    }
+  });
+
+  it("does not create a Gmail draft when tailored resume generation fails", async () => {
+    const tmpDb = path.join(os.tmpdir(), `job-reply-agent-tailor-fail-${Date.now()}.sqlite`);
+    try {
+      const cfg = loadConfig();
+      const db = getDb(tmpDb);
+      const statuses: string[] = [];
+      let draftCalls = 0;
+
+      const outcome = await processGmailInbox({
+        db,
+        profile: cfg.profile,
+        resumeMap: cfg.resumeMap,
+        rules: {
+          ...cfg.rules,
+          resume_tailoring: {
+            ...cfg.rules.resume_tailoring!,
+            enabled: true,
+            template_path: path.join(os.tmpdir(), "missing-approved-template.docx"),
+            business_analysis_template_path: path.join(os.tmpdir(), "missing-approved-ba-template.docx")
+          }
+        },
+        messages: [
+          {
+            messageId: "tailor-fail-1",
+            threadId: "tailor-fail-thread-1",
+            from: "Recruiter <jobs@example-recruiter.test>",
+            subject: "Senior Business Systems Analyst",
+            body: "Senior Business Systems Analyst in Toronto requiring requirements gathering, stakeholder management, SQL, Jira, UAT coordination, and API integrations.",
+            receivedAt: new Date().toISOString()
+          }
+        ],
+        createDraft: async () => {
+          draftCalls += 1;
+          return { draftId: "must-not-exist", recipientEmail: "jobs@example-recruiter.test" };
+        },
+        onStatusChange: async (_messageId, status) => {
+          statuses.push(status);
+        }
+      });
+
+      expect(outcome.needsReview).toBe(1);
+      expect(outcome.errors).toBe(0);
+      expect(draftCalls).toBe(0);
+      expect(statuses).toContain("needs_review");
+      const draft = db.prepare("SELECT id FROM drafts WHERE message_id=?").get("tailor-fail-1");
+      expect(draft).toBeUndefined();
     } finally {
       if (fs.existsSync(tmpDb)) {
         try {
