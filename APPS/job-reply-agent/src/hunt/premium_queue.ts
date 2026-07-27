@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { loadUserInstance } from "../instance.js";
 import type Database from "better-sqlite3";
 import { writeCoverLetterArtifacts } from "../cover_letter.js";
 import { logger } from "../logger.js";
@@ -104,7 +105,7 @@ export function buildPremiumQueueReport(
 }
 
 export function writePremiumQueueReport(report: ReturnType<typeof buildPremiumQueueReport>): string {
-  const dir = path.resolve(".local", "premium-queue");
+  const dir = path.join(loadUserInstance().paths.proof, "premium-queue");
   fs.mkdirSync(dir, { recursive: true });
   const file = path.join(dir, `premium-queue-${report.generatedAt.replace(/[:.]/g, "-")}.json`);
   fs.writeFileSync(file, JSON.stringify(report, null, 2), "utf8");

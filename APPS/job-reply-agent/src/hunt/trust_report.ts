@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { loadUserInstance } from "../instance.js";
 import type Database from "better-sqlite3";
 import { logger } from "../logger.js";
 import { loadConfig } from "../config.js";
@@ -129,7 +130,7 @@ export function buildTrustReport(db: Database.Database, opts: TrustReportOptions
 }
 
 export function writeTrustReport(report: ReturnType<typeof buildTrustReport>): string {
-  const dir = path.resolve(".local", "trust-reports");
+  const dir = path.join(loadUserInstance().paths.proof, "trust-reports");
   fs.mkdirSync(dir, { recursive: true });
   const stamp = report.generatedAt.replace(/[:.]/g, "-");
   const file = path.join(dir, `trust-report-${stamp}.json`);
