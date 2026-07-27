@@ -2,16 +2,22 @@ param(
   [Parameter(Mandatory=$true)]
   [ValidatePattern("^[a-z0-9][a-z0-9_-]{1,31}$")]
   [string]$InstanceId,
-  [switch]$BrowserCycle
+  [switch]$BrowserCycle,
+  [string]$ProjectRoot = "",
+  [string]$StateRoot = ""
 )
 
 # Scheduled Job Agent Run
 # Default mode is quiet/background: status, premium queues, and trust reports only.
 # Use -BrowserCycle, or JOB_AGENT_BROWSER_CYCLE=1, for explicit laptop browser proof runs.
 $ErrorActionPreference = "Continue"
-$root = "C:\FTC HOLDING\APPS\job-reply-agent"
+if (-not $ProjectRoot) { $ProjectRoot = Split-Path -Parent $PSScriptRoot }
+if (-not $StateRoot) { $StateRoot = $ProjectRoot }
+$root = (Resolve-Path -LiteralPath $ProjectRoot).Path
+$statePath = (Resolve-Path -LiteralPath $StateRoot).Path
 $env:JOB_AGENT_INSTANCE_ID = $InstanceId
-$logDir = Join-Path $root "instances\$InstanceId\logs"
+$env:JOB_AGENT_STATE_ROOT = $statePath
+$logDir = Join-Path $statePath "instances\$InstanceId\scheduler-logs"
 New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 $stamp = Get-Date -Format "yyyy-MM-dd"
 $log = Join-Path $logDir "$InstanceId-scheduler-$stamp.log"
@@ -54,6 +60,7 @@ function Run-Step($label, $cmd) {
 "=== Scheduler start $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" | Tee-Object -FilePath $log -Append
 "Instance: $InstanceId" | Tee-Object -FilePath $log -Append
 "Working dir: $root" | Tee-Object -FilePath $log -Append
+"State root: $statePath" | Tee-Object -FilePath $log -Append
 $pausedSourcesRaw = if ($env:JOB_AGENT_PAUSED_SOURCES) { $env:JOB_AGENT_PAUSED_SOURCES } else { "dice,indeed,monster" }
 $pausedSources = @($pausedSourcesRaw -split "," | ForEach-Object { $_.Trim().ToLowerInvariant() } | Where-Object { $_ })
 function Test-SourcePaused($source) {

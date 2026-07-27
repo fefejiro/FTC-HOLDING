@@ -1,6 +1,7 @@
 import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
+import { config as loadDotEnv } from "dotenv";
 import { z } from "zod";
 import YAML from "yaml";
 import type {
@@ -160,6 +161,26 @@ function readYaml<T>(filePath: string): T {
   return YAML.parse(raw) as T;
 }
 
+function readOptionalYaml<T>(filePath: string, fallback: T): T {
+  if (!fs.existsSync(filePath)) return fallback;
+  return readYaml<T>(filePath);
+}
+
+function loadStateEnvironment(): void {
+  const stateRoot = (process.env.JOB_AGENT_STATE_ROOT || "").trim();
+  if (!stateRoot) return;
+  const stateEnvPath = path.join(path.resolve(stateRoot), ".env");
+  if (fs.existsSync(stateEnvPath)) {
+    loadDotEnv({ path: stateEnvPath, override: false, quiet: true });
+  }
+}
+
+function resolveStatePath(value: string): string {
+  if (path.isAbsolute(value)) return path.normalize(value);
+  const stateRoot = (process.env.JOB_AGENT_STATE_ROOT || "").trim();
+  return stateRoot ? path.resolve(stateRoot, value) : resolveProjectPath(value);
+}
+
 export function loadConfig(): {
   instance: UserInstanceConfig;
   profile: ProfileConfig;
@@ -183,12 +204,17 @@ export function loadConfig(): {
     sendDailyEmail: boolean;
   };
 } {
+  loadStateEnvironment();
   const instance = loadUserInstance();
   const configPath = (fileName: string) => path.join(instance.paths.configDir, fileName);
   const profile = profileSchema.parse(readYaml<ProfileConfig>(configPath("profile.yaml")));
   const rules = rulesSchema.parse(readYaml<RulesConfig>(configPath("rules.yaml")));
   const resumeMap = resumeMapSchema.parse(readYaml<ResumeMapConfig>(configPath("resume_map.yaml")));
-  const applicationAnswers = readYaml<ApplicationAnswersConfig>(configPath("application_answers.yaml"));
+  const configuredAnswersPath = (process.env.JOB_AGENT_APPLICATION_ANSWERS_PATH || "").trim();
+  const applicationAnswersPath = configuredAnswersPath
+    ? resolveStatePath(configuredAnswersPath)
+    : configPath("application_answers.yaml");
+  const applicationAnswers = readOptionalYaml<ApplicationAnswersConfig>(applicationAnswersPath, {});
 
   const authMode = process.env.GMAIL_AUTH_MODE === "smtp" ? "smtp" : "oauth";
   const gmailClientId = process.env.GMAIL_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "";
@@ -203,7 +229,7 @@ export function loadConfig(): {
     explicitTokensPath ||
     (instance.id === "fejiro" ? legacyTokensPath : "");
   const gmailTokensPath = envTokensPath
-    ? (path.isAbsolute(envTokensPath) ? envTokensPath : resolveProjectPath(envTokensPath))
+    ? resolveStatePath(envTokensPath)
     : instance.paths.gmailTokens;
   const explicitAccountEmail = (process.env.JOB_AGENT_GMAIL_ACCOUNT_EMAIL || "").trim();
   const legacyAccountEmail = (process.env.GMAIL_ACCOUNT_EMAIL || "").trim();

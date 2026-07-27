@@ -3,7 +3,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$root = "C:\FTC HOLDING\APPS\job-reply-agent"
+$root = Split-Path -Parent $PSScriptRoot
 $outDir = Join-Path $root ".local\visible-indeed"
 New-Item -ItemType Directory -Path $outDir -Force | Out-Null
 

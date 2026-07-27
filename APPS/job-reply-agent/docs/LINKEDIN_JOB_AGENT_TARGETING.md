@@ -1,4 +1,5 @@
 # LinkedIn Job Agent Targeting
+
 Last updated: 2026-06-18
 
 ## Active Target

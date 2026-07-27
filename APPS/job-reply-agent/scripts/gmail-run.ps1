@@ -1,15 +1,21 @@
 param(
   [Parameter(Mandatory=$true)]
   [ValidatePattern("^[a-z0-9][a-z0-9_-]{1,31}$")]
-  [string]$InstanceId
+  [string]$InstanceId,
+  [string]$ProjectRoot = "",
+  [string]$StateRoot = ""
 )
 
 # Scheduled Gmail Job Agent Run
 # Scans recruiter email, drafts safe replies, and sends only approved Gmail drafts.
 $ErrorActionPreference = "Continue"
-$root = "C:\FTC HOLDING\APPS\job-reply-agent"
+if (-not $ProjectRoot) { $ProjectRoot = Split-Path -Parent $PSScriptRoot }
+if (-not $StateRoot) { $StateRoot = $ProjectRoot }
+$root = (Resolve-Path -LiteralPath $ProjectRoot).Path
+$statePath = (Resolve-Path -LiteralPath $StateRoot).Path
 $env:JOB_AGENT_INSTANCE_ID = $InstanceId
-$logDir = Join-Path $root "instances\$InstanceId\logs"
+$env:JOB_AGENT_STATE_ROOT = $statePath
+$logDir = Join-Path $statePath "instances\$InstanceId\scheduler-logs"
 New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 $stamp = Get-Date -Format "yyyy-MM-dd"
 $log = Join-Path $logDir "$InstanceId-gmail-scheduler-$stamp.log"
@@ -51,6 +57,7 @@ try {
   "=== Gmail scheduler start $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" | Tee-Object -FilePath $log -Append
   "Instance: $InstanceId" | Tee-Object -FilePath $log -Append
   "Working dir: $root" | Tee-Object -FilePath $log -Append
+  "State root: $statePath" | Tee-Object -FilePath $log -Append
 
   $statusExit = Run-Step "0. Gmail auth status" "npm run gmail:status"
   if ($statusExit -ne 0) {

@@ -9,6 +9,7 @@ import {
 import { getDb } from "../src/db.js";
 
 const originalAccount = process.env.GMAIL_ACCOUNT_EMAIL;
+const originalStateRoot = process.env.JOB_AGENT_STATE_ROOT;
 
 afterEach(() => {
   process.env.JOB_AGENT_INSTANCE_ID = "fejiro";
@@ -16,6 +17,11 @@ afterEach(() => {
     delete process.env.GMAIL_ACCOUNT_EMAIL;
   } else {
     process.env.GMAIL_ACCOUNT_EMAIL = originalAccount;
+  }
+  if (originalStateRoot === undefined) {
+    delete process.env.JOB_AGENT_STATE_ROOT;
+  } else {
+    process.env.JOB_AGENT_STATE_ROOT = originalStateRoot;
   }
 });
 
@@ -52,6 +58,20 @@ describe("JobAgent instance isolation", () => {
       activationEnabled: false,
       proactiveWorkAuthorization: false
     });
+  });
+
+  it("resolves relative private paths beneath an explicit state root", () => {
+    const stateRoot = path.resolve(".local", "state-root-test");
+    process.env.JOB_AGENT_STATE_ROOT = stateRoot;
+
+    const fejiro = loadUserInstance("fejiro");
+    const chukwuma = loadUserInstance("chukwuma");
+
+    expect(fejiro.paths.database).toBe(path.join(stateRoot, "data", "job_leads.sqlite"));
+    expect(fejiro.paths.gmailTokens).toBe(path.join(stateRoot, "data", "gmail_tokens.json"));
+    expect(chukwuma.paths.database).toBe(
+      path.join(stateRoot, "instances", "chukwuma", "data", "job_leads.sqlite")
+    );
   });
 
   it("creates the migration-ready application proof ledger", () => {

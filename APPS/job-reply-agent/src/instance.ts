@@ -118,6 +118,11 @@ function resolveFromManifest(manifestDir: string, value: string): string {
   return path.isAbsolute(value) ? path.normalize(value) : path.resolve(manifestDir, value);
 }
 
+function resolveStateRoot(): string {
+  const configured = (process.env.JOB_AGENT_STATE_ROOT || "").trim();
+  return configured ? path.resolve(configured) : PROJECT_ROOT;
+}
+
 export function resolveInstanceId(explicit?: string): string {
   const value = (explicit || process.env.JOB_AGENT_INSTANCE_ID || "").trim().toLowerCase();
   if (!value) {
@@ -143,7 +148,8 @@ export function loadUserInstance(explicit?: string): UserInstanceConfig {
     throw new Error(`Instance manifest mismatch: requested '${id}', manifest declares '${parsed.id}'.`);
   }
 
-  const manifestDir = path.dirname(manifestPath);
+  const stateRoot = resolveStateRoot();
+  const manifestDir = path.join(stateRoot, "instances", id);
   return {
     id,
     candidateName: parsed.candidate_name.trim(),

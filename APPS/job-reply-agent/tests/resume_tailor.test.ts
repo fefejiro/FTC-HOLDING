@@ -12,46 +12,22 @@ import {
   isApprovedOrangeTemplatePath
 } from "../src/resume_style";
 
-const templatePath = path.resolve(
-  process.cwd(),
-  ".local",
-  "resume-references",
+const fixtureRoot = path.resolve(process.cwd(), ".local", "test-fixtures", "fejiro");
+const templatePath = path.join(
+  fixtureRoot,
   "Fejiro_Efiuvwere_Canadian_Tire_Manager_Network_Analytics_Resume.docx"
 );
-const defaultTemplatePath = path.resolve(
-  process.cwd(),
-  "..",
-  "..",
-  "DOCS",
-  "Fejiro_Job_Reply_Agent_Resume_Bank",
-  "resumes",
-  APPROVED_ORANGE_TEMPLATE_BASENAME
-);
-const businessAnalystTemplatePath = path.resolve(
-  process.cwd(),
-  "..",
-  "..",
-  "DOCS",
-  "Fejiro_Job_Reply_Agent_Resume_Bank",
-  "resumes",
+const defaultTemplatePath = path.join(fixtureRoot, APPROVED_ORANGE_TEMPLATE_BASENAME);
+const businessAnalystTemplatePath = path.join(
+  fixtureRoot,
   APPROVED_BUSINESS_ANALYST_TEMPLATE_BASENAME
 );
-const businessAnalystGoldenTemplatePath = path.resolve(
-  process.cwd(),
-  "..",
-  "..",
-  "DOCS",
-  "Fejiro_Job_Reply_Agent_Resume_Bank",
-  "resumes",
+const businessAnalystGoldenTemplatePath = path.join(
+  fixtureRoot,
   APPROVED_BUSINESS_ANALYST_GOLDEN_TEMPLATE_BASENAME
 );
-const itManagementTemplatePath = path.resolve(
-  process.cwd(),
-  "..",
-  "..",
-  "DOCS",
-  "Fejiro_Job_Reply_Agent_Resume_Bank",
-  "resumes",
+const itManagementTemplatePath = path.join(
+  fixtureRoot,
   APPROVED_IT_MANAGEMENT_TEMPLATE_BASENAME
 );
 const outputDir = path.resolve(process.cwd(), ".local", "generated-tests");

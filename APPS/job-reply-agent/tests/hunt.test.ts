@@ -630,7 +630,8 @@ describe("hunt flow", () => {
 
     const templatePath = path.resolve(
       ".local",
-      "resume-references",
+      "test-fixtures",
+      "fejiro",
       "Fejiro_Efiuvwere_Canadian_Tire_Manager_Network_Analytics_Resume.docx"
     );
     const outputDir = path.resolve(".local", "generated-tests", "premium-artifacts");
@@ -674,7 +675,8 @@ describe("hunt flow", () => {
 
     const templatePath = path.resolve(
       ".local",
-      "resume-references",
+      "test-fixtures",
+      "fejiro",
       "Fejiro_Efiuvwere_Canadian_Tire_Manager_Network_Analytics_Resume.docx"
     );
     const outputDir = path.resolve(".local", "generated-tests", "premium-artifacts-no-package");
@@ -719,7 +721,8 @@ describe("hunt flow", () => {
 
     const templatePath = path.resolve(
       ".local",
-      "resume-references",
+      "test-fixtures",
+      "fejiro",
       "Fejiro_Efiuvwere_Canadian_Tire_Manager_Network_Analytics_Resume.docx"
     );
     const outputDir = path.resolve(".local", "generated-tests", "premium-artifacts-email-fallback");
@@ -762,7 +765,8 @@ describe("hunt flow", () => {
 
     const templatePath = path.resolve(
       ".local",
-      "resume-references",
+      "test-fixtures",
+      "fejiro",
       "Fejiro_Efiuvwere_Canadian_Tire_Manager_Network_Analytics_Resume.docx"
     );
     const outputDir = path.resolve(".local", "generated-tests", "premium-artifacts-title-company-fallback");

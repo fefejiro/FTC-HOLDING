@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
@@ -20,7 +21,7 @@ describe("multi-instance resume isolation", () => {
       "console.log('RESULT_JSON='+JSON.stringify(result));",
       "})()"
     ].join("");
-    const tsxCli = path.resolve("..", "..", "node_modules", "tsx", "dist", "cli.mjs");
+    const tsxCli = createRequire(import.meta.url).resolve("tsx/cli");
     const result = spawnSync(
       process.execPath,
       [tsxCli, "-e", script],
