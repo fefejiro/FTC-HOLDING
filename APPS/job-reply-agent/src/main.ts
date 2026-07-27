@@ -1,9 +1,11 @@
 import { format } from "date-fns";
 import { loadConfig } from "./config.js";
-import { getDb, resetDb } from "./db.js";
+import { getDb, resetDb, resolveDbPath } from "./db.js";
 import { sendEmail } from "./email_sender.js";
 import {
   applyStatusLabel,
+  checkGmailAuthStatus,
+  createDraftFromStoredContent,
   createReplyDraftInThread,
   exchangeCodeAndSaveTokens,
   getGmailConsentUrl,
@@ -13,7 +15,12 @@ import {
   scanInboxForRecruiters,
 } from "./gmail.js";
 import { logger } from "./logger.js";
-import { getApprovedPendingDrafts, insertDecision, markDraftSent } from "./message_store.js";
+import {
+  getApprovedPendingDrafts,
+  insertDecision,
+  markDraftSent,
+  updateDraftTransportMeta
+} from "./message_store.js";
 import {
   approveAllDrafts,
   processGmailInbox,
@@ -23,6 +30,9 @@ import {
 import { buildDailyReport, renderDailyReport } from "./reporter.js";
 import { seedSampleData } from "./seed.js";
 import { isHuntCommand, runHuntCommand } from "./hunt/cli.js";
+import { runAutoApplyQueueAndReport, runDicePreflight, syncApplicationProofFromMessages } from "./automation.js";
+import { assertInstanceReady, instanceBanner, loadUserInstance } from "./instance.js";
+import { evaluateOnboardingReadiness } from "./onboarding.js";
 
 function parseDateArg(argv: string[]): string | undefined {
   return parseOptionArg(argv, "date");
@@ -43,23 +53,177 @@ function parseOptionArg(argv: string[], name: string): string | undefined {
   return next;
 }
 
+async function requireGmailAuth(command: string, cfg: Parameters<typeof checkGmailAuthStatus>[0]): Promise<boolean> {
+  const status = await checkGmailAuthStatus(cfg);
+  if (status.ok) return true;
+
+  logger.error(
+    {
+      command,
+      gmail: status,
+      nextAction: "Run npm run gmail:auth:local, complete Google consent, then rerun npm run gmail:status."
+    },
+    "Gmail auth blocked; refusing to run recruiter email workflow."
+  );
+  process.exitCode = 1;
+  return false;
+}
+
+function extractEmailAddress(value: string): string {
+  return value.match(/<([^>]+)>/)?.[1] || value.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "";
+}
+
+function isStaleDraftError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error || "");
+  return /message not a draft|requested entity was not found|not found|invalid argument/i.test(message);
+}
+
+function resolveRecipientEmailForDraft(db: any, draft: {
+  message_id: string;
+  recipient_email: string | null;
+}): string | null {
+  if (draft.recipient_email && /@/.test(draft.recipient_email)) {
+    return draft.recipient_email;
+  }
+
+  const row = db.prepare("SELECT sender FROM messages WHERE message_id=? LIMIT 1").get(draft.message_id) as { sender?: string } | undefined;
+  const parsed = extractEmailAddress(row?.sender || "");
+  return parsed || null;
+}
+
+async function ensureSendableDraftId(params: {
+  db: any;
+  cfg: any;
+  draft: {
+    message_id: string;
+    thread_id: string;
+    subject: string;
+    body: string;
+    resume_path: string;
+    gmail_draft_id: string | null;
+    recipient_email: string | null;
+  };
+}): Promise<string> {
+  if (params.draft.gmail_draft_id) {
+    return params.draft.gmail_draft_id;
+  }
+
+  const recipient = resolveRecipientEmailForDraft(params.db, params.draft);
+  if (!recipient) {
+    throw new Error("Cannot recreate Gmail draft: missing recipient email.");
+  }
+
+  const rebuilt = await createDraftFromStoredContent({
+    cfg: params.cfg,
+    threadId: params.draft.thread_id,
+    to: recipient,
+    subject: params.draft.subject,
+    body: params.draft.body,
+    resumePath: params.draft.resume_path || undefined
+  });
+
+  updateDraftTransportMeta(params.db, params.draft.message_id, {
+    gmailDraftId: rebuilt.draftId,
+    recipientEmail: recipient
+  });
+
+  return rebuilt.draftId;
+}
+
+async function sendApprovedDraftsViaGmail(params: {
+  db: any;
+  cfg: any;
+  maxSendsPerDay: number;
+  labels: any;
+}): Promise<{ sent: number; errors: number; considered: number }> {
+  const pending = getApprovedPendingDrafts(params.db).slice(0, params.maxSendsPerDay);
+  let sent = 0;
+  let errors = 0;
+
+  for (const draft of pending) {
+    try {
+      let draftId = await ensureSendableDraftId({ db: params.db, cfg: params.cfg, draft });
+
+      try {
+        await sendDraftById(params.cfg, draftId);
+      } catch (sendError) {
+        if (!isStaleDraftError(sendError)) {
+          throw sendError;
+        }
+
+        // Rebuild stale/missing Gmail draft and retry once.
+        const recipient = resolveRecipientEmailForDraft(params.db, draft);
+        if (!recipient) {
+          throw sendError;
+        }
+
+        const rebuilt = await createDraftFromStoredContent({
+          cfg: params.cfg,
+          threadId: draft.thread_id,
+          to: recipient,
+          subject: draft.subject,
+          body: draft.body,
+          resumePath: draft.resume_path || undefined
+        });
+
+        updateDraftTransportMeta(params.db, draft.message_id, {
+          gmailDraftId: rebuilt.draftId,
+          recipientEmail: recipient
+        });
+
+        draftId = rebuilt.draftId;
+        await sendDraftById(params.cfg, draftId);
+      }
+
+      if (markDraftSent(params.db, draft.message_id)) {
+        insertDecision(params.db, draft.message_id, "sent", "Approved Gmail draft sent");
+        await applyStatusLabel({
+          cfg: params.cfg,
+          messageId: draft.message_id,
+          labels: params.labels,
+          status: "sent"
+        });
+        sent += 1;
+      }
+    } catch (error) {
+      errors += 1;
+      insertDecision(
+        params.db,
+        draft.message_id,
+        "error",
+        `Send failed: ${error instanceof Error ? error.message : "unknown error"}`
+      );
+    }
+  }
+
+  return { sent, errors, considered: pending.length };
+}
+
 export function parseCommandArgs(argv: string[]): {
   command: string | undefined;
   dateArg: string | undefined;
   codeArg: string | undefined;
   fileArg: string | undefined;
   limitArg: number | undefined;
+  jobIdArg: number | undefined;
   sourceArg: string | undefined;
+  confirmArg: string | undefined;
+  instanceArg: string | undefined;
 } {
   const limitRaw = parseOptionArg(argv, "limit");
   const limitArg = limitRaw && /^\d+$/.test(limitRaw) ? Number(limitRaw) : undefined;
+  const jobIdRaw = parseOptionArg(argv, "job-id") || parseOptionArg(argv, "id");
+  const jobIdArg = jobIdRaw && /^\d+$/.test(jobIdRaw) ? Number(jobIdRaw) : undefined;
   return {
     command: argv[2],
     dateArg: parseDateArg(argv),
     codeArg: parseOptionArg(argv, "code"),
     fileArg: parseOptionArg(argv, "file"),
     limitArg,
-    sourceArg: parseOptionArg(argv, "source")
+    jobIdArg,
+    sourceArg: parseOptionArg(argv, "source"),
+    confirmArg: parseOptionArg(argv, "confirm"),
+    instanceArg: parseOptionArg(argv, "instance")
   };
 }
 
@@ -69,19 +233,49 @@ export async function runCommand(args: {
   codeArg?: string;
   fileArg?: string;
   limitArg?: number;
+  jobIdArg?: number;
   sourceArg?: string;
+  confirmArg?: string;
+  instanceArg?: string;
 }): Promise<void> {
+  if (args.instanceArg) {
+    process.env.JOB_AGENT_INSTANCE_ID = args.instanceArg;
+  }
   const command = args.command;
   const dateArg = args.dateArg;
   const codeArg = args.codeArg;
   const fileArg = args.fileArg;
   const limitArg = args.limitArg;
+  const jobIdArg = args.jobIdArg;
   const sourceArg = args.sourceArg;
+  const confirmArg = args.confirmArg;
   const reportDate = dateArg || format(new Date(), "yyyy-MM-dd");
+  const instance = loadUserInstance(args.instanceArg);
+  logger.info(instanceBanner(instance), "JobAgent instance selected.");
+
+  if (command === "instance:status") {
+    return;
+  }
+  if (command === "instance:onboarding-status") {
+    const readiness = evaluateOnboardingReadiness(instance);
+    logger.info(readiness, "JobAgent onboarding readiness.");
+    if (!readiness.ready) process.exitCode = 1;
+    return;
+  }
+
+  assertInstanceReady(instance, command || "");
+  if (command === "instance:ready") {
+    logger.info(instanceBanner(instance), "JobAgent instance is approved and activated.");
+    return;
+  }
 
   if (command === "db:reset") {
+    if (confirmArg !== "RESET") {
+      logger.error({ dbPath: resolveDbPath() }, "Refusing destructive reset. Re-run with --confirm=RESET to proceed.");
+      return;
+    }
     resetDb();
-    logger.info("Database reset completed.");
+    logger.info({ dbPath: resolveDbPath() }, "Database reset completed.");
     return;
   }
 
@@ -89,13 +283,30 @@ export async function runCommand(args: {
   const db = getDb();
 
   if (isHuntCommand(command)) {
-    await runHuntCommand({ command, db, limitArg, dateArg, sourceArg, fileArg });
+    await runHuntCommand({ command, db, limitArg, dateArg, sourceArg, fileArg, jobIdArg });
     return;
   }
 
   if (command === "gmail:auth:url") {
-    const url = getGmailConsentUrl(cfg.env);
-    logger.info("Open this URL in your browser, authorize, then copy the code parameter:");
+    const url = getGmailConsentUrl(cfg.env, { fresh: true });
+    logger.info({
+      redirectUri: cfg.env.gmailRedirectUri,
+      callbackServer: "npm run serve"
+    }, "Open this URL in your browser after the callback server is running. OAuth tokens save automatically on /oauth2callback.");
+    logger.info(url);
+    return;
+  }
+
+  if (command === "gmail:auth:local") {
+    const url = getGmailConsentUrl(cfg.env, { fresh: true });
+    logger.info({
+      redirectUri: cfg.env.gmailRedirectUri,
+      steps: [
+        "Run npm run serve in another terminal if it is not already running.",
+        "Open the URL below in the signed-in browser.",
+        "After the success page, run npm run gmail:status."
+      ]
+    }, "Gmail local OAuth flow prepared.");
     logger.info(url);
     return;
   }
@@ -128,7 +339,7 @@ export async function runCommand(args: {
       profile: cfg.profile,
       rules: cfg.rules,
       resumeMap: cfg.resumeMap,
-      includeTnLine: true
+      includeTnLine: cfg.instance.proactiveWorkAuthorization
     });
 
     logger.info({ outcome }, "process:mock completed.");
@@ -140,6 +351,7 @@ export async function runCommand(args: {
       logger.warn("Automation disabled. Skipping process:gmail.");
       return;
     }
+    if (!(await requireGmailAuth(command, cfg.env))) return;
 
       const scanLimit = limitArg ?? cfg.rules.automation.max_drafts_per_day * 3;
       const fetchLimit = limitArg ?? cfg.rules.automation.max_drafts_per_day;
@@ -173,7 +385,7 @@ export async function runCommand(args: {
       rules: cfg.rules,
       resumeMap: cfg.resumeMap,
       messages: inbox,
-      includeTnLine: true,
+      includeTnLine: cfg.instance.proactiveWorkAuthorization,
       onStatusChange: async (messageId, status) => {
         await applyStatusLabel({
           cfg: cfg.env,
@@ -214,38 +426,13 @@ export async function runCommand(args: {
       return;
     }
 
-    const pending = getApprovedPendingDrafts(db)
-      .filter((draft) => Boolean(draft.gmail_draft_id))
-      .slice(0, cfg.rules.automation.max_sends_per_day);
-
-    let sent = 0;
-    let errors = 0;
-
-    for (const draft of pending) {
-      try {
-        await sendDraftById(cfg.env, draft.gmail_draft_id as string);
-        if (markDraftSent(db, draft.message_id)) {
-          insertDecision(db, draft.message_id, "sent", "Approved Gmail draft sent");
-          await applyStatusLabel({
-            cfg: cfg.env,
-            messageId: draft.message_id,
-            labels: cfg.rules.filters.labels,
-            status: "sent"
-          });
-          sent += 1;
-        }
-      } catch (error) {
-        errors += 1;
-        insertDecision(
-          db,
-          draft.message_id,
-          "error",
-          `Send failed: ${error instanceof Error ? error.message : "unknown error"}`
-        );
-      }
-    }
-
-    logger.info({ sent, errors, considered: pending.length }, "send:approved:gmail completed.");
+    const result = await sendApprovedDraftsViaGmail({
+      db,
+      cfg: cfg.env,
+      maxSendsPerDay: cfg.rules.automation.max_sends_per_day,
+      labels: cfg.rules.filters.labels
+    });
+    logger.info(result, "send:approved:gmail completed.");
     return;
   }
 
@@ -260,7 +447,7 @@ export async function runCommand(args: {
       profile: cfg.profile,
       rules: cfg.rules,
       resumeMap: cfg.resumeMap,
-      includeTnLine: true
+      includeTnLine: cfg.instance.proactiveWorkAuthorization
     });
     const approved = approveAllDrafts(db);
     const sent = sendApprovedDrafts({ db, rules: cfg.rules });
@@ -274,6 +461,7 @@ export async function runCommand(args: {
       logger.warn("Automation disabled. Skipping run:gmail-cycle.");
       return;
     }
+    if (!(await requireGmailAuth(command, cfg.env))) return;
 
     const inbox = await listRecruiterInboundMessages(
       cfg.env,
@@ -287,7 +475,7 @@ export async function runCommand(args: {
       rules: cfg.rules,
       resumeMap: cfg.resumeMap,
       messages: inbox,
-      includeTnLine: true,
+      includeTnLine: cfg.instance.proactiveWorkAuthorization,
       onStatusChange: async (messageId, status) => {
         await applyStatusLabel({
           cfg: cfg.env,
@@ -308,26 +496,136 @@ export async function runCommand(args: {
 
     // Send only pre-approved drafts (those already marked as "approved" by the processor).
     // Do NOT auto-approve all drafts (draft-first control model).
-    const pending = getApprovedPendingDrafts(db)
-      .filter((draft) => Boolean(draft.gmail_draft_id))
-      .slice(0, cfg.rules.automation.max_sends_per_day);
+    const sendOutcome = await sendApprovedDraftsViaGmail({
+      db,
+      cfg: cfg.env,
+      maxSendsPerDay: cfg.rules.automation.max_sends_per_day,
+      labels: cfg.rules.filters.labels
+    });
 
-    let sent = 0;
-    for (const draft of pending) {
-      await sendDraftById(cfg.env, draft.gmail_draft_id as string);
-      if (markDraftSent(db, draft.message_id)) {
-        insertDecision(db, draft.message_id, "sent", "Approved Gmail draft sent");
+    logger.info({ processOutcome, sent: sendOutcome.sent, sendErrors: sendOutcome.errors }, "run:gmail-cycle completed (only pre-approved drafts sent).");
+    return;
+  }
+
+  if (command === "gmail:status") {
+    const status = await checkGmailAuthStatus(cfg.env);
+    logger.info(status, "gmail:status completed.");
+    if (!status.ok) {
+      process.exitCode = 1;
+    }
+    return;
+  }
+
+  if (command === "auth:doctor") {
+    const gmail = await checkGmailAuthStatus(cfg.env);
+    const dice = await runDicePreflight();
+    const ok = gmail.ok && dice.ok;
+    logger.info(
+      {
+        ok,
+        gmail,
+        dice,
+        nextAction: ok
+          ? "Auth is ready for cloud/laptop cycles."
+          : "Complete the reported auth fix, then rerun npm run auth:doctor."
+      },
+      "auth:doctor completed."
+    );
+    if (!ok) {
+      process.exitCode = 1;
+    }
+    return;
+  }
+
+  if (command === "run:cloud-cycle") {
+    if (!cfg.rules.automation.enabled || cfg.rules.automation.mode === "disabled") {
+      logger.warn("Automation disabled. Skipping run:cloud-cycle.");
+      return;
+    }
+    if (!(await requireGmailAuth(command, cfg.env))) return;
+
+    const inbox = await listRecruiterInboundMessages(
+      cfg.env,
+      cfg.rules.filters.labels.inbound,
+      limitArg ?? cfg.rules.automation.max_drafts_per_day
+    );
+    const proof = syncApplicationProofFromMessages(db, inbox);
+
+    const processOutcome = await processGmailInbox({
+      db,
+      profile: cfg.profile,
+      rules: cfg.rules,
+      resumeMap: cfg.resumeMap,
+      messages: inbox,
+      includeTnLine: cfg.instance.proactiveWorkAuthorization,
+      onStatusChange: async (messageId, status) => {
         await applyStatusLabel({
           cfg: cfg.env,
-          messageId: draft.message_id,
+          messageId,
           labels: cfg.rules.filters.labels,
-          status: "sent"
+          status
         });
-        sent += 1;
-      }
+      },
+      createDraft: async ({ message, subject, body, resumePath }) =>
+        createReplyDraftInThread({
+          cfg: cfg.env,
+          message,
+          replySubject: subject,
+          replyBody: body,
+          resumePath
+        })
+    });
+
+    const sendOutcome = await sendApprovedDraftsViaGmail({
+      db,
+      cfg: cfg.env,
+      maxSendsPerDay: cfg.rules.automation.max_sends_per_day,
+      labels: cfg.rules.filters.labels
+    });
+
+    logger.info({ proof, processOutcome, sent: sendOutcome.sent, sendErrors: sendOutcome.errors }, "run:cloud-cycle completed.");
+    return;
+  }
+
+  if (command === "run:laptop-cycle") {
+    logger.info({ dbPath: resolveDbPath() }, "run:laptop-cycle started.");
+
+    const preflight = await runDicePreflight();
+    logger.info(preflight, "Dice preflight completed.");
+
+    await runHuntCommand({ command: "hunt:scrape-dice", db, limitArg, dateArg, sourceArg: "dice", fileArg });
+    await runHuntCommand({ command: "hunt:score", db, limitArg, dateArg, sourceArg, fileArg });
+    await runHuntCommand({ command: "hunt:package", db, limitArg, dateArg, sourceArg, fileArg });
+    await runHuntCommand({ command: "hunt:apply-assist", db, limitArg, dateArg, sourceArg, fileArg });
+
+    if (!preflight.ok) {
+      logger.warn({ preflight }, "Laptop Dice apply queue skipped because Dice preflight is not ready.");
+      return;
     }
 
-    logger.info({ processOutcome, sent }, "run:gmail-cycle completed (only pre-approved drafts sent).");
+    const { summary, report } = await runAutoApplyQueueAndReport({
+      db,
+      cfg,
+      sourceFilter: "dice",
+      maxJobs: limitArg,
+      requireDicePreflight: true
+    });
+    logger.info({ summary }, "Laptop Dice apply queue completed.");
+    logger.info({ report }, "Laptop queue report snapshot.");
+    return;
+  }
+
+  if (command === "run:production-cycle") {
+    logger.info({ dbPath: resolveDbPath() }, "run:production-cycle started.");
+
+    await runHuntCommand({ command: "hunt:scrape-all", db, limitArg, dateArg, sourceArg, fileArg });
+    await runHuntCommand({ command: "hunt:score", db, limitArg, dateArg, sourceArg, fileArg });
+    await runHuntCommand({ command: "hunt:package", db, limitArg, dateArg, sourceArg, fileArg });
+    await runHuntCommand({ command: "hunt:apply-assist", db, limitArg, dateArg, sourceArg, fileArg });
+
+    const { summary, report } = await runAutoApplyQueueAndReport({ db, cfg });
+    logger.info({ summary }, "Auto-apply queue completed.");
+    logger.info({ report }, "Queue report snapshot.");
     return;
   }
 
@@ -377,7 +675,7 @@ export async function runCommand(args: {
   }
 
   logger.info(
-    "No command supplied. Use one of: gmail:auth:url, gmail:auth:save --code=..., db:reset, seed:sample, process:mock, process:gmail, approve:all, send:approved, send:approved:gmail, run:mock-cycle, run:gmail-cycle, report:daily, hunt:ingest, hunt:status, hunt:scout, hunt:score, hunt:package, hunt:apply-assist, hunt:approve-submit, hunt:interview-prep, hunt:report, hunt:export."
+    "No command supplied. Pass --instance=<id>. Use one of: instance:status, instance:onboarding-status, instance:ready, auth:doctor, gmail:auth:url, gmail:auth:local, gmail:auth:save --code=..., gmail:status, db:reset --confirm=RESET, seed:sample, process:mock, process:gmail, approve:all, send:approved, send:approved:gmail, run:mock-cycle, run:gmail-cycle, run:laptop-cycle, run:production-cycle, report:daily, hunt:ingest, hunt:status, hunt:scout, hunt:score, hunt:package, hunt:apply-assist, hunt:premium-queue, hunt:prepare-artifacts, hunt:apply-one --job-id=..., hunt:approve-submit, hunt:interview-prep, hunt:report, hunt:export, hunt:scrape-dice, hunt:scrape-indeed, hunt:scrape-linkedin, hunt:scrape-all."
   );
 }
 

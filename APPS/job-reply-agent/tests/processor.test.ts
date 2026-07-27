@@ -95,4 +95,113 @@ describe("mock processing pipeline", () => {
       }
     }
   });
+
+  it("skips automated job alerts without creating resume drafts", async () => {
+    const tmpDb = path.join(os.tmpdir(), `job-reply-agent-alert-skip-${Date.now()}.sqlite`);
+    try {
+      const cfg = loadConfig();
+      const db = getDb(tmpDb);
+      const statuses: string[] = [];
+      let draftCalls = 0;
+
+      const outcome = await processGmailInbox({
+        db,
+        profile: cfg.profile,
+        resumeMap: cfg.resumeMap,
+        rules: {
+          ...cfg.rules,
+          resume_tailoring: { ...cfg.rules.resume_tailoring!, enabled: false }
+        },
+        messages: [
+          {
+            messageId: "linkedin-alert-1",
+            threadId: "thread-linkedin-alert-1",
+            from: "LinkedIn Job Alerts <jobalerts-noreply@linkedin.com>",
+            subject: "Senior Business Systems Analyst at ExampleCo: new jobs in Canada",
+            body: "Manage job alerts. Created with the new AI-powered job search.",
+            receivedAt: new Date().toISOString()
+          }
+        ],
+        createDraft: async () => {
+          draftCalls += 1;
+          return { draftId: "should-not-exist", recipientEmail: "jobalerts-noreply@linkedin.com" };
+        },
+        onStatusChange: async (_messageId, status) => {
+          statuses.push(status);
+        }
+      });
+
+      expect(outcome.processed).toBe(1);
+      expect(outcome.skipped).toBe(1);
+      expect(outcome.drafted).toBe(0);
+      expect(outcome.needsReview).toBe(0);
+      expect(draftCalls).toBe(0);
+      expect(statuses).toEqual(["skipped"]);
+      const draft = db.prepare("SELECT id FROM drafts WHERE message_id=?").get("linkedin-alert-1") as any;
+      expect(draft).toBeUndefined();
+    } finally {
+      if (fs.existsSync(tmpDb)) {
+        try {
+          fs.rmSync(tmpDb, { force: true });
+        } catch {
+          // no-op for test cleanup
+        }
+      }
+    }
+  });
+
+  it("does not skip direct recruiter hiring emails that use templated subjects", async () => {
+    const tmpDb = path.join(os.tmpdir(), `job-reply-agent-direct-recruiter-${Date.now()}.sqlite`);
+    try {
+      const cfg = loadConfig();
+      const db = getDb(tmpDb);
+      let draftCalls = 0;
+
+      const outcome = await processGmailInbox({
+        db,
+        profile: cfg.profile,
+        resumeMap: cfg.resumeMap,
+        rules: {
+          ...cfg.rules,
+          resume_tailoring: { ...cfg.rules.resume_tailoring!, enabled: false },
+          filters: {
+            ...cfg.rules.filters,
+            score_bands: {
+              auto_send_min: 95,
+              draft_min: 70,
+              needs_review_min: 50
+            }
+          }
+        },
+        messages: [
+          {
+            messageId: "direct-recruiter-1",
+            threadId: "thread-direct-recruiter-1",
+            from: "Sumit Goyal <sumit.goyal@synchronycorp.com>",
+            subject: "Urgent Fulltime Hire - Program manager - Remote",
+            body:
+              "Hello Fejiro,\n\nWe have a remote Program Manager role for enterprise implementation, stakeholder management, UAT, release readiness, and vendor coordination. Please share your resume if interested.\n\nYou can update your email preferences.",
+            receivedAt: new Date().toISOString()
+          }
+        ],
+        createDraft: async () => {
+          draftCalls += 1;
+          return { draftId: "draft-direct-recruiter-1", recipientEmail: "sumit.goyal@synchronycorp.com" };
+        }
+      });
+
+      expect(outcome.processed).toBe(1);
+      expect(outcome.skipped).toBe(0);
+      expect(outcome.drafted + outcome.needsReview).toBe(1);
+      expect(draftCalls).toBe(1);
+    } finally {
+      if (fs.existsSync(tmpDb)) {
+        try {
+          fs.rmSync(tmpDb, { force: true });
+        } catch {
+          // no-op for test cleanup
+        }
+      }
+    }
+  });
 });

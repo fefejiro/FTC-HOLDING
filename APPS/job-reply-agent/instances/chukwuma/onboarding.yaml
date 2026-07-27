@@ -1,0 +1,53 @@
+version: 1
+identity:
+  full_name: Chukwuma Mezie-Okoye
+  phone: "+234 802 784 4846"
+  location: Pickering, Ontario, Canada
+  postal_code: L1V 0E9
+  linkedin_url: https://www.linkedin.com/in/chukwuma-mezie-okoye
+  portfolio_url: ""
+  github_url: ""
+preferences:
+  target_titles:
+    - Digital Transformation Program Manager
+    - Product Manager
+    - Head of Marketing
+    - Growth Marketing Director
+    - Corporate Communications Manager
+    - Internal Communications Manager
+    - Account Manager
+    - Digital Project Manager
+    - Content Marketing Manager
+    - AI Prompt Engineer
+    - AI Automation Specialist
+    - AI Trainer
+    - AI Data Specialist
+  excluded_titles: []
+  locations:
+    - Remote
+  work_modes:
+    - remote
+  employment_types:
+    - permanent
+    - contract
+  salary_or_rate: Minimum USD 25 per hour; open to higher compensation based on role scope and market rate
+  relocation: Willing to relocate
+  travel: Willing to travel
+  start_date: First day of any month
+eligibility:
+  work_authorization: Currently based in Nigeria and available for remote roles; disclose location or work authorization only when explicitly asked
+  sponsorship_required: Yes, employer sponsorship is required
+resumes:
+  source_files:
+    - Chukwuma Mezie-Okoye Resume.pdf
+  default_file: Chukwuma Mezie-Okoye Resume.pdf
+job_platforms:
+  - linkedin
+  - indeed
+consent:
+  profile_truth_confirmed: true
+  recruiter_drafts: false
+  recruiter_sends: false
+  assisted_applications: false
+  controlled_submissions: false
+  approved_at: ""

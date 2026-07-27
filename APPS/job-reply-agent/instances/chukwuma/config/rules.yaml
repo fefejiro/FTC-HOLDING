@@ -1,0 +1,74 @@
+automation:
+  enabled: false
+  mode: approval_required
+  timezone: America/Toronto
+  max_drafts_per_day: 10
+  max_sends_per_day: 5
+filters:
+  min_match_score: 75
+  score_bands:
+    auto_send_min: 90
+    draft_min: 75
+    needs_review_min: 50
+  labels:
+    inbound: JOB AGENT/Chukwuma/Recruiter Inbound
+    drafted: JOB AGENT/Chukwuma/Drafted
+    needs_review: JOB AGENT/Chukwuma/Needs Review
+    approve_send: JOB AGENT/Chukwuma/Approved Send
+    sent: JOB AGENT/Chukwuma/Sent
+    skipped: JOB AGENT/Chukwuma/Skipped
+    blocked: JOB AGENT/Chukwuma/Blocked
+    approved: JOB AGENT/Chukwuma/Approved Send
+    trusted_recruiter: JOB AGENT/Chukwuma/Trusted Recruiter
+    resume_generated: JOB AGENT/Chukwuma/Resume Generated
+    error: JOB AGENT/Chukwuma/Error
+risk_controls:
+  block_keywords:
+    - sin
+    - ssn
+    - passport
+    - banking information
+    - payment to apply
+    - suspicious link
+  require_review_keywords:
+    - salary expectation
+    - work authorization
+    - sponsorship
+    - relocation
+    - legal attestation
+    - right to represent
+scraper:
+  enabled: false
+  dice:
+    enabled: false
+    keywords: []
+    max_jobs_per_run: 10
+  indeed:
+    enabled: false
+    keywords: []
+    max_jobs_per_run: 10
+  linkedin:
+    enabled: false
+    keywords:
+      - remote digital transformation program manager
+      - remote product manager Africa
+      - remote head of marketing growth marketing director
+      - remote corporate communications internal communications manager
+      - remote digital project manager account manager
+      - remote content marketing manager
+      - remote AI prompt engineer AI automation specialist
+      - remote AI trainer AI data specialist
+    max_jobs_per_run: 10
+trusted_recruiter_domains: []
+resume_tailoring:
+  enabled: true
+  template_path: C:/FTC HOLDING/APPS/job-reply-agent/instances/chukwuma/resumes/Chukwuma Mezie-Okoye Golden Template.docx
+  output_dir: C:/FTC HOLDING/APPS/job-reply-agent/instances/chukwuma/resumes/generated
+  attach_mode: docx_only
+  auto_send: false
+  auto_send_criteria:
+    min_score: 90
+    require_recruiter_name: true
+    require_clean_role_title: true
+    require_resume_generated: true
+    no_sensitive_requests: true

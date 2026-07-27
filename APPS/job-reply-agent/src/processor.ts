@@ -16,10 +16,39 @@ import {
 import { evaluateRisk } from "./red_flags.js";
 import { generateReply } from "./reply_generator.js";
 import { selectResume } from "./resume_selector.js";
-import { tailorResumeForJD } from "./resume_tailor.js";
+import { selectTailoringTemplatePath, tailorResumeForJD } from "./resume_tailor.js";
 import type { ProfileConfig, RecruiterMessage, ResumeMapConfig, RulesConfig } from "./types.js";
 
 type GmailLabelStatus = "drafted" | "needs_review" | "sent" | "skipped" | "blocked" | "approved";
+
+function classifyAutomatedJobNotice(message: RecruiterMessage): string | null {
+  const from = (message.from || "").toLowerCase();
+  const subject = (message.subject || "").toLowerCase();
+  const body = (message.body || "").toLowerCase();
+  const haystack = `${from}\n${subject}\n${body}`;
+
+  if (
+    /\b(no-?reply|do-?not-?reply|donotreply|noreply|notifications?)@/.test(from) ||
+    from.includes("jobalerts-noreply@linkedin.com") ||
+    from.includes("jobs-noreply@linkedin.com") ||
+    from.includes("jobs-listings@linkedin.com") ||
+    from.includes("messages-noreply@linkedin.com") ||
+    from.includes("newsletters-noreply@linkedin.com") ||
+    from.includes("monster@notifications.monster.com") ||
+    from.includes("donotreply.jobalert.indeed.com")
+  ) {
+    return "Automated/no-reply job notice is not a recruiter thread";
+  }
+
+  if (
+    /\bjob alert\b|\brecommended jobs\b|\bjobs recommended\b|\bnew jobs\b|\bhiring market report\b|\bjob posting\(s\)\b|\bfunding opportunity\b|\bupdate your resume\b/.test(subject) ||
+    /\bcreated with the new ai-powered job search\b|\bmanage job alerts\b/.test(haystack)
+  ) {
+    return "Job alert or newsletter should be scouted, not replied to";
+  }
+
+  return null;
+}
 
 /**
  * Determine if auto-send is eligible based on score, time-of-day, and config guards.
@@ -206,6 +235,18 @@ export async function processGmailInbox(params: {
     insertDecision(db, message.messageId, "processed", "Message ingested from Gmail");
     processed += 1;
 
+    const automatedNoticeReason = classifyAutomatedJobNotice(message);
+    if (automatedNoticeReason) {
+      skipped += 1;
+      insertDecision(db, message.messageId, "skipped", automatedNoticeReason);
+      await params.onStatusChange?.(message.messageId, "skipped");
+      logger.info(
+        { messageId: message.messageId, from: message.from, subject: message.subject, reason: automatedNoticeReason },
+        "Skipped automated job notice."
+      );
+      continue;
+    }
+
     const parsed = parseRecruiterEmail(message);
     const score = scoreOpportunity(parsed, profile, resumeMap, message.body);
     upsertOpportunity(db, message, parsed, score.score);
@@ -271,10 +312,17 @@ export async function processGmailInbox(params: {
     const tailoring = rules.resume_tailoring;
     if (tailoring?.enabled) {
       try {
+        const templatePath = selectTailoringTemplatePath({
+          parsed,
+          jdText: message.body,
+          defaultTemplatePath: tailoring.template_path,
+          businessAnalysisTemplatePath: tailoring.business_analysis_template_path,
+          itManagementTemplatePath: tailoring.it_management_template_path
+        });
         const tailored = await tailorResumeForJD({
           parsed,
           jdText: message.body,
-          templatePath: tailoring.template_path,
+          templatePath,
           outputDir: tailoring.output_dir
         });
         attachPath = tailored.docxPath;

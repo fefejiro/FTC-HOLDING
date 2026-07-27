@@ -3,7 +3,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 import YAML from "yaml";
-import type { ProfileConfig, ResumeMapConfig, RulesConfig } from "./types.js";
+import type {
+  ApplicationAnswersConfig,
+  ProfileConfig,
+  ResumeMapConfig,
+  RulesConfig
+} from "./types.js";
+import { resolveProjectPath } from "./db.js";
+import { loadUserInstance, type UserInstanceConfig } from "./instance.js";
 
 const profileSchema = z.object({
   name: z.string(),
@@ -14,8 +21,8 @@ const profileSchema = z.object({
   contact: z.object({
     email: z.string().email(),
     phone: z.string(),
-    linkedin: z.string().url(),
-    github: z.string().url()
+    linkedin: z.union([z.string().url(), z.literal("")]),
+    github: z.union([z.string().url(), z.literal("")])
   })
 });
 
@@ -65,11 +72,60 @@ const rulesSchema = z.object({
     block_keywords: z.array(z.string()),
     require_review_keywords: z.array(z.string())
   }),
+  scraper: z
+    .object({
+      enabled: z.boolean(),
+      dice: z
+        .object({
+          enabled: z.boolean(),
+          keywords: z.array(z.string()),
+          max_jobs_per_run: z.number().int().positive()
+        })
+        .optional(),
+      indeed: z
+        .object({
+          enabled: z.boolean(),
+          keywords: z.array(z.string()),
+          max_jobs_per_run: z.number().int().positive()
+        })
+        .optional(),
+      linkedin: z
+        .object({
+          enabled: z.boolean(),
+          keywords: z.array(z.string()),
+          max_jobs_per_run: z.number().int().positive()
+        })
+        .optional(),
+      robert_half: z
+        .object({
+          enabled: z.boolean(),
+          keywords: z.array(z.string()),
+          max_jobs_per_run: z.number().int().positive()
+        })
+        .optional(),
+      workopolis: z
+        .object({
+          enabled: z.boolean(),
+          keywords: z.array(z.string()),
+          max_jobs_per_run: z.number().int().positive()
+        })
+        .optional(),
+      mercor: z
+        .object({
+          enabled: z.boolean(),
+          keywords: z.array(z.string()),
+          max_jobs_per_run: z.number().int().positive()
+        })
+        .optional()
+    })
+    .optional(),
   trusted_recruiter_domains: z.array(z.string()),
   resume_tailoring: z
     .object({
       enabled: z.boolean(),
       template_path: z.string(),
+      business_analysis_template_path: z.string().optional(),
+      it_management_template_path: z.string().optional(),
       output_dir: z.string(),
       attach_mode: z.enum(["docx_only", "docx_and_pdf", "pdf_only"]),
       auto_send: z.boolean(),
@@ -99,16 +155,17 @@ const resumeMapSchema = z.object({
   )
 });
 
-function readYaml<T>(relativePath: string): T {
-  const filePath = path.join(process.cwd(), relativePath);
+function readYaml<T>(filePath: string): T {
   const raw = fs.readFileSync(filePath, "utf8");
   return YAML.parse(raw) as T;
 }
 
 export function loadConfig(): {
+  instance: UserInstanceConfig;
   profile: ProfileConfig;
   rules: RulesConfig;
   resumeMap: ResumeMapConfig;
+  applicationAnswers: ApplicationAnswersConfig;
   env: {
     authMode: "oauth" | "smtp";
     gmailClientId: string;
@@ -126,17 +183,40 @@ export function loadConfig(): {
     sendDailyEmail: boolean;
   };
 } {
-  const profile = profileSchema.parse(readYaml<ProfileConfig>("config/profile.yaml"));
-  const rules = rulesSchema.parse(readYaml<RulesConfig>("config/rules.yaml"));
-  const resumeMap = resumeMapSchema.parse(readYaml<ResumeMapConfig>("config/resume_map.yaml"));
+  const instance = loadUserInstance();
+  const configPath = (fileName: string) => path.join(instance.paths.configDir, fileName);
+  const profile = profileSchema.parse(readYaml<ProfileConfig>(configPath("profile.yaml")));
+  const rules = rulesSchema.parse(readYaml<RulesConfig>(configPath("rules.yaml")));
+  const resumeMap = resumeMapSchema.parse(readYaml<ResumeMapConfig>(configPath("resume_map.yaml")));
+  const applicationAnswers = readYaml<ApplicationAnswersConfig>(configPath("application_answers.yaml"));
 
   const authMode = process.env.GMAIL_AUTH_MODE === "smtp" ? "smtp" : "oauth";
-  const gmailClientId = process.env.GMAIL_CLIENT_ID || "";
-  const gmailClientSecret = process.env.GMAIL_CLIENT_SECRET || "";
-  const gmailRedirectUri = process.env.GMAIL_REDIRECT_URI || "http://localhost:3007/oauth2callback";
-  const gmailTokensPath =
-    process.env.GMAIL_TOKENS_PATH || path.join(process.cwd(), "data", "gmail_tokens.json");
-  const gmailAccountEmail = process.env.GMAIL_ACCOUNT_EMAIL || "";
+  const gmailClientId = process.env.GMAIL_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "";
+  const gmailClientSecret = process.env.GMAIL_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET || "";
+  const gmailRedirectUri =
+    process.env.GMAIL_REDIRECT_URI ||
+    process.env.GOOGLE_REDIRECT_URI ||
+    "http://127.0.0.1:3007";
+  const explicitTokensPath = (process.env.JOB_AGENT_GMAIL_TOKENS_PATH || "").trim();
+  const legacyTokensPath = (process.env.GMAIL_TOKENS_PATH || "").trim();
+  const envTokensPath =
+    explicitTokensPath ||
+    (instance.id === "fejiro" ? legacyTokensPath : "");
+  const gmailTokensPath = envTokensPath
+    ? (path.isAbsolute(envTokensPath) ? envTokensPath : resolveProjectPath(envTokensPath))
+    : instance.paths.gmailTokens;
+  const explicitAccountEmail = (process.env.JOB_AGENT_GMAIL_ACCOUNT_EMAIL || "").trim();
+  const legacyAccountEmail = (process.env.GMAIL_ACCOUNT_EMAIL || "").trim();
+  const gmailAccountEmail =
+    explicitAccountEmail ||
+    (legacyAccountEmail.toLowerCase() === instance.expectedGmailAccount
+      ? legacyAccountEmail
+      : instance.expectedGmailAccount);
+  if (gmailAccountEmail.trim().toLowerCase() !== instance.expectedGmailAccount) {
+    throw new Error(
+      `Gmail identity configuration mismatch for '${instance.id}': expected ${instance.expectedGmailAccount}, got ${gmailAccountEmail}.`
+    );
+  }
 
   const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
   const smtpPort = Number(process.env.SMTP_PORT || 587);
@@ -148,9 +228,11 @@ export function loadConfig(): {
   const sendDailyEmail = String(process.env.DAILY_REPORT_ENABLE_SEND || "true") === "true";
 
   return {
+    instance,
     profile,
     rules,
     resumeMap,
+    applicationAnswers,
     env: {
       authMode,
       gmailClientId,

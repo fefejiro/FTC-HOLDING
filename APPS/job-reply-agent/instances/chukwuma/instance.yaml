@@ -1,0 +1,17 @@
+id: chukwuma
+candidate_name: Chukwuma Mezie-Okoye
+expected_gmail_account: chukwumamezok@gmail.com
+onboarding_approved: false
+activation_enabled: false
+proactive_work_authorization: false
+enabled_channels:
+  - gmail
+  - linkedin
+paths:
+  config_dir: config
+  database: data/job_leads.sqlite
+  gmail_tokens: secrets/gmail_tokens.json
+  resume_root: resumes
+  browser_profile: browser/profile
+  logs: logs
+  proof: proof

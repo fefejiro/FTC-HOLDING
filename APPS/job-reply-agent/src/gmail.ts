@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import { google, gmail_v1 } from "googleapis";
 import type { Credentials } from "google-auth-library";
 import type { RecruiterMessage } from "./types.js";
@@ -26,7 +27,7 @@ export type GmailStatusLabelState = keyof GmailStatusLabelConfig;
 function ensureOauthConfigured(cfg: GmailAuthConfig): void {
   if (!cfg.gmailClientId || !cfg.gmailClientSecret || !cfg.gmailRedirectUri) {
     throw new Error(
-      "Missing OAuth config. Set GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, and GMAIL_REDIRECT_URI."
+      "Missing OAuth config. Set GMAIL_CLIENT_ID/GMAIL_CLIENT_SECRET/GMAIL_REDIRECT_URI or GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET/GOOGLE_REDIRECT_URI."
     );
   }
 }
@@ -34,6 +35,55 @@ function ensureOauthConfigured(cfg: GmailAuthConfig): void {
 function createOAuthClient(cfg: GmailAuthConfig) {
   ensureOauthConfigured(cfg);
   return new google.auth.OAuth2(cfg.gmailClientId, cfg.gmailClientSecret, cfg.gmailRedirectUri);
+}
+
+function pkcePath(cfg: GmailAuthConfig): string {
+  return path.join(path.dirname(path.resolve(cfg.gmailTokensPath)), "gmail_oauth_pkce.json");
+}
+
+function base64Url(buffer: Buffer): string {
+  return buffer
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function createPkcePair(): { verifier: string; challenge: string } {
+  const verifier = base64Url(crypto.randomBytes(64));
+  return { verifier, challenge: createPkceChallenge(verifier) };
+}
+
+function createPkceChallenge(verifier: string): string {
+  return base64Url(crypto.createHash("sha256").update(verifier).digest());
+}
+
+function savePkceVerifier(cfg: GmailAuthConfig, verifier: string): void {
+  const file = pkcePath(cfg);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify({ verifier, createdAt: new Date().toISOString() }, null, 2), "utf8");
+}
+
+function readPkceVerifier(cfg: GmailAuthConfig): string | null {
+  const file = pkcePath(cfg);
+  if (!fs.existsSync(file)) return null;
+  try {
+    const parsed = JSON.parse(fs.readFileSync(file, "utf8")) as { verifier?: string };
+    return parsed.verifier || null;
+  } catch {
+    return null;
+  }
+}
+
+function getReusablePkcePair(cfg: GmailAuthConfig): { verifier: string; challenge: string } {
+  const existingVerifier = readPkceVerifier(cfg);
+  if (existingVerifier) {
+    return { verifier: existingVerifier, challenge: createPkceChallenge(existingVerifier) };
+  }
+
+  const pkce = createPkcePair();
+  savePkceVerifier(cfg, pkce.verifier);
+  return pkce;
 }
 
 function decodeBase64Url(input: string): string {
@@ -53,17 +103,134 @@ function encodeBase64Url(input: Buffer | string): string {
 function readTokenFile(tokensPath: string): Credentials {
   if (!fs.existsSync(tokensPath)) {
     throw new Error(
-      `OAuth tokens not found at ${tokensPath}. Run gmail:auth:url and gmail:auth:save first.`
+      `OAuth tokens not found at ${tokensPath}. Run npm run serve, then npm run gmail:auth:url.`
     );
   }
   const raw = fs.readFileSync(tokensPath, "utf8");
   return JSON.parse(raw) as Credentials;
 }
 
+function getTokenCandidates(tokensPath: string): string[] {
+  const resolved = path.resolve(tokensPath);
+  const dir = path.dirname(resolved);
+  const base = path.basename(resolved);
+  const prefix = base.replace(/\.json$/i, "").split(".")[0] || "gmail_tokens";
+
+  const candidates = new Set<string>([resolved]);
+  if (!fs.existsSync(dir)) {
+    return [resolved];
+  }
+
+  const files = fs
+    .readdirSync(dir)
+    .filter((name) => name.startsWith(prefix) && name.endsWith(".json"))
+    .map((name) => path.join(dir, name))
+    .sort((a, b) => {
+      const aTime = fs.statSync(a).mtimeMs;
+      const bTime = fs.statSync(b).mtimeMs;
+      return bTime - aTime;
+    });
+
+  for (const file of files) {
+    candidates.add(file);
+  }
+
+  return Array.from(candidates);
+}
+
+function isInvalidGrant(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error || "");
+  if (/invalid_grant/i.test(message)) {
+    return true;
+  }
+
+  const maybeResponse = (error as any)?.response?.data;
+  return /invalid_grant/i.test(String(maybeResponse?.error || ""));
+}
+
+function buildReauthHint(cfg: GmailAuthConfig): string {
+  const consentUrl = getGmailConsentUrl(cfg);
+  return [
+    `Gmail OAuth token is invalid/revoked at ${cfg.gmailTokensPath}.`,
+    `Configured redirect URI: ${cfg.gmailRedirectUri}`,
+    "Google Cloud must allow that exact redirect URI for this OAuth client.",
+    "Re-auth steps:",
+    "1) Start the local callback server: npm run serve",
+    `2) Open consent URL: ${consentUrl}`,
+    "3) Finish Google consent; the callback should save tokens automatically.",
+    "4) Verify with: npm run gmail:status",
+    "Fallback: if Google leaves a code in the browser URL instead of hitting the callback, run npm run gmail:auth:save -- --code=<PASTE_CODE>."
+  ].join("\n");
+}
+
 async function getGmailClient(cfg: GmailAuthConfig): Promise<gmail_v1.Gmail> {
-  const oauth = createOAuthClient(cfg);
-  oauth.setCredentials(readTokenFile(cfg.gmailTokensPath));
-  return google.gmail({ version: "v1", auth: oauth });
+  const candidates = getTokenCandidates(cfg.gmailTokensPath);
+  let lastError: unknown;
+
+  for (const candidatePath of candidates) {
+    try {
+      const oauth = createOAuthClient(cfg);
+      oauth.setCredentials(readTokenFile(candidatePath));
+      const gmail = google.gmail({ version: "v1", auth: oauth });
+
+      // Force a lightweight authenticated call so revoked tokens fail early.
+      await gmail.users.getProfile({ userId: "me" });
+
+      if (candidatePath !== path.resolve(cfg.gmailTokensPath)) {
+        fs.mkdirSync(path.dirname(cfg.gmailTokensPath), { recursive: true });
+        fs.copyFileSync(candidatePath, cfg.gmailTokensPath);
+      }
+
+      return gmail;
+    } catch (error) {
+      lastError = error;
+      if (!isInvalidGrant(error)) {
+        throw error;
+      }
+    }
+  }
+
+  const hint = buildReauthHint(cfg);
+  throw new Error(`${hint}\n\nOriginal error: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
+}
+
+export async function checkGmailAuthStatus(cfg: GmailAuthConfig): Promise<{
+  ok: boolean;
+  accountEmail: string;
+  tokenPath: string;
+  redirectUri: string;
+  message: string;
+}> {
+  try {
+    const gmail = await getGmailClient(cfg);
+    const profile = await gmail.users.getProfile({ userId: "me" });
+    const accountEmail = (profile.data.emailAddress || "").trim().toLowerCase();
+    const expectedEmail = (cfg.gmailAccountEmail || "").trim().toLowerCase();
+    if (expectedEmail && accountEmail !== expectedEmail) {
+      return {
+        ok: false,
+        accountEmail,
+        tokenPath: path.resolve(cfg.gmailTokensPath),
+        redirectUri: cfg.gmailRedirectUri,
+        message: `Gmail identity mismatch: expected ${expectedEmail}, authenticated as ${accountEmail || "(unknown)"}.`
+      };
+    }
+    return {
+      ok: true,
+      accountEmail,
+      tokenPath: path.resolve(cfg.gmailTokensPath),
+      redirectUri: cfg.gmailRedirectUri,
+      message: "Gmail OAuth token is valid."
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      accountEmail: cfg.gmailAccountEmail || "",
+      tokenPath: path.resolve(cfg.gmailTokensPath),
+      redirectUri: cfg.gmailRedirectUri,
+      message: error instanceof Error ? error.message : String(error)
+    };
+  }
 }
 
 function getHeaderValue(headers: gmail_v1.Schema$MessagePartHeader[] | undefined, name: string): string {
@@ -169,11 +336,17 @@ export async function scanInboxForRecruiters(
   return { scanned: messages.length, labeled };
 }
 
-export function getGmailConsentUrl(cfg: GmailAuthConfig): string {
+export function getGmailConsentUrl(cfg: GmailAuthConfig, options: { fresh?: boolean } = {}): string {
   const oauth = createOAuthClient(cfg);
+  const pkce = options.fresh ? createPkcePair() : getReusablePkcePair(cfg);
+  if (options.fresh) {
+    savePkceVerifier(cfg, pkce.verifier);
+  }
   return oauth.generateAuthUrl({
     access_type: "offline",
     prompt: "consent",
+    code_challenge: pkce.challenge,
+    code_challenge_method: "S256" as any,
     scope: [
       "https://www.googleapis.com/auth/gmail.modify",
       "https://www.googleapis.com/auth/gmail.send",
@@ -185,7 +358,11 @@ export function getGmailConsentUrl(cfg: GmailAuthConfig): string {
 export async function exchangeCodeAndSaveTokens(cfg: GmailAuthConfig, code: string): Promise<void> {
   const oauth = createOAuthClient(cfg);
   const normalizedCode = code.trim();
-  const { tokens } = await oauth.getToken(normalizedCode);
+  const codeVerifier = readPkceVerifier(cfg);
+  const response = codeVerifier
+    ? await oauth.getToken({ code: normalizedCode, codeVerifier } as any)
+    : await oauth.getToken(normalizedCode);
+  const { tokens } = response;
 
   if (!tokens.refresh_token) {
     throw new Error("No refresh_token returned. Re-run auth with prompt=consent.");
@@ -194,6 +371,7 @@ export async function exchangeCodeAndSaveTokens(cfg: GmailAuthConfig, code: stri
   const targetPath = cfg.gmailTokensPath;
   fs.mkdirSync(path.dirname(targetPath), { recursive: true });
   fs.writeFileSync(targetPath, JSON.stringify(tokens, null, 2), "utf8");
+  fs.rmSync(pkcePath(cfg), { force: true });
 }
 
 export async function listRecruiterInboundMessages(
@@ -395,6 +573,39 @@ export async function sendDraftById(cfg: GmailAuthConfig, draftId: string): Prom
       id: draftId
     }
   });
+}
+
+export async function createDraftFromStoredContent(params: {
+  cfg: GmailAuthConfig;
+  threadId: string;
+  to: string;
+  subject: string;
+  body: string;
+  resumePath?: string;
+}): Promise<{ draftId: string }> {
+  const gmail = await getGmailClient(params.cfg);
+  const rawMime = buildMimeMessage({
+    to: params.to,
+    subject: params.subject,
+    body: params.body,
+    attachmentPath: params.resumePath
+  });
+
+  const draft = await gmail.users.drafts.create({
+    userId: "me",
+    requestBody: {
+      message: {
+        threadId: params.threadId,
+        raw: encodeBase64Url(rawMime)
+      }
+    }
+  });
+
+  if (!draft.data.id) {
+    throw new Error("Failed to recreate Gmail draft: missing draft id.");
+  }
+
+  return { draftId: draft.data.id };
 }
 
 export async function sendPlainTextEmail(params: {
