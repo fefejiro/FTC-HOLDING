@@ -581,3 +581,42 @@ Validation:
   - a failed carousel can produce an approved one-slide rescue,
   - a weak one-slide rescue is still blocked,
   - the original strict carousel rules remain intact.
+
+## July 27 Scheduled Monitoring Setup
+
+Goal:
+
+- Keep the daily system running while making each scheduled result observable.
+- Improve over time from proof and monitor reports, not memory or guesswork.
+
+Added:
+
+- `scripts/monitor-schedule.mjs`
+- `npm run monitor:today`
+- Windows monitor task registration in
+  `scripts/register-weekly-social-schedule.ps1`
+
+Monitor behaviour:
+
+- Reads `schedule-run-status.json`.
+- Reads `publish-guard-report.json`.
+- Reads `visible-social-post-report.json` when present.
+- Reads Windows Scheduler status for all `UnaLabsSocial*` tasks.
+- Writes:
+  - `content/proof/YYYY-MM-DD/monitor/<window>-monitor-report.json`
+  - `content/proof/YYYY-MM-DD/monitor/<window>-monitor-report.md`
+
+Registered monitor windows:
+
+- `UnaLabsSocial-MorningMonitor`: weekdays, 35 minutes after the 6:45 AM news run.
+- `UnaLabsSocial-EveningMonitor`: weekdays, 35 minutes after the 5:30 PM evergreen run.
+- `UnaLabsSocial-WeekendMonitor`: Saturdays, 35 minutes after the weekend tip.
+- `UnaLabsSocial-RecapMonitor`: Sundays, 35 minutes after the weekly recap.
+
+Operator expectation:
+
+- A post run should create guard proof first, browser proof second, and monitor
+  proof third.
+- If publishing fails, the monitor report should name the failed stage and
+  point to the proof/logs instead of silently leaving the owner to discover it
+  hours later.

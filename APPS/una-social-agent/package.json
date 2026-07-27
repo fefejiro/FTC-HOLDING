@@ -24,6 +24,7 @@
     "browser:seed-profile": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/seed-posting-browser-profile.ps1",
     "post:record": "node scripts/record-posted.mjs",
     "engagement:monitor": "python scripts/visible-social-monitor.py",
+    "monitor:today": "node scripts/monitor-schedule.mjs",
     "linkedin:page-proof": "python scripts/linkedin-page-proof.py",
     "linkedin:banner": "python scripts/render-linkedin-page-banner.py",
     "quality:today": "node scripts/quality-check.mjs",
@@ -51,7 +52,7 @@
     "social:qa": "node scripts/social-publication.mjs qa",
     "caption:write": "node scripts/caption-writer.mjs",
     "test": "node --test tests/*.test.mjs",
-    "check": "node --check src/editorial-quality.mjs && node --check src/publish-guard.mjs && node --check scripts/quality-check.mjs && node --check scripts/visuals/news-visual-pipeline.mjs && npm test"
+    "check": "node --check src/editorial-quality.mjs && node --check src/publish-guard.mjs && node --check scripts/quality-check.mjs && node --check scripts/monitor-schedule.mjs && node --check scripts/visuals/news-visual-pipeline.mjs && npm test"
   },
   "engines": {
     "node": ">=20"
