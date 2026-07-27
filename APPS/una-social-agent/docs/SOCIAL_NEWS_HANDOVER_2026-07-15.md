@@ -687,3 +687,62 @@ Remaining improvement:
 - Continue improving visual selection taste; the current guard prevents repeats
   and broken posts, but source-photo editorial quality still benefits from
   better source ranking over time.
+
+## July 27-28 Owner Monitoring Window
+
+Owner plan:
+
+- Fejiro will monitor the live Una Labs accounts from July 27 through the July
+  28 morning scheduled run.
+- The system should run without manual babysitting. Manual review is only for
+  confirming the visible outcome and feeding back any quality issue.
+
+Expected July 28 morning sequence:
+
+1. `UnaLabsSocial-PeakDraft` starts at 6:45 AM Eastern.
+2. The runner discovers fresh stories and excludes same-day URLs already used.
+3. The visual pipeline creates one approved three-region carousel, or one
+   quality-rescue slide if the full carousel cannot be trusted.
+4. The publish guard blocks any repeated source image, repeated raw image,
+   missing image, incomplete copy, newsletter boilerplate, weak caption, or bad
+   slide count.
+5. Instagram and LinkedIn publish only the exact approved assets.
+6. `UnaLabsSocial-MorningMonitor` runs at 7:20 AM Eastern and writes a monitor
+   report.
+
+Healthy outcome:
+
+- Instagram profile shows a new post for the day.
+- LinkedIn Una Labs Page Posts shows a new post for the day.
+- Images are not repeated from prior posts.
+- If the carousel is posted, all expected slides are attached.
+- If a one-slide rescue is posted, the caption should clearly say the system
+  kept the post smaller because the full carousel did not clear quality.
+- Proof exists under `content/proof/YYYY-MM-DD/`.
+- The monitor report exists under
+  `content/proof/YYYY-MM-DD/monitor/morning-monitor-report.md`.
+
+Needs attention:
+
+- No Instagram or LinkedIn post appears by 7:30 AM Eastern.
+- A repeated image source appears despite the source-URL guard.
+- The first slide image looks generic or unrelated to the story.
+- A headline is clipped, ends awkwardly, or contains trailing dots.
+- LinkedIn posts without images.
+- The run ends in `quality_hold` but does not provide a clear reason.
+
+Fast inspection commands:
+
+```powershell
+npm --prefix APPS/una-social-agent run monitor:today
+Get-Content APPS/una-social-agent/content/proof/$(Get-Date -Format yyyy-MM-dd)/monitor/morning-monitor-report.md
+Get-Content APPS/una-social-agent/content/drafts/$(Get-Date -Format yyyy-MM-dd)/publish-approved.json
+Get-Content APPS/una-social-agent/content/ledger/social-ledger.jsonl -Tail 5
+```
+
+Decision rule:
+
+- Do not manually force-post a failed run unless the approved asset and caption
+  have been inspected.
+- If the post is blocked for quality, improve the story/image/copy path and run
+  again rather than reposting an old image.
