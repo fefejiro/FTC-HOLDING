@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#191b1d">
+  <meta name="description" content="Una Labs JobAgent candidate workspace">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.png">
+  <link rel="apple-touch-icon" href="/icon.png">
+  <link rel="stylesheet" href="/styles.css">
+  <title>Una Labs JobAgent</title>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="JobAgent home">
+      <img src="/icon.png" width="36" height="36" alt="">
+      <span><strong>JobAgent</strong><small>Una Labs</small></span>
+    </a>
+    <div class="top-actions">
+      <span id="global-status" class="status-chip neutral">Checking</span>
+      <button id="install-app" class="button subtle" type="button" hidden>Install</button>
+      <button id="logout" class="button subtle auth-only" type="button" hidden>Sign out</button>
+    </div>
+  </header>
+
+  <main id="auth-view" class="auth-layout">
+    <section class="auth-panel" aria-labelledby="auth-title">
+      <p class="eyebrow">Invite-only beta</p>
+      <h1 id="auth-title">Sign in to JobAgent</h1>
+      <div id="auth-message" class="notice" aria-live="polite" hidden></div>
+      <form id="login-form" class="form-stack">
+        <label>Email<input name="email" type="email" autocomplete="email" required></label>
+        <label>Password<input name="password" type="password" autocomplete="current-password" minlength="12" required></label>
+        <label id="mfa-field" hidden>Authenticator code<input name="mfaCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6"></label>
+        <button class="button primary" type="submit">Sign in</button>
+        <button id="show-reset" class="text-button" type="button">Forgot password</button>
+      </form>
+      <form id="register-form" class="form-stack" hidden>
+        <label>Email<input name="email" type="email" autocomplete="email" required></label>
+        <label>Create password<input name="password" type="password" autocomplete="new-password" minlength="12" required></label>
+        <input name="inviteToken" type="hidden">
+        <button class="button primary" type="submit">Accept invitation</button>
+      </form>
+      <form id="reset-request-form" class="form-stack" hidden>
+        <label>Email<input name="email" type="email" autocomplete="email" required></label>
+        <button class="button primary" type="submit">Send reset link</button>
+        <button class="text-button" data-auth-screen="login" type="button">Back to sign in</button>
+      </form>
+      <form id="reset-confirm-form" class="form-stack" hidden>
+        <label>New password<input name="password" type="password" autocomplete="new-password" minlength="12" required></label>
+        <input name="token" type="hidden">
+        <button class="button primary" type="submit">Reset password</button>
+      </form>
+    </section>
+  </main>
+
+  <div id="app-shell" class="app-shell" hidden>
+    <aside class="sidebar" aria-label="Workspace navigation">
+      <nav>
+        <button class="nav-item active" type="button" data-view="dashboard">Overview</button>
+        <button class="nav-item" type="button" data-view="profile">Profile</button>
+        <button class="nav-item" type="button" data-view="resumes">Resumes</button>
+        <button class="nav-item" type="button" data-view="connections">Connections</button>
+        <button class="nav-item" type="button" data-view="opportunities">Opportunities</button>
+        <button class="nav-item" type="button" data-view="approvals">Approvals</button>
+        <button class="nav-item" type="button" data-view="activity">Activity</button>
+        <button class="nav-item" type="button" data-view="security">Security</button>
+        <button id="operator-nav" class="nav-item" type="button" data-view="operator" hidden>Operator</button>
+      </nav>
+      <div class="sidebar-account">
+        <strong id="candidate-email"></strong>
+        <span id="candidate-role"></span>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <div id="account-banner" class="notice warning" hidden></div>
+
+      <section class="view active" data-view-panel="dashboard">
+        <div class="page-heading"><div><p class="eyebrow">Workspace</p><h1>Overview</h1></div><button id="refresh-dashboard" class="button secondary" type="button">Refresh</button></div>
+        <div class="metrics" aria-label="Application summary">
+          <article><span>Recommended</span><strong id="metric-recommended">0</strong></article>
+          <article><span>Needs approval</span><strong id="metric-approvals">0</strong></article>
+          <article><span>Verified</span><strong id="metric-verified">0</strong></article>
+          <article><span>Needs review</span><strong id="metric-gates">0</strong></article>
+        </div>
+        <div class="split-layout">
+          <section class="content-band"><h2>Activation</h2><ul id="readiness-list" class="record-list"></ul></section>
+          <section class="content-band"><h2>Channel status</h2><ul id="connector-summary" class="record-list"></ul></section>
+        </div>
+        <section class="content-band"><h2>Recent applications</h2><ul id="application-summary" class="record-list"></ul></section>
+      </section>
+
+      <section class="view" data-view-panel="profile">
+        <div class="page-heading"><div><p class="eyebrow">Candidate record</p><h1>Profile and policy</h1></div></div>
+        <form id="onboarding-form" class="section-form">
+          <div class="form-grid">
+            <label>Full name<input name="fullName" required></label>
+            <label>Phone<input name="phone" autocomplete="tel" required></label>
+            <label>Location<input name="location" required></label>
+            <label>Time zone<input name="timeZone" value="America/Toronto" required></label>
+            <label class="wide">LinkedIn URL<input name="linkedIn" type="url" required></label>
+            <label>Target titles<textarea name="targetTitles" required></textarea></label>
+            <label>Excluded titles<textarea name="excludedTitles"></textarea></label>
+            <label>Preferred locations<textarea name="locations" required></textarea></label>
+            <label>Employment types<textarea name="employmentTypes" required></textarea></label>
+            <fieldset><legend>Work modes</legend><label class="check"><input name="workModes" value="remote" type="checkbox">Remote</label><label class="check"><input name="workModes" value="hybrid" type="checkbox">Hybrid</label><label class="check"><input name="workModes" value="onsite" type="checkbox">Onsite</label></fieldset>
+            <label>Minimum compensation<input name="compensationFloor" required></label>
+            <label class="wide">Work authorization<input name="workAuthorization" required></label>
+            <label>Sponsorship<select name="sponsorshipRequired"><option value="false">Not required</option><option value="true">Required</option></select></label>
+          </div>
+          <fieldset class="consent-block"><legend>Consent</legend>
+            <label class="check"><input name="truthConfirmed" type="checkbox" required>My professional information is truthful.</label>
+            <label class="check"><input name="recruiterDrafts" type="checkbox">Prepare recruiter drafts.</label>
+            <label class="check"><input name="recruiterSends" type="checkbox">Send only approved recruiter replies.</label>
+            <label class="check"><input name="assistedApplications" type="checkbox">Prepare and assist with applications.</label>
+            <label class="check"><input name="controlledSubmissions" type="checkbox">Submit only when every answer and channel rule is covered.</label>
+          </fieldset>
+          <button class="button primary" type="submit">Save profile</button>
+          <p id="profile-result" class="form-result" aria-live="polite"></p>
+        </form>
+        <form id="policy-form" class="section-form compact-form">
+          <h2>Automation policy</h2>
+          <div class="form-grid">
+            <label>Mode<select name="mode"><option value="assist">Assist</option><option value="approval_required">Approval required</option><option value="controlled_autopilot">Controlled autopilot</option></select></label>
+            <label>Time zone<input name="timeZone" required></label>
+            <label>Draft cap<input name="maxDraftsPerDay" type="number" min="0" max="50" required></label>
+            <label>Recruiter send cap<input name="maxRecruiterSendsPerDay" type="number" min="0" max="10" required></label>
+            <label>Application cap<input name="maxApplicationsPerDay" type="number" min="0" max="10" required></label>
+            <label>Per-board cap<input name="maxApplicationsPerBoard" type="number" min="0" max="5" required></label>
+            <label>Quiet hours start<input name="quietHoursStart" type="number" min="0" max="23" required></label>
+            <label>Quiet hours end<input name="quietHoursEnd" type="number" min="0" max="23" required></label>
+          </div>
+          <input name="recruiterDrafts" type="hidden" value="true">
+          <input name="recruiterSends" type="hidden" value="false">
+          <input name="assistedApplications" type="hidden" value="true">
+          <input name="controlledSubmissions" type="hidden" value="false">
+          <button class="button primary" type="submit">Save policy</button>
+          <p id="policy-result" class="form-result" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="view" data-view-panel="resumes">
+        <div class="page-heading"><div><p class="eyebrow">Private vault</p><h1>Resumes and career facts</h1></div></div>
+        <form id="resume-upload-form" class="section-form inline-form">
+          <label>Resume file<input name="resume" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required></label>
+          <label class="check"><input name="isDefault" type="checkbox">Default resume</label>
+          <button class="button primary" type="submit">Upload</button>
+        </form>
+        <p id="resume-result" class="form-result" aria-live="polite"></p>
+        <div id="resume-list" class="vault-list"></div>
+        <form id="truth-form" class="section-form">
+          <h2>Approved career facts</h2>
+          <label>One verified fact per line<textarea name="facts" class="tall" required></textarea></label>
+          <label class="check"><input name="confirm" type="checkbox" required>I confirm these facts are accurate.</label>
+          <button class="button primary" type="submit">Approve facts</button>
+          <p id="truth-result" class="form-result" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="view" data-view-panel="connections">
+        <div class="page-heading"><div><p class="eyebrow">Channels</p><h1>Connections</h1></div></div>
+        <div id="connection-grid" class="connection-grid"></div>
+        <section class="content-band">
+          <h2>Forwarded recruiter email</h2>
+          <div class="actions"><button id="create-inbound-alias" class="button secondary" type="button">Create private forwarding address</button></div>
+          <p id="inbound-result" class="form-result" aria-live="polite"></p>
+        </section>
+        <section class="content-band">
+          <h2>Trusted Windows runner</h2>
+          <div class="actions"><button id="create-runner-token" class="button secondary" type="button">Create enrollment token</button></div>
+          <p id="runner-result" class="form-result secret-output" aria-live="polite"></p>
+        </section>
+      </section>
+
+      <section class="view" data-view-panel="opportunities">
+        <div class="page-heading"><div><p class="eyebrow">Ranked queue</p><h1>Opportunities</h1></div></div>
+        <ul id="job-list" class="record-list detailed"></ul>
+      </section>
+
+      <section class="view" data-view-panel="approvals">
+        <div class="page-heading"><div><p class="eyebrow">Human gates</p><h1>Approvals</h1></div></div>
+        <ul id="approval-list" class="record-list detailed"></ul>
+      </section>
+
+      <section class="view" data-view-panel="activity">
+        <div class="page-heading"><div><p class="eyebrow">Evidence ledger</p><h1>Activity and proof</h1></div></div>
+        <ul id="application-list" class="record-list detailed"></ul>
+        <h2>Audit history</h2>
+        <ul id="audit-list" class="record-list"></ul>
+      </section>
+
+      <section class="view" data-view-panel="security">
+        <div class="page-heading"><div><p class="eyebrow">Account controls</p><h1>Security and privacy</h1></div></div>
+        <section class="content-band">
+          <h2>Email verification</h2>
+          <p id="verification-state"></p>
+          <button id="resend-verification" class="button secondary" type="button">Resend verification</button>
+        </section>
+        <section class="content-band">
+          <h2>Authenticator MFA</h2>
+          <button id="setup-mfa" class="button secondary" type="button">Set up MFA</button>
+          <form id="mfa-confirm-form" class="inline-form" hidden>
+            <label>Authenticator code<input name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></label>
+            <button class="button primary" type="submit">Confirm MFA</button>
+          </form>
+          <p id="mfa-result" class="form-result secret-output" aria-live="polite"></p>
+        </section>
+        <section class="content-band">
+          <h2>Account</h2>
+          <div class="actions"><button id="export-account" class="button secondary" type="button">Export data</button><button id="pause-account" class="button danger" type="button">Pause account</button><button id="resume-account" class="button secondary" type="button">Resume account</button></div>
+        </section>
+        <form id="delete-account-form" class="section-form danger-zone">
+          <h2>Delete account</h2>
+          <label>Current password<input name="password" type="password" autocomplete="current-password" required></label>
+          <label>Type DELETE<input name="confirmation" pattern="DELETE" required></label>
+          <button class="button danger" type="submit">Delete permanently</button>
+          <p id="account-result" class="form-result" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="view" data-view-panel="operator">
+        <div class="page-heading"><div><p class="eyebrow">Operations</p><h1>Operator health</h1></div><button id="refresh-operator" class="button secondary" type="button">Refresh</button></div>
+        <pre id="operator-health" class="health-output"></pre>
+        <form id="invite-form" class="section-form compact-form">
+          <h2>Create invitation</h2>
+          <div class="form-grid"><label>Email<input name="email" type="email" required></label><label>Role<select name="role"><option value="candidate">Candidate</option><option value="operator">Operator</option></select></label><label>Expires in hours<input name="expiresInHours" type="number" min="1" max="168" value="72" required></label></div>
+          <button class="button primary" type="submit">Send invitation</button>
+          <p id="invite-result" class="form-result" aria-live="polite"></p>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    <span>Una Labs JobAgent</span>
+    <nav aria-label="Legal"><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/google-data">Google data</a><a href="/retention">Retention</a><a href="/account-deletion">Delete account</a></nav>
+  </footer>
+  <script src="/app.js" defer></script>
+</body>
+</html>

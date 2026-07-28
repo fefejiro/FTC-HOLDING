@@ -1,15 +1,22 @@
 import crypto from "node:crypto";
+import fs from "node:fs/promises";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import {
   authenticatedUser,
   clearSessionCookie,
   createSession,
+  createTotpSecret,
+  csrfTokenAllowed,
   hasRecentAuthentication,
   hashPassword,
+  publicProductUser,
+  revokeAllSessions,
   revokeCurrentSession,
-  setSessionCookie,
+  setSessionCookies,
+  verifyTotp,
   verifyPassword
 } from "./product_auth.js";
 import { assertProductDatabaseRole, getProductPool, migrateProductDb } from "./product_db.js";
@@ -27,11 +34,12 @@ import {
   decideProductApproval,
   exportProductAccount,
   getCareerTruthBank,
+  getProductApplicationEvidenceObject,
   getProductOnboarding,
   getProductResumeBySha,
   getProductResumeObject,
   listProductConnections,
-  listProductResumeStorageObjects,
+  listProductPrivateStorageObjects,
   listProductResumes,
   productActivationReadiness,
   productAuditLog,
@@ -44,28 +52,73 @@ import {
   setProductAccountStatus
 } from "./product_repository.js";
 import {
+  assertPrivateStorageOwnership,
   assertResumeStorageOwnership,
+  buildProofStorageKey,
   buildResumeStorageKey,
   createProductObjectStorage,
   type ProductObjectStorage
 } from "./product_object_storage.js";
+import {
+  authAttemptKey,
+  clearProductAuthFailures,
+  consumeProductInvitation,
+  createEmailVerificationToken,
+  createInboundAlias,
+  createPasswordResetForEmail,
+  createProductInvitation,
+  createRunnerEnrollment,
+  enableProductMfa,
+  enrollRunnerDevice,
+  ensureConnectorCapabilities,
+  getAutomationPolicy,
+  getDecryptedMfaSecret,
+  getRunnerProofObject,
+  heartbeatRunner,
+  isProductAuthBlocked,
+  leaseRunnerTask,
+  linkInvitationUser,
+  normalizedEmail,
+  recordConsentSnapshot,
+  recordProductAuthFailure,
+  recordRunnerNonce,
+  resetProductPassword,
+  runnerCredential,
+  runnerSignature,
+  saveAutomationPolicy,
+  saveEncryptedMfaSecret,
+  saveRunnerProof,
+  storeInboundMessage,
+  updateConnectorCapability,
+  verifyProductEmail
+} from "./product_public_beta_repository.js";
+import {
+  sendInvitationEmail,
+  sendPasswordResetEmail,
+  sendVerificationEmail,
+  verifyResendWebhook
+} from "./product_email.js";
+import type { ApplicationProof, ConnectorSource, ConnectorStatus } from "./product_domain.js";
 import { validateResumeUpload } from "./product_resume.js";
 import { productSecretKeyring } from "./product_secret_crypto.js";
 
 const HOST = process.env.HOST || "0.0.0.0";
 const PORT = Number(process.env.PORT || 3000);
-const CONSENT_VERSION = "2026-07-23";
+const CONSENT_VERSION = "2026-07-27";
 const MAX_BODY_BYTES = 7_500_000;
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const PUBLIC_ROOT = path.join(ROOT, "public");
 
 const registrationSchema = z.object({
   email: z.string().email().transform((value) => value.trim().toLowerCase()),
   password: z.string().min(12).max(200),
-  inviteCode: z.string().min(1).max(200)
+  inviteToken: z.string().min(20).max(500)
 });
 
 const loginSchema = z.object({
   email: z.string().email().transform((value) => value.trim().toLowerCase()),
-  password: z.string().min(1).max(200)
+  password: z.string().min(1).max(200),
+  mfaCode: z.string().regex(/^\d{6}$/).optional()
 });
 
 const onboardingSchema = z.object({
@@ -81,6 +134,7 @@ const onboardingSchema = z.object({
   compensationFloor: z.string().min(2).max(180),
   workAuthorization: z.string().min(2).max(500),
   sponsorshipRequired: z.boolean(),
+  timeZone: z.string().min(1).max(80).default("UTC"),
   consent: z.object({
     truthConfirmed: z.literal(true),
     recruiterDrafts: z.boolean(),
@@ -99,14 +153,17 @@ const resumeUploadSchema = z.object({
 
 const careerTruthSchema = z.object({
   facts: z.array(z.object({
+    id: z.string().min(8).max(100).optional(),
     category: z.string().min(2).max(80),
     statement: z.string().min(3).max(1000),
-    sourceResumeId: z.string().uuid().optional()
+    sourceResumeId: z.string().uuid().optional(),
+    verificationStatus: z.literal("approved").optional(),
+    provenance: z.record(z.string(), z.unknown()).optional()
   })).min(1).max(300)
 });
 
 const connectionSchema = z.object({
-  provider: z.enum(["gmail", "linkedin", "indeed"])
+  provider: z.enum(["gmail", "linkedin", "indeed", "dice", "monster"])
 });
 
 const approvalDecisionSchema = z.object({
@@ -118,15 +175,103 @@ const accountDeletionSchema = z.object({
   confirmation: z.literal("DELETE")
 });
 
+const tokenSchema = z.object({
+  token: z.string().min(20).max(500)
+});
+
+const passwordResetRequestSchema = z.object({
+  email: z.string().email().transform((value) => value.trim().toLowerCase())
+});
+
+const passwordResetSchema = z.object({
+  token: z.string().min(20).max(500),
+  password: z.string().min(12).max(200)
+});
+
+const mfaCodeSchema = z.object({
+  code: z.string().regex(/^\d{6}$/)
+});
+
+const automationPolicySchema = z.object({
+  mode: z.enum(["assist", "approval_required", "controlled_autopilot"]),
+  recruiterDrafts: z.boolean(),
+  recruiterSends: z.boolean(),
+  assistedApplications: z.boolean(),
+  controlledSubmissions: z.boolean(),
+  maxDraftsPerDay: z.number().int().min(0).max(50),
+  maxRecruiterSendsPerDay: z.number().int().min(0).max(10),
+  maxApplicationsPerDay: z.number().int().min(0).max(10),
+  maxApplicationsPerBoard: z.number().int().min(0).max(5),
+  quietHoursStart: z.number().int().min(0).max(23),
+  quietHoursEnd: z.number().int().min(0).max(23),
+  timeZone: z.string().min(1).max(80)
+});
+
+const invitationSchema = z.object({
+  email: z.string().email().transform((value) => value.trim().toLowerCase()),
+  role: z.enum(["candidate", "operator", "admin"]).default("candidate"),
+  expiresInHours: z.number().int().min(1).max(168).default(72)
+});
+
+const runnerEnrollmentSchema = z.object({
+  token: z.string().min(20).max(500),
+  name: z.string().min(2).max(100),
+  platform: z.string().min(2).max(100)
+});
+
+const runnerProofSchema = z.object({
+  candidateUserId: z.string().uuid(),
+  applicationId: z.string().uuid().nullable().optional(),
+  taskId: z.string().uuid(),
+  source: z.enum(["linkedin", "indeed", "dice", "monster"]),
+  resultStatus: z.enum([
+    "submitted_verified",
+    "submitted_unverified",
+    "manual_gate",
+    "blocked_auth",
+    "blocked_proof",
+    "failed"
+  ]),
+  resumeId: z.string().uuid().nullable().optional(),
+  answers: z.record(z.string(), z.unknown()).default({}),
+  finalUrl: z.string().url().nullable().optional(),
+  evidenceReference: z.string().min(1).max(1000).nullable().optional(),
+  capturedAt: z.string().datetime()
+});
+
+const runnerEvidenceSchema = z.object({
+  filename: z.string().min(1).max(180),
+  mimeType: z.enum(["image/png", "image/jpeg", "application/pdf"]),
+  base64: z.string().min(1).max(7_100_000)
+});
+
+const connectorCertificationSchema = z.object({
+  source: z.enum(["gmail", "linkedin", "indeed", "dice", "monster"]),
+  status: z.enum([
+    "certified_live",
+    "pilot_only",
+    "manual_only",
+    "blocked_auth",
+    "blocked_proof",
+    "disabled"
+  ]),
+  evidenceReference: z.string().max(1000).nullable().optional()
+});
+
 const attempts = new Map<string, { count: number; resetAt: number }>();
 
 function clientKey(req: IncomingMessage): string {
   return String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown").split(",")[0].trim();
 }
 
-function rateLimited(req: IncomingMessage, limit = 30, windowMs = 60_000): boolean {
+function rateLimited(
+  req: IncomingMessage,
+  scope: string,
+  limit: number,
+  windowMs = 60_000
+): boolean {
   const now = Date.now();
-  const key = clientKey(req);
+  const key = `${scope}:${clientKey(req)}`;
   const current = attempts.get(key);
   if (!current || current.resetAt <= now) {
     attempts.set(key, { count: 1, resetAt: now + windowMs });
@@ -136,6 +281,19 @@ function rateLimited(req: IncomingMessage, limit = 30, windowMs = 60_000): boole
   return current.count > limit;
 }
 
+function requestRateLimit(req: IncomingMessage, pathname: string): boolean {
+  const method = req.method || "GET";
+  const authenticationPath = pathname === "/api/v1/auth/login"
+    || pathname === "/api/v1/auth/register"
+    || pathname === "/api/v1/auth/password-reset/request"
+    || pathname === "/api/v1/auth/password-reset/confirm";
+  if (authenticationPath) return rateLimited(req, "authentication", 20);
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+    return rateLimited(req, "mutation", 120);
+  }
+  return false;
+}
+
 function securityHeaders(res: ServerResponse): void {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
@@ -143,7 +301,7 @@ function securityHeaders(res: ServerResponse): void {
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   res.setHeader(
     "Content-Security-Policy",
-    "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    "default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
   );
   if (process.env.NODE_ENV === "production") {
     res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
@@ -162,6 +320,12 @@ function html(res: ServerResponse, status: number, body: string): void {
   res.end(body);
 }
 
+function redirect(res: ServerResponse, location: string, status = 303): void {
+  securityHeaders(res);
+  res.writeHead(status, { location, "cache-control": "no-store" });
+  res.end();
+}
+
 function fileResponse(res: ServerResponse, file: { filename: string; mimeType: string; content: Buffer }): void {
   securityHeaders(res);
   const filename = file.filename.replace(/["\r\n]/g, "_");
@@ -175,6 +339,11 @@ function fileResponse(res: ServerResponse, file: { filename: string; mimeType: s
 }
 
 async function readJson(req: IncomingMessage): Promise<unknown> {
+  const content = await readText(req);
+  return content ? JSON.parse(content) : {};
+}
+
+async function readText(req: IncomingMessage): Promise<string> {
   const chunks: Buffer[] = [];
   let total = 0;
   for await (const chunk of req) {
@@ -183,8 +352,7 @@ async function readJson(req: IncomingMessage): Promise<unknown> {
     if (total > MAX_BODY_BYTES) throw new Error("Request body exceeds the allowed size.");
     chunks.push(buffer);
   }
-  if (chunks.length === 0) return {};
-  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  return Buffer.concat(chunks).toString("utf8");
 }
 
 async function idempotentMutation(
@@ -218,15 +386,65 @@ async function idempotentMutation(
 
 export function mutationOriginAllowed(req: IncomingMessage): boolean {
   if (!["POST", "PUT", "PATCH", "DELETE"].includes(req.method || "")) return true;
-  const expected = String(process.env.APP_ORIGIN || "").replace(/\/$/, "");
-  if (!expected) return process.env.NODE_ENV !== "production";
-  return String(req.headers.origin || "").replace(/\/$/, "") === expected;
+  const pathname = new URL(req.url || "/", "http://localhost").pathname;
+  if (pathname === "/api/v1/webhooks/resend/inbound"
+      || pathname === "/api/v1/runner/enroll"
+      || pathname.startsWith("/api/v1/runner/device/")) return true;
+  const allowedOrigins = [
+    process.env.APP_ORIGIN,
+    ...String(process.env.APP_ALLOWED_ORIGINS || "").split(",")
+  ]
+    .map((value) => String(value || "").trim().replace(/\/$/, ""))
+    .filter(Boolean);
+  if (!allowedOrigins.length) return process.env.NODE_ENV !== "production";
+  const requestOrigin = String(req.headers.origin || "").replace(/\/$/, "");
+  return allowedOrigins.includes(requestOrigin);
 }
 
 export function constantEqual(left: string, right: string): boolean {
   const a = Buffer.from(left);
   const b = Buffer.from(right);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+async function authenticateRunnerRequest(
+  req: IncomingMessage,
+  pathname: string,
+  rawBody: string,
+  db: ReturnType<typeof getProductPool>
+): Promise<{ deviceId: string; userId: string; secret: string } | null> {
+  const deviceId = String(req.headers["x-runner-device-id"] || "");
+  const timestamp = String(req.headers["x-runner-timestamp"] || "");
+  const nonce = String(req.headers["x-runner-nonce"] || "");
+  const signature = String(req.headers["x-runner-signature"] || "");
+  if (!/^[0-9a-f-]{36}$/i.test(deviceId)
+      || !/^\d{10,13}$/.test(timestamp)
+      || nonce.length < 16
+      || signature.length < 32) return null;
+  const timestampMs = timestamp.length === 10 ? Number(timestamp) * 1000 : Number(timestamp);
+  if (!Number.isFinite(timestampMs) || Math.abs(Date.now() - timestampMs) > 5 * 60_000) return null;
+  const credential = await runnerCredential(db, deviceId);
+  if (!credential || credential.status !== "active") return null;
+  const expected = runnerSignature(credential.secret, {
+    method: req.method || "GET",
+    pathname,
+    timestamp,
+    nonce,
+    bodyHash: crypto.createHash("sha256").update(rawBody).digest("hex")
+  });
+  if (!constantEqual(expected, signature)) return null;
+  if (!await recordRunnerNonce(db, credential.userId, deviceId, nonce)) return null;
+  return { deviceId, userId: credential.userId, secret: credential.secret };
+}
+
+function operatorAllowed(user: Awaited<ReturnType<typeof authenticatedUser>>): boolean {
+  return Boolean(
+    user
+    && ["operator", "admin"].includes(user.role)
+    && user.mfaEnabled
+    && user.emailVerifiedAt
+    && hasRecentAuthentication(user)
+  );
 }
 
 function renderPage(authenticated: boolean): string {
@@ -366,6 +584,69 @@ function renderPage(authenticated: boolean): string {
 </body></html>`;
 }
 
+interface StaticAsset {
+  file: string;
+  type: string;
+  cache: string;
+  base64Fallback?: string;
+}
+
+const STATIC_FILES: Record<string, StaticAsset> = {
+  "/": { file: "index.html", type: "text/html; charset=utf-8", cache: "no-store" },
+  "/app.js": { file: "app.js", type: "text/javascript; charset=utf-8", cache: "no-cache" },
+  "/styles.css": { file: "styles.css", type: "text/css; charset=utf-8", cache: "public, max-age=3600" },
+  "/manifest.webmanifest": { file: "manifest.webmanifest", type: "application/manifest+json", cache: "public, max-age=3600" },
+  "/sw.js": { file: "sw.js", type: "text/javascript; charset=utf-8", cache: "no-cache" },
+  "/icon-192.png": {
+    file: "icon-192.png",
+    type: "image/png",
+    cache: "public, max-age=86400",
+    base64Fallback: "icon-192.png.b64"
+  },
+  "/icon.png": {
+    file: "icon.png",
+    type: "image/png",
+    cache: "public, max-age=86400",
+    base64Fallback: "icon.png.b64"
+  },
+  "/privacy": { file: "privacy.html", type: "text/html; charset=utf-8", cache: "public, max-age=3600" },
+  "/terms": { file: "terms.html", type: "text/html; charset=utf-8", cache: "public, max-age=3600" },
+  "/google-data": { file: "google-data.html", type: "text/html; charset=utf-8", cache: "public, max-age=3600" },
+  "/retention": { file: "retention.html", type: "text/html; charset=utf-8", cache: "public, max-age=3600" },
+  "/account-deletion": { file: "account-deletion.html", type: "text/html; charset=utf-8", cache: "public, max-age=3600" }
+};
+
+async function serveStatic(res: ServerResponse, pathname: string): Promise<boolean> {
+  const publicPath = ["/accept-invite", "/verify-email", "/reset-password"].includes(pathname)
+    ? "/"
+    : pathname;
+  const asset = STATIC_FILES[publicPath];
+  if (!asset) return false;
+  let content: Buffer;
+  try {
+    content = await fs.readFile(path.join(PUBLIC_ROOT, asset.file));
+  } catch (error: any) {
+    if (error?.code !== "ENOENT" || !asset.base64Fallback) {
+      console.error(JSON.stringify({
+        event: "static_asset_read_failed",
+        asset: asset.file,
+        errorCode: String(error?.code || "unknown")
+      }));
+      throw error;
+    }
+    const encoded = await fs.readFile(path.join(PUBLIC_ROOT, asset.base64Fallback), "ascii");
+    content = Buffer.from(encoded.trim(), "base64");
+    console.warn(JSON.stringify({
+      event: "static_asset_fallback_used",
+      asset: asset.file
+    }));
+  }
+  securityHeaders(res);
+  res.writeHead(200, { "content-type": asset.type, "cache-control": asset.cache });
+  res.end(content);
+  return true;
+}
+
 export async function createProductServer(storage: ProductObjectStorage = createProductObjectStorage()) {
   const db = getProductPool();
   if (process.env.AUTO_MIGRATE === "true") await migrateProductDb(db);
@@ -378,7 +659,9 @@ export async function createProductServer(storage: ProductObjectStorage = create
   return createServer(async (req, res) => {
     try {
       const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
-      if (rateLimited(req)) return json(res, 429, { error: "Too many requests. Try again shortly." });
+      if (requestRateLimit(req, url.pathname)) {
+        return json(res, 429, { error: "Too many requests. Try again shortly." });
+      }
       if (!mutationOriginAllowed(req)) return json(res, 403, { error: "Origin rejected." });
 
       if (req.method === "GET" && url.pathname === "/healthz") return json(res, 200, { ok: true });
@@ -397,29 +680,26 @@ export async function createProductServer(storage: ProductObjectStorage = create
           return json(res, 503, { ready: false, database: "unavailable" });
         }
       }
-      if (req.method === "GET" && url.pathname === "/manifest.webmanifest") {
-        securityHeaders(res);
-        res.writeHead(200, { "content-type": "application/manifest+json" });
-        return res.end(JSON.stringify({ name: "Una Labs JobAgent", short_name: "JobAgent", start_url: "/", display: "standalone", background_color: "#f4f6f8", theme_color: "#17202a" }));
-      }
-      if (req.method === "GET" && url.pathname === "/sw.js") {
-        securityHeaders(res);
-        res.writeHead(200, { "content-type": "text/javascript", "cache-control": "no-cache" });
-        return res.end("self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));self.addEventListener('fetch',e=>{if(e.request.method==='GET'&&new URL(e.request.url).origin===location.origin)e.respondWith(fetch(e.request).catch(()=>new Response('Offline',{status:503})))})");
-      }
-
       if (req.method === "POST" && url.pathname === "/api/v1/auth/register") {
         const input = registrationSchema.parse(await readJson(req));
-        const expectedInvite = String(process.env.JOB_AGENT_INVITE_CODE || "");
-        if (!expectedInvite || !constantEqual(input.inviteCode, expectedInvite)) return json(res, 403, { error: "Invalid invitation." });
         const passwordHash = hashPassword(input.password);
         const client = await db.connect();
         try {
           await client.query("BEGIN");
+          const invitation = await consumeProductInvitation(client, input.email, input.inviteToken);
+          if (!invitation) {
+            await client.query("ROLLBACK");
+            return json(res, 403, { error: "Invitation is invalid, expired, or already used." });
+          }
           const inserted = await client.query(
-            "INSERT INTO product_users (email, password_hash) VALUES ($1, $2) RETURNING id, email, status",
-            [input.email, passwordHash]
+            `INSERT INTO product_users (email, password_hash, role)
+             VALUES ($1,$2,$3)
+             RETURNING id, email, status, role,
+                       email_verified_at AS "emailVerifiedAt",
+                       mfa_enabled AS "mfaEnabled"`,
+            [input.email, passwordHash, invitation.role]
           );
+          await linkInvitationUser(client, invitation.id, inserted.rows[0].id);
           await client.query("SELECT set_config('app.user_id', $1, true)", [inserted.rows[0].id]);
           await client.query(
             "INSERT INTO product_onboarding (user_id) VALUES ($1)",
@@ -430,9 +710,21 @@ export async function createProductServer(storage: ProductObjectStorage = create
             [inserted.rows[0].id]
           );
           await client.query("COMMIT");
-          const token = await createSession(db, inserted.rows[0].id);
-          setSessionCookie(res, token);
-          return json(res, 201, { user: inserted.rows[0] });
+          const verification = await createEmailVerificationToken(db, inserted.rows[0].id);
+          const deliveryId = await sendVerificationEmail(input.email, verification.token).catch(() => null);
+          const session = await createSession(db, inserted.rows[0].id);
+          setSessionCookies(res, session);
+          return json(res, 201, {
+            user: {
+              id: inserted.rows[0].id,
+              email: inserted.rows[0].email,
+              status: inserted.rows[0].status,
+              role: inserted.rows[0].role,
+              emailVerified: false,
+              mfaEnabled: false
+            },
+            verificationEmailSent: Boolean(deliveryId)
+          });
         } catch (error: any) {
           await client.query("ROLLBACK").catch(() => undefined);
           if (error?.code === "23505") return json(res, 409, { error: "Account already exists." });
@@ -444,15 +736,164 @@ export async function createProductServer(storage: ProductObjectStorage = create
 
       if (req.method === "POST" && url.pathname === "/api/v1/auth/login") {
         const input = loginSchema.parse(await readJson(req));
+        const attemptKey = authAttemptKey(input.email, clientKey(req));
+        if (await isProductAuthBlocked(db, attemptKey)) {
+          return json(res, 429, { error: "Sign-in is temporarily blocked. Try again later." });
+        }
         const found = await db.query(
-          "SELECT id, email, status, password_hash FROM product_users WHERE email=$1 AND status <> 'deleted' LIMIT 1",
+          `SELECT id, email, status, role, password_hash,
+                  email_verified_at AS "emailVerifiedAt",
+                  mfa_enabled AS "mfaEnabled"
+             FROM product_users
+            WHERE email=$1 AND status <> 'deleted'
+            LIMIT 1`,
           [input.email]
         );
-        const user = found.rows[0];
-        if (!user || !verifyPassword(input.password, user.password_hash)) return json(res, 401, { error: "Invalid email or password." });
-        const token = await createSession(db, user.id);
-        setSessionCookie(res, token);
-        return json(res, 200, { user: { id: user.id, email: user.email, status: user.status } });
+        const foundUser = found.rows[0];
+        if (!foundUser || !verifyPassword(input.password, foundUser.password_hash)) {
+          await recordProductAuthFailure(db, attemptKey);
+          return json(res, 401, { error: "Invalid email or password." });
+        }
+        if (foundUser.mfaEnabled) {
+          const secret = await getDecryptedMfaSecret(db, foundUser.id);
+          if (!secret || !input.mfaCode || !verifyTotp(secret, input.mfaCode)) {
+            await recordProductAuthFailure(db, attemptKey);
+            return json(res, 401, { error: "A valid MFA code is required.", code: "MFA_REQUIRED" });
+          }
+        }
+        await clearProductAuthFailures(db, attemptKey);
+        await revokeAllSessions(db, foundUser.id);
+        const session = await createSession(db, foundUser.id);
+        setSessionCookies(res, session);
+        return json(res, 200, {
+          user: {
+            id: foundUser.id,
+            email: foundUser.email,
+            status: foundUser.status,
+            role: foundUser.role,
+            emailVerified: Boolean(foundUser.emailVerifiedAt),
+            mfaEnabled: foundUser.mfaEnabled
+          }
+        });
+      }
+
+      if (req.method === "POST" && url.pathname === "/api/v1/auth/verify-email") {
+        const input = tokenSchema.parse(await readJson(req));
+        const verified = await verifyProductEmail(db, input.token);
+        return verified
+          ? json(res, 200, { verified: true, email: verified.email })
+          : json(res, 400, { error: "Verification link is invalid or expired." });
+      }
+
+      if (req.method === "POST" && url.pathname === "/api/v1/auth/password-reset/request") {
+        const input = passwordResetRequestSchema.parse(await readJson(req));
+        const reset = await createPasswordResetForEmail(db, input.email);
+        if (reset) await sendPasswordResetEmail(reset.email, reset.token).catch(() => null);
+        return json(res, 202, { accepted: true });
+      }
+
+      if (req.method === "POST" && url.pathname === "/api/v1/auth/password-reset/confirm") {
+        const input = passwordResetSchema.parse(await readJson(req));
+        const reset = await resetProductPassword(db, input.token, hashPassword(input.password));
+        return reset
+          ? json(res, 200, { reset: true })
+          : json(res, 400, { error: "Reset link is invalid or expired." });
+      }
+
+      if (req.method === "POST" && url.pathname === "/api/v1/webhooks/resend/inbound") {
+        const payload = await readText(req);
+        const event = await verifyResendWebhook(payload, {
+          id: String(req.headers["svix-id"] || ""),
+          timestamp: String(req.headers["svix-timestamp"] || ""),
+          signature: String(req.headers["svix-signature"] || "")
+        });
+        if (event.type !== "email.received") return json(res, 202, { accepted: true });
+        const data = event.data || {};
+        let stored = null;
+        for (const recipient of data.received_for || data.to || []) {
+          stored = await storeInboundMessage(db, {
+            recipient,
+            providerMessageId: String(data.email_id || data.message_id || ""),
+            senderAddress: data.from,
+            subject: data.subject,
+            receivedAt: data.created_at || event.created_at
+          });
+          if (stored) break;
+        }
+        return json(res, 202, { accepted: true, routed: Boolean(stored) });
+      }
+
+      if (req.method === "POST" && url.pathname === "/api/v1/runner/enroll") {
+        const input = runnerEnrollmentSchema.parse(await readJson(req));
+        const enrolled = await enrollRunnerDevice(db, input);
+        return json(res, 201, {
+          deviceId: enrolled.deviceId,
+          deviceSecret: enrolled.secret,
+          candidateUserId: enrolled.userId
+        });
+      }
+
+      if (url.pathname.startsWith("/api/v1/runner/device/")) {
+        const rawBody = req.method === "POST" ? await readText(req) : "";
+        const runner = await authenticateRunnerRequest(req, url.pathname, rawBody, db);
+        if (!runner) return json(res, 401, { error: "Runner authentication failed." });
+        if (req.method === "POST" && url.pathname === "/api/v1/runner/device/heartbeat") {
+          await heartbeatRunner(db, runner.userId, runner.deviceId);
+          return json(res, 200, { ok: true });
+        }
+        if (req.method === "POST" && url.pathname === "/api/v1/runner/device/tasks/lease") {
+          await heartbeatRunner(db, runner.userId, runner.deviceId);
+          const leased = await leaseRunnerTask(db, runner.userId, runner.deviceId, runner.secret);
+          return json(res, 200, leased || { task: null });
+        }
+        if (req.method === "POST" && url.pathname === "/api/v1/runner/device/proofs") {
+          const body = JSON.parse(rawBody || "{}");
+          const proof = runnerProofSchema.parse(body.proof) as ApplicationProof;
+          const evidenceInput = body.evidence
+            ? runnerEvidenceSchema.parse(body.evidence)
+            : null;
+          let evidence: { storageKey: string; mimeType: string; filename: string } | undefined;
+          if (evidenceInput) {
+            const content = Buffer.from(evidenceInput.base64, "base64");
+            if (!content.length
+                || content.length > 5_000_000
+                || content.toString("base64").replace(/=+$/, "") !== evidenceInput.base64.replace(/=+$/, "")) {
+              return json(res, 400, { error: "Proof evidence is invalid or exceeds 5 MB." });
+            }
+            const sha256 = crypto.createHash("sha256")
+              .update(`${runner.userId}:${proof.taskId}:`)
+              .update(content)
+              .digest("hex");
+            const storageKey = buildProofStorageKey(runner.userId, sha256);
+            assertPrivateStorageOwnership(runner.userId, storageKey);
+            await storage.putObject({
+              key: storageKey,
+              content,
+              mimeType: evidenceInput.mimeType,
+              filename: evidenceInput.filename
+            });
+            evidence = {
+              storageKey,
+              mimeType: evidenceInput.mimeType,
+              filename: evidenceInput.filename
+            };
+          }
+          try {
+            const saved = await saveRunnerProof(
+              db,
+              runner.userId,
+              runner.deviceId,
+              String(body.leaseToken || ""),
+              proof,
+              evidence
+            );
+            return json(res, 201, { accepted: true, proofId: saved.id });
+          } catch (error) {
+            if (evidence) await storage.deleteObject(evidence.storageKey).catch(() => undefined);
+            throw error;
+          }
+        }
+        return json(res, 404, { error: "Runner endpoint not found." });
       }
 
       const user = await authenticatedUser(req, db);
@@ -471,22 +912,163 @@ export async function createProductServer(storage: ProductObjectStorage = create
             code,
             state
           });
-          return html(res, 200, '<h1>Gmail connected</h1><p><a href="/">Return to JobAgent</a></p>');
-        } catch (error) {
-          console.error(error);
-          return html(res, 400, "<h1>Gmail connection was not completed</h1><p>The mailbox identity or authorization could not be verified.</p>");
+          return redirect(res, "/?connection=gmail-connected");
+        } catch {
+          return redirect(res, "/?connection=gmail-failed");
         }
       }
-      if (req.method === "GET" && url.pathname === "/") return html(res, 200, renderPage(Boolean(user)));
+      if (req.method === "GET" && await serveStatic(res, url.pathname)) return;
       if (!user && url.pathname.startsWith("/api/v1/")) return json(res, 401, { error: "Authentication required." });
       if (!user) return json(res, 404, { error: "Not found." });
+      if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method || "")
+          && !csrfTokenAllowed(req, user)) {
+        return json(res, 403, { error: "CSRF validation failed. Refresh JobAgent and try again." });
+      }
 
       if (req.method === "POST" && url.pathname === "/api/v1/auth/logout") {
         await revokeCurrentSession(req, db);
         clearSessionCookie(res);
         return json(res, 200, { ok: true });
       }
-      if (req.method === "GET" && url.pathname === "/api/v1/me") return json(res, 200, { user });
+      if (req.method === "GET" && url.pathname === "/api/v1/me") {
+        return json(res, 200, { user: publicProductUser(user) });
+      }
+      if (req.method === "POST" && url.pathname === "/api/v1/auth/verification/resend") {
+        if (user.emailVerifiedAt) return json(res, 200, { sent: false, alreadyVerified: true });
+        const verification = await createEmailVerificationToken(db, user.id);
+        const deliveryId = await sendVerificationEmail(user.email, verification.token).catch(() => null);
+        return json(res, deliveryId ? 202 : 503, { sent: Boolean(deliveryId) });
+      }
+      if (req.method === "POST" && url.pathname === "/api/v1/auth/mfa/setup") {
+        if (!user.emailVerifiedAt || !hasRecentAuthentication(user)) {
+          return json(res, 401, { error: "Verify your email and sign in again before setting up MFA." });
+        }
+        const secret = createTotpSecret();
+        await saveEncryptedMfaSecret(db, user.id, secret);
+        const issuer = encodeURIComponent("Una Labs JobAgent");
+        const account = encodeURIComponent(user.email);
+        return json(res, 200, {
+          secret,
+          otpauthUrl: `otpauth://totp/${issuer}:${account}?secret=${secret}&issuer=${issuer}&digits=6&period=30`
+        });
+      }
+      if (req.method === "POST" && url.pathname === "/api/v1/auth/mfa/confirm") {
+        if (!hasRecentAuthentication(user)) {
+          return json(res, 401, { error: "Sign in again before confirming MFA." });
+        }
+        const input = mfaCodeSchema.parse(await readJson(req));
+        const secret = await getDecryptedMfaSecret(db, user.id);
+        if (!secret || !verifyTotp(secret, input.code)) {
+          return json(res, 400, { error: "MFA code is invalid." });
+        }
+        await enableProductMfa(db, user.id);
+        return json(res, 200, { enabled: true });
+      }
+      if (req.method === "GET" && url.pathname === "/api/v1/automation-policy") {
+        return json(res, 200, { policy: await getAutomationPolicy(db, user.id) });
+      }
+      if (req.method === "PUT" && url.pathname === "/api/v1/automation-policy") {
+        if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
+        const body = await readJson(req);
+        const input = automationPolicySchema.parse(body);
+        return idempotentMutation(req, res, {
+          db, userId: user.id, requestPath: url.pathname, body,
+          action: async () => ({
+            status: 200,
+            body: { policy: await saveAutomationPolicy(db, user.id, input) }
+          })
+        });
+      }
+      if (req.method === "GET" && url.pathname === "/api/v1/connectors/capabilities") {
+        return json(res, 200, { connectors: await ensureConnectorCapabilities(db, user.id) });
+      }
+      if (req.method === "POST" && url.pathname === "/api/v1/inbound-alias") {
+        if (!user.emailVerifiedAt) return json(res, 403, { error: "Verify your email first." });
+        const body = await readJson(req);
+        return idempotentMutation(req, res, {
+          db, userId: user.id, requestPath: url.pathname, body,
+          action: async () => ({
+            status: 201,
+            body: { alias: await createInboundAlias(db, user.id) }
+          })
+        });
+      }
+      if (req.method === "POST" && url.pathname === "/api/v1/runner/enrollment-token") {
+        if (!user.emailVerifiedAt || !hasRecentAuthentication(user)) {
+          return json(res, 401, { error: "Verify your email and sign in again before enrolling a runner." });
+        }
+        const body = await readJson(req);
+        return idempotentMutation(req, res, {
+          db, userId: user.id, requestPath: url.pathname, body,
+          action: async () => ({
+            status: 201,
+            body: { enrollment: await createRunnerEnrollment(db, user.id) }
+          })
+        });
+      }
+      if (req.method === "GET" && url.pathname === "/api/v1/operator/health") {
+        if (!operatorAllowed(user)) return json(res, 403, { error: "Verified operator MFA is required." });
+        const counts = await db.query(
+          `SELECT count(*)::integer AS users,
+                  count(*) FILTER (WHERE status='active')::integer AS active,
+                  count(*) FILTER (WHERE status='paused')::integer AS paused
+             FROM product_users WHERE status <> 'deleted'`
+        );
+        return json(res, 200, {
+          database: "connected",
+          objectStorage: storage.driver,
+          accounts: counts.rows[0],
+          checkedAt: new Date().toISOString()
+        });
+      }
+      if (req.method === "POST" && url.pathname === "/api/v1/operator/invitations") {
+        if (!operatorAllowed(user)) return json(res, 403, { error: "Verified operator MFA is required." });
+        const body = await readJson(req);
+        const input = invitationSchema.parse(body);
+        return idempotentMutation(req, res, {
+          db, userId: user.id, requestPath: url.pathname, body,
+          action: async () => {
+            const invitation = await createProductInvitation(db, {
+              ...input,
+              createdBy: user.id
+            });
+            const deliveryId = await sendInvitationEmail(
+              invitation.email,
+              invitation.token,
+              invitation.expiresAt
+            );
+            return {
+              status: 201,
+              body: {
+                invitation: {
+                  email: invitation.email,
+                  role: invitation.role,
+                  expiresAt: invitation.expiresAt
+                },
+                deliveryId
+              }
+            };
+          }
+        });
+      }
+      if (req.method === "POST" && url.pathname === "/api/v1/operator/connectors") {
+        if (!operatorAllowed(user)) return json(res, 403, { error: "Verified operator MFA is required." });
+        const body: any = await readJson(req);
+        const input = connectorCertificationSchema.parse(body);
+        const target = await db.query(
+          "SELECT id FROM product_users WHERE email=$1 AND status <> 'deleted'",
+          [normalizedEmail(String(body.email || ""))]
+        );
+        if (!target.rows[0]) return json(res, 404, { error: "Candidate account was not found." });
+        await updateConnectorCapability(
+          db,
+          target.rows[0].id,
+          input.source as ConnectorSource,
+          input.status as ConnectorStatus,
+          input.evidenceReference
+        );
+        return json(res, 200, { updated: true });
+      }
       if (req.method === "GET" && url.pathname === "/api/v1/onboarding") {
         return json(res, 200, { onboarding: await getProductOnboarding(db, user.id) });
       }
@@ -528,6 +1110,38 @@ export async function createProductServer(storage: ProductObjectStorage = create
               throw error;
             }
           }
+        });
+      }
+      const proofDownload = url.pathname.match(/^\/api\/v1\/proofs\/([0-9a-f-]{36})\/download$/i);
+      if (req.method === "GET" && proofDownload) {
+        const file = await getRunnerProofObject(db, user.id, proofDownload[1]);
+        if (!file) return json(res, 404, { error: "Proof evidence was not found." });
+        assertPrivateStorageOwnership(user.id, file.storageKey);
+        const signedUrl = await storage.signedDownloadUrl(file.storageKey, file.filename);
+        if (signedUrl) return redirect(res, signedUrl, 302);
+        return fileResponse(res, {
+          filename: file.filename,
+          mimeType: file.mimeType,
+          content: await storage.getObject(file.storageKey)
+        });
+      }
+      const applicationEvidenceDownload = url.pathname.match(
+        /^\/api\/v1\/application-evidence\/([0-9a-f-]{36})\/download$/i
+      );
+      if (req.method === "GET" && applicationEvidenceDownload) {
+        const file = await getProductApplicationEvidenceObject(
+          db,
+          user.id,
+          applicationEvidenceDownload[1]
+        );
+        if (!file) return json(res, 404, { error: "Application evidence was not found." });
+        assertPrivateStorageOwnership(user.id, file.storageKey);
+        const signedUrl = await storage.signedDownloadUrl(file.storageKey, file.filename);
+        if (signedUrl) return redirect(res, signedUrl, 302);
+        return fileResponse(res, {
+          filename: file.filename,
+          mimeType: file.mimeType,
+          content: await storage.getObject(file.storageKey)
         });
       }
       const resumeDownload = url.pathname.match(/^\/api\/v1\/resumes\/([0-9a-f-]{36})\/download$/i);
@@ -605,6 +1219,7 @@ export async function createProductServer(storage: ProductObjectStorage = create
       }
       if (req.method === "POST" && url.pathname === "/api/v1/connections") {
         if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
+        if (!user.emailVerifiedAt) return json(res, 403, { error: "Verify your email before connecting an account." });
         const body = await readJson(req);
         const input = connectionSchema.parse(body);
         return idempotentMutation(req, res, {
@@ -617,7 +1232,7 @@ export async function createProductServer(storage: ProductObjectStorage = create
           }
         });
       }
-      const connectionRevoke = url.pathname.match(/^\/api\/v1\/connections\/(gmail|linkedin|indeed)$/);
+      const connectionRevoke = url.pathname.match(/^\/api\/v1\/connections\/(gmail|linkedin|indeed|dice|monster)$/);
       if (req.method === "DELETE" && connectionRevoke) {
         if (!hasRecentAuthentication(user)) return json(res, 401, { error: "Sign in again before revoking a connection." });
         return idempotentMutation(req, res, {
@@ -664,20 +1279,48 @@ export async function createProductServer(storage: ProductObjectStorage = create
           action: async () => ({
             status: 200,
             body: {
-              onboarding: await saveProductOnboarding(db, user.id, {
-                record,
-                completed,
-                consentVersion: CONSENT_VERSION,
-                consentedAt: new Date().toISOString()
-              })
+              onboarding: await (async () => {
+                const onboarding = await saveProductOnboarding(db, user.id, {
+                  record,
+                  completed,
+                  consentVersion: CONSENT_VERSION,
+                  consentedAt: new Date().toISOString()
+                });
+                const policy = await saveAutomationPolicy(db, user.id, {
+                  mode: "approval_required",
+                  recruiterDrafts: record.consent.recruiterDrafts,
+                  recruiterSends: record.consent.recruiterSends,
+                  assistedApplications: record.consent.assistedApplications,
+                  controlledSubmissions: record.consent.controlledSubmissions,
+                  maxDraftsPerDay: 50,
+                  maxRecruiterSendsPerDay: 10,
+                  maxApplicationsPerDay: 10,
+                  maxApplicationsPerBoard: 5,
+                  quietHoursStart: 23,
+                  quietHoursEnd: 7,
+                  timeZone: record.timeZone
+                });
+                await recordConsentSnapshot(db, user.id, {
+                  career_truth: record.consent.truthConfirmed,
+                  recruiter_drafts: record.consent.recruiterDrafts,
+                  recruiter_sends: record.consent.recruiterSends,
+                  assisted_applications: record.consent.assistedApplications,
+                  controlled_submissions: record.consent.controlledSubmissions,
+                  google_data: false
+                }, policy as unknown as Record<string, unknown>);
+                await ensureConnectorCapabilities(db, user.id);
+                return onboarding;
+              })()
             }
           })
         });
       }
       if (req.method === "POST" && url.pathname === "/api/v1/account/pause") {
         if (!hasRecentAuthentication(user)) return json(res, 401, { error: "Sign in again before pausing the account." });
+        await revokeProductGmailOAuth(db, user.id).catch(() => ({ providerRevoked: false }));
+        await revokeProductConnection(db, user.id, "gmail").catch(() => null);
         await setProductAccountStatus(db, user.id, "paused");
-        await db.query("DELETE FROM product_sessions WHERE user_id=$1", [user.id]);
+        await revokeAllSessions(db, user.id);
         clearSessionCookie(res);
         return json(res, 200, { paused: true });
       }
@@ -699,10 +1342,10 @@ export async function createProductServer(storage: ProductObjectStorage = create
         if (!found.rows[0] || !verifyPassword(input.password, found.rows[0].password_hash)) {
           return json(res, 401, { error: "Current password is incorrect." });
         }
-        const storedObjects = await listProductResumeStorageObjects(db, user.id);
+        const storedObjects = await listProductPrivateStorageObjects(db, user.id);
         try {
           for (const object of storedObjects) {
-            assertResumeStorageOwnership(user.id, object.storageKey);
+            assertPrivateStorageOwnership(user.id, object.storageKey);
             if (object.storageDriver !== storage.driver) {
               throw new Error("Configured storage does not match an account object.");
             }
@@ -727,7 +1370,10 @@ export async function createProductServer(storage: ProductObjectStorage = create
       return json(res, 404, { error: "Not found." });
     } catch (error) {
       if (error instanceof z.ZodError) return json(res, 400, { error: "Invalid request.", details: error.issues });
-      console.error(error);
+      console.error(JSON.stringify({
+        event: "request_failed",
+        errorClass: error instanceof Error ? error.name : "UnknownError"
+      }));
       return json(res, 500, { error: "Internal server error." });
     }
   });
@@ -735,13 +1381,20 @@ export async function createProductServer(storage: ProductObjectStorage = create
 
 export async function startProductServer(): Promise<void> {
   const server = await createProductServer();
-  server.listen(PORT, HOST, () => console.log(`Una Labs JobAgent product server listening on ${HOST}:${PORT}`));
+  server.listen(PORT, HOST, () => console.log(JSON.stringify({
+    event: "server_ready",
+    host: HOST,
+    port: PORT
+  })));
 }
 
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 if (isMain) {
   startProductServer().catch((error) => {
-    console.error(error);
+    console.error(JSON.stringify({
+      event: "server_failed",
+      errorClass: error instanceof Error ? error.name : "UnknownError"
+    }));
     process.exitCode = 1;
   });
 }

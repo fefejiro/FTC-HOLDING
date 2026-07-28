@@ -3,7 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  assertPrivateStorageOwnership,
   assertResumeStorageOwnership,
+  buildProofStorageKey,
   buildResumeStorageKey,
   LocalProductObjectStorage,
   objectStorageConfig,
@@ -46,6 +48,22 @@ describe("private product object storage", () => {
     expect(() => buildResumeStorageKey(userId, "../escape")).toThrow(/Invalid/);
   });
 
+  it("keeps runner evidence in the owning tenant's private proof namespace", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "jobagent-proof-"));
+    roots.push(root);
+    const storage = new LocalProductObjectStorage(root);
+    const key = buildProofStorageKey(userId, sha256);
+    expect(() => assertPrivateStorageOwnership(userId, key)).not.toThrow();
+    expect(() => assertPrivateStorageOwnership("22222222-2222-4222-8222-222222222222", key))
+      .toThrow(/does not belong/);
+    await storage.putObject({
+      key,
+      content: Buffer.from("proof-image"),
+      mimeType: "image/png"
+    });
+    await expect(storage.getObject(key)).resolves.toEqual(Buffer.from("proof-image"));
+  });
+
   it("fails closed when production is configured with filesystem storage", () => {
     const previous = process.env.NODE_ENV;
     process.env.NODE_ENV = "production";
@@ -66,5 +84,34 @@ describe("private product object storage", () => {
       region: "ca-central-1",
       serverSideEncryption: "aws:kms"
     })).toThrow(/KMS_KEY_ID/);
+  });
+
+  it("can omit unsupported S3 encryption headers for a private Railway bucket", () => {
+    process.env.OBJECT_STORAGE_DRIVER = "s3";
+    process.env.OBJECT_STORAGE_BUCKET = "private-bucket";
+    process.env.OBJECT_STORAGE_REGION = "auto";
+    process.env.OBJECT_STORAGE_SSE = "none";
+    expect(objectStorageConfig().serverSideEncryption).toBeUndefined();
+  });
+
+  it("does not send encryption headers when the provider does not support them", async () => {
+    const storage = new S3ProductObjectStorage({
+      driver: "s3",
+      bucket: "private-bucket",
+      region: "auto"
+    });
+    let input: Record<string, unknown> | undefined;
+    (storage as any).client = {
+      send: async (command: { input: Record<string, unknown> }) => {
+        input = command.input;
+      }
+    };
+    await storage.putObject({
+      key: buildResumeStorageKey(userId, sha256),
+      content: Buffer.from("private"),
+      mimeType: "application/pdf"
+    });
+    expect(input).not.toHaveProperty("ServerSideEncryption");
+    expect(input).not.toHaveProperty("SSEKMSKeyId");
   });
 });

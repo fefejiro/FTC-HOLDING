@@ -3,6 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
+const repositoryRoot = path.resolve(root, "..", "..");
+const railwayIgnorePath = path.join(repositoryRoot, ".railwayignore");
 const strict = process.argv.includes("--strict");
 const failures = [];
 const warnings = [];
@@ -40,38 +42,151 @@ for (const relative of trackedFiles()) {
   }
 }
 
+for (const required of [
+  "Dockerfile",
+  "railway.web.toml",
+  "railway.worker.toml",
+  "railway.migrate.toml",
+  "public/index.html",
+  "public/app.js",
+  "public/manifest.webmanifest",
+  "public/sw.js",
+  "public/privacy.html",
+  "public/terms.html",
+  "public/google-data.html",
+  "public/retention.html",
+  "public/account-deletion.html",
+  "public/icon-192.png",
+  "public/icon-192.png.b64",
+  "public/icon.png",
+  "public/icon.png.b64",
+  "migrations/008_safe_public_beta.sql",
+  "migrations/009_application_evidence.sql",
+  "scripts/install-trusted-runner.ps1",
+  "scripts/provision-railway-database.mjs",
+  "src/product_runner_client.ts",
+  "src/product_pilot_import.ts"
+]) {
+  if (!fs.existsSync(path.join(root, required))) failures.push(`Required release file is missing: ${required}`);
+}
+
+const railwayIgnore = fs.readFileSync(railwayIgnorePath, "utf8");
+if (!railwayIgnore.split(/\r?\n/).some((line) => line.trim() === "*.png")) {
+  warnings.push("Railway upload rules no longer exclude binary PNG artifacts; review the upload scope.");
+}
+
+for (const icon of ["icon-192.png", "icon.png"]) {
+  const binary = fs.readFileSync(path.join(root, "public", icon));
+  const fallback = Buffer.from(
+    fs.readFileSync(path.join(root, "public", `${icon}.b64`), "ascii").trim(),
+    "base64"
+  );
+  if (!binary.equals(fallback)) {
+    failures.push(`PWA icon fallback does not match its binary source: ${icon}`);
+  }
+}
+
+const lock = JSON.parse(fs.readFileSync(path.join(root, "package-lock.json"), "utf8"));
+if (lock.packages?.["node_modules/gaxios"]?.version === "7.1.4") {
+  failures.push("Standalone lockfile still resolves the obsolete gaxios 7.1.4 release.");
+}
+
+for (const legacyWorkflow of ["job-reply-agent.yml", "job-reply-report.yml"]) {
+  const workflow = path.join(repositoryRoot, ".github", "workflows", legacyWorkflow);
+  if (fs.existsSync(workflow) && /^\s*schedule\s*:/m.test(fs.readFileSync(workflow, "utf8"))) {
+    failures.push(`Legacy single-user schedule is still active: ${legacyWorkflow}`);
+  }
+}
+
 if (strict) {
   if (process.env.NODE_ENV !== "production") failures.push("NODE_ENV must equal production.");
-  if (!/^postgres(?:ql)?:\/\//.test(process.env.DATABASE_URL || "")) failures.push("DATABASE_URL must be a PostgreSQL URL.");
-  if (!/^https:\/\//.test(process.env.APP_ORIGIN || "")) failures.push("APP_ORIGIN must be an HTTPS origin.");
-  if ((process.env.JOB_AGENT_INVITE_CODE || "").length < 24) failures.push("JOB_AGENT_INVITE_CODE must be at least 24 characters.");
-  if (process.env.OBJECT_STORAGE_DRIVER !== "s3") failures.push("OBJECT_STORAGE_DRIVER must equal s3.");
-  if (!(process.env.OBJECT_STORAGE_BUCKET || "").trim()) failures.push("OBJECT_STORAGE_BUCKET is required.");
-  if (!(process.env.OBJECT_STORAGE_REGION || "").trim()) failures.push("OBJECT_STORAGE_REGION is required.");
-  if (process.env.OBJECT_STORAGE_ENDPOINT && !/^https:\/\//.test(process.env.OBJECT_STORAGE_ENDPOINT)) failures.push("OBJECT_STORAGE_ENDPOINT must use HTTPS.");
-  if (process.env.OBJECT_STORAGE_SSE === "aws:kms" && !(process.env.OBJECT_STORAGE_KMS_KEY_ID || "").trim()) failures.push("OBJECT_STORAGE_KMS_KEY_ID is required for KMS encryption.");
-  if (process.env.ALLOW_LOCAL_OBJECT_STORAGE === "true") failures.push("ALLOW_LOCAL_OBJECT_STORAGE cannot be enabled in production.");
-  if (!(process.env.GMAIL_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "").trim()) failures.push("GMAIL_CLIENT_ID or GOOGLE_CLIENT_ID is required.");
-  if (!(process.env.GMAIL_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET || "").trim()) failures.push("GMAIL_CLIENT_SECRET or GOOGLE_CLIENT_SECRET is required.");
-
-  const activeKeyVersion = (process.env.OAUTH_TOKEN_ACTIVE_KEY_VERSION || "v1").trim();
-  let oauthKeys = {};
+  const processType = String(process.env.JOB_AGENT_PROCESS || "all").trim().toLowerCase();
+  if (!["web", "worker", "migrate", "all"].includes(processType)) {
+    failures.push("JOB_AGENT_PROCESS must be web, worker, migrate, or all.");
+  }
+  const databaseUrls = {
+    runtime: process.env.DATABASE_URL || "",
+    migration: process.env.MIGRATION_DATABASE_URL || "",
+    queue: process.env.JOB_QUEUE_DATABASE_URL || ""
+  };
+  const requiredDatabases = processType === "web"
+    ? ["runtime"]
+    : processType === "worker"
+      ? ["runtime", "queue"]
+      : processType === "migrate"
+        ? ["runtime", "migration"]
+        : ["runtime", "migration", "queue"];
+  for (const name of requiredDatabases) {
+    const value = databaseUrls[name];
+    if (!/^postgres(?:ql)?:\/\//.test(value)) failures.push(`${name} database URL must be a PostgreSQL URL.`);
+  }
   try {
-    if (process.env.OAUTH_TOKEN_ENCRYPTION_KEYS) {
-      oauthKeys = JSON.parse(process.env.OAUTH_TOKEN_ENCRYPTION_KEYS);
-    } else if (process.env.OAUTH_TOKEN_ENCRYPTION_KEY) {
-      oauthKeys = { [activeKeyVersion]: process.env.OAUTH_TOKEN_ENCRYPTION_KEY };
+    const roles = requiredDatabases.map((name) => decodeURIComponent(new URL(databaseUrls[name]).username));
+    if (roles.some((role) => !role)) failures.push("Every required database URL must identify a role.");
+    if (new Set(roles).size !== roles.length) {
+      failures.push("Database roles assigned to this process must be distinct.");
     }
   } catch {
-    failures.push("OAUTH_TOKEN_ENCRYPTION_KEYS must be valid JSON.");
+    failures.push("Required database URLs could not be parsed.");
   }
-  const activeKey = typeof oauthKeys === "object" && oauthKeys !== null
-    ? oauthKeys[activeKeyVersion]
-    : undefined;
-  if (!activeKey) {
-    failures.push(`OAuth encryption key version ${activeKeyVersion} is required.`);
-  } else if (Buffer.from(activeKey, "base64").length !== 32) {
-    failures.push(`OAuth encryption key version ${activeKeyVersion} must decode to 32 bytes.`);
+  if (processType !== "migrate") {
+    try {
+      const origin = new URL(process.env.APP_ORIGIN || "");
+      if (origin.protocol !== "https:" || origin.origin !== process.env.APP_ORIGIN) {
+        failures.push("APP_ORIGIN must be a canonical HTTPS origin without a path.");
+      }
+    } catch {
+      failures.push("APP_ORIGIN must be a valid HTTPS origin.");
+    }
+    for (const candidate of String(process.env.APP_ALLOWED_ORIGINS || "").split(",").filter(Boolean)) {
+      try {
+        const origin = new URL(candidate.trim());
+        if (origin.protocol !== "https:" || origin.origin !== candidate.trim() || candidate.includes("*")) {
+          failures.push("APP_ALLOWED_ORIGINS must contain canonical HTTPS origins without wildcards.");
+        }
+      } catch {
+        failures.push("APP_ALLOWED_ORIGINS contains an invalid origin.");
+      }
+    }
+  }
+  if (process.env.AUTO_MIGRATE === "true") failures.push("AUTO_MIGRATE must be disabled for runtime services.");
+  if (processType !== "migrate") {
+    if (process.env.OBJECT_STORAGE_DRIVER !== "s3") failures.push("OBJECT_STORAGE_DRIVER must equal s3.");
+    if (!(process.env.OBJECT_STORAGE_BUCKET || "").trim()) failures.push("OBJECT_STORAGE_BUCKET is required.");
+    if (!(process.env.OBJECT_STORAGE_REGION || "").trim()) failures.push("OBJECT_STORAGE_REGION is required.");
+    if (!(process.env.AWS_ACCESS_KEY_ID || "").trim()) failures.push("AWS_ACCESS_KEY_ID is required.");
+    if (!(process.env.AWS_SECRET_ACCESS_KEY || "").trim()) failures.push("AWS_SECRET_ACCESS_KEY is required.");
+    if (process.env.OBJECT_STORAGE_ENDPOINT && !/^https:\/\//.test(process.env.OBJECT_STORAGE_ENDPOINT)) failures.push("OBJECT_STORAGE_ENDPOINT must use HTTPS.");
+    if (process.env.OBJECT_STORAGE_SSE === "aws:kms" && !(process.env.OBJECT_STORAGE_KMS_KEY_ID || "").trim()) failures.push("OBJECT_STORAGE_KMS_KEY_ID is required for KMS encryption.");
+    if (process.env.ALLOW_LOCAL_OBJECT_STORAGE === "true") failures.push("ALLOW_LOCAL_OBJECT_STORAGE cannot be enabled in production.");
+    if (!(process.env.GMAIL_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "").trim()) failures.push("GMAIL_CLIENT_ID or GOOGLE_CLIENT_ID is required.");
+    if (!(process.env.GMAIL_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET || "").trim()) failures.push("GMAIL_CLIENT_SECRET or GOOGLE_CLIENT_SECRET is required.");
+    if (!(process.env.RESEND_API_KEY || "").startsWith("re_")) failures.push("RESEND_API_KEY is required.");
+    if (!(process.env.RESEND_INBOUND_WEBHOOK_SECRET || "").startsWith("whsec_")) failures.push("RESEND_INBOUND_WEBHOOK_SECRET is required.");
+    if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(process.env.INBOUND_EMAIL_DOMAIN || "")) failures.push("INBOUND_EMAIL_DOMAIN must be a valid domain.");
+    if (!(process.env.TRANSACTIONAL_EMAIL_FROM || "").includes("@")) failures.push("TRANSACTIONAL_EMAIL_FROM is required.");
+  }
+
+  if (processType !== "migrate") {
+    const activeKeyVersion = (process.env.OAUTH_TOKEN_ACTIVE_KEY_VERSION || "v1").trim();
+    let oauthKeys = {};
+    try {
+      if (process.env.OAUTH_TOKEN_ENCRYPTION_KEYS) {
+        oauthKeys = JSON.parse(process.env.OAUTH_TOKEN_ENCRYPTION_KEYS);
+      } else if (process.env.OAUTH_TOKEN_ENCRYPTION_KEY) {
+        oauthKeys = { [activeKeyVersion]: process.env.OAUTH_TOKEN_ENCRYPTION_KEY };
+      }
+    } catch {
+      failures.push("OAUTH_TOKEN_ENCRYPTION_KEYS must be valid JSON.");
+    }
+    const activeKey = typeof oauthKeys === "object" && oauthKeys !== null
+      ? oauthKeys[activeKeyVersion]
+      : undefined;
+    if (!activeKey) {
+      failures.push(`OAuth encryption key version ${activeKeyVersion} is required.`);
+    } else if (Buffer.from(activeKey, "base64").length !== 32) {
+      failures.push(`OAuth encryption key version ${activeKeyVersion} must decode to 32 bytes.`);
+    }
   }
 } else {
   warnings.push("Runtime environment checks skipped. Run production:check:strict in the deployment environment.");

@@ -41,6 +41,7 @@ export interface ObjectStorageConfig {
 const USER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SHA256 = /^[a-f0-9]{64}$/;
 const STORAGE_KEY = /^users\/([0-9a-f-]{36})\/resumes\/([a-f0-9]{64})$/i;
+const PRIVATE_STORAGE_KEY = /^users\/([0-9a-f-]{36})\/(resumes|proof)\/([a-f0-9]{64})$/i;
 
 export function buildResumeStorageKey(userId: string, sha256: string): string {
   if (!USER_ID.test(userId) || !SHA256.test(sha256)) throw new Error("Invalid resume storage identity.");
@@ -54,8 +55,20 @@ export function assertResumeStorageOwnership(userId: string, key: string): void 
   }
 }
 
+export function buildProofStorageKey(userId: string, sha256: string): string {
+  if (!USER_ID.test(userId) || !SHA256.test(sha256)) throw new Error("Invalid proof storage identity.");
+  return `users/${userId.toLowerCase()}/proof/${sha256}`;
+}
+
+export function assertPrivateStorageOwnership(userId: string, key: string): void {
+  const match = PRIVATE_STORAGE_KEY.exec(key);
+  if (!match || match[1].toLowerCase() !== userId.toLowerCase()) {
+    throw new Error("Private object does not belong to the authenticated user.");
+  }
+}
+
 function safeLocalPath(root: string, key: string): string {
-  if (!STORAGE_KEY.test(key)) throw new Error("Invalid private object key.");
+  if (!PRIVATE_STORAGE_KEY.test(key)) throw new Error("Invalid private object key.");
   const absoluteRoot = path.resolve(root);
   const target = path.resolve(absoluteRoot, ...key.split("/"));
   if (target !== absoluteRoot && !target.startsWith(`${absoluteRoot}${path.sep}`)) {
@@ -65,7 +78,7 @@ function safeLocalPath(root: string, key: string): string {
 }
 
 function assertValidStorageKey(key: string): void {
-  if (!STORAGE_KEY.test(key)) throw new Error("Invalid private object key.");
+  if (!PRIVATE_STORAGE_KEY.test(key)) throw new Error("Invalid private object key.");
 }
 
 export class LocalProductObjectStorage implements ProductObjectStorage {
@@ -128,8 +141,14 @@ export class S3ProductObjectStorage implements ProductObjectStorage {
       ContentType: object.mimeType,
       CacheControl: "private, no-store",
       Metadata: { sha256: object.key.split("/").at(-1) || "" },
-      ServerSideEncryption: this.config.serverSideEncryption || "AES256",
-      SSEKMSKeyId: this.config.serverSideEncryption === "aws:kms" ? this.config.kmsKeyId : undefined
+      ...(this.config.serverSideEncryption
+        ? {
+            ServerSideEncryption: this.config.serverSideEncryption,
+            SSEKMSKeyId: this.config.serverSideEncryption === "aws:kms"
+              ? this.config.kmsKeyId
+              : undefined
+          }
+        : {})
     }));
   }
 
@@ -168,7 +187,11 @@ export class S3ProductObjectStorage implements ProductObjectStorage {
 
 export function objectStorageConfig(): ObjectStorageConfig {
   const driver = String(process.env.OBJECT_STORAGE_DRIVER || "local").trim().toLowerCase();
+  const encryption = String(process.env.OBJECT_STORAGE_SSE || "AES256").trim().toLowerCase();
   if (driver !== "local" && driver !== "s3") throw new Error("OBJECT_STORAGE_DRIVER must be local or s3.");
+  if (!["none", "aes256", "aws:kms"].includes(encryption)) {
+    throw new Error("OBJECT_STORAGE_SSE must be none, AES256, or aws:kms.");
+  }
   if (process.env.NODE_ENV === "production" && driver !== "s3" && process.env.ALLOW_LOCAL_OBJECT_STORAGE !== "true") {
     throw new Error("Production requires private S3-compatible object storage.");
   }
@@ -179,7 +202,9 @@ export function objectStorageConfig(): ObjectStorageConfig {
     region: process.env.OBJECT_STORAGE_REGION,
     endpoint: process.env.OBJECT_STORAGE_ENDPOINT,
     forcePathStyle: process.env.OBJECT_STORAGE_FORCE_PATH_STYLE === "true",
-    serverSideEncryption: process.env.OBJECT_STORAGE_SSE === "aws:kms" ? "aws:kms" : "AES256",
+    serverSideEncryption: encryption === "none"
+      ? undefined
+      : encryption === "aws:kms" ? "aws:kms" : "AES256",
     kmsKeyId: process.env.OBJECT_STORAGE_KMS_KEY_ID
   };
 }

@@ -14,11 +14,15 @@ import type { SecretKeyring } from "../src/product_secret_crypto.js";
 
 const connectionString = process.env.TEST_DATABASE_URL;
 const describeDatabase = connectionString ? describe : describe.skip;
-const pool = connectionString ? new pg.Pool({ connectionString }) : null;
+const databaseSsl = process.env.TEST_DATABASE_SSL === "true"
+  ? { rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== "false" }
+  : undefined;
+const pool = connectionString ? new pg.Pool({ connectionString, ssl: databaseSsl }) : null;
 let appPool: pg.Pool | null = null;
 
 describeDatabase("PostgreSQL tenant isolation", () => {
   const suffix = crypto.randomBytes(6).toString("hex");
+  const rolePassword = crypto.randomBytes(32).toString("base64url");
   let userA = "";
   let userB = "";
   let resumeB = "";
@@ -31,12 +35,19 @@ describeDatabase("PostgreSQL tenant isolation", () => {
     if (!pool) return;
     await migrateProductDb(pool);
     const role = `jobagent_test_${suffix}`;
-    await pool.query(`CREATE ROLE ${role} LOGIN NOSUPERUSER NOBYPASSRLS`);
+    await pool.query(
+      `CREATE ROLE ${role} LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD '${rolePassword.replaceAll("'", "''")}'`
+    );
     await pool.query(`GRANT USAGE ON SCHEMA public TO ${role}`);
     await pool.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${role}`);
     await pool.query(`GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ${role}`);
+    const appUrl = new URL(connectionString!);
+    appUrl.username = role;
+    appUrl.password = rolePassword;
+    appUrl.searchParams.delete("user");
     appPool = new pg.Pool({
-      connectionString: connectionString!.replace(/\/[^/]+$/, `/jobagent_test?user=${role}`)
+      connectionString: appUrl.toString(),
+      ssl: databaseSsl
     });
     process.env.GMAIL_CLIENT_ID = "test-client-id";
     process.env.GMAIL_CLIENT_SECRET = "test-client-secret";

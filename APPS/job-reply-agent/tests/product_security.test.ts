@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { clearSessionCookie, hasRecentAuthentication, hashPassword, verifyPassword } from "../src/product_auth.js";
 import { normalizeIdempotencyKey, requestFingerprint } from "../src/product_idempotency.js";
-import { constantEqual } from "../src/product_server.js";
+import { constantEqual, mutationOriginAllowed } from "../src/product_server.js";
 
 describe("product security", () => {
   it("hashes passwords with a random salt and verifies them", () => {
@@ -27,6 +27,21 @@ describe("product security", () => {
     expect(cookie).toContain("HttpOnly");
     expect(cookie).toContain("SameSite=Lax");
     expect(cookie).toContain("Max-Age=0");
+  });
+
+  it("accepts mutations only from the canonical or explicitly trusted origin", () => {
+    process.env.APP_ORIGIN = "https://jobagent.unalabs.cloud";
+    process.env.APP_ALLOWED_ORIGINS = "https://jobagent-preview.example";
+    const request = (origin: string) => ({
+      method: "POST",
+      url: "/api/v1/onboarding",
+      headers: { origin }
+    }) as any;
+    expect(mutationOriginAllowed(request("https://jobagent.unalabs.cloud"))).toBe(true);
+    expect(mutationOriginAllowed(request("https://jobagent-preview.example"))).toBe(true);
+    expect(mutationOriginAllowed(request("https://attacker.example"))).toBe(false);
+    delete process.env.APP_ORIGIN;
+    delete process.env.APP_ALLOWED_ORIGINS;
   });
 
   it("requires a recent session for destructive account actions", () => {
