@@ -43,8 +43,9 @@
 - Indeed: exact Applied page authenticated; 24 historical applications visible. Latest
   visible entry was June 21. Certification remains `pilot_only` pending a fresh suitable
   proof-backed submission.
-- Dice: authenticated Applied page visible, but no recent applications were shown.
-  Certification remains `pilot_only` pending a fresh suitable proof-backed submission.
+- Dice: the earlier authenticated Applied-page baseline showed no recent applications.
+  During the afternoon retry the Fejiro session had expired, and both the Allwyn detail
+  page and dashboard route exposed `Login`. Certification is now `blocked_auth`.
 - Monster: profile identity verified as Fejiro Efiuvwere and
   `fejiro.efiuvwere@gmail.com`. Discovery and package generation are usable. Certification
   remains `manual_only` because an authoritative applied-history proof boundary has not
@@ -63,8 +64,26 @@
 
 - `npm run build`: passed.
 - `npm run lint`: passed.
-- `npm test`: 24 files passed, 190 tests passed, 8 external-service tests skipped.
+- `npm test`: 24 files passed, 191 tests passed, 8 external-service tests skipped.
 - `npm audit --omit=dev --audit-level=high`: 0 vulnerabilities.
 - `npm run production:check`: passed in static mode.
 - PWA rendered at 1440x900 and 390x844 with no horizontal overflow.
 - Hosted strict runtime checks remain a deployment-environment gate.
+
+## Afternoon Operational Retry
+
+- Dice job `#1745`, Senior Technical Program Manager - Enterprise Digital
+  Transformation at Allwyn Corporation, passed live fit review.
+- Render QA caught and prevented upload of a stale Salesforce-themed resume. The
+  track selector now gives explicit project/program titles precedence over incidental
+  Salesforce and cloud-platform mentions, and trailing title pipes are removed.
+- The corrected Allwyn resume rendered across seven pages and passed structural audit:
+  0 empty list paragraphs, 0 empty table rows, no stale Salesforce/cloud-architecture
+  theme, no mojibake, and a clean title.
+- No Dice submission was attempted because Apply redirected to authentication. The
+  attempt is `manual_gate` with the audited package preserved.
+- Indeed discovery was refreshed, but anti-bot interstitials caused incomplete
+  company/location evidence and no fresh package was promoted.
+- LinkedIn fresh BA/BSA review rejected four roles truthfully: mandatory mainframe,
+  mandatory GTM analytics tooling, below-market `CAD $26/hour`, and mandatory
+  Google CCaaS/Vertex AI expertise. No poor-fit application was submitted.
