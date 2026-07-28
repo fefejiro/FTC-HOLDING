@@ -671,6 +671,37 @@ describe("Resume Tailoring Engine", () => {
     expect(text).not.toMatch(/WMS Project Manager|Blue Yonder|North West Company/i);
   });
 
+  it("keeps explicit program-manager roles out of the Salesforce track when Salesforce is incidental", async () => {
+    const result = await tailorResumeForJD({
+      parsed: {
+        roleTitle: "Senior Technical Program Manager - Enterprise Digital Transformation |",
+        company: "Allwyn Corporation",
+        location: "Remote",
+        employmentType: "Full-time",
+        summary: "",
+        recruiterName: "",
+        parserConfidence: 90,
+        cleanBody: "",
+        cleanRoleTitle: "Senior Technical Program Manager - Enterprise Digital Transformation |",
+        alignmentKeywords: [],
+        salaryOrRate: "",
+        isUsRole: true
+      },
+      jdText: [
+        "Lead enterprise digital transformation, SaaS delivery, cloud and data modernization, integrations, UAT, RAID, vendors, and governance.",
+        "Experience may include platforms such as ServiceNow, Salesforce, Microsoft Dynamics, SAP, or Oracle."
+      ].join(" "),
+      templatePath: itManagementTemplatePath,
+      outputDir
+    });
+
+    const text = await extractDocText(result.docxPath);
+    expect(result.newTitle).toBe("Senior Technical Program Manager - Enterprise Digital Transformation");
+    expect(text).toMatch(/program|governance|digital transformation/i);
+    expect(text).not.toMatch(/Salesforce-adjacent|Salesforce ecosystem|CRM-adjacent/i);
+    expect(text).not.toMatch(/Cloud architecture and migration governance|Cross-functional architecture communication/i);
+  });
+
   it("rejects missing role title or company instead of generic fallback", async () => {
     await expect(
       tailorResumeForJD({

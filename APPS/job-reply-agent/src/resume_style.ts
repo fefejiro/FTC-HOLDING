@@ -97,6 +97,8 @@ const FORBIDDEN_VISIBLE_RESUME_PATTERNS = [
   /\bRQ\d+\b/i
 ];
 const SALESFORCE_SIGNALS = /\b(salesforce|crm|service cloud|sales cloud|salesforce cpq|appbuilder|agentforce)\b/i;
+const SALESFORCE_TITLE_SIGNALS = /\b(salesforce|crm|service cloud|sales cloud)\b/i;
+const SALESFORCE_REQUIREMENT_SIGNALS = /\b(?:salesforce|service cloud|sales cloud|salesforce cpq|appbuilder|agentforce)\b[^.!?\n]{0,80}\b(?:required|mandatory|must[- ]have|essential|core requirement)\b|\b(?:required|mandatory|must[- ]have|essential|core requirement)\b[^.!?\n]{0,80}\b(?:salesforce|service cloud|sales cloud|salesforce cpq|appbuilder|agentforce)\b/i;
 const AZURE_CLOUD_SIGNALS = /\b(azure|cloud enterprise architect|landing zone|cloud migration|cloud governance|devsecops|enterprise architecture)\b/i;
 const MAXIMO_EWMS_SIGNALS = /\b(maximo|ewms|enterprise work management|asset management|work orders?|preventative maintenance|preventive maintenance|service requests?|facilities maintenance|mobile field workflows?)\b/i;
 const WMS_ERP_SUPPLY_CHAIN_SIGNALS = /\b(maximo|ewms|enterprise work management|wms|warehouse|warehouse management|erp|supply chain|logistics|inventory|distribution center|distribution centres?|fulfillment|blue yonder|manhattan|sap|oracle|pos integration|warehouse operations)\b/i;
@@ -239,14 +241,20 @@ function detectTrack(title: string, company: string, jdText: string, truthBank: 
   if (supportsTrack("wms_erp_supply_chain") && /\b(wms|warehouse|erp|supply chain|logistics|inventory|fulfillment)\b/i.test(title)) {
     return "wms_erp_supply_chain";
   }
-  if (supportsTrack("salesforce_crm_delivery") && SALESFORCE_SIGNALS.test(corpus)) {
+  if (
+    supportsTrack("salesforce_crm_delivery")
+    && (SALESFORCE_TITLE_SIGNALS.test(title) || SALESFORCE_REQUIREMENT_SIGNALS.test(jdText))
+  ) {
     return "salesforce_crm_delivery";
+  }
+  if (supportsTrack("project_program_management") && /\b(project manager|program manager|delivery manager|pmo)\b/i.test(title)) {
+    return "project_program_management";
   }
   if (supportsTrack("azure_cloud") && AZURE_CLOUD_SIGNALS.test(corpus)) {
     return "azure_cloud";
   }
-  if (supportsTrack("project_program_management") && /\b(project manager|program manager|delivery manager|pmo)\b/i.test(title)) {
-    return "project_program_management";
+  if (supportsTrack("salesforce_crm_delivery") && SALESFORCE_SIGNALS.test(corpus)) {
+    return "salesforce_crm_delivery";
   }
   if (supportsTrack("wms_erp_supply_chain") && WMS_ERP_SUPPLY_CHAIN_SIGNALS.test(corpus)) {
     return "wms_erp_supply_chain";

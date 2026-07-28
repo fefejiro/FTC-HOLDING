@@ -132,7 +132,7 @@ function cleanVisibleRoleTitle(raw: string): string {
     .replace(/\s+\b(?:TCS|Infosys|HCL|Cognizant|Deloitte|Accenture)\b.*$/i, "")
     .replace(/\s{2,}/g, " ")
     .replace(/\s*-\s*BA\b/i, " - BA")
-    .replace(/^[\s:,-]+|[\s:,-]+$/g, "")
+    .replace(/^[\s:,|=-]+|[\s:,|=-]+$/g, "")
     .trim();
 
   return value || normalizeTitle(raw);
