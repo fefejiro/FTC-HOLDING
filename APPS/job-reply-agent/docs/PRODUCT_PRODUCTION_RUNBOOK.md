@@ -14,6 +14,8 @@ Use the dedicated `una-jobagent` project only:
 - `jobagent-worker`: `JOB_AGENT_PROCESS=worker`, restricted RLS runtime role
   plus the queue-schema owner
 - `jobagent-migrate`: one-shot `JOB_AGENT_PROCESS=migrate`, migration owner only
+- `jobagent-backup`: daily one-shot `JOB_AGENT_PROCESS=backup`, PostgreSQL
+  administrative backup connection, private bucket, and backup key only
 - `Postgres`: dedicated product database, not shared with another Una Labs app
 - `jobagent-private`: private S3-compatible bucket for resumes and proof
 
@@ -72,30 +74,40 @@ sensitive, contradictory, or unknown screens return a manual gate.
 
 ## Backup and restore drill
 
-The current Railway workspace is on Hobby. Upgrade it to Pro before relying on
-Railway volume schedules; the backup API is currently authorization-blocked.
+The current Railway workspace is on Hobby and cannot use scheduled managed
+volume backups. `jobagent-backup` provides the beta fallback without requiring
+a plan upgrade:
 
-1. Create and timestamp a managed PostgreSQL backup.
-2. Restore it into a temporary isolated PostgreSQL service.
-3. Run migrations in checksum mode and compare tenant/table counts.
-4. Verify a sample tenant export, resume download, and proof download.
-5. Record recovery time and recovery point, then delete the temporary service.
-6. Confirm deleted-user backups expire within 30 days.
+1. Run `pg_dump` with the PostgreSQL 18 client over Railway private networking.
+2. Encrypt the custom-format dump with AES-256-GCM before upload.
+3. Upload to the private bucket, download it, and verify its SHA-256 digest.
+4. Decrypt it and restore it into a temporary isolated database.
+5. Compare every public table and row count, then drop the temporary database.
+6. Retain verified backups for no more than 30 days.
 
-No release is production-ready until this restore drill has passed.
+The job runs daily at `06:00 UTC`, exits after completion, and never retries in
+a loop. Its encryption key is separately escrowed with Windows DPAPI under the
+operator account in ignored local recovery storage. A wider public launch still
+requires a provider-independent restore drill on replacement infrastructure;
+the same-cluster drill is sufficient for the invite-only beta.
 
 ## Branded domain
 
-Railway custom domain id `d3553a40-ceab-4240-a5b9-34f9b3c17af7` is registered
-for `jobagent.unalabs.cloud`. In Cloudflare, create:
+`jobagent.unalabs.cloud` is a Cloudflare Worker Custom Domain. The
+`una-jobagent-edge` Worker owns DNS and TLS, proxies only to the fixed Railway
+service origin, rewrites upstream redirects, and disables caching for account,
+OAuth, API, session, and readiness routes. Railway's obsolete custom-domain
+registration has been deleted.
 
-- CNAME `jobagent` to `88uc7kph.up.railway.app`, DNS-only during validation.
-- TXT `_railway-verify.jobagent` with the ownership value Railway displays if
-  Railway requests the secondary verification record.
+Deploy with:
 
-Wait for Railway to report the domain verified and the certificate issued.
-Then set the uptime workflow origin to the branded URL and rerun the browser
-and strict production checks.
+```powershell
+wrangler deploy --config cloudflare/jobagent-edge/wrangler.jsonc
+```
+
+Require both `/edgez` and `/readyz` to return `200` before release. The Railway
+origin remains available for operator diagnosis but is not the public product
+address.
 
 ## Channel proof
 

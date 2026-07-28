@@ -253,8 +253,9 @@ Before public onboarding:
 8. Pass cross-tenant isolation and authorization tests. **Local and live
    PostgreSQL tests pass; final CI run remains required on the release commit.**
 9. Complete privacy, retention, export, deletion, and incident procedures.
-   **Product controls and public pages are implemented; restore and incident
-   drills remain.**
+   **Product controls and public pages are implemented. A daily encrypted
+   private-bucket backup and same-cluster full restore drill pass on Railway
+   Hobby; replacement-infrastructure restore and incident drills remain.**
 10. Run the first-friend pilot reliably for at least two weeks. **Not started.**
 
 ## Near-Term Build Order

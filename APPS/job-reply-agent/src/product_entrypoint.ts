@@ -8,8 +8,10 @@ if (processType === "web") {
   await startProductWorker();
 } else if (processType === "migrate") {
   await import("./product_migrate.js");
+} else if (processType === "backup") {
+  await import("./product_backup.js");
 } else {
-  throw new Error("JOB_AGENT_PROCESS must be web, worker, or migrate.");
+  throw new Error("JOB_AGENT_PROCESS must be web, worker, migrate, or backup.");
 }
 
 export {};

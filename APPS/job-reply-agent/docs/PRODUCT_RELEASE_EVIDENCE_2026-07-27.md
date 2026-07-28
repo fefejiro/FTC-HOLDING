@@ -3,11 +3,13 @@
 ## Hosted foundation
 
 - Railway project: `una-jobagent`
-- Temporary QA origin: `https://jobagent-web-production.up.railway.app`
-- Branded domain registration: `jobagent.unalabs.cloud` is active in Railway
-  and awaiting its Cloudflare DNS record.
-- Web, worker, one-shot migration, PostgreSQL, and private bucket are separate
-  resources.
+- Public beta origin: `https://jobagent.unalabs.cloud`
+- Railway diagnostic origin: `https://jobagent-web-production.up.railway.app`
+- Cloudflare Worker `una-jobagent-edge` owns the branded hostname, DNS, TLS,
+  fixed-origin proxying, redirect rewriting, and no-store enforcement for
+  account/API routes. Version: `6494e25c-443a-4826-8ade-cf7d7ffb144e`.
+- Web, worker, one-shot migration, daily backup, PostgreSQL, and private bucket
+  are separate resources.
 - Migration deployment completed and granted table access only to
   `jobagent_app`.
 - `/readyz` returned database connected, tenant isolation role enforced, and
@@ -16,8 +18,26 @@
   before Railway promotes a deployment.
 - Worker startup registered Gmail sync, discovery, scoring, package generation,
   approved send, proof reconciliation, digest, and retention queues.
-- A scheduled GitHub health workflow checks readiness and the PWA assets every
-  15 minutes.
+- GitHub health and release workflows are committed, but GitHub currently
+  refuses to start any runner because the account is billing-locked. This is an
+  external CI gate, not a passing check.
+
+## Hobby backup fallback - 2026-07-28
+
+- Railway managed volume backup scheduling remains unavailable on Hobby.
+- `jobagent-backup` performs a PostgreSQL 18 custom-format dump, AES-256-GCM
+  client-side encryption, private-bucket upload/download, hash verification,
+  temporary-database restoration, and complete public-table count comparison.
+- Two live runs passed. The second bound the dump and count manifest to one
+  exported PostgreSQL snapshot and completed in `6.856s`: `69` tables matched,
+  no expired object was removed, and the temporary database was dropped.
+- Verified object:
+  `system/backups/jobagent-2026-07-28T12-44-01-296Z.dump.enc`
+- Encrypted-object SHA-256:
+  `a3184ba13368b437f36247761717a3ab4e25b8b4a09bfe67fcb2424b7884f2c4`
+- Daily schedule: `06:00 UTC`; restart policy: `NEVER`; retention: `30` days.
+- The encryption key is separately DPAPI-escrowed in ignored local recovery
+  storage for the operator Windows account.
 
 ## Database and isolation
 
@@ -28,7 +48,7 @@
   idempotency, restricted-role, and encrypted OAuth checks.
 - Schema migrations are advisory-locked and checksum protected.
 - A clean standalone install contains 207 packages with zero production audit
-  findings. Build, lint, static release checks, 23 test files, and 183 tests
+  findings. Build, lint, static release checks, 24 test files, and 186 tests
   passed; one file and eight database tests are skipped only in the no-database
   local pass, then all eight passed against live Railway PostgreSQL.
 
@@ -81,15 +101,14 @@
 
 ## Release blockers
 
-- Cloudflare must add unproxied CNAME `jobagent` to
-  `88uc7kph.up.railway.app`. Railway is validating ownership; the current
-  Wrangler OAuth token has read-only zone access and its DNS write was rejected.
 - Resend API and inbound-webhook secrets are not provisioned.
 - Google production OAuth callback/verification is not complete.
 - Operator MFA is enforced but has not been enrolled by Fejiro.
-- The Railway workspace is actually `HOBBY`, not the assumed `PRO` plan.
-  Scheduled volume-backup creation returned `Not Authorized`; plan upgrade,
-  backup scheduling, and the isolated restore/incident drill remain open.
+- Railway remains on `HOBBY`. The encrypted logical backup and same-cluster
+  restore drill now pass; provider snapshots and a replacement-infrastructure
+  restore remain unavailable but do not block the two-user invite-only beta.
+- GitHub Actions jobs cannot start because GitHub reports the account is locked
+  for a billing issue. The same checks pass locally, but CI remains red.
 - The CI release now builds one commit-addressed GHCR image on `main`. Current
   CLI-built services are source-identical but remain on separate image digests
   until that artifact is published and pinned.

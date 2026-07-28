@@ -16,6 +16,7 @@
     "product:migrate:prod": "node dist/product_migrate.js",
     "product:worker:dev": "tsx src/product_worker.ts",
     "product:worker": "node dist/product_worker.js",
+    "product:backup": "node dist/product_backup.js",
     "product:admin": "node dist/product_admin.js",
     "product:pilot-import": "node dist/product_pilot_import.js",
     "runner:dev": "tsx src/product_runner_client.ts",

@@ -47,6 +47,9 @@ for (const required of [
   "railway.web.toml",
   "railway.worker.toml",
   "railway.migrate.toml",
+  "railway.backup.toml",
+  "cloudflare/jobagent-edge/wrangler.jsonc",
+  "cloudflare/jobagent-edge/src/index.js",
   "public/index.html",
   "public/app.js",
   "public/manifest.webmanifest",
@@ -101,13 +104,14 @@ for (const legacyWorkflow of ["job-reply-agent.yml", "job-reply-report.yml"]) {
 if (strict) {
   if (process.env.NODE_ENV !== "production") failures.push("NODE_ENV must equal production.");
   const processType = String(process.env.JOB_AGENT_PROCESS || "all").trim().toLowerCase();
-  if (!["web", "worker", "migrate", "all"].includes(processType)) {
-    failures.push("JOB_AGENT_PROCESS must be web, worker, migrate, or all.");
+  if (!["web", "worker", "migrate", "backup", "all"].includes(processType)) {
+    failures.push("JOB_AGENT_PROCESS must be web, worker, migrate, backup, or all.");
   }
   const databaseUrls = {
     runtime: process.env.DATABASE_URL || "",
     migration: process.env.MIGRATION_DATABASE_URL || "",
-    queue: process.env.JOB_QUEUE_DATABASE_URL || ""
+    queue: process.env.JOB_QUEUE_DATABASE_URL || "",
+    backup: process.env.BACKUP_DATABASE_URL || ""
   };
   const requiredDatabases = processType === "web"
     ? ["runtime"]
@@ -115,7 +119,9 @@ if (strict) {
       ? ["runtime", "queue"]
       : processType === "migrate"
         ? ["runtime", "migration"]
-        : ["runtime", "migration", "queue"];
+        : processType === "backup"
+          ? ["backup"]
+          : ["runtime", "migration", "queue", "backup"];
   for (const name of requiredDatabases) {
     const value = databaseUrls[name];
     if (!/^postgres(?:ql)?:\/\//.test(value)) failures.push(`${name} database URL must be a PostgreSQL URL.`);
@@ -129,7 +135,7 @@ if (strict) {
   } catch {
     failures.push("Required database URLs could not be parsed.");
   }
-  if (processType !== "migrate") {
+  if (["web", "worker", "all"].includes(processType)) {
     try {
       const origin = new URL(process.env.APP_ORIGIN || "");
       if (origin.protocol !== "https:" || origin.origin !== process.env.APP_ORIGIN) {
@@ -159,15 +165,17 @@ if (strict) {
     if (process.env.OBJECT_STORAGE_ENDPOINT && !/^https:\/\//.test(process.env.OBJECT_STORAGE_ENDPOINT)) failures.push("OBJECT_STORAGE_ENDPOINT must use HTTPS.");
     if (process.env.OBJECT_STORAGE_SSE === "aws:kms" && !(process.env.OBJECT_STORAGE_KMS_KEY_ID || "").trim()) failures.push("OBJECT_STORAGE_KMS_KEY_ID is required for KMS encryption.");
     if (process.env.ALLOW_LOCAL_OBJECT_STORAGE === "true") failures.push("ALLOW_LOCAL_OBJECT_STORAGE cannot be enabled in production.");
-    if (!(process.env.GMAIL_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "").trim()) failures.push("GMAIL_CLIENT_ID or GOOGLE_CLIENT_ID is required.");
-    if (!(process.env.GMAIL_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET || "").trim()) failures.push("GMAIL_CLIENT_SECRET or GOOGLE_CLIENT_SECRET is required.");
-    if (!(process.env.RESEND_API_KEY || "").startsWith("re_")) failures.push("RESEND_API_KEY is required.");
-    if (!(process.env.RESEND_INBOUND_WEBHOOK_SECRET || "").startsWith("whsec_")) failures.push("RESEND_INBOUND_WEBHOOK_SECRET is required.");
-    if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(process.env.INBOUND_EMAIL_DOMAIN || "")) failures.push("INBOUND_EMAIL_DOMAIN must be a valid domain.");
-    if (!(process.env.TRANSACTIONAL_EMAIL_FROM || "").includes("@")) failures.push("TRANSACTIONAL_EMAIL_FROM is required.");
+    if (["web", "worker", "all"].includes(processType)) {
+      if (!(process.env.GMAIL_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "").trim()) failures.push("GMAIL_CLIENT_ID or GOOGLE_CLIENT_ID is required.");
+      if (!(process.env.GMAIL_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET || "").trim()) failures.push("GMAIL_CLIENT_SECRET or GOOGLE_CLIENT_SECRET is required.");
+      if (!(process.env.RESEND_API_KEY || "").startsWith("re_")) failures.push("RESEND_API_KEY is required.");
+      if (!(process.env.RESEND_INBOUND_WEBHOOK_SECRET || "").startsWith("whsec_")) failures.push("RESEND_INBOUND_WEBHOOK_SECRET is required.");
+      if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(process.env.INBOUND_EMAIL_DOMAIN || "")) failures.push("INBOUND_EMAIL_DOMAIN must be a valid domain.");
+      if (!(process.env.TRANSACTIONAL_EMAIL_FROM || "").includes("@")) failures.push("TRANSACTIONAL_EMAIL_FROM is required.");
+    }
   }
 
-  if (processType !== "migrate") {
+  if (["web", "worker", "all"].includes(processType)) {
     const activeKeyVersion = (process.env.OAUTH_TOKEN_ACTIVE_KEY_VERSION || "v1").trim();
     let oauthKeys = {};
     try {
@@ -186,6 +194,12 @@ if (strict) {
       failures.push(`OAuth encryption key version ${activeKeyVersion} is required.`);
     } else if (Buffer.from(activeKey, "base64").length !== 32) {
       failures.push(`OAuth encryption key version ${activeKeyVersion} must decode to 32 bytes.`);
+    }
+  }
+  if (["backup", "all"].includes(processType)) {
+    const backupKey = Buffer.from(process.env.BACKUP_ENCRYPTION_KEY || "", "base64");
+    if (backupKey.length !== 32) {
+      failures.push("BACKUP_ENCRYPTION_KEY must decode to exactly 32 bytes.");
     }
   }
 } else {
