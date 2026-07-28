@@ -4,7 +4,8 @@
   const state = {
     user: null,
     installPrompt: null,
-    mfaPending: false
+    mfaPending: false,
+    dashboard: null
   };
 
   const $ = (selector, root = document) => root.querySelector(selector);
@@ -356,13 +357,34 @@
     }
   }
 
-  function renderDashboard(dashboard, readiness, connectors) {
+  function renderInterviewPrep(sessions) {
+    clearAndFill(
+      $("#interview-list"),
+      sessions,
+      (session) => recordItem(
+        session.title || "Interview preparation",
+        [
+          session.company,
+          `${session.questions?.length || 0} grounded questions`,
+          statusLabel(session.status),
+          ...(session.questions || []).map((question) => question.prompt)
+        ]
+      ),
+      "No interview preparation sessions have been created."
+    );
+  }
+
+  function renderDashboard(dashboard, readiness, connectors, analytics) {
+    state.dashboard = dashboard;
     $("#metric-recommended").textContent = dashboard.recommendations.length;
     $("#metric-approvals").textContent = dashboard.approvals.length;
     $("#metric-verified").textContent = dashboard.applications
       .filter((item) => item.status === "submitted_verified").length;
     $("#metric-gates").textContent = dashboard.applications
       .filter((item) => ["manual_gate", "submitted_unverified"].includes(item.status)).length;
+    $("#metric-replies").textContent = analytics.recruiterReplies || 0;
+    $("#metric-interviews").textContent = analytics.interviews || 0;
+    $("#metric-offers").textContent = analytics.offers || 0;
 
     clearAndFill(
       $("#readiness-list"),
@@ -380,7 +402,10 @@
         connector.source.toUpperCase(),
         [
           statusLabel(connector.status),
-          connector.evidenceReference ? "Certification evidence recorded" : "No live certification evidence"
+          connector.accountIdentifier ? `Identity: ${connector.accountIdentifier}` : null,
+          connector.evidenceReference ? "Certification evidence recorded" : "No live certification evidence",
+          connector.expiresAt ? `Certification expires ${dateLabel(connector.expiresAt)}` : null,
+          connector.blockingReason || null
         ]
       ),
       "No channel capabilities are configured."
@@ -401,14 +426,22 @@
     clearAndFill(
       $("#job-list"),
       dashboard.recommendations,
-      (job) => recordItem(
-        job.title || "Opportunity",
-        [
-          [job.company, job.location, job.source].filter(Boolean).join(" · "),
-          `${Number(job.score || 0)}% match · ${statusLabel(job.status)}`
-        ],
-        { url: job.jobUrl }
-      ),
+      (job) => {
+        const actions = document.createElement("div");
+        actions.className = "actions";
+        actions.append(
+          actionButton("Analyze fit", "job-insight", job.id),
+          actionButton("Prepare interview", "interview-prep", job.id)
+        );
+        return recordItem(
+          job.title || "Opportunity",
+          [
+            [job.company, job.location, job.source].filter(Boolean).join(" · "),
+            `${Number(job.score || 0)}% match · ${statusLabel(job.status)}`
+          ],
+          { url: job.jobUrl, actions }
+        );
+      },
       "No suitable opportunities are in the ranked queue."
     );
     clearAndFill(
@@ -445,6 +478,10 @@
             `/api/v1/application-evidence/${application.evidenceId}/download`
           ));
         }
+        actions.append(
+          actionButton("Timeline", "timeline", application.id),
+          actionButton("Record outcome", "outcome", application.id)
+        );
         return recordItem(
           application.title || "Application",
           [
@@ -453,7 +490,7 @@
             application.evidenceId ? "Private verification evidence recorded" : "Verification evidence not recorded",
             dateLabel(application.updatedAt)
           ],
-          { url: application.finalUrl, actions: actions.childElementCount ? actions : null }
+          { url: application.finalUrl, actions }
         );
       },
       "No application attempts are recorded."
@@ -461,12 +498,15 @@
   }
 
   async function loadDashboard() {
-    const [dashboard, readiness, capabilityData] = await Promise.all([
+    const [dashboard, readiness, capabilityData, analytics, prep] = await Promise.all([
       api("/api/v1/dashboard"),
       api("/api/v1/activation-readiness"),
-      api("/api/v1/connectors/capabilities")
+      api("/api/v1/connectors/capabilities"),
+      api("/api/v1/analytics/conversion"),
+      api("/api/v1/interview-prep")
     ]);
-    renderDashboard(dashboard, readiness, capabilityData.connectors);
+    renderDashboard(dashboard, readiness, capabilityData.connectors, analytics);
+    renderInterviewPrep(prep.sessions);
     const connectionData = await api("/api/v1/connections");
     renderConnections(connectionData.connections, capabilityData.connectors);
   }
@@ -787,6 +827,121 @@
     } catch (error) {
       showNotice("#account-banner", error.message, "danger");
     }
+  });
+
+  $("#job-list").addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-action]");
+    if (!button) return;
+    const jobMatchId = button.dataset.value;
+    if (button.dataset.action === "job-insight") {
+      const form = $("#job-insight-form");
+      form.reset();
+      form.elements.jobMatchId.value = jobMatchId;
+      setResult("#job-insight-result", "");
+      $("#job-insight-dialog").showModal();
+      return;
+    }
+    if (button.dataset.action === "interview-prep") {
+      try {
+        await api(`/api/v1/jobs/${encodeURIComponent(jobMatchId)}/interview-prep`, {
+          method: "POST",
+          body: "{}"
+        });
+        await loadDashboard();
+        $('[data-view="interview"]').click();
+      } catch (error) {
+        showNotice("#account-banner", error.message, "danger");
+      }
+    }
+  });
+
+  $("#job-insight-form").addEventListener("submit", async (event) => {
+    if (event.submitter?.value === "cancel") return;
+    event.preventDefault();
+    const form = event.currentTarget;
+    try {
+      const { insight } = await api(
+        `/api/v1/jobs/${encodeURIComponent(form.elements.jobMatchId.value)}/insights`,
+        {
+          method: "POST",
+          body: JSON.stringify({ jobDescription: form.elements.jobDescription.value })
+        }
+      );
+      const match = insight.matchExplanation;
+      const ats = insight.atsGapReport;
+      setResult(
+        "#job-insight-result",
+        [
+          `Fit score: ${match.score}%`,
+          `Verified matches: ${match.matchedRequirements.join(", ") || "None detected"}`,
+          `Evidence gaps: ${match.missingRequirements.join(", ") || "None detected"}`,
+          `Policy conflicts: ${match.policyConflicts.join(", ") || "None"}`,
+          `ATS-supported terms: ${ats.coveredTerms.join(", ") || "None detected"}`,
+          `Unsupported terms: ${ats.unsupportedTerms.join(", ") || "None detected"}`
+        ].join("\n\n"),
+        "good"
+      );
+    } catch (error) {
+      setResult("#job-insight-result", error.message, "danger");
+    }
+  });
+
+  $("#application-list").addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-action]");
+    if (!button) return;
+    const applicationId = button.dataset.value;
+    if (button.dataset.action === "outcome") {
+      const form = $("#outcome-form");
+      form.reset();
+      form.elements.applicationId.value = applicationId;
+      $("#outcome-dialog").showModal();
+      return;
+    }
+    if (button.dataset.action === "timeline") {
+      try {
+        const { events } = await api(
+          `/api/v1/applications/${encodeURIComponent(applicationId)}/timeline`
+        );
+        clearAndFill(
+          $("#timeline-list"),
+          events,
+          (item) => recordItem(
+            statusLabel(item.eventType),
+            [statusLabel(item.actorType), dateLabel(item.occurredAt)]
+          ),
+          "No timeline events are recorded."
+        );
+        $("#timeline-dialog").showModal();
+      } catch (error) {
+        showNotice("#account-banner", error.message, "danger");
+      }
+    }
+  });
+
+  $("#outcome-form").addEventListener("submit", async (event) => {
+    if (event.submitter?.value === "cancel") return;
+    event.preventDefault();
+    const form = event.currentTarget;
+    try {
+      await api(
+        `/api/v1/applications/${encodeURIComponent(form.elements.applicationId.value)}/outcomes`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            outcomeType: form.elements.outcomeType.value,
+            metadata: { note: form.elements.note.value }
+          })
+        }
+      );
+      $("#outcome-dialog").close();
+      await loadDashboard();
+    } catch (error) {
+      showNotice("#account-banner", error.message, "danger");
+    }
+  });
+
+  $$("[data-close-dialog]").forEach((button) => {
+    button.addEventListener("click", () => $(`#${button.dataset.closeDialog}`).close());
   });
 
   $("#create-inbound-alias").addEventListener("click", async () => {

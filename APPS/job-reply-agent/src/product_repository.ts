@@ -1,6 +1,12 @@
 import crypto from "node:crypto";
 import type pg from "pg";
 import { withTenant } from "./product_db.js";
+import {
+  buildGroundedInterviewQuestions,
+  buildTrustAnalysis,
+  type CareerFact,
+  type OutcomeType
+} from "./product_domain.js";
 
 export interface ProductOnboarding {
   record: Record<string, unknown>;
@@ -525,12 +531,15 @@ export async function exportProductAccount(db: pg.Pool, userId: string): Promise
       client.query("SELECT action, target_type AS \"targetType\", target_id AS \"targetId\", metadata, created_at AS \"createdAt\" FROM product_audit_logs WHERE user_id=$1 ORDER BY created_at", [userId]),
       client.query("SELECT consent_version AS \"consentVersion\", consent_type AS \"consentType\", granted, granted_at AS \"grantedAt\", revoked_at AS \"revokedAt\" FROM product_consent_grants WHERE user_id=$1 ORDER BY created_at", [userId]),
       client.query("SELECT mode, recruiter_drafts AS \"recruiterDrafts\", recruiter_sends AS \"recruiterSends\", assisted_applications AS \"assistedApplications\", controlled_submissions AS \"controlledSubmissions\", max_drafts_per_day AS \"maxDraftsPerDay\", max_recruiter_sends_per_day AS \"maxRecruiterSendsPerDay\", max_applications_per_day AS \"maxApplicationsPerDay\", max_applications_per_board AS \"maxApplicationsPerBoard\", quiet_hours_start AS \"quietHoursStart\", quiet_hours_end AS \"quietHoursEnd\", time_zone AS \"timeZone\", policy_version AS \"policyVersion\", updated_at AS \"updatedAt\" FROM product_automation_policies WHERE user_id=$1", [userId]),
-      client.query("SELECT source, status, capabilities, evidence_reference AS \"evidenceReference\", verified_at AS \"verifiedAt\", updated_at AS \"updatedAt\" FROM product_connector_capabilities WHERE user_id=$1 ORDER BY source", [userId]),
+      client.query("SELECT source, status, capabilities, evidence_reference AS \"evidenceReference\", verified_at AS \"verifiedAt\", account_identifier AS \"accountIdentifier\", expires_at AS \"expiresAt\", blocking_reason AS \"blockingReason\", updated_at AS \"updatedAt\" FROM product_connector_capabilities WHERE user_id=$1 ORDER BY source", [userId]),
       client.query("SELECT alias, status, created_at AS \"createdAt\", revoked_at AS \"revokedAt\" FROM product_inbound_aliases WHERE user_id=$1 ORDER BY created_at", [userId]),
       client.query("SELECT id, name, platform, status, last_seen_at AS \"lastSeenAt\", created_at AS \"createdAt\", revoked_at AS \"revokedAt\" FROM product_runner_devices WHERE user_id=$1 ORDER BY created_at", [userId]),
       client.query("SELECT id, result_status AS \"resultStatus\", final_url AS \"finalUrl\", evidence_reference AS \"evidenceReference\", (evidence_storage_key IS NOT NULL) AS \"evidenceAvailable\", captured_at AS \"capturedAt\" FROM product_runner_proofs WHERE user_id=$1 ORDER BY captured_at", [userId]),
       client.query("SELECT run_type AS \"runType\", status, redacted_summary AS \"redactedSummary\", started_at AS \"startedAt\", completed_at AS \"completedAt\", created_at AS \"createdAt\" FROM agent_runs WHERE user_id=$1 ORDER BY created_at", [userId]),
-      client.query("SELECT id, application_id AS \"applicationId\", evidence_type AS \"evidenceType\", mime_type AS \"mimeType\", filename, sha256, captured_at AS \"capturedAt\", provenance, created_at AS \"createdAt\" FROM product_application_evidence WHERE user_id=$1 ORDER BY captured_at", [userId])
+      client.query("SELECT id, application_id AS \"applicationId\", evidence_type AS \"evidenceType\", mime_type AS \"mimeType\", filename, sha256, captured_at AS \"capturedAt\", provenance, created_at AS \"createdAt\" FROM product_application_evidence WHERE user_id=$1 ORDER BY captured_at", [userId]),
+      client.query("SELECT job_match_id AS \"jobMatchId\", match_explanation AS \"matchExplanation\", ats_gap_report AS \"atsGapReport\", updated_at AS \"updatedAt\" FROM product_job_insights WHERE user_id=$1 ORDER BY updated_at", [userId]),
+      client.query("SELECT id, job_match_id AS \"jobMatchId\", application_id AS \"applicationId\", status, questions, rehearsal, created_at AS \"createdAt\", updated_at AS \"updatedAt\" FROM product_interview_prep_sessions WHERE user_id=$1 ORDER BY created_at", [userId]),
+      client.query("SELECT id, application_id AS \"applicationId\", outcome_type AS \"outcomeType\", metadata, occurred_at AS \"occurredAt\" FROM product_outcome_events WHERE user_id=$1 ORDER BY occurred_at", [userId])
     ]);
     return {
       exportedAt: new Date().toISOString(),
@@ -550,7 +559,10 @@ export async function exportProductAccount(db: pg.Pool, userId: string): Promise
       runnerDevices: queries[13].rows,
       runnerProofs: queries[14].rows,
       agentRuns: queries[15].rows,
-      applicationEvidence: queries[16].rows
+      applicationEvidence: queries[16].rows,
+      jobInsights: queries[17].rows,
+      interviewPrepSessions: queries[18].rows,
+      outcomeEvents: queries[19].rows
     };
   }, db);
 }
@@ -747,5 +759,242 @@ export async function decideProductApproval(
       [userId, approvalId, JSON.stringify({ decision, runnerTaskId, manualGate })]
     );
     return { ...approval, runnerTaskId, manualGate };
+  }, db);
+}
+
+function approvedProductFacts(userId: string, facts: unknown): CareerFact[] {
+  if (!Array.isArray(facts)) return [];
+  return facts
+    .filter((fact): fact is Record<string, unknown> => Boolean(fact && typeof fact === "object"))
+    .map((fact) => ({
+      id: String(fact.id || crypto.randomUUID()),
+      userId,
+      category: String(fact.category || "approved"),
+      statement: String(fact.statement || ""),
+      verificationStatus: (
+        fact.verificationStatus === "approved" ? "approved" : "review_required"
+      ) as CareerFact["verificationStatus"],
+      provenance: fact.provenance && typeof fact.provenance === "object"
+        ? fact.provenance as Record<string, unknown>
+        : {}
+    }))
+    .filter((fact) => fact.statement);
+}
+
+export async function generateProductJobInsight(
+  db: pg.Pool,
+  userId: string,
+  jobMatchId: string,
+  jobDescription?: string
+): Promise<unknown | null> {
+  return withTenant(userId, async (client) => {
+    const [jobResult, truthResult] = await Promise.all([
+      client.query(
+        `SELECT id, title, company, score, reasons, description_text AS "descriptionText"
+           FROM product_job_matches WHERE user_id=$1 AND id=$2`,
+        [userId, jobMatchId]
+      ),
+      client.query("SELECT facts FROM product_career_truth_banks WHERE user_id=$1", [userId])
+    ]);
+    const job = jobResult.rows[0];
+    if (!job) return null;
+    const description = String(jobDescription || job.descriptionText || "").trim();
+    if (!description) throw new Error("A complete job description is required for trust analysis.");
+    const reasons: string[] = Array.isArray(job.reasons)
+      ? job.reasons.map((reason: unknown) => String(reason))
+      : [];
+    const analysis = buildTrustAnalysis({
+      score: Number(job.score || 0),
+      jobDescription: description,
+      careerFacts: approvedProductFacts(userId, truthResult.rows[0]?.facts),
+      policyConflicts: reasons.filter((reason) => /conflict|blocked|required|authorization/i.test(reason)),
+      structuralFindings: ["Resume content must remain traceable to approved career facts."]
+    });
+    const saved = await client.query(
+      `INSERT INTO product_job_insights
+         (user_id, job_match_id, match_explanation, ats_gap_report, updated_at)
+       VALUES ($1,$2,$3::jsonb,$4::jsonb,now())
+       ON CONFLICT (user_id, job_match_id) DO UPDATE SET
+         match_explanation=excluded.match_explanation,
+         ats_gap_report=excluded.ats_gap_report,
+         updated_at=now()
+       RETURNING job_match_id AS "jobMatchId", match_explanation AS "matchExplanation",
+                 ats_gap_report AS "atsGapReport", updated_at AS "updatedAt"`,
+      [userId, jobMatchId, JSON.stringify(analysis.match), JSON.stringify(analysis.ats)]
+    );
+    await client.query(
+      `UPDATE product_job_matches SET description_text=$3, updated_at=now()
+        WHERE user_id=$1 AND id=$2`,
+      [userId, jobMatchId, description]
+    );
+    return saved.rows[0];
+  }, db);
+}
+
+export async function getProductJobInsight(
+  db: pg.Pool,
+  userId: string,
+  jobMatchId: string
+): Promise<unknown | null> {
+  return withTenant(userId, async (client) => {
+    const result = await client.query(
+      `SELECT job_match_id AS "jobMatchId", match_explanation AS "matchExplanation",
+              ats_gap_report AS "atsGapReport", updated_at AS "updatedAt"
+         FROM product_job_insights WHERE user_id=$1 AND job_match_id=$2`,
+      [userId, jobMatchId]
+    );
+    return result.rows[0] || null;
+  }, db);
+}
+
+export async function createProductInterviewPrep(
+  db: pg.Pool,
+  userId: string,
+  jobMatchId: string
+): Promise<unknown | null> {
+  return withTenant(userId, async (client) => {
+    const [jobResult, truthResult, applicationResult] = await Promise.all([
+      client.query("SELECT id, title, company FROM product_job_matches WHERE user_id=$1 AND id=$2", [userId, jobMatchId]),
+      client.query("SELECT facts FROM product_career_truth_banks WHERE user_id=$1", [userId]),
+      client.query(
+        "SELECT id FROM product_applications WHERE user_id=$1 AND job_match_id=$2 ORDER BY created_at DESC LIMIT 1",
+        [userId, jobMatchId]
+      )
+    ]);
+    const job = jobResult.rows[0];
+    if (!job) return null;
+    const questions = buildGroundedInterviewQuestions({
+      title: job.title,
+      company: job.company,
+      careerFacts: approvedProductFacts(userId, truthResult.rows[0]?.facts)
+    });
+    const result = await client.query(
+      `INSERT INTO product_interview_prep_sessions
+         (user_id, job_match_id, application_id, questions)
+       VALUES ($1,$2,$3,$4::jsonb)
+       RETURNING id, job_match_id AS "jobMatchId", application_id AS "applicationId",
+                 status, questions, rehearsal, created_at AS "createdAt", updated_at AS "updatedAt"`,
+      [userId, jobMatchId, applicationResult.rows[0]?.id || null, JSON.stringify(questions)]
+    );
+    return result.rows[0];
+  }, db);
+}
+
+export async function listProductInterviewPrep(db: pg.Pool, userId: string): Promise<unknown[]> {
+  return withTenant(userId, async (client) => {
+    const result = await client.query(
+      `SELECT s.id, s.job_match_id AS "jobMatchId", s.application_id AS "applicationId",
+              s.status, s.questions, s.rehearsal, s.created_at AS "createdAt",
+              s.updated_at AS "updatedAt", j.title, j.company
+         FROM product_interview_prep_sessions s
+         JOIN product_job_matches j ON j.id=s.job_match_id
+        WHERE s.user_id=$1 ORDER BY s.updated_at DESC`,
+      [userId]
+    );
+    return result.rows;
+  }, db);
+}
+
+export async function recordProductOutcome(
+  db: pg.Pool,
+  userId: string,
+  applicationId: string,
+  outcomeType: OutcomeType,
+  metadata: Record<string, unknown>
+): Promise<unknown | null> {
+  return withTenant(userId, async (client) => {
+    const result = await client.query(
+      `INSERT INTO product_outcome_events (user_id, application_id, outcome_type, metadata)
+       SELECT $1, id, $3, $4::jsonb
+         FROM product_applications WHERE user_id=$1 AND id=$2
+       RETURNING id, application_id AS "applicationId", outcome_type AS "outcomeType",
+                 metadata, occurred_at AS "occurredAt"`,
+      [userId, applicationId, outcomeType, JSON.stringify(metadata)]
+    );
+    return result.rows[0] || null;
+  }, db);
+}
+
+export async function productApplicationTimeline(
+  db: pg.Pool,
+  userId: string,
+  applicationId: string
+): Promise<unknown[] | null> {
+  return withTenant(userId, async (client) => {
+    const application = await client.query(
+      `SELECT id, status, final_url AS "finalUrl", evidence_reference AS "evidenceReference",
+              verified_at AS "verifiedAt", created_at AS "createdAt", updated_at AS "updatedAt"
+         FROM product_applications WHERE user_id=$1 AND id=$2`,
+      [userId, applicationId]
+    );
+    if (!application.rows[0]) return null;
+    const [evidence, outcomes] = await Promise.all([
+      client.query(
+        `SELECT id, evidence_type AS "evidenceType", filename, sha256,
+                captured_at AS "capturedAt", provenance
+           FROM product_application_evidence
+          WHERE user_id=$1 AND application_id=$2 ORDER BY captured_at`,
+        [userId, applicationId]
+      ),
+      client.query(
+        `SELECT id, outcome_type AS "outcomeType", metadata, occurred_at AS "occurredAt"
+           FROM product_outcome_events
+          WHERE user_id=$1 AND application_id=$2 ORDER BY occurred_at`,
+        [userId, applicationId]
+      )
+    ]);
+    const row = application.rows[0];
+    const events = [
+      {
+        id: `application:${applicationId}:created`,
+        applicationId,
+        eventType: "application_created",
+        actorType: "system",
+        metadata: { status: row.status },
+        occurredAt: row.createdAt
+      },
+      ...evidence.rows.map((item) => ({
+        id: item.id,
+        applicationId,
+        eventType: "evidence_stored",
+        actorType: "runner",
+        metadata: item,
+        occurredAt: item.capturedAt
+      })),
+      ...outcomes.rows.map((item) => ({
+        id: item.id,
+        applicationId,
+        eventType: "outcome_recorded",
+        actorType: "user",
+        metadata: { outcomeType: item.outcomeType, ...item.metadata },
+        occurredAt: item.occurredAt
+      }))
+    ];
+    if (row.verifiedAt) {
+      events.push({
+        id: `application:${applicationId}:verified`,
+        applicationId,
+        eventType: "proof_captured",
+        actorType: "system",
+        metadata: { finalUrl: row.finalUrl, evidenceReference: row.evidenceReference },
+        occurredAt: row.verifiedAt
+      });
+    }
+    return events.sort((left, right) => String(left.occurredAt).localeCompare(String(right.occurredAt)));
+  }, db);
+}
+
+export async function productConversionAnalytics(db: pg.Pool, userId: string): Promise<Record<string, number>> {
+  return withTenant(userId, async (client) => {
+    const result = await client.query(
+      `SELECT
+         (SELECT count(*) FROM product_job_matches WHERE user_id=$1 AND score >= 70)::integer AS "qualifiedMatches",
+         (SELECT count(*) FROM product_applications WHERE user_id=$1 AND status='submitted_verified')::integer AS "verifiedApplications",
+         (SELECT count(*) FROM product_outcome_events WHERE user_id=$1 AND outcome_type='recruiter_reply')::integer AS "recruiterReplies",
+         (SELECT count(*) FROM product_outcome_events WHERE user_id=$1 AND outcome_type='interview')::integer AS interviews,
+         (SELECT count(*) FROM product_outcome_events WHERE user_id=$1 AND outcome_type='offer')::integer AS offers`,
+      [userId]
+    );
+    return result.rows[0];
   }, db);
 }

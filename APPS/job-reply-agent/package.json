@@ -61,6 +61,7 @@
     "browser:attach-chrome": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-chrome-cdp.ps1",
     "browser:fejiro-status": "python scripts/fejiro_chrome_status.py",
     "browser:instance-status": "python scripts/instance_chrome_status.py",
+    "hunt:ingest": "tsx src/main.ts hunt:ingest",
     "hunt:status": "tsx src/main.ts hunt:status",
     "hunt:scout": "tsx src/main.ts hunt:scout",
     "hunt:score": "tsx src/main.ts hunt:score",

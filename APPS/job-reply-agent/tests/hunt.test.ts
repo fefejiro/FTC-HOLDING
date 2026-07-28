@@ -74,6 +74,17 @@ describe("hunt flow", () => {
     expect(parsed.needs_review).toBe(1);
   });
 
+  it("preserves a named LinkedIn source without requiring a URL host", () => {
+    const parsed = parseManualJobText([
+      "Title: IT Project Manager",
+      "Company: Example",
+      "Source: LinkedIn",
+      "Description: Manage enterprise technology projects."
+    ].join("\n"));
+
+    expect(parsed.source).toBe("linkedin");
+  });
+
   it("manual happy path can score, package, draft outreach, and report next action", () => {
     const db = getDb(":memory:");
     insertHuntJob(db, parseManualJobText([

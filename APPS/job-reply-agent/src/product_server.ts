@@ -33,17 +33,24 @@ import {
   deleteProductResume,
   decideProductApproval,
   exportProductAccount,
+  generateProductJobInsight,
   getCareerTruthBank,
+  getProductJobInsight,
   getProductApplicationEvidenceObject,
   getProductOnboarding,
   getProductResumeBySha,
   getProductResumeObject,
   listProductConnections,
+  listProductInterviewPrep,
   listProductPrivateStorageObjects,
   listProductResumes,
   productActivationReadiness,
+  productApplicationTimeline,
   productAuditLog,
+  productConversionAnalytics,
   productDashboard,
+  createProductInterviewPrep,
+  recordProductOutcome,
   requestProductConnection,
   revokeProductConnection,
   saveCareerTruthBank,
@@ -255,7 +262,22 @@ const connectorCertificationSchema = z.object({
     "blocked_proof",
     "disabled"
   ]),
-  evidenceReference: z.string().max(1000).nullable().optional()
+  evidenceReference: z.string().max(1000).nullable().optional(),
+  accountIdentifier: z.string().max(320).nullable().optional(),
+  expiresAt: z.string().datetime().nullable().optional(),
+  blockingReason: z.string().max(1000).nullable().optional()
+});
+
+const trustAnalysisSchema = z.object({
+  jobDescription: z.string().min(50).max(100_000)
+});
+
+const outcomeSchema = z.object({
+  outcomeType: z.enum([
+    "recruiter_reply", "screening", "interview",
+    "offer", "rejection", "withdrawal"
+  ]),
+  metadata: z.record(z.string(), z.unknown()).default({})
 });
 
 const attempts = new Map<string, { count: number; resetAt: number }>();
@@ -1065,7 +1087,12 @@ export async function createProductServer(storage: ProductObjectStorage = create
           target.rows[0].id,
           input.source as ConnectorSource,
           input.status as ConnectorStatus,
-          input.evidenceReference
+          input.evidenceReference,
+          {
+            accountIdentifier: input.accountIdentifier,
+            expiresAt: input.expiresAt,
+            blockingReason: input.blockingReason
+          }
         );
         return json(res, 200, { updated: true });
       }
@@ -1253,6 +1280,70 @@ export async function createProductServer(storage: ProductObjectStorage = create
       }
       if (req.method === "GET" && url.pathname === "/api/v1/dashboard") {
         return json(res, 200, await productDashboard(db, user.id));
+      }
+      if (req.method === "GET" && url.pathname === "/api/v1/analytics/conversion") {
+        return json(res, 200, await productConversionAnalytics(db, user.id));
+      }
+      if (req.method === "GET" && url.pathname === "/api/v1/interview-prep") {
+        return json(res, 200, { sessions: await listProductInterviewPrep(db, user.id) });
+      }
+      const jobInsight = url.pathname.match(/^\/api\/v1\/jobs\/([0-9a-f-]{36})\/insights$/i);
+      if (req.method === "GET" && jobInsight) {
+        const insight = await getProductJobInsight(db, user.id, jobInsight[1]);
+        return insight
+          ? json(res, 200, { insight })
+          : json(res, 404, { error: "Job insight was not found." });
+      }
+      if (req.method === "POST" && jobInsight) {
+        if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
+        const body = await readJson(req);
+        const input = trustAnalysisSchema.parse(body);
+        return idempotentMutation(req, res, {
+          db, userId: user.id, requestPath: url.pathname, body,
+          action: async () => {
+            const insight = await generateProductJobInsight(db, user.id, jobInsight[1], input.jobDescription);
+            return insight
+              ? { status: 200, body: { insight } }
+              : { status: 404, body: { error: "Job match was not found." } };
+          }
+        });
+      }
+      const interviewPrep = url.pathname.match(/^\/api\/v1\/jobs\/([0-9a-f-]{36})\/interview-prep$/i);
+      if (req.method === "POST" && interviewPrep) {
+        if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
+        const body = await readJson(req);
+        return idempotentMutation(req, res, {
+          db, userId: user.id, requestPath: url.pathname, body,
+          action: async () => {
+            const session = await createProductInterviewPrep(db, user.id, interviewPrep[1]);
+            return session
+              ? { status: 201, body: { session } }
+              : { status: 404, body: { error: "Job match was not found." } };
+          }
+        });
+      }
+      const applicationTimeline = url.pathname.match(/^\/api\/v1\/applications\/([0-9a-f-]{36})\/timeline$/i);
+      if (req.method === "GET" && applicationTimeline) {
+        const events = await productApplicationTimeline(db, user.id, applicationTimeline[1]);
+        return events
+          ? json(res, 200, { events })
+          : json(res, 404, { error: "Application was not found." });
+      }
+      const applicationOutcome = url.pathname.match(/^\/api\/v1\/applications\/([0-9a-f-]{36})\/outcomes$/i);
+      if (req.method === "POST" && applicationOutcome) {
+        const body = await readJson(req);
+        const input = outcomeSchema.parse(body);
+        return idempotentMutation(req, res, {
+          db, userId: user.id, requestPath: url.pathname, body,
+          action: async () => {
+            const outcome = await recordProductOutcome(
+              db, user.id, applicationOutcome[1], input.outcomeType, input.metadata
+            );
+            return outcome
+              ? { status: 201, body: { outcome } }
+              : { status: 404, body: { error: "Application was not found." } };
+          }
+        });
       }
       const approvalDecision = url.pathname.match(/^\/api\/v1\/approvals\/([0-9a-f-]{36})$/i);
       if (req.method === "POST" && approvalDecision) {

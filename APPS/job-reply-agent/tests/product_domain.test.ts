@@ -3,6 +3,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   assertMailboxOwnership,
+  buildGroundedInterviewQuestions,
+  buildTrustAnalysis,
   isDuplicateJob,
   requiresExplicitApproval,
   selectApprovedCareerFacts
@@ -67,6 +69,75 @@ describe("SaaS product domain safeguards", () => {
     expect(() => assertMailboxOwnership("user@example.com", "USER@example.com")).not.toThrow();
     expect(() => assertMailboxOwnership("user@example.com", "other@example.com"))
       .toThrow(/does not match/);
+  });
+
+  it("explains fit using only approved career facts", () => {
+    const analysis = buildTrustAnalysis({
+      score: 84,
+      jobDescription: "Project management, Jira, SAP, cloud, cybersecurity and risk management.",
+      careerFacts: [
+        {
+          id: "approved-jira",
+          userId: "user-a",
+          category: "experience",
+          statement: "Led project management, Jira, SAP, cloud and risk management delivery.",
+          verificationStatus: "approved",
+          provenance: { resumeId: "resume-a" }
+        },
+        {
+          id: "unverified-cyber",
+          userId: "user-a",
+          category: "experience",
+          statement: "Led cybersecurity projects.",
+          verificationStatus: "review_required",
+          provenance: {}
+        }
+      ],
+      now: "2026-07-28T14:00:00.000Z"
+    });
+
+    expect(analysis.match.matchedRequirements).toEqual(
+      expect.arrayContaining(["cloud", "jira", "project management", "risk management", "sap"])
+    );
+    expect(analysis.match.missingRequirements).toContain("cybersecurity");
+    expect(analysis.match.evidenceFactIds).toEqual(["approved-jira"]);
+    expect(analysis.ats.unsupportedTerms).toEqual(analysis.ats.missingTerms);
+  });
+
+  it("grounds interview preparation in approved facts", () => {
+    const questions = buildGroundedInterviewQuestions({
+      title: "IT Project Manager",
+      company: "Example",
+      careerFacts: [{
+        id: "approved-delivery",
+        userId: "user-a",
+        category: "experience",
+        statement: "Led enterprise delivery.",
+        verificationStatus: "approved",
+        provenance: {}
+      }]
+    });
+
+    expect(questions).toHaveLength(5);
+    expect(questions[0].prompt).toContain("IT Project Manager");
+    expect(questions[0].approvedFactIds).toEqual(["approved-delivery"]);
+    expect(questions.at(-1)?.approvedFactIds).toEqual([]);
+  });
+});
+
+describe("trust-first pilot schema", () => {
+  const sql = fs.readFileSync(path.resolve("migrations/010_trust_first_pilot.sql"), "utf8");
+
+  it("owns and forces RLS on every new private resource", () => {
+    for (const table of [
+      "product_job_insights",
+      "product_interview_prep_sessions",
+      "product_outcome_events"
+    ]) {
+      expect(sql).toMatch(new RegExp(`CREATE TABLE IF NOT EXISTS ${table}[\\s\\S]*?user_id uuid NOT NULL`, "i"));
+      expect(sql).toContain(`ALTER TABLE ${table} FORCE ROW LEVEL SECURITY`);
+      expect(sql).toContain(`CREATE POLICY ${table}_tenant_policy`);
+    }
   });
 });
 

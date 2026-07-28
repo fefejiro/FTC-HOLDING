@@ -464,7 +464,10 @@ export async function ensureConnectorCapabilities(
     const result = await client.query(
       `SELECT source, status, capabilities,
               evidence_reference AS "evidenceReference",
-              verified_at AS "verifiedAt"
+              verified_at AS "verifiedAt",
+              account_identifier AS "accountIdentifier",
+              expires_at AS "expiresAt",
+              blocking_reason AS "blockingReason"
          FROM product_connector_capabilities
         WHERE user_id=$1 ORDER BY source`,
       [userId]
@@ -474,7 +477,10 @@ export async function ensureConnectorCapabilities(
       status: row.status,
       ...row.capabilities,
       evidenceReference: row.evidenceReference,
-      verifiedAt: row.verifiedAt
+      verifiedAt: row.verifiedAt,
+      accountIdentifier: row.accountIdentifier,
+      expiresAt: row.expiresAt,
+      blockingReason: row.blockingReason
     }));
   }, db);
 }
@@ -484,19 +490,29 @@ export async function updateConnectorCapability(
   userId: string,
   source: ConnectorSource,
   status: ConnectorStatus,
-  evidenceReference?: string | null
+  evidenceReference?: string | null,
+  certification: {
+    accountIdentifier?: string | null;
+    expiresAt?: string | null;
+    blockingReason?: string | null;
+  } = {}
 ): Promise<void> {
   await withTenant(userId, async (client) => {
     const defaults = defaultConnector(source);
     const controlledSubmission = status === "certified_live" && source !== "monster";
     await client.query(
       `INSERT INTO product_connector_capabilities
-         (user_id, source, status, capabilities, evidence_reference, verified_at, updated_at)
-       VALUES ($1,$2,$3,$4::jsonb,$5,$6,now())
+         (user_id, source, status, capabilities, evidence_reference, verified_at,
+          account_identifier, expires_at, blocking_reason, updated_at)
+       VALUES ($1,$2,$3,$4::jsonb,$5,$6,$7,$8,$9,now())
        ON CONFLICT (user_id, source) DO UPDATE SET
          status=excluded.status, capabilities=excluded.capabilities,
          evidence_reference=excluded.evidence_reference,
-         verified_at=excluded.verified_at, updated_at=now()`,
+         verified_at=excluded.verified_at,
+         account_identifier=excluded.account_identifier,
+         expires_at=excluded.expires_at,
+         blocking_reason=excluded.blocking_reason,
+         updated_at=now()`,
       [
         userId, source, status,
         JSON.stringify({
@@ -507,7 +523,10 @@ export async function updateConnectorCapability(
           proofReconciliation: status === "certified_live" || defaults.proofReconciliation
         }),
         evidenceReference || null,
-        status === "certified_live" ? new Date() : null
+        status === "certified_live" ? new Date() : null,
+        certification.accountIdentifier || null,
+        certification.expiresAt || null,
+        certification.blockingReason || null
       ]
     );
   }, db);

@@ -173,6 +173,17 @@ h2 { margin: 0 0 14px; font-size: 19px; }
 
 .health-output { min-height: 160px; margin: 0 0 24px; padding: 16px; overflow: auto; color: #d6f5e7; background: #202527; border-left: 4px solid #18a36d; }
 
+dialog {
+  width: min(680px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 0 22px;
+  border: 1px solid #8b979c;
+  border-radius: 8px;
+  color: #191b1d;
+}
+dialog::backdrop { background: rgb(25 27 29 / 55%); }
+.analysis-result { white-space: pre-wrap; line-height: 1.5; }
+
 footer { min-height: 68px; display: flex; justify-content: space-between; gap: 20px; align-items: center; padding: 18px 24px; color: #59656b; background: #e4e8ea; border-top: 1px solid #cbd2d5; font-size: 13px; }
 footer nav { display: flex; gap: 14px; flex-wrap: wrap; }
 

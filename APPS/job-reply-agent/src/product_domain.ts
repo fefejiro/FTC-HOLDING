@@ -69,6 +69,82 @@ export interface ConnectorCapability {
   proofReconciliation: boolean;
   evidenceReference?: string | null;
   verifiedAt?: string | null;
+  accountIdentifier?: string | null;
+  expiresAt?: string | null;
+  blockingReason?: string | null;
+}
+
+export interface ConnectorCertification extends ConnectorCapability {
+  accountIdentifier: string | null;
+  expiresAt: string | null;
+  blockingReason: string | null;
+}
+
+export interface MatchExplanation {
+  score: number;
+  matchedRequirements: string[];
+  missingRequirements: string[];
+  policyConflicts: string[];
+  evidenceFactIds: string[];
+  generatedAt: string;
+}
+
+export interface AtsGapReport {
+  coveredTerms: string[];
+  missingTerms: string[];
+  unsupportedTerms: string[];
+  structuralFindings: string[];
+  generatedAt: string;
+}
+
+export interface ApplicationTimelineEvent {
+  id: string;
+  applicationId: string;
+  eventType:
+    | "application_created"
+    | "status_changed"
+    | "proof_captured"
+    | "evidence_stored"
+    | "outcome_recorded";
+  actorType: "user" | "agent" | "runner" | "system";
+  metadata: Record<string, unknown>;
+  occurredAt: string;
+}
+
+export interface InterviewPrepQuestion {
+  id: string;
+  prompt: string;
+  competency: string;
+  approvedFactIds: string[];
+}
+
+export interface InterviewPrepSession {
+  id: string;
+  userId: string;
+  jobMatchId: string;
+  applicationId?: string | null;
+  status: "ready" | "in_progress" | "completed";
+  questions: InterviewPrepQuestion[];
+  rehearsal: Record<string, string>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type OutcomeType =
+  | "recruiter_reply"
+  | "screening"
+  | "interview"
+  | "offer"
+  | "rejection"
+  | "withdrawal";
+
+export interface OutcomeEvent {
+  id: string;
+  userId: string;
+  applicationId: string;
+  outcomeType: OutcomeType;
+  metadata: Record<string, unknown>;
+  occurredAt: string;
 }
 
 export type QueueOperation =
@@ -183,4 +259,108 @@ export function assertMailboxOwnership(configuredMailbox: string, authenticatedM
   if (!expected || !actual || expected !== actual) {
     throw new Error("Authenticated mailbox does not match the user-owned integration.");
   }
+}
+
+const TRUST_SKILL_TERMS = [
+  "acceptance criteria", "agile", "api", "azure", "business analysis",
+  "change management", "cloud", "confluence", "crm", "cybersecurity", "data analysis",
+  "digital transformation", "erp", "governance", "integration", "jira",
+  "leadership", "pos", "process mapping", "product management", "program management",
+  "project management", "requirements", "retail", "risk management", "sap",
+  "sql", "stakeholder management", "supply chain", "uat", "vendor management", "wms"
+] as const;
+
+function uniqueSorted(values: string[]): string[] {
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))]
+    .sort((left, right) => left.localeCompare(right));
+}
+
+function detectedTerms(value: string): string[] {
+  const haystack = normalized(value);
+  return TRUST_SKILL_TERMS.filter((term) => haystack.includes(term));
+}
+
+export function buildTrustAnalysis(input: {
+  score: number;
+  jobDescription: string;
+  careerFacts: CareerFact[];
+  policyConflicts?: string[];
+  structuralFindings?: string[];
+  now?: string;
+}): { match: MatchExplanation; ats: AtsGapReport } {
+  const generatedAt = input.now || new Date().toISOString();
+  const approvedFacts = selectApprovedCareerFacts(input.careerFacts).approvedFacts;
+  const requiredTerms = detectedTerms(input.jobDescription);
+  const evidence = approvedFacts.map((fact) => ({
+    fact,
+    terms: detectedTerms(fact.statement)
+  }));
+  const coveredTerms = requiredTerms.filter((term) =>
+    evidence.some((entry) => entry.terms.includes(term))
+  );
+  const missingTerms = requiredTerms.filter((term) => !coveredTerms.includes(term));
+  const evidenceFactIds = evidence
+    .filter((entry) => entry.terms.some((term) => coveredTerms.includes(term)))
+    .map((entry) => entry.fact.id);
+
+  return {
+    match: {
+      score: Math.max(0, Math.min(100, Math.round(input.score))),
+      matchedRequirements: uniqueSorted(coveredTerms),
+      missingRequirements: uniqueSorted(missingTerms),
+      policyConflicts: uniqueSorted(input.policyConflicts || []),
+      evidenceFactIds: uniqueSorted(evidenceFactIds),
+      generatedAt
+    },
+    ats: {
+      coveredTerms: uniqueSorted(coveredTerms),
+      missingTerms: uniqueSorted(missingTerms),
+      unsupportedTerms: uniqueSorted(missingTerms),
+      structuralFindings: uniqueSorted(input.structuralFindings || []),
+      generatedAt
+    }
+  };
+}
+
+export function buildGroundedInterviewQuestions(input: {
+  title: string;
+  company: string;
+  careerFacts: CareerFact[];
+}): InterviewPrepQuestion[] {
+  const approvedFacts = selectApprovedCareerFacts(input.careerFacts).approvedFacts;
+  const factIds = approvedFacts.slice(0, 6).map((fact) => fact.id);
+  const role = input.title.trim() || "this role";
+  const company = input.company.trim() || "the organization";
+  return [
+    {
+      id: "role-fit",
+      prompt: `Which approved experiences best demonstrate your fit for ${role} at ${company}?`,
+      competency: "role alignment",
+      approvedFactIds: factIds
+    },
+    {
+      id: "stakeholders",
+      prompt: "Describe a time you aligned business and technical stakeholders around an ambiguous requirement.",
+      competency: "stakeholder management",
+      approvedFactIds: factIds
+    },
+    {
+      id: "delivery",
+      prompt: "Describe a delivery risk you identified early, how you handled it, and the verified outcome.",
+      competency: "delivery and risk",
+      approvedFactIds: factIds
+    },
+    {
+      id: "change",
+      prompt: "Describe a system or process change you helped move from discovery through adoption.",
+      competency: "change leadership",
+      approvedFactIds: factIds
+    },
+    {
+      id: "questions",
+      prompt: `What evidence-based questions will you ask ${company} about priorities, success measures, and constraints?`,
+      competency: "candidate questions",
+      approvedFactIds: []
+    }
+  ];
 }

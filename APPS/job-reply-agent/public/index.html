@@ -64,6 +64,7 @@
         <button class="nav-item" type="button" data-view="connections">Connections</button>
         <button class="nav-item" type="button" data-view="opportunities">Opportunities</button>
         <button class="nav-item" type="button" data-view="approvals">Approvals</button>
+        <button class="nav-item" type="button" data-view="interview">Interview prep</button>
         <button class="nav-item" type="button" data-view="activity">Activity</button>
         <button class="nav-item" type="button" data-view="security">Security</button>
         <button id="operator-nav" class="nav-item" type="button" data-view="operator" hidden>Operator</button>
@@ -84,6 +85,9 @@
           <article><span>Needs approval</span><strong id="metric-approvals">0</strong></article>
           <article><span>Verified</span><strong id="metric-verified">0</strong></article>
           <article><span>Needs review</span><strong id="metric-gates">0</strong></article>
+          <article><span>Recruiter replies</span><strong id="metric-replies">0</strong></article>
+          <article><span>Interviews</span><strong id="metric-interviews">0</strong></article>
+          <article><span>Offers</span><strong id="metric-offers">0</strong></article>
         </div>
         <div class="split-layout">
           <section class="content-band"><h2>Activation</h2><ul id="readiness-list" class="record-list"></ul></section>
@@ -184,6 +188,11 @@
         <ul id="approval-list" class="record-list detailed"></ul>
       </section>
 
+      <section class="view" data-view-panel="interview">
+        <div class="page-heading"><div><p class="eyebrow">Grounded rehearsal</p><h1>Interview preparation</h1></div></div>
+        <ul id="interview-list" class="record-list detailed"></ul>
+      </section>
+
       <section class="view" data-view-panel="activity">
         <div class="page-heading"><div><p class="eyebrow">Evidence ledger</p><h1>Activity and proof</h1></div></div>
         <ul id="application-list" class="record-list detailed"></ul>
@@ -232,6 +241,34 @@
       </section>
     </main>
   </div>
+
+  <dialog id="job-insight-dialog">
+    <form id="job-insight-form" class="section-form" method="dialog">
+      <h2>Evidence-based fit analysis</h2>
+      <input name="jobMatchId" type="hidden">
+      <label>Complete job description<textarea name="jobDescription" class="tall" minlength="50" required></textarea></label>
+      <div class="actions"><button class="button primary" value="analyze" type="submit">Analyze</button><button class="button secondary" value="cancel" formmethod="dialog">Cancel</button></div>
+      <div id="job-insight-result" class="analysis-result" aria-live="polite"></div>
+    </form>
+  </dialog>
+
+  <dialog id="outcome-dialog">
+    <form id="outcome-form" class="section-form" method="dialog">
+      <h2>Record application outcome</h2>
+      <input name="applicationId" type="hidden">
+      <label>Outcome<select name="outcomeType"><option value="recruiter_reply">Recruiter reply</option><option value="screening">Screening</option><option value="interview">Interview</option><option value="offer">Offer</option><option value="rejection">Rejection</option><option value="withdrawal">Withdrawal</option></select></label>
+      <label>Note<textarea name="note" maxlength="1000"></textarea></label>
+      <div class="actions"><button class="button primary" value="record" type="submit">Record</button><button class="button secondary" value="cancel" formmethod="dialog">Cancel</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="timeline-dialog">
+    <div class="section-form">
+      <h2>Application timeline</h2>
+      <ul id="timeline-list" class="record-list detailed"></ul>
+      <button class="button secondary" type="button" data-close-dialog="timeline-dialog">Close</button>
+    </div>
+  </dialog>
 
   <footer>
     <span>Una Labs JobAgent</span>

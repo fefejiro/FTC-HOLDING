@@ -894,6 +894,10 @@ function guessLocation(content: string): string {
 }
 
 function normalizeSourceName(value: string): HuntSource | string {
+  const namedSource = cleanText(value).toLowerCase();
+  if (["linkedin", "indeed", "dice", "monster", "greenhouse", "lever", "ashby", "workday"].includes(namedSource)) {
+    return namedSource as HuntSource;
+  }
   for (const [re, source] of SOURCE_HOSTS) {
     if (re.test(value)) return source;
   }
