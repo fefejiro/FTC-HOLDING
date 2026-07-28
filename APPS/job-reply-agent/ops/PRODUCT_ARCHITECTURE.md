@@ -21,23 +21,26 @@ proof workflows are stable.
 
 ## Current Reality
 
-The repository currently contains:
+JobAgent now has two deliberately separate execution boundaries:
 
-- A responsive local HTML dashboard served by Node
-- Per-instance YAML configuration and private filesystem roots
-- SQLite persistence
-- Gmail OAuth and recruiter-message workflows
-- Resume generation and application-package workflows
-- Browser-assisted job-board operations
-- Proof-backed application states
-- Windows scheduled-task runners
+- The existing Windows pilot/operator runtime still owns browser-assisted job
+  boards, local resume generation, and the verified Fejiro Gmail workflow.
+- The hosted beta foundation owns invite-only accounts, PostgreSQL tenancy,
+  private object storage, approvals, proof history, queues, and trusted-runner
+  task exchange.
 
-This is a working pilot/operator system. It is not currently:
+The hosted foundation is deployed to an Una Labs Railway project with separate
+web, worker, migration, PostgreSQL, and private-bucket resources. Its temporary
+Railway hostname is live for controlled QA. The branded
+`jobagent.unalabs.cloud` domain is registered and awaits Cloudflare DNS.
+Transactional email, Google production verification, operator MFA enrollment,
+the Pro-plan backup/restore drill, and channel proof runs remain release gates.
 
-- A public hosted service
-- A user-authenticated multi-tenant SaaS
+This is not yet:
+
+- Open for broader public invitations
+- A certified autonomous job-board submission engine
 - A native iOS or Android app
-- Suitable for arbitrary users without operator-created instance files
 - Ready for App Store or Play Store distribution
 
 ## Verified Pilot Status - 2026-07-27
@@ -78,29 +81,45 @@ the two-week Chukwuma pilot remain release gates.
 
 ## SaaS Foundation Status - 2026-07-27
 
-The first hosted-product boundary is implemented:
+The safe public-beta boundary is implemented and deployed:
 
-- Invite-only account registration and password sessions
+- Expiring one-use invitations, verified email, password recovery, rotated
+  password sessions, login throttling, CSRF protection, and mandatory operator MFA
 - Authenticated user-derived tenant scope on every current `/api/v1` request
 - PostgreSQL repositories and forced row-level security
 - Runtime refusal of superuser or `BYPASSRLS` database roles in production
 - Separate migration-owner and restricted runtime-role deployment credentials
 - Tenant-scoped idempotency keys for retry-safe user mutations
-- Resume vault, Career Truth Bank, connection, dashboard, approval, and proof APIs
+- Resume vault, Career Truth Bank, connection, dashboard, approval, application,
+  downloadable proof, inbound email, trusted runner, and operator APIs
 - Recent-authentication gates for connection revocation, pause, resume, export,
   and deletion
-- Complete metadata export and password-confirmed account deletion
+- Versioned consent and automation policies, quiet hours, daily caps, immediate
+  pause/revocation, complete metadata export, and password-confirmed deletion
 - Live PostgreSQL tests proving cross-tenant read, update, delete, and
   idempotency isolation
-- Private S3-compatible resume storage with tenant-bound object keys,
-  short-lived signed downloads, encrypted-at-rest uploads, deletion outbox,
-  and a legacy database-blob migration command
+- Private S3-compatible storage for resumes and proof with tenant-bound keys,
+  short-lived signed downloads, deletion cleanup, and no public bucket access
+- PostgreSQL-backed `pg-boss` queues with retries, dead-letter handling,
+  deduplication, per-user/channel grouping, quiet hours, and redacted envelopes
+- A signed, expiring Windows trusted-runner protocol that keeps browser cookies
+  on the candidate device and fails closed on identity, CAPTCHA, authentication,
+  legal, sensitive, contradictory, or unknown gates
+- A responsive installable PWA covering onboarding, policy, resumes, facts,
+  connections, recommendations, approvals, applications, proof, activity, and
+  security controls
+- A live Railway `/readyz` promotion gate, structured redacted logs, and a
+  scheduled external readiness/PWA monitor
+- Fejiro dry-run and hosted import with exact identity matching, 12 approved
+  facts, 68 content-deduplicated resumes, 96 applications, 65 private evidence
+  artifacts, and 31 deliberately downgraded unverified records
 
-This is a verified foundation, not a hosted release. Private object storage,
-email verification and recovery, encrypted OAuth connection completion, queue
-workers, production observability, deployment, and the two-week friend pilot
-remain open. The object-storage adapter is implemented and locally verified;
-provisioning the production bucket remains an external deployment gate.
+The hosted services and tenant foundation are verified. A public beta is not
+declared complete until Cloudflare activates the branded domain, the Railway
+workspace is upgraded from Hobby to Pro, the email provider and operator MFA
+are configured, Google verification passes, the backup restore and incident
+drills pass, fresh channel proof runs complete, and the 14-day Chukwuma
+isolation pilot passes.
 
 ## Target Platform
 
@@ -225,22 +244,26 @@ Before public onboarding:
 
 1. Replace filesystem tenant selection with authenticated user ownership. **Implemented.**
 2. Replace SQLite with PostgreSQL and private object storage. **Implemented for the product API.**
-3. Add account authentication, recovery, and session management. **Password authentication and sessions implemented; email verification and recovery remain.**
-4. Add per-user OAuth connections and encrypted token storage. **Gmail PKCE, exact-mailbox verification, AES-GCM token storage, and revocation implemented; live provider provisioning remains.**
-5. Add consent versioning and revocation.
-6. Add background queues, retries, rate limits, and quiet hours.
-7. Add responsive user and admin experiences.
-8. Pass cross-tenant isolation and authorization tests.
+3. Add account authentication, recovery, and session management. **Implemented.**
+4. Add per-user OAuth connections and encrypted token storage. **Implemented;
+   hosted Gmail reconnection and Google verification remain external gates.**
+5. Add consent versioning and revocation. **Implemented.**
+6. Add background queues, retries, rate limits, and quiet hours. **Implemented.**
+7. Add responsive user and admin experiences. **Implemented as a PWA.**
+8. Pass cross-tenant isolation and authorization tests. **Local and live
+   PostgreSQL tests pass; final CI run remains required on the release commit.**
 9. Complete privacy, retention, export, deletion, and incident procedures.
-10. Run the first-friend pilot reliably for at least two weeks.
+   **Product controls and public pages are implemented; restore and incident
+   drills remain.**
+10. Run the first-friend pilot reliably for at least two weeks. **Not started.**
 
 ## Near-Term Build Order
 
-1. Provision hosted PostgreSQL, private object storage, and a Google OAuth client.
-2. Add email verification, password recovery, and account security controls.
-3. Move Gmail intake and job discovery into queue-backed per-user workers.
-4. Complete consent versioning, approvals, rate limits, and quiet hours.
-5. Deploy the web application and workers with observability and incident alerts.
-6. Run Chukwuma as an isolated first-friend pilot for two reliable weeks.
-7. Add PWA installation and notifications.
-8. Build and distribute iOS and Android beta clients after the web workflow is proven.
+1. Finish `jobagent.unalabs.cloud`, Resend, hosted Gmail OAuth, operator MFA,
+   monitoring, backups, and restore/incident drills.
+2. Complete Fejiro Gmail, LinkedIn, Indeed, and Dice proof runs without
+   submitting a poor-fit role; keep Monster `manual_only` until proof exists.
+3. Cut local schedules over one channel at a time after shadow comparison.
+4. Run Chukwuma as an isolated first-friend pilot for 14 reliable days.
+5. Open broader invitations only after privacy and Google verification.
+6. Build iOS and Android clients after the API and web pilot are stable.
