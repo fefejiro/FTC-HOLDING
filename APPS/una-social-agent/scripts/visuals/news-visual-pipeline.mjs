@@ -95,7 +95,7 @@ function inferDomain(text) {
   if (hasAny(lower, ['daily brief', 'inbox', 'calendar', 'assistant', 'attention each day', 'morning'])) return 'workplace AI'
   if (hasAny(lower, ['cryptography', 'cryptographic', 'symcrypt', 'verified code', 'code verification', 'memory safety'])) return 'cybersecurity'
   if (hasAny(lower, ['nvidia', 'gpu', 'blackwell', 'semiconductor', 'foundry', 'chip'])) return 'semiconductor'
-  if (hasAny(lower, ['enterprise ai', 'spreadsheet analysis', 'decide for work', 'workplaces', 'workplace', 'office productivity', 'productivity ai'])) return 'workplace AI'
+  if (hasAny(lower, ['what people do at work', 'workers do', 'job boundaries', 'enterprise ai', 'spreadsheet analysis', 'decide for work', 'workplaces', 'workplace', 'office productivity', 'productivity ai'])) return 'workplace AI'
   if (hasAny(lower, ['web3', 'blockchain', 'stablecoin'])) return 'web3'
   if (hasAny(lower, ['whatsapp', 'encryption', 'username', 'messaging', 'platform rule', 'platform policy', 'ban'])) return 'platform policy'
   if (hasAny(lower, ['airtel money', 'mobile money', 'payment', 'payments', 'fintech', 'merchant', 'bank', 'wallet', 'remittance', 'listing', 'financial services', 'community finance', 'access to capital', 'entrepreneur', 'entrepreneurs', 'small business finance'])) return 'fintech'
@@ -259,13 +259,13 @@ const DOMAIN_VISUALS = {
     applications: ['mapping', 'climate monitoring', 'communications'],
   },
   'workplace AI': {
-    primarySubject: 'work-focused AI agent in daily operations',
-    technology: ['AI agents', 'workflow automation', 'document review', 'customer support'],
-    roles: ['operations manager', 'support lead', 'analyst'],
-    environment: 'real team workspace or meeting room',
-    objects: ['workflow board', 'ticket queue', 'review checklist', 'shared dashboard'],
-    actions: ['checking agent output', 'reviewing a task queue', 'deciding the next action'],
-    applications: ['support operations', 'admin work', 'research and reporting'],
+    primarySubject: 'AI changing practical office work',
+    technology: ['AI-assisted task work', 'document review', 'research workflow', 'human review'],
+    roles: ['knowledge worker', 'operations lead', 'research analyst'],
+    environment: 'real workplace with documents, notes, laptops and human review',
+    objects: ['marked-up document', 'notebook', 'spreadsheet', 'task list', 'review notes'],
+    actions: ['checking AI-assisted work against source material', 'reviewing a document with notes', 'turning research into next actions'],
+    applications: ['office work', 'research support', 'admin work', 'workflow review'],
   },
   'logistics automation': {
     primarySubject: 'logistics automation workflow',
@@ -673,11 +673,12 @@ function searchTermsForFacts(facts) {
     ],
     satellite: ['satellite control room operator', 'earth observation control room'],
     'workplace AI': [
-      'African business team laptop office',
-      'business people working laptops meeting',
-      'diverse team office computer workflow',
-      'business analyst team dashboard',
-      'office team spreadsheet laptop meeting',
+      'office worker reviewing documents notebook laptop',
+      'analyst checking spreadsheet notes laptop',
+      'team reviewing printed documents laptop table',
+      'customer support operations desk notes laptop',
+      'research analyst notebook laptop documents',
+      'office workflow review documents laptop',
     ],
     'logistics automation': ['warehouse dispatch operator', 'logistics control room warehouse'],
     'telecom AI': ['telecom network operations center', 'network operations center engineer'],
@@ -761,6 +762,44 @@ async function usedImageSourceUrls(limit = 80) {
       }
       for (const slide of entry.slides || []) {
         if (slide.assetSourceUrl) used.add(String(slide.assetSourceUrl).trim().toLowerCase())
+      }
+      if (used.size >= limit) break
+    }
+  } catch {
+    // Continue with visual proof ledgers below.
+  }
+  try {
+    const proofRoot = path.join(root, 'content', 'proof')
+    const dates = await fs.readdir(proofRoot)
+    for (const date of dates.sort().reverse()) {
+      const dateDir = path.join(proofRoot, date)
+      const stack = [dateDir]
+      while (stack.length) {
+        const current = stack.pop()
+        let entries = []
+        try {
+          entries = await fs.readdir(current, { withFileTypes: true })
+        } catch {
+          continue
+        }
+        for (const entry of entries) {
+          const fullPath = path.join(current, entry.name)
+          if (entry.isDirectory()) {
+            stack.push(fullPath)
+            continue
+          }
+          if (!/^visible-social-post-report.*\.json$/i.test(entry.name)) continue
+          try {
+            const report = JSON.parse(await fs.readFile(fullPath, 'utf8'))
+            for (const result of Object.values(report.results || {})) {
+              for (const sourceUrl of result?.assetProof?.sourceUrls || []) {
+                if (sourceUrl) used.add(String(sourceUrl).trim().toLowerCase())
+              }
+            }
+          } catch {
+            continue
+          }
+        }
       }
       if (used.size >= limit) break
     }

@@ -185,7 +185,7 @@ def ensure_window_visible(window):
         return rect
 
 
-def find_chrome_window():
+def find_chrome_window(preferred_channel: str | None = None):
     candidates = []
     for window in Desktop(backend="uia").windows():
         try:
@@ -199,12 +199,22 @@ def find_chrome_window():
     if not candidates:
         raise RuntimeError("No visible Google Chrome window found.")
 
+    preferred = (preferred_channel or "").lower().strip()
+
     def window_score(window) -> int:
         label = profile_label(window).lower()
         title = (window.window_text() or "").lower()
         score = 0
+        # Publishing must use Fejiro's signed-in Chrome profile. The Mike/Michael
+        # profile can have Una Labs tabs open, but Instagram is logged out there.
+        if "fejiro" in label:
+            score += 500
+        if "michael" in label or "mike" in label:
+            score -= 500
         if "sign up | linkedin" in title or "join linkedin" in title or "authwall" in title:
             score -= 500
+        if "log into instagram" in title or "login" in title:
+            score -= 300
         if "una_rect:" in title:
             score += 130
         if "unalabs" in title or "una labs" in title:
@@ -213,10 +223,18 @@ def find_chrome_window():
             score += 100
         if "instagram" in title:
             score += 95
+        if preferred == "instagram":
+            if "instagram" in title:
+                score += 400
+            if "linkedin" in title:
+                score -= 120
+        if preferred == "linkedin":
+            if "linkedin" in title or "company page" in title:
+                score += 300
+            if "instagram" in title:
+                score -= 80
         if "company page" in title or "page posts" in title:
             score += 40
-        if "fejiro" in label:
-            score += 20
         if "dice" in title or "gmail" in title or "jobs | linkedin" in title:
             score -= 60
         return score
@@ -1225,10 +1243,10 @@ def main() -> int:
 
     channels = [item.strip().lower() for item in args.channels.split(",") if item.strip()]
     with VisibleBrowserLock():
-        window = find_chrome_window()
-        window.set_focus()
         results = {}
         if "instagram" in channels:
+            window = find_chrome_window("instagram")
+            window.set_focus()
             duplicate = already_posted_same_images(run_date, args.slot, "instagram", instagram_asset_proof)
             if duplicate.get("duplicate"):
                 results["instagram"] = {
@@ -1243,6 +1261,8 @@ def main() -> int:
                 results["instagram"].setdefault("assetProof", {})
                 results["instagram"]["assetProof"].update(instagram_asset_proof)
         if "linkedin" in channels:
+            window = find_chrome_window("linkedin")
+            window.set_focus()
             duplicate = already_posted_same_images(run_date, args.slot, "linkedin", linkedin_asset_proof)
             if duplicate.get("duplicate"):
                 results["linkedin"] = {

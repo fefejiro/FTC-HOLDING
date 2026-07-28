@@ -746,3 +746,48 @@ Decision rule:
   have been inspected.
 - If the post is blocked for quality, improve the story/image/copy path and run
   again rather than reposting an old image.
+
+## July 28 Follow-Up: Browser Profile And Visual Repetition Fixes
+
+What happened:
+
+- Instagram initially failed because the visible publisher selected the
+  Mike/Michael Chrome window, where Instagram was logged out.
+- Fejiro logged into Instagram in the Fejiro Chrome profile, then the publisher
+  still needed profile-aware window selection so it would use that window.
+- The same broad "human at laptop / work meeting" stock-photo lane kept
+  appearing because the visual source guard blocked exact hashes and source URLs
+  from formal ledgers, but it did not scan recent visible-post proof reports.
+- The workplace-AI search terms were also too generic, so Openverse could keep
+  returning the same kind of office/laptop scene.
+
+Fix applied:
+
+- `scripts/visible-social-post.py` now scores Fejiro's Chrome profile much
+  higher and penalizes Mike/Michael for publishing.
+- Instagram publishing now explicitly asks for an Instagram-preferred Chrome
+  window; LinkedIn asks for a LinkedIn-preferred window.
+- `scripts/visuals/news-visual-pipeline.mjs` now scans recent
+  `visible-social-post-report*.json` files for used image source URLs.
+- Workplace-AI visual facts and search terms now lean toward document review,
+  source checking, support operations, and practical workflow review instead of
+  generic "business team laptop office" imagery.
+- `config/blocked-image-sources.json` now includes the exact repeated
+  StockSnap team/meeting/writing photo sources.
+
+Verification:
+
+- `npm --prefix APPS/una-social-agent run check` passed.
+- Instagram retry on July 28 used the Fejiro Instagram window and posted three
+  images.
+- Proof captured:
+  `content/proof/2026-07-28/visible-instagram-profile-verify.png`.
+
+Taste rule going forward:
+
+- A good working-person photo is not enough. If the image reads like the same
+  laptop meeting from a different angle, treat it as visual repetition and
+  replace it before posting.
+- Prefer story-specific, varied scenes: documents under review, lab work,
+  field operations, bank/payment operations, policy rooms, telecom/network
+  operations, clinics, classrooms, workshops, or real product/business contexts.
