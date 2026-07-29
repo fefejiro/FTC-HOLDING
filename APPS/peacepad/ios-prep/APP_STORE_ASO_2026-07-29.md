@@ -13,6 +13,33 @@ Apple ID: `6793350735`
 Public product URL:
 `https://apps.apple.com/app/peacepad/id6793350735`
 
+## Live storefront baseline
+
+Verified from Apple's Canadian public product page and catalog API on
+2026-07-29:
+
+| Field | Live value |
+|---|---|
+| Name | PeacePad |
+| Subtitle | Calmer co-parenting tools |
+| Version | 1.0 |
+| Price | Free |
+| Primary category | Lifestyle |
+| Secondary category | Productivity |
+| Age rating | 12+ |
+| Minimum iOS | 14.0 |
+| Seller | Fejiro Technology Consultancy Inc |
+| Bundle ID | `ca.peacepad.family` |
+
+The product URL returned HTTP 200 and resolved to the Canadian storefront. A
+public-device install remains a separate acceptance check.
+
+Apple's public catalog API initially returned zero iPhone and iPad screenshots,
+and the public page's social image used a placeholder while App Store Connect
+showed approved screenshots. Treat this as launch propagation until the
+24-hour window expires. If screenshots or the social image remain absent after
+that window, investigate the public listing before changing screenshot content.
+
 ## Change boundary
 
 ### Safe to update now
@@ -226,9 +253,14 @@ time, beginning with the first three screenshots.
 
 ## App Store Connect execution checklist
 
-- [ ] Confirm version 1.0 is publicly downloadable from the product URL.
-- [ ] Record the current live name, subtitle, keywords, description, categories,
-      promotional text, URLs, and tags before editing.
+- [x] Confirm version 1.0 has a public product page.
+- [ ] Confirm version 1.0 installs from the public App Store on a real iPhone.
+- [x] Record the current live name, subtitle, description, categories,
+      version, rating, seller, and minimum iOS version.
+- [ ] Record the non-public keyword field and current promotional text from App
+      Store Connect before editing.
+- [ ] Recheck public screenshot and social-image propagation after 24 hours.
+- [ ] Record the remaining live URLs and tags before editing.
 - [ ] Update only the 147-character promotional text for version 1.0.
 - [ ] Set the canonical Support URL to `https://peacepad.ca/support` if the
       current field is editable without a new version.
@@ -245,6 +277,9 @@ time, beginning with the first three screenshots.
 |---|---|
 | Apple approval | VERIFIED |
 | Ready for Distribution | VERIFIED |
+| Public product page | VERIFIED, HTTP 200 |
+| Public-device installation | NOT YET VERIFIED |
+| Public screenshots/social image | PROPAGATION PENDING |
 | Public URLs | VERIFIED, HTTP 200 |
 | Character limits | VERIFIED |
 | Promotional copy | READY TO APPLY |

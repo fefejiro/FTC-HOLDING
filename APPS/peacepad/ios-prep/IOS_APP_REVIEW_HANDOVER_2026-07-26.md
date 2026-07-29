@@ -142,7 +142,9 @@ so the App Review password field is never visible.
 | Existing-binary resubmission | COMPLETE | 100% |
 | Apple review | APPROVED | 100% |
 | Ready for Distribution | VERIFIED | 100% |
-| Public App Store propagation | VERIFICATION PENDING | External |
+| Public App Store product page | VERIFIED | 100% |
+| Public-device installation | VERIFICATION PENDING | External |
+| Public screenshot/social-image propagation | PENDING | External |
 | Version 1.0 promotional text | READY TO APPLY | 90% |
 | Version 1.0.1 ASO package | STAGED | 80% |
 
