@@ -1,19 +1,31 @@
 # App Store Metadata for PeacePad
 
-## Current submission status
+## Current distribution status
 
-Verified in App Store Connect on 2026-07-26:
+Verified from App Store Connect and Apple's distribution email on 2026-07-29:
 
 ```text
-Version/build: 1.0.9 (1)
-Submission: Waiting for Review
-Release: Automatically release this version
+Marketing version: 1.0
+Approved binary: 1.0.9 (1)
+App status: Ready for Distribution
+Apple ID: 6793350735
+Product URL: https://apps.apple.com/app/peacepad/id6793350735
+Submission ID: 94d3acfa-f54d-4aad-a741-16bfeabaf6ee
 ```
 
-The isolated synthetic reviewer credentials and testing notes were saved, the
-Guideline 2.1 response was sent, and the existing binary was resubmitted. See
-`IOS_APP_REVIEW_HANDOVER_2026-07-26.md` for the evidence and next-owner actions.
-Never add the raw reviewer password to this file.
+Apple approved the existing binary after the Guideline 2.1 account-access
+recovery and Guideline 2.3.3 screenshot correction. The isolated synthetic
+reviewer credentials remain operational review information only. Never add the
+raw reviewer password to this file.
+
+The current public metadata must remain factually consistent with approved
+version 1.0. Promotional text may be updated without a new binary. Name,
+subtitle, keywords, description, and replacement screenshots are staged for
+version 1.0.1 unless App Store Connect explicitly marks the field editable
+without a new submission.
+
+See `APP_STORE_ASO_2026-07-29.md` for the approved, character-counted ASO package
+and rollout gates.
 
 ## App Name (30 character limit)
 ```

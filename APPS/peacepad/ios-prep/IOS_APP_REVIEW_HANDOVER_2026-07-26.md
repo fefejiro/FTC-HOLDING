@@ -16,6 +16,29 @@ This was a metadata and hosted-runtime recovery of the existing Capacitor
 binary. No replacement binary, second App Store record, bundle-ID change, or
 React Native migration was performed.
 
+## Approval update - 2026-07-29
+
+Apple completed review and approved PeacePad for distribution. App Store
+Connect subsequently showed:
+
+```text
+Marketing version: 1.0
+Approved binary: 1.0.9 (1)
+App status: Ready for Distribution
+Apple ID: 6793350735
+Submission ID: 94d3acfa-f54d-4aad-a741-16bfeabaf6ee
+Product URL: https://apps.apple.com/app/peacepad/id6793350735
+```
+
+This approval closes the Guideline 2.1 reviewer-access recovery and the later
+Guideline 2.3.3 screenshot correction. It does not by itself prove that every
+storefront has completed propagation or that a public-device install has
+passed.
+
+The post-approval App Store optimization package is documented in
+`APP_STORE_ASO_2026-07-29.md`. The approved binary remains frozen while its
+public listing is verified.
+
 ## Reason for the recovery
 
 Apple's automated Guideline 2.1 check detected account-based functionality but
@@ -117,8 +140,11 @@ so the App Review password field is never visible.
 | App Review credentials and notes | SAVED | 100% |
 | Resolution Center response | SENT | 100% |
 | Existing-binary resubmission | COMPLETE | 100% |
-| Apple review | WAITING FOR REVIEW | External |
-| Public App Store availability | PENDING APPLE APPROVAL | External |
+| Apple review | APPROVED | 100% |
+| Ready for Distribution | VERIFIED | 100% |
+| Public App Store propagation | VERIFICATION PENDING | External |
+| Version 1.0 promotional text | READY TO APPLY | 90% |
+| Version 1.0.1 ASO package | STAGED | 80% |
 
 ## Known limits
 
@@ -131,22 +157,21 @@ so the App Review password field is never visible.
 
 ## Next owner actions
 
-Until Apple changes the status, monitor only:
-
-1. Check App Store Connect for `In Review`, a new Resolution Center message, or
-   `Ready for Distribution`.
-2. Do not upload a replacement build, remove the submission, revoke signing
-   credentials, or change metadata while review is active unless a verified
-   release blocker requires it.
-3. If Apple asks a question, answer narrowly with the documented synthetic
-   reviewer path. Never paste the reviewer password into chat, tickets, or
-   source control.
-4. If Apple approves the app, confirm automatic release completes and verify
-   the public App Store listing from a signed-out device.
-5. After release, perform a short production acceptance pass and record:
+1. Confirm the public product URL is downloadable from a signed-out iPhone in
+   an enabled storefront.
+2. Do not upload a replacement build, revoke signing credentials, or change the
+   bundle ID during the launch acceptance window.
+3. Record the complete live metadata baseline before changing App Store text or
+   assets.
+4. Apply only the approved promotional-text change to version 1.0. Stage the
+   name, subtitle, keywords, description, and screenshot package for version
+   1.0.1.
+5. Perform a short production acceptance pass and record:
    listing URL, version/build, install result, first launch, reviewer/ordinary
    account access, guest Compose, privacy links, deletion entry point, and any
    crash or review feedback.
+6. Never paste the reviewer password into chat, tickets, analytics, screenshots,
+   or source control.
 
 ## Stop conditions
 
@@ -157,4 +182,5 @@ Stop before:
 - changing `ca.peacepad.family`;
 - adding real court or family documents;
 - merging the React Native lab into the submitted application;
-- claiming approval or public availability before Apple confirms it.
+- claiming public availability before a storefront and public-device check
+  confirms it.
