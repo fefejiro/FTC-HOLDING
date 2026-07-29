@@ -75,6 +75,8 @@ import {
   createPasswordResetForEmail,
   createProductInvitation,
   createRunnerEnrollment,
+  discardPasswordResetForUser,
+  discardProductInvitation,
   enableProductMfa,
   enrollRunnerDevice,
   ensureConnectorCapabilities,
@@ -103,6 +105,7 @@ import {
   sendInvitationEmail,
   sendPasswordResetEmail,
   sendVerificationEmail,
+  transactionalEmailConfigured,
   verifyResendWebhook
 } from "./product_email.js";
 import type { ApplicationProof, ConnectorSource, ConnectorStatus } from "./product_domain.js";
@@ -809,8 +812,21 @@ export async function createProductServer(storage: ProductObjectStorage = create
 
       if (req.method === "POST" && url.pathname === "/api/v1/auth/password-reset/request") {
         const input = passwordResetRequestSchema.parse(await readJson(req));
+        if (!transactionalEmailConfigured()) {
+          return json(res, 503, {
+            error: "Password reset email is temporarily unavailable. Contact the JobAgent operator."
+          });
+        }
         const reset = await createPasswordResetForEmail(db, input.email);
-        if (reset) await sendPasswordResetEmail(reset.email, reset.token).catch(() => null);
+        if (reset) {
+          const deliveryId = await sendPasswordResetEmail(reset.email, reset.token).catch(() => null);
+          if (!deliveryId) {
+            await discardPasswordResetForUser(db, reset.userId);
+            return json(res, 503, {
+              error: "Password reset email is temporarily unavailable. Contact the JobAgent operator."
+            });
+          }
+        }
         return json(res, 202, { accepted: true });
       }
 
@@ -1045,6 +1061,11 @@ export async function createProductServer(storage: ProductObjectStorage = create
       }
       if (req.method === "POST" && url.pathname === "/api/v1/operator/invitations") {
         if (!operatorAllowed(user)) return json(res, 403, { error: "Verified operator MFA is required." });
+        if (!transactionalEmailConfigured()) {
+          return json(res, 503, {
+            error: "Invitation email is temporarily unavailable. No invitation was created."
+          });
+        }
         const body = await readJson(req);
         const input = invitationSchema.parse(body);
         return idempotentMutation(req, res, {
@@ -1058,7 +1079,16 @@ export async function createProductServer(storage: ProductObjectStorage = create
               invitation.email,
               invitation.token,
               invitation.expiresAt
-            );
+            ).catch(() => null);
+            if (!deliveryId) {
+              await discardProductInvitation(db, invitation.token);
+              return {
+                status: 503,
+                body: {
+                  error: "Invitation email is temporarily unavailable. No invitation was created."
+                }
+              };
+            }
             return {
               status: 201,
               body: {

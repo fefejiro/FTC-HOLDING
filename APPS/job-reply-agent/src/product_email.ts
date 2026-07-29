@@ -20,6 +20,12 @@ function emailConfig() {
   return { apiKey, from, appOrigin };
 }
 
+export function transactionalEmailConfigured(): boolean {
+  const apiKey = String(process.env.RESEND_API_KEY || "").trim();
+  const appOrigin = String(process.env.APP_ORIGIN || "").replace(/\/$/, "");
+  return Boolean(apiKey && appOrigin.startsWith("https://"));
+}
+
 function link(pathname: string, token: string): string {
   const { appOrigin } = emailConfig();
   return `${appOrigin}${pathname}?token=${encodeURIComponent(token)}`;
@@ -39,9 +45,9 @@ export async function sendTransactionalEmail(message: TransactionalEmail): Promi
   return response.data?.id || null;
 }
 
-export function sendVerificationEmail(email: string, token: string) {
+export async function sendVerificationEmail(email: string, token: string) {
   const url = link("/verify-email", token);
-  return sendTransactionalEmail({
+  return await sendTransactionalEmail({
     to: email,
     subject: "Verify your Una Labs JobAgent email",
     text: `Verify your email to continue setting up JobAgent: ${url}\n\nThis link expires in 24 hours.`,
@@ -49,9 +55,9 @@ export function sendVerificationEmail(email: string, token: string) {
   });
 }
 
-export function sendPasswordResetEmail(email: string, token: string) {
+export async function sendPasswordResetEmail(email: string, token: string) {
   const url = link("/reset-password", token);
-  return sendTransactionalEmail({
+  return await sendTransactionalEmail({
     to: email,
     subject: "Reset your Una Labs JobAgent password",
     text: `Reset your JobAgent password: ${url}\n\nThis link expires in one hour. Ignore this message if you did not request it.`,
@@ -59,9 +65,9 @@ export function sendPasswordResetEmail(email: string, token: string) {
   });
 }
 
-export function sendInvitationEmail(email: string, token: string, expiresAt: string) {
+export async function sendInvitationEmail(email: string, token: string, expiresAt: string) {
   const url = link("/accept-invite", token);
-  return sendTransactionalEmail({
+  return await sendTransactionalEmail({
     to: email,
     subject: "Your Una Labs JobAgent invitation",
     text: `Your private JobAgent invitation is ready: ${url}\n\nIt expires ${expiresAt}.`,

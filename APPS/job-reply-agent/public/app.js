@@ -985,8 +985,12 @@
       });
       setResult(
         "#verification-state",
-        result.alreadyVerified ? "Email already verified." : "Verification email sent.",
-        "good"
+        result.alreadyVerified
+          ? "Email already verified."
+          : result.sent
+            ? "Verification email sent."
+            : "Verification email is temporarily unavailable. Contact the JobAgent operator.",
+        result.alreadyVerified || result.sent ? "good" : "danger"
       );
     } catch (error) {
       setResult("#verification-state", error.message, "danger");

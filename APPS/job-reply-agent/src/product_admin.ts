@@ -1,7 +1,10 @@
 import { fileURLToPath } from "node:url";
 import { createProductPool } from "./product_db.js";
 import { hashPassword } from "./product_auth.js";
-import { sendInvitationEmail } from "./product_email.js";
+import {
+  sendInvitationEmail,
+  transactionalEmailConfigured
+} from "./product_email.js";
 import {
   createProductInvitation,
   updateConnectorCapability
@@ -52,6 +55,9 @@ async function createInvitation() {
   const role = (option("role") || "candidate") as "candidate" | "operator" | "admin";
   const createdByEmail = option("created-by").trim().toLowerCase();
   if (!email) throw new Error("--email is required.");
+  if (!transactionalEmailConfigured()) {
+    throw new Error("Transactional invitation email is not configured; no invitation was created.");
+  }
   const db = createProductPool();
   try {
     let createdBy: string | null = null;

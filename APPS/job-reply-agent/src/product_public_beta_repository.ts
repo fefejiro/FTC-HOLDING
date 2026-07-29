@@ -176,6 +176,23 @@ export async function createPasswordResetForEmail(
   return { userId: found.rows[0].id, email: found.rows[0].email, ...token };
 }
 
+export async function discardPasswordResetForUser(
+  db: pg.Pool,
+  userId: string
+): Promise<void> {
+  await db.query("DELETE FROM product_password_reset_tokens WHERE user_id=$1", [userId]);
+}
+
+export async function discardProductInvitation(
+  db: pg.Pool,
+  token: string
+): Promise<void> {
+  await db.query(
+    "DELETE FROM product_invitations WHERE token_hash=$1 AND used_at IS NULL",
+    [hashOpaqueToken(token)]
+  );
+}
+
 export async function resetProductPassword(
   db: pg.Pool,
   token: string,
