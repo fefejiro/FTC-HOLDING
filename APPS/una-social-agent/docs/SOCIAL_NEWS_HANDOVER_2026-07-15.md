@@ -791,3 +791,51 @@ Taste rule going forward:
 - Prefer story-specific, varied scenes: documents under review, lab work,
   field operations, bank/payment operations, policy rooms, telecom/network
   operations, clinics, classrooms, workshops, or real product/business contexts.
+
+## July 29 Follow-Up: Scheduled Run Reached Browser But Did Not Publish
+
+What happened:
+
+- `UnaLabsSocial-PeakDraft` did run at 6:45 AM Eastern.
+- The newsroom quality guard approved a `single_slide_rescue` because the full
+  three-region carousel did not have enough unique, quality-cleared assets.
+- Instagram blocked before upload because the Create modal did not open from
+  the visible home/profile surface.
+- LinkedIn opened the Una Labs Page composer and filled the post text, but the
+  intended media picker did not open.
+- The previous behavior left the LinkedIn composer sitting open with text,
+  which made the run look almost posted even though the required image had not
+  attached.
+
+Proof:
+
+- `content/proof/2026-07-29/visible-social-post-report.json`
+- `content/proof/2026-07-29/visible-instagram-create-missing.png`
+- `content/proof/2026-07-29/visible-linkedin-media-picker-missing.png`
+- `content/proof/2026-07-29/manual-linkedin-after-clean-post-click.png`
+
+Fix applied:
+
+- `scripts/visible-social-post.py` now has a broader UIA text matcher for
+  upload controls whose labels are not exact matches.
+- Instagram publishing now has a final visible-click fallback for compact or
+  split left-rail layouts before it reports `blocked_no_create_modal`.
+- LinkedIn image upload now tries multiple deterministic toolbar positions
+  before it reports `blocked_media_not_attached`.
+- If LinkedIn text is filled but required media cannot attach, the publisher
+  now captures cleanup proof and closes the composer instead of leaving a
+  half-finished draft on screen.
+
+Operating rule:
+
+- If the run requires an image, do not post text-only as an automatic fallback.
+  Stop cleanly, record the blocked reason, and leave no open composer.
+- A manual recovery click can confirm that LinkedIn accepted text, but it must
+  not be counted as a proper image publish unless the proof shows the intended
+  image attached and visible after posting.
+
+Verification:
+
+- `python -m py_compile APPS/una-social-agent/scripts/visible-social-post.py`
+  passed.
+- `npm --prefix APPS/una-social-agent run check` passed with 30 tests.
