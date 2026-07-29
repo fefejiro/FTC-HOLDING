@@ -550,6 +550,32 @@ def force_instagram_create_with_bookmarklet(window, wait: float = 1.5) -> dict:
     return {"ok": False, "mode": "bookmarklet", "reason": "Create modal did not open after bookmarklet click."}
 
 
+def force_instagram_create_with_visible_clicks(window, proof_dir: Path, wait: float = 1.0) -> dict:
+    """Use visible fallbacks for compact or split Instagram windows."""
+    detail = {"ok": False, "mode": "visible_clicks", "steps": []}
+    attempts = [
+        ("uia_contains_create", lambda: click_text_contains_fallback(window, r"^(Create|New post)$")),
+        ("left_rail_plus_large", lambda: click_relative(window, 0.022, 0.625, wait)),
+        ("left_rail_plus_compact", lambda: click_relative(window, 0.026, 0.705, wait)),
+        ("left_rail_create_text", lambda: click_relative(window, 0.038, 0.455, wait)),
+    ]
+    for label, action in attempts:
+        try:
+            result = action()
+            detail["steps"].append({"action": label, "result": result})
+        except Exception as exc:
+            detail["steps"].append({"action": label, "error": str(exc)})
+        time.sleep(wait)
+        if "Create new post" in visible_text(window) or "Select from computer" in visible_text(window):
+            detail["ok"] = True
+            detail["openedBy"] = label
+            detail["proof"] = screenshot(window, proof_dir / "visible-instagram-create-fallback-open.png")
+            return detail
+    detail["proof"] = screenshot(window, proof_dir / "visible-instagram-create-fallback-missing.png")
+    detail["reason"] = "Create modal did not open after visible fallbacks."
+    return detail
+
+
 def paste_text(window, text: str, select_all: bool = False):
     window.set_focus()
     old = set_clipboard_temporarily(text)
@@ -665,6 +691,34 @@ def click_text_fallback(window, label: str) -> bool:
                 return True
             except Exception:
                 pass
+    return False
+
+
+def click_text_contains_fallback(window, pattern: str) -> bool:
+    """Click a visible control whose UIA text contains a useful label."""
+    import re
+
+    rx = re.compile(pattern, re.I)
+    win = window.rectangle()
+    matches = []
+    for control in window.descendants():
+        try:
+            text = (control.window_text() or "").strip()
+            rect = control.rectangle()
+        except Exception:
+            continue
+        if not text or not rx.search(text):
+            continue
+        if rect.bottom <= win.top or rect.top >= win.bottom or rect.right <= win.left or rect.left >= win.right:
+            continue
+        matches.append((rect.top, rect.left, control))
+    for _top, _left, control in sorted(matches):
+        try:
+            control.click_input()
+            time.sleep(0.8)
+            return True
+        except Exception:
+            pass
     return False
 
 
@@ -785,6 +839,31 @@ def fill_linkedin_composer(window, post: str, proof_dir: Path) -> dict:
     return {"ok": True, **detail}
 
 
+def close_linkedin_composer(window, proof_dir: Path, reason: str) -> dict:
+    """Close a partially filled composer so blocked runs are not left pending."""
+    detail = {"ok": False, "reason": reason, "steps": []}
+    detail["before_cleanup"] = screenshot(window, proof_dir / "visible-linkedin-composer-before-cleanup.png")
+    attempts = [
+        ("escape", lambda: keyboard.send_keys("{ESC}")),
+        ("close_text", lambda: click_text_fallback(window, "Close")),
+        ("close_dom", lambda: click_dom(window, r"^(Close|x)$", 0.8).get("ok")),
+        ("close_coordinate", lambda: click_relative(window, 0.70, 0.165, 0.8)),
+    ]
+    for label, action in attempts:
+        try:
+            result = action()
+            detail["steps"].append({"action": label, "result": result})
+        except Exception as exc:
+            detail["steps"].append({"action": label, "error": str(exc)})
+        time.sleep(0.8)
+        if not linkedin_composer_is_open(window):
+            detail["ok"] = True
+            detail["after_cleanup"] = screenshot(window, proof_dir / "visible-linkedin-composer-cleaned-up.png")
+            return detail
+    detail["after_cleanup"] = screenshot(window, proof_dir / "visible-linkedin-composer-cleanup-failed.png")
+    return detail
+
+
 def dismiss_linkedin_premium_prompt(window, proof_dir: Path) -> dict:
     """Close LinkedIn's Premium Page prompt when it covers composer controls."""
     detail = {"ok": False, "steps": []}
@@ -844,10 +923,11 @@ def attach_linkedin_images(window, image_paths: list[Path], proof_dir: Path) -> 
         time.sleep(1.0)
     before = current_window_handles()
     clicked = (
-        click_dom_physical(window, r"^Add media$|Add a photo|Add photo|Photo|Image", 1.0).get("ok")
+        click_dom_physical(window, r"^Add media$|Add a photo|Add photo|Photo|Image|Media", 1.0).get("ok")
         or click_text_fallback(window, "Add media")
         or click_text_fallback(window, "Photo")
         or click_text_fallback(window, "Add photo")
+        or click_text_contains_fallback(window, r"Add media|Add photo|Photo|Image|Media")
     )
     if not clicked:
         # In the LinkedIn composer, the media button is usually in the lower
@@ -864,10 +944,13 @@ def attach_linkedin_images(window, image_paths: list[Path], proof_dir: Path) -> 
         prompt = dismiss_linkedin_premium_prompt(window, proof_dir)
         if prompt.get("steps"):
             detail["steps"].extend(prompt["steps"])
-        before = current_window_handles()
-        coords = click_visible_upload_button(window, 0.40, 0.735, 1.0)
-        detail["steps"].append({"action": "linkedin_media_coordinate_retry", "coords": coords})
-        picker, picker_title = find_file_picker(before, 8)
+        for idx, (x_ratio, y_ratio) in enumerate(((0.40, 0.735), (0.66, 0.735), (0.64, 0.80), (0.34, 0.735)), start=1):
+            before = current_window_handles()
+            coords = click_visible_upload_button(window, x_ratio, y_ratio, 1.0)
+            detail["steps"].append({"action": "linkedin_media_coordinate_retry", "attempt": idx, "coords": coords})
+            picker, picker_title = find_file_picker(before, 5)
+            if picker:
+                break
     if not picker:
         detail["media_missing"] = screenshot(window, proof_dir / "visible-linkedin-media-picker-missing.png")
         return {"ok": False, "reason": "LinkedIn media file picker did not open.", **detail}
@@ -951,6 +1034,9 @@ def publish_instagram(window, run_date: str, image_paths: list[Path], caption: s
     if "Create new post" not in visible_text(window) and "Select from computer" not in visible_text(window):
         bookmarklet_click = force_instagram_create_with_bookmarklet(window, 1.5)
         click["bookmarkletFallback"] = bookmarklet_click
+    if "Create new post" not in visible_text(window) and "Select from computer" not in visible_text(window):
+        visible_click = force_instagram_create_with_visible_clicks(window, proof_dir, 0.8)
+        click["visibleFallback"] = visible_click
     if "Create new post" not in visible_text(window) and "Select from computer" not in visible_text(window):
         result.update(status="blocked_no_create_modal", reason="Instagram Create modal did not open from the home page.", clickCreate=click)
         result["proof"]["error"] = screenshot(window, proof_dir / "visible-instagram-create-missing.png")
@@ -1050,6 +1136,7 @@ def publish_linkedin(window, post: str, image_paths: list[Path], proof_dir: Path
         result["imageCount"] = len(image_paths)
         if not attached.get("ok"):
             result.update(status="blocked_media_not_attached", reason=attached.get("reason", "LinkedIn image was not attached."), details=attached)
+            result["cleanup"] = close_linkedin_composer(window, proof_dir, result["reason"])
             return result
 
     if dry_run:
