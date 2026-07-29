@@ -1,6 +1,6 @@
 # PeacePad Next Native Status
 
-Last updated: 2026-07-25
+Last updated: 2026-07-29
 
 ## Scope
 
@@ -90,11 +90,19 @@ Stop after one controlled simulator pass. If remote input is unreliable, record 
 
 ## Architecture decision gate
 
-See [`ARCHITECTURE_DECISION_GATE.md`](./ARCHITECTURE_DECISION_GATE.md). The current recommendation is to adopt selected native concepts into Capacitor after approval, while retaining this React Native work as a non-production lab.
+The 2026-07-25 recommendation to adopt selected native concepts into Capacitor
+has been superseded by the decision to develop a full native v2 while keeping
+the approved Capacitor version 1 as the live rollback baseline.
+
+See
+[`NATIVE_V2_PRODUCTION_ROADMAP_2026-07-29.md`](./NATIVE_V2_PRODUCTION_ROADMAP_2026-07-29.md)
+for the parity-first production gates. The lab remains non-production and its
+existing safety controls remain mandatory.
 
 See [`WORKFLOW_SCOPING_NOTE.md`](./WORKFLOW_SCOPING_NOTE.md) for the unrelated Garden workflow trigger caused by the shared root lockfile.
 
-Continue the native lab through one controlled simulator proof and then assess:
+Continue the native client through one controlled simulator proof and Gate 1,
+then assess:
 
 1. Whether the state model remains understandable as auth and persistence contracts are designed.
 2. Whether the evidence privacy/storage model can be approved before any upload work.

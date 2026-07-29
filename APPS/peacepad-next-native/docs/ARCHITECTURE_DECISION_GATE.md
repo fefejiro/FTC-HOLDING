@@ -1,8 +1,24 @@
 # PeacePad Native Architecture Decision Gate
 
-Date: 2026-07-25  
-Status: RECOMMENDATION PENDING APPROVAL  
+Date: 2026-07-25
+Status: SUPERSEDED 2026-07-29
 Evidence baseline: PR #148, commit `7a713fb61834f4b7b32c1538882cf666d128b4f9`
+
+## Superseding decision
+
+The product direction is now to develop PeacePad Native as the full iOS v2
+successor while retaining the approved Capacitor version 1 as the live
+production and rollback baseline.
+
+This changes the destination, not the safety gates. Native v2 must reach
+review-critical feature parity, preserve existing users and data, pass privacy
+and device verification, and complete TestFlight acceptance before it can use
+the production bundle ID or replace version 1.
+
+See
+[`NATIVE_V2_PRODUCTION_ROADMAP_2026-07-29.md`](./NATIVE_V2_PRODUCTION_ROADMAP_2026-07-29.md)
+for the active decision and milestone plan. The analysis below is retained as
+the historical 2026-07-25 decision record.
 
 ## Decision
 
