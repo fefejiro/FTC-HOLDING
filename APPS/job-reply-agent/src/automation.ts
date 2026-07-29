@@ -574,6 +574,17 @@ export async function runAutoApplyQueue(params: {
               AND a.status IN ('paused','needs_review','manual_open_pause','blocked_needs_auth')
           )
         )
+        AND NOT EXISTS (
+          SELECT 1
+          FROM application_attempts gate
+          WHERE gate.job_id = j.id
+            AND gate.status IN ('paused','manual_gate','manual_open_pause','needs_review')
+            AND (
+              LOWER(COALESCE(gate.pause_reason, '')) LIKE '%captcha%'
+              OR LOWER(COALESCE(gate.pause_reason, '')) LIKE '%human-verification%'
+              OR LOWER(COALESCE(gate.pause_reason, '')) LIKE '%prove you are human%'
+            )
+        )
        ORDER BY
         CASE WHEN j.description LIKE '[Dice evidence]%' THEN 0 ELSE 1 END,
         j.updated_at DESC,
@@ -754,6 +765,31 @@ export async function runAutoApplyOneJob(params: {
 
   if (!job) {
     return { jobId, status: "not_found", reason: "Job not found" };
+  }
+
+  const existingAttempt = db
+    .prepare("SELECT status, pause_reason, final_url, screenshot_path, adapter FROM application_attempts WHERE job_id=? LIMIT 1")
+    .get(jobId) as {
+      status?: string;
+      pause_reason?: string | null;
+      final_url?: string | null;
+      screenshot_path?: string | null;
+      adapter?: string | null;
+    } | undefined;
+  if (existingAttempt && isCaptchaGateAttempt(existingAttempt.status, existingAttempt.pause_reason)) {
+    const reason = [
+      "CAPTCHA retry lock is active for this application.",
+      existingAttempt.pause_reason || "A human-verification challenge was previously detected.",
+      "Resume from the preserved manual checkpoint after the candidate completes the challenge; automated retries are disabled."
+    ].join(" ");
+    return {
+      jobId,
+      status: "paused",
+      reason,
+      finalUrl: existingAttempt.final_url || job.apply_url,
+      screenshotPath: existingAttempt.screenshot_path || undefined,
+      adapter: existingAttempt.adapter || "generic"
+    };
   }
 
   const runId = createApplicationRun(db, "auto-apply-one", "running");
@@ -1872,9 +1908,24 @@ async function submitApplication(args: {
       await submitButton.click().catch(() => undefined);
     }
 
-    await page.waitForLoadState("networkidle").catch(() => undefined);
+    await page.waitForTimeout(1500).catch(() => undefined);
+    const postSubmitHtml = await page.content().catch(() => "");
+    const postSubmitVisibleText = await collectVisibleTextIncludingShadow(page).catch(() => "");
+    const postSubmitGateReason = detectHumanGate(page.url() || finalUrl, `${stripTags(postSubmitHtml)} ${postSubmitVisibleText}`);
     const screenshotPath = args.artifacts.screenshotPath ? args.artifacts.screenshotPath : path.join(os.tmpdir(), `job-reply-agent-submit-${Date.now()}.png`);
     await page.screenshot({ path: screenshotPath, fullPage: true }).catch(() => undefined);
+    if (postSubmitGateReason) {
+      return {
+        status: "paused",
+        reason: `Submit stopped at a human-verification gate. ${postSubmitGateReason}`,
+        finalUrl: page.url() || finalUrl,
+        screenshotPath,
+        adapter,
+        requiredFields: plan.requiredFields,
+        answeredFields: plan.entries
+      };
+    }
+    await page.waitForLoadState("networkidle").catch(() => undefined);
     const currentUrl = page.url();
     return { status: "submitted_unverified", reason: "Submit clicked; waiting for platform or Gmail confirmation proof.", finalUrl: currentUrl || finalUrl, screenshotPath, adapter, requiredFields: plan.requiredFields, answeredFields: plan.entries };
   } catch (error) {
@@ -2681,6 +2732,15 @@ function detectHumanGate(url: string, html: string): string {
     return "LinkedIn authentication or checkpoint detected. Complete it in one authenticated browser session, then rerun Auto Apply.";
   }
   return "";
+}
+
+export function isCaptchaGateAttempt(status?: string | null, pauseReason?: string | null): boolean {
+  const normalizedStatus = String(status || "").trim().toLowerCase();
+  const reason = String(pauseReason || "");
+  if (!["paused", "manual_gate", "manual_open_pause", "needs_review"].includes(normalizedStatus)) {
+    return false;
+  }
+  return /\b(captcha|recaptcha|hcaptcha|turnstile|human[- ]verification|prove you are human)\b/i.test(reason);
 }
 
 function getInvalidApplyUrlReason(url: string): string {

@@ -182,6 +182,13 @@ Browser automation remains a controlled worker capability. CAPTCHA,
 authentication challenges, legal declarations, unknown answers, and identity
 mismatches create manual gates.
 
+External ATS submission uses a visible pre-submit human-gate check. A CAPTCHA
+provider, challenge badge, or human-verification control pauses the application
+with its tailored package and completed answers preserved. Only one automatic
+submit click is allowed. Once a CAPTCHA gate is recorded, scheduled and
+single-job runs cannot retry that application until the candidate completes the
+challenge from the preserved checkpoint.
+
 ### Data and security
 
 Move from filesystem instances and SQLite to:

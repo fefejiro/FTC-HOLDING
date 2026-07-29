@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getDb } from "../src/db.js";
-import { automationDeps, buildApplicationPlan, buildRecruiterAutoReply, classifyVisibleDicePreflightCapture, matchesIndeedAppliedHistoryText, runAutoApplyQueue, runDailyHuntAutomation, syncApplicationProofFromMessages } from "../src/automation.js";
+import { automationDeps, buildApplicationPlan, buildRecruiterAutoReply, classifyVisibleDicePreflightCapture, isCaptchaGateAttempt, matchesIndeedAppliedHistoryText, runAutoApplyOneJob, runAutoApplyQueue, runDailyHuntAutomation, syncApplicationProofFromMessages } from "../src/automation.js";
 import { parseRecruiterEmail } from "../src/job_parser.js";
 import type { RecruiterMessage } from "../src/types.js";
 
@@ -90,6 +90,34 @@ afterEach(() => {
 });
 
 describe("automation layer", () => {
+  it("locks automated retries after a recorded CAPTCHA gate", () => {
+    expect(isCaptchaGateAttempt("manual_gate", "reCAPTCHA image challenge opened after submit")).toBe(true);
+    expect(isCaptchaGateAttempt("paused", "Complete the human-verification challenge")).toBe(true);
+    expect(isCaptchaGateAttempt("paused", "Missing answer for desired salary")).toBe(false);
+    expect(isCaptchaGateAttempt("submitted_unverified", "reCAPTCHA mentioned in page footer")).toBe(false);
+  });
+
+  it("does not reopen a job with a preserved CAPTCHA checkpoint", async () => {
+    const db = getDb(":memory:");
+    const now = new Date().toISOString();
+    db.prepare(`INSERT INTO hunt_jobs (id,title,company,location,source,source_url,apply_url,description,created_at,updated_at,status,tier)
+      VALUES (1,'IT Business Solutions Manager','Home Hardware','St. Jacobs, ON','linkedin','https://linkedin.test/job','https://homehardware.test/apply','',?,?,'manual_open_pause','tier_1')`)
+      .run(now, now);
+    db.prepare(`INSERT INTO application_runs (id,run_type,status,summary_json,created_at,updated_at)
+      VALUES (1,'visible-assist','completed','{}',?,?)`).run(now, now);
+    db.prepare(`INSERT INTO application_attempts (run_id,job_id,adapter,apply_url,status,required_fields_json,answered_fields_json,pause_reason,final_url,created_at,updated_at)
+      VALUES (1,1,'jobvite','https://homehardware.test/apply','manual_gate','[]','[]','reCAPTCHA image challenge opened after submit','https://homehardware.test/apply',?,?)`)
+      .run(now, now);
+
+    const result = await runAutoApplyOneJob({ db, cfg: baseConfig(), jobId: 1 });
+    const runCount = (db.prepare("SELECT COUNT(*) AS count FROM application_runs").get() as { count: number }).count;
+
+    expect(result.status).toBe("paused");
+    expect(result.reason).toContain("CAPTCHA retry lock");
+    expect(result.finalUrl).toBe("https://homehardware.test/apply");
+    expect(runCount).toBe(1);
+  });
+
   it("builds a truthful recruiter reply with work authorization and salary when requested", () => {
     const parsed = parseRecruiterEmail(recruiterMessage());
     const body = buildRecruiterAutoReply({
