@@ -253,11 +253,11 @@ function detectTrack(title: string, company: string, jdText: string, truthBank: 
   if (supportsTrack("azure_cloud") && AZURE_CLOUD_SIGNALS.test(corpus)) {
     return "azure_cloud";
   }
-  if (supportsTrack("salesforce_crm_delivery") && SALESFORCE_SIGNALS.test(corpus)) {
-    return "salesforce_crm_delivery";
-  }
   if (supportsTrack("wms_erp_supply_chain") && WMS_ERP_SUPPLY_CHAIN_SIGNALS.test(corpus)) {
     return "wms_erp_supply_chain";
+  }
+  if (supportsTrack("salesforce_crm_delivery") && SALESFORCE_SIGNALS.test(corpus)) {
+    return "salesforce_crm_delivery";
   }
   if (supportsTrack("retail_analytics") && RETAIL_TECH_SIGNALS.test(corpus)) {
     return "retail_analytics";

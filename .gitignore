@@ -25,6 +25,8 @@ test-results/
 **/.cache/
 **/.turbo/
 **/.vite/
+**/__pycache__/
+**/*.py[cod]
 **/.env
 **/.env.*
 !**/.env.example

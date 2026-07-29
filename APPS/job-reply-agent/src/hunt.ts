@@ -84,6 +84,7 @@ const DELIVERY_ROLES = /\b(project manager|consultant|business analyst|business 
 const SENIOR_BSA_ROLES = /\b(senior business systems analyst|technical business analyst|business systems analyst|business analyst|systems analyst)\b/i;
 const QA_UAT_ROLES = /\b(senior qa|quality engineer|uat lead|test lead|qa lead|quality assurance lead|release validation)\b/i;
 const TECH_PROJECT_ROLES = /\b(technical project manager|technical program manager|it project manager|program manager|project manager|implementation manager)\b/i;
+const IT_MANAGEMENT_ROLES = /\b(it manager|information technology manager|manager,\s*it business systems|it business systems manager|business systems manager|systems software manager|enterprise applications manager|director of it|director,\s*information technology)\b/i;
 const SYSTEMS_SIGNALS = /\b(erp|wms|warehouse management|pos|api|integration|integrations|enterprise systems|business systems|retail systems|supply chain|digital transformation|platform delivery|cloud migration|operations technology|uat|vendor|stakeholder|program delivery|implementation|migration|saas|cloud|sql|regression|end-to-end|release validation|manhattan|sap|gcp|salesforce|crm)\b/i;
 const QA_SIGNALS = /\b(integration|api|sql|regression|end-to-end|e2e|release validation|uat|test plan|test strategy|data validation|quality gate)\b/i;
 const HARD_REJECT_PATTERNS: Array<[RegExp, string]> = [
@@ -206,7 +207,7 @@ export function insertHuntJob(db: Database.Database, p: NormalizedHuntJob): numb
 }
 
 export function scoreJobs(db: Database.Database): number {
-  const jobs = db.prepare("SELECT id,title,company,location,work_mode,description,required_skills,preferred_skills,needs_review,red_flags,source,recruiter_email FROM hunt_jobs WHERE status IN ('discovered','needs_review')").all() as any[];
+  const jobs = db.prepare("SELECT id,title,company,location,work_mode,description,required_skills,preferred_skills,needs_review,red_flags,source,recruiter_email,salary_or_rate FROM hunt_jobs WHERE status IN ('discovered','needs_review')").all() as any[];
   let n = 0;
   for (const j of jobs) {
     const result = scoreHuntJob(j);
@@ -228,6 +229,7 @@ export function scoreHuntJob(job: {
   location?: string;
   work_mode?: string;
   description?: string;
+  salary_or_rate?: string;
   required_skills?: string;
   preferred_skills?: string;
   needs_review?: number;
@@ -241,6 +243,7 @@ export function scoreHuntJob(job: {
     job.company || "",
     job.location || "",
     job.work_mode || "",
+    job.salary_or_rate || "",
     stripVisibleEvidenceMetadata(job.description || ""),
     requiredSkills.join("\n"),
     preferredSkills.join("\n")
@@ -277,6 +280,7 @@ export function scoreHuntJob(job: {
   const seniorBsaRole = SENIOR_BSA_ROLES.test(haystack);
   const qaRole = QA_UAT_ROLES.test(haystack);
   const techProjectRole = TECH_PROJECT_ROLES.test(haystack);
+  const itManagementRole = IT_MANAGEMENT_ROLES.test(haystack);
   const systems = countMatches(haystack, SYSTEMS_SIGNALS);
   const qaSignals = countMatches(haystack, QA_SIGNALS);
   const skillScore = Math.min(24, (requiredSkills.length + preferredSkills.length) * 4);
@@ -306,6 +310,15 @@ export function scoreHuntJob(job: {
       tier: "tier_3",
       needsReview: true,
       reason: "Tier 3 QA, UAT, test lead, or quality engineering role for enterprise systems validation."
+    });
+  }
+
+  if (itManagementRole && systems > 0) {
+    return finalizeFitScore({
+      score: Math.min(96, 68 + systems * 5 + skillScore + geoScore),
+      tier: "tier_1",
+      needsReview: Boolean(job.needs_review),
+      reason: "Tier 1 IT or business systems management role with enterprise systems, ERP, WMS, integration, vendor, or delivery leadership signal."
     });
   }
 

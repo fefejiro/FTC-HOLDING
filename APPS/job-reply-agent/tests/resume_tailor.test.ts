@@ -702,6 +702,36 @@ describe("Resume Tailoring Engine", () => {
     expect(text).not.toMatch(/Cloud architecture and migration governance|Cross-functional architecture communication/i);
   });
 
+  it("keeps ERP and warehouse IT management roles out of the Salesforce track when Salesforce is only an asset", async () => {
+    const result = await tailorResumeForJD({
+      parsed: {
+        roleTitle: "Manager, IT Business Systems",
+        company: "East Penn Canada",
+        location: "Courtice, ON",
+        employmentType: "Full-time",
+        summary: "",
+        recruiterName: "",
+        parserConfidence: 90,
+        cleanBody: "",
+        cleanRoleTitle: "Manager, IT Business Systems",
+        alignmentKeywords: [],
+        salaryOrRate: "$115,000-$130,000 per year",
+        isUsRole: false
+      },
+      jdText: [
+        "Lead SAP S/4HANA ERP and business systems across warehouse operations, procurement, finance, and order-to-cash.",
+        "Manage vendors, cross-functional delivery, UAT, change management, and the Business Systems team.",
+        "Salesforce, Boomi, Power BI, and SQL are considered assets."
+      ].join(" "),
+      templatePath: itManagementTemplatePath,
+      outputDir
+    });
+
+    const text = await extractDocText(result.docxPath);
+    expect(text).toMatch(/WMS|ERP|SAP|warehouse|supply-chain/i);
+    expect(text).not.toMatch(/Salesforce-adjacent|Salesforce ecosystem|CRM-adjacent/i);
+  });
+
   it("rejects missing role title or company instead of generic fallback", async () => {
     await expect(
       tailorResumeForJD({

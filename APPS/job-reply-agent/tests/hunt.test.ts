@@ -303,6 +303,25 @@ describe("hunt flow", () => {
     expect(remoteNorthAmerica.score).toBeGreaterThan(genericOnsite.score);
   });
 
+  it("allows a well-paid onsite role outside the configured GTA city list", () => {
+    const result = scoreHuntJob({
+      title: "Manager, IT Business Systems",
+      company: "East Penn Canada",
+      location: "Courtice, ON",
+      work_mode: "onsite",
+      salary_or_rate: "$115,000-$130,000 per year",
+      description: "Lead SAP S/4HANA business systems, ERP delivery, warehouse operations, vendors, and cross-functional projects.",
+      required_skills: JSON.stringify(["SAP", "ERP", "Warehouse Management", "IT project management"]),
+      preferred_skills: "[]",
+      needs_review: 0,
+      red_flags: "[]"
+    });
+
+    expect(result.reason).not.toContain("onsite outside GTA");
+    expect(result.tier).toBe("tier_1");
+    expect(result.status).not.toBe("blocked");
+  });
+
   it("does not promote generic project manager roles without systems signal", () => {
     const result = scoreHuntJob({
       title: "Project Manager",
