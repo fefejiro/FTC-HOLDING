@@ -27,7 +27,7 @@ describe("standalone iOS simulator workdir", () => {
 
   it("pins Metro resolution to the standalone dependency tree", () => {
     expect(standaloneMetroPolicy).toEqual({
-      disableHierarchicalLookup: true,
+      disableHierarchicalLookup: false,
       nodeModulesDirectory: "node_modules",
       watchFolders: [],
     });

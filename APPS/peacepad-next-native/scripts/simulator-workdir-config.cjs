@@ -9,7 +9,7 @@ const requiredStandaloneDependencies = Object.freeze([
 ]);
 
 const standaloneMetroPolicy = Object.freeze({
-  disableHierarchicalLookup: true,
+  disableHierarchicalLookup: false,
   nodeModulesDirectory: "node_modules",
   watchFolders: Object.freeze([]),
 });
