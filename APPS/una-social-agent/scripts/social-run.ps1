@@ -4,7 +4,9 @@ param(
   [string]$Channels = 'instagram,linkedin',
   [switch]$CaptionOnly,
   [switch]$DraftOnly,
-  [switch]$AllowScheduledPublish
+  [switch]$AllowScheduledPublish,
+  [string]$ScheduledAt = '',
+  [int]$MaxLatenessMinutes = 0
 )
 
 $ErrorActionPreference = 'Stop'
@@ -19,6 +21,9 @@ $proofDir = Join-Path (Join-Path $ProjectDir 'content\proof') $runDate
 New-Item -ItemType Directory -Force -Path $proofDir | Out-Null
 $statusPath = Join-Path $proofDir 'schedule-run-status.json'
 $stage = 'starting'
+$runMutex = $null
+
+. (Join-Path $PSScriptRoot 'social-run-guard.ps1')
 
 function Write-RunStatus {
   param(
@@ -40,6 +45,19 @@ function Write-RunStatus {
 Push-Location $ProjectDir
 try {
   Write-RunStatus -ExitCode 0 -Status 'running'
+  if (-not (Test-UnaScheduledWindow -ScheduledAt $ScheduledAt -MaxLatenessMinutes $MaxLatenessMinutes)) {
+    $stage = 'stale_window'
+    Write-RunStatus -ExitCode 0 -Status 'skipped_stale_window'
+    "[$(Get-Date -Format o)] Skipped stale scheduled news run for $ScheduledAt after the $MaxLatenessMinutes minute window." | Tee-Object -FilePath $logPath
+    exit 0
+  }
+  $runMutex = Enter-UnaSocialRunLock
+  if ($null -eq $runMutex) {
+    $stage = 'waiting_for_other_lane'
+    Write-RunStatus -ExitCode 0 -Status 'skipped_concurrent_lane'
+    "[$(Get-Date -Format o)] Skipped because another Una Labs content lane held the shared pipeline lock." | Tee-Object -FilePath $logPath
+    exit 0
+  }
   "[$(Get-Date -Format o)] Una Labs social daily workflow starting for channels: $Channels" | Tee-Object -FilePath $logPath
 
   $envPath = Join-Path $ProjectDir '.env.local'
@@ -128,5 +146,6 @@ catch {
   exit 1
 }
 finally {
+  Exit-UnaSocialRunLock -Mutex $runMutex
   Pop-Location
 }

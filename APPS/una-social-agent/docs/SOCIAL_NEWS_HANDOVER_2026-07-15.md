@@ -700,7 +700,8 @@ Owner plan:
 Expected July 28 morning sequence:
 
 1. `UnaLabsSocial-PeakDraft` starts at 6:45 AM Eastern.
-2. The runner discovers fresh stories and excludes same-day URLs already used.
+2. The runner discovers fresh stories and excludes URLs used by any previously
+   published edition.
 3. The visual pipeline creates one approved three-region carousel, or one
    quality-rescue slide if the full carousel cannot be trusted.
 4. The publish guard blocks any repeated source image, repeated raw image,
@@ -839,3 +840,72 @@ Verification:
 - `python -m py_compile APPS/una-social-agent/scripts/visible-social-post.py`
   passed.
 - `npm --prefix APPS/una-social-agent run check` passed with 30 tests.
+
+## July 30 Follow-Up: Cross-Lane Story And Image Isolation
+
+What happened:
+
+- The weekday news lane and weekday evergreen lane were separate scheduled
+  tasks, but they did not share one complete publication-history boundary.
+- The visible publisher only rejected duplicate assets for the same date,
+  slot, and channel. An image used by news could therefore be accepted later
+  by evergreen, or the same source photo could be accepted under another
+  filename.
+- Regional story selection excluded same-day URLs only. A story from an older
+  edition could be selected again after tracking parameters changed.
+- Evergreen selection relied on an `evergreen-ledger.jsonl` file that the live
+  publisher did not maintain. After the small tip list cycled, it could return
+  to the first tip and its fixed visual.
+- Windows `StartWhenAvailable` can launch an old missed task when the computer
+  returns. Separate tasks could therefore enter the pipeline close together
+  even though their normal clock times were far apart.
+
+Fix applied:
+
+- `src/publication-history.mjs` is now the shared published-history reader for
+  story URLs, normalized titles, content IDs, rendered image hashes, raw image
+  hashes, and image source URLs.
+- Regional news excludes every story URL that has already appeared in a
+  successful Una Labs post, including URLs that differ only by analytics
+  parameters.
+- Evergreen tips now consult the real social ledger. A published tip cannot be
+  selected again, and exhaustion stops with a clear error instead of silently
+  recycling old content.
+- Evergreen quality now writes `publish-approved.json` with final and raw image
+  fingerprints. Previously published rendered or source images fail the gate.
+- `scripts/visible-social-post.py` performs a final cross-date, cross-slot,
+  cross-channel duplicate check for both stories and visuals before opening
+  either platform.
+- Both scheduled runners now share the `Local\UnaLabsSocialPipeline` mutex.
+  Only one content lane can generate and publish at a time.
+- Scheduled actions include a lateness window. A missed evening task cannot
+  wake up the next morning and compete with the morning newsroom.
+
+Current schedule:
+
+- Weekday news: 6:45 AM Eastern, maximum catch-up lateness 180 minutes.
+- Weekday evergreen: 5:30 PM Eastern, maximum catch-up lateness 120 minutes.
+- Saturday tip: 9:00 AM Eastern, maximum catch-up lateness 180 minutes.
+- Sunday recap: 10:00 AM Eastern, maximum catch-up lateness 180 minutes.
+- Monitor tasks remain 35 minutes after each content task.
+
+Failure behavior:
+
+- A duplicate story produces `blocked_duplicate_story`.
+- A duplicate rendered image, raw image, or image-source URL produces
+  `blocked_duplicate_asset`.
+- A second lane that cannot acquire the shared lock records
+  `skipped_concurrent_lane`.
+- A task outside its catch-up window records `skipped_stale_window`.
+- None of these states may invoke Instagram or LinkedIn publishing.
+
+Verification:
+
+- `npm run check` passed with 34 tests.
+- `python -m py_compile scripts/visible-social-post.py` passed.
+- PowerShell parser checks passed for the scheduler and both runners.
+- A dry generation for the July 30 evergreen lane selected the unused
+  `chatgpt-context-before-prompt` topic, rendered three slides, and passed its
+  cross-lane image-history gate.
+- Windows Task Scheduler was re-registered and the actual actions show the new
+  scheduled times and lateness limits.

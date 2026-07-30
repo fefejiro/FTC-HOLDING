@@ -1,6 +1,8 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { createHash } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
+import { loadPublishedAssetIdentities } from '../src/publication-history.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(__dirname, '..')
@@ -42,6 +44,10 @@ async function readText(filePath) {
 
 async function readJson(filePath) {
   return JSON.parse(await readText(filePath))
+}
+
+async function sha256File(filePath) {
+  return createHash('sha256').update(await fs.readFile(filePath)).digest('hex')
 }
 
 function wordCount(text) {
@@ -86,6 +92,32 @@ if (!/#\w+/.test(instagram)) issues.push('Instagram caption is missing hashtags.
 if (/\[[^\]]+\]|lorem ipsum|caption goes here|todo/i.test(instagram + linkedin)) issues.push('Draft contains placeholder text.')
 if (/source-backed|breaking|today in tech/i.test(instagram)) warnings.push('Evergreen caption may sound like the news lane.')
 
+const publishedAssets = await loadPublishedAssetIdentities(root)
+const slidePaths = [paths.slide1, paths.slide2, paths.slide3]
+const rawPaths = topic?.evergreen?.id
+  ? [
+      path.join(root, 'content', 'assets', 'evergreen', `${topic.evergreen.id}.png`),
+      path.join(root, 'content', 'assets', 'evergreen', `${topic.evergreen.id}-steps.png`),
+      path.join(root, 'content', 'assets', 'evergreen', `${topic.evergreen.id}-takeaway.png`),
+    ]
+  : []
+const slides = []
+for (const [index, slidePath] of slidePaths.entries()) {
+  if (!(await exists(slidePath))) continue
+  const fingerprint = await sha256File(slidePath)
+  let rawFingerprint = ''
+  if (rawPaths[index] && await exists(rawPaths[index])) rawFingerprint = await sha256File(rawPaths[index])
+  if (publishedAssets.has(`hash:${fingerprint}`)) issues.push(`Slide ${index + 1} repeats a previously published rendered image.`)
+  if (rawFingerprint && publishedAssets.has(`raw:${rawFingerprint}`)) issues.push(`Slide ${index + 1} repeats a previously published source image.`)
+  slides.push({
+    region: slot,
+    storyId: topic?.evergreen?.id || '',
+    assetPath: slidePath,
+    assetFingerprint: fingerprint,
+    rawFingerprint,
+  })
+}
+
 const result = {
   status: issues.length ? 'failed' : 'passed',
   runDate,
@@ -96,6 +128,29 @@ const result = {
   linkedinWords,
   issues,
   warnings,
+}
+
+if (!issues.length) {
+  await fs.writeFile(
+    path.join(draftDir, 'publish-approved.json'),
+    JSON.stringify(
+      {
+        approved: true,
+        mode: 'evergreen',
+        runDate,
+        slot,
+        contentId: topic.evergreen.id,
+        slides,
+        captions: {
+          instagram: instagram.trim(),
+          linkedin: linkedin.trim(),
+        },
+      },
+      null,
+      2,
+    ) + '\n',
+    'utf8',
+  )
 }
 
 console.log(JSON.stringify(result, null, 2))

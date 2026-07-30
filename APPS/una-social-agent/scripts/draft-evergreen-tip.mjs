@@ -1,14 +1,15 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { loadPublishedStoryIdentities, normalizePublishedText } from '../src/publication-history.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(__dirname, '..')
 const runDate = readArg('--date') || todayInTimeZone()
 const slot = readArg('--slot') || 'evergreen'
 const mode = readArg('--mode') || (slot === 'weekly-recap' ? 'weekly-recap' : 'tip')
-const forceNew = process.argv.includes('--force-new')
 const forcedTipId = readArg('--tip-id')
+const allowPublishedReuse = process.argv.includes('--allow-published-reuse')
 
 function readArg(name) {
   const index = process.argv.indexOf(name)
@@ -28,15 +29,6 @@ function todayInTimeZone(timeZone = 'America/New_York') {
 
 async function readJson(filePath) {
   return JSON.parse(await fs.readFile(filePath, 'utf8'))
-}
-
-async function exists(filePath) {
-  try {
-    await fs.access(filePath)
-    return true
-  } catch {
-    return false
-  }
 }
 
 async function writeText(filePath, value) {
@@ -136,39 +128,32 @@ What is one task you would trust AI to draft, but not fully decide for you yet?
 `
 }
 
-function selectTip(tips, usedIds) {
+function selectTip(tips, usedIds, usedTitles) {
   if (forcedTipId) {
     const found = tips.find((tip) => tip.id === forcedTipId)
     if (!found) throw new Error(`Unknown evergreen tip id: ${forcedTipId}`)
+    if (!allowPublishedReuse && (usedIds.has(found.id) || usedTitles.has(normalizePublishedText(found.title)))) {
+      throw new Error(`Evergreen tip was already published: ${found.id}`)
+    }
     return found
   }
-  if (forceNew) {
-    const unused = tips.find((tip) => !usedIds.has(tip.id))
-    if (unused) return unused
-  }
-  const dayNumber = Math.floor(Date.parse(`${runDate}T12:00:00-04:00`) / 86400000)
-  return tips[dayNumber % tips.length]
+  const unused = tips.find((tip) => !usedIds.has(tip.id) && !usedTitles.has(normalizePublishedText(tip.title)))
+  if (unused) return unused
+  throw new Error('No unpublished evergreen tips remain. Add a new tip instead of recycling a published story or visual.')
 }
 
 const tipsPath = path.join(root, 'content', 'evergreen', mode === 'weekly-recap' ? 'weekly-recaps.json' : 'tips.json')
-const ledgerPath = path.join(root, 'content', 'ledger', 'evergreen-ledger.jsonl')
 const tips = await readJson(tipsPath)
 if (!Array.isArray(tips) || tips.length === 0) throw new Error(`No evergreen tips found in ${tipsPath}`)
 
 const usedIds = new Set()
-if (await exists(ledgerPath)) {
-  const lines = (await fs.readFile(ledgerPath, 'utf8')).split(/\r?\n/).filter(Boolean)
-  for (const line of lines) {
-    try {
-      const entry = JSON.parse(line)
-      if (entry?.tipId) usedIds.add(entry.tipId)
-    } catch {
-      // Ignore malformed historical ledger lines.
-    }
-  }
+const usedTitles = new Set()
+for (const identity of await loadPublishedStoryIdentities(root)) {
+  if (identity.startsWith('content:')) usedIds.add(identity.slice(8))
+  if (identity.startsWith('title:')) usedTitles.add(identity.slice(6))
 }
 
-const tip = selectTip(tips, usedIds)
+const tip = selectTip(tips, usedIds, usedTitles)
 const key = draftKey(runDate, slot)
 const draftDir = path.join(root, 'content', 'drafts', key)
 

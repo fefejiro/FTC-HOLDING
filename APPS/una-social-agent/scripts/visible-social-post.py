@@ -1212,25 +1212,115 @@ def already_posted_same_images(run_date: str, slot: str, channel: str, proof: di
     hashes = proof.get("imageHashes") or []
     raw_hashes = proof.get("rawImageHashes") or []
     source_urls = proof.get("sourceUrls") or []
-    wanted = set(hashes + raw_hashes + [f"source:{url}".lower() for url in source_urls if url])
+    wanted = set(
+        hashes
+        + raw_hashes
+        + [f"source:{normalize_story_url(url)}" for url in source_urls if normalize_story_url(url)]
+    )
     if not wanted:
         return {"duplicate": False, "reason": "no hashes or source URLs"}
     for entry in reversed(load_ledger_entries()):
-        if entry.get("runDate") != run_date or entry.get("slot", "news") != slot or entry.get("dryRun"):
+        if entry.get("dryRun"):
             continue
-        result = (entry.get("results") or {}).get(channel) or {}
-        if not str(result.get("status", "")).startswith("posted"):
+        if entry.get("runDate") == run_date and entry.get("slot", "news") == slot:
             continue
-        previous_proof = result.get("assetProof") or {}
-        previous = set((previous_proof.get("imageHashes") or []) + (previous_proof.get("rawImageHashes") or []))
-        previous.update(f"source:{url}".lower() for url in previous_proof.get("sourceUrls") or [] if url)
+        previous = set()
+        for result in (entry.get("results") or {}).values():
+            if not str(result.get("status", "")).startswith("posted"):
+                continue
+            previous_proof = result.get("assetProof") or {}
+            previous.update(previous_proof.get("imageHashes") or [])
+            previous.update(previous_proof.get("rawImageHashes") or [])
+            previous.update(
+                f"source:{normalize_story_url(url)}"
+                for url in previous_proof.get("sourceUrls") or []
+                if normalize_story_url(url)
+            )
         if previous and wanted.intersection(previous):
             return {
                 "duplicate": True,
-                "reason": f"{channel} already posted one of these image/source identities for {run_date}.",
+                "reason": f"{channel} would reuse an image/source identity from an earlier Una Labs edition.",
                 "previousRunId": entry.get("id"),
+                "previousRunDate": entry.get("runDate"),
+                "previousSlot": entry.get("slot", "news"),
             }
     return {"duplicate": False, "reason": "no matching posted image/source identities"}
+
+
+def normalize_story_url(value: str) -> str:
+    value = str(value or "").strip()
+    if not value:
+        return ""
+    try:
+        from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+        parts = urlsplit(value)
+        query = [
+            (key, item)
+            for key, item in parse_qsl(parts.query, keep_blank_values=True)
+            if not key.lower().startswith("utm_") and key.lower() not in {"fbclid", "gclid", "mc_cid", "mc_eid"}
+        ]
+        host = parts.netloc.lower()
+        if host.startswith("www."):
+            host = host[4:]
+        clean_path = parts.path.rstrip("/") or "/"
+        return urlunsplit((parts.scheme.lower(), host, clean_path, urlencode(query), ""))
+    except Exception:
+        return value.lower()
+
+
+def normalize_story_title(value: str) -> str:
+    return " ".join("".join(char.lower() if char.isalnum() else " " for char in str(value or "")).split())
+
+
+def current_story_identities(topic: dict, sources: list[dict], content_id: str) -> set[str]:
+    identities = set()
+    for url in [topic.get("selected", {}).get("url"), *[source.get("url") for source in sources]]:
+        normalized = normalize_story_url(url)
+        if normalized:
+            identities.add(f"url:{normalized}")
+    for title in [topic.get("selected", {}).get("title"), *[source.get("title") for source in sources]]:
+        normalized = normalize_story_title(title)
+        if normalized:
+            identities.add(f"title:{normalized}")
+    if content_id:
+        identities.add(f"content:{normalize_story_title(content_id)}")
+    return identities
+
+
+def already_posted_same_story(run_date: str, slot: str, identities: set[str]) -> dict:
+    if os.environ.get("UNA_ALLOW_REPOST") == "1":
+        return {"duplicate": False, "reason": "repost override enabled"}
+    for entry in reversed(load_ledger_entries()):
+        if entry.get("dryRun"):
+            continue
+        if entry.get("runDate") == run_date and entry.get("slot", "news") == slot:
+            continue
+        posted = any(str(result.get("status", "")).startswith("posted") for result in (entry.get("results") or {}).values())
+        if not posted and not str(entry.get("status", "")).startswith("posted"):
+            continue
+        previous = set()
+        topic = entry.get("topic") or {}
+        for url in [topic.get("url"), *[source.get("url") for source in entry.get("sources") or []]]:
+            normalized = normalize_story_url(url)
+            if normalized:
+                previous.add(f"url:{normalized}")
+        for title in [topic.get("title"), *[source.get("title") for source in entry.get("sources") or []]]:
+            normalized = normalize_story_title(title)
+            if normalized:
+                previous.add(f"title:{normalized}")
+        if entry.get("contentId"):
+            previous.add(f"content:{normalize_story_title(entry.get('contentId'))}")
+        overlap = identities.intersection(previous)
+        if overlap:
+            return {
+                "duplicate": True,
+                "reason": "This edition would reuse a story or evergreen topic from an earlier Una Labs post.",
+                "previousRunId": entry.get("id"),
+                "previousRunDate": entry.get("runDate"),
+                "previousSlot": entry.get("slot", "news"),
+                "matchingIdentities": sorted(overlap),
+            }
+    return {"duplicate": False, "reason": "no previously published story identities matched"}
 
 
 def approved_image_paths(approval: dict) -> list[Path]:
@@ -1315,6 +1405,7 @@ def main() -> int:
             sources = json.loads(sources_path.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             sources = []
+    content_id = ((topic.get("evergreen") or {}).get("id") or topic.get("selected", {}).get("url") or "")
     approved_captions = approval.get("captions") or {}
     instagram_caption = (approved_captions.get("instagram") or (draft_dir / "instagram-caption.md").read_text(encoding="utf-8")).strip()
     linkedin_post = (approved_captions.get("linkedin") or (draft_dir / "linkedin-post.md").read_text(encoding="utf-8")).strip()
@@ -1329,9 +1420,22 @@ def main() -> int:
             raise RuntimeError("Instagram caption preflight failed: " + " ".join(caption_issues))
 
     channels = [item.strip().lower() for item in args.channels.split(",") if item.strip()]
+    story_duplicate = already_posted_same_story(
+        run_date,
+        args.slot,
+        current_story_identities(topic, sources, content_id),
+    )
     with VisibleBrowserLock():
         results = {}
-        if "instagram" in channels:
+        if story_duplicate.get("duplicate"):
+            for channel in channels:
+                results[channel] = {
+                    "channel": channel,
+                    "status": "blocked_duplicate_story",
+                    "reason": story_duplicate["reason"],
+                    "details": story_duplicate,
+                }
+        if "instagram" in channels and not story_duplicate.get("duplicate"):
             window = find_chrome_window("instagram")
             window.set_focus()
             duplicate = already_posted_same_images(run_date, args.slot, "instagram", instagram_asset_proof)
@@ -1347,7 +1451,7 @@ def main() -> int:
                 results["instagram"] = publish_instagram(window, run_date, image_paths, instagram_caption, proof_dir, args.dry_run)
                 results["instagram"].setdefault("assetProof", {})
                 results["instagram"]["assetProof"].update(instagram_asset_proof)
-        if "linkedin" in channels:
+        if "linkedin" in channels and not story_duplicate.get("duplicate"):
             window = find_chrome_window("linkedin")
             window.set_focus()
             duplicate = already_posted_same_images(run_date, args.slot, "linkedin", linkedin_asset_proof)
@@ -1374,6 +1478,7 @@ def main() -> int:
         "id": f"una-social-visible-{run_date}-{int(time.time())}",
         "runDate": run_date,
         "slot": args.slot,
+        "contentId": content_id,
         "draftKey": key,
         "mode": "visible_chrome",
         "status": status,

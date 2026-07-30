@@ -37,7 +37,7 @@ function Register-UnaTask {
   Write-Host "Registered $TaskName for $($DaysOfWeek -join ',') at $At."
 }
 
-$runArgs = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$runner`" -ProjectDir `"$ProjectDir`" -ForceNew -Channels `"$Channels`" -AllowScheduledPublish"
+$runArgs = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$runner`" -ProjectDir `"$ProjectDir`" -ForceNew -Channels `"$Channels`" -AllowScheduledPublish -ScheduledAt `"$PeakAt`" -MaxLatenessMinutes 180"
 
 $staleTasks = @(
   'UnaLabsSocial-DailyDraft',
@@ -67,21 +67,21 @@ $morningMonitorAt = ([datetime]::ParseExact($PeakAt, 'HH:mm', $null)).AddMinutes
 $monitorArgs = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -Command `"Set-Location -LiteralPath '$ProjectDir'; npm run monitor:today -- --window morning`""
 Register-UnaTask -TaskName 'UnaLabsSocial-MorningMonitor' -At $morningMonitorAt -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -Arguments $monitorArgs -Description 'Weekday Una Labs morning health monitor: checks scheduler result, quality gate, visible publish report, proof files, and next action.'
 
-$evergreenArgs = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$evergreenRunner`" -ProjectDir `"$ProjectDir`" -Slot `"evergreen`" -Mode `"tip`" -ForceNew -Channels `"$Channels`" -AllowScheduledPublish"
+$evergreenArgs = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$evergreenRunner`" -ProjectDir `"$ProjectDir`" -Slot `"evergreen`" -Mode `"tip`" -ForceNew -Channels `"$Channels`" -AllowScheduledPublish -ScheduledAt `"$EvergreenAt`" -MaxLatenessMinutes 120"
 Register-UnaTask -TaskName 'UnaLabsSocial-EvergreenTip' -At $EvergreenAt -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -Arguments $evergreenArgs -Description 'Weekday Una Labs sandbox evergreen post with quality gate, automatic visible-browser publish, and proof ledger.'
 
 $eveningMonitorAt = ([datetime]::ParseExact($EvergreenAt, 'HH:mm', $null)).AddMinutes(35).ToString('HH:mm')
 $eveningMonitorArgs = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -Command `"Set-Location -LiteralPath '$ProjectDir'; npm run monitor:today -- --window evening`""
 Register-UnaTask -TaskName 'UnaLabsSocial-EveningMonitor' -At $eveningMonitorAt -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -Arguments $eveningMonitorArgs -Description 'Weekday Una Labs evening health monitor for evergreen publishing proof and scheduler result.'
 
-$saturdayArgs = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$evergreenRunner`" -ProjectDir `"$ProjectDir`" -Slot `"weekend-tip`" -Mode `"tip`" -ForceNew -Channels `"$Channels`" -AllowScheduledPublish"
+$saturdayArgs = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$evergreenRunner`" -ProjectDir `"$ProjectDir`" -Slot `"weekend-tip`" -Mode `"tip`" -ForceNew -Channels `"$Channels`" -AllowScheduledPublish -ScheduledAt `"$SaturdayTipAt`" -MaxLatenessMinutes 180"
 Register-UnaTask -TaskName 'UnaLabsSocial-WeekendTip' -At $SaturdayTipAt -DaysOfWeek Saturday -Arguments $saturdayArgs -Description 'Saturday Una Labs sandbox practical AI tip with automatic visible-browser publish and proof ledger.'
 
 $weekendMonitorAt = ([datetime]::ParseExact($SaturdayTipAt, 'HH:mm', $null)).AddMinutes(35).ToString('HH:mm')
 $weekendMonitorArgs = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -Command `"Set-Location -LiteralPath '$ProjectDir'; npm run monitor:today -- --window weekend-tip`""
 Register-UnaTask -TaskName 'UnaLabsSocial-WeekendMonitor' -At $weekendMonitorAt -DaysOfWeek Saturday -Arguments $weekendMonitorArgs -Description 'Saturday Una Labs monitor for weekend tip proof and scheduler result.'
 
-$sundayArgs = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$evergreenRunner`" -ProjectDir `"$ProjectDir`" -Slot `"weekly-recap`" -Mode `"weekly-recap`" -ForceNew -Channels `"$Channels`" -AllowScheduledPublish"
+$sundayArgs = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$evergreenRunner`" -ProjectDir `"$ProjectDir`" -Slot `"weekly-recap`" -Mode `"weekly-recap`" -ForceNew -Channels `"$Channels`" -AllowScheduledPublish -ScheduledAt `"$SundayRecapAt`" -MaxLatenessMinutes 180"
 Register-UnaTask -TaskName 'UnaLabsSocial-WeeklyRecap' -At $SundayRecapAt -DaysOfWeek Sunday -Arguments $sundayArgs -Description 'Sunday Una Labs sandbox week-ahead recap with automatic visible-browser publish and proof ledger.'
 
 $recapMonitorAt = ([datetime]::ParseExact($SundayRecapAt, 'HH:mm', $null)).AddMinutes(35).ToString('HH:mm')

@@ -1,13 +1,14 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { loadPublishedStoryIdentities, normalizePublishedUrl } from '../src/publication-history.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(__dirname, '..')
 const runDate = readArg('--date') || todayInTimeZone()
 const maxSourceAgeDays = Number(readArg('--max-source-age-days') || 3)
 const feedFetchTimeoutMs = Number(readArg('--feed-timeout-ms') || process.env.UNA_FEED_TIMEOUT_MS || 12000)
-const allowSameDayReuse = process.argv.includes('--allow-same-day-reuse')
+const allowPublishedReuse = process.argv.includes('--allow-published-reuse')
 
 function readArg(name) {
   const index = process.argv.indexOf(name)
@@ -153,9 +154,12 @@ async function walkFiles(dirPath, fileName) {
   return matches
 }
 
-async function usedSameDayUrls() {
-  if (allowSameDayReuse) return new Set()
+async function usedPublishedUrls() {
+  if (allowPublishedReuse) return new Set()
   const used = new Set()
+  for (const identity of await loadPublishedStoryIdentities(root)) {
+    if (identity.startsWith('url:')) used.add(identity.slice(4))
+  }
   const ledgerPath = path.join(root, 'content', 'ledger', 'social-ledger.jsonl')
   try {
     const lines = (await fs.readFile(ledgerPath, 'utf8')).split(/\r?\n/).filter(Boolean)
@@ -166,13 +170,12 @@ async function usedSameDayUrls() {
       } catch {
         continue
       }
-      if (entry?.runDate !== runDate) continue
       if (entry?.dryRun) continue
       const posted = Object.values(entry.results || {}).some((result) => String(result?.status || '').startsWith('posted'))
       if (!posted) continue
-      if (entry?.topic?.url) used.add(entry.topic.url)
+      if (entry?.topic?.url) used.add(normalizePublishedUrl(entry.topic.url))
       for (const source of entry?.sources || []) {
-        if (source?.url) used.add(source.url)
+        if (source?.url) used.add(normalizePublishedUrl(source.url))
       }
     }
   } catch {
@@ -184,9 +187,9 @@ async function usedSameDayUrls() {
     if (!report || report.dryRun) continue
     const posted = Object.values(report.results || {}).some((result) => String(result?.status || '').startsWith('posted'))
     if (!posted) continue
-    if (report?.topic?.url) used.add(report.topic.url)
+    if (report?.topic?.url) used.add(normalizePublishedUrl(report.topic.url))
     for (const source of report?.sources || []) {
-      if (source?.url) used.add(source.url)
+      if (source?.url) used.add(normalizePublishedUrl(source.url))
     }
   }
   return used
@@ -215,7 +218,7 @@ function daysOld(item, now = new Date(`${runDate}T12:00:00-04:00`)) {
 function isUsableStory(item, usedUrls = new Set()) {
   const text = `${item?.title || ''} ${item?.summary || ''}`.toLowerCase()
   if (!item?.title || !item?.url || daysOld(item) > maxSourceAgeDays) return false
-  if (usedUrls.has(item.url)) return false
+  if (usedUrls.has(normalizePublishedUrl(item.url))) return false
   if (/\/brandpress\//i.test(item.url || '')) return false
   return !/(celebrity|gossip|career advice|how to transition|stock price|crypto price|\[d\]|request for expressions? of interest|capacity development|procurement|tender|call for applications|sponsored|advertorial|press release|world cup|football prediction|sports prediction|goldfish|hiring bias|biases when hiring|resume before a human sees it|e-visa|visa fee|labour mobility|song made with|suno|music opinion|entertainment|video game|gaming industry|sassa|payment dates?|grant amounts?|social grant|srd grant|pension grant|disability grant)/i.test(text)
 }
@@ -446,10 +449,10 @@ for (const result of feedResults) {
   }
 }
 
-const usedUrls = await usedSameDayUrls()
+const usedUrls = await usedPublishedUrls()
 const entries = selectRegionalStories(items, usedUrls)
 if (entries.length !== 3) {
-  throw new Error(`Expected 3 fresh regional stories, found ${entries.length}. Used same-day URLs excluded: ${usedUrls.size}. Errors: ${JSON.stringify(errors)}`)
+  throw new Error(`Expected 3 fresh regional stories, found ${entries.length}. Previously published URLs excluded: ${usedUrls.size}. Errors: ${JSON.stringify(errors)}`)
 }
 
 const draftDir = path.join(root, 'content', 'drafts', runDate)
@@ -510,7 +513,7 @@ console.log(
         linkedin: path.relative(root, path.join(draftDir, 'linkedin-post.md')),
       },
       errors,
-      excludedSameDayUrlCount: usedUrls.size,
+      excludedPublishedUrlCount: usedUrls.size,
     },
     null,
     2,

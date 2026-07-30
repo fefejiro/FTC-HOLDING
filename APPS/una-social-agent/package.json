@@ -52,7 +52,7 @@
     "social:qa": "node scripts/social-publication.mjs qa",
     "caption:write": "node scripts/caption-writer.mjs",
     "test": "node --test tests/*.test.mjs",
-    "check": "node --check src/editorial-quality.mjs && node --check src/publish-guard.mjs && node --check scripts/quality-check.mjs && node --check scripts/monitor-schedule.mjs && node --check scripts/visuals/news-visual-pipeline.mjs && npm test"
+    "check": "node --check src/editorial-quality.mjs && node --check src/publication-history.mjs && node --check src/publish-guard.mjs && node --check scripts/draft-regional-brief.mjs && node --check scripts/draft-evergreen-tip.mjs && node --check scripts/quality-check.mjs && node --check scripts/quality-evergreen-tip.mjs && node --check scripts/monitor-schedule.mjs && node --check scripts/visuals/news-visual-pipeline.mjs && npm test"
   },
   "engines": {
     "node": ">=20"
