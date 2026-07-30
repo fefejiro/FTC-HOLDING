@@ -77,10 +77,13 @@ function readGit(args) {
 rmrf(simRoot);
 fs.mkdirSync(simRoot, { recursive: true });
 for (const entry of copyEntries) copyOne(entry);
-fs.copyFileSync(
-  path.join(root, "scripts", "metro.standalone.config.cjs"),
-  path.join(simRoot, "metro.config.js"),
-);
+
+function applyStandaloneMetroConfig() {
+  fs.copyFileSync(
+    path.join(root, "scripts", "metro.standalone.config.cjs"),
+    path.join(simRoot, "metro.config.js"),
+  );
+}
 
 const packagePath = path.join(simRoot, "package.json");
 const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf8"));
@@ -124,8 +127,12 @@ if (args.has("--install")) {
 }
 
 if (args.has("--doctor")) {
+  // Doctor validates the generated app and isolated dependency tree before the
+  // intentional standalone Metro override is applied.
   run({ cmd: "npx", args: ["--yes", "expo-doctor@latest", "."] });
 }
+
+applyStandaloneMetroConfig();
 
 if (args.has("--ios")) {
   run({ cmd: "npx", args: ["expo", "start", "--ios", "--clear"] });
