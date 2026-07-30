@@ -4,7 +4,9 @@ Last updated: 2026-07-29
 
 ## Scope
 
-PeacePad Next Native remains an isolated React Native / Expo lab. This batch proves one synthetic, in-memory product slice:
+PeacePad Next Native remains an isolated React Native / Expo lab. The current
+branch combines the synthetic Premium product slice with a staging-only Gate 1
+foundation:
 
 ```text
 Goal Setup
@@ -22,9 +24,17 @@ No production API, database, real document, App Store record, production bundle 
 | Capability | Status | Evidence |
 | --- | --- | --- |
 | Eight Home quick actions | AUTOMATED VERIFIED | RNTL parameterized navigation test |
-| Default startup route | AUTOMATED VERIFIED | Home is asserted by RNTL |
+| Default startup route | AUTOMATED VERIFIED | Empty/unknown routes resolve to Gate 1 Foundation |
+| PeacePad conch brand | AUTOMATED VERIFIED | Foundation test asserts the actual image asset |
+| Existing-account route shell | AUTOMATED VERIFIED | Shell creates no session and performs no API write |
+| Required consent boundary | AUTOMATED VERIFIED | Terms and Privacy acknowledgement precede guest creation |
+| Optional AI consent | AUTOMATED VERIFIED | Defaults off and is sent separately |
+| Lab/staging isolation | AUTOMATED VERIFIED | Production target is rejected; writes remain false |
+| Typed API/error contract | AUTOMATED VERIFIED | Guest start, preview, HTTP, timeout, invalid response, and network paths |
+| Secure device session | AUTOMATED VERIFIED | SecureStore save/read/reset, expiry, invalid data, and consent |
+| Restart recovery behavior | AUTOMATED VERIFIED | Stored session refreshes through the injected staging API |
 | Evidence Detail startup route | AUTOMATED VERIFIED | `evidence-detail` route is asserted by RNTL |
-| Unsupported startup fallback | AUTOMATED VERIFIED | Unknown route resolves to Home |
+| Unsupported startup fallback | AUTOMATED VERIFIED | Unknown route resolves to Foundation |
 | Typed session-only lab state | AUTOMATED VERIFIED | Context test covers binder, evidence, review, timeline, and export |
 | Goal selection | AUTOMATED VERIFIED | `Organize my records` continues to Binder |
 | Binder required fields | AUTOMATED VERIFIED | Empty name and child label are blocked |
@@ -47,7 +57,14 @@ npm --workspace=@ftc/peacepad-next-native run guardrails
 -> PeacePad Next Native guardrails OK.
 
 npm --workspace=@ftc/peacepad-next-native test
--> 3 suites passed, 18 tests passed
+-> 8 suites passed, 47 tests passed
+
+npm --workspace=@ftc/peacepad-next-native run test:coverage
+-> 82.32% statements
+-> 85.35% branches
+-> 75.65% functions
+-> 85.11% lines
+-> global 75% threshold enforced
 
 npm --workspace=@ftc/peacepad-next-native exec expo -- config --type public
 -> SDK 54 config resolved
@@ -60,6 +77,12 @@ npm --workspace=@ftc/peacepad-next-native run sim:doctor
 ```
 
 Direct monorepo Expo Doctor reports the unrelated root React 18 beside the lab's React 19. The established standalone simulator workdir removes that monorepo dependency noise and passes all 18 checks.
+
+`npm audit --omit=dev` in that standalone workdir reports 19 high and 8
+moderate transitive advisories in the supported Expo 54 / React Native 0.81
+toolchain. The offered automatic fixes require breaking upgrades to React
+Native 0.86 or Expo 57, so no forced audit mutation was applied. This remains a
+release blocker to resolve through a separately tested supported-SDK upgrade.
 
 ## Simulator evidence
 
@@ -80,9 +103,11 @@ Stop after one controlled simulator pass. If remote input is unreliable, record 
 
 ## Known limitations
 
-- Session state is memory-only and resets when the app restarts.
+- Premium product state is memory-only and resets when the app restarts.
+- The separate Gate 1 guest token and consent state use SecureStore.
 - Original-file metadata is a synthetic placeholder; no picker or upload exists.
-- No authentication, database, private storage, offline queue, AI service, calls, billing, or production API integration exists.
+- No account authentication, database, evidence storage, offline queue, AI
+  service, calls, billing, or production API integration exists.
 - Evidence review creates one deterministic synthetic timeline entry.
 - Export Preview selects records but does not create or share a file.
 - Device, accessibility, dark-mode, and real-iPhone matrices remain incomplete.
@@ -108,3 +133,20 @@ then assess:
 2. Whether the evidence privacy/storage model can be approved before any upload work.
 3. Whether the RN interaction and accessibility quality is materially better than adopting the same lessons in Capacitor.
 4. Whether migration cost is justified after the submitted Capacitor release is fully tested.
+
+## Honest completion map
+
+| Area | Status |
+| --- | ---: |
+| Expanded repository audit and reuse map | 100% |
+| Product thesis and 24-30 month program design | 85% |
+| Synthetic Premium vertical slice | 60% |
+| Gate 1 environment/API/session foundation | 55% |
+| Automated native verification | 70% |
+| Simulator proof for this exact commit | 0% |
+| Real-iPhone staging proof | 0% |
+| Production auth and account recovery | 5% |
+| Production evidence integrity and export | 5% |
+| Native calling transport | 0% |
+| Review-critical v1 parity | 10% |
+| Overall production-native v2 | 16-18% |

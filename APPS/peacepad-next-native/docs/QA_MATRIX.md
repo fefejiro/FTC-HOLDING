@@ -1,6 +1,6 @@
 # PeacePad Next Native QA Matrix
 
-Last updated: 2026-07-25
+Last updated: 2026-07-29
 
 Status vocabulary:
 
@@ -22,9 +22,9 @@ Status vocabulary:
 | Home quick action: Evidence Detail | AUTOMATED VERIFIED | `App.test.tsx` |
 | Home quick action: Timeline | AUTOMATED VERIFIED | `App.test.tsx` |
 | Home quick action: Export Preview | AUTOMATED VERIFIED | `App.test.tsx` |
-| Default startup is Home | AUTOMATED VERIFIED | `App.test.tsx` |
+| Default startup is Gate 1 Foundation | AUTOMATED VERIFIED | `App.test.tsx` |
 | `evidence-detail` startup route | AUTOMATED VERIFIED | `App.test.tsx` |
-| Unsupported startup route falls back to Home | AUTOMATED VERIFIED | `App.test.tsx` |
+| Unsupported startup route falls back to Foundation | AUTOMATED VERIFIED | `App.test.tsx` |
 | Organize-records goal routes to Binder | AUTOMATED VERIFIED | Full vertical-slice test |
 | Binder required fields | AUTOMATED VERIFIED | Empty required-field test |
 | Evidence required metadata | AUTOMATED VERIFIED | Missing required-field test |
@@ -36,6 +36,14 @@ Status vocabulary:
 | Timeline export selection | AUTOMATED VERIFIED | Full vertical-slice test |
 | State survives active-session navigation | AUTOMATED VERIFIED | Detail -> Vault persistence test |
 | Production writes disabled | AUTOMATED VERIFIED | Config test and guardrail |
+| Real conch asset replaces placeholder mark | AUTOMATED VERIFIED | `FoundationScreen.test.tsx` |
+| Existing-account shell performs no write | AUTOMATED VERIFIED | `FoundationScreen.test.tsx` |
+| Welcome creates no guest session or consent | AUTOMATED VERIFIED | `FoundationScreen.test.tsx` |
+| Required consent precedes session creation | AUTOMATED VERIFIED | UI and API client tests |
+| Optional AI consent defaults off | AUTOMATED VERIFIED | UI, API payload, and SecureStore tests |
+| Staging API isolation | AUTOMATED VERIFIED | `environment.test.ts` and guardrails |
+| Timeout/network/HTTP/invalid-response mapping | AUTOMATED VERIFIED | `PeacePadApiClient.test.ts` |
+| Secure session restore, expiry, invalid data, reset | AUTOMATED VERIFIED | `secureGuestSession.test.ts` |
 
 ## Tooling and configuration
 
@@ -43,7 +51,9 @@ Status vocabulary:
 | --- | --- | --- |
 | TypeScript | AUTOMATED VERIFIED | Passed |
 | Lab guardrails | AUTOMATED VERIFIED | Passed |
-| Jest/RNTL suite | AUTOMATED VERIFIED | 3 suites, 18 tests |
+| Jest/RNTL suite | AUTOMATED VERIFIED | 8 suites, 47 tests |
+| Coverage threshold | AUTOMATED VERIFIED | Global 75% gate; 82.32% statements / 85.35% branches |
+| Production dependency audit | BLOCKED | 19 high / 8 moderate transitive Expo/RN advisories; fixes require breaking SDK upgrade |
 | Expo public config | AUTOMATED VERIFIED | SDK 54; lab bundle; writes false |
 | Standalone Expo Doctor | AUTOMATED VERIFIED | 18/18 |
 | Direct monorepo Expo Doctor | BLOCKED | Root React 18 duplicates isolated lab React 19 |
@@ -82,7 +92,8 @@ The July 24 screenshots are historical visual evidence for the earlier mock. The
 | Dark mode and large text | NOT STARTED |
 | VoiceOver/accessibility audit | NOT STARTED |
 | Offline/session recovery policy | NOT STARTED |
-| Auth/session contract | NOT STARTED |
+| Guest session contract | AUTOMATED VERIFIED |
+| Account auth/recovery contract | NOT STARTED |
 | Private evidence storage threat model | NOT STARTED |
 | Backend API contracts | NOT STARTED |
 | Real file picker/upload | NOT STARTED |
@@ -99,3 +110,12 @@ The July 24 screenshots are historical visual evidence for the earlier mock. The
 | Submitted Capacitor app untouched | IMPLEMENTED |
 | No real court/child/family documents | IMPLEMENTED |
 | No App Store Connect upload | IMPLEMENTED |
+
+## Gate 1 device evidence
+
+| Journey | Status | Evidence |
+| --- | --- | --- |
+| Welcome -> consent -> guest -> preview | AUTOMATED VERIFIED | RNTL with injected staging adapter |
+| Restart -> secure session refresh | AUTOMATED VERIFIED | RNTL plus SecureStore unit tests |
+| iOS Simulator on current commit | BLOCKED | Requires one controlled Mac pass after commit |
+| Real iPhone against staging | NOT STARTED | No production API use permitted |

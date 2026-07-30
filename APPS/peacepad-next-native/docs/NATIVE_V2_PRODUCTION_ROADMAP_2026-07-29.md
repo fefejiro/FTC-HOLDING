@@ -29,14 +29,19 @@ The native workspace currently has:
 - production API writes disabled;
 - typed in-memory state for one synthetic Premium flow;
 - React Navigation;
-- 3 passing test suites and 18 passing tests;
-- passing TypeScript and lab guardrails.
+- 8 passing test suites and 47 passing tests;
+- passing TypeScript and lab guardrails;
+- a typed lab/staging API adapter with production targeting blocked;
+- SecureStore-backed guest-session recovery;
+- explicit required consent and optional AI consent;
+- the real PeacePad conch asset and a staging-only existing-account shell;
+- standalone Expo Doctor 18/18 and an enforced 75% coverage floor.
 
 It does not yet have production authentication, API integration, database
 storage, secure evidence storage, offline recovery, real uploads, real export,
 billing, or a complete device and accessibility matrix.
 
-Overall production readiness is approximately 15%.
+Overall production readiness is approximately 16-18%.
 
 ## Delivery sequence
 
@@ -214,14 +219,15 @@ version 1 binary.
 | Area | Estimate |
 |---|---:|
 | React Native / Expo shell and tooling | 70% |
-| Synthetic native UX prototype | 55% |
+| Synthetic native UX prototype | 60% |
+| Gate 1 environment/API/session foundation | 55% |
 | Production authentication and API integration | 5% |
 | Review-critical version 1 parity | 10% |
 | Secure evidence upload and export | 0-5% |
 | Offline and restart recovery | 0% |
 | Device and accessibility QA | 5-10% |
 | App Store v2 readiness | 5% |
-| Overall production-native v2 | Approximately 15% |
+| Overall production-native v2 | Approximately 16-18% |
 
 Planning estimate:
 
@@ -248,3 +254,12 @@ staging environment
 
 The sprint must end with automated tests plus one controlled Simulator and
 real-iPhone staging pass.
+
+Current sprint result:
+
+- automated portion: passed;
+- standalone Expo Doctor: 18/18;
+- coverage: enforced and passing;
+- Simulator: pending one controlled Mac pass;
+- real iPhone staging: not started;
+- production writes: still disabled.

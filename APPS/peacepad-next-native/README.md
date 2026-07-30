@@ -1,6 +1,6 @@
 # PeacePad Next Native
 
-Status: React Native / Expo lab spike  
+Status: React Native / Expo successor lab; Gate 1 foundation in progress
 Created: 2026-07-23
 
 This workspace is a non-production prototype for testing the PeacePad Premium Delta experience while the submitted PeacePad iOS release remains frozen in Apple App Review.
@@ -50,6 +50,10 @@ no App Store submission
 
 ```powershell
 npm --workspace=@ftc/peacepad-next-native run guardrails
+npm --workspace=@ftc/peacepad-next-native run typecheck
+npm --workspace=@ftc/peacepad-next-native test
+npm --workspace=@ftc/peacepad-next-native run test:coverage
+npm --workspace=@ftc/peacepad-next-native run sim:doctor
 npm --workspace=@ftc/peacepad-next-native run start
 ```
 
@@ -65,7 +69,9 @@ npm install
 - Feature QA matrix: `docs/QA_MATRIX.md`
 - iOS simulator runbook: `docs/IOS_SIMULATOR_RUNBOOK.md`
 
-The lab has rendered on MacInCloud iOS Simulator, but it is still mock-data only and not approved as the production PeacePad migration.
+The historical lab has rendered on MacInCloud iOS Simulator. The current Gate
+1 commit still requires a fresh controlled Simulator pass and a real-iPhone
+staging pass; automated proof is not presented as device proof.
 
 ## Decision gate
 
