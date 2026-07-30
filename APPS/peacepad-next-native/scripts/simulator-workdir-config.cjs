@@ -4,6 +4,7 @@ const standaloneInstallArgs = Object.freeze([
 ]);
 
 const requiredStandaloneDependencies = Object.freeze([
+  "expo-asset",
   "expo-modules-core",
 ]);
 
