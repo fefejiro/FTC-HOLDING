@@ -30,6 +30,7 @@ No production API, database, real document, App Store record, production bundle 
 | Required consent boundary | AUTOMATED VERIFIED | Terms and Privacy acknowledgement precede guest creation |
 | Optional AI consent | AUTOMATED VERIFIED | Defaults off and is sent separately |
 | Lab/staging isolation | AUTOMATED VERIFIED | Production target is rejected; writes remain false |
+| Synthetic lab runtime | AUTOMATED VERIFIED | Device journey uses an in-memory adapter; staging retains typed HTTP |
 | Typed API/error contract | AUTOMATED VERIFIED | Guest start, preview, HTTP, timeout, invalid response, and network paths |
 | Secure device session | AUTOMATED VERIFIED | SecureStore save/read/reset, expiry, invalid data, and consent |
 | Restart recovery behavior | AUTOMATED VERIFIED | Stored session refreshes through the injected staging API |
@@ -60,13 +61,13 @@ npm --workspace=@ftc/peacepad-next-native run guardrails
 -> PeacePad Next Native guardrails OK.
 
 npm --workspace=@ftc/peacepad-next-native test
--> 8 suites passed, 47 tests passed
+-> 9 suites passed, 52 tests passed
 
 npm --workspace=@ftc/peacepad-next-native run test:coverage
--> 82.32% statements
--> 85.35% branches
--> 75.65% functions
--> 85.11% lines
+-> 82.79% statements
+-> 85.86% branches
+-> 75.79% functions
+-> 85.53% lines
 -> global 75% threshold enforced
 
 npm --workspace=@ftc/peacepad-next-native exec expo -- config --type public

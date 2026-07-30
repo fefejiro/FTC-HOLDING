@@ -14,10 +14,10 @@ import type {
   MessagePreviewResponse
 } from "../api/contracts";
 import {
-  PeacePadApiClient,
   PeacePadApiError,
   type PeacePadFoundationApi
 } from "../api/PeacePadApiClient";
+import { createFoundationApi } from "../api/SyntheticLabFoundationApi";
 import { environmentConfig } from "../config/environment";
 import {
   createStoredGuestSession,
@@ -41,7 +41,7 @@ const initialConsent: ConsentPreferences = {
   aiMessageConsent: false
 };
 
-const defaultApi = new PeacePadApiClient(environmentConfig);
+const defaultApi = createFoundationApi(environmentConfig);
 
 function friendlyError(error: unknown): string {
   if (error instanceof PeacePadApiError) return error.message;
