@@ -4,6 +4,7 @@ const standaloneInstallArgs = Object.freeze([
 ]);
 
 const requiredStandaloneDependencies = Object.freeze([
+  "@react-native/virtualized-lists",
   "expo-asset",
   "expo-modules-core",
 ]);

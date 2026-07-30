@@ -21,6 +21,9 @@ describe("standalone iOS simulator workdir", () => {
   });
 
   it("fails preparation when Expo's native module runtime is absent", () => {
+    expect(requiredStandaloneDependencies).toContain(
+      "@react-native/virtualized-lists",
+    );
     expect(requiredStandaloneDependencies).toContain("expo-asset");
     expect(requiredStandaloneDependencies).toContain("expo-modules-core");
   });
