@@ -1,6 +1,10 @@
 const fs = require("fs");
 const path = require("path");
 const cp = require("child_process");
+const {
+  requiredStandaloneDependencies,
+  standaloneInstallArgs,
+} = require("./simulator-workdir-config.cjs");
 
 const root = path.resolve(__dirname, "..");
 const repositoryRoot = path.resolve(root, "..", "..");
@@ -39,6 +43,22 @@ function run(command, options = {}) {
     stdio: "inherit",
     shell: process.platform === "win32"
   });
+}
+
+function assertStandaloneDependency(packageName) {
+  const packageManifest = path.join(
+    simRoot,
+    "node_modules",
+    ...packageName.split("/"),
+    "package.json",
+  );
+
+  if (!fs.existsSync(packageManifest)) {
+    throw new Error(
+      `Standalone simulator dependency is missing: ${packageName}. ` +
+        "The install must remain isolated from the monorepo workspace.",
+    );
+  }
 }
 
 function readGit(args) {
@@ -89,7 +109,13 @@ console.log(
 );
 
 if (args.has("--install")) {
-  run({ cmd: "npm", args: ["install"] });
+  // The simulator copy lives beneath the source workspace. Without this flag,
+  // npm walks up to the monorepo root and installs against the source workspace
+  // instead of creating the standalone node_modules tree Metro needs.
+  run({ cmd: "npm", args: standaloneInstallArgs });
+  for (const packageName of requiredStandaloneDependencies) {
+    assertStandaloneDependency(packageName);
+  }
 }
 
 if (args.has("--doctor")) {
