@@ -40,6 +40,11 @@ const callEngineV2 = new CallEngineV2(storage);
 // Export for use in routes (registering legacy-created sessions)
 export { callEngineV2 };
 
+const PRODUCTION_REALTIME_ORIGINS = new Set([
+  "https://peacepad.ca",
+  "https://www.peacepad.ca",
+]);
+
 const sessionDebug = new Map<string, {
   offers: number; answers: number; candidates: number;
   lastTo: string[]; lastToConn: string[];
@@ -902,9 +907,14 @@ function isAllowedRealtimeOrigin(origin: string | undefined): boolean {
 
   try {
     const normalized = new URL(origin).origin.toLowerCase();
+
+    if (process.env.NODE_ENV === "production") {
+      return PRODUCTION_REALTIME_ORIGINS.has(normalized);
+    }
+
     return config.cors.allowedOrigins.some((allowedOrigin) => {
       if (!allowedOrigin || allowedOrigin === "*") {
-        return allowedOrigin === "*" && process.env.NODE_ENV !== "production";
+        return allowedOrigin === "*";
       }
       try {
         return new URL(allowedOrigin).origin.toLowerCase() === normalized;
