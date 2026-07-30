@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "sim:prepare": "node scripts/prepare-ios-sim-workdir.cjs",
     "sim:doctor": "node scripts/prepare-ios-sim-workdir.cjs --install --doctor",
-    "sim:ios": "node scripts/prepare-ios-sim-workdir.cjs --install --ios"
+    "sim:ios": "node scripts/prepare-ios-sim-workdir.cjs --install --ios",
+    "sim:gate1": "npm run guardrails && npm run typecheck && npm test && node scripts/prepare-ios-sim-workdir.cjs --install --doctor --ios"
   },
   "dependencies": {
     "@expo-google-fonts/playfair-display": "^0.4.2",

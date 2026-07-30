@@ -44,23 +44,28 @@ git rev-parse HEAD
 Compare the commit with the current PR #160 head. Do not continue if the
 working tree is dirty or the commit differs.
 
-Then run:
+The preferred controlled pass is now one command:
 
 ```bash
-npm --workspace=@ftc/peacepad-next-native run sim:doctor
+npm --workspace=@ftc/peacepad-next-native run sim:gate1
 ```
 
-The generated workspace contains `SIMULATOR_PROOF_CONTEXT.json`. Before
-capturing evidence, confirm:
+This runs guardrails, typecheck, Jest, standalone installation, Expo Doctor,
+and then opens the iOS Simulator. If any preflight fails, the Simulator does
+not start.
+
+The generated workspace contains `SIMULATOR_PROOF_CONTEXT.json`. Once the app
+opens and before capturing evidence, confirm:
 
 - `sourceCommit` equals the PR #160 head;
 - `sourceDirty` is `false`;
 - `iosBundleIdentifier` is `ca.peacepad.nextnative.lab`;
 - `productionApiWritesEnabled` is `false`.
 
-If doctor passes, run:
+For troubleshooting, the preflight and launch remain available separately:
 
 ```bash
+npm --workspace=@ftc/peacepad-next-native run sim:doctor
 npm --workspace=@ftc/peacepad-next-native run sim:ios
 ```
 
