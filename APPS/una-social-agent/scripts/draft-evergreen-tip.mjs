@@ -49,6 +49,19 @@ function hashtags(tip) {
   return (tip.hashtags || ['#ArtificialIntelligence', '#Automation', '#Workflow', '#AITools']).join(' ')
 }
 
+function audienceLabel(level) {
+  return {
+    beginner: 'new AI users',
+    builder: 'everyday builders',
+    'power-user': 'AI power users',
+    business: 'business leaders',
+  }[level] || 'AI users'
+}
+
+function promptBlock(tip) {
+  return tip.prompt ? `\nTry this prompt:\n"${tip.prompt}"\n` : ''
+}
+
 function instagramCaption(tip) {
   if (mode === 'weekly-recap') {
     return `
@@ -72,8 +85,11 @@ ${tip.tip}
 
 Simple way to use it today:
 ${tip.steps.map((step, index) => `${index + 1}. ${step}`).join('\n')}
+${promptBlock(tip)}
 
 Why it matters: ${tip.why}
+
+Useful for: ${audienceLabel(tip.level)}
 
 Source: Una Labs practical AI notes
 
@@ -119,14 +135,17 @@ How I would use it in real work:
 2. ${tip.steps[1]}
 3. ${tip.steps[2]}
 4. ${tip.steps[3]}
+${promptBlock(tip)}
 
 The point is not to make AI look clever. The point is to make the work easier to check, easier to repeat, and safer to hand off.
 
-For small teams, this is where AI starts to become useful: one clear workflow, one review step, one improvement at a time.
+This one is especially useful for ${audienceLabel(tip.level)}.
 
-What is one task you would trust AI to draft, but not fully decide for you yet?
+${tip.question || 'What would you test this on first?'}
 `
 }
+
+const levelOrder = ['beginner', 'builder', 'power-user', 'business']
 
 function selectTip(tips, usedIds, usedTitles) {
   if (forcedTipId) {
@@ -137,14 +156,52 @@ function selectTip(tips, usedIds, usedTitles) {
     }
     return found
   }
-  const unused = tips.find((tip) => !usedIds.has(tip.id) && !usedTitles.has(normalizePublishedText(tip.title)))
-  if (unused) return unused
+  const unused = tips.filter((tip) => !usedIds.has(tip.id) && !usedTitles.has(normalizePublishedText(tip.title)))
+  if (unused.length > 0) {
+    const usedCountByLevel = new Map(levelOrder.map((level) => [level, 0]))
+    for (const tip of tips) {
+      if ((usedIds.has(tip.id) || usedTitles.has(normalizePublishedText(tip.title))) && usedCountByLevel.has(tip.level)) {
+        usedCountByLevel.set(tip.level, usedCountByLevel.get(tip.level) + 1)
+      }
+    }
+    const dayNumber = Math.floor(Date.parse(`${runDate}T00:00:00Z`) / 86400000)
+    const rotationStart = ((dayNumber % levelOrder.length) + levelOrder.length) % levelOrder.length
+    const rankedLevels = [...levelOrder].sort((a, b) => {
+      const countDifference = usedCountByLevel.get(a) - usedCountByLevel.get(b)
+      if (countDifference !== 0) return countDifference
+      const aIndex = (levelOrder.indexOf(a) - rotationStart + levelOrder.length) % levelOrder.length
+      const bIndex = (levelOrder.indexOf(b) - rotationStart + levelOrder.length) % levelOrder.length
+      return aIndex - bIndex
+    })
+    for (const level of rankedLevels) {
+      const match = unused.find((tip) => tip.level === level)
+      if (match) return match
+    }
+    return unused[0]
+  }
   throw new Error('No unpublished evergreen tips remain. Add a new tip instead of recycling a published story or visual.')
+}
+
+function validateTipLibrary(tips) {
+  const ids = new Set()
+  for (const [index, tip] of tips.entries()) {
+    const label = tip?.id || `item ${index + 1}`
+    if (!tip?.id || ids.has(tip.id)) throw new Error(`Evergreen tip has a missing or duplicate id: ${label}`)
+    ids.add(tip.id)
+    if (!levelOrder.includes(tip.level)) throw new Error(`Evergreen tip has an invalid level: ${label}`)
+    for (const field of ['category', 'title', 'hook', 'tip', 'why', 'prompt', 'question']) {
+      if (!String(tip[field] || '').trim()) throw new Error(`Evergreen tip ${label} is missing ${field}`)
+    }
+    if (!Array.isArray(tip.steps) || tip.steps.length !== 4 || tip.steps.some((step) => !String(step).trim())) {
+      throw new Error(`Evergreen tip ${label} must have exactly four usable steps`)
+    }
+  }
 }
 
 const tipsPath = path.join(root, 'content', 'evergreen', mode === 'weekly-recap' ? 'weekly-recaps.json' : 'tips.json')
 const tips = await readJson(tipsPath)
 if (!Array.isArray(tips) || tips.length === 0) throw new Error(`No evergreen tips found in ${tipsPath}`)
+if (mode !== 'weekly-recap') validateTipLibrary(tips)
 
 const usedIds = new Set()
 const usedTitles = new Set()
@@ -166,7 +223,7 @@ const topic = {
     url: 'https://unalabs.cloud',
     publishedAt: `${runDate}T12:00:00-04:00`,
     summary: tip.tip,
-    topics: [tip.category, 'AI tips', 'workflow', 'automation'],
+    topics: [tip.category, tip.level, 'AI tips', 'workflow'],
   },
   evergreen: tip,
   policy: {
@@ -201,6 +258,7 @@ Slot: ${slot}
 Mode: ${mode}
 Tip: ${tip.title}
 Category: ${tip.category}
+Level: ${tip.level || 'general'}
 
 ## Hook
 
@@ -213,6 +271,10 @@ ${tip.tip}
 ## Why
 
 ${tip.why}
+
+## Prompt
+
+${tip.prompt || 'Not applicable'}
 `,
 )
 

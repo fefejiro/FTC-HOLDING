@@ -15,6 +15,12 @@ tips. This is for posts that do not depend on breaking news: ChatGPT tips,
 Claude tips, AI review habits, automation ideas, and small-business workflow
 advice.
 
+The evening lane rotates across beginner, builder, power-user, and business
+topics. Its library includes immediately usable ChatGPT and Claude prompts,
+workflow methods, model-evaluation habits, AI agent controls, ROI, and AI moat
+strategy. Current model-release claims remain in the source-backed news lane;
+the evergreen lane teaches readers how to evaluate and use those models.
+
 Weekend content is intentionally lighter than weekday content. Saturdays publish
 a practical AI/workflow tip for saveable weekend reading. Sundays publish a
 week-ahead AI and technology recap. Do not run the full regional breaking-news

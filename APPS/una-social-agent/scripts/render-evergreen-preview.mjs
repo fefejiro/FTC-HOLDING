@@ -37,7 +37,7 @@ function escapeHtml(value) {
 
 function shortText(value, maxWords) {
   const words = String(value || '').split(/\s+/).filter(Boolean)
-  return words.length <= maxWords ? words.join(' ') : `${words.slice(0, maxWords).join(' ')}...`
+  return words.length <= maxWords ? words.join(' ') : `${words.slice(0, maxWords).join(' ')}.`
 }
 
 async function readJson(filePath) {
@@ -175,7 +175,7 @@ function slideHtml({ tip, kind, slide, sourceLabel, tagLabel, heroDataUrl, steps
               <div class="screen"><div class="line"></div><div class="line"></div><div class="line"></div></div>
             </div>`
       }
-      <div class="eyebrow">${escapeHtml(tip.category)}</div>
+      <div class="eyebrow">${escapeHtml(tip.category)} | ${escapeHtml(tip.level || 'general')}</div>
       <h1>${escapeHtml(tip.title)}</h1>
       <p class="hook">${escapeHtml(tip.hook)}</p>
       <p class="body">${escapeHtml(shortText(tip.tip, 24))}</p>`
@@ -191,13 +191,13 @@ function slideHtml({ tip, kind, slide, sourceLabel, tagLabel, heroDataUrl, steps
       </div>`
   } else {
     content = `
-      <div class="tag">WHY IT MATTERS</div>
+      <div class="tag">${tip.prompt ? 'PROMPT TO TRY' : 'WHY IT MATTERS'}</div>
       ${photoBlock(takeawayDataUrl, 'compact')}
-      <h1>Useful AI still needs judgment</h1>
-      <p class="hook">${escapeHtml(tip.why)}</p>
+      <h1>${tip.prompt ? 'Copy, adapt, and test it' : 'Useful AI still needs judgment'}</h1>
+      <p class="hook">${escapeHtml(tip.prompt || tip.why)}</p>
       <div class="panel">
-        <div class="panel-title">Simple takeaway</div>
-        <p>Use AI to draft, compare, summarize, and organize. Keep a human check before the final decision.</p>
+        <div class="panel-title">Why it matters</div>
+        <p>${escapeHtml(tip.why)}</p>
       </div>`
   }
 
