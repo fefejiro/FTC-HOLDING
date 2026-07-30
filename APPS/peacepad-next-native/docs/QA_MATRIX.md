@@ -1,6 +1,6 @@
 # PeacePad Next Native QA Matrix
 
-Last updated: 2026-07-29
+Last updated: 2026-07-30
 
 Status vocabulary:
 
@@ -52,8 +52,8 @@ Status vocabulary:
 | --- | --- | --- |
 | TypeScript | AUTOMATED VERIFIED | Passed |
 | Lab guardrails | AUTOMATED VERIFIED | Passed |
-| Jest/RNTL suite | AUTOMATED VERIFIED | 9 suites, 52 tests |
-| Coverage threshold | AUTOMATED VERIFIED | Global 75% gate; 82.79% statements / 85.86% branches |
+| Jest/RNTL suite | AUTOMATED VERIFIED | 10 suites, 55 tests |
+| Coverage threshold | AUTOMATED VERIFIED | Global 75% gate; 82.94% statements / 85.86% branches / 75.79% functions / 85.67% lines |
 | Production dependency audit | BLOCKED | 19 high / 8 moderate transitive Expo/RN advisories; fixes require breaking SDK upgrade |
 | Expo public config | AUTOMATED VERIFIED | SDK 54; lab bundle; writes false |
 | Standalone Expo Doctor | AUTOMATED VERIFIED | 18/18 |
@@ -64,12 +64,12 @@ Status vocabulary:
 
 | Screen | Status | Current evidence |
 | --- | --- | --- |
-| Goal Setup | BLOCKED | RDP input did not load tested commit; no current screenshot |
-| Case Binder | BLOCKED | RDP input did not load tested commit; no current screenshot |
-| Evidence Metadata | BLOCKED | RDP input did not load tested commit; no current screenshot |
-| Evidence Detail | BLOCKED | RDP input did not load tested commit; no current screenshot |
-| Timeline | BLOCKED | RDP input did not load tested commit; no current screenshot |
-| Export Preview | BLOCKED | RDP input did not load tested commit; no current screenshot |
+| Goal Setup | NOT STARTED | Not exercised in the 2026-07-30 Gate 1 pass |
+| Case Binder | NOT STARTED | Not exercised in the 2026-07-30 Gate 1 pass |
+| Evidence Metadata | NOT STARTED | Not exercised in the 2026-07-30 Gate 1 pass |
+| Evidence Detail | NOT STARTED | Not exercised in the 2026-07-30 Gate 1 pass |
+| Timeline | NOT STARTED | Not exercised in the 2026-07-30 Gate 1 pass |
+| Export Preview | NOT STARTED | Not exercised in the 2026-07-30 Gate 1 pass |
 
 The July 24 screenshots are historical visual evidence for the earlier mock. They are not evidence for this stateful batch.
 
@@ -84,11 +84,25 @@ The July 24 screenshots are historical visual evidence for the earlier mock. The
 - Synthetic-data confirmation: no new record was entered.
 - Production-write confirmation: automated config/guardrail proof remains passed; no production action occurred.
 
+### 2026-07-30 Gate 1 controlled pass
+
+- Tested source commit: `e6c7a5525f232d546d505e14140b21764cdd3f41`.
+- Device: iPhone 17 simulator, iOS 26.5.
+- Result: `SIMULATOR VERIFIED`.
+- Welcome: [`01-welcome.png`](./evidence/gate1-2026-07-30/01-welcome.png).
+- Existing-account shell: [`02-existing-account.png`](./evidence/gate1-2026-07-30/02-existing-account.png).
+- Required consent with AI off: [`03-consent-ai-off.png`](./evidence/gate1-2026-07-30/03-consent-ai-off.png).
+- Synthetic guest compose: [`04-guest-compose.png`](./evidence/gate1-2026-07-30/04-guest-compose.png).
+- Rule-based preview: [`05-message-preview.png`](./evidence/gate1-2026-07-30/05-message-preview.png).
+- Restart recovery: [`06-session-recovered.png`](./evidence/gate1-2026-07-30/06-session-recovered.png).
+- Proof context: [`SIMULATOR_PROOF_CONTEXT.json`](./evidence/gate1-2026-07-30/SIMULATOR_PROOF_CONTEXT.json).
+- All values remained synthetic. No production API, App Store, real family, court, or child data was used.
+
 ## Remaining architecture evidence
 
 | Area | Status |
 | --- | --- |
-| One controlled iPhone simulator vertical-slice pass | BLOCKED |
+| One controlled iPhone simulator Premium vertical-slice pass | NOT STARTED |
 | Small/large iPhone layout | NOT STARTED |
 | iPad layout | NOT STARTED |
 | Dark mode and large text | NOT STARTED |
@@ -117,7 +131,8 @@ The July 24 screenshots are historical visual evidence for the earlier mock. The
 
 | Journey | Status | Evidence |
 | --- | --- | --- |
-| Welcome -> consent -> guest -> preview | AUTOMATED VERIFIED | RNTL with injected staging adapter |
-| Restart -> secure session refresh | AUTOMATED VERIFIED | RNTL plus SecureStore unit tests |
-| iOS Simulator on current commit | BLOCKED | Requires one controlled Mac pass after commit |
+| Welcome -> consent -> guest -> preview | SIMULATOR VERIFIED | `01-welcome.png`, `03-consent-ai-off.png`, `04-guest-compose.png`, `05-message-preview.png` |
+| Existing-account staging shell | SIMULATOR VERIFIED | `02-existing-account.png`; no production credentials used |
+| Restart -> secure session refresh | SIMULATOR VERIFIED | `06-session-recovered.png` plus RNTL and SecureStore tests |
+| iOS Simulator on tested source commit | SIMULATOR VERIFIED | iPhone 17 / iOS 26.5; proof context pins clean `e6c7a552` source |
 | Real iPhone against staging | NOT STARTED | No production API use permitted |

@@ -1,6 +1,6 @@
 # PeacePad Next Native Status
 
-Last updated: 2026-07-29
+Last updated: 2026-07-30
 
 ## Scope
 
@@ -47,9 +47,10 @@ No production API, database, real document, App Store record, production bundle 
 | Active-session state persistence | AUTOMATED VERIFIED | Edited evidence survives Detail -> Vault navigation |
 | Production write capability | AUTOMATED VERIFIED | Config test plus guardrail enforce `false` |
 | Simulator proof context | AUTOMATED VERIFIED | Generated manifest pins commit, dirty state, bundle ID, and write boundary |
+| Gate 1 iOS simulator journey | SIMULATOR VERIFIED | iPhone 17 / iOS 26.5 evidence captured from clean commit `e6c7a5525f232d546d505e14140b21764cdd3f41` |
 | GitHub Actions execution | BLOCKED | PR #160 Garden jobs ran zero steps; GitHub reports an account billing lock |
 | Cloudflare branch check | BLOCKED | External PeacePad Worker check failed; no provider log or deploy action authorized |
-| iOS simulator vertical-slice smoke | BLOCKED | No controllable Mac simulator session in this run; no new screenshots claimed |
+| Premium six-screen simulator vertical slice | NOT STARTED | Goal -> Binder -> Evidence -> Detail -> Timeline -> Export was not part of the Gate 1 pass |
 
 ## Verification results
 
@@ -61,13 +62,13 @@ npm --workspace=@ftc/peacepad-next-native run guardrails
 -> PeacePad Next Native guardrails OK.
 
 npm --workspace=@ftc/peacepad-next-native test
--> 9 suites passed, 52 tests passed
+-> 10 suites passed, 55 tests passed
 
 npm --workspace=@ftc/peacepad-next-native run test:coverage
--> 82.79% statements
+-> 82.94% statements
 -> 85.86% branches
 -> 75.79% functions
--> 85.53% lines
+-> 85.67% lines
 -> global 75% threshold enforced
 
 npm --workspace=@ftc/peacepad-next-native exec expo -- config --type public
@@ -90,11 +91,34 @@ release blocker to resolve through a separately tested supported-SDK upgrade.
 
 ## Simulator evidence
 
-The screenshots in `.local/peacepad-rn-sim/qa-2026-07-24` document the earlier clickable mock only. They do not prove the 2026-07-25 stateful vertical slice and are not relabelled as current evidence.
+The screenshots in `.local/peacepad-rn-sim/qa-2026-07-24` document the earlier clickable mock only. They are not relabelled as current evidence.
 
-One controlled attempt plus one retry was made on 2026-07-25. Commit `7a713fb61834f4b7b32c1538882cf666d128b4f9` rendered its Home screen on an iPhone 17 simulator running iOS 26.5. The first in-app tap and the single retry were both misrouted into the Mac TV application instead of Simulator. The vertical-slice pass is recorded as `BLOCKED`; no startup-only image is claimed as six-screen proof.
+The 2026-07-25 attempt on commit `7a713fb61834f4b7b32c1538882cf666d128b4f9` remains a historical blocked run: remote input was twice misrouted into the Mac TV application.
 
-Required new screenshots remain:
+### 2026-07-30 Gate 1 controlled pass
+
+- Tested source commit: `e6c7a5525f232d546d505e14140b21764cdd3f41`.
+- Device: iPhone 17 simulator, iOS 26.5.
+- Proof context: clean source, bundle `ca.peacepad.nextnative.lab`, production API writes disabled.
+- Welcome rendered with the PeacePad conch identity.
+- Existing-account staging shell opened without creating a session or using production credentials.
+- Terms and Privacy were explicitly selected while optional AI processing remained off.
+- A synthetic guest session opened Calm Compose.
+- The rule-based preview returned `Neutral`; no message was sent.
+- Expo Go was terminated and reopened; the private guest session was restored.
+- Result: `SIMULATOR VERIFIED`.
+
+Current simulator-native evidence:
+
+- [`01-welcome.png`](./evidence/gate1-2026-07-30/01-welcome.png)
+- [`02-existing-account.png`](./evidence/gate1-2026-07-30/02-existing-account.png)
+- [`03-consent-ai-off.png`](./evidence/gate1-2026-07-30/03-consent-ai-off.png)
+- [`04-guest-compose.png`](./evidence/gate1-2026-07-30/04-guest-compose.png)
+- [`05-message-preview.png`](./evidence/gate1-2026-07-30/05-message-preview.png)
+- [`06-session-recovered.png`](./evidence/gate1-2026-07-30/06-session-recovered.png)
+- [`SIMULATOR_PROOF_CONTEXT.json`](./evidence/gate1-2026-07-30/SIMULATOR_PROOF_CONTEXT.json)
+
+The separate Premium product vertical-slice simulator proof remains:
 
 - Goal Setup.
 - Case Binder.
@@ -145,12 +169,13 @@ then assess:
 | Expanded repository audit and reuse map | 100% |
 | Product thesis and 24-30 month program design | 85% |
 | Synthetic Premium vertical slice | 60% |
-| Gate 1 environment/API/session foundation | 55% |
-| Automated native verification | 70% |
-| Simulator proof for this exact commit | 0% |
+| Gate 1 environment/API/session foundation | 70% |
+| Automated native verification | 75% |
+| Gate 1 simulator proof for tested commit | 100% |
+| Premium vertical-slice simulator proof on current code | 0% |
 | Real-iPhone staging proof | 0% |
 | Production auth and account recovery | 5% |
 | Production evidence integrity and export | 5% |
 | Native calling transport | 0% |
 | Review-critical v1 parity | 10% |
-| Overall production-native v2 | 16-18% |
+| Overall production-native v2 | 18-20% |
