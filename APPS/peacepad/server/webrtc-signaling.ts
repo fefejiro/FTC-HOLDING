@@ -2,10 +2,16 @@ import { WebSocketServer, WebSocket } from "ws";
 import { type Server } from "http";
 import { parse } from "url";
 import { type IncomingMessage } from "http"; // Import IncomingMessage type
-import { trackUsage } from "./softAuth";
+import type { RequestHandler } from "express";
+import { resolveGuestIdentity, trackUsage } from "./softAuth";
 import { sendPushNotification } from "./push-notifications";
 import { storage } from "./storage";
 import { CallEngineV2 } from "./call-engine-v2/CallEngineV2";
+import {
+  isLegacyCallingEnabled,
+  isLegacyCallingMessageType,
+} from "./lib/callingSecurity";
+import { config } from "./config";
 
 interface Client {
   ws: WebSocket;
@@ -847,12 +853,135 @@ export async function broadcastConchInviteDeclined(sessionId: string, partnershi
   });
 }
 
-export function setupWebRTCSignaling(server: Server) {
+type RealtimeRequest = IncomingMessage & {
+  session?: {
+    userId?: string;
+    sessionId?: string;
+    passport?: {
+      user?: unknown;
+    };
+  };
+  sessionID?: string;
+  user?: unknown;
+  realtimeIdentity?: {
+    userId: string;
+    sessionId: string;
+  };
+};
+
+function readSessionUserId(request: RealtimeRequest): string | null {
+  const directUserId = request.session?.userId;
+  if (typeof directUserId === "string" && directUserId.length > 0) {
+    return directUserId;
+  }
+
+  const passportUser = request.session?.passport?.user;
+  if (typeof passportUser === "string" && passportUser.length > 0) {
+    return passportUser;
+  }
+  if (passportUser && typeof passportUser === "object") {
+    const candidate = passportUser as {
+      id?: unknown;
+      claims?: { sub?: unknown };
+    };
+    if (typeof candidate.claims?.sub === "string" && candidate.claims.sub.length > 0) {
+      return candidate.claims.sub;
+    }
+    if (typeof candidate.id === "string" && candidate.id.length > 0) {
+      return candidate.id;
+    }
+  }
+
+  return null;
+}
+
+function isAllowedRealtimeOrigin(origin: string | undefined): boolean {
+  if (!origin) {
+    return process.env.NODE_ENV !== "production";
+  }
+
+  try {
+    const normalized = new URL(origin).origin.toLowerCase();
+    return config.cors.allowedOrigins.some((allowedOrigin) => {
+      if (!allowedOrigin || allowedOrigin === "*") {
+        return allowedOrigin === "*" && process.env.NODE_ENV !== "production";
+      }
+      try {
+        return new URL(allowedOrigin).origin.toLowerCase() === normalized;
+      } catch {
+        return allowedOrigin.toLowerCase() === normalized;
+      }
+    });
+  } catch {
+    return false;
+  }
+}
+
+async function resolveRealtimeIdentity(
+  request: RealtimeRequest,
+  sessionMiddleware: RequestHandler | undefined,
+): Promise<{ userId: string; sessionId: string } | null> {
+  if (!sessionMiddleware) {
+    return null;
+  }
+
+  const sessionLoaded = await new Promise<boolean>((resolve) => {
+    const responseShim = {
+      getHeader: () => undefined,
+      setHeader: () => undefined,
+      end: () => undefined,
+    };
+    sessionMiddleware(request as any, responseShim as any, (error?: unknown) => {
+      resolve(!error);
+    });
+  });
+  if (!sessionLoaded) {
+    return null;
+  }
+
+  const guestIdentity = await resolveGuestIdentity(request, { allowExpired: false });
+  const userId = guestIdentity?.session?.userId || readSessionUserId(request);
+  if (typeof userId !== "string" || userId.length === 0) {
+    return null;
+  }
+
+  const sessionId =
+    guestIdentity?.session?.sessionId ||
+    request.session?.sessionId ||
+    request.sessionID ||
+    userId;
+  return { userId, sessionId };
+}
+
+export function setupWebRTCSignaling(
+  server: Server,
+  options: { sessionMiddleware?: RequestHandler } = {},
+) {
   const wss = new WebSocketServer({
     server,
     path: '/ws/signaling',
-    maxPayload: 100 * 1024 * 1024, // 100MB
-    clientTracking: true
+    // Signaling messages are small. A narrow limit reduces memory-exhaustion
+    // risk and prevents this channel from becoming an upload transport.
+    maxPayload: 64 * 1024,
+    clientTracking: true,
+    verifyClient: (info, done) => {
+      const request = info.req as RealtimeRequest;
+      if (!isAllowedRealtimeOrigin(info.origin)) {
+        done(false, 403, "Origin not allowed");
+        return;
+      }
+
+      resolveRealtimeIdentity(request, options.sessionMiddleware)
+        .then((identity) => {
+          if (!identity) {
+            done(false, 401, "Authentication required");
+            return;
+          }
+          request.realtimeIdentity = identity;
+          done(true);
+        })
+        .catch(() => done(false, 401, "Authentication required"));
+    },
   });
 
   // Connection limit per user to prevent leaks
@@ -864,12 +993,12 @@ export function setupWebRTCSignaling(server: Server) {
     connectionCount++;
     console.log(`[WS] New connection (total: ${connectionCount})`);
 
-    const url = new URL(request.url!, `http://${request.headers.host}`);
-    const sessionId = url.searchParams.get("sessionId");
-    const userId = url.searchParams.get("userId");
+    const identity = (request as RealtimeRequest).realtimeIdentity;
+    const sessionId = identity?.sessionId;
+    const userId = identity?.userId;
 
     if (!sessionId || !userId) {
-      ws.close(1008, "Missing sessionId or userId");
+      ws.close(1008, "Authentication required");
       return;
     }
 
@@ -943,6 +1072,14 @@ export function setupWebRTCSignaling(server: Server) {
         // Validate message type
         if (!type || typeof type !== 'string') {
           console.error(`[WS] Missing or invalid message type from ${userId}`);
+          return;
+        }
+
+        if (!isLegacyCallingEnabled() && isLegacyCallingMessageType(type)) {
+          ws.send(JSON.stringify({
+            type: "feature-unavailable",
+            feature: "calls",
+          }));
           return;
         }
         

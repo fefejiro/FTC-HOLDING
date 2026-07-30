@@ -12,7 +12,13 @@ import {
   resolveGuestIdentity,
   trialEnforcer,
   GUEST_COOKIE_NAME,
+  getSoftAuthSessionMiddleware,
 } from "./softAuth";
+import {
+  isLegacyCallingEnabled,
+  LEGACY_CALLING_HTTP_PREFIXES,
+  rejectDisabledLegacyCalling,
+} from "./lib/callingSecurity";
 import { createUpgradeFromGuestHandler } from "./guestUpgrade";
 import {
   insertMessageSchema,
@@ -885,6 +891,10 @@ async function conversationMembersAreAuthorized(
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  if (!isLegacyCallingEnabled()) {
+    app.use(LEGACY_CALLING_HTTP_PREFIXES, rejectDisabledLegacyCalling);
+  }
+
   await setupAuth(app);
   await reconcileQuarantinedUploadFiles(async (accountId) => {
     const account = await storage.getUser(accountId);
@@ -10525,8 +10535,12 @@ Crawl-delay: 1
 
   const httpServer = createServer(app);
 
-  // Set up WebRTC signaling server
-  setupWebRTCSignaling(httpServer);
+  // Keep ordinary authenticated real-time updates available. The signaling
+  // server rejects unauthenticated sockets and blocks the retired call protocol
+  // unless it is explicitly enabled in a non-production local process.
+  setupWebRTCSignaling(httpServer, {
+    sessionMiddleware: getSoftAuthSessionMiddleware(app),
+  });
 
   return httpServer;
 }

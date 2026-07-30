@@ -11,6 +11,7 @@ import { initializeReEngagementScheduler } from "./services/reEngagementSchedule
 import { setupSoftAuth } from "./softAuth";
 import { killProcessOnPort, HealthMonitor, setupAutoCleanup } from "./autoRecovery";
 import { config } from "./config";
+import { isLegacyCallingEnabled } from "./lib/callingSecurity";
 
 // Detect build mode for Play Store APK/AAB builds
 const isBuildMode = process.env.BUILD_MODE === 'true' || process.env.PLAY_STORE_BUILD === 'true';
@@ -444,11 +445,12 @@ app.use((req, res, next) => {
   // Setup automatic cleanup on shutdown
   setupAutoCleanup();
 
-  // Start Conch Mode session cleanup service
-  startConchSessionCleanup();
-
-  // Start call cleanup service (marks stuck ringing calls as missed after 60 seconds)
-  startCallCleanup();
+  if (isLegacyCallingEnabled()) {
+    // These jobs belong to the retired calling prototype and are intentionally
+    // unavailable in production.
+    startConchSessionCleanup();
+    startCallCleanup();
+  }
 
   // Start daily cleanup for expired guest sessions + guest-scoped data
   startGuestSessionCleanup();

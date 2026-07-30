@@ -607,12 +607,20 @@ type SetupSoftAuthOptions = {
   sessionMiddleware?: RequestHandler;
 };
 
+export const SOFT_AUTH_SESSION_MIDDLEWARE_KEY = "softAuthSessionMiddleware";
+
+export function getSoftAuthSessionMiddleware(app: Express): RequestHandler | undefined {
+  return app.get(SOFT_AUTH_SESSION_MIDDLEWARE_KEY) as RequestHandler | undefined;
+}
+
 export async function setupSoftAuth(app: Express, options: SetupSoftAuthOptions = {}) {
   const includeSessionMiddleware = options.includeSessionMiddleware ?? true;
   app.set("trust proxy", 1);
 
   if (includeSessionMiddleware && !app.get("softAuthSessionConfigured")) {
-    app.use(options.sessionMiddleware || getSession());
+    const sessionMiddleware = options.sessionMiddleware || getSession();
+    app.use(sessionMiddleware);
+    app.set(SOFT_AUTH_SESSION_MIDDLEWARE_KEY, sessionMiddleware);
     app.set("softAuthSessionConfigured", true);
   }
 

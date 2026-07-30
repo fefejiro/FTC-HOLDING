@@ -11,6 +11,7 @@ import android.view.WindowManager;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
+import android.net.Uri;
 
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
@@ -93,6 +94,15 @@ public class MainActivity extends BridgeActivity {
                     @Override
                     public void onPermissionRequest(final PermissionRequest request) {
                         runOnUiThread(() -> {
+                            if (!isTrustedMediaOrigin(request.getOrigin())) {
+                                android.util.Log.w(
+                                    "PeacePad",
+                                    "Denied WebView media permission for untrusted origin"
+                                );
+                                request.deny();
+                                return;
+                            }
+
                             // Only grant audio and video capture permissions
                             // Deny all other resource types for security
                             String[] requestedResources = request.getResources();
@@ -127,6 +137,25 @@ public class MainActivity extends BridgeActivity {
             // WebView may not be ready yet, Capacitor handles this normally
             android.util.Log.w("PeacePad", "WebView permission config deferred: " + e.getMessage());
         }
+    }
+
+    private boolean isTrustedMediaOrigin(Uri origin) {
+        if (origin == null || origin.getScheme() == null || origin.getHost() == null) {
+            return false;
+        }
+
+        String scheme = origin.getScheme().toLowerCase(java.util.Locale.ROOT);
+        String host = origin.getHost().toLowerCase(java.util.Locale.ROOT);
+        boolean securePeacePadOrigin =
+            "https".equals(scheme) &&
+            ("peacepad.ca".equals(host) || "www.peacepad.ca".equals(host));
+        if (securePeacePadOrigin) {
+            return true;
+        }
+
+        return BuildConfig.DEBUG &&
+            ("http".equals(scheme) || "https".equals(scheme)) &&
+            ("localhost".equals(host) || "127.0.0.1".equals(host));
     }
     
     private void createNotificationChannels() {
