@@ -6,7 +6,7 @@ import { LabStateProvider } from "./state/LabState";
 function renderLab(startScreen?: string) {
   return render(
     <LabStateProvider>
-      <PeacePadLabApp startScreen={startScreen} />
+      <PeacePadLabApp startScreen={startScreen ?? "home"} />
     </LabStateProvider>
   );
 }
@@ -23,7 +23,7 @@ describe("PeacePad lab navigation", () => {
     ["Export Preview", "Premium export preview"]
   ] as const;
 
-  it("opens Home by default", () => {
+  it("opens Home when the lab route is requested", () => {
     renderLab();
     expect(screen.getByText("A calm operating system for parenting records.")).toBeOnTheScreen();
   });
@@ -39,15 +39,15 @@ describe("PeacePad lab navigation", () => {
     expect(screen.getByText("Evidence detail")).toBeOnTheScreen();
   });
 
-  it("falls back safely to Home for an unsupported startup route", () => {
-    renderLab("production-dashboard");
-    expect(screen.getByText("A calm operating system for parenting records.")).toBeOnTheScreen();
+  it("falls back safely to the foundation for an unsupported startup route", () => {
+    expect(resolveLabStartScreen("production-dashboard")).toBe("foundation");
   });
 
   it("resolves startup-route values without widening the allowed route set", () => {
     expect(resolveLabStartScreen("evidence-detail")).toBe("evidence-detail");
-    expect(resolveLabStartScreen("anything-else")).toBe("home");
-    expect(resolveLabStartScreen()).toBe("home");
+    expect(resolveLabStartScreen("home")).toBe("home");
+    expect(resolveLabStartScreen("anything-else")).toBe("foundation");
+    expect(resolveLabStartScreen()).toBe("foundation");
   });
 });
 

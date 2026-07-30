@@ -18,7 +18,9 @@
       "environment": "lab",
       "productionApiWritesEnabled": false,
       "submittedBundleId": "ca.peacepad.family"
-    }
+    },
+    "plugins": [
+      "expo-secure-store"
+    ]
   }
 }
-

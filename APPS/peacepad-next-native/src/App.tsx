@@ -4,6 +4,7 @@ import { createNativeStackNavigator, type NativeStackNavigationProp } from "@rea
 import { ScrollView, StatusBar, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScreenTabs } from "./components/ScreenTabs";
+import { FoundationScreen } from "./foundation/FoundationScreen";
 import {
   ComposeScreen,
   BinderScreen,
@@ -19,7 +20,9 @@ import {
 import { LabStateProvider, useLabState } from "./state/LabState";
 import { colors, spacing } from "./theme";
 
-type RootStackParamList = Record<LabScreen, undefined>;
+export type AppScreen = LabScreen | "foundation";
+
+type RootStackParamList = Record<AppScreen, undefined>;
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -27,11 +30,14 @@ declare const process: {
   env?: Record<string, string | undefined>;
 };
 
-export function resolveLabStartScreen(value?: string): LabScreen {
-  return value === "evidence-detail" ? "evidence-detail" : "home";
+export function resolveLabStartScreen(value?: string): AppScreen {
+  if (value === "evidence-detail") return "evidence-detail";
+  if (value === "home") return "home";
+  return "foundation";
 }
 
-const screenTitles: Record<LabScreen, string> = {
+const screenTitles: Record<AppScreen, string> = {
+  foundation: "PeacePad",
   home: "PeacePad Premium",
   onboarding: "Goal Setup",
   binder: "Case Binder",
@@ -76,7 +82,7 @@ export function PeacePadLabApp({ startScreen }: { startScreen?: string }) {
           headerTitleStyle: styles.headerTitle
         }}
       >
-        {(Object.keys(screenTitles) as LabScreen[]).map((routeName) => (
+        {(Object.keys(screenTitles) as AppScreen[]).map((routeName) => (
           <Stack.Screen key={routeName} name={routeName} options={{ title: screenTitles[routeName] }}>
             {() => <LabRoute activeScreen={routeName} {...sharedProps} />}
           </Stack.Screen>
@@ -101,7 +107,7 @@ function LabRoute({
   setDraft,
   setSelectedGoal
 }: SharedScreenProps & {
-  activeScreen: LabScreen;
+  activeScreen: AppScreen;
   selectedGoal: ReturnType<typeof useLabState>["selectedGoal"];
   setSelectedGoal: ReturnType<typeof useLabState>["selectGoal"];
 }) {
@@ -119,7 +125,11 @@ function LabRoute({
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container}>
-        <ScreenTabs active={activeScreen} onSelect={setScreen} />
+        {activeScreen === "foundation" ? (
+          <FoundationScreen onOpenLab={() => setScreen("home")} />
+        ) : (
+          <ScreenTabs active={activeScreen} onSelect={setScreen} />
+        )}
         {activeScreen === "home" ? <HomeScreen {...screenProps} /> : null}
         {activeScreen === "onboarding" ? <OnboardingScreen {...screenProps} /> : null}
         {activeScreen === "binder" ? <BinderScreen {...screenProps} /> : null}

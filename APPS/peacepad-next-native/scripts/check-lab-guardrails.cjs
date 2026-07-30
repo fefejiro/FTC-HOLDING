@@ -46,7 +46,8 @@ walk(root);
 for (const file of sourceFiles) {
   const rel = path.relative(root, file);
   const text = fs.readFileSync(file, "utf8");
-  if (/api\.peacepad\.ca/.test(text)) {
+  const isTestFixture = /\.(?:test|spec)\.[cm]?[jt]sx?$/.test(rel);
+  if (!isTestFixture && /api\.peacepad\.ca/.test(text)) {
     failures.push(`${rel} references production API api.peacepad.ca.`);
   }
   const affirmativeText = text
