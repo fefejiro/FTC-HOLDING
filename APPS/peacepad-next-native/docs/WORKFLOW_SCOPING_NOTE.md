@@ -1,8 +1,12 @@
-# PR #148 Workflow-Scoping Note
+# PeacePad Native Workflow-Scoping Note
 
-Date: 2026-07-25  
-PR: https://github.com/fefejiro/FTC-HOLDING/pull/148  
-Run: https://github.com/fefejiro/FTC-HOLDING/actions/runs/30159056119
+First recorded: 2026-07-25
+Updated: 2026-07-29
+
+Affected pull requests:
+
+- PR #148: https://github.com/fefejiro/FTC-HOLDING/pull/148
+- PR #160: https://github.com/fefejiro/FTC-HOLDING/pull/160
 
 ## Finding
 
@@ -15,6 +19,18 @@ The PR updates that lockfile only to add PeacePad Next Native test dependencies.
 - Credentialed portal role QA.
 
 All three jobs ended before executing any steps. No Garden failure can be attributed to the PeacePad lab diff.
+
+PR #160 reproduced the same broad trigger after the required root lockfile
+update for `expo-secure-store`. GitHub run
+https://github.com/fefejiro/FTC-HOLDING/actions/runs/30506650313 created the
+same three Garden jobs. Each job contains zero steps and the GitHub check-run
+annotation states:
+
+> The job was not started because your account is locked due to a billing issue.
+
+This is an account/runner availability blocker, not a Garden or PeacePad test
+failure. Local native verification remains the evidence for PR #160 until the
+account can run Actions again.
 
 ## Scope boundary
 
@@ -29,7 +45,11 @@ A future infrastructure-only change should decide whether root lockfile changes 
 
 ## Cloudflare Workers build failure
 
-Cloudflare also attempted to build its `peacepad` project for this lab-only PR. Local reproduction confirmed that the build stopped during the clean dependency install because the PR branch's root `package-lock.json` did not match the current workspace manifests. The lockfile contained stale package versions and omitted required packages.
+Cloudflare also attempted to build its `peacepad` project for these lab-only
+PRs. For PR #148, local reproduction confirmed that the build stopped during
+the clean dependency install because the PR branch's root `package-lock.json`
+did not match the current workspace manifests. The lockfile contained stale
+package versions and omitted required packages.
 
 The lockfile was regenerated from the current manifests and verified from a clean dependency state:
 
@@ -40,5 +60,11 @@ The lockfile was regenerated from the current manifests and verified from a clea
 - Expo public configuration still reports `ca.peacepad.nextnative.lab` with production writes disabled.
 
 No Garden source, submitted PeacePad source, production API, or Cloudflare deployment configuration was changed.
+
+PR #160 again received an external `Workers Builds: peacepad` failure. GitHub
+does not expose the provider log, and this lab PR is not authorized to mutate
+or deploy the production Cloudflare project. The PR therefore records the
+external check separately from the passing local typecheck, guardrails, Jest,
+coverage, Expo config, and standalone Expo Doctor evidence.
 
 This PR should not trigger a production PeacePad deployment. Cloudflare's Git integration currently appears to watch the monorepo too broadly. Follow-up infrastructure work should configure the production project's build watch paths and root directory so `APPS/peacepad-next-native/**` and other unrelated lab-only changes are ignored. Reference: [Cloudflare Build watch paths](https://developers.cloudflare.com/workers/ci-cd/builds/build-watch-paths/).
