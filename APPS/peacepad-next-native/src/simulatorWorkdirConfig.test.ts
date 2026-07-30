@@ -1,9 +1,15 @@
 const {
   requiredStandaloneDependencies,
   standaloneInstallArgs,
+  standaloneMetroPolicy,
 } = require("../scripts/simulator-workdir-config.cjs") as {
   requiredStandaloneDependencies: readonly string[];
   standaloneInstallArgs: readonly string[];
+  standaloneMetroPolicy: {
+    readonly disableHierarchicalLookup: boolean;
+    readonly nodeModulesDirectory: string;
+    readonly watchFolders: readonly string[];
+  };
 };
 
 describe("standalone iOS simulator workdir", () => {
@@ -16,5 +22,13 @@ describe("standalone iOS simulator workdir", () => {
 
   it("fails preparation when Expo's native module runtime is absent", () => {
     expect(requiredStandaloneDependencies).toContain("expo-modules-core");
+  });
+
+  it("pins Metro resolution to the standalone dependency tree", () => {
+    expect(standaloneMetroPolicy).toEqual({
+      disableHierarchicalLookup: true,
+      nodeModulesDirectory: "node_modules",
+      watchFolders: [],
+    });
   });
 });

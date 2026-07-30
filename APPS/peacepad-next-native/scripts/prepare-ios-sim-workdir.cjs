@@ -20,7 +20,8 @@ const copyEntries = [
   "README.md",
   "src",
   "docs",
-  "scripts/check-lab-guardrails.cjs"
+  "scripts/check-lab-guardrails.cjs",
+  "scripts/simulator-workdir-config.cjs"
 ];
 
 function rmrf(target) {
@@ -76,6 +77,10 @@ function readGit(args) {
 rmrf(simRoot);
 fs.mkdirSync(simRoot, { recursive: true });
 for (const entry of copyEntries) copyOne(entry);
+fs.copyFileSync(
+  path.join(root, "scripts", "metro.standalone.config.cjs"),
+  path.join(simRoot, "metro.config.js"),
+);
 
 const packagePath = path.join(simRoot, "package.json");
 const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf8"));
