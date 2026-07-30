@@ -3,6 +3,7 @@ const path = require("path");
 const cp = require("child_process");
 
 const root = path.resolve(__dirname, "..");
+const repositoryRoot = path.resolve(root, "..", "..");
 const simRoot = path.join(root, ".sim", "peacepad-next-native-ios");
 const args = new Set(process.argv.slice(2));
 
@@ -40,6 +41,18 @@ function run(command, options = {}) {
   });
 }
 
+function readGit(args) {
+  try {
+    return cp.execFileSync("git", args, {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return "unknown";
+  }
+}
+
 rmrf(simRoot);
 fs.mkdirSync(simRoot, { recursive: true });
 for (const entry of copyEntries) copyOne(entry);
@@ -54,7 +67,26 @@ packageJson.scripts = {
 };
 fs.writeFileSync(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`);
 
+const appJson = JSON.parse(
+  fs.readFileSync(path.join(simRoot, "app.json"), "utf8"),
+);
+const proofContext = {
+  generatedAt: new Date().toISOString(),
+  sourceCommit: readGit(["rev-parse", "HEAD"]),
+  sourceDirty: readGit(["status", "--porcelain"]) !== "",
+  iosBundleIdentifier: appJson.expo?.ios?.bundleIdentifier ?? "unknown",
+  productionApiWritesEnabled:
+    appJson.expo?.extra?.productionApiWritesEnabled ?? "unknown",
+};
+fs.writeFileSync(
+  path.join(simRoot, "SIMULATOR_PROOF_CONTEXT.json"),
+  `${JSON.stringify(proofContext, null, 2)}\n`,
+);
+
 console.log(`Prepared standalone simulator workdir: ${simRoot}`);
+console.log(
+  `Proof context: ${proofContext.sourceCommit} (dirty: ${proofContext.sourceDirty})`,
+);
 
 if (args.has("--install")) {
   run({ cmd: "npm", args: ["install"] });

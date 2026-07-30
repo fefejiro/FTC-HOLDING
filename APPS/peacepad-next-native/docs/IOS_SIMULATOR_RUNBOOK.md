@@ -1,6 +1,6 @@
 # PeacePad Next Native iOS Simulator Runbook
 
-Last updated: 2026-07-24
+Last updated: 2026-07-29
 
 ## Why this exists
 
@@ -29,12 +29,34 @@ The simulator workdir also receives `metro.config.js`, which disables Watchman f
 
 ## On MacInCloud
 
-Copy or pull the repo, then run:
+Copy or pull the repository, check out the PR #160 head branch, and confirm the
+working tree is clean:
 
 ```bash
-cd "/path/to/FTC HOLDING"
+cd ~/Desktop/FTC-HOLDING
+git fetch origin
+git switch feat/peacepad-native-production-foundation
+git pull --ff-only
+git status --short
+git rev-parse HEAD
+```
+
+Compare the commit with the current PR #160 head. Do not continue if the
+working tree is dirty or the commit differs.
+
+Then run:
+
+```bash
 npm --workspace=@ftc/peacepad-next-native run sim:doctor
 ```
+
+The generated workspace contains `SIMULATOR_PROOF_CONTEXT.json`. Before
+capturing evidence, confirm:
+
+- `sourceCommit` equals the PR #160 head;
+- `sourceDirty` is `false`;
+- `iosBundleIdentifier` is `ca.peacepad.nextnative.lab`;
+- `productionApiWritesEnabled` is `false`.
 
 If doctor passes, run:
 
@@ -62,10 +84,36 @@ open -a Simulator
 xcrun simctl openurl booted exp://127.0.0.1:8081
 ```
 
-Pass signal:
+## Gate 1 proof journey
 
-- Premium dashboard renders in the iPhone simulator.
-- Vault tab opens and shows the Evidence Vault metadata form.
+Use synthetic text only. Complete this once:
+
+1. Launch from a fresh lab installation and capture the branded Welcome screen.
+2. Confirm opening Welcome creates no guest session.
+3. Acknowledge Terms and Privacy while leaving optional AI processing off.
+4. Start the staging guest session and capture the active-session state.
+5. Enter a synthetic co-parenting message and generate the rule-based Calm
+   Compose preview.
+6. Force-quit and relaunch the app; confirm the guest session recovers from
+   SecureStore.
+7. Open the Existing account shell and confirm it clearly remains staging-only
+   and performs no write.
+
+Capture:
+
+- Welcome and conch branding.
+- Required consent with AI off.
+- Guest session active.
+- Calm Compose preview.
+- Recovered session after restart.
+- Existing-account staging shell.
+
+For every image, retain the corresponding
+`SIMULATOR_PROOF_CONTEXT.json` beside the screenshot set.
+
+Pass only when all seven steps are observed on the same commit. If input is
+misrouted or the Simulator becomes unreliable, make one retry and then record
+the affected steps as `BLOCKED`.
 
 ## If Simulator does not open
 

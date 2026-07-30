@@ -56,6 +56,7 @@ Status vocabulary:
 | Production dependency audit | BLOCKED | 19 high / 8 moderate transitive Expo/RN advisories; fixes require breaking SDK upgrade |
 | Expo public config | AUTOMATED VERIFIED | SDK 54; lab bundle; writes false |
 | Standalone Expo Doctor | AUTOMATED VERIFIED | 18/18 |
+| Simulator proof-context manifest | AUTOMATED VERIFIED | `sim:prepare` records commit, dirty state, bundle ID, and write boundary |
 | Direct monorepo Expo Doctor | BLOCKED | Root React 18 duplicates isolated lab React 19 |
 
 ## Current simulator proof

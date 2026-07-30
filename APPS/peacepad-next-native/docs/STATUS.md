@@ -45,6 +45,7 @@ No production API, database, real document, App Store record, production bundle 
 | Export evidence/timeline selection | AUTOMATED VERIFIED | Selected counts reach 1 evidence and 1 timeline |
 | Active-session state persistence | AUTOMATED VERIFIED | Edited evidence survives Detail -> Vault navigation |
 | Production write capability | AUTOMATED VERIFIED | Config test plus guardrail enforce `false` |
+| Simulator proof context | AUTOMATED VERIFIED | Generated manifest pins commit, dirty state, bundle ID, and write boundary |
 | GitHub Actions execution | BLOCKED | PR #160 Garden jobs ran zero steps; GitHub reports an account billing lock |
 | Cloudflare branch check | BLOCKED | External PeacePad Worker check failed; no provider log or deploy action authorized |
 | iOS simulator vertical-slice smoke | BLOCKED | No controllable Mac simulator session in this run; no new screenshots claimed |
