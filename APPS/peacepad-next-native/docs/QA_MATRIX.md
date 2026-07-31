@@ -1,6 +1,6 @@
 # PeacePad Next Native QA Matrix
 
-Last updated: 2026-07-30
+Last updated: 2026-07-31
 
 Status vocabulary:
 
@@ -64,12 +64,12 @@ Status vocabulary:
 
 | Screen | Status | Current evidence |
 | --- | --- | --- |
-| Goal Setup | NOT STARTED | Not exercised in the 2026-07-30 Gate 1 pass |
-| Case Binder | NOT STARTED | Not exercised in the 2026-07-30 Gate 1 pass |
-| Evidence Metadata | NOT STARTED | Not exercised in the 2026-07-30 Gate 1 pass |
-| Evidence Detail | NOT STARTED | Not exercised in the 2026-07-30 Gate 1 pass |
-| Timeline | NOT STARTED | Not exercised in the 2026-07-30 Gate 1 pass |
-| Export Preview | NOT STARTED | Not exercised in the 2026-07-30 Gate 1 pass |
+| Goal Setup | SIMULATOR VERIFIED | [`01-goal-setup.png`](./evidence/premium-vertical-slice-2026-07-31/01-goal-setup.png) |
+| Case Binder | SIMULATOR VERIFIED | [`02-case-binder.png`](./evidence/premium-vertical-slice-2026-07-31/02-case-binder.png) |
+| Evidence Metadata | SIMULATOR VERIFIED | [`03-evidence-metadata.png`](./evidence/premium-vertical-slice-2026-07-31/03-evidence-metadata.png) |
+| Evidence Detail | SIMULATOR VERIFIED | [`04-evidence-detail.png`](./evidence/premium-vertical-slice-2026-07-31/04-evidence-detail.png) |
+| Timeline | SIMULATOR VERIFIED | [`05-timeline.png`](./evidence/premium-vertical-slice-2026-07-31/05-timeline.png) |
+| Export Preview | SIMULATOR VERIFIED | [`06-export-preview.png`](./evidence/premium-vertical-slice-2026-07-31/06-export-preview.png) |
 
 The July 24 screenshots are historical visual evidence for the earlier mock. They are not evidence for this stateful batch.
 
@@ -98,11 +98,26 @@ The July 24 screenshots are historical visual evidence for the earlier mock. The
 - Proof context: [`SIMULATOR_PROOF_CONTEXT.json`](./evidence/gate1-2026-07-30/SIMULATOR_PROOF_CONTEXT.json).
 - All values remained synthetic. No production API, App Store, real family, court, or child data was used.
 
+### 2026-07-31 Premium vertical-slice controlled pass
+
+- Tested source commit: `86adf4cb5056758ea64395391b11d03892c0cf2d`.
+- Device: iPhone 17 simulator, iOS 26.5.
+- Result: `SIMULATOR VERIFIED`.
+- Goal Setup: [`01-goal-setup.png`](./evidence/premium-vertical-slice-2026-07-31/01-goal-setup.png).
+- Case Binder: [`02-case-binder.png`](./evidence/premium-vertical-slice-2026-07-31/02-case-binder.png).
+- Evidence Metadata: [`03-evidence-metadata.png`](./evidence/premium-vertical-slice-2026-07-31/03-evidence-metadata.png).
+- Evidence Detail: [`04-evidence-detail.png`](./evidence/premium-vertical-slice-2026-07-31/04-evidence-detail.png).
+- Source-linked Timeline: [`05-timeline.png`](./evidence/premium-vertical-slice-2026-07-31/05-timeline.png).
+- Export Preview with 1 evidence and 1 timeline item selected: [`06-export-preview.png`](./evidence/premium-vertical-slice-2026-07-31/06-export-preview.png).
+- Proof context: [`SIMULATOR_PROOF_CONTEXT.json`](./evidence/premium-vertical-slice-2026-07-31/SIMULATOR_PROOF_CONTEXT.json).
+- All values remained synthetic. Production API writes remained disabled, bundle ID remained `ca.peacepad.nextnative.lab`, and the submitted Capacitor app was untouched.
+- Visual defects: long Binder/Evidence forms require several swipes; standalone Expo host chrome shows a `Safari` return indicator. No functional blocker was found.
+
 ## Remaining architecture evidence
 
 | Area | Status |
 | --- | --- |
-| One controlled iPhone simulator Premium vertical-slice pass | NOT STARTED |
+| One controlled iPhone simulator Premium vertical-slice pass | SIMULATOR VERIFIED |
 | Small/large iPhone layout | NOT STARTED |
 | iPad layout | NOT STARTED |
 | Dark mode and large text | NOT STARTED |
@@ -136,3 +151,4 @@ The July 24 screenshots are historical visual evidence for the earlier mock. The
 | Restart -> secure session refresh | SIMULATOR VERIFIED | `06-session-recovered.png` plus RNTL and SecureStore tests |
 | iOS Simulator on tested source commit | SIMULATOR VERIFIED | iPhone 17 / iOS 26.5; proof context pins clean `e6c7a552` source |
 | Real iPhone against staging | NOT STARTED | No production API use permitted |
+

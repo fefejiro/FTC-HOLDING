@@ -1,6 +1,6 @@
 # PeacePad Next Native Status
 
-Last updated: 2026-07-30
+Last updated: 2026-07-31
 
 ## Scope
 
@@ -50,7 +50,7 @@ No production API, database, real document, App Store record, production bundle 
 | Gate 1 iOS simulator journey | SIMULATOR VERIFIED | iPhone 17 / iOS 26.5 evidence captured from clean commit `e6c7a5525f232d546d505e14140b21764cdd3f41` |
 | GitHub Actions execution | BLOCKED | PR #160 Garden jobs ran zero steps; GitHub reports an account billing lock |
 | Cloudflare branch check | BLOCKED | External PeacePad Worker check failed; no provider log or deploy action authorized |
-| Premium six-screen simulator vertical slice | NOT STARTED | Goal -> Binder -> Evidence -> Detail -> Timeline -> Export was not part of the Gate 1 pass |
+| Premium six-screen simulator vertical slice | SIMULATOR VERIFIED | One controlled iPhone 17 / iOS 26.5 pass completed from clean source `86adf4cb5056758ea64395391b11d03892c0cf2d` |
 
 ## Verification results
 
@@ -118,16 +118,33 @@ Current simulator-native evidence:
 - [`06-session-recovered.png`](./evidence/gate1-2026-07-30/06-session-recovered.png)
 - [`SIMULATOR_PROOF_CONTEXT.json`](./evidence/gate1-2026-07-30/SIMULATOR_PROOF_CONTEXT.json)
 
-The separate Premium product vertical-slice simulator proof remains:
+### 2026-07-31 Premium vertical-slice controlled pass
 
-- Goal Setup.
-- Case Binder.
-- Evidence Metadata.
-- Evidence Detail.
-- Timeline.
-- Export Preview.
+- Tested source commit: `86adf4cb5056758ea64395391b11d03892c0cf2d`.
+- Device: iPhone 17 simulator, iOS 26.5.
+- Proof context: clean source, bundle `ca.peacepad.nextnative.lab`, production API writes disabled.
+- Selected the synthetic `Organize my records` goal.
+- Validated the synthetic `Parenting contact record` binder.
+- Validated one synthetic evidence record and confirmed that its saved values appeared in Evidence Detail.
+- Confirmed the review state, which generated a source-linked Timeline entry.
+- Selected both the evidence item and generated timeline item in Export Preview.
+- Result: `SIMULATOR VERIFIED`.
 
-Stop after one controlled simulator pass. If remote input is unreliable, record the blockage once and do not repeatedly retry.
+Current simulator-native evidence:
+
+- [`01-goal-setup.png`](./evidence/premium-vertical-slice-2026-07-31/01-goal-setup.png)
+- [`02-case-binder.png`](./evidence/premium-vertical-slice-2026-07-31/02-case-binder.png)
+- [`03-evidence-metadata.png`](./evidence/premium-vertical-slice-2026-07-31/03-evidence-metadata.png)
+- [`04-evidence-detail.png`](./evidence/premium-vertical-slice-2026-07-31/04-evidence-detail.png)
+- [`05-timeline.png`](./evidence/premium-vertical-slice-2026-07-31/05-timeline.png)
+- [`06-export-preview.png`](./evidence/premium-vertical-slice-2026-07-31/06-export-preview.png)
+- [`SIMULATOR_PROOF_CONTEXT.json`](./evidence/premium-vertical-slice-2026-07-31/SIMULATOR_PROOF_CONTEXT.json)
+
+Observed defects:
+
+- Binder and Evidence Metadata remain long forms that require several vertical swipes on an iPhone-sized screen.
+- The standalone Expo lab shows a `Safari` return indicator in the simulator status area; this is host-context chrome, not production navigation.
+- No functional blocker was found in the selected synthetic journey.
 
 ## Known limitations
 
@@ -168,14 +185,15 @@ then assess:
 | --- | ---: |
 | Expanded repository audit and reuse map | 100% |
 | Product thesis and 24-30 month program design | 85% |
-| Synthetic Premium vertical slice | 60% |
+| Synthetic Premium vertical slice | 65% |
 | Gate 1 environment/API/session foundation | 70% |
 | Automated native verification | 75% |
 | Gate 1 simulator proof for tested commit | 100% |
-| Premium vertical-slice simulator proof on current code | 0% |
+| Premium vertical-slice simulator proof on current code | 100% |
 | Real-iPhone staging proof | 0% |
 | Production auth and account recovery | 5% |
 | Production evidence integrity and export | 5% |
 | Native calling transport | 0% |
 | Review-critical v1 parity | 10% |
-| Overall production-native v2 | 18-20% |
+| Overall production-native v2 | 20-22% |
+
