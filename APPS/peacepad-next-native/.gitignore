@@ -5,3 +5,4 @@ node_modules/
 ios/
 android/
 .sim/
+!staging/.env.server.example

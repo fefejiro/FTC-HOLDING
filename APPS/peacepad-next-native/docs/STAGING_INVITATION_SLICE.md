@@ -16,25 +16,39 @@ Implemented behavior:
 - proof of code resolution required before accept or decline;
 - expiry, revocation, reuse, region, and optimistic-version enforcement;
 - idempotent create and state transitions;
-- rate-limited resolution attempts; and
+- independently rate-limited creation and resolution attempts; and
 - hash-linked append-only audit events.
 
-## Deployment adapters still required
+## Durable staging adapters
 
-Before a staging deployment, replace `InMemoryInvitationStore` and the local
-rate-limit buckets with:
+The repository now includes:
 
-1. a region-bound durable invitation and participant-grant repository;
-2. transactional compare-and-swap writes for invitation state changes;
-3. a shared rate limiter suitable for multiple service instances;
-4. durable idempotency receipts and append-only audit storage;
-5. a server-only secret provider for the hashing pepper;
-6. trusted authentication middleware that constructs `StagingActor`; and
-7. family display-name lookup that applies the same authorization boundary.
+1. `PostgresInvitationStore`, with transaction rollback, advisory locks,
+   compare-and-swap updates, peppered idempotency hashes, durable grants, and
+   audit storage;
+2. `PostgresInvitationRateLimiter`, using atomic upserts and hashed subjects;
+3. `TrustedInvitationHttpBridge`, which constructs actors only through a
+   server authenticator and ignores user-supplied actor headers;
+4. `createStagingInvitationRuntime`, which wires those adapters, requires HTTPS
+   away from localhost, and rejects non-staging origins; and
+5. `staging/migrations/0001_invitation_slice.sql`, an isolated schema that has
+   no plaintext invitation-code or deep-link columns and revokes PUBLIC table
+   access.
 
 The client must never be allowed to submit or override a trusted actor. The
 route adapter receives that actor from server middleware rather than HTTP
 headers.
+
+## Deployment work still required
+
+- Provision an isolated PostgreSQL database and staging API service.
+- Apply the migration and grant a dedicated runtime role only the operations it
+  needs. The migration was not executed locally because `psql` is unavailable.
+- Bind a real database pool, staging session authenticator, and authorized
+  family-directory lookup.
+- Supply invitation and rate-limit peppers through the server secret store.
+- Add health/readiness endpoints, structured redacted logs, and live restore
+  verification.
 
 ## Promotion gate
 

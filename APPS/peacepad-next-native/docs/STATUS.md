@@ -29,15 +29,18 @@ approved Capacitor app, production data/API, App Store record, and
 | Current quiet-premium Simulator evidence | SIMULATOR VERIFIED | iPhone 17 / iOS 26.5; commit `02d19cf5`; fresh device-only screenshots |
 | Real-iPhone staging evidence | NOT STARTED | Requires deployed staging slice and controlled device session |
 | Staging `/api/v2` invitation handler core | AUTOMATED VERIFIED | Framework-neutral route/service tests; not deployed |
-| Persistent staging invitation infrastructure | NOT STARTED | Requires durable repository, shared rate limiter, secret injection, and trusted auth middleware |
+| Postgres staging repository and migration | AUTOMATED VERIFIED | Transaction/rollback/CAS adapter tests; migration prepared but not applied |
+| Shared staging rate limiter | AUTOMATED VERIFIED | Atomic Postgres upsert contract; not deployed |
+| Trusted staging session boundary | AUTOMATED VERIFIED | Bearer authenticator bridge ignores spoofed actor headers |
+| Persistent staging deployment | NOT STARTED | Requires isolated database/service provisioning and secret injection |
 
 ## Verification
 
 ```text
 guardrails       passed
 typecheck        passed
-Jest/RNTL        15 suites / 87 tests passed
-coverage         84.60 statements / 79.58 branches / 79.16 functions / 87.80 lines
+Jest/RNTL        18 suites / 105 tests passed
+coverage         84.87 statements / 79.43 branches / 78.84 functions / 87.90 lines
 Expo Doctor      18/18 passed
 Expo config      PeacePad; ca.peacepad.nextnative.lab; diagnostics/writes false
 iOS export       passed; 841 modules bundled
@@ -86,8 +89,17 @@ commit and are not relabelled as current evidence.
   idempotency/audit events, and infrastructure rate limits are not deployed.
 - The invitation handler core now verifies trusted actors, family permission,
   region/version headers, idempotency, peppered code hashes, expiry, single
-  use, resolution claims, local rate limits, and hash-linked audit events. Its
-  repository and limiter are intentionally memory-only test adapters.
+  use, resolution claims, local rate limits, and hash-linked audit events.
+  In-memory adapters remain available only for deterministic tests.
+- A Postgres-backed store, transactional unit-of-work boundary, shared
+  Postgres rate limiter, trusted-session bridge, staging-only runtime factory,
+  and isolated schema migration now exist. They are automated-verified but
+  have not been connected to a database or deployed service.
+- PostgreSQL CLI tooling was unavailable locally, so the migration received
+  static guardrail and adapter-contract verification but no live SQL execution.
+- Durable idempotency values and rate-limit subjects are peppered before
+  persistence; plaintext invitation codes, deep links, and raw limiter keys are
+  not represented by the staging schema.
 - The product adapter is memory-only; only the earlier guest session uses
   SecureStore.
 - Invitation acceptance and code/deep-link contracts exist. Device sharing and
@@ -107,15 +119,15 @@ commit and are not relabelled as current evidence.
 | Layered calendar product flow | 55% |
 | Per-chat Message Check | 70% |
 | Typed staging compatibility client | 75% |
-| Staging invitation server core | 35% |
+| Staging invitation server core | 60% |
 | Automated verification | 90% |
 | Current device verification | 70% |
-| Overall production-native v2 | 29% |
+| Overall production-native v2 | 32% |
 
 ## Next best move
 
-Connect the verified invitation core to a durable staging-only repository,
-shared rate limiter, injected server secret, and trusted session middleware.
-Then deploy that isolated slice and run one real-iPhone staging pass, including
-calendar layer sharing. Do not expand into calling, billing, or production
-migration before those gates pass.
+Provision a new isolated staging database and service, apply the prepared
+migration, grant a least-privilege runtime role, and inject staging-only secret
+material. Then run live API contract tests and one real-iPhone staging pass,
+including calendar layer sharing. Do not expand into calling, billing, or
+production migration before those gates pass.

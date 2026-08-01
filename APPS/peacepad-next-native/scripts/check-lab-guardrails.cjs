@@ -6,6 +6,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 
 const appJson = JSON.parse(read("app.json"));
 const packageJson = JSON.parse(read("package.json"));
+const stagingInvitationMigration = read("staging/migrations/0001_invitation_slice.sql");
 
 const iosBundle = appJson.expo?.ios?.bundleIdentifier;
 const androidPackage = appJson.expo?.android?.package;
@@ -39,6 +40,18 @@ if (extra.diagnosticsEnabled !== false) {
 
 if (!packageJson.private) {
   failures.push("package.json must remain private.");
+}
+
+if (!/\bcode_hash\s+text\s+not\s+null\s+unique\b/i.test(stagingInvitationMigration)) {
+  failures.push("Staging invitations must persist a unique code hash.");
+}
+
+if (/^\s*(code|deep_link)\s+(text|varchar)/im.test(stagingInvitationMigration)) {
+  failures.push("Staging invitations must not define plaintext code or deep-link columns.");
+}
+
+if (!/REVOKE ALL ON ALL TABLES IN SCHEMA peacepad_native_staging FROM PUBLIC/i.test(stagingInvitationMigration)) {
+  failures.push("Staging invitation tables must revoke default PUBLIC access.");
 }
 
 const sourceFiles = [];

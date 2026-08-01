@@ -24,6 +24,7 @@ export type StoredInvitation = Readonly<{
 }>;
 
 export interface InvitationStore {
+  transaction<T>(work: (store: InvitationStore) => Promise<T>): Promise<T>;
   findById(id: string): Promise<StoredInvitation | undefined>;
   findByCodeHash(codeHash: string): Promise<StoredInvitation | undefined>;
   save(record: StoredInvitation, expectedVersion: number | null): Promise<void>;
@@ -44,6 +45,10 @@ export type InvitationDirectory = Readonly<{
 
 export type Clock = Readonly<{ now(): Date }>;
 
+export interface InvitationRateLimiter {
+  enforce(scope: "create" | "resolve", subjectKey: string, limit: number, windowMs: number): Promise<boolean>;
+}
+
 export type InvitationServiceOptions = Readonly<{
   store: InvitationStore;
   digest: SecretDigest;
@@ -51,7 +56,9 @@ export type InvitationServiceOptions = Readonly<{
   clock?: Clock;
   pepper: string;
   maxResolveAttempts?: number;
+  maxCreateAttempts?: number;
   resolveWindowMs?: number;
+  rateLimiter?: InvitationRateLimiter;
 }>;
 
 export class InvitationServiceError extends Error {
@@ -103,8 +110,9 @@ const invitationFailure = (status: FamilyInvitation["status"]): InvitationFailur
 export class InvitationService {
   private readonly clock: Clock;
   private readonly maxResolveAttempts: number;
+  private readonly maxCreateAttempts: number;
   private readonly resolveWindowMs: number;
-  private readonly resolveBuckets = new Map<string, ResolveBucket>();
+  private readonly rateLimiter: InvitationRateLimiter;
   private readonly resolvedInvitationClaims = new Map<string, Set<string>>();
 
   constructor(private readonly options: InvitationServiceOptions) {
@@ -113,7 +121,9 @@ export class InvitationService {
     }
     this.clock = options.clock ?? { now: () => new Date() };
     this.maxResolveAttempts = options.maxResolveAttempts ?? 8;
+    this.maxCreateAttempts = options.maxCreateAttempts ?? 5;
     this.resolveWindowMs = options.resolveWindowMs ?? 60_000;
+    this.rateLimiter = options.rateLimiter ?? new InMemoryInvitationRateLimiter(this.clock);
   }
 
   async create(
@@ -122,6 +132,7 @@ export class InvitationService {
     actor: StagingActor
   ): Promise<CreatedInvitation> {
     this.assertContextActor(context, actor);
+    await this.enforceRateLimit("create", actor.identityId, this.maxCreateAttempts);
     if (!input || typeof input.familyCircleId !== "string" || !input.familyCircleId.trim()) {
       throw new InvitationServiceError("INVALID_REQUEST", "A family is required.", 400);
     }
@@ -141,70 +152,72 @@ export class InvitationService {
       throw new InvitationServiceError("FORBIDDEN", "You cannot invite participants to this family.", 403);
     }
 
-    const operationKey = this.idempotencyKey("create", context);
-    const priorId = await this.options.store.findIdempotentResult(operationKey);
     const code = await this.deriveCode(input.familyCircleId, context);
-    if (priorId) {
-      const prior = await this.options.store.findById(priorId);
-      if (!prior) throw new Error("Idempotency record points to a missing invitation.");
-      return { invitation: prior.invitation, code, deepLink: `https://peacepad.ca/invite/${code}` };
-    }
+    return this.options.store.transaction(async (store) => {
+      const operationKey = this.idempotencyKey("create", context);
+      const priorId = await store.findIdempotentResult(operationKey);
+      if (priorId) {
+        const prior = await store.findById(priorId);
+        if (!prior) throw new Error("Idempotency record points to a missing invitation.");
+        return { invitation: prior.invitation, code, deepLink: `https://peacepad.ca/invite/${code}` };
+      }
 
-    const now = this.clock.now();
-    const id = `inv_${(await this.options.digest.digest(
-      `${this.options.pepper}:id:${context.region}:${actor.identityId}:${input.familyCircleId}:${context.idempotencyKey}`
-    )).slice(0, 20)}`;
-    const invitation: FamilyInvitation = {
-      id,
-      schemaVersion: PEACEPAD_V2_SCHEMA_VERSION,
-      version: 1,
-      region: context.region,
-      provenance: {
-        createdAt: now.toISOString(),
-        createdBy: context.actor,
-        source: "app"
-      },
-      familyCircleId: input.familyCircleId,
-      invitedRole: input.invitedRole,
-      permissions: [...new Set(input.permissions.map((permission) => permission.trim()))],
-      invitedByIdentityId: actor.identityId,
-      expiresAt: new Date(now.getTime() + input.expiresInHours * 3_600_000).toISOString(),
-      status: "pending",
-      acceptedParticipantGrantId: null
-    };
-    const codeHash = await this.hashCode(code);
-    await this.options.store.save(
-      { invitation, codeHash, inviterDisplayName: actor.displayName, familyDisplayName },
-      null
-    );
-    await this.options.store.saveIdempotentResult(operationKey, invitation.id);
-    await this.audit("invitation.created", invitation.id, context, { familyCircleId: input.familyCircleId });
-    return { invitation, code, deepLink: `https://peacepad.ca/invite/${code}` };
+      const now = this.clock.now();
+      const id = `inv_${(await this.options.digest.digest(
+        `${this.options.pepper}:id:${context.region}:${actor.identityId}:${input.familyCircleId}:${context.idempotencyKey}`
+      )).slice(0, 20)}`;
+      const invitation: FamilyInvitation = {
+        id,
+        schemaVersion: PEACEPAD_V2_SCHEMA_VERSION,
+        version: 1,
+        region: context.region,
+        provenance: {
+          createdAt: now.toISOString(),
+          createdBy: context.actor,
+          source: "app"
+        },
+        familyCircleId: input.familyCircleId,
+        invitedRole: input.invitedRole,
+        permissions: [...new Set(input.permissions.map((permission) => permission.trim()))],
+        invitedByIdentityId: actor.identityId,
+        expiresAt: new Date(now.getTime() + input.expiresInHours * 3_600_000).toISOString(),
+        status: "pending",
+        acceptedParticipantGrantId: null
+      };
+      const codeHash = await this.hashCode(code);
+      await store.save({ invitation, codeHash, inviterDisplayName: actor.displayName, familyDisplayName }, null);
+      await store.saveIdempotentResult(operationKey, invitation.id);
+      await this.audit("invitation.created", invitation.id, context, { familyCircleId: input.familyCircleId }, store);
+      return { invitation, code, deepLink: `https://peacepad.ca/invite/${code}` };
+    });
   }
 
   async resolve(codeInput: string, requesterKey: string): Promise<InvitationPreview> {
-    this.enforceResolveLimit(requesterKey);
+    await this.enforceRateLimit("resolve", requesterKey, this.maxResolveAttempts);
     const code = normalizeCode(codeInput);
     if (!/^[A-Z0-9]{6}$/.test(code)) {
       throw new InvitationServiceError("INVITATION_INVALID", "Enter a valid six-character invitation code.", 404);
     }
-    const record = await this.options.store.findByCodeHash(await this.hashCode(code));
-    if (!record) {
-      throw new InvitationServiceError("INVITATION_INVALID", "This invitation is not available.", 404);
-    }
-    const invitation = await this.expireIfNeeded(record);
-    this.assertInvitationAvailable(invitation);
-    const claims = this.resolvedInvitationClaims.get(requesterKey) ?? new Set<string>();
-    claims.add(invitation.id);
-    this.resolvedInvitationClaims.set(requesterKey, claims);
-    return {
-      invitationId: invitation.id,
-      inviterDisplayName: record.inviterDisplayName,
-      familyDisplayName: record.familyDisplayName,
-      invitedRole: invitation.invitedRole,
-      permissions: invitation.permissions,
-      expiresAt: invitation.expiresAt
-    };
+    const codeHash = await this.hashCode(code);
+    return this.options.store.transaction(async (store) => {
+      const record = await store.findByCodeHash(codeHash);
+      if (!record) {
+        throw new InvitationServiceError("INVITATION_INVALID", "This invitation is not available.", 404);
+      }
+      const invitation = await this.expireIfNeeded(record, store);
+      this.assertInvitationAvailable(invitation);
+      const claims = this.resolvedInvitationClaims.get(requesterKey) ?? new Set<string>();
+      claims.add(invitation.id);
+      this.resolvedInvitationClaims.set(requesterKey, claims);
+      return {
+        invitationId: invitation.id,
+        inviterDisplayName: record.inviterDisplayName,
+        familyDisplayName: record.familyDisplayName,
+        invitedRole: invitation.invitedRole,
+        permissions: invitation.permissions,
+        expiresAt: invitation.expiresAt
+      };
+    });
   }
 
   async accept(
@@ -214,34 +227,36 @@ export class InvitationService {
     requesterKey: string = actor.sessionId
   ): Promise<ParticipantGrant> {
     this.assertContextActor(context, actor);
-    const operationKey = this.idempotencyKey(`accept:${invitationId}`, context);
-    const priorGrantId = await this.options.store.findIdempotentResult(operationKey);
-    const record = await this.requireInvitation(invitationId);
-    if (priorGrantId && record.invitation.acceptedParticipantGrantId === priorGrantId) {
-      return this.grantFrom(record.invitation, actor, priorGrantId);
-    }
-    const invitation = await this.expireIfNeeded(record);
-    this.assertRegion(invitation.region, context.region);
-    this.assertVersion(invitation.version, context.expectedVersion);
-    this.assertInvitationAvailable(invitation);
-    this.assertResolvedClaim(requesterKey, invitationId);
-    if (invitation.invitedByIdentityId === actor.identityId) {
-      throw new InvitationServiceError("FORBIDDEN", "The sender cannot accept their own invitation.", 403);
-    }
+    return this.options.store.transaction(async (store) => {
+      const operationKey = this.idempotencyKey(`accept:${invitationId}`, context);
+      const priorGrantId = await store.findIdempotentResult(operationKey);
+      const record = await this.requireInvitation(invitationId, store);
+      if (priorGrantId && record.invitation.acceptedParticipantGrantId === priorGrantId) {
+        return this.grantFrom(record.invitation, actor, priorGrantId);
+      }
+      const invitation = await this.expireIfNeeded(record, store);
+      this.assertRegion(invitation.region, context.region);
+      this.assertVersion(invitation.version, context.expectedVersion);
+      this.assertInvitationAvailable(invitation);
+      this.assertResolvedClaim(requesterKey, invitationId);
+      if (invitation.invitedByIdentityId === actor.identityId) {
+        throw new InvitationServiceError("FORBIDDEN", "The sender cannot accept their own invitation.", 403);
+      }
 
-    const grantId = `grant_${(await this.options.digest.digest(`${invitation.id}:${actor.identityId}`)).slice(0, 20)}`;
-    const grant = this.grantFrom(invitation, actor, grantId);
-    const accepted: FamilyInvitation = {
-      ...invitation,
-      version: invitation.version + 1,
-      status: "accepted",
-      acceptedParticipantGrantId: grant.id
-    };
-    await this.options.store.save({ ...record, invitation: accepted }, invitation.version);
-    await this.options.store.saveGrant(grant);
-    await this.options.store.saveIdempotentResult(operationKey, grant.id);
-    await this.audit("invitation.accepted", invitation.id, context, { participantGrantId: grant.id });
-    return grant;
+      const grantId = `grant_${(await this.options.digest.digest(`${invitation.id}:${actor.identityId}`)).slice(0, 20)}`;
+      const grant = this.grantFrom(invitation, actor, grantId);
+      const accepted: FamilyInvitation = {
+        ...invitation,
+        version: invitation.version + 1,
+        status: "accepted",
+        acceptedParticipantGrantId: grant.id
+      };
+      await store.save({ ...record, invitation: accepted }, invitation.version);
+      await store.saveGrant(grant);
+      await store.saveIdempotentResult(operationKey, grant.id);
+      await this.audit("invitation.accepted", invitation.id, context, { participantGrantId: grant.id }, store);
+      return grant;
+    });
   }
 
   async decline(
@@ -266,22 +281,24 @@ export class InvitationService {
     requesterKey: string
   ) {
     this.assertContextActor(context, actor);
-    const operationKey = this.idempotencyKey(`${target}:${invitationId}`, context);
-    if (await this.options.store.findIdempotentResult(operationKey)) return;
-    const record = await this.requireInvitation(invitationId);
-    const invitation = await this.expireIfNeeded(record);
-    this.assertRegion(invitation.region, context.region);
-    this.assertVersion(invitation.version, context.expectedVersion);
-    this.assertInvitationAvailable(invitation);
-    if (requiresFamilyPermission) {
-      this.assertFamilyPermission(actor, invitation.familyCircleId, "invite");
-    } else {
-      this.assertResolvedClaim(requesterKey, invitationId);
-    }
-    const updated = { ...invitation, version: invitation.version + 1, status: target } as FamilyInvitation;
-    await this.options.store.save({ ...record, invitation: updated }, invitation.version);
-    await this.options.store.saveIdempotentResult(operationKey, invitation.id);
-    await this.audit(`invitation.${target}`, invitation.id, context, {});
+    await this.options.store.transaction(async (store) => {
+      const operationKey = this.idempotencyKey(`${target}:${invitationId}`, context);
+      if (await store.findIdempotentResult(operationKey)) return;
+      const record = await this.requireInvitation(invitationId, store);
+      const invitation = await this.expireIfNeeded(record, store);
+      this.assertRegion(invitation.region, context.region);
+      this.assertVersion(invitation.version, context.expectedVersion);
+      this.assertInvitationAvailable(invitation);
+      if (requiresFamilyPermission) {
+        this.assertFamilyPermission(actor, invitation.familyCircleId, "invite");
+      } else {
+        this.assertResolvedClaim(requesterKey, invitationId);
+      }
+      const updated = { ...invitation, version: invitation.version + 1, status: target } as FamilyInvitation;
+      await store.save({ ...record, invitation: updated }, invitation.version);
+      await store.saveIdempotentResult(operationKey, invitation.id);
+      await this.audit(`invitation.${target}`, invitation.id, context, {}, store);
+    });
   }
 
   private async deriveCode(familyCircleId: string, context: WriteContext) {
@@ -295,25 +312,25 @@ export class InvitationService {
     return this.options.digest.digest(`${this.options.pepper}:lookup:${normalizeCode(code)}`);
   }
 
-  private async expireIfNeeded(record: StoredInvitation): Promise<FamilyInvitation> {
+  private async expireIfNeeded(record: StoredInvitation, store: InvitationStore): Promise<FamilyInvitation> {
     const invitation = record.invitation;
     if (invitation.status !== "pending" || Date.parse(invitation.expiresAt) > this.clock.now().getTime()) {
       return invitation;
     }
     const expired = { ...invitation, version: invitation.version + 1, status: "expired" } as FamilyInvitation;
-    await this.options.store.save({ ...record, invitation: expired }, invitation.version);
+    await store.save({ ...record, invitation: expired }, invitation.version);
     await this.audit("invitation.expired", invitation.id, {
       idempotencyKey: `system-expire-${invitation.id}-${expired.version}`,
       expectedVersion: invitation.version,
       region: invitation.region,
       schemaVersion: PEACEPAD_V2_SCHEMA_VERSION,
       actor: SYSTEM_ACTOR
-    }, {});
+    }, {}, store);
     return expired;
   }
 
-  private async requireInvitation(invitationId: string) {
-    const record = await this.options.store.findById(invitationId);
+  private async requireInvitation(invitationId: string, store: InvitationStore) {
+    const record = await store.findById(invitationId);
     if (!record) throw new InvitationServiceError("INVITATION_INVALID", "This invitation is not available.", 404);
     return record;
   }
@@ -356,19 +373,12 @@ export class InvitationService {
     }
   }
 
-  private enforceResolveLimit(requesterKey: string) {
+  private async enforceRateLimit(scope: "create" | "resolve", requesterKey: string, limit: number) {
     const key = requesterKey.trim();
     if (!key) throw new InvitationServiceError("INVALID_REQUEST", "A request identifier is required.", 400);
-    const now = this.clock.now().getTime();
-    const bucket = this.resolveBuckets.get(key);
-    if (!bucket || now - bucket.startedAt >= this.resolveWindowMs) {
-      this.resolveBuckets.set(key, { startedAt: now, attempts: 1 });
-      return;
-    }
-    if (bucket.attempts >= this.maxResolveAttempts) {
+    if (!(await this.rateLimiter.enforce(scope, key, limit, this.resolveWindowMs))) {
       throw new InvitationServiceError("INVITATION_RATE_LIMITED", "Too many attempts. Try again later.", 429);
     }
-    bucket.attempts += 1;
   }
 
   private idempotencyKey(operation: string, context: WriteContext) {
@@ -393,8 +403,8 @@ export class InvitationService {
     };
   }
 
-  private async audit(action: string, targetId: string, context: WriteContext, payload: unknown) {
-    const previous = await this.options.store.latestAudit();
+  private async audit(action: string, targetId: string, context: WriteContext, payload: unknown, store: InvitationStore) {
+    const previous = await store.latestAudit();
     const occurredAt = this.clock.now().toISOString();
     const payloadHash = await this.options.digest.digest(JSON.stringify(payload));
     const sequence = (previous?.sequence ?? 0) + 1;
@@ -413,7 +423,7 @@ export class InvitationService {
         payloadHash
       })
     );
-    await this.options.store.appendAudit({
+    await store.appendAudit({
       id: `audit_${eventHash.slice(0, 20)}`,
       schemaVersion: PEACEPAD_V2_SCHEMA_VERSION,
       region: context.region,
@@ -430,11 +440,49 @@ export class InvitationService {
   }
 }
 
+export class InMemoryInvitationRateLimiter implements InvitationRateLimiter {
+  private readonly buckets = new Map<string, ResolveBucket>();
+
+  constructor(private readonly clock: Clock = { now: () => new Date() }) {}
+
+  async enforce(scope: "create" | "resolve", subjectKey: string, limit: number, windowMs: number) {
+    const key = `${scope}:${subjectKey}`;
+    const now = this.clock.now().getTime();
+    const bucket = this.buckets.get(key);
+    if (!bucket || now - bucket.startedAt >= windowMs) {
+      this.buckets.set(key, { startedAt: now, attempts: 1 });
+      return true;
+    }
+    if (bucket.attempts >= limit) return false;
+    bucket.attempts += 1;
+    return true;
+  }
+}
+
 export class InMemoryInvitationStore implements InvitationStore {
   readonly invitations = new Map<string, StoredInvitation>();
   readonly grants = new Map<string, ParticipantGrant>();
   readonly idempotency = new Map<string, string>();
   readonly auditEvents: AuditEvent[] = [];
+
+  async transaction<T>(work: (store: InvitationStore) => Promise<T>): Promise<T> {
+    const invitations = new Map(this.invitations);
+    const grants = new Map(this.grants);
+    const idempotency = new Map(this.idempotency);
+    const auditEvents = [...this.auditEvents];
+    try {
+      return await work(this);
+    } catch (error) {
+      this.invitations.clear();
+      invitations.forEach((value, key) => this.invitations.set(key, value));
+      this.grants.clear();
+      grants.forEach((value, key) => this.grants.set(key, value));
+      this.idempotency.clear();
+      idempotency.forEach((value, key) => this.idempotency.set(key, value));
+      this.auditEvents.splice(0, this.auditEvents.length, ...auditEvents);
+      throw error;
+    }
+  }
 
   async findById(id: string) { return this.invitations.get(id); }
   async findByCodeHash(codeHash: string) {

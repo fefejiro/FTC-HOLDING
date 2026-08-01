@@ -28,6 +28,12 @@ and `NOT STARTED`.
 | Expiry and single-use enforcement | AUTOMATED VERIFIED | staging service tests |
 | Resolve attempts rate-limited | AUTOMATED VERIFIED | staging service/route tests |
 | Hash-linked append-only audit sequence | AUTOMATED VERIFIED | staging audit-chain test |
+| Invitation/grant/idempotency/audit writes are atomic | AUTOMATED VERIFIED | transaction rollback test |
+| Postgres compare-and-swap persistence adapter | AUTOMATED VERIFIED | SQL contract tests |
+| Shared rate-limit keys are hashed before persistence | AUTOMATED VERIFIED | Postgres limiter test |
+| Trusted bearer session ignores actor spoofing headers | AUTOMATED VERIFIED | HTTP bridge test |
+| Runtime rejects non-staging service origins | AUTOMATED VERIFIED | runtime factory tests |
+| SQL schema excludes plaintext code/deep-link columns | AUTOMATED VERIFIED | migration guardrail |
 | Layers private by default | AUTOMATED VERIFIED | adapter/UI tests |
 | Cross-family reads/writes blocked | AUTOMATED VERIFIED | authorization tests |
 | Layers identified by name/state, not colour alone | AUTOMATED VERIFIED | labels and accessibility state |
@@ -46,8 +52,8 @@ and `NOT STARTED`.
 | --- | --- | --- |
 | TypeScript | AUTOMATED VERIFIED | passed |
 | Guardrails | AUTOMATED VERIFIED | passed |
-| Jest/RNTL | AUTOMATED VERIFIED | 15 suites / 87 tests |
-| Coverage | AUTOMATED VERIFIED | 84.60 / 79.58 / 79.16 / 87.80 |
+| Jest/RNTL | AUTOMATED VERIFIED | 18 suites / 105 tests |
+| Coverage | AUTOMATED VERIFIED | 84.87 / 79.43 / 78.84 / 87.90 |
 | Expo config | AUTOMATED VERIFIED | lab bundle; diagnostics/writes false |
 | Expo Doctor | AUTOMATED VERIFIED | 18/18 |
 | iOS export | AUTOMATED VERIFIED | 841 modules |
@@ -86,11 +92,11 @@ The historical records screenshots in
 
 ## Remaining promotion gates
 
-- Replace the in-memory invitation repository and limiter with durable,
-  concurrency-safe staging infrastructure.
-- Bind route actors to trusted session middleware and inject the server-only
-  hash pepper from staging secrets.
-- Deploy the staging invitation slice and verify its authorization/audit proof.
+- Provision an isolated staging Postgres instance and service runtime.
+- Apply `staging/migrations/0001_invitation_slice.sql` and grant a dedicated,
+  least-privilege runtime role.
+- Inject server-only peppers and connect a real staging session authenticator.
+- Run live concurrency, rollback, rate-limit, and audit-restoration tests.
 - Add tested device sharing and scannable QR behavior.
 - Verify calendar layer sharing on Simulator or real iPhone.
 - Run one real-iPhone staging pass with fictional accounts.

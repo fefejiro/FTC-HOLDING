@@ -47,7 +47,7 @@ const input = {
   expiresInHours: 24
 };
 
-function setup(options: { maxResolveAttempts?: number; now?: Date } = {}) {
+function setup(options: { maxResolveAttempts?: number; maxCreateAttempts?: number; now?: Date } = {}) {
   let now = options.now ?? new Date("2026-08-01T12:00:00.000Z");
   const clock: Clock = { now: () => now };
   const store = new InMemoryInvitationStore();
@@ -57,7 +57,8 @@ function setup(options: { maxResolveAttempts?: number; now?: Date } = {}) {
     digest: new TestDigest(),
     directory: { familyName: async (id) => id === "family-1" ? "Morgan family" : undefined },
     pepper: "staging-secret-pepper-only",
-    maxResolveAttempts: options.maxResolveAttempts ?? 8
+    maxResolveAttempts: options.maxResolveAttempts ?? 8,
+    maxCreateAttempts: options.maxCreateAttempts ?? 5
   });
   return { service, store, advance: (milliseconds: number) => { now = new Date(now.getTime() + milliseconds); } };
 }
@@ -174,6 +175,16 @@ describe("InvitationService", () => {
     });
   });
 
+  it("rate-limits authenticated invitation creation independently", async () => {
+    const { service } = setup({ maxCreateAttempts: 2 });
+    await expect(service.create(input, context(owner, "create-rate-1"), owner)).resolves.toBeDefined();
+    await expect(service.create(input, context(owner, "create-rate-2"), owner)).resolves.toBeDefined();
+    await expect(service.create(input, context(owner, "create-rate-3"), owner)).rejects.toMatchObject({
+      code: "INVITATION_RATE_LIMITED",
+      status: 429
+    });
+  });
+
   it("supports explicit decline and authorized revocation with idempotent audit writes", async () => {
     const declined = setup();
     const first = await declined.service.create(input, context(owner, "decline-create"), owner);
@@ -207,5 +218,15 @@ describe("InvitationService", () => {
       eventHash: "hash",
       payloadHash: "payload"
     })).rejects.toThrow("Append-only audit chain violation");
+  });
+
+  it("rolls back every invitation write when the audit append fails", async () => {
+    const { service, store } = setup();
+    jest.spyOn(store, "appendAudit").mockRejectedValueOnce(new Error("audit unavailable"));
+
+    await expect(service.create(input, context(owner, "rollback"), owner)).rejects.toThrow("audit unavailable");
+    expect(store.invitations.size).toBe(0);
+    expect(store.idempotency.size).toBe(0);
+    expect(store.auditEvents).toHaveLength(0);
   });
 });
