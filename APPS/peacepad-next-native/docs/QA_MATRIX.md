@@ -57,6 +57,7 @@ and `NOT STARTED`.
 | Coverage | AUTOMATED VERIFIED | 85.29 / 79.85 / 80.05 / 88.42 |
 | Expo config | AUTOMATED VERIFIED | lab bundle; diagnostics/writes false |
 | Expo Doctor | BLOCKED | 17/18; app React 19 and monorepo-root React 18 duplicate |
+| Expo Doctor (standalone native install) | AUTOMATED VERIFIED | 18/18 with a clean temporary npm install outside the monorepo |
 | iOS export | AUTOMATED VERIFIED | 846 modules |
 | Local staging host health | AUTOMATED VERIFIED | `/health` 200 |
 | Readiness without database | AUTOMATED VERIFIED | `/readyz` fails closed with 500 |
@@ -97,8 +98,9 @@ The historical records screenshots in
 ## Remaining promotion gates
 
 - Provision an isolated staging Postgres instance and service runtime.
-- Resolve the duplicate-React Expo Doctor finding without modifying unrelated
-  applications, and plan safe Expo/React Native dependency remediation.
+- Run Expo Doctor from a clean standalone native install in CI; the native
+  dependency graph itself passes 18/18. Keep the shared web dependency tree
+  unchanged and triage the inherited advisories separately.
 - Apply `staging/migrations/0001_invitation_slice.sql` and grant a dedicated,
   least-privilege runtime role.
 - Inject server-only peppers and connect a real staging session authenticator.

@@ -60,11 +60,13 @@ database, migration, or production credential was created or changed.
 ## Dependency gate
 
 TypeScript, guardrails, all 117 tests, Expo config, and an iOS production export
-pass. Expo Doctor is 17/18 because the monorepo currently exposes React 19 in
-the native workspace and React 18 at its root. The production-dependency audit
-also reports 25 inherited Expo/React Native advisories. Do not use
-`npm audit fix --force`; resolve both items through a reviewed native dependency
-isolation/upgrade plan before deployment promotion.
+pass. The shared monorepo Expo Doctor run is 17/18 because web workspaces expose
+React 18 above the native workspace's React 19; a clean standalone native npm
+install passes 18/18. Use the standalone install strategy in CI rather than
+changing unrelated web dependencies. The production-dependency audit also
+reports 25 inherited Expo/React Native advisories. Do not use `npm audit
+fix --force`; triage those advisories through a reviewed upgrade plan before
+deployment promotion.
 
 ## Promotion gate
 

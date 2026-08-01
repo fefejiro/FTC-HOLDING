@@ -42,7 +42,7 @@ guardrails       passed
 typecheck        passed
 Jest/RNTL        20 suites / 117 tests passed
 coverage         85.29 statements / 79.85 branches / 80.05 functions / 88.42 lines
-Expo Doctor      BLOCKED: 17/18; duplicate React 19 app / React 18 monorepo root
+Expo Doctor      17/18 in monorepo; isolated native install 18/18
 Expo config      PeacePad; ca.peacepad.nextnative.lab; diagnostics/writes false
 iOS export       passed; 846 modules bundled
 diff check       passed
@@ -117,9 +117,11 @@ commit and are not relabelled as current evidence.
 - Message Check is rule-based and does not call third-party AI.
 - Calendar layer-sharing Simulator proof and all real-iPhone staging evidence
   remain required.
-- Expo Doctor is blocked by two React versions in the wider monorepo dependency
-  layout. The app typecheck, tests, config, and iOS production export pass; this
-  dependency-layout issue must be resolved without changing unrelated apps.
+- The shared monorepo Expo Doctor run is 17/18 because web workspaces expose
+  React 18 above the native workspace's React 19. A clean standalone install of
+  the native manifest passed Expo Doctor 18/18, confirming the native app's own
+  dependency graph is healthy. CI should use that isolated install strategy;
+  changing the root web dependency graph is not required for this lab.
 - `npm audit --omit=dev --workspace=@ftc/peacepad-next-native` currently reports
   25 inherited Expo/React Native toolchain advisories (3 low, 13 moderate,
   7 high, 2 critical). The suggested blanket repair requires a breaking Expo
@@ -141,10 +143,10 @@ commit and are not relabelled as current evidence.
 
 ## Next best move
 
-First resolve the Expo Doctor duplicate-React layout in an isolated native
-install strategy and triage the dependency advisories without a breaking blind
-upgrade. Then, after an explicit cost/hosting decision, provision one isolated
-staging database and service, apply the prepared migration, grant a
-least-privilege runtime role, and run live API plus real-iPhone staging checks.
+Adopt the proven standalone native install strategy in CI and triage the
+dependency advisories without a breaking blind upgrade. Then, after an explicit
+cost/hosting decision, provision one isolated staging database and service,
+apply the prepared migration, grant a least-privilege runtime role, and run
+live API plus real-iPhone staging checks.
 Do not expand into calling, billing, or production migration before those gates
 pass.
