@@ -1,15 +1,14 @@
 import React, { useMemo, useState } from "react";
 import { NavigationContainer, useNavigation } from "@react-navigation/native";
 import { createNativeStackNavigator, type NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { ScrollView, StatusBar, StyleSheet } from "react-native";
+import { ScrollView, StatusBar, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ScreenTabs } from "./components/ScreenTabs";
+import { TaskNavigation, type PrimaryTaskScreen } from "./components/TaskNavigation";
 import { FoundationScreen } from "./foundation/FoundationScreen";
 import {
   ComposeScreen,
   BinderScreen,
   EvidenceDetailScreen,
-  HomeScreen,
   LabScreen,
   LogsScreen,
   OnboardingScreen,
@@ -17,6 +16,15 @@ import {
   VaultScreen,
   ExportScreen
 } from "./screens";
+import {
+  CalendarScreen,
+  CoordinationHomeScreen,
+  InvitationScreen,
+  MessagesScreen,
+  MoreScreen,
+  RecordsHomeScreen
+} from "./coordination/CoordinationScreens";
+import { CoordinationStateProvider } from "./coordination/CoordinationState";
 import { LabStateProvider, useLabState } from "./state/LabState";
 import { colors, spacing } from "./theme";
 
@@ -31,20 +39,42 @@ declare const process: {
 };
 
 export function resolveLabStartScreen(value?: string): AppScreen {
-  if (value === "evidence-detail") return "evidence-detail";
-  if (value === "home") return "home";
+  const supportedScreens = new Set<AppScreen>([
+    "foundation",
+    "home",
+    "messages",
+    "calendar",
+    "invite",
+    "records",
+    "more",
+    "onboarding",
+    "binder",
+    "compose",
+    "logs",
+    "vault",
+    "evidence-detail",
+    "timeline",
+    "export"
+  ]);
+
+  if (value && supportedScreens.has(value as AppScreen)) return value as AppScreen;
   return "foundation";
 }
 
 const screenTitles: Record<AppScreen, string> = {
   foundation: "PeacePad",
-  home: "PeacePad Premium",
+  home: "PeacePad",
+  messages: "Messages",
+  calendar: "Calendar",
+  invite: "Invitation",
+  records: "Records",
+  more: "More",
   onboarding: "Goal Setup",
-  binder: "Case Binder",
-  compose: "Calm Compose",
-  logs: "Parenting Logs",
-  vault: "Evidence Vault",
-  "evidence-detail": "Evidence Detail",
+  binder: "Create a binder",
+  compose: "Check your message",
+  logs: "Calls and parenting time",
+  vault: "Add record details",
+  "evidence-detail": "Record details",
   timeline: "Timeline",
   export: "Export Preview"
 };
@@ -94,9 +124,11 @@ export function PeacePadLabApp({ startScreen }: { startScreen?: string }) {
 
 export default function App() {
   return (
-    <LabStateProvider>
-      <PeacePadLabApp />
-    </LabStateProvider>
+    <CoordinationStateProvider>
+      <LabStateProvider>
+        <PeacePadLabApp />
+      </LabStateProvider>
+    </CoordinationStateProvider>
   );
 }
 
@@ -113,6 +145,12 @@ function LabRoute({
 }) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const setScreen = (screen: LabScreen) => navigation.navigate(screen);
+  const primaryScreen: PrimaryTaskScreen =
+    activeScreen === "messages" || activeScreen === "calendar" || activeScreen === "records" || activeScreen === "more"
+      ? activeScreen
+      : activeScreen === "home" || activeScreen === "invite"
+        ? "home"
+        : "records";
 
   const screenProps = {
     draft,
@@ -124,22 +162,26 @@ function LabRoute({
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.container}>
-        {activeScreen === "foundation" ? (
-          <FoundationScreen onOpenLab={() => setScreen("home")} />
-        ) : (
-          <ScreenTabs active={activeScreen} onSelect={setScreen} />
-        )}
-        {activeScreen === "home" ? <HomeScreen {...screenProps} /> : null}
-        {activeScreen === "onboarding" ? <OnboardingScreen {...screenProps} /> : null}
-        {activeScreen === "binder" ? <BinderScreen {...screenProps} /> : null}
-        {activeScreen === "compose" ? <ComposeScreen {...screenProps} /> : null}
-        {activeScreen === "logs" ? <LogsScreen {...screenProps} /> : null}
-        {activeScreen === "vault" ? <VaultScreen {...screenProps} /> : null}
-        {activeScreen === "evidence-detail" ? <EvidenceDetailScreen {...screenProps} /> : null}
-        {activeScreen === "timeline" ? <TimelineScreen {...screenProps} /> : null}
-        {activeScreen === "export" ? <ExportScreen {...screenProps} /> : null}
-      </ScrollView>
+      <View style={styles.shell}>
+        <ScrollView contentContainerStyle={styles.container}>
+          {activeScreen === "foundation" ? <FoundationScreen onOpenLab={() => setScreen("home")} /> : null}
+          {activeScreen === "home" ? <CoordinationHomeScreen setScreen={setScreen} /> : null}
+          {activeScreen === "messages" ? <MessagesScreen /> : null}
+          {activeScreen === "calendar" ? <CalendarScreen /> : null}
+          {activeScreen === "invite" ? <InvitationScreen /> : null}
+          {activeScreen === "records" ? <RecordsHomeScreen setScreen={setScreen} /> : null}
+          {activeScreen === "more" ? <MoreScreen setScreen={setScreen} /> : null}
+          {activeScreen === "onboarding" ? <OnboardingScreen {...screenProps} /> : null}
+          {activeScreen === "binder" ? <BinderScreen {...screenProps} /> : null}
+          {activeScreen === "compose" ? <ComposeScreen {...screenProps} /> : null}
+          {activeScreen === "logs" ? <LogsScreen {...screenProps} /> : null}
+          {activeScreen === "vault" ? <VaultScreen {...screenProps} /> : null}
+          {activeScreen === "evidence-detail" ? <EvidenceDetailScreen {...screenProps} /> : null}
+          {activeScreen === "timeline" ? <TimelineScreen {...screenProps} /> : null}
+          {activeScreen === "export" ? <ExportScreen {...screenProps} /> : null}
+        </ScrollView>
+        {activeScreen !== "foundation" ? <TaskNavigation active={primaryScreen} onSelect={setScreen} /> : null}
+      </View>
     </SafeAreaView>
   );
 }
@@ -160,6 +202,9 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background
+  },
+  shell: {
+    flex: 1
   },
   container: {
     padding: spacing.lg,

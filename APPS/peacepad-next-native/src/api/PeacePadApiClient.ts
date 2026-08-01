@@ -99,7 +99,7 @@ export class PeacePadApiClient implements PeacePadFoundationApi {
       );
     }
 
-    const response = await this.request<MessagePreviewResponse>("/api/messages/preview", {
+    const response = await this.request<MessagePreviewResponse>("/api/v2/message-previews", {
       method: "POST",
       body: JSON.stringify({ content: normalized })
     });

@@ -1,22 +1,12 @@
 import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { LabButton } from "./components/LabButton";
-import { ModuleCard } from "./components/ModuleCard";
-import { TimelineItemCard } from "./components/TimelineItemCard";
 import {
-  binderMetrics,
-  binderSetupSteps,
   calmRewriteSample,
-  evidenceItems,
-  evidencePrepStatuses,
   exportChecklistItems,
-  exportPackages,
   goalOptions,
   parentingOutcomeOptions,
-  premiumModules,
-  premiumWorkflows,
-  sourceTypeOptions,
-  timelineItems
+  sourceTypeOptions
 } from "./data/mockPeacePad";
 import { hasBinderValidationErrors, validateBinderDraft, type BinderDraft, type BinderValidationErrors } from "./lib/binderValidation";
 import {
@@ -30,6 +20,11 @@ import { syntheticFilePlaceholder, useLabState, type LabGoal } from "./state/Lab
 
 export type LabScreen =
   | "home"
+  | "messages"
+  | "calendar"
+  | "invite"
+  | "records"
+  | "more"
   | "onboarding"
   | "binder"
   | "compose"
@@ -47,115 +42,10 @@ type ScreenProps = {
   setScreen: (screen: LabScreen) => void;
 };
 
-export function HomeScreen({ setScreen }: ScreenProps) {
-  const quickActions: Array<{ label: string; screen: LabScreen }> = [
-    { label: "Goal Setup", screen: "onboarding" },
-    { label: "Case Binder", screen: "binder" },
-    { label: "Calm Compose", screen: "compose" },
-    { label: "Parenting Logs", screen: "logs" },
-    { label: "Evidence Vault", screen: "vault" },
-    { label: "Evidence Detail", screen: "evidence-detail" },
-    { label: "Timeline", screen: "timeline" },
-    { label: "Export Preview", screen: "export" }
-  ];
-
-  return (
-    <View style={styles.stack}>
-      <View style={styles.hero}>
-        <Text style={styles.eyebrow}>PeacePad Premium Lab</Text>
-        <Text style={styles.title}>A calm operating system for parenting records.</Text>
-        <Text style={styles.heroBody}>
-          Premium is not just "more features." It is the difference between scattered screenshots and a clean,
-          source-linked parenting record the user can understand and review with support.
-        </Text>
-        <View style={styles.heroPills}>
-          <View style={styles.heroPill}>
-            <Text style={styles.heroPillText}>Source-linked</Text>
-          </View>
-          <View style={styles.heroPill}>
-            <Text style={styles.heroPillText}>Lab-only data</Text>
-          </View>
-          <View style={styles.heroPill}>
-            <Text style={styles.heroPillText}>Premium preview</Text>
-          </View>
-        </View>
-        <View style={styles.heroActions}>
-          <LabButton label="Start premium flow" onPress={() => setScreen("onboarding")} />
-          <LabButton label="Review export" onPress={() => setScreen("export")} variant="secondary" />
-          <LabButton label="Open evidence detail" onPress={() => setScreen("evidence-detail")} variant="secondary" />
-        </View>
-      </View>
-
-      <View style={styles.metricGrid}>
-        {binderMetrics.map((metric) => (
-          <View key={metric.label} style={styles.metricCard}>
-            <Text style={styles.metricValue}>{metric.value}</Text>
-            <Text style={styles.metricLabel}>{metric.label}</Text>
-            <Text style={styles.caption}>{metric.note}</Text>
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.quickActions}>
-        <View style={styles.quickActionsHeader}>
-          <Text style={styles.sectionTitle}>Lab ops quick actions</Text>
-          <Text style={styles.caption}>Jump straight to a QA route</Text>
-        </View>
-        <View style={styles.quickActionGrid}>
-          {quickActions.map((action) => (
-            <Pressable
-              accessibilityLabel={`Open ${action.label}`}
-              accessibilityRole="button"
-              key={action.screen}
-              onPress={() => setScreen(action.screen)}
-              style={styles.quickAction}
-            >
-              <Text style={styles.quickActionText}>{action.label}</Text>
-            </Pressable>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Premium workflows</Text>
-        {premiumWorkflows.map((workflow) => (
-          <Pressable
-            accessibilityRole="button"
-            key={workflow.id}
-            onPress={() => setScreen(workflow.id === "binder" ? "binder" : workflow.id === "contact-proof" ? "logs" : "export")}
-            style={styles.workflowCard}
-          >
-            <Text style={styles.choiceTitle}>{workflow.title}</Text>
-            <Text style={styles.body}>{workflow.subtitle}</Text>
-            <Text style={styles.premiumSignal}>{workflow.premiumSignal}</Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Modules behind the experience</Text>
-        {premiumModules.map((module) => (
-          <ModuleCard key={module.id} module={module} />
-        ))}
-      </View>
-    </View>
-  );
-}
-
 export function OnboardingScreen({ selectedGoal, setSelectedGoal, setScreen }: ScreenProps) {
   return (
     <View style={styles.stack}>
-      <Text style={styles.eyebrow}>Premium routing</Text>
       <Text style={styles.sectionTitle}>What do you need first?</Text>
-      <Text style={styles.body}>
-        PeacePad starts by routing users to the next useful action, not a long onboarding wall.
-      </Text>
-      <View style={styles.cardPremium}>
-        <Text style={styles.choiceTitle}>Premium promise</Text>
-        <Text style={styles.body}>
-          The app should feel calm, guided, and specific from the first tap.
-        </Text>
-      </View>
       {goalOptions.map((goal) => (
         <Pressable
           accessibilityRole="button"
@@ -178,10 +68,10 @@ export function OnboardingScreen({ selectedGoal, setSelectedGoal, setScreen }: S
 export function BinderScreen({ setScreen }: ScreenProps) {
   const { binder, saveBinder } = useLabState();
   const [binderDraft, setBinderDraft] = useState<BinderDraft>({
-    binderName: binder?.name ?? "Parenting contact record",
-    childInitials: binder?.childLabel ?? "Child A",
+    binderName: binder?.name ?? "",
+    childInitials: binder?.childLabel ?? "",
     supportContact: binder?.supportContact ?? "",
-    selectedSourceTypes: binder?.sourceTypes ?? ["screenshots", "call-logs"]
+    selectedSourceTypes: binder?.sourceTypes ?? []
   });
   const [errors, setErrors] = useState<BinderValidationErrors>({});
 
@@ -218,20 +108,10 @@ export function BinderScreen({ setScreen }: ScreenProps) {
 
   return (
     <View style={styles.stack}>
-      <Text style={styles.eyebrow}>Premium setup</Text>
-      <Text style={styles.sectionTitle}>Case Binder setup</Text>
-      <Text style={styles.body}>
-        The binder is the Premium home base: one calm workspace for people, source types, logs, and export readiness.
-      </Text>
-      <View style={styles.cardPremium}>
-        <Text style={styles.choiceTitle}>Premium setup flow</Text>
-        <Text style={styles.body}>
-          Keep the first setup minimal, but make the structure and language feel deliberate.
-        </Text>
-      </View>
+      <Text style={styles.sectionTitle}>Create a binder</Text>
+      <Text style={styles.body}>Keep related records together.</Text>
       <View style={styles.card}>
         <Text style={styles.choiceTitle}>Binder details</Text>
-        <Text style={styles.caption}>Lab form only. No data is saved or uploaded.</Text>
         <Text style={styles.fieldLabel}>Binder name</Text>
         <TextInput
           accessibilityLabel="Binder name"
@@ -250,7 +130,7 @@ export function BinderScreen({ setScreen }: ScreenProps) {
           value={binderDraft.childInitials}
         />
         {errors.childInitials ? <Text style={styles.errorText}>{errors.childInitials}</Text> : null}
-        <Text style={styles.fieldLabel}>Trusted reviewer or support contact optional</Text>
+        <Text style={styles.fieldLabel}>Professional or support contact (optional)</Text>
         <TextInput
           accessibilityLabel="Support contact"
           onChangeText={(value) => updateDraft("supportContact", value)}
@@ -260,8 +140,7 @@ export function BinderScreen({ setScreen }: ScreenProps) {
         />
       </View>
       <View style={styles.card}>
-        <Text style={styles.choiceTitle}>Source types to organize first</Text>
-        <Text style={styles.caption}>Pick the records PeacePad should help structure before anything gets exported.</Text>
+        <Text style={styles.choiceTitle}>Records to include</Text>
         {sourceTypeOptions.map((sourceType) => {
           const selected = binderDraft.selectedSourceTypes.includes(sourceType.id);
           return (
@@ -281,22 +160,7 @@ export function BinderScreen({ setScreen }: ScreenProps) {
         })}
         {errors.selectedSourceTypes ? <Text style={styles.errorText}>{errors.selectedSourceTypes}</Text> : null}
       </View>
-      {binderSetupSteps.map((step) => (
-        <View key={step.id} style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.choiceTitle}>{step.title}</Text>
-            <Text style={[styles.statusPill, step.status === "locked" ? styles.lockedPill : null]}>{step.status}</Text>
-          </View>
-          <Text style={styles.body}>{step.description}</Text>
-        </View>
-      ))}
-      <View style={styles.cardPremium}>
-        <Text style={styles.choiceTitle}>Premium setup principle</Text>
-        <Text style={styles.body}>
-          Ask for the minimum needed to organize records. Let users add sensitive details later, deliberately.
-        </Text>
-      </View>
-      <LabButton label="Validate and continue to evidence vault" onPress={continueToVault} />
+      <LabButton label="Continue" onPress={continueToVault} />
     </View>
   );
 }
@@ -304,17 +168,8 @@ export function BinderScreen({ setScreen }: ScreenProps) {
 export function ComposeScreen({ draft, setDraft, setScreen }: ScreenProps) {
   return (
     <View style={styles.stack}>
-      <Text style={styles.eyebrow}>Premium messaging</Text>
-      <Text style={styles.sectionTitle}>Calm Compose</Text>
-      <Text style={styles.body}>
-        Draft stays local in this lab. The suggestion is mock output, not a sent message.
-      </Text>
-      <View style={styles.cardPremium}>
-        <Text style={styles.choiceTitle}>Premium tone support</Text>
-        <Text style={styles.body}>
-          The goal is to lower escalation and make next-step writing feel confident, not cold.
-        </Text>
-      </View>
+      <Text style={styles.sectionTitle}>Check your message</Text>
+      <Text style={styles.body}>Review tone and clarity before you decide what to send.</Text>
       <TextInput
         multiline
         onChangeText={setDraft}
@@ -323,17 +178,11 @@ export function ComposeScreen({ draft, setDraft, setScreen }: ScreenProps) {
         value={draft}
       />
       <View style={styles.suggestion}>
-        <Text style={styles.eyebrowDark}>Mock calmer rewrite</Text>
+        <Text style={styles.eyebrowDark}>Suggested rewrite</Text>
         <Text style={styles.body}>{calmRewriteSample}</Text>
       </View>
-      <View style={styles.premiumInsight}>
-        <Text style={styles.choiceTitle}>Premium insight</Text>
-        <Text style={styles.body}>
-          Tone risk lowered. Parenting request detected. Suggested next step: attach this to the pickup-time timeline
-          only if it becomes relevant.
-        </Text>
-      </View>
-      <LabButton label="Attach to timeline concept" onPress={() => setScreen("timeline")} />
+      <Text style={styles.caption}>PeacePad does not send automatically.</Text>
+      <LabButton label="Go to messages" onPress={() => setScreen("messages")} />
     </View>
   );
 }
@@ -343,20 +192,13 @@ export function LogsScreen({ setScreen }: ScreenProps) {
 
   return (
     <View style={styles.stack}>
-      <Text style={styles.eyebrow}>Premium records</Text>
-      <Text style={styles.sectionTitle}>Parenting-time and child-call logs</Text>
-      <Text style={styles.body}>This screen tests neutral, factual logging language before building real storage.</Text>
-      <View style={styles.cardPremium}>
-        <Text style={styles.choiceTitle}>Premium record design</Text>
-        <Text style={styles.body}>
-          Entries should read like clear history, not argument. That keeps the record trustworthy.
-        </Text>
-      </View>
+      <Text style={styles.sectionTitle}>Calls and parenting time</Text>
       <View style={styles.card}>
-        <Text style={styles.choiceTitle}>New log prototype</Text>
-        <Text style={styles.body}>Type: weekly child call</Text>
-        <Text style={styles.body}>Selected outcome: {selectedOutcome}</Text>
-        <Text style={styles.body}>Tone: factual, child-centred, non-accusatory</Text>
+        <Text style={styles.choiceTitle}>New entry</Text>
+        <Text style={styles.fieldLabel}>Type</Text>
+        <Text style={styles.body}>Weekly child call</Text>
+        <Text style={styles.fieldLabel}>Outcome</Text>
+        <Text style={styles.body}>{selectedOutcome}</Text>
       </View>
       {parentingOutcomeOptions.map((option) => (
         <Pressable
@@ -369,12 +211,7 @@ export function LogsScreen({ setScreen }: ScreenProps) {
           <Text style={styles.body}>{option.description}</Text>
         </Pressable>
       ))}
-      <View style={styles.cardPremium}>
-        <Text style={styles.choiceTitle}>Peace Calls proof-first design</Text>
-        <Text style={styles.body}>Initial Premium focus is schedule + attempt + outcome + source note.</Text>
-        <Text style={styles.caption}>Recording/transcription remains excluded until consent and jurisdiction review.</Text>
-      </View>
-      <LabButton label="View timeline impact" onPress={() => setScreen("timeline")} />
+      <LabButton label="View timeline" onPress={() => setScreen("timeline")} />
     </View>
   );
 }
@@ -382,15 +219,14 @@ export function LogsScreen({ setScreen }: ScreenProps) {
 export function VaultScreen({ setScreen }: ScreenProps) {
   const { binder, evidence, saveEvidence } = useLabState();
   const [evidenceDraft, setEvidenceDraft] = useState<EvidenceDraft>({
-    title: evidence?.title ?? "Weekly child call screenshot",
+    title: evidence?.title ?? "",
     category: evidence?.category ?? "screenshots",
-    eventDate: evidence?.eventDate ?? "2026-07-21",
-    source: evidence?.source ?? "Synthetic parenting communication",
-    description: evidence?.description ?? "Synthetic screenshot showing a completed weekly child call.",
+    eventDate: evidence?.eventDate ?? "",
+    source: evidence?.source ?? "",
+    description: evidence?.description ?? "",
     originalFileName: evidence?.originalFile.fileName ?? syntheticFilePlaceholder.fileName
   });
   const [errors, setErrors] = useState<EvidenceValidationErrors>({});
-  const [prepStatus, setPrepStatus] = useState("metadata-ready");
 
   const updateDraft = (field: keyof EvidenceDraft, value: string) => {
     setEvidenceDraft((current) => ({ ...current, [field]: value }));
@@ -421,20 +257,10 @@ export function VaultScreen({ setScreen }: ScreenProps) {
 
   return (
     <View style={styles.stack}>
-      <Text style={styles.eyebrow}>Premium evidence</Text>
-      <Text style={styles.sectionTitle}>Evidence Vault concept</Text>
-      <Text style={styles.body}>
-        Mock metadata only. No real court files, screenshots, or private records are stored here.
-      </Text>
-      <View style={styles.cardPremium}>
-        <Text style={styles.choiceTitle}>Premium vault principle</Text>
-        <Text style={styles.body}>
-          Source context comes first; uploading and exporting should feel deliberate, not accidental.
-        </Text>
-      </View>
+      <Text style={styles.sectionTitle}>Add record details</Text>
+      <Text style={styles.body}>Add context now so the record is easier to understand later.</Text>
       <View style={styles.card}>
-        <Text style={styles.choiceTitle}>Prepare a source before upload</Text>
-        <Text style={styles.caption}>Premium rule: context first, upload later. This keeps sensitive files deliberate.</Text>
+        <Text style={styles.choiceTitle}>Record information</Text>
         <Text style={styles.fieldLabel}>Source title</Text>
         <TextInput
           accessibilityLabel="Evidence title"
@@ -476,7 +302,7 @@ export function VaultScreen({ setScreen }: ScreenProps) {
         <TextInput
           accessibilityLabel="Evidence source"
           onChangeText={(value) => updateDraft("source", value)}
-          placeholder="Example: synthetic parenting communication"
+          placeholder="Example: message thread or school email"
           style={[styles.input, styles.singleLineInput, errors.source ? styles.inputError : null]}
           value={evidenceDraft.source}
         />
@@ -491,104 +317,43 @@ export function VaultScreen({ setScreen }: ScreenProps) {
           value={evidenceDraft.description}
         />
         {errors.description ? <Text style={styles.errorText}>{errors.description}</Text> : null}
-        <Text style={styles.fieldLabel}>Original file placeholder</Text>
-        <TextInput
-          accessibilityLabel="Original file placeholder"
-          onChangeText={(value) => updateDraft("originalFileName", value)}
-          placeholder="Synthetic file name only"
-          style={[styles.input, styles.singleLineInput, errors.originalFileName ? styles.inputError : null]}
-          value={evidenceDraft.originalFileName}
-        />
-        {errors.originalFileName ? <Text style={styles.errorText}>{errors.originalFileName}</Text> : null}
       </View>
-      <LabButton label="Validate metadata and open detail" onPress={continueToDetail} variant="secondary" />
-      <View style={styles.cardPremium}>
-        <Text style={styles.choiceTitle}>Upload-readiness status</Text>
-        {evidencePrepStatuses.map((status) => (
-          <Pressable
-            accessibilityRole="button"
-            key={status.id}
-            onPress={() => setPrepStatus(status.id)}
-            style={[styles.checkRow, prepStatus === status.id ? styles.checkRowActive : null]}
-          >
-            <Text style={styles.checkMark}>{prepStatus === status.id ? "On" : "Off"}</Text>
-            <View style={styles.checkText}>
-              <Text style={styles.choiceTitle}>{status.label}</Text>
-              <Text style={styles.body}>{status.description}</Text>
-            </View>
-          </Pressable>
-        ))}
-      </View>
-      {evidenceItems.map((item) => (
-        <View key={item.id} style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.choiceTitle}>{item.title}</Text>
-            <Text style={styles.statusPill}>{item.status}</Text>
-          </View>
-          <Text style={styles.body}>Kind: {item.kind}</Text>
-          <Text style={styles.body}>Tag: {item.tag}</Text>
-          <Text style={styles.body}>Linked event: {item.linkedEvent}</Text>
-          <Text style={styles.caption}>{item.integrityNote}</Text>
-        </View>
-      ))}
-      <View style={styles.cardPremium}>
-        <Text style={styles.choiceTitle}>Missing evidence prompts</Text>
-        <Text style={styles.body}>3 call logs have no source attachment. 2 visit notes need date/source review.</Text>
-      </View>
-      <LabButton label="Review source-linked timeline" onPress={() => setScreen("timeline")} />
+      <LabButton label="Review details" onPress={continueToDetail} />
     </View>
   );
 }
 
 export function EvidenceDetailScreen({ setScreen }: ScreenProps) {
   const { evidence, confirmEvidence } = useLabState();
-  const item = evidenceItems[0];
 
   return (
     <View style={styles.stack}>
-      <Text style={styles.eyebrow}>Premium review</Text>
-      <Text style={styles.sectionTitle}>Evidence detail</Text>
-      <Text style={styles.body}>
-        This is the screen where Premium starts feeling serious: every source gets context before it becomes part of a
-        timeline or export package.
-      </Text>
-      <View style={styles.cardPremium}>
-        <Text style={styles.choiceTitle}>Premium review gate</Text>
-        <Text style={styles.body}>
-          The screen should feel like a careful review room: source first, interpretation second.
-        </Text>
-      </View>
-      <View style={styles.card}>
+      <Text style={styles.sectionTitle}>Record details</Text>
+      {evidence ? <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Text style={styles.choiceTitle}>{evidence?.title ?? item.title}</Text>
-          <Text style={styles.statusPill}>{evidence?.reviewStatus ?? "sample"}</Text>
+          <Text style={styles.choiceTitle}>{evidence.title}</Text>
+          <Text style={styles.statusPill}>{evidence.reviewStatus}</Text>
         </View>
-        <Text style={styles.body}>Category: {evidence?.category ?? item.kind}</Text>
-        <Text style={styles.body}>Event date: {evidence?.eventDate ?? "Synthetic sample"}</Text>
-        <Text style={styles.body}>Source: {evidence?.source ?? item.linkedEvent}</Text>
-        <Text style={styles.body}>Description: {evidence?.description ?? item.integrityNote}</Text>
-        <Text style={styles.caption}>
-          Original placeholder: {evidence?.originalFile.fileName ?? "No saved vertical-slice record yet"}
-        </Text>
-      </View>
-      <View style={styles.guardrail}>
-        <Text style={styles.guardrailTitle}>AI summary gate</Text>
-        <Text style={styles.body}>
-          AI can summarize this record only after extraction. The user reviews the summary before it is saved or exported.
-        </Text>
-      </View>
+        <Text style={styles.body}>Category: {evidence.category}</Text>
+        <Text style={styles.body}>Event date: {evidence.eventDate}</Text>
+        <Text style={styles.body}>Source: {evidence.source}</Text>
+        <Text style={styles.body}>Description: {evidence.description}</Text>
+      </View> : <View style={styles.card}>
+        <Text style={styles.choiceTitle}>No record selected</Text>
+        <Text style={styles.body}>Add record details before reviewing them.</Text>
+      </View>}
       {evidence?.reviewStatus === "confirmed" ? (
         <LabButton label="View generated timeline entry" onPress={() => setScreen("timeline")} />
-      ) : (
+      ) : evidence ? (
         <LabButton
-          label="Confirm evidence review"
+          label="Confirm review"
           onPress={() => {
             confirmEvidence();
             setScreen("timeline");
           }}
         />
-      )}
-      <LabButton label="Back to vault" onPress={() => setScreen("vault")} variant="secondary" />
+      ) : null}
+      <LabButton label="Back to records" onPress={() => setScreen("vault")} variant="secondary" />
     </View>
   );
 }
@@ -597,29 +362,18 @@ export function TimelineScreen({ setScreen }: ScreenProps) {
   const { timelineEntry } = useLabState();
   return (
     <View style={styles.stack}>
-      <Text style={styles.eyebrow}>Premium chronology</Text>
-      <Text style={styles.sectionTitle}>Source-linked timeline</Text>
-      <Text style={styles.body}>Each timeline card should link back to source records and avoid legal conclusions.</Text>
-      <View style={styles.cardPremium}>
-        <Text style={styles.choiceTitle}>Premium timeline logic</Text>
-        <Text style={styles.body}>
-          Each entry should feel traceable, readable, and safe to review later.
-        </Text>
-      </View>
+      <Text style={styles.sectionTitle}>Timeline</Text>
+      <Text style={styles.body}>Confirmed records appear here in date order.</Text>
       {timelineEntry ? (
         <View style={styles.card}>
           <Text style={styles.choiceTitle}>{timelineEntry.title}</Text>
           <Text style={styles.body}>Date: {timelineEntry.eventDate}</Text>
           <Text style={styles.body}>{timelineEntry.description}</Text>
           <Text style={styles.caption}>Source: {timelineEntry.sourceLabel}</Text>
-          <Text style={styles.premiumSignal}>Linked evidence: {timelineEntry.evidenceId}</Text>
         </View>
-      ) : null}
-      {timelineItems.map((item) => (
-        <TimelineItemCard key={item.id} item={item} />
-      ))}
+      ) : <View style={styles.card}><Text style={styles.body}>No timeline entries yet.</Text></View>}
       <View style={styles.guardrail}>
-        <Text style={styles.guardrailTitle}>Safety copy under test</Text>
+        <Text style={styles.guardrailTitle}>About this timeline</Text>
         <Text style={styles.body}>
           PeacePad organizes what you enter. It does not decide legal meaning or guarantee court use.
         </Text>
@@ -647,28 +401,10 @@ export function ExportScreen({ setScreen }: ScreenProps) {
 
   return (
     <View style={styles.stack}>
-      <Text style={styles.eyebrow}>Premium package</Text>
-      <Text style={styles.sectionTitle}>Premium export preview</Text>
-      <Text style={styles.body}>
-        The old Premium Delta idea was strongest here: users need a clean package, not another pile of files.
-      </Text>
-      <View style={styles.cardPremium}>
-        <Text style={styles.choiceTitle}>Premium export principle</Text>
-        <Text style={styles.body}>
-          The package should read like a curated case packet, not a folder dump.
-        </Text>
-      </View>
-      {exportPackages.map((pack) => (
-        <View key={pack.id} style={styles.exportCard}>
-          <Text style={styles.choiceTitle}>{pack.title}</Text>
-          {pack.includes.map((item) => (
-            <Text key={item} style={styles.body}>- {item}</Text>
-          ))}
-          <Text style={styles.exportCaution}>{pack.caution}</Text>
-        </View>
-      ))}
+      <Text style={styles.sectionTitle}>Export preview</Text>
+      <Text style={styles.body}>Choose what to include before sharing.</Text>
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Vertical-slice items</Text>
+        <Text style={styles.sectionTitle}>Choose records</Text>
         {evidence ? (
           <Pressable
             accessibilityRole="button"
@@ -715,12 +451,12 @@ export function ExportScreen({ setScreen }: ScreenProps) {
         ))}
       </View>
       <View style={styles.guardrail}>
-        <Text style={styles.guardrailTitle}>Export review gate</Text>
+        <Text style={styles.guardrailTitle}>Review before sharing</Text>
         <Text style={styles.body}>
-          Before sharing, the user confirms every included record. AI summaries remain drafts and cite source items.
+          Confirm every included record. Generated summaries remain drafts and cite their sources.
         </Text>
       </View>
-      <LabButton label="Back to premium dashboard" onPress={() => setScreen("home")} variant="secondary" />
+      <LabButton label="Back to home" onPress={() => setScreen("home")} variant="secondary" />
     </View>
   );
 }

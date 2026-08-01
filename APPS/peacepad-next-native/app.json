@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "PeacePad Next Lab",
+    "name": "PeacePad",
     "slug": "peacepad-next-native-lab",
     "version": "0.0.1",
     "orientation": "portrait",
@@ -16,6 +16,7 @@
     },
     "extra": {
       "environment": "lab",
+      "diagnosticsEnabled": false,
       "productionApiWritesEnabled": false,
       "submittedBundleId": "ca.peacepad.family"
     },

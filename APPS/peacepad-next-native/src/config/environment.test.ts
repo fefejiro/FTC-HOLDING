@@ -6,8 +6,18 @@ describe("resolveEnvironmentConfig", () => {
       environment: "lab",
       apiBaseUrl: "http://127.0.0.1:8787",
       requestTimeoutMs: 12_000,
-      productionApiWritesEnabled: false
+      productionApiWritesEnabled: false,
+      diagnosticsEnabled: false
     });
+  });
+
+  it("allows diagnostics only in the local lab", () => {
+    expect(resolveEnvironmentConfig({ EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS: "true" }).diagnosticsEnabled).toBe(true);
+    expect(() => resolveEnvironmentConfig({
+      EXPO_PUBLIC_PEACEPAD_ENV: "staging",
+      EXPO_PUBLIC_PEACEPAD_API_BASE_URL: "https://staging.peacepad.test",
+      EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS: "true"
+    })).toThrow("diagnostics are allowed only in the local lab");
   });
 
   it("accepts a staging URL and removes trailing slashes", () => {

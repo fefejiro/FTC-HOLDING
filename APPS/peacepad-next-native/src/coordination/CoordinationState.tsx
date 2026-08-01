@@ -1,0 +1,263 @@
+import React, { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import type { MessagePreviewResponse } from "../api/contracts";
+import {
+  HttpPeacePadCoordinationApi,
+  InvitationError,
+  type PeacePadCoordinationApi
+} from "../api/CoordinationApi";
+import { defaultCalendarLayers, SyntheticCoordinationApi } from "../api/SyntheticCoordinationApi";
+import { environmentConfig } from "../config/environment";
+import {
+  createWriteContext,
+  type CalendarLayer,
+  type InvitationPreview,
+  type ParticipantGrant,
+  type ScheduleEvent
+} from "../domain/v2";
+
+export type CalendarView = "month" | "week" | "day";
+
+export type SentMessage = Readonly<{
+  id: string;
+  originalBody: string;
+  sentBody: string;
+  sentAt: string;
+}>;
+
+type CoordinationStateValue = {
+  invitationCode: string;
+  invitationPreview?: InvitationPreview;
+  invitationGrant?: ParticipantGrant;
+  invitationError?: string;
+  invitationBusy: boolean;
+  calendarView: CalendarView;
+  layers: readonly CalendarLayer[];
+  visibleLayerIds: readonly string[];
+  events: readonly ScheduleEvent[];
+  messageCheckEnabled: boolean;
+  messageDraft: string;
+  messagePreview?: MessagePreviewResponse;
+  messageCheckBusy: boolean;
+  messageError?: string;
+  sentMessages: readonly SentMessage[];
+  setInvitationCode: (code: string) => void;
+  resolveInvitation: () => Promise<void>;
+  acceptInvitation: () => Promise<void>;
+  declineInvitation: () => Promise<void>;
+  setCalendarView: (view: CalendarView) => void;
+  toggleLayerFilter: (layerId: string) => void;
+  setLayerShared: (layerId: string, shared: boolean) => Promise<void>;
+  addEvent: (input: { layerId: string; title: string; startsAt: string; endsAt: string }) => Promise<void>;
+  deleteEvent: (eventId: string) => Promise<void>;
+  setMessageDraft: (draft: string) => void;
+  setMessageCheckEnabled: (enabled: boolean) => Promise<void>;
+  checkMessage: () => Promise<void>;
+  sendMessage: (useSuggestion: boolean) => void;
+};
+
+const CoordinationStateContext = createContext<CoordinationStateValue | undefined>(undefined);
+
+const seededInvitation: InvitationPreview = {
+  invitationId: "invitation-demo",
+  inviterDisplayName: "Jordan",
+  familyDisplayName: "Shared parenting space",
+  invitedRole: "parent",
+  permissions: ["messages", "calendar", "shared-records"],
+  expiresAt: "2099-01-01T00:00:00.000Z"
+};
+
+function createDefaultApi(): PeacePadCoordinationApi {
+  if (environmentConfig.environment === "staging") {
+    return new HttpPeacePadCoordinationApi(environmentConfig);
+  }
+  return new SyntheticCoordinationApi([{ code: "CALM26", preview: seededInvitation }]);
+}
+
+function writeContext(expectedVersion: number | null = null) {
+  return createWriteContext({
+    idempotencyKey: `device-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+    expectedVersion,
+    region: "ca",
+    actor: { identityId: "identity-current", sessionId: "session-device" }
+  });
+}
+
+function invitationMessage(error: unknown): string {
+  if (error instanceof InvitationError) return error.message;
+  return "PeacePad could not verify that invitation. Try again.";
+}
+
+export function CoordinationStateProvider({
+  api = createDefaultApi(),
+  children
+}: {
+  api?: PeacePadCoordinationApi;
+  children: ReactNode;
+}) {
+  const [invitationCode, setInvitationCodeState] = useState("");
+  const [invitationPreview, setInvitationPreview] = useState<InvitationPreview>();
+  const [invitationGrant, setInvitationGrant] = useState<ParticipantGrant>();
+  const [invitationError, setInvitationError] = useState<string>();
+  const [invitationBusy, setInvitationBusy] = useState(false);
+  const [calendarView, setCalendarView] = useState<CalendarView>("month");
+  const [layers, setLayers] = useState<readonly CalendarLayer[]>(defaultCalendarLayers);
+  const [visibleLayerIds, setVisibleLayerIds] = useState<readonly string[]>(defaultCalendarLayers.map((layer) => layer.id));
+  const [events, setEvents] = useState<readonly ScheduleEvent[]>([]);
+  const [messageCheckEnabled, setMessageCheckEnabledState] = useState(false);
+  const [messageDraft, setMessageDraftState] = useState("");
+  const [messagePreview, setMessagePreview] = useState<MessagePreviewResponse>();
+  const [messageCheckBusy, setMessageCheckBusy] = useState(false);
+  const [messageError, setMessageError] = useState<string>();
+  const [sentMessages, setSentMessages] = useState<readonly SentMessage[]>([]);
+
+  const value = useMemo<CoordinationStateValue>(() => ({
+    invitationCode,
+    invitationPreview,
+    invitationGrant,
+    invitationError,
+    invitationBusy,
+    calendarView,
+    layers,
+    visibleLayerIds,
+    events,
+    messageCheckEnabled,
+    messageDraft,
+    messagePreview,
+    messageCheckBusy,
+    messageError,
+    sentMessages,
+    setInvitationCode: (code) => {
+      setInvitationCodeState(code.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 6));
+      setInvitationPreview(undefined);
+      setInvitationError(undefined);
+    },
+    resolveInvitation: async () => {
+      setInvitationBusy(true);
+      setInvitationError(undefined);
+      setInvitationPreview(undefined);
+      try {
+        setInvitationPreview(await api.resolveInvitation(invitationCode));
+      } catch (error) {
+        setInvitationError(invitationMessage(error));
+      } finally {
+        setInvitationBusy(false);
+      }
+    },
+    acceptInvitation: async () => {
+      if (!invitationPreview) return;
+      setInvitationBusy(true);
+      setInvitationError(undefined);
+      try {
+        setInvitationGrant(await api.acceptInvitation(invitationPreview.invitationId, writeContext()));
+        setInvitationPreview(undefined);
+      } catch (error) {
+        setInvitationError(invitationMessage(error));
+      } finally {
+        setInvitationBusy(false);
+      }
+    },
+    declineInvitation: async () => {
+      if (invitationPreview) await api.declineInvitation(invitationPreview.invitationId, writeContext());
+      setInvitationPreview(undefined);
+      setInvitationCodeState("");
+    },
+    setCalendarView,
+    toggleLayerFilter: (layerId) => setVisibleLayerIds((current) =>
+      current.includes(layerId) ? current.filter((id) => id !== layerId) : [...current, layerId]
+    ),
+    setLayerShared: async (layerId, shared) => {
+      const layer = layers.find((item) => item.id === layerId);
+      if (!layer) return;
+      const updated = await api.updateCalendarLayer(
+        { ...layer, visibility: shared ? { scope: "family" } : { scope: "private" } },
+        writeContext(layer.version)
+      );
+      setLayers((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+    },
+    addEvent: async ({ layerId, title, startsAt, endsAt }) => {
+      const layer = layers.find((item) => item.id === layerId);
+      if (!layer || !title.trim()) return;
+      const event = await api.createScheduleEvent({
+        familyCircleId: layer.familyCircleId,
+        calendarLayerId: layer.id,
+        childProfileIds: [],
+        eventType: layer.kind === "parenting-time" ? "parenting-time" : "appointment",
+        title: title.trim(),
+        description: null,
+        startsAt,
+        endsAt,
+        status: "planned",
+        recurrence: null,
+        visibilityOverride: null
+      }, writeContext());
+      setEvents((current) => [...current, event]);
+    },
+    deleteEvent: async (eventId) => {
+      await api.deleteScheduleEvent(eventId, writeContext());
+      setEvents((current) => current.filter((event) => event.id !== eventId));
+    },
+    setMessageDraft: (draft) => {
+      setMessageDraftState(draft);
+      setMessagePreview(undefined);
+      setMessageError(undefined);
+    },
+    setMessageCheckEnabled: async (enabled) => {
+      await api.setMessageCheckPreference("conversation-primary", enabled, writeContext());
+      setMessageCheckEnabledState(enabled);
+      if (!enabled) setMessagePreview(undefined);
+    },
+    checkMessage: async () => {
+      if (!messageCheckEnabled) return;
+      setMessageCheckBusy(true);
+      setMessageError(undefined);
+      try {
+        setMessagePreview(await api.previewMessage("conversation-primary", messageDraft));
+      } catch (error) {
+        setMessageError(error instanceof Error ? error.message : "Message Check is unavailable.");
+      } finally {
+        setMessageCheckBusy(false);
+      }
+    },
+    sendMessage: (useSuggestion) => {
+      const originalBody = messageDraft.trim();
+      if (!originalBody) return;
+      const sentBody = useSuggestion && messagePreview?.rewordingSuggestion
+        ? messagePreview.rewordingSuggestion
+        : originalBody;
+      setSentMessages((current) => [...current, {
+        id: `message-${Date.now().toString(36)}`,
+        originalBody,
+        sentBody,
+        sentAt: new Date().toISOString()
+      }]);
+      setMessageDraftState("");
+      setMessagePreview(undefined);
+      setMessageError(undefined);
+    }
+  }), [
+    api,
+    calendarView,
+    events,
+    invitationBusy,
+    invitationCode,
+    invitationError,
+    invitationGrant,
+    invitationPreview,
+    layers,
+    messageCheckBusy,
+    messageCheckEnabled,
+    messageDraft,
+    messageError,
+    messagePreview,
+    sentMessages,
+    visibleLayerIds
+  ]);
+
+  return <CoordinationStateContext.Provider value={value}>{children}</CoordinationStateContext.Provider>;
+}
+
+export function useCoordinationState(): CoordinationStateValue {
+  const value = useContext(CoordinationStateContext);
+  if (!value) throw new Error("useCoordinationState must be used inside CoordinationStateProvider");
+  return value;
+}

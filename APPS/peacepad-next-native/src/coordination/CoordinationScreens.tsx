@@ -1,0 +1,467 @@
+import React, { useState } from "react";
+import { Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { LabButton } from "../components/LabButton";
+import type { LabScreen } from "../screens";
+import { useLabState } from "../state/LabState";
+import { colors, spacing, typography } from "../theme";
+import { useCoordinationState, type CalendarView } from "./CoordinationState";
+
+type Navigate = (screen: LabScreen) => void;
+
+const layerColors: Record<string, string> = {
+  teal: "#24B9B5",
+  violet: "#8B5CF6",
+  amber: "#F59E0B",
+  rose: "#EF476F",
+  blue: "#3B82F6",
+  green: "#62B44B"
+};
+
+export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
+  const { binder, evidence, timelineEntry } = useLabState();
+  const { events, invitationGrant, sentMessages } = useCoordinationState();
+  const recordCount = [binder, evidence, timelineEntry].filter(Boolean).length;
+
+  const actions: readonly { label: string; detail: string; route: LabScreen }[] = [
+    { label: "Send a message", detail: "Write clearly and review before sending.", route: "messages" },
+    { label: "Add an event", detail: "Keep parenting plans and activities together.", route: "calendar" },
+    { label: "Invite co-parent", detail: "Connect only after reviewing access.", route: "invite" },
+    { label: "Add a record", detail: "Organize notes and source details.", route: "vault" }
+  ];
+
+  return (
+    <View style={styles.stack}>
+      <View style={styles.brandHero}>
+        <Image accessibilityLabel="PeacePad conch logo" source={require("../foundation/peacepad-conch.png")} style={styles.logo} />
+        <View style={styles.brandHeroCopy}>
+          <Text style={styles.title}>What would you like to do?</Text>
+          <Text style={styles.body}>Messages, plans, and records in one calm place.</Text>
+        </View>
+      </View>
+
+      <View style={styles.actionGrid}>
+        {actions.map((action) => (
+          <Pressable
+            accessibilityLabel={action.label}
+            accessibilityRole="button"
+            key={action.label}
+            onPress={() => setScreen(action.route)}
+            style={({ pressed }) => [styles.actionCard, pressed ? styles.pressed : null]}
+          >
+            <Text style={styles.actionTitle}>{action.label}</Text>
+            <Text style={styles.caption}>{action.detail}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      <View style={styles.summaryCard}>
+        <Text style={styles.heading}>Today</Text>
+        <SummaryRow label="Upcoming events" value={String(events.length)} />
+        <SummaryRow label="Saved records" value={String(recordCount)} />
+        <SummaryRow label="Messages sent this session" value={String(sentMessages.length)} />
+        <SummaryRow label="Family connection" value={invitationGrant ? "Connected" : "Not connected"} />
+      </View>
+    </View>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.summaryRow}>
+      <Text style={styles.body}>{label}</Text>
+      <Text style={styles.summaryValue}>{value}</Text>
+    </View>
+  );
+}
+
+export function InvitationScreen() {
+  const {
+    acceptInvitation,
+    declineInvitation,
+    invitationBusy,
+    invitationCode,
+    invitationError,
+    invitationGrant,
+    invitationPreview,
+    resolveInvitation,
+    setInvitationCode
+  } = useCoordinationState();
+
+  return (
+    <View style={styles.stack}>
+      <Text style={styles.title}>Connect your family</Text>
+      <Text style={styles.body}>Enter the six-character code from your invitation.</Text>
+      <TextInput
+        accessibilityLabel="Invitation code"
+        autoCapitalize="characters"
+        autoCorrect={false}
+        maxLength={6}
+        onChangeText={setInvitationCode}
+        placeholder="ABC123"
+        style={styles.codeInput}
+        value={invitationCode}
+      />
+      <LabButton
+        disabled={invitationCode.length !== 6 || invitationBusy}
+        label={invitationBusy ? "Checking…" : "Review invitation"}
+        onPress={() => void resolveInvitation()}
+      />
+
+      {invitationError ? <Text accessibilityRole="alert" style={styles.error}>{invitationError}</Text> : null}
+
+      {invitationPreview ? (
+        <View accessibilityLabel="Invitation preview" style={styles.card}>
+          <Text style={styles.heading}>{invitationPreview.inviterDisplayName} invited you</Text>
+          <Text style={styles.body}>{invitationPreview.familyDisplayName}</Text>
+          <Text style={styles.fieldLabel}>Role</Text>
+          <Text style={styles.body}>{invitationPreview.invitedRole}</Text>
+          <Text style={styles.fieldLabel}>Access</Text>
+          {invitationPreview.permissions.map((permission) => (
+            <Text key={permission} style={styles.body}>• {permission.replace(/-/g, " ")}</Text>
+          ))}
+          <Text style={styles.caption}>Nothing is shared until you accept.</Text>
+          <LabButton label="Accept invitation" onPress={() => void acceptInvitation()} />
+          <LabButton label="Decline" onPress={() => void declineInvitation()} variant="secondary" />
+        </View>
+      ) : null}
+
+      {invitationGrant ? (
+        <View accessibilityLabel="Invitation accepted" style={styles.successCard}>
+          <Text style={styles.heading}>You’re connected</Text>
+          <Text style={styles.body}>Your approved family access is now active.</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+export function CalendarScreen() {
+  const {
+    addEvent,
+    calendarView,
+    deleteEvent,
+    events,
+    layers,
+    setCalendarView,
+    setLayerShared,
+    toggleLayerFilter,
+    visibleLayerIds
+  } = useCoordinationState();
+  const [eventTitle, setEventTitle] = useState("");
+  const [selectedLayerId, setSelectedLayerId] = useState(layers[0]?.id ?? "");
+  const [pendingShareLayerId, setPendingShareLayerId] = useState<string>();
+  const [pendingDeleteEventId, setPendingDeleteEventId] = useState<string>();
+
+  const visibleEvents = events.filter((event) => visibleLayerIds.includes(event.calendarLayerId));
+  const views: readonly CalendarView[] = ["month", "week", "day"];
+
+  return (
+    <View style={styles.stack}>
+      <View style={styles.titleRow}>
+        <View>
+          <Text style={styles.title}>Calendar</Text>
+          <Text style={styles.body}>See parenting plans, requests, activities, and calls.</Text>
+        </View>
+      </View>
+
+      <View accessibilityLabel="Calendar view" style={styles.segmented}>
+        {views.map((view) => (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ selected: calendarView === view }}
+            key={view}
+            onPress={() => setCalendarView(view)}
+            style={[styles.segment, calendarView === view ? styles.segmentActive : null]}
+          >
+            <Text style={[styles.segmentText, calendarView === view ? styles.segmentTextActive : null]}>
+              {view[0].toUpperCase() + view.slice(1)}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      <View style={styles.calendarCanvas} accessibilityLabel={`${calendarView} calendar`}>
+        <Text style={styles.calendarMonth}>August 2026</Text>
+        <Text style={styles.calendarEmpty}>{visibleEvents.length ? `${visibleEvents.length} scheduled item${visibleEvents.length === 1 ? "" : "s"}` : "No events yet"}</Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.heading}>Calendars</Text>
+        {layers.map((layer) => {
+          const visible = visibleLayerIds.includes(layer.id);
+          const shared = layer.visibility.scope !== "private";
+          return (
+            <View key={layer.id} style={styles.layerRow}>
+              <Pressable
+                accessibilityLabel={`${visible ? "Hide" : "Show"} ${layer.name}`}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: visible }}
+                onPress={() => toggleLayerFilter(layer.id)}
+                style={styles.layerIdentity}
+              >
+                <View style={[styles.layerDot, { backgroundColor: layerColors[layer.colorToken] }]} />
+                <View style={styles.layerCopy}>
+                  <Text style={styles.actionTitle}>{layer.name}</Text>
+                  <Text style={styles.caption}>{shared ? "Shared with family" : "Private"}</Text>
+                </View>
+              </Pressable>
+              <Pressable
+                accessibilityLabel={`${shared ? "Make private" : "Share"} ${layer.name}`}
+                accessibilityRole="button"
+                onPress={() => shared ? void setLayerShared(layer.id, false) : setPendingShareLayerId(layer.id)}
+                style={styles.smallButton}
+              >
+                <Text style={styles.smallButtonText}>{shared ? "Private" : "Share"}</Text>
+              </Pressable>
+            </View>
+          );
+        })}
+      </View>
+
+      {pendingShareLayerId ? (
+        <View accessibilityRole="alert" style={styles.confirmCard}>
+          <Text style={styles.heading}>Share this calendar?</Text>
+          <Text style={styles.body}>Future events in this calendar will be visible to family participants.</Text>
+          <LabButton label="Confirm sharing" onPress={() => {
+            void setLayerShared(pendingShareLayerId, true);
+            setPendingShareLayerId(undefined);
+          }} />
+          <LabButton label="Keep private" onPress={() => setPendingShareLayerId(undefined)} variant="secondary" />
+        </View>
+      ) : null}
+
+      <View style={styles.card}>
+        <Text style={styles.heading}>Add event</Text>
+        <TextInput accessibilityLabel="Event title" onChangeText={setEventTitle} placeholder="Event title" style={styles.input} value={eventTitle} />
+        <Text style={styles.fieldLabel}>Calendar</Text>
+        <View style={styles.wrap}>
+          {layers.map((layer) => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ selected: selectedLayerId === layer.id }}
+              key={layer.id}
+              onPress={() => setSelectedLayerId(layer.id)}
+              style={[styles.chip, selectedLayerId === layer.id ? styles.chipActive : null]}
+            >
+              <Text style={[styles.chipText, selectedLayerId === layer.id ? styles.chipTextActive : null]}>{layer.name}</Text>
+            </Pressable>
+          ))}
+        </View>
+        <LabButton label="Save event" disabled={!eventTitle.trim()} onPress={() => {
+          void addEvent({
+            layerId: selectedLayerId,
+            title: eventTitle,
+            startsAt: "2026-08-01T14:00:00.000Z",
+            endsAt: "2026-08-01T15:00:00.000Z"
+          });
+          setEventTitle("");
+        }} />
+      </View>
+
+      {visibleEvents.map((event) => (
+        <View key={event.id} style={styles.card}>
+          <Text style={styles.actionTitle}>{event.title}</Text>
+          <Text style={styles.caption}>{layers.find((layer) => layer.id === event.calendarLayerId)?.name}</Text>
+          {pendingDeleteEventId === event.id ? (
+            <View style={styles.stackTight}>
+              <Text style={styles.body}>Delete this event? Shared participants may lose access to it.</Text>
+              <LabButton label="Confirm delete" onPress={() => { void deleteEvent(event.id); setPendingDeleteEventId(undefined); }} />
+              <LabButton label="Cancel" onPress={() => setPendingDeleteEventId(undefined)} variant="secondary" />
+            </View>
+          ) : (
+            <LabButton label="Delete event" onPress={() => setPendingDeleteEventId(event.id)} variant="secondary" />
+          )}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+export function MessagesScreen() {
+  const {
+    checkMessage,
+    messageCheckBusy,
+    messageCheckEnabled,
+    messageDraft,
+    messageError,
+    messagePreview,
+    sendMessage,
+    sentMessages,
+    setMessageCheckEnabled,
+    setMessageDraft
+  } = useCoordinationState();
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
+
+  return (
+    <View style={styles.stack}>
+      <Text style={styles.title}>Messages</Text>
+      <Text style={styles.body}>Write to your co-parent. PeacePad never sends without your confirmation.</Text>
+
+      {!messageCheckEnabled ? (
+        <View style={styles.assistCard}>
+          <Text style={styles.heading}>Message Check</Text>
+          <Text style={styles.body}>Get suggestions for clarity and tone before you send. You choose what changes.</Text>
+          <LabButton label="Turn on" onPress={() => void setMessageCheckEnabled(true)} />
+          <LabButton label="Not now" onPress={() => setShowHowItWorks(false)} variant="secondary" />
+          <Pressable accessibilityRole="button" onPress={() => setShowHowItWorks((current) => !current)}>
+            <Text style={styles.link}>How it works</Text>
+          </Pressable>
+          {showHowItWorks ? (
+            <Text style={styles.caption}>The first version uses rule-based checks. Optional AI assistance remains separate and off.</Text>
+          ) : null}
+        </View>
+      ) : (
+        <View style={styles.enabledRow}>
+          <Text style={styles.successText}>Message Check on</Text>
+          <Pressable accessibilityRole="button" onPress={() => void setMessageCheckEnabled(false)}>
+            <Text style={styles.link}>Turn off</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {sentMessages.map((message) => (
+        <View accessibilityLabel="Sent message" key={message.id} style={styles.sentBubble}>
+          <Text style={styles.body}>{message.sentBody}</Text>
+        </View>
+      ))}
+
+      <TextInput
+        accessibilityLabel="Message draft"
+        multiline
+        onChangeText={setMessageDraft}
+        placeholder="Write a message"
+        style={[styles.input, styles.messageInput]}
+        value={messageDraft}
+      />
+
+      {messageCheckEnabled ? (
+        <LabButton disabled={!messageDraft.trim() || messageCheckBusy} label={messageCheckBusy ? "Checking…" : "Check message"} onPress={() => void checkMessage()} />
+      ) : null}
+
+      {messagePreview ? (
+        <View accessibilityLabel="Message Check result" style={styles.assistCard}>
+          <Text style={styles.heading}>{messagePreview.tone}</Text>
+          <Text style={styles.body}>{messagePreview.summary}</Text>
+          {messagePreview.rewordingSuggestion ? (
+            <>
+              <Text style={styles.fieldLabel}>Suggested wording</Text>
+              <Text style={styles.body}>{messagePreview.rewordingSuggestion}</Text>
+              <LabButton label="Send suggested message" onPress={() => sendMessage(true)} />
+            </>
+          ) : null}
+          <LabButton label="Send original" onPress={() => sendMessage(false)} variant="secondary" />
+        </View>
+      ) : null}
+
+      {messageError ? (
+        <View accessibilityRole="alert" style={styles.confirmCard}>
+          <Text style={styles.error}>{messageError}</Text>
+          <LabButton label="Try again" onPress={() => void checkMessage()} />
+          <LabButton label="Send original" onPress={() => sendMessage(false)} variant="secondary" />
+        </View>
+      ) : null}
+
+      {!messageCheckEnabled && messageDraft.trim() ? (
+        <LabButton label="Send message" onPress={() => sendMessage(false)} />
+      ) : null}
+    </View>
+  );
+}
+
+export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
+  const { binder, evidence, timelineEntry } = useLabState();
+  const actions: readonly { label: string; detail: string; route: LabScreen }[] = [
+    { label: binder ? "Open binder" : "Create a binder", detail: "Keep related records together.", route: "binder" },
+    { label: "Add record details", detail: evidence ? "Review or update your saved record." : "Add dates, sources, and notes.", route: "vault" },
+    { label: "Timeline", detail: timelineEntry ? "Review your latest linked entry." : "Confirmed records appear here.", route: "timeline" },
+    { label: "Export preview", detail: "Choose what to include before sharing.", route: "export" }
+  ];
+  return (
+    <View style={styles.stack}>
+      <Text style={styles.title}>Records</Text>
+      <Text style={styles.body}>Organize information before you share it.</Text>
+      {actions.map((action) => (
+        <Pressable accessibilityRole="button" key={action.label} onPress={() => setScreen(action.route)} style={styles.actionCard}>
+          <Text style={styles.actionTitle}>{action.label}</Text>
+          <Text style={styles.caption}>{action.detail}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
+  return (
+    <View style={styles.stack}>
+      <Text style={styles.title}>More</Text>
+      <Pressable accessibilityRole="button" onPress={() => setScreen("invite")} style={styles.actionCard}>
+        <Text style={styles.actionTitle}>Family connection</Text>
+        <Text style={styles.caption}>Review or enter an invitation.</Text>
+      </Pressable>
+      <View style={styles.actionCard}>
+        <Text style={styles.actionTitle}>Privacy and consent</Text>
+        <Text style={styles.caption}>Review your choices and how PeacePad handles information.</Text>
+      </View>
+      <View style={styles.actionCard}>
+        <Text style={styles.actionTitle}>Plans & Billing</Text>
+        <Text style={styles.caption}>Manage access when subscriptions become available.</Text>
+      </View>
+      <View style={styles.actionCard}>
+        <Text style={styles.actionTitle}>Help & Support</Text>
+        <Text style={styles.caption}>Get help using PeacePad.</Text>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  stack: { gap: spacing.lg },
+  stackTight: { gap: spacing.sm },
+  title: { ...typography.title, color: colors.text },
+  heading: { ...typography.subheading, color: colors.text },
+  body: { ...typography.body, color: colors.muted },
+  caption: { ...typography.caption, color: colors.muted },
+  fieldLabel: { ...typography.caption, color: colors.text, fontWeight: "800", marginTop: spacing.sm, textTransform: "uppercase" },
+  brandHero: { alignItems: "center", flexDirection: "row", gap: spacing.md, paddingVertical: spacing.sm },
+  brandHeroCopy: { flex: 1, gap: spacing.xs },
+  logo: { height: 64, width: 64 },
+  actionGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
+  actionCard: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 22, borderWidth: 1, gap: spacing.sm, minWidth: "46%", padding: spacing.lg, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 1 },
+  actionTitle: { ...typography.subheading, color: colors.text },
+  pressed: { opacity: 0.72 },
+  summaryCard: { backgroundColor: colors.brand, borderRadius: 24, gap: spacing.sm, padding: spacing.lg },
+  summaryRow: { alignItems: "center", borderTopColor: "rgba(255,255,255,0.16)", borderTopWidth: 1, flexDirection: "row", justifyContent: "space-between", paddingTop: spacing.sm },
+  summaryValue: { ...typography.body, color: colors.white, fontWeight: "800" },
+  card: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 22, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
+  successCard: { backgroundColor: "#E9F9F4", borderColor: "#B8E8D9", borderRadius: 22, borderWidth: 1, gap: spacing.sm, padding: spacing.lg },
+  confirmCard: { backgroundColor: "#FFF7E8", borderColor: "#F3D398", borderRadius: 22, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
+  assistCard: { backgroundColor: colors.brandSoft, borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
+  codeInput: { ...typography.title, backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 20, borderWidth: 1, color: colors.text, letterSpacing: 12, padding: spacing.lg, textAlign: "center" },
+  error: { ...typography.body, color: "#B42318", fontWeight: "700" },
+  titleRow: { flexDirection: "row", justifyContent: "space-between" },
+  segmented: { backgroundColor: colors.brandSoft, borderRadius: 18, flexDirection: "row", padding: spacing.xs },
+  segment: { alignItems: "center", borderRadius: 14, flex: 1, paddingVertical: spacing.md },
+  segmentActive: { backgroundColor: colors.surface },
+  segmentText: { ...typography.body, color: colors.muted, fontWeight: "700" },
+  segmentTextActive: { color: colors.brand },
+  calendarCanvas: { alignItems: "center", backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: spacing.sm, minHeight: 180, justifyContent: "center", padding: spacing.xl },
+  calendarMonth: { ...typography.heading, color: colors.text },
+  calendarEmpty: { ...typography.body, color: colors.muted },
+  layerRow: { alignItems: "center", borderTopColor: colors.border, borderTopWidth: 1, flexDirection: "row", gap: spacing.sm, paddingTop: spacing.md },
+  layerIdentity: { alignItems: "center", flex: 1, flexDirection: "row", gap: spacing.md },
+  layerCopy: { flex: 1 },
+  layerDot: { borderRadius: 999, height: 16, width: 16 },
+  smallButton: { backgroundColor: colors.brandSoft, borderRadius: 999, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  smallButtonText: { ...typography.caption, color: colors.brand, fontWeight: "800" },
+  input: { ...typography.body, backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 18, borderWidth: 1, color: colors.text, minHeight: 52, padding: spacing.md },
+  messageInput: { minHeight: 120, textAlignVertical: "top" },
+  wrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  chip: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 999, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  chipActive: { backgroundColor: colors.brand, borderColor: colors.brand },
+  chipText: { ...typography.caption, color: colors.muted, fontWeight: "700" },
+  chipTextActive: { color: colors.white },
+  enabledRow: { alignItems: "center", backgroundColor: "#E9F9F4", borderRadius: 18, flexDirection: "row", justifyContent: "space-between", padding: spacing.md },
+  successText: { ...typography.body, color: "#087A64", fontWeight: "800" },
+  link: { ...typography.body, color: colors.brand, fontWeight: "800", textAlign: "center" },
+  sentBubble: { alignSelf: "flex-end", backgroundColor: colors.brandSoft, borderRadius: 20, maxWidth: "86%", padding: spacing.md }
+});

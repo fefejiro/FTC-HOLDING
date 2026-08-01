@@ -69,6 +69,28 @@ export type ParticipantGrant = VersionedEntity &
     grantedBy: EntityId;
   }>;
 
+export type InvitationStatus = "pending" | "accepted" | "declined" | "expired" | "revoked" | "used";
+
+export type FamilyInvitation = VersionedEntity &
+  Readonly<{
+    familyCircleId: EntityId;
+    invitedRole: ParticipantRole;
+    permissions: readonly string[];
+    invitedByIdentityId: EntityId;
+    expiresAt: IsoUtcTimestamp;
+    status: InvitationStatus;
+    acceptedParticipantGrantId: EntityId | null;
+  }>;
+
+export type InvitationPreview = Readonly<{
+  invitationId: EntityId;
+  inviterDisplayName: string;
+  familyDisplayName: string;
+  invitedRole: ParticipantRole;
+  permissions: readonly string[];
+  expiresAt: IsoUtcTimestamp;
+}>;
+
 export type ChildProfile = VersionedEntity &
   Readonly<{
     familyCircleId: EntityId;
@@ -105,14 +127,58 @@ export type MessageEvent = VersionedEntity &
     occurredAt: IsoUtcTimestamp;
   }>;
 
+export type MessageCheckPreference = VersionedEntity &
+  Readonly<{
+    identityId: EntityId;
+    conversationId: EntityId;
+    enabled: boolean;
+    aiAssistanceEnabled: boolean;
+  }>;
+
+export type CalendarLayerKind =
+  | "parenting-time"
+  | "expenses-requests"
+  | "events-activities"
+  | "calls"
+  | "custom";
+
+export type LayerVisibility =
+  | Readonly<{ scope: "private" }>
+  | Readonly<{ scope: "family" }>
+  | Readonly<{ scope: "selected"; participantGrantIds: readonly EntityId[] }>;
+
+export type CalendarLayer = VersionedEntity &
+  Readonly<{
+    familyCircleId: EntityId;
+    ownerIdentityId: EntityId;
+    name: string;
+    kind: CalendarLayerKind;
+    icon: "calendar" | "clock" | "receipt" | "activity" | "phone" | "custom";
+    colorToken: "teal" | "violet" | "amber" | "rose" | "blue" | "green";
+    visibility: LayerVisibility;
+  }>;
+
+export type RecurrenceRule = Readonly<{
+  frequency: "daily" | "weekly" | "monthly" | "yearly";
+  interval: number;
+  weekdays: readonly ("MO" | "TU" | "WE" | "TH" | "FR" | "SA" | "SU")[];
+  until: IsoUtcTimestamp | null;
+  count: number | null;
+}>;
+
 export type ScheduleEvent = VersionedEntity &
   Readonly<{
     familyCircleId: EntityId;
+    calendarLayerId: EntityId;
     childProfileIds: readonly EntityId[];
     eventType: "parenting-time" | "appointment" | "holiday" | "change-request";
+    title: string;
+    description: string | null;
     startsAt: IsoUtcTimestamp;
     endsAt: IsoUtcTimestamp;
     status: "planned" | "requested" | "accepted" | "declined" | "cancelled";
+    recurrence: RecurrenceRule | null;
+    visibilityOverride: LayerVisibility | null;
   }>;
 
 export type ExpenseRecord = VersionedEntity &

@@ -10,6 +10,7 @@ const labConfig: PeacePadEnvironmentConfig = {
   apiBaseUrl: "http://127.0.0.1:8787",
   requestTimeoutMs: 12_000,
   productionApiWritesEnabled: false,
+  diagnosticsEnabled: false,
 };
 
 const stagingConfig: PeacePadEnvironmentConfig = {
@@ -17,6 +18,7 @@ const stagingConfig: PeacePadEnvironmentConfig = {
   apiBaseUrl: "https://staging-api.peacepad.example",
   requestTimeoutMs: 12_000,
   productionApiWritesEnabled: false,
+  diagnosticsEnabled: false,
 };
 
 describe("synthetic lab foundation API", () => {

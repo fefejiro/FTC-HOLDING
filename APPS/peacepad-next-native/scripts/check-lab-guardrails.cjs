@@ -13,6 +13,14 @@ const extra = appJson.expo?.extra || {};
 
 const failures = [];
 
+if (appJson.expo?.name !== "PeacePad") {
+  failures.push("The visible app name must remain PeacePad.");
+}
+
+if (iosBundle !== "ca.peacepad.nextnative.lab" || androidPackage !== "ca.peacepad.nextnative.lab") {
+  failures.push("Native lab identifiers must remain ca.peacepad.nextnative.lab.");
+}
+
 if (iosBundle === "ca.peacepad.family") {
   failures.push("iOS bundleIdentifier must not equal submitted production bundle ca.peacepad.family.");
 }
@@ -23,6 +31,10 @@ if (androidPackage === "ca.peacepad.family") {
 
 if (extra.productionApiWritesEnabled !== false) {
   failures.push("productionApiWritesEnabled must remain false in the lab app.");
+}
+
+if (extra.diagnosticsEnabled !== false) {
+  failures.push("diagnosticsEnabled must remain false in the checked-in app config.");
 }
 
 if (!packageJson.private) {

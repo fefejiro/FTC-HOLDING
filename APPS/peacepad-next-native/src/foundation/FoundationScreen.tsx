@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -6,13 +6,9 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View
 } from "react-native";
-import type {
-  ConsentPreferences,
-  MessagePreviewResponse
-} from "../api/contracts";
+import type { ConsentPreferences } from "../api/contracts";
 import {
   PeacePadApiError,
   type PeacePadFoundationApi
@@ -57,12 +53,6 @@ export function FoundationScreen({
   const [consent, setConsent] = useState<ConsentPreferences>(initialConsent);
   const [sessionState, setSessionState] = useState<AsyncState>("idle");
   const [sessionMessage, setSessionMessage] = useState<string | null>(null);
-  const [draft, setDraft] = useState(
-    "Can you confirm the pickup time for Saturday?"
-  );
-  const [preview, setPreview] = useState<MessagePreviewResponse | null>(null);
-  const [previewState, setPreviewState] = useState<AsyncState>("idle");
-  const [previewError, setPreviewError] = useState<string | null>(null);
 
   const requiredConsentAccepted =
     consent.termsAccepted && consent.privacyAcknowledged;
@@ -92,7 +82,7 @@ export function FoundationScreen({
         );
         if (!active) return;
         setPhase("compose");
-        setSessionMessage("Your private guest session was restored on this device.");
+        setSessionMessage("Welcome back.");
         setSessionState("ready");
       })
       .catch(async (error) => {
@@ -107,14 +97,6 @@ export function FoundationScreen({
       active = false;
     };
   }, [api, sessionStore]);
-
-  const statusLabel = useMemo(
-    () =>
-      environmentConfig.environment === "staging"
-        ? "Connected to staging"
-        : "Native lab foundation",
-    []
-  );
 
   async function startGuestSession() {
     if (!requiredConsentAccepted) {
@@ -134,32 +116,16 @@ export function FoundationScreen({
       await sessionStore.save(createStoredGuestSession(response, consent));
       setPhase("compose");
       setSessionState("ready");
-      setSessionMessage("Guest session ready. AI processing remains optional.");
+      setSessionMessage("Your choices are saved on this device.");
     } catch (error) {
       setSessionState("idle");
       setSessionMessage(friendlyError(error));
     }
   }
 
-  async function checkMessage() {
-    setPreviewState("loading");
-    setPreviewError(null);
-    setPreview(null);
-    try {
-      const result = await api.previewMessage(draft);
-      setPreview(result);
-      setPreviewState("ready");
-    } catch (error) {
-      setPreviewState("idle");
-      setPreviewError(friendlyError(error));
-    }
-  }
-
   async function resetDeviceSession() {
     await sessionStore.clear();
     setConsent(initialConsent);
-    setPreview(null);
-    setPreviewError(null);
     setSessionMessage("This device session was cleared.");
     setSessionState("idle");
     setPhase("welcome");
@@ -183,7 +149,6 @@ export function FoundationScreen({
           style={styles.conchMark}
         />
         <View style={styles.brandCopy}>
-          <Text style={styles.eyebrow}>{statusLabel}</Text>
           <Text style={styles.brandName}>PeacePad</Text>
         </View>
       </View>
@@ -202,10 +167,6 @@ export function FoundationScreen({
             label="Existing account"
             onPress={() => setPhase("account")}
           />
-          <SecondaryButton
-            label="Open synthetic Premium lab"
-            onPress={onOpenLab ?? (() => undefined)}
-          />
           <LegalLinks />
         </View>
       ) : null}
@@ -214,17 +175,9 @@ export function FoundationScreen({
         <View style={styles.card}>
           <Text style={styles.heading}>Existing account</Text>
           <Text style={styles.body}>
-            Account sign-in is not connected in this isolated native lab. This
-            shell reserves the route without touching production credentials or
-            user data.
+            Sign-in is temporarily unavailable. You can continue as a guest.
           </Text>
-          <View style={styles.safetyNote}>
-            <Text style={styles.safetyNoteTitle}>Staging gate</Text>
-            <Text style={styles.body}>
-              Authentication will be enabled only after the versioned staging
-              contract and account-recovery tests pass.
-            </Text>
-          </View>
+          <PrimaryButton label="Continue as guest" onPress={() => setPhase("consent")} />
           <SecondaryButton label="Back to welcome" onPress={() => setPhase("welcome")} />
           <LegalLinks />
         </View>
@@ -234,8 +187,7 @@ export function FoundationScreen({
         <View style={styles.card}>
           <Text style={styles.heading}>Your choices come first</Text>
           <Text style={styles.body}>
-            Opening this screen creates no account or guest session. Required
-            consent is stored only after the server creates your guest session.
+            Review the required terms. Optional message assistance remains off unless you choose it.
           </Text>
           <ConsentToggle
             label="I agree to the Terms"
@@ -280,46 +232,9 @@ export function FoundationScreen({
 
       {phase === "compose" ? (
         <View style={styles.card}>
-          <Text style={styles.heading}>Check your message before sending</Text>
-          <Text style={styles.body}>
-            This Gate 1 flow calls the existing rule-based preview endpoint.
-            PeacePad does not send this message to a co-parent.
-          </Text>
-          <TextInput
-            accessibilityLabel="Message draft"
-            multiline
-            onChangeText={setDraft}
-            placeholder="Write a difficult message…"
-            style={styles.input}
-            value={draft}
-          />
-          <PrimaryButton
-            label={previewState === "loading" ? "Checking…" : "Check message"}
-            onPress={checkMessage}
-            disabled={previewState === "loading"}
-          />
-
-          {preview ? (
-            <View style={styles.result} accessibilityLabel="Message preview result">
-              <Text style={styles.resultTone}>
-                {preview.emoji ? `${preview.emoji} ` : ""}
-                {preview.tone}
-              </Text>
-              <Text style={styles.body}>{preview.summary}</Text>
-              {preview.rewordingSuggestion ? (
-                <Text style={styles.suggestion}>
-                  Suggested wording: {preview.rewordingSuggestion}
-                </Text>
-              ) : null}
-            </View>
-          ) : null}
-
-          {previewError ? (
-            <View style={styles.errorCard} accessibilityRole="alert">
-              <Text style={styles.errorText}>{previewError}</Text>
-              <SecondaryButton label="Retry message check" onPress={checkMessage} />
-            </View>
-          ) : null}
+          <Text style={styles.heading}>You’re ready</Text>
+          <Text style={styles.body}>Start with a message, plan an event, or organize a record.</Text>
+          <PrimaryButton label="Continue to PeacePad" onPress={onOpenLab ?? (() => undefined)} />
 
           <SecondaryButton
             label="Reset this device session"
