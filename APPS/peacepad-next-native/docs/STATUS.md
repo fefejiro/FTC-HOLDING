@@ -28,15 +28,16 @@ approved Capacitor app, production data/API, App Store record, and
 | Third-party AI consent separate/off | AUTOMATED VERIFIED | consent and preference tests |
 | Current quiet-premium Simulator evidence | SIMULATOR VERIFIED | iPhone 17 / iOS 26.5; commit `02d19cf5`; fresh device-only screenshots |
 | Real-iPhone staging evidence | NOT STARTED | Requires deployed staging slice and controlled device session |
-| Staging `/api/v2` server handlers | NOT STARTED | Client contract and in-memory adapter only |
+| Staging `/api/v2` invitation handler core | AUTOMATED VERIFIED | Framework-neutral route/service tests; not deployed |
+| Persistent staging invitation infrastructure | NOT STARTED | Requires durable repository, shared rate limiter, secret injection, and trusted auth middleware |
 
 ## Verification
 
 ```text
 guardrails       passed
 typecheck        passed
-Jest/RNTL        12 suites / 74 tests passed
-coverage         82.38 statements / 77.81 branches / 75.47 functions / 85.71 lines
+Jest/RNTL        15 suites / 87 tests passed
+coverage         84.60 statements / 79.58 branches / 79.16 functions / 87.80 lines
 Expo Doctor      18/18 passed
 Expo config      PeacePad; ca.peacepad.nextnative.lab; diagnostics/writes false
 iOS export       passed; 841 modules bundled
@@ -83,6 +84,10 @@ commit and are not relabelled as current evidence.
 
 - Staging server authorization, hashed single-use codes, persisted
   idempotency/audit events, and infrastructure rate limits are not deployed.
+- The invitation handler core now verifies trusted actors, family permission,
+  region/version headers, idempotency, peppered code hashes, expiry, single
+  use, resolution claims, local rate limits, and hash-linked audit events. Its
+  repository and limiter are intentionally memory-only test adapters.
 - The product adapter is memory-only; only the earlier guest session uses
   SecureStore.
 - Invitation acceptance and code/deep-link contracts exist. Device sharing and
@@ -102,15 +107,15 @@ commit and are not relabelled as current evidence.
 | Layered calendar product flow | 55% |
 | Per-chat Message Check | 70% |
 | Typed staging compatibility client | 75% |
-| Staging server implementation | 0% |
+| Staging invitation server core | 35% |
 | Automated verification | 90% |
 | Current device verification | 70% |
-| Overall production-native v2 | 27% |
+| Overall production-native v2 | 29% |
 
 ## Next best move
 
-Run one real-iPhone staging pass and verify calendar layer sharing on-device.
-Then implement the staging `/api/v2` invitation slice: authorization, hashed
-single-use codes, rate limiting, idempotency, optimistic concurrency, and
-append-only audit events. Do not expand into calling, billing, or production
+Connect the verified invitation core to a durable staging-only repository,
+shared rate limiter, injected server secret, and trusted session middleware.
+Then deploy that isolated slice and run one real-iPhone staging pass, including
+calendar layer sharing. Do not expand into calling, billing, or production
 migration before those gates pass.

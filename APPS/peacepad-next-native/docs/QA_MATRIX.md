@@ -19,6 +19,15 @@ and `NOT STARTED`.
 | Explicit accept/decline before grant | AUTOMATED VERIFIED | UI and adapter tests |
 | Invalid, expired, revoked, used, rate-limited states | AUTOMATED VERIFIED | contract/adapter tests |
 | Invitation code excluded from URL | AUTOMATED VERIFIED | request test |
+| Server stores only peppered invitation-code hashes | AUTOMATED VERIFIED | staging service storage assertion |
+| Authenticated actor matches trusted session context | AUTOMATED VERIFIED | staging service/route tests |
+| Family invitation permission required | AUTOMATED VERIFIED | staging authorization test |
+| Code resolution proof required before accept/decline | AUTOMATED VERIFIED | staging claim test |
+| Region binding and optimistic concurrency | AUTOMATED VERIFIED | staging service tests |
+| Create/accept/decline/revoke idempotency | AUTOMATED VERIFIED | staging replay tests |
+| Expiry and single-use enforcement | AUTOMATED VERIFIED | staging service tests |
+| Resolve attempts rate-limited | AUTOMATED VERIFIED | staging service/route tests |
+| Hash-linked append-only audit sequence | AUTOMATED VERIFIED | staging audit-chain test |
 | Layers private by default | AUTOMATED VERIFIED | adapter/UI tests |
 | Cross-family reads/writes blocked | AUTOMATED VERIFIED | authorization tests |
 | Layers identified by name/state, not colour alone | AUTOMATED VERIFIED | labels and accessibility state |
@@ -37,8 +46,8 @@ and `NOT STARTED`.
 | --- | --- | --- |
 | TypeScript | AUTOMATED VERIFIED | passed |
 | Guardrails | AUTOMATED VERIFIED | passed |
-| Jest/RNTL | AUTOMATED VERIFIED | 12 suites / 74 tests |
-| Coverage | AUTOMATED VERIFIED | 82.38 / 77.81 / 75.47 / 85.71 |
+| Jest/RNTL | AUTOMATED VERIFIED | 15 suites / 87 tests |
+| Coverage | AUTOMATED VERIFIED | 84.60 / 79.58 / 79.16 / 87.80 |
 | Expo config | AUTOMATED VERIFIED | lab bundle; diagnostics/writes false |
 | Expo Doctor | AUTOMATED VERIFIED | 18/18 |
 | iOS export | AUTOMATED VERIFIED | 841 modules |
@@ -77,7 +86,11 @@ The historical records screenshots in
 
 ## Remaining promotion gates
 
-- Deploy the staging server invitation slice with authorization/audit proof.
+- Replace the in-memory invitation repository and limiter with durable,
+  concurrency-safe staging infrastructure.
+- Bind route actors to trusted session middleware and inject the server-only
+  hash pepper from staging secrets.
+- Deploy the staging invitation slice and verify its authorization/audit proof.
 - Add tested device sharing and scannable QR behavior.
 - Verify calendar layer sharing on Simulator or real iPhone.
 - Run one real-iPhone staging pass with fictional accounts.
