@@ -1,6 +1,6 @@
 # PeacePad Next Native Status
 
-Last updated: 2026-07-31
+Last updated: 2026-08-01
 
 ## Scope boundary
 
@@ -26,7 +26,7 @@ approved Capacitor app, production data/API, App Store record, and
 | Per-chat Message Check, default off | AUTOMATED VERIFIED | UI and adapter tests |
 | Original draft preserved; no automatic send | AUTOMATED VERIFIED | explicit-send tests |
 | Third-party AI consent separate/off | AUTOMATED VERIFIED | consent and preference tests |
-| Current quiet-premium Simulator evidence | NOT STARTED | No callable Mac/iOS Simulator in this execution session |
+| Current quiet-premium Simulator evidence | SIMULATOR VERIFIED | iPhone 17 / iOS 26.5; commit `02d19cf5`; fresh device-only screenshots |
 | Real-iPhone staging evidence | NOT STARTED | Requires deployed staging slice and controlled device session |
 | Staging `/api/v2` server handlers | NOT STARTED | Client contract and in-memory adapter only |
 
@@ -60,6 +60,18 @@ write was used.
 
 ## Simulator evidence boundary
 
+The fresh screenshots under
+`docs/evidence/quiet-premium-2026-08-01` prove the current quiet-premium Home,
+invitation, Month/Week/Day calendar switching, and Message Check explicit-send
+journeys on commit `02d19cf5`. The simulator was an iPhone 17 running iOS 26.5.
+All records and messages were fictional, the bundle remained
+`ca.peacepad.nextnative.lab`, and production writes remained disabled.
+
+Calendar layer sharing remains **BLOCKED** for Simulator evidence. The control
+was visible and its confirmation behavior is automated-verified, but the remote
+pointer did not activate that one control after the permitted retry. It is not
+marked Simulator verified.
+
 The six screenshots under
 `docs/evidence/premium-vertical-slice-2026-07-31` prove the earlier records
 vertical slice on commit `86adf4cb`. They were added by remote commit
@@ -78,7 +90,8 @@ commit and are not relabelled as current evidence.
 - Calendar view selection/layers/events are implemented; full grids,
   recurrence, offline behavior, and production persistence are later gates.
 - Message Check is rule-based and does not call third-party AI.
-- Current Simulator and real-iPhone screenshots remain required.
+- Calendar layer-sharing Simulator proof and all real-iPhone staging evidence
+  remain required.
 
 ## Honest completion map
 
@@ -91,13 +104,13 @@ commit and are not relabelled as current evidence.
 | Typed staging compatibility client | 75% |
 | Staging server implementation | 0% |
 | Automated verification | 90% |
-| Current device verification | 0% |
-| Overall production-native v2 | 24% |
+| Current device verification | 70% |
+| Overall production-native v2 | 27% |
 
 ## Next best move
 
-Implement the staging `/api/v2` invitation slice first: authorization, hashed
+Run one real-iPhone staging pass and verify calendar layer sharing on-device.
+Then implement the staging `/api/v2` invitation slice: authorization, hashed
 single-use codes, rate limiting, idempotency, optimistic concurrency, and
-append-only audit events. Then connect the existing UI and run one Simulator
-pass followed by one real-iPhone staging pass. Do not expand into calling,
-billing, or production migration before that proof.
+append-only audit events. Do not expand into calling, billing, or production
+migration before those gates pass.

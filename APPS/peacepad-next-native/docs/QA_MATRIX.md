@@ -1,6 +1,6 @@
 # PeacePad Next Native QA Matrix
 
-Last updated: 2026-07-31
+Last updated: 2026-08-01
 
 Statuses: `IMPLEMENTED`, `AUTOMATED VERIFIED`, `SIMULATOR VERIFIED`, `BLOCKED`,
 and `NOT STARTED`.
@@ -48,12 +48,17 @@ and `NOT STARTED`.
 
 | Evidence | Status |
 | --- | --- |
-| Home | NOT STARTED |
-| Invitation preview and acceptance | NOT STARTED |
-| Month/Week/Day calendar | NOT STARTED |
-| Layer sharing | NOT STARTED |
-| Message Check opt-in, review, explicit send | NOT STARTED |
+| Home | SIMULATOR VERIFIED |
+| Invitation preview and acceptance | SIMULATOR VERIFIED |
+| Month/Week/Day calendar | SIMULATOR VERIFIED |
+| Layer sharing | BLOCKED |
+| Message Check opt-in, review, explicit send | SIMULATOR VERIFIED |
 | Real-iPhone staging pass | NOT STARTED |
+
+Current evidence is in `docs/evidence/quiet-premium-2026-08-01` and was
+captured from an iPhone 17 simulator running iOS 26.5 at source commit
+`02d19cf5`. Layer sharing is automated-verified, but its visible Simulator
+control did not activate through the remote pointer after the permitted retry.
 
 The historical records screenshots in
 `docs/evidence/premium-vertical-slice-2026-07-31` remain valid only for commit
@@ -74,7 +79,7 @@ The historical records screenshots in
 
 - Deploy the staging server invitation slice with authorization/audit proof.
 - Add tested device sharing and scannable QR behavior.
-- Capture the current ten-screen iOS Simulator evidence once.
+- Verify calendar layer sharing on Simulator or real iPhone.
 - Run one real-iPhone staging pass with fictional accounts.
 - Complete accessibility, dark mode, dynamic type, offline, and weak-network
   matrices before any production migration decision.
