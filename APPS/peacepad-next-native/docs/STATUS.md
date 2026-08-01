@@ -137,9 +137,9 @@ commit and are not relabelled as current evidence.
 | Per-chat Message Check | 70% |
 | Typed staging compatibility client | 75% |
 | Staging invitation server core | 70% |
-| Automated verification | 92% |
+| Automated verification | 94% |
 | Current device verification | 70% |
-| Overall production-native v2 | 32% |
+| Overall production-native v2 | 33% |
 
 ## Next best move
 
