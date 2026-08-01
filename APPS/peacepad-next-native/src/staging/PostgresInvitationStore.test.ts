@@ -126,6 +126,25 @@ describe("PostgresInvitationStore", () => {
     expect(JSON.stringify(pool.client.calls)).not.toContain('"intent"');
     expect(idempotencyDigest.digest).toHaveBeenCalledWith("staging-idempotency-pepper:intent");
   });
+
+  it("persists and verifies only hashed resolution subjects", async () => {
+    const pool = new FakePool();
+    pool.client.queued.push(
+      { rows: [], rowCount: 1 },
+      { rows: [{ "?column?": 1 }], rowCount: 1 }
+    );
+    const store = createStore(pool);
+
+    await store.transaction(async (transaction) => {
+      await transaction.saveResolutionClaim("subject-hash", invitation.id, invitation.expiresAt);
+      await expect(transaction.hasResolutionClaim("subject-hash", invitation.id)).resolves.toBe(true);
+    });
+
+    const claimCalls = pool.client.calls.filter((call) => call.text.includes("invitation_resolution_claims"));
+    expect(claimCalls).toHaveLength(2);
+    expect(JSON.stringify(claimCalls)).toContain("subject-hash");
+    expect(JSON.stringify(claimCalls)).not.toContain("raw-requester");
+  });
 });
 
 describe("PostgresInvitationRateLimiter", () => {

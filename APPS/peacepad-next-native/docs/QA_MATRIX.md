@@ -23,6 +23,7 @@ and `NOT STARTED`.
 | Authenticated actor matches trusted session context | AUTOMATED VERIFIED | staging service/route tests |
 | Family invitation permission required | AUTOMATED VERIFIED | staging authorization test |
 | Code resolution proof required before accept/decline | AUTOMATED VERIFIED | staging claim test |
+| Resolution proof survives service restart | AUTOMATED VERIFIED | durable claim store and cross-service test |
 | Region binding and optimistic concurrency | AUTOMATED VERIFIED | staging service tests |
 | Create/accept/decline/revoke idempotency | AUTOMATED VERIFIED | staging replay tests |
 | Expiry and single-use enforcement | AUTOMATED VERIFIED | staging service tests |
@@ -52,11 +53,14 @@ and `NOT STARTED`.
 | --- | --- | --- |
 | TypeScript | AUTOMATED VERIFIED | passed |
 | Guardrails | AUTOMATED VERIFIED | passed |
-| Jest/RNTL | AUTOMATED VERIFIED | 18 suites / 105 tests |
-| Coverage | AUTOMATED VERIFIED | 84.87 / 79.43 / 78.84 / 87.90 |
+| Jest/RNTL | AUTOMATED VERIFIED | 20 suites / 117 tests |
+| Coverage | AUTOMATED VERIFIED | 85.29 / 79.85 / 80.05 / 88.42 |
 | Expo config | AUTOMATED VERIFIED | lab bundle; diagnostics/writes false |
-| Expo Doctor | AUTOMATED VERIFIED | 18/18 |
-| iOS export | AUTOMATED VERIFIED | 841 modules |
+| Expo Doctor | BLOCKED | 17/18; app React 19 and monorepo-root React 18 duplicate |
+| iOS export | AUTOMATED VERIFIED | 846 modules |
+| Local staging host health | AUTOMATED VERIFIED | `/health` 200 |
+| Readiness without database | AUTOMATED VERIFIED | `/readyz` fails closed with 500 |
+| Production dependency audit | BLOCKED | 25 inherited advisories; breaking blanket upgrade rejected |
 | Diff/secret checks | AUTOMATED VERIFIED | passed |
 
 ## Current device evidence required
@@ -93,6 +97,8 @@ The historical records screenshots in
 ## Remaining promotion gates
 
 - Provision an isolated staging Postgres instance and service runtime.
+- Resolve the duplicate-React Expo Doctor finding without modifying unrelated
+  applications, and plan safe Expo/React Native dependency remediation.
 - Apply `staging/migrations/0001_invitation_slice.sql` and grant a dedicated,
   least-privilege runtime role.
 - Inject server-only peppers and connect a real staging session authenticator.

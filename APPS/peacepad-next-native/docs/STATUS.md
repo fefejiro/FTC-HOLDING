@@ -28,10 +28,11 @@ approved Capacitor app, production data/API, App Store record, and
 | Third-party AI consent separate/off | AUTOMATED VERIFIED | consent and preference tests |
 | Current quiet-premium Simulator evidence | SIMULATOR VERIFIED | iPhone 17 / iOS 26.5; commit `02d19cf5`; fresh device-only screenshots |
 | Real-iPhone staging evidence | NOT STARTED | Requires deployed staging slice and controlled device session |
-| Staging `/api/v2` invitation handler core | AUTOMATED VERIFIED | Framework-neutral route/service tests; not deployed |
-| Postgres staging repository and migration | AUTOMATED VERIFIED | Transaction/rollback/CAS adapter tests; migration prepared but not applied |
+| Staging `/api/v2` invitation handler core | AUTOMATED VERIFIED | Reviewed Node host plus framework-neutral route/service tests; not deployed |
+| Postgres staging repository and migration | AUTOMATED VERIFIED | Transaction/rollback/CAS and durable resolution-claim tests; migration prepared but not applied |
 | Shared staging rate limiter | AUTOMATED VERIFIED | Atomic Postgres upsert contract; not deployed |
 | Trusted staging session boundary | AUTOMATED VERIFIED | Bearer authenticator bridge ignores spoofed actor headers |
+| Staging host health/fail-closed readiness | AUTOMATED VERIFIED | Local `/health` returned 200; `/readyz` returned 500 with the database intentionally unavailable |
 | Persistent staging deployment | NOT STARTED | Requires isolated database/service provisioning and secret injection |
 
 ## Verification
@@ -39,11 +40,11 @@ approved Capacitor app, production data/API, App Store record, and
 ```text
 guardrails       passed
 typecheck        passed
-Jest/RNTL        18 suites / 105 tests passed
-coverage         84.87 statements / 79.43 branches / 78.84 functions / 87.90 lines
-Expo Doctor      18/18 passed
+Jest/RNTL        20 suites / 117 tests passed
+coverage         85.29 statements / 79.85 branches / 80.05 functions / 88.42 lines
+Expo Doctor      BLOCKED: 17/18; duplicate React 19 app / React 18 monorepo root
 Expo config      PeacePad; ca.peacepad.nextnative.lab; diagnostics/writes false
-iOS export       passed; 841 modules bundled
+iOS export       passed; 846 modules bundled
 diff check       passed
 secret scan      no credential value found in changed runtime files
 ```
@@ -87,6 +88,10 @@ commit and are not relabelled as current evidence.
 
 - Staging server authorization, hashed single-use codes, persisted
   idempotency/audit events, and infrastructure rate limits are not deployed.
+- The reviewed Node staging host is locally runnable, validates staging-only
+  origins/database/session configuration, exposes health/readiness endpoints,
+  bounds JSON bodies, applies strict CORS, and logs no request bodies or tokens.
+  It does not auto-apply migrations.
 - The invitation handler core now verifies trusted actors, family permission,
   region/version headers, idempotency, peppered code hashes, expiry, single
   use, resolution claims, local rate limits, and hash-linked audit events.
@@ -95,6 +100,9 @@ commit and are not relabelled as current evidence.
   Postgres rate limiter, trusted-session bridge, staging-only runtime factory,
   and isolated schema migration now exist. They are automated-verified but
   have not been connected to a database or deployed service.
+- Invitation-resolution proof is persisted as an expiring peppered subject
+  hash, so accept/decline authorization survives a process restart or a second
+  service instance without storing the submitted code or bearer token.
 - PostgreSQL CLI tooling was unavailable locally, so the migration received
   static guardrail and adapter-contract verification but no live SQL execution.
 - Durable idempotency values and rate-limit subjects are peppered before
@@ -109,6 +117,13 @@ commit and are not relabelled as current evidence.
 - Message Check is rule-based and does not call third-party AI.
 - Calendar layer-sharing Simulator proof and all real-iPhone staging evidence
   remain required.
+- Expo Doctor is blocked by two React versions in the wider monorepo dependency
+  layout. The app typecheck, tests, config, and iOS production export pass; this
+  dependency-layout issue must be resolved without changing unrelated apps.
+- `npm audit --omit=dev --workspace=@ftc/peacepad-next-native` currently reports
+  25 inherited Expo/React Native toolchain advisories (3 low, 13 moderate,
+  7 high, 2 critical). The suggested blanket repair requires a breaking Expo
+  upgrade and was intentionally not applied.
 
 ## Honest completion map
 
@@ -119,15 +134,17 @@ commit and are not relabelled as current evidence.
 | Layered calendar product flow | 55% |
 | Per-chat Message Check | 70% |
 | Typed staging compatibility client | 75% |
-| Staging invitation server core | 60% |
-| Automated verification | 90% |
+| Staging invitation server core | 70% |
+| Automated verification | 92% |
 | Current device verification | 70% |
 | Overall production-native v2 | 32% |
 
 ## Next best move
 
-Provision a new isolated staging database and service, apply the prepared
-migration, grant a least-privilege runtime role, and inject staging-only secret
-material. Then run live API contract tests and one real-iPhone staging pass,
-including calendar layer sharing. Do not expand into calling, billing, or
-production migration before those gates pass.
+First resolve the Expo Doctor duplicate-React layout in an isolated native
+install strategy and triage the dependency advisories without a breaking blind
+upgrade. Then, after an explicit cost/hosting decision, provision one isolated
+staging database and service, apply the prepared migration, grant a
+least-privilege runtime role, and run live API plus real-iPhone staging checks.
+Do not expand into calling, billing, or production migration before those gates
+pass.

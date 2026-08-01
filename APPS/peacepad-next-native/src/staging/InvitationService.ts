@@ -31,6 +31,8 @@ export interface InvitationStore {
   saveGrant(grant: ParticipantGrant): Promise<void>;
   findIdempotentResult(key: string): Promise<string | undefined>;
   saveIdempotentResult(key: string, targetId: string): Promise<void>;
+  saveResolutionClaim(subjectHash: string, invitationId: string, expiresAt: string): Promise<void>;
+  hasResolutionClaim(subjectHash: string, invitationId: string): Promise<boolean>;
   appendAudit(event: AuditEvent): Promise<void>;
   latestAudit(): Promise<AuditEvent | undefined>;
 }
@@ -113,8 +115,6 @@ export class InvitationService {
   private readonly maxCreateAttempts: number;
   private readonly resolveWindowMs: number;
   private readonly rateLimiter: InvitationRateLimiter;
-  private readonly resolvedInvitationClaims = new Map<string, Set<string>>();
-
   constructor(private readonly options: InvitationServiceOptions) {
     if (options.pepper.trim().length < 16) {
       throw new Error("Invitation hashing requires a server-only pepper of at least 16 characters.");
@@ -199,6 +199,7 @@ export class InvitationService {
       throw new InvitationServiceError("INVITATION_INVALID", "Enter a valid six-character invitation code.", 404);
     }
     const codeHash = await this.hashCode(code);
+    const subjectHash = await this.hashResolutionSubject(requesterKey);
     return this.options.store.transaction(async (store) => {
       const record = await store.findByCodeHash(codeHash);
       if (!record) {
@@ -206,9 +207,7 @@ export class InvitationService {
       }
       const invitation = await this.expireIfNeeded(record, store);
       this.assertInvitationAvailable(invitation);
-      const claims = this.resolvedInvitationClaims.get(requesterKey) ?? new Set<string>();
-      claims.add(invitation.id);
-      this.resolvedInvitationClaims.set(requesterKey, claims);
+      await store.saveResolutionClaim(subjectHash, invitation.id, invitation.expiresAt);
       return {
         invitationId: invitation.id,
         inviterDisplayName: record.inviterDisplayName,
@@ -238,7 +237,7 @@ export class InvitationService {
       this.assertRegion(invitation.region, context.region);
       this.assertVersion(invitation.version, context.expectedVersion);
       this.assertInvitationAvailable(invitation);
-      this.assertResolvedClaim(requesterKey, invitationId);
+      await this.assertResolvedClaim(requesterKey, invitationId, store);
       if (invitation.invitedByIdentityId === actor.identityId) {
         throw new InvitationServiceError("FORBIDDEN", "The sender cannot accept their own invitation.", 403);
       }
@@ -292,7 +291,7 @@ export class InvitationService {
       if (requiresFamilyPermission) {
         this.assertFamilyPermission(actor, invitation.familyCircleId, "invite");
       } else {
-        this.assertResolvedClaim(requesterKey, invitationId);
+        await this.assertResolvedClaim(requesterKey, invitationId, store);
       }
       const updated = { ...invitation, version: invitation.version + 1, status: target } as FamilyInvitation;
       await store.save({ ...record, invitation: updated }, invitation.version);
@@ -357,10 +356,15 @@ export class InvitationService {
     }
   }
 
-  private assertResolvedClaim(requesterKey: string, invitationId: string) {
-    if (!this.resolvedInvitationClaims.get(requesterKey)?.has(invitationId)) {
+  private async assertResolvedClaim(requesterKey: string, invitationId: string, store: InvitationStore) {
+    const subjectHash = await this.hashResolutionSubject(requesterKey);
+    if (!(await store.hasResolutionClaim(subjectHash, invitationId))) {
       throw new InvitationServiceError("FORBIDDEN", "Resolve this invitation before responding.", 403);
     }
+  }
+
+  private hashResolutionSubject(requesterKey: string) {
+    return this.options.digest.digest(`${this.options.pepper}:resolution-claim:${requesterKey}`);
   }
 
   private assertRegion(actual: DataRegion, expected: DataRegion) {
@@ -463,12 +467,14 @@ export class InMemoryInvitationStore implements InvitationStore {
   readonly invitations = new Map<string, StoredInvitation>();
   readonly grants = new Map<string, ParticipantGrant>();
   readonly idempotency = new Map<string, string>();
+  readonly resolutionClaims = new Map<string, string>();
   readonly auditEvents: AuditEvent[] = [];
 
   async transaction<T>(work: (store: InvitationStore) => Promise<T>): Promise<T> {
     const invitations = new Map(this.invitations);
     const grants = new Map(this.grants);
     const idempotency = new Map(this.idempotency);
+    const resolutionClaims = new Map(this.resolutionClaims);
     const auditEvents = [...this.auditEvents];
     try {
       return await work(this);
@@ -479,6 +485,8 @@ export class InMemoryInvitationStore implements InvitationStore {
       grants.forEach((value, key) => this.grants.set(key, value));
       this.idempotency.clear();
       idempotency.forEach((value, key) => this.idempotency.set(key, value));
+      this.resolutionClaims.clear();
+      resolutionClaims.forEach((value, key) => this.resolutionClaims.set(key, value));
       this.auditEvents.splice(0, this.auditEvents.length, ...auditEvents);
       throw error;
     }
@@ -499,6 +507,13 @@ export class InMemoryInvitationStore implements InvitationStore {
   async saveGrant(grant: ParticipantGrant) { this.grants.set(grant.id, grant); }
   async findIdempotentResult(key: string) { return this.idempotency.get(key); }
   async saveIdempotentResult(key: string, targetId: string) { this.idempotency.set(key, targetId); }
+  async saveResolutionClaim(subjectHash: string, invitationId: string, expiresAt: string) {
+    this.resolutionClaims.set(`${subjectHash}:${invitationId}`, expiresAt);
+  }
+  async hasResolutionClaim(subjectHash: string, invitationId: string) {
+    const expiresAt = this.resolutionClaims.get(`${subjectHash}:${invitationId}`);
+    return expiresAt !== undefined && Date.parse(expiresAt) > Date.now();
+  }
   async appendAudit(event: AuditEvent) {
     const previous = this.auditEvents.at(-1);
     if (event.sequence !== (previous?.sequence ?? 0) + 1 || event.previousEventHash !== (previous?.eventHash ?? null)) {

@@ -160,6 +160,31 @@ export class PostgresInvitationStore implements InvitationStore {
     );
   }
 
+  async saveResolutionClaim(subjectHash: string, invitationId: string, expiresAt: string) {
+    this.assertTransaction("resolution claim write");
+    await this.connection.query(
+      `INSERT INTO peacepad_native_staging.invitation_resolution_claims
+        (subject_hash, invitation_id, expires_at)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (subject_hash, invitation_id) DO UPDATE
+       SET expires_at = EXCLUDED.expires_at`,
+      [subjectHash, invitationId, expiresAt]
+    );
+  }
+
+  async hasResolutionClaim(subjectHash: string, invitationId: string) {
+    this.assertTransaction("resolution claim lookup");
+    const result = await this.connection.query(
+      `SELECT 1
+         FROM peacepad_native_staging.invitation_resolution_claims
+        WHERE subject_hash = $1
+          AND invitation_id = $2
+          AND expires_at > now()`,
+      [subjectHash, invitationId]
+    );
+    return result.rowCount === 1;
+  }
+
   async appendAudit(event: AuditEvent) {
     this.assertTransaction("audit append");
     await this.connection.query(

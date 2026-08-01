@@ -14,6 +14,7 @@ Implemented behavior:
 - preview after successful code resolution;
 - explicit accept, decline, and sender-authorized revoke;
 - proof of code resolution required before accept or decline;
+- durable, expiring, peppered resolution proof that survives process restarts;
 - expiry, revocation, reuse, region, and optimistic-version enforcement;
 - idempotent create and state transitions;
 - independently rate-limited creation and resolution attempts; and
@@ -32,8 +33,11 @@ The repository now includes:
 4. `createStagingInvitationRuntime`, which wires those adapters, requires HTTPS
    away from localhost, and rejects non-staging origins; and
 5. `staging/migrations/0001_invitation_slice.sql`, an isolated schema that has
-   no plaintext invitation-code or deep-link columns and revokes PUBLIC table
-   access.
+   no plaintext invitation-code, deep-link, requester, or bearer-token columns,
+   persists expiring resolution claims, and revokes PUBLIC table access; and
+6. `src/staging/server.ts`, a staging-only Node host with bounded JSON input,
+   strict origin handling, redacted structured logs, health/readiness checks,
+   and graceful shutdown. It never applies migrations automatically.
 
 The client must never be allowed to submit or override a trusted actor. The
 route adapter receives that actor from server middleware rather than HTTP
@@ -44,11 +48,23 @@ headers.
 - Provision an isolated PostgreSQL database and staging API service.
 - Apply the migration and grant a dedicated runtime role only the operations it
   needs. The migration was not executed locally because `psql` is unavailable.
-- Bind a real database pool, staging session authenticator, and authorized
-  family-directory lookup.
+- Deploy the reviewed host and bind its database pool, hashed synthetic staging
+  session, and authorized family-directory configuration.
 - Supply invitation and rate-limit peppers through the server secret store.
-- Add health/readiness endpoints, structured redacted logs, and live restore
-  verification.
+- Complete live restore, restart, and multi-instance verification.
+
+Local host verification proved `/health` returns 200 and `/readyz` fails closed
+with 500 when the database is intentionally unavailable. No external service,
+database, migration, or production credential was created or changed.
+
+## Dependency gate
+
+TypeScript, guardrails, all 117 tests, Expo config, and an iOS production export
+pass. Expo Doctor is 17/18 because the monorepo currently exposes React 19 in
+the native workspace and React 18 at its root. The production-dependency audit
+also reports 25 inherited Expo/React Native advisories. Do not use
+`npm audit fix --force`; resolve both items through a reviewed native dependency
+isolation/upgrade plan before deployment promotion.
 
 ## Promotion gate
 

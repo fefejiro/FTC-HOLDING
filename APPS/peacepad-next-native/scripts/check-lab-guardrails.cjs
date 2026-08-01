@@ -42,12 +42,24 @@ if (!packageJson.private) {
   failures.push("package.json must remain private.");
 }
 
+if (packageJson.scripts?.["staging:start"] !== "tsx src/staging/server.ts") {
+  failures.push("The isolated staging server must use the reviewed staging entrypoint.");
+}
+
 if (!/\bcode_hash\s+text\s+not\s+null\s+unique\b/i.test(stagingInvitationMigration)) {
   failures.push("Staging invitations must persist a unique code hash.");
 }
 
 if (/^\s*(code|deep_link)\s+(text|varchar)/im.test(stagingInvitationMigration)) {
   failures.push("Staging invitations must not define plaintext code or deep-link columns.");
+}
+
+if (!/CREATE TABLE IF NOT EXISTS peacepad_native_staging\.invitation_resolution_claims/i.test(stagingInvitationMigration)) {
+  failures.push("Invitation resolution proof must be durable across staging instances.");
+}
+
+if (/^\s*(requester_key|session_token)\s+(text|varchar)/im.test(stagingInvitationMigration)) {
+  failures.push("Staging resolution proof must not persist raw requester or session values.");
 }
 
 if (!/REVOKE ALL ON ALL TABLES IN SCHEMA peacepad_native_staging FROM PUBLIC/i.test(stagingInvitationMigration)) {

@@ -60,7 +60,12 @@ function setup(options: { maxResolveAttempts?: number; maxCreateAttempts?: numbe
     maxResolveAttempts: options.maxResolveAttempts ?? 8,
     maxCreateAttempts: options.maxCreateAttempts ?? 5
   });
-  return { service, store, advance: (milliseconds: number) => { now = new Date(now.getTime() + milliseconds); } };
+  return {
+    service,
+    store,
+    clock,
+    advance: (milliseconds: number) => { now = new Date(now.getTime() + milliseconds); }
+  };
 }
 
 describe("InvitationService", () => {
@@ -121,6 +126,24 @@ describe("InvitationService", () => {
     await expect(service.accept(created.invitation.id, context(recipient, "accept", 1), recipient)).rejects.toMatchObject({
       code: "FORBIDDEN"
     });
+  });
+
+  it("persists hashed resolution proof across service restarts", async () => {
+    const { service, store, clock } = setup();
+    const created = await service.create(input, context(owner, "durable-claim"), owner);
+    await service.resolve(created.code, recipient.sessionId);
+
+    expect(JSON.stringify([...store.resolutionClaims.keys()])).not.toContain(recipient.sessionId);
+    const restarted = new InvitationService({
+      store,
+      clock,
+      digest: new TestDigest(),
+      directory: { familyName: async (id) => id === "family-1" ? "Morgan family" : undefined },
+      pepper: "staging-secret-pepper-only"
+    });
+    await expect(
+      restarted.accept(created.invitation.id, context(recipient, "restart-accept", 1), recipient)
+    ).resolves.toMatchObject({ identityId: recipient.identityId });
   });
 
   it("accepts once, creates a grant, and replays the same intent safely", async () => {
@@ -227,6 +250,7 @@ describe("InvitationService", () => {
     await expect(service.create(input, context(owner, "rollback"), owner)).rejects.toThrow("audit unavailable");
     expect(store.invitations.size).toBe(0);
     expect(store.idempotency.size).toBe(0);
+    expect(store.resolutionClaims.size).toBe(0);
     expect(store.auditEvents).toHaveLength(0);
   });
 });

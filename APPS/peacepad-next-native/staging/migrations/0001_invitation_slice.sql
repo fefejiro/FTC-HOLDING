@@ -34,6 +34,14 @@ CREATE TABLE IF NOT EXISTS peacepad_native_staging.idempotency_receipts (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS peacepad_native_staging.invitation_resolution_claims (
+  subject_hash text NOT NULL,
+  invitation_id text NOT NULL REFERENCES peacepad_native_staging.invitations(id) ON DELETE CASCADE,
+  expires_at timestamptz NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (subject_hash, invitation_id)
+);
+
 CREATE TABLE IF NOT EXISTS peacepad_native_staging.audit_events (
   id text PRIMARY KEY,
   region text NOT NULL CHECK (region IN ('ca', 'us')),
@@ -61,6 +69,9 @@ CREATE INDEX IF NOT EXISTS invitations_family_status_idx
 
 CREATE INDEX IF NOT EXISTS invitations_expiry_idx
   ON peacepad_native_staging.invitations (expires_at);
+
+CREATE INDEX IF NOT EXISTS invitation_resolution_claims_expiry_idx
+  ON peacepad_native_staging.invitation_resolution_claims (expires_at);
 
 REVOKE ALL ON SCHEMA peacepad_native_staging FROM PUBLIC;
 REVOKE ALL ON ALL TABLES IN SCHEMA peacepad_native_staging FROM PUBLIC;
