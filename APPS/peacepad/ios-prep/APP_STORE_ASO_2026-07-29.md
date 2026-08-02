@@ -1,6 +1,7 @@
 # PeacePad App Store ASO and Metadata Plan
 
 Date: 2026-07-29
+Live audit refreshed: 2026-08-02
 
 ## Outcome
 
@@ -25,20 +26,29 @@ Verified from Apple's Canadian public product page and catalog API on
 | Version | 1.0 |
 | Price | Free |
 | Primary category | Lifestyle |
-| Secondary category | Productivity |
-| Age rating | 12+ |
+| Secondary category | Not exposed by the public storefront |
+| Age rating | 13+ |
 | Minimum iOS | 14.0 |
 | Seller | Fejiro Technology Consultancy Inc |
 | Bundle ID | `ca.peacepad.family` |
 
-The product URL returned HTTP 200 and resolved to the Canadian storefront. A
-public-device install remains a separate acceptance check.
+The product URL returned HTTP 200 and resolved to the Canadian storefront. The
+owner confirmed a successful public App Store installation and launch on a
+real iPhone.
 
-Apple's public catalog API initially returned zero iPhone and iPad screenshots,
-and the public page's social image used a placeholder while App Store Connect
-showed approved screenshots. Treat this as launch propagation until the
-24-hour window expires. If screenshots or the social image remain absent after
-that window, investigate the public listing before changing screenshot content.
+The live product page now exposes two iPhone screenshots. Both show almost the
+same Compose state; the first has an empty draft and disabled action. This is a
+conversion weakness because Apple may show up to three screenshots directly in
+search results. The public social image still resolves through Apple's
+placeholder asset, so owned PeacePad links should use the website's current
+Open Graph image rather than relying on the storefront social card.
+
+The listing currently has zero displayed ratings and only English metadata.
+The public App Privacy summary is also very broad: it declares analytics,
+health, financial, precise/coarse location, contact, user-content, identifier,
+and usage data. Reconcile those answers against observed version 1.0 network
+and storage behaviour before removing or retaining any category. Accuracy is
+the objective; a shorter privacy label is not a marketing exercise.
 
 ## Change boundary
 
@@ -48,6 +58,8 @@ that window, investigate the public listing before changing screenshot content.
   app submission.
 - Privacy Policy URL and App Privacy answers when they need to remain accurate.
 - Availability, pricing, and relevant App Store tags.
+- The PeacePad website's Smart App Banner, App Store links, and structured app
+  metadata.
 
 ### Stage for version 1.0.1
 
@@ -87,6 +99,19 @@ Avoid:
 - unsupported encryption, compliance, or AI-training guarantees;
 - describing optional AI processing as required for the core compose flow.
 
+## Category recommendation for version 1.0.1
+
+Set **Productivity** as the primary category and retain **Lifestyle** as the
+secondary category, subject to App Review confirming the shipped coordination
+flows. On the Canadian storefront, AppClose, OurFamilyWizard, and several other
+co-parenting coordination products currently use Productivity as their primary
+category. PeacePad's current Lifestyle placement separates it from the most
+relevant browse/filter context. Categories are indexed, so this is a search
+alignment change, not cosmetic positioning.
+
+Do not change category independently of the 1.0.1 metadata review. Reconfirm
+that Compose, Prep, and calendar context remain easy for reviewers to find.
+
 ## Paste-ready metadata
 
 ### App name for version 1.0.1
@@ -107,23 +132,23 @@ category phrase.
 Limit: 30 characters
 
 ```text
-Calm Co-Parent Communication
+Calmer Messages & Planning
 ```
 
-Count: 28 characters
+Count: 26 characters
 
-Reason: communicates the central benefit and adds a high-intent phrase without
-repeating the full app name.
+Reason: adds two distinct, high-intent concepts without repeating the
+`Co-Parenting` phrase already present in the proposed name.
 
 ### Promotional text for version 1.0
 
 Limit: 170 characters
 
 ```text
-Pause before you send. PeacePad helps co-parents check message tone, prepare for difficult conversations, and keep parenting communication focused.
+Pause before you send. PeacePad helps co-parents check tone, prepare for difficult conversations, and keep practical parenting details organized.
 ```
 
-Count: 147 characters
+Count: 145 characters
 
 This is the first live metadata change to make after confirming the public
 product page. It describes the approved compose and preparation experience and
@@ -134,13 +159,14 @@ does not claim legal, therapeutic, or guaranteed outcomes.
 Limit: 100 bytes
 
 ```text
-custody,calendar,divorce,separation,parenting,messaging,schedule,expenses,shared,family,conflict
+custody,divorce,separation,calendar,schedule,expense,communication,shared family,organizer,clarity
 ```
 
-Count: 96 ASCII bytes
+Count: 98 ASCII bytes
 
-The list does not repeat `PeacePad` or the exact co-parent wording already used
-by the name and subtitle.
+The list does not repeat `PeacePad`, `Co-Parenting`, `Messages`, `Planning`, or
+the Lifestyle category. It contains no competitor names or unsupported court,
+therapy, or legal-service claims.
 
 ### Description for version 1.0.1
 
@@ -203,7 +229,7 @@ search results:
 
 1. **Pause before you send** -- Compose with a realistic synthetic draft.
 2. **Find a calmer way to say it** -- Tone guidance and rewrite choice.
-3. **Start privately, at your pace** -- Guest-first entry and clear privacy
+3. **Start privately, at your pace** -- Guest-first entry and concise privacy
    choice.
 4. **Prepare for difficult conversations** -- Prep Chat.
 5. **Keep parenting details organized** -- Schedule, tasks, or expenses.
@@ -218,6 +244,42 @@ Requirements:
 - Keep overlay copy concise and readable at search-result size.
 - Do not show unimplemented premium, legal, evidence, or calling features.
 - Capture both supported iPhone and iPad sizes.
+- Never use the current empty/disabled Compose state as screenshot one.
+- Keep overlay headlines under roughly six words so they remain legible in
+  search results.
+
+## Rating and review acquisition
+
+Ratings and reviews are search inputs, but PeacePad must never gate, reward, or
+filter reviews. The current rating prompt already waits for tenure and positive
+actions; its iOS destination was a placeholder App Store ID. Version 1.0 can
+load the corrected web destination after the website release because the
+Capacitor shell uses the PeacePad web application.
+
+Use this sequence:
+
+1. Correct the App Store review URL to Apple ID `6793350735`.
+2. Ask only after a completed user action, never during onboarding, a safety
+   flow, an error, or a tense-message warning.
+3. Keep **Rate PeacePad**, **Remind Me Later**, and **No Thanks** equally honest;
+   do not ask whether the user is happy before opening Apple's review sheet.
+4. Invite an initial group of real users to try the app and leave an honest
+   review. Do not request a five-star review or offer an incentive.
+5. Monitor review themes and respond factually through App Store Connect.
+
+## Owned-web discovery
+
+The live website already has useful title, description, canonical, Open Graph,
+and SoftwareApplication markup. The 2026-08-02 audit found three missing or
+incorrect connections:
+
+- no Apple Smart App Banner;
+- SoftwareApplication `operatingSystem` omitted iOS and iPadOS;
+- the in-app rating prompt linked to placeholder Apple ID `1234567890`.
+
+The visibility branch corrects those links and adds the App Store URL to the
+Organization and SoftwareApplication structured data. It deliberately does
+not invent an aggregate rating while the public listing displays none.
 
 ## App Store tags
 
@@ -229,9 +291,10 @@ social-network, or other misleading tags.
 ## Localization order
 
 1. English (Canada): authoritative launch copy.
-2. English (United States): next high-value localization.
-3. English (United Kingdom): after U.S. metadata is stable.
-4. French (Canada): only after a native-speaker content and support review.
+2. English (United States): next high-value localization with U.S.-appropriate
+   wording and keywords.
+3. French (Canada): only after a native-speaker product and support review.
+4. English (United Kingdom): after Canadian and U.S. metadata are stable.
 
 Do not machine-publish unsupported localizations.
 
@@ -254,14 +317,16 @@ time, beginning with the first three screenshots.
 ## App Store Connect execution checklist
 
 - [x] Confirm version 1.0 has a public product page.
-- [ ] Confirm version 1.0 installs from the public App Store on a real iPhone.
+- [x] Confirm version 1.0 installs from the public App Store on a real iPhone.
 - [x] Record the current live name, subtitle, description, categories,
       version, rating, seller, and minimum iOS version.
 - [ ] Record the non-public keyword field and current promotional text from App
       Store Connect before editing.
-- [ ] Recheck public screenshot and social-image propagation after 24 hours.
+- [x] Recheck public screenshot propagation; two iPhone images are public.
+- [ ] Replace the two-image set with a six-screen, exact-build conversion set
+      in version 1.0.1.
 - [ ] Record the remaining live URLs and tags before editing.
-- [ ] Update only the 147-character promotional text for version 1.0.
+- [ ] Update only the 145-character promotional text for version 1.0.
 - [ ] Set the canonical Support URL to `https://peacepad.ca/support` if the
       current field is editable without a new version.
 - [ ] Review App Store tags and keep only accurate shipped-function tags.
@@ -269,6 +334,7 @@ time, beginning with the first three screenshots.
 - [ ] Create version 1.0.1 only when the tested premium UI build is ready.
 - [ ] Apply the staged name, subtitle, keywords, description, localization, and
       screenshot package to 1.0.1.
+- [ ] Set Productivity primary and Lifestyle secondary for 1.0.1.
 - [ ] Reconcile App Privacy answers against the exact 1.0.1 binary before review.
 
 ## Verification status
@@ -278,11 +344,17 @@ time, beginning with the first three screenshots.
 | Apple approval | VERIFIED |
 | Ready for Distribution | VERIFIED |
 | Public product page | VERIFIED, HTTP 200 |
-| Public-device installation | NOT YET VERIFIED |
-| Public screenshots/social image | PROPAGATION PENDING |
+| Public-device installation | VERIFIED by owner on real iPhone |
+| Public screenshots | VERIFIED, two near-duplicate Compose images |
+| Public social image | PLACEHOLDER still observed |
 | Public URLs | VERIFIED, HTTP 200 |
 | Character limits | VERIFIED |
 | Promotional copy | READY TO APPLY |
+| Smart App Banner and store links | IMPLEMENTED ON BRANCH, NOT DEPLOYED |
+| Rating prompt destination | CORRECTED ON BRANCH, NOT DEPLOYED |
+| Public ratings | ZERO DISPLAYED |
+| Metadata languages | ENGLISH ONLY |
+| App Privacy answers | RECONCILIATION REQUIRED |
 | Live metadata field audit | BLOCKED by authenticated browser-control handoff |
 | Live App Store save | NOT PERFORMED |
 | Version 1.0.1 metadata | STAGED, NOT SUBMITTED |
