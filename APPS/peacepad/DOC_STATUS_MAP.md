@@ -8,6 +8,9 @@ This file classifies the main checklist-heavy documents so execution work stays 
   - Canonical release gating checklist
 - `ACTIONABLE_TASK_QUEUE.md`
   - Short actionable work queue extracted from broader docs
+- `ios-prep/IOS_APP_REVIEW_HANDOVER_2026-07-26.md`
+  - Current iOS submission status, verified evidence, security cleanup, and
+    next-owner actions
 
 ## Supporting Reference Documents
 

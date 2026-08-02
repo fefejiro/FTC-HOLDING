@@ -6,6 +6,19 @@ Use this as the short execution queue. For release gating, the canonical checkli
 
 ## Do Now
 
+### iOS App Review Monitoring
+
+- [x] Supply and verify the isolated synthetic reviewer account
+- [x] Save App Review credentials and testing notes
+- [x] Reply to the Guideline 2.1 reviewer-access issue
+- [x] Resubmit existing build `1.0.9 (1)`
+- [ ] Monitor the current `Waiting for Review` submission
+- [ ] Respond narrowly if Apple sends a new Resolution Center question
+- [ ] After approval, verify automatic release and the public App Store listing
+
+See `ios-prep/IOS_APP_REVIEW_HANDOVER_2026-07-26.md`. Do not upload a
+replacement build or alter the active submission without a verified blocker.
+
 ### Release Infrastructure
 - [ ] Confirm the authoritative production deployment workflow and owner
 - [ ] Confirm whether Android release is PWA/TWA, wrapper, or native package
