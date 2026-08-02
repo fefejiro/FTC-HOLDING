@@ -94,6 +94,8 @@ describe("secure invitation flow", () => {
     fireEvent.press(screen.getByText("Create invitation"));
     expect(await screen.findByLabelText("Invitation ready")).toBeOnTheScreen();
     expect(screen.getByText("P00001")).toBeOnTheScreen();
+    expect(screen.getByLabelText("Scannable invitation QR")).toBeOnTheScreen();
+    expect(screen.getByText("Scan to review access")).toBeOnTheScreen();
     expect(screen.queryByText("You’re connected")).not.toBeOnTheScreen();
 
     fireEvent.press(screen.getByText("Share invitation"));

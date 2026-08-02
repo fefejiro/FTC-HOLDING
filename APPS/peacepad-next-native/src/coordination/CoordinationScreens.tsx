@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Image, Pressable, Share, StyleSheet, Text, TextInput, View } from "react-native";
+import { InvitationQr } from "../components/InvitationQr";
 import { LabButton } from "../components/LabButton";
 import type { LabScreen } from "../screens";
 import { useLabState } from "../state/LabState";
@@ -257,6 +258,15 @@ export function InvitationScreen({ initialCode }: { initialCode?: string }) {
               <Text accessibilityLabel={`Invitation code ${createdInvitation.code}`} style={styles.invitationCode}>
                 {createdInvitation.code}
               </Text>
+              <View
+                accessibilityHint="Scanning opens the invitation review screen. It does not connect anyone automatically."
+                accessibilityLabel="Scannable invitation QR"
+                accessibilityRole="image"
+                style={styles.qrCard}
+              >
+                <InvitationQr value={createdInvitation.deepLink} />
+                <Text style={styles.qrLabel}>Scan to review access</Text>
+              </View>
               <Text style={styles.caption}>Single use • expires in 72 hours</Text>
               <LabButton label="Share invitation" onPress={() => void shareCreatedInvitation()} />
               <LabButton
@@ -618,6 +628,8 @@ const styles = StyleSheet.create({
   assistCard: { backgroundColor: colors.brandSoft, borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
   codeInput: { ...typography.title, backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 20, borderWidth: 1, color: colors.text, letterSpacing: 12, padding: spacing.lg, textAlign: "center" },
   invitationCode: { ...typography.heading, color: colors.brand, letterSpacing: 8, textAlign: "center" },
+  qrCard: { alignItems: "center", alignSelf: "center", backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: spacing.sm, padding: spacing.md },
+  qrLabel: { ...typography.caption, color: colors.text, fontWeight: "800" },
   error: { ...typography.body, color: "#B42318", fontWeight: "700" },
   titleRow: { flexDirection: "row", justifyContent: "space-between" },
   segmented: { backgroundColor: colors.brandSoft, borderRadius: 18, flexDirection: "row", padding: spacing.xs },

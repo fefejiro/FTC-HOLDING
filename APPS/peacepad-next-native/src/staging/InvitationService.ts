@@ -470,6 +470,8 @@ export class InMemoryInvitationStore implements InvitationStore {
   readonly resolutionClaims = new Map<string, string>();
   readonly auditEvents: AuditEvent[] = [];
 
+  constructor(private readonly now: () => number = Date.now) {}
+
   async transaction<T>(work: (store: InvitationStore) => Promise<T>): Promise<T> {
     const invitations = new Map(this.invitations);
     const grants = new Map(this.grants);
@@ -512,7 +514,7 @@ export class InMemoryInvitationStore implements InvitationStore {
   }
   async hasResolutionClaim(subjectHash: string, invitationId: string) {
     const expiresAt = this.resolutionClaims.get(`${subjectHash}:${invitationId}`);
-    return expiresAt !== undefined && Date.parse(expiresAt) > Date.now();
+    return expiresAt !== undefined && Date.parse(expiresAt) > this.now();
   }
   async appendAudit(event: AuditEvent) {
     const previous = this.auditEvents.at(-1);

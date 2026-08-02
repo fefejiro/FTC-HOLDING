@@ -50,7 +50,7 @@ const input = {
 function setup(options: { maxResolveAttempts?: number; maxCreateAttempts?: number; now?: Date } = {}) {
   let now = options.now ?? new Date("2026-08-01T12:00:00.000Z");
   const clock: Clock = { now: () => now };
-  const store = new InMemoryInvitationStore();
+  const store = new InMemoryInvitationStore(() => now.getTime());
   const service = new InvitationService({
     store,
     clock,
