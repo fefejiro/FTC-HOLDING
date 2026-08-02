@@ -46,11 +46,9 @@ export function AppRatingPrompt({ trigger = 'unknown' }: AppRatingPromptProps) {
     const isAndroid = /Android/.test(navigator.userAgent);
     
     if (isIOS) {
-      // iOS App Store deep link (replace with actual app ID)
-      window.open('https://apps.apple.com/app/id1234567890?action=write-review', '_blank');
+      window.open('https://apps.apple.com/app/id6793350735?action=write-review', '_blank', 'noopener,noreferrer');
     } else if (isAndroid) {
-      // Google Play Store deep link (replace with actual package name)
-      window.open('https://play.google.com/store/apps/details?id=com.peacepad.app', '_blank');
+      window.open('https://play.google.com/store/apps/details?id=ca.peacepad.family', '_blank', 'noopener,noreferrer');
     } else {
       // Fallback for desktop/web
       window.open('https://peacepad.ca/review', '_blank');
