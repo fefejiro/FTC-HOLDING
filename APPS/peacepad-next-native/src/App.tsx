@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { NavigationContainer, useNavigation } from "@react-navigation/native";
+import { NavigationContainer, useNavigation, type LinkingOptions } from "@react-navigation/native";
 import { createNativeStackNavigator, type NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ScrollView, StatusBar, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -30,9 +30,18 @@ import { colors, spacing } from "./theme";
 
 export type AppScreen = LabScreen | "foundation";
 
-type RootStackParamList = Record<AppScreen, undefined>;
+type RootStackParamList = Record<AppScreen, { code?: string } | undefined>;
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+export const peacePadLinking: LinkingOptions<RootStackParamList> = {
+  prefixes: ["peacepadnextlab://"],
+  config: {
+    screens: {
+      invite: "invite/:code"
+    }
+  }
+};
 
 declare const process: {
   env?: Record<string, string | undefined>;
@@ -99,7 +108,7 @@ export function PeacePadLabApp({ startScreen }: { startScreen?: string }) {
   );
 
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={startScreen ? undefined : peacePadLinking}>
       <StatusBar barStyle="dark-content" />
       <Stack.Navigator
         initialRouteName={resolveLabStartScreen(startScreen ?? process.env?.EXPO_PUBLIC_PEACEPAD_LAB_START_SCREEN)}
@@ -114,7 +123,13 @@ export function PeacePadLabApp({ startScreen }: { startScreen?: string }) {
       >
         {(Object.keys(screenTitles) as AppScreen[]).map((routeName) => (
           <Stack.Screen key={routeName} name={routeName} options={{ title: screenTitles[routeName] }}>
-            {() => <LabRoute activeScreen={routeName} {...sharedProps} />}
+            {({ route }) => (
+              <LabRoute
+                activeScreen={routeName}
+                invitationCode={routeName === "invite" ? route.params?.code : undefined}
+                {...sharedProps}
+              />
+            )}
           </Stack.Screen>
         ))}
       </Stack.Navigator>
@@ -135,11 +150,13 @@ export default function App() {
 function LabRoute({
   activeScreen,
   draft,
+  invitationCode,
   selectedGoal,
   setDraft,
   setSelectedGoal
 }: SharedScreenProps & {
   activeScreen: AppScreen;
+  invitationCode?: string;
   selectedGoal: ReturnType<typeof useLabState>["selectedGoal"];
   setSelectedGoal: ReturnType<typeof useLabState>["selectGoal"];
 }) {
@@ -168,7 +185,7 @@ function LabRoute({
           {activeScreen === "home" ? <CoordinationHomeScreen setScreen={setScreen} /> : null}
           {activeScreen === "messages" ? <MessagesScreen /> : null}
           {activeScreen === "calendar" ? <CalendarScreen /> : null}
-          {activeScreen === "invite" ? <InvitationScreen /> : null}
+          {activeScreen === "invite" ? <InvitationScreen initialCode={invitationCode} /> : null}
           {activeScreen === "records" ? <RecordsHomeScreen setScreen={setScreen} /> : null}
           {activeScreen === "more" ? <MoreScreen setScreen={setScreen} /> : null}
           {activeScreen === "onboarding" ? <OnboardingScreen {...screenProps} /> : null}

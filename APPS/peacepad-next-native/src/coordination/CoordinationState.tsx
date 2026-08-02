@@ -3,6 +3,7 @@ import type { MessagePreviewResponse } from "../api/contracts";
 import {
   HttpPeacePadCoordinationApi,
   InvitationError,
+  type CreatedInvitation,
   type PeacePadCoordinationApi
 } from "../api/CoordinationApi";
 import { defaultCalendarLayers, SyntheticCoordinationApi } from "../api/SyntheticCoordinationApi";
@@ -26,6 +27,7 @@ export type SentMessage = Readonly<{
 
 type CoordinationStateValue = {
   invitationCode: string;
+  createdInvitation?: CreatedInvitation;
   invitationPreview?: InvitationPreview;
   invitationGrant?: ParticipantGrant;
   invitationError?: string;
@@ -41,6 +43,8 @@ type CoordinationStateValue = {
   messageError?: string;
   sentMessages: readonly SentMessage[];
   setInvitationCode: (code: string) => void;
+  createInvitation: () => Promise<void>;
+  revokeCreatedInvitation: () => Promise<void>;
   resolveInvitation: () => Promise<void>;
   acceptInvitation: () => Promise<void>;
   declineInvitation: () => Promise<void>;
@@ -95,6 +99,7 @@ export function CoordinationStateProvider({
   children: ReactNode;
 }) {
   const [invitationCode, setInvitationCodeState] = useState("");
+  const [createdInvitation, setCreatedInvitation] = useState<CreatedInvitation>();
   const [invitationPreview, setInvitationPreview] = useState<InvitationPreview>();
   const [invitationGrant, setInvitationGrant] = useState<ParticipantGrant>();
   const [invitationError, setInvitationError] = useState<string>();
@@ -112,6 +117,7 @@ export function CoordinationStateProvider({
 
   const value = useMemo<CoordinationStateValue>(() => ({
     invitationCode,
+    createdInvitation,
     invitationPreview,
     invitationGrant,
     invitationError,
@@ -126,6 +132,35 @@ export function CoordinationStateProvider({
     messageCheckBusy,
     messageError,
     sentMessages,
+    createInvitation: async () => {
+      setInvitationBusy(true);
+      setInvitationError(undefined);
+      try {
+        setCreatedInvitation(await api.createInvitation({
+          familyCircleId: "family-current",
+          invitedRole: "parent",
+          permissions: ["messages", "calendar", "shared-records"],
+          expiresInHours: 72
+        }, writeContext()));
+      } catch (error) {
+        setInvitationError(invitationMessage(error));
+      } finally {
+        setInvitationBusy(false);
+      }
+    },
+    revokeCreatedInvitation: async () => {
+      if (!createdInvitation) return;
+      setInvitationBusy(true);
+      setInvitationError(undefined);
+      try {
+        await api.revokeInvitation(createdInvitation.invitation.id, writeContext(createdInvitation.invitation.version));
+        setCreatedInvitation(undefined);
+      } catch (error) {
+        setInvitationError(invitationMessage(error));
+      } finally {
+        setInvitationBusy(false);
+      }
+    },
     setInvitationCode: (code) => {
       setInvitationCodeState(code.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 6));
       setInvitationPreview(undefined);
@@ -237,6 +272,7 @@ export function CoordinationStateProvider({
   }), [
     api,
     calendarView,
+    createdInvitation,
     events,
     invitationBusy,
     invitationCode,

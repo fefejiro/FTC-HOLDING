@@ -19,6 +19,9 @@ and `NOT STARTED`.
 | Explicit accept/decline before grant | AUTOMATED VERIFIED | UI and adapter tests |
 | Invalid, expired, revoked, used, rate-limited states | AUTOMATED VERIFIED | contract/adapter tests |
 | Invitation code excluded from URL | AUTOMATED VERIFIED | request test |
+| Sender can create and explicitly share an expiring invitation | AUTOMATED VERIFIED | rendered native-share test |
+| Deep link prefills code but does not create a grant | AUTOMATED VERIFIED | linking and rendered state test |
+| Sender can revoke a pending invitation | AUTOMATED VERIFIED | rendered UI and adapter lifecycle test |
 | Server stores only peppered invitation-code hashes | AUTOMATED VERIFIED | staging service storage assertion |
 | Authenticated actor matches trusted session context | AUTOMATED VERIFIED | staging service/route tests |
 | Family invitation permission required | AUTOMATED VERIFIED | staging authorization test |
@@ -53,8 +56,8 @@ and `NOT STARTED`.
 | --- | --- | --- |
 | TypeScript | AUTOMATED VERIFIED | passed |
 | Guardrails | AUTOMATED VERIFIED | passed |
-| Jest/RNTL | AUTOMATED VERIFIED | 20 suites / 117 tests |
-| Coverage | AUTOMATED VERIFIED | 85.29 / 79.85 / 80.05 / 88.42 |
+| Jest/RNTL | AUTOMATED VERIFIED | 20 suites / 119 tests |
+| Coverage | AUTOMATED VERIFIED | 85.05 / 79.69 / 79.73 / 88.18 |
 | Expo config | AUTOMATED VERIFIED | lab bundle; diagnostics/writes false |
 | Expo Doctor | BLOCKED | 17/18; app React 19 and monorepo-root React 18 duplicate |
 | Expo Doctor (standalone native install) | AUTOMATED VERIFIED | 18/18 with a clean temporary npm install outside the monorepo |
@@ -111,7 +114,7 @@ The historical records screenshots in
   least-privilege runtime role.
 - Inject server-only peppers and connect a real staging session authenticator.
 - Run live concurrency, rollback, rate-limit, and audit-restoration tests.
-- Add tested device sharing and scannable QR behavior.
+- Verify native share-sheet and deep-link behavior on device; add scannable QR.
 - Verify calendar layer sharing on Simulator or real iPhone.
 - Run one real-iPhone staging pass with fictional accounts.
 - Complete accessibility, dark mode, dynamic type, offline, and weak-network

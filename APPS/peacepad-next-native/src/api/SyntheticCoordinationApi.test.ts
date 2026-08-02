@@ -124,12 +124,16 @@ describe("SyntheticCoordinationApi safety behavior", () => {
 
   it("supports invitation creation, decline, and revocation states", async () => {
     const api = new SyntheticCoordinationApi([invitation()]);
-    await expect(api.createInvitation({
+    const created = await api.createInvitation({
       familyCircleId: "family-current",
       invitedRole: "parent",
       permissions: ["messages"],
       expiresInHours: 24
-    }, context)).resolves.toMatchObject({ code: "CALM26" });
+    }, context);
+    expect(created).toMatchObject({ code: "P00001", deepLink: "peacepadnextlab://invite/P00001" });
+    await api.revokeInvitation(created.invitation.id, context);
+    await expect(api.resolveInvitation(created.code)).rejects.toMatchObject({ reason: "revoked" });
+
     await api.declineInvitation("invitation-1", context);
     await expect(api.resolveInvitation("CALM26")).rejects.toMatchObject({ reason: "used" });
 

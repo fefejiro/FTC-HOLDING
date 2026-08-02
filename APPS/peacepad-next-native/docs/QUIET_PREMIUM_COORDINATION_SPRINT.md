@@ -10,7 +10,8 @@ do not use prototype, lab, architecture, or marketing commentary.
 
 - Task-based shell: Home, Messages, Calendar, Records, More.
 - State-derived Home actions and honest empty/count states.
-- Explicit invitation preview and acceptance boundary.
+- Sender-side invitation creation, native sharing, deep-link prefill, and
+  revocation, plus explicit recipient preview and acceptance.
 - Typed `/api/v2` client contracts and isolated in-memory adapter.
 - Private-by-default calendar layers with explicit sharing confirmation.
 - Month, Week, and Day view selection plus event lifecycle.

@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { Image, Pressable, Share, StyleSheet, Text, TextInput, View } from "react-native";
 import { LabButton } from "../components/LabButton";
 import type { LabScreen } from "../screens";
 import { useLabState } from "../state/LabState";
@@ -74,9 +74,11 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function InvitationScreen() {
+export function InvitationScreen({ initialCode }: { initialCode?: string }) {
   const {
     acceptInvitation,
+    createInvitation,
+    createdInvitation,
     declineInvitation,
     invitationBusy,
     invitationCode,
@@ -84,30 +86,114 @@ export function InvitationScreen() {
     invitationGrant,
     invitationPreview,
     resolveInvitation,
+    revokeCreatedInvitation,
     setInvitationCode
   } = useCoordinationState();
+  const [mode, setMode] = useState<"create" | "join">("create");
+  const [shareError, setShareError] = useState<string>();
+
+  useEffect(() => {
+    if (!initialCode) return;
+    setMode("join");
+    setInvitationCode(initialCode);
+  }, [initialCode]);
+
+  const shareCreatedInvitation = async () => {
+    if (!createdInvitation) return;
+    setShareError(undefined);
+    try {
+      await Share.share({
+        message: [
+          "PeacePad invitation",
+          "Review the access before you connect.",
+          `Code: ${createdInvitation.code}`,
+          createdInvitation.deepLink
+        ].join("\n\n")
+      });
+    } catch {
+      setShareError("Sharing is unavailable. Use the six-character code instead.");
+    }
+  };
 
   return (
     <View style={styles.stack}>
-      <Text style={styles.title}>Connect your family</Text>
-      <Text style={styles.body}>Enter the six-character code from your invitation.</Text>
-      <TextInput
-        accessibilityLabel="Invitation code"
-        autoCapitalize="characters"
-        autoCorrect={false}
-        maxLength={6}
-        onChangeText={setInvitationCode}
-        placeholder="ABC123"
-        style={styles.codeInput}
-        value={invitationCode}
-      />
-      <LabButton
-        disabled={invitationCode.length !== 6 || invitationBusy}
-        label={invitationBusy ? "Checking…" : "Review invitation"}
-        onPress={() => void resolveInvitation()}
-      />
+      <Text style={styles.title}>Family connection</Text>
+      <Text style={styles.body}>Invite a co-parent or enter a code you received.</Text>
+
+      <View accessibilityLabel="Invitation action" style={styles.segmented}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ selected: mode === "create" }}
+          onPress={() => setMode("create")}
+          style={[styles.segment, mode === "create" ? styles.segmentActive : null]}
+        >
+          <Text style={[styles.segmentText, mode === "create" ? styles.segmentTextActive : null]}>Invite someone</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ selected: mode === "join" }}
+          onPress={() => setMode("join")}
+          style={[styles.segment, mode === "join" ? styles.segmentActive : null]}
+        >
+          <Text style={[styles.segmentText, mode === "join" ? styles.segmentTextActive : null]}>Enter a code</Text>
+        </Pressable>
+      </View>
+
+      {mode === "create" ? (
+        <View accessibilityLabel="Create family invitation" style={styles.card}>
+          <Text style={styles.heading}>Invite a co-parent</Text>
+          <Text style={styles.body}>They will review your name, the shared space, and access before connecting.</Text>
+          <Text style={styles.fieldLabel}>Access</Text>
+          <Text style={styles.body}>• Messages</Text>
+          <Text style={styles.body}>• Calendar</Text>
+          <Text style={styles.body}>• Shared records</Text>
+
+          {!createdInvitation ? (
+            <LabButton
+              disabled={invitationBusy}
+              label={invitationBusy ? "Creating…" : "Create invitation"}
+              onPress={() => void createInvitation()}
+            />
+          ) : (
+            <View accessibilityLabel="Invitation ready" style={styles.stackTight}>
+              <Text style={styles.fieldLabel}>Invitation code</Text>
+              <Text accessibilityLabel={`Invitation code ${createdInvitation.code}`} style={styles.invitationCode}>
+                {createdInvitation.code}
+              </Text>
+              <Text style={styles.caption}>Single use • expires in 72 hours</Text>
+              <LabButton label="Share invitation" onPress={() => void shareCreatedInvitation()} />
+              <LabButton
+                disabled={invitationBusy}
+                label={invitationBusy ? "Cancelling…" : "Cancel invitation"}
+                onPress={() => void revokeCreatedInvitation()}
+                variant="secondary"
+              />
+            </View>
+          )}
+        </View>
+      ) : (
+        <>
+          <Text style={styles.body}>Enter the six-character code from your invitation.</Text>
+          <TextInput
+            accessibilityLabel="Invitation code"
+            autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={6}
+            onChangeText={setInvitationCode}
+            placeholder="ABC123"
+            style={styles.codeInput}
+            value={invitationCode}
+          />
+          <LabButton
+            disabled={invitationCode.length !== 6 || invitationBusy}
+            label={invitationBusy ? "Checking…" : "Review invitation"}
+            onPress={() => void resolveInvitation()}
+          />
+        </>
+      )}
 
       {invitationError ? <Text accessibilityRole="alert" style={styles.error}>{invitationError}</Text> : null}
+      {shareError ? <Text accessibilityRole="alert" style={styles.error}>{shareError}</Text> : null}
 
       {invitationPreview ? (
         <View accessibilityLabel="Invitation preview" style={styles.card}>
@@ -437,6 +523,7 @@ const styles = StyleSheet.create({
   confirmCard: { backgroundColor: "#FFF7E8", borderColor: "#F3D398", borderRadius: 22, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
   assistCard: { backgroundColor: colors.brandSoft, borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
   codeInput: { ...typography.title, backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 20, borderWidth: 1, color: colors.text, letterSpacing: 12, padding: spacing.lg, textAlign: "center" },
+  invitationCode: { ...typography.heading, color: colors.brand, letterSpacing: 8, textAlign: "center" },
   error: { ...typography.body, color: "#B42318", fontWeight: "700" },
   titleRow: { flexDirection: "row", justifyContent: "space-between" },
   segmented: { backgroundColor: colors.brandSoft, borderRadius: 18, flexDirection: "row", padding: spacing.xs },

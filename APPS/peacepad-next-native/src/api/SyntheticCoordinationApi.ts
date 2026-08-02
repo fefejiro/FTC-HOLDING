@@ -76,6 +76,7 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
   private readonly invitations = new Map<string, SeedInvitation>();
   private readonly invitationsById = new Map<string, SeedInvitation>();
   private readonly invitationStates = new Map<string, NonNullable<SeedInvitation["state"]>>();
+  private createdInvitationCount = 0;
   private layers = [...defaultCalendarLayers];
   private events: ScheduleEvent[] = [];
   private previewAttempts = 0;
@@ -90,7 +91,8 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
 
   async createInvitation(input: CreateInvitationInput, _context: WriteContext): Promise<CreatedInvitation> {
     const invitationId = `invitation-${Date.now().toString(36)}`;
-    const code = "CALM26";
+    this.createdInvitationCount += 1;
+    const code = `P${this.createdInvitationCount.toString(36).padStart(5, "0")}`.toUpperCase();
     const invitation: FamilyInvitation = {
       ...versioned(invitationId),
       familyCircleId: input.familyCircleId,
@@ -101,6 +103,21 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
       status: "pending",
       acceptedParticipantGrantId: null
     };
+    const seed: SeedInvitation = {
+      code,
+      preview: {
+        invitationId,
+        inviterDisplayName: "PeacePad member",
+        familyDisplayName: "Shared parenting space",
+        invitedRole: input.invitedRole,
+        permissions: input.permissions,
+        expiresAt: invitation.expiresAt
+      },
+      state: "pending"
+    };
+    this.invitations.set(code, seed);
+    this.invitationsById.set(invitationId, seed);
+    this.invitationStates.set(invitationId, "pending");
     return { invitation, code, deepLink: `peacepadnextlab://invite/${code}` };
   }
 

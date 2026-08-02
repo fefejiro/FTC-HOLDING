@@ -1,12 +1,15 @@
 import React from "react";
+import { getStateFromPath } from "@react-navigation/native";
+import { Share } from "react-native";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
-import App, { PeacePadLabApp, resolveLabStartScreen } from "./App";
+import { peacePadLinking, PeacePadLabApp, resolveLabStartScreen } from "./App";
 import { SyntheticCoordinationApi } from "./api/SyntheticCoordinationApi";
+import { InvitationScreen } from "./coordination/CoordinationScreens";
 import { CoordinationStateProvider } from "./coordination/CoordinationState";
 import { LabStateProvider } from "./state/LabState";
 
-function renderApp(startScreen = "home") {
-  const api = new SyntheticCoordinationApi([{
+function createTestApi() {
+  return new SyntheticCoordinationApi([{
     code: "CALM26",
     preview: {
       invitationId: "invitation-test",
@@ -17,6 +20,10 @@ function renderApp(startScreen = "home") {
       expiresAt: "2099-01-01T00:00:00.000Z"
     }
   }]);
+}
+
+function renderApp(startScreen = "home") {
+  const api = createTestApi();
   return render(
     <CoordinationStateProvider api={api}>
       <LabStateProvider>
@@ -28,7 +35,7 @@ function renderApp(startScreen = "home") {
 
 describe("PeacePad task navigation", () => {
   it("renders the safe default app entry point", async () => {
-    render(<App />);
+    renderApp("foundation");
     expect(await screen.findByText("A calmer way through hard co-parenting moments.")).toBeOnTheScreen();
   });
 
@@ -66,8 +73,42 @@ describe("PeacePad task navigation", () => {
 });
 
 describe("secure invitation flow", () => {
+  it("routes a lab deep link to a prefilled invitation without accepting it", async () => {
+    const linkedState = getStateFromPath("invite/CALM26", peacePadLinking.config);
+    expect(linkedState?.routes[0]).toMatchObject({ name: "invite", params: { code: "CALM26" } });
+
+    render(
+      <CoordinationStateProvider api={createTestApi()}>
+        <InvitationScreen initialCode="calm26" />
+      </CoordinationStateProvider>
+    );
+    expect(await screen.findByDisplayValue("CALM26")).toBeOnTheScreen();
+    expect(screen.queryByText("You’re connected")).not.toBeOnTheScreen();
+  });
+
+  it("creates, shares, and revokes an invitation without connecting anyone", async () => {
+    const shareSpy = jest.spyOn(Share, "share").mockResolvedValue({ action: Share.sharedAction });
+    renderApp("invite");
+
+    expect(screen.queryByLabelText("Invitation ready")).not.toBeOnTheScreen();
+    fireEvent.press(screen.getByText("Create invitation"));
+    expect(await screen.findByLabelText("Invitation ready")).toBeOnTheScreen();
+    expect(screen.getByText("P00001")).toBeOnTheScreen();
+    expect(screen.queryByText("You’re connected")).not.toBeOnTheScreen();
+
+    fireEvent.press(screen.getByText("Share invitation"));
+    await waitFor(() => expect(shareSpy).toHaveBeenCalledWith({
+      message: expect.stringContaining("Code: P00001")
+    }));
+
+    fireEvent.press(screen.getByText("Cancel invitation"));
+    await waitFor(() => expect(screen.queryByLabelText("Invitation ready")).not.toBeOnTheScreen());
+    shareSpy.mockRestore();
+  });
+
   it("previews identity and access before forming a family connection", async () => {
     renderApp("invite");
+    fireEvent.press(screen.getByText("Enter a code"));
     fireEvent.changeText(screen.getByLabelText("Invitation code"), "calm26");
     fireEvent.press(screen.getByText("Review invitation"));
 
@@ -81,6 +122,7 @@ describe("secure invitation flow", () => {
 
   it("shows a safe invalid-code error", async () => {
     renderApp("invite");
+    fireEvent.press(screen.getByText("Enter a code"));
     fireEvent.changeText(screen.getByLabelText("Invitation code"), "ABC123");
     fireEvent.press(screen.getByText("Review invitation"));
     expect(await screen.findByText("Check the code and try again.")).toBeOnTheScreen();

@@ -19,7 +19,7 @@ approved Capacitor app, production data/API, App Store record, and
 | Typed `/api/v2` coordination client | AUTOMATED VERIFIED | HTTP contract tests |
 | Invitation preview before explicit acceptance | AUTOMATED VERIFIED | UI and adapter tests |
 | Invalid/expired/revoked/used/rate-limited handling | AUTOMATED VERIFIED | HTTP mapping and adapter tests |
-| Invitation creation contract with code/deep link | AUTOMATED VERIFIED | adapter lifecycle test |
+| Invitation creation, native sharing, deep-link prefill, and revocation | AUTOMATED VERIFIED | rendered UI, link-routing, and adapter lifecycle tests |
 | Private-by-default calendar layers | AUTOMATED VERIFIED | UI and authorization tests |
 | Month/Week/Day selection and event lifecycle | AUTOMATED VERIFIED | UI and adapter tests |
 | Explicit calendar sharing confirmation | AUTOMATED VERIFIED | rendered interaction test |
@@ -40,8 +40,8 @@ approved Capacitor app, production data/API, App Store record, and
 ```text
 guardrails       passed
 typecheck        passed
-Jest/RNTL        20 suites / 117 tests passed
-coverage         85.29 statements / 79.85 branches / 80.05 functions / 88.42 lines
+Jest/RNTL        20 suites / 119 tests passed
+coverage         85.05 statements / 79.69 branches / 79.73 functions / 88.18 lines
 Expo Doctor      17/18 in monorepo; isolated native install 18/18
 Expo config      PeacePad; ca.peacepad.nextnative.lab; diagnostics/writes false
 iOS export       passed; 846 modules bundled
@@ -66,7 +66,7 @@ constraint, not a native test failure; the same isolated checks pass locally.
 Home
 |- Send message -> optional Message Check -> explicit send
 |- Add event -> private layer -> confirmed sharing
-|- Invite co-parent -> resolve -> preview access -> accept/decline
+|- Invite co-parent -> create/share/revoke or resolve -> preview -> accept/decline
 `- Add record -> binder -> detail -> timeline -> export preview
 ```
 
@@ -121,8 +121,9 @@ commit and are not relabelled as current evidence.
   not represented by the staging schema.
 - The product adapter is memory-only; only the earlier guest session uses
   SecureStore.
-- Invitation acceptance and code/deep-link contracts exist. Device sharing and
-  scannable QR presentation still require implementation and proof.
+- Invitation creation, native share-sheet delivery, deep-link prefill,
+  acceptance, and revocation are automated-verified. Scannable QR presentation
+  and device proof for the new sender flow remain open.
 - Calendar view selection/layers/events are implemented; full grids,
   recurrence, offline behavior, and production persistence are later gates.
 - Message Check is rule-based and does not call third-party AI.
@@ -143,14 +144,14 @@ commit and are not relabelled as current evidence.
 | Area | Status |
 | --- | ---: |
 | Quiet-premium information architecture | 85% |
-| Secure invitation product flow | 65% |
+| Secure invitation product flow | 75% |
 | Layered calendar product flow | 55% |
 | Per-chat Message Check | 70% |
 | Typed staging compatibility client | 75% |
 | Staging invitation server core | 70% |
 | Automated verification | 94% |
 | Current device verification | 70% |
-| Overall production-native v2 | 33% |
+| Overall production-native v2 | 34% |
 
 ## Next best move
 
