@@ -64,6 +64,11 @@ and `NOT STARTED`.
 | Production dependency audit | BLOCKED | 25 inherited advisories; breaking blanket upgrade rejected |
 | Diff/secret checks | AUTOMATED VERIFIED | passed |
 
+The path-scoped native workflow is
+`.github/workflows/peacepad-native-lab-gates.yml`. It is intentionally
+separate from Garden Portal Deep QA and does not deploy or write to any
+PeacePad production service.
+
 ## Current device evidence required
 
 | Evidence | Status |

@@ -49,6 +49,13 @@ diff check       passed
 secret scan      no credential value found in changed runtime files
 ```
 
+The standalone native checks are path-scoped in
+`.github/workflows/peacepad-native-lab-gates.yml`. They install the native
+manifest outside the monorepo workspace, then run guardrails, typecheck,
+Jest/coverage, Expo Doctor, Expo config, and an iOS export. This avoids turning
+the unrelated Garden workflow or the monorepo's older web React dependency
+into a native-lab failure.
+
 ## Current flow
 
 ```text
