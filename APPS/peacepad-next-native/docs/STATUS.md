@@ -56,6 +56,10 @@ Jest/coverage, Expo Doctor, Expo config, and an iOS export. This avoids turning
 the unrelated Garden workflow or the monorepo's older web React dependency
 into a native-lab failure.
 
+The first PR execution was **BLOCKED before job start** because GitHub reports
+the account is locked for a billing issue. This is an infrastructure/account
+constraint, not a native test failure; the same isolated checks pass locally.
+
 ## Current flow
 
 ```text

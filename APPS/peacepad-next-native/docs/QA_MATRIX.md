@@ -63,6 +63,7 @@ and `NOT STARTED`.
 | Readiness without database | AUTOMATED VERIFIED | `/readyz` fails closed with 500 |
 | Production dependency audit | BLOCKED | 25 inherited advisories; breaking blanket upgrade rejected |
 | Diff/secret checks | AUTOMATED VERIFIED | passed |
+| Native lab GitHub workflow | BLOCKED | GitHub account billing lock prevented job start; local isolated checks passed |
 
 The path-scoped native workflow is
 `.github/workflows/peacepad-native-lab-gates.yml`. It is intentionally
