@@ -1,6 +1,6 @@
 # PeacePad Next Native QA Matrix
 
-Last updated: 2026-08-01
+Last updated: 2026-08-02
 
 Statuses: `IMPLEMENTED`, `AUTOMATED VERIFIED`, `SIMULATOR VERIFIED`, `BLOCKED`,
 and `NOT STARTED`.
@@ -64,7 +64,7 @@ and `NOT STARTED`.
 | iOS export | AUTOMATED VERIFIED | 846 modules |
 | Local staging host health | AUTOMATED VERIFIED | `/health` 200 |
 | Readiness without database | AUTOMATED VERIFIED | `/readyz` fails closed with 500 |
-| Production dependency audit | BLOCKED | 25 inherited advisories; breaking blanket upgrade rejected |
+| Standalone production dependency audit | BLOCKED | 11 inherited Expo toolchain advisories: 1 high, 10 moderate, 0 critical; breaking Expo 57 force-upgrade rejected |
 | Diff/secret checks | AUTOMATED VERIFIED | passed |
 | Native lab GitHub workflow | BLOCKED | GitHub account billing lock prevented job start; local isolated checks passed |
 

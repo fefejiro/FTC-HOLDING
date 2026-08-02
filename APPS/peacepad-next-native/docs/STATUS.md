@@ -1,6 +1,6 @@
 # PeacePad Next Native Status
 
-Last updated: 2026-08-01
+Last updated: 2026-08-02
 
 ## Scope boundary
 
@@ -134,10 +134,11 @@ commit and are not relabelled as current evidence.
   the native manifest passed Expo Doctor 18/18, confirming the native app's own
   dependency graph is healthy. CI should use that isolated install strategy;
   changing the root web dependency graph is not required for this lab.
-- `npm audit --omit=dev --workspace=@ftc/peacepad-next-native` currently reports
-  25 inherited Expo/React Native toolchain advisories (3 low, 13 moderate,
-  7 high, 2 critical). The suggested blanket repair requires a breaking Expo
-  upgrade and was intentionally not applied.
+- A clean standalone native audit reports 11 inherited Expo toolchain
+  advisories (10 moderate, 1 high, 0 critical). The previous 25-advisory count
+  included unrelated monorepo dependencies. Expo dependency compatibility
+  passes; the remaining blanket repair requires a breaking Expo 57 upgrade and
+  was intentionally not applied. See `docs/DEPENDENCY_RISK_REGISTER.md`.
 
 ## Honest completion map
 
@@ -155,9 +156,8 @@ commit and are not relabelled as current evidence.
 
 ## Next best move
 
-Adopt the proven standalone native install strategy in CI and triage the
-dependency advisories without a breaking blind upgrade. Then, after an explicit
-cost/hosting decision, provision one isolated staging database and service,
+After an explicit cost/hosting decision, provision one isolated staging
+database and service,
 apply the prepared migration, grant a least-privilege runtime role, and run
 live API plus real-iPhone staging checks.
 Do not expand into calling, billing, or production migration before those gates
