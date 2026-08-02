@@ -132,6 +132,8 @@ describe("secure invitation flow", () => {
 describe("calendar coordination", () => {
   it("starts private, confirms sharing, switches views, and creates an event", async () => {
     renderApp("calendar");
+    expect(screen.getByLabelText("month calendar")).toBeOnTheScreen();
+    expect(screen.getByText("Sun")).toBeOnTheScreen();
     expect(screen.getAllByText("Private")).toHaveLength(4);
     fireEvent.press(screen.getByLabelText("Share Parenting Time"));
     expect(screen.getByText("Share this calendar?")).toBeOnTheScreen();
@@ -140,10 +142,15 @@ describe("calendar coordination", () => {
 
     fireEvent.press(screen.getByText("Week"));
     expect(screen.getByLabelText("week calendar")).toBeOnTheScreen();
+    expect(screen.getByText("Sat 1")).toBeOnTheScreen();
+
+    fireEvent.press(screen.getByText("Day"));
+    expect(screen.getByLabelText("day calendar")).toBeOnTheScreen();
+    expect(screen.getByText("Saturday, August 1")).toBeOnTheScreen();
 
     fireEvent.changeText(screen.getByLabelText("Event title"), "School pickup");
     fireEvent.press(screen.getByText("Save event"));
-    expect(await screen.findByText("School pickup")).toBeOnTheScreen();
+    expect((await screen.findAllByText("School pickup")).length).toBeGreaterThanOrEqual(2);
   });
 });
 

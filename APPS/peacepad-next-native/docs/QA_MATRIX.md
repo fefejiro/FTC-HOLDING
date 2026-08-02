@@ -42,7 +42,7 @@ and `NOT STARTED`.
 | Cross-family reads/writes blocked | AUTOMATED VERIFIED | authorization tests |
 | Layers identified by name/state, not colour alone | AUTOMATED VERIFIED | labels and accessibility state |
 | Sharing expansion requires confirmation | AUTOMATED VERIFIED | UI interaction test |
-| Month/Week/Day switching | AUTOMATED VERIFIED | UI interaction test |
+| Month grid, seven-day schedule, and day agenda | AUTOMATED VERIFIED | rendered switching and event-placement test |
 | Event create/update/delete contract | AUTOMATED VERIFIED | adapter lifecycle test |
 | Message Check defaults off per chat | AUTOMATED VERIFIED | UI/adapter tests |
 | Rule-based preview works with AI off | AUTOMATED VERIFIED | adapter test |
@@ -57,7 +57,7 @@ and `NOT STARTED`.
 | TypeScript | AUTOMATED VERIFIED | passed |
 | Guardrails | AUTOMATED VERIFIED | passed |
 | Jest/RNTL | AUTOMATED VERIFIED | 20 suites / 119 tests |
-| Coverage | AUTOMATED VERIFIED | 85.05 / 79.69 / 79.73 / 88.18 |
+| Coverage | AUTOMATED VERIFIED | 85.04 / 79.86 / 79.48 / 88.24 |
 | Expo config | AUTOMATED VERIFIED | lab bundle; diagnostics/writes false |
 | Expo Doctor | BLOCKED | 17/18; app React 19 and monorepo-root React 18 duplicate |
 | Expo Doctor (standalone native install) | AUTOMATED VERIFIED | 18/18 with a clean temporary npm install outside the monorepo |
@@ -79,15 +79,18 @@ PeacePad production service.
 | --- | --- |
 | Home | SIMULATOR VERIFIED |
 | Invitation preview and acceptance | SIMULATOR VERIFIED |
-| Month/Week/Day calendar | SIMULATOR VERIFIED |
+| Earlier Month/Week/Day selection on commit `02d19cf5` | SIMULATOR VERIFIED |
+| Current Month grid, Week schedule, and Day agenda | BLOCKED |
 | Layer sharing | BLOCKED |
 | Message Check opt-in, review, explicit send | SIMULATOR VERIFIED |
 | Real-iPhone staging pass | NOT STARTED |
 
 Current evidence is in `docs/evidence/quiet-premium-2026-08-01` and was
 captured from an iPhone 17 simulator running iOS 26.5 at source commit
-`02d19cf5`. Layer sharing is automated-verified, but its visible Simulator
-control did not activate through the remote pointer after the permitted retry.
+`02d19cf5`. It predates the current grid/schedule/agenda presentation and is not
+relabelled as proof of that change. Layer sharing is automated-verified, but its
+visible Simulator control did not activate through the remote pointer after
+the permitted retry.
 
 The historical records screenshots in
 `docs/evidence/premium-vertical-slice-2026-07-31` remain valid only for commit

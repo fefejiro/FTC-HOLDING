@@ -17,6 +17,103 @@ const layerColors: Record<string, string> = {
   green: "#62B44B"
 };
 
+const august2026Weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+const august2026Week = [
+  { day: 1, label: "Sat 1" },
+  { day: 2, label: "Sun 2" },
+  { day: 3, label: "Mon 3" },
+  { day: 4, label: "Tue 4" },
+  { day: 5, label: "Wed 5" },
+  { day: 6, label: "Thu 6" },
+  { day: 7, label: "Fri 7" }
+] as const;
+
+function eventDay(event: ReturnType<typeof useCoordinationState>["events"][number]): number {
+  return new Date(event.startsAt).getUTCDate();
+}
+
+function CalendarViewPanel({
+  calendarView,
+  events,
+  layers
+}: {
+  calendarView: CalendarView;
+  events: ReturnType<typeof useCoordinationState>["events"];
+  layers: ReturnType<typeof useCoordinationState>["layers"];
+}) {
+  const layerName = (calendarLayerId: string) =>
+    layers.find((layer) => layer.id === calendarLayerId)?.name ?? "Calendar";
+
+  if (calendarView === "month") {
+    const cells: readonly { key: string; day?: number }[] = [
+      ...Array.from({ length: 6 }, (_, index) => ({ key: `blank-${index}` })),
+      ...Array.from({ length: 31 }, (_, index) => ({ key: `day-${index + 1}`, day: index + 1 }))
+    ];
+    return (
+      <View accessibilityLabel="month calendar" style={styles.calendarCanvas}>
+        <Text style={styles.calendarMonth}>August 2026</Text>
+        <View style={styles.monthGrid}>
+          {august2026Weekdays.map((weekday) => (
+            <Text key={weekday} style={styles.weekday}>{weekday}</Text>
+          ))}
+          {cells.map((cell) => {
+            const dayEvents = cell.day ? events.filter((event) => eventDay(event) === cell.day) : [];
+            return (
+              <View accessibilityLabel={cell.day ? `August ${cell.day}` : undefined} key={cell.key} style={styles.monthCell}>
+                {cell.day ? <Text style={styles.dayNumber}>{cell.day}</Text> : null}
+                {dayEvents.slice(0, 1).map((event) => (
+                  <Text key={event.id} numberOfLines={1} style={styles.monthEvent}>{event.title}</Text>
+                ))}
+              </View>
+            );
+          })}
+        </View>
+      </View>
+    );
+  }
+
+  if (calendarView === "week") {
+    return (
+      <View accessibilityLabel="week calendar" style={styles.calendarCanvas}>
+        <Text style={styles.calendarMonth}>August 1–7</Text>
+        <View style={styles.scheduleList}>
+          {august2026Week.map(({ day, label }) => {
+            const dayEvents = events.filter((event) => eventDay(event) === day);
+            return (
+              <View key={day} style={styles.scheduleRow}>
+                <Text style={styles.scheduleDate}>{label}</Text>
+                <View style={styles.scheduleContent}>
+                  {dayEvents.length ? dayEvents.map((event) => (
+                    <View key={event.id} style={styles.scheduleEvent}>
+                      <Text style={styles.actionTitle}>{event.title}</Text>
+                      <Text style={styles.caption}>{layerName(event.calendarLayerId)}</Text>
+                    </View>
+                  )) : <Text style={styles.caption}>No events</Text>}
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      </View>
+    );
+  }
+
+  const dayEvents = events.filter((event) => eventDay(event) === 1);
+  return (
+    <View accessibilityLabel="day calendar" style={styles.calendarCanvas}>
+      <Text style={styles.calendarMonth}>Saturday, August 1</Text>
+      <View style={styles.scheduleList}>
+        {dayEvents.length ? dayEvents.map((event) => (
+          <View key={event.id} style={styles.scheduleEvent}>
+            <Text style={styles.actionTitle}>{event.title}</Text>
+            <Text style={styles.caption}>{layerName(event.calendarLayerId)}</Text>
+          </View>
+        )) : <Text style={styles.calendarEmpty}>No events yet</Text>}
+      </View>
+    </View>
+  );
+}
+
 export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
   const { binder, evidence, timelineEntry } = useLabState();
   const { events, invitationGrant, sentMessages } = useCoordinationState();
@@ -266,10 +363,7 @@ export function CalendarScreen() {
         ))}
       </View>
 
-      <View style={styles.calendarCanvas} accessibilityLabel={`${calendarView} calendar`}>
-        <Text style={styles.calendarMonth}>August 2026</Text>
-        <Text style={styles.calendarEmpty}>{visibleEvents.length ? `${visibleEvents.length} scheduled item${visibleEvents.length === 1 ? "" : "s"}` : "No events yet"}</Text>
-      </View>
+      <CalendarViewPanel calendarView={calendarView} events={visibleEvents} layers={layers} />
 
       <View style={styles.card}>
         <Text style={styles.heading}>Calendars</Text>
@@ -531,9 +625,19 @@ const styles = StyleSheet.create({
   segmentActive: { backgroundColor: colors.surface },
   segmentText: { ...typography.body, color: colors.muted, fontWeight: "700" },
   segmentTextActive: { color: colors.brand },
-  calendarCanvas: { alignItems: "center", backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: spacing.sm, minHeight: 180, justifyContent: "center", padding: spacing.xl },
+  calendarCanvas: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: spacing.md, minHeight: 180, padding: spacing.lg },
   calendarMonth: { ...typography.heading, color: colors.text },
   calendarEmpty: { ...typography.body, color: colors.muted },
+  monthGrid: { flexDirection: "row", flexWrap: "wrap" },
+  weekday: { ...typography.caption, color: colors.muted, fontWeight: "800", textAlign: "center", width: "14.2857%" },
+  monthCell: { borderTopColor: colors.border, borderTopWidth: 1, gap: 2, minHeight: 54, paddingHorizontal: 3, paddingTop: spacing.xs, width: "14.2857%" },
+  dayNumber: { ...typography.caption, color: colors.text, fontWeight: "800" },
+  monthEvent: { backgroundColor: colors.brandSoft, borderRadius: 6, color: colors.brand, fontSize: 9, fontWeight: "700", overflow: "hidden", paddingHorizontal: 3, paddingVertical: 2 },
+  scheduleList: { gap: spacing.sm },
+  scheduleRow: { borderTopColor: colors.border, borderTopWidth: 1, flexDirection: "row", gap: spacing.md, paddingTop: spacing.sm },
+  scheduleDate: { ...typography.caption, color: colors.text, fontWeight: "800", width: 48 },
+  scheduleContent: { flex: 1, gap: spacing.xs },
+  scheduleEvent: { backgroundColor: colors.brandSoft, borderLeftColor: colors.brand, borderLeftWidth: 3, borderRadius: 12, gap: 2, padding: spacing.sm },
   layerRow: { alignItems: "center", borderTopColor: colors.border, borderTopWidth: 1, flexDirection: "row", gap: spacing.sm, paddingTop: spacing.md },
   layerIdentity: { alignItems: "center", flex: 1, flexDirection: "row", gap: spacing.md },
   layerCopy: { flex: 1 },

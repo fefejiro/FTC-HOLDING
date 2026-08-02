@@ -21,12 +21,12 @@ approved Capacitor app, production data/API, App Store record, and
 | Invalid/expired/revoked/used/rate-limited handling | AUTOMATED VERIFIED | HTTP mapping and adapter tests |
 | Invitation creation, native sharing, deep-link prefill, and revocation | AUTOMATED VERIFIED | rendered UI, link-routing, and adapter lifecycle tests |
 | Private-by-default calendar layers | AUTOMATED VERIFIED | UI and authorization tests |
-| Month/Week/Day selection and event lifecycle | AUTOMATED VERIFIED | UI and adapter tests |
+| Month/Week/Day calendar presentations and event lifecycle | AUTOMATED VERIFIED | rendered view-switching and event-placement tests plus adapter lifecycle tests |
 | Explicit calendar sharing confirmation | AUTOMATED VERIFIED | rendered interaction test |
 | Per-chat Message Check, default off | AUTOMATED VERIFIED | UI and adapter tests |
 | Original draft preserved; no automatic send | AUTOMATED VERIFIED | explicit-send tests |
 | Third-party AI consent separate/off | AUTOMATED VERIFIED | consent and preference tests |
-| Current quiet-premium Simulator evidence | SIMULATOR VERIFIED | iPhone 17 / iOS 26.5; commit `02d19cf5`; fresh device-only screenshots |
+| Current quiet-premium Simulator evidence | BLOCKED | iPhone 17 / iOS 26.5 evidence exists for commit `02d19cf5`; the newer full calendar presentations require fresh screenshots |
 | Real-iPhone staging evidence | NOT STARTED | Requires deployed staging slice and controlled device session |
 | Staging `/api/v2` invitation handler core | AUTOMATED VERIFIED | Reviewed Node host plus framework-neutral route/service tests; not deployed |
 | Postgres staging repository and migration | AUTOMATED VERIFIED | Transaction/rollback/CAS and durable resolution-claim tests; migration prepared but not applied |
@@ -41,7 +41,7 @@ approved Capacitor app, production data/API, App Store record, and
 guardrails       passed
 typecheck        passed
 Jest/RNTL        20 suites / 119 tests passed
-coverage         85.05 statements / 79.69 branches / 79.73 functions / 88.18 lines
+coverage         85.04 statements / 79.86 branches / 79.48 functions / 88.24 lines
 Expo Doctor      17/18 in monorepo; isolated native install 18/18
 Expo config      PeacePad; ca.peacepad.nextnative.lab; diagnostics/writes false
 iOS export       passed; 846 modules bundled
@@ -76,12 +76,13 @@ write was used.
 
 ## Simulator evidence boundary
 
-The fresh screenshots under
-`docs/evidence/quiet-premium-2026-08-01` prove the current quiet-premium Home,
-invitation, Month/Week/Day calendar switching, and Message Check explicit-send
-journeys on commit `02d19cf5`. The simulator was an iPhone 17 running iOS 26.5.
-All records and messages were fictional, the bundle remained
-`ca.peacepad.nextnative.lab`, and production writes remained disabled.
+The screenshots under `docs/evidence/quiet-premium-2026-08-01` prove the
+quiet-premium Home, invitation, earlier Month/Week/Day selection, and Message
+Check explicit-send journeys on commit `02d19cf5`. The simulator was an iPhone
+17 running iOS 26.5. All records and messages were fictional, the bundle
+remained `ca.peacepad.nextnative.lab`, and production writes remained disabled.
+They do not yet prove the newer calendar grid, seven-day schedule, or day
+agenda, so those presentations remain automated-verified only.
 
 Calendar layer sharing remains **BLOCKED** for Simulator evidence. The control
 was visible and its confirmation behavior is automated-verified, but the remote
@@ -124,7 +125,8 @@ commit and are not relabelled as current evidence.
 - Invitation creation, native share-sheet delivery, deep-link prefill,
   acceptance, and revocation are automated-verified. Scannable QR presentation
   and device proof for the new sender flow remain open.
-- Calendar view selection/layers/events are implemented; full grids,
+- Calendar view selection/layers/events and Month/Week/Day presentations are
+  implemented for the fixed fictional August 2026 fixture. Date navigation,
   recurrence, offline behavior, and production persistence are later gates.
 - Message Check is rule-based and does not call third-party AI.
 - Calendar layer-sharing Simulator proof and all real-iPhone staging evidence
@@ -146,19 +148,19 @@ commit and are not relabelled as current evidence.
 | --- | ---: |
 | Quiet-premium information architecture | 85% |
 | Secure invitation product flow | 75% |
-| Layered calendar product flow | 55% |
+| Layered calendar product flow | 65% |
 | Per-chat Message Check | 70% |
 | Typed staging compatibility client | 75% |
 | Staging invitation server core | 70% |
 | Automated verification | 94% |
-| Current device verification | 70% |
+| Current device verification | 65% |
 | Overall production-native v2 | 34% |
 
 ## Next best move
 
-After an explicit cost/hosting decision, provision one isolated staging
-database and service,
-apply the prepared migration, grant a least-privilege runtime role, and run
-live API plus real-iPhone staging checks.
-Do not expand into calling, billing, or production migration before those gates
-pass.
+Capture one controlled current-calendar Simulator pass without retry loops,
+then add a scannable invitation QR and its accessibility/expiry proof. After an
+explicit cost/hosting decision, provision one isolated staging database and
+service, apply the prepared migration, grant a least-privilege runtime role,
+and run live API plus real-iPhone staging checks. Do not expand into calling,
+billing, or production migration before those gates pass.
