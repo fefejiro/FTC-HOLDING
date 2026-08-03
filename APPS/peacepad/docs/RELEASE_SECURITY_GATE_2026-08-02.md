@@ -52,7 +52,8 @@ The remaining moderate findings are in Firebase Admin / Google Cloud transport a
 
 - Verified: lockfile consistency, registry resolution, package-lock-only audit, exact resolved versions, and no forced upgrades.
 - Previously verified on this source baseline: TypeScript under Node.js 22.23.2.
-- Still required in CI after these dependency changes: clean install, typecheck, unit/API tests, production build, secret scan, and Capacitor sync validation.
+- Added `.github/workflows/peacepad-pr-validation.yml` to run a clean install, dependency regression gate, tracked-source secret scan, typecheck, unit/contract tests with coverage, production build, and Capacitor configuration check on PeacePad pull requests.
+- The workflow result remains pending until GitHub Actions completes against this branch.
 - Still required before merging breaking dependency work: Drizzle database integration tests and Sharp media-pipeline tests.
 
 ## Release decision

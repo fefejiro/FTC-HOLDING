@@ -33,7 +33,8 @@
         "verify:deployment-ownership": "node scripts/verify-deployment-ownership.mjs",
         "guard:openai-secrets": "node scripts/guard-openai-secrets.mjs",
         "guard:openai-secrets:all": "node scripts/guard-openai-secrets.mjs --all",
-        "guard:openai-secrets:test": "node scripts/guard-openai-secrets.mjs --self-test"
+        "guard:openai-secrets:test": "node scripts/guard-openai-secrets.mjs --self-test",
+        "verify:dependency-audit": "node scripts/verify-dependency-audit.mjs"
     },
     "dependencies": {
         "@capacitor/android": "^7.4.5",
