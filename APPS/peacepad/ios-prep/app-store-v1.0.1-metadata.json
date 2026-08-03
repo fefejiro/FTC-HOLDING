@@ -2,6 +2,8 @@
   "schemaVersion": 1,
   "appStoreId": "6793350735",
   "bundleId": "ca.peacepad.family",
+  "currentPublicVersion": "1.0",
+  "currentVersionVerifiedAt": "2026-08-03",
   "targetVersion": "1.0.1",
   "targetBuild": "2",
   "packageStatus": "prepared-not-submitted",

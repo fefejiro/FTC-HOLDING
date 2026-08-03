@@ -29,6 +29,17 @@ function utf8Bytes(value) {
   return Buffer.byteLength(value, "utf8");
 }
 
+function compareVersions(left, right) {
+  const leftParts = left.split(".").map(Number);
+  const rightParts = right.split(".").map(Number);
+  const width = Math.max(leftParts.length, rightParts.length);
+  for (let index = 0; index < width; index += 1) {
+    const difference = (leftParts[index] ?? 0) - (rightParts[index] ?? 0);
+    if (difference !== 0) return Math.sign(difference);
+  }
+  return 0;
+}
+
 function validateUrl(locale, field, value) {
   try {
     const url = new URL(value);
@@ -40,7 +51,12 @@ function validateUrl(locale, field, value) {
 
 check(metadata.appStoreId === "6793350735", "Unexpected App Store ID");
 check(metadata.bundleId === "ca.peacepad.family", "Production bundle ID changed");
+check(metadata.currentPublicVersion === "1.0", "Unexpected current public version");
 check(metadata.targetVersion === "1.0.1", "Unexpected target version");
+check(
+  compareVersions(metadata.targetVersion, metadata.currentPublicVersion) > 0,
+  "Target version must be newer than the current public version",
+);
 check(
   metadata.packageStatus === "prepared-not-submitted",
   "Package must remain prepared-not-submitted",

@@ -4,6 +4,7 @@ Updated: 2026-08-03
 
 ## Candidate identity
 
+- Current public App Store version: `1.0` (live lookup verified 2026-08-03)
 - App Store version: `1.0.1`
 - Build number: `2`
 - Bundle identifier: `ca.peacepad.family`
@@ -14,6 +15,11 @@ The npm package version remains an internal web-package identifier and is not
 the iOS release identity. The iOS archive derives its public version and build
 from the Xcode project settings verified by
 `npm run verify:ios-release-candidate`.
+
+Apple's public lookup returns version `1.0` for App Store ID `6793350735` in
+both Canada and the United States. The metadata validator therefore requires
+the candidate target to compare newer than `1.0`; it will reject a target equal
+to or below the current public version.
 
 ## Integrated local evidence
 
