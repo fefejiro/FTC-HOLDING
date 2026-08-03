@@ -12,18 +12,25 @@ Use this as the short execution queue. For release gating, the canonical checkli
 - [x] Save App Review credentials and testing notes
 - [x] Reply to the Guideline 2.1 reviewer-access issue
 - [x] Resubmit existing build `1.0.9 (1)`
-- [ ] Monitor the current `Waiting for Review` submission
-- [ ] Respond narrowly if Apple sends a new Resolution Center question
-- [ ] After approval, verify automatic release and the public App Store listing
+- [x] Monitor the submission through approval
+- [x] Respond narrowly to Apple's Resolution Center questions
+- [x] Verify release, public App Store listing, and real-iPhone installation
 
-See `ios-prep/IOS_APP_REVIEW_HANDOVER_2026-07-26.md`. Do not upload a
-replacement build or alter the active submission without a verified blocker.
+See `ios-prep/IOS_APP_REVIEW_HANDOVER_2026-07-26.md` for the historical review
+recovery. Version 1.0 is now public; do not upload a replacement binary merely
+to change website discovery links or editable metadata.
 
 ### Release Infrastructure
-- [ ] Confirm the authoritative production deployment workflow and owner
+- [x] Confirm Cloudflare Pages project `ftc-holding` as the production frontend owner
+- [x] Deploy and verify the App Store discovery update from commit `eba4ddd3`
+- [ ] Disconnect the unused Git integration from the legacy Cloudflare Worker `peacepad`
 - [ ] Confirm whether Android release is PWA/TWA, wrapper, or native package
-- [ ] Verify the production domain configuration is final and live
-- [ ] Verify privacy policy and terms URLs are reachable on the production domain
+- [x] Verify `peacepad.ca` and `www.peacepad.ca` are attached to the Pages project
+- [x] Verify privacy policy, terms, and support URLs are reachable on the production domain
+
+See `docs/PRODUCTION_DEPLOYMENT_HANDOVER_2026-08-02.md`. Do not delete the
+legacy Worker until its lack of domains, routes, bindings, and traffic is
+reconfirmed. Disconnecting its Git integration is the current safe cleanup.
 
 ### Store Readiness
 - [ ] Finalize app icon, screenshots, store descriptions, and support contact details

@@ -9,7 +9,7 @@
 
 | Layer | Technology | Notes |
 |-------|-----------|-------|
-| **Frontend** | React + Vite (static) | Served from `peacepad.ca` |
+| **Frontend** | React + Vite (static) | Cloudflare Pages project `ftc-holding`; served from `peacepad.ca` |
 | **Backend** | Node.js / Express / TypeScript | Deployed to Railway as `@ftc/peacepad` |
 | **Database** | PostgreSQL via **Neon** | Managed serverless Postgres — see DB section below |
 | **ORM** | Drizzle ORM | Schema at `shared/schema.ts`; migrations in `server/migrations/` |
@@ -38,7 +38,20 @@
 - `@ftc/peacepad-extension` — Completed
 
 ### Frontend (peacepad.ca)
-Served separately (Cloudflare Pages or similar). The backend is API-only (`DEPLOY_ROLE=api`).
+Served by the Cloudflare Pages project `ftc-holding`.
+
+- **Production branch:** `main`
+- **Root directory:** `APPS/peacepad`
+- **Build command:** `npm run build:frontend`
+- **Output directory:** `dist/public`
+- **Domains:** `peacepad.ca`, `www.peacepad.ca`, `ftc-holding.pages.dev`
+
+The frontend and the Git-connected Cloudflare Worker named `peacepad` are
+different deployments. The Worker has no PeacePad custom domain or route and
+must not be treated as the website's production owner. See
+`docs/PRODUCTION_DEPLOYMENT_HANDOVER_2026-08-02.md`.
+
+The backend remains API-only (`DEPLOY_ROLE=api`).
 
 ---
 
@@ -139,13 +152,30 @@ Dev vs prod AI behaviour:
 
 ## Git & Deployment Flow
 
-```
-local branch → commit → git push → Railway auto-deploys @ftc/peacepad
+Frontend:
+
+```text
+local branch -> pull request -> main -> Cloudflare Pages project ftc-holding
 ```
 
-Railway is linked to the GitHub repo and auto-deploys on push to the main branch.
+Backend:
 
-For manual redeploy: `railway up --detach` from inside `C:\FTC HOLDING\APPS\peacepad`
+```text
+local branch -> pull request -> main -> Railway service @ftc/peacepad
+```
+
+The production frontend can be recovered from a verified local build with:
+
+```bash
+wrangler pages deploy dist/public --project-name ftc-holding --branch main --commit-hash <verified-commit>
+```
+
+Use a commit that passed the frontend checks and record the Cloudflare deployment
+ID. Do not deploy documentation-only or unrelated monorepo changes.
+
+For a manual backend redeploy, first link the correct Railway project and service,
+then run `railway up --detach` from `C:\FTC HOLDING\APPS\peacepad`. A local
+Railway CLI session that reports no linked project is not deployment evidence.
 
 ---
 
@@ -157,6 +187,8 @@ For manual redeploy: `railway up --detach` from inside `C:\FTC HOLDING\APPS\peac
 | 502 from `api.peacepad.ca` | Service crashed or not deployed | Check Railway dashboard + logs |
 | Android "Failed to fetch" | API is down | Check `api.peacepad.ca/api/health` |
 | Build fails on Railway | Railpack workspace detection issue | Check `package.json` has correct `"workspaces"` field |
+| Pages build fails before the build step | Git clone or Cloudflare source-integration failure | Inspect the deployment stages; retry only after confirming the selected commit and Pages project |
+| Dashboard shows `Latest build failed` for Worker `peacepad` | Stale Worker Git integration, not the `peacepad.ca` Pages site | Verify no domains/routes/traffic, then disconnect its Git integration in Worker Settings -> Build |
 | AI returns mocks in prod | `NODE_ENV` not set to `production` | Set in Railway env vars |
 
 ---

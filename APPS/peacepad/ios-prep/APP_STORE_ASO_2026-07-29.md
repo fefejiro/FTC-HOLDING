@@ -350,8 +350,8 @@ time, beginning with the first three screenshots.
 | Public URLs | VERIFIED, HTTP 200 |
 | Character limits | VERIFIED |
 | Promotional copy | READY TO APPLY |
-| Smart App Banner and store links | IMPLEMENTED ON BRANCH, NOT DEPLOYED |
-| Rating prompt destination | CORRECTED ON BRANCH, NOT DEPLOYED |
+| Smart App Banner and store links | DEPLOYED AND LIVE VERIFIED, commit `eba4ddd3` |
+| Rating prompt destination | DEPLOYED; unit contract verified before publication |
 | Public ratings | ZERO DISPLAYED |
 | Metadata languages | ENGLISH ONLY |
 | App Privacy answers | RECONCILIATION REQUIRED |
