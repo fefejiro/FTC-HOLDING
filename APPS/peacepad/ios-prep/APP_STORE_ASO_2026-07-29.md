@@ -392,7 +392,7 @@ time, beginning with the first three screenshots.
 | Public social image | PLACEHOLDER still observed |
 | Public URLs | VERIFIED, HTTP 200 |
 | Character limits | VERIFIED |
-| Promotional copy | SAVED IN APP STORE CONNECT; PUBLIC PROPAGATION PENDING |
+| Promotional copy | SAVED AND LIVE VERIFIED on Canadian and U.S. storefronts, 2026-08-02 |
 | Smart App Banner and store links | DEPLOYED AND LIVE VERIFIED, commit `eba4ddd3` |
 | Rating prompt destination | DEPLOYED; unit contract verified before publication |
 | Public ratings | ZERO DISPLAYED |
