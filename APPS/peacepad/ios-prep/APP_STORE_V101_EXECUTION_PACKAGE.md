@@ -128,8 +128,11 @@ These findings were not auto-fixed in this metadata-only branch because
 security triage is now in draft PR #167. Its proposed lockfile reports 0
 critical, 2 high, and 9 moderate findings. The two remaining high findings are
 the deliberately deferred Drizzle ORM and Sharp semver-major migrations. PR
-#167 still requires clean-install CI evidence before merge and does not yet
-clear version 1.0.1 for release.
+#167 now passes the equivalent clean Node 22 release gate locally: dependency
+threshold, secret guards, TypeScript, 181 unit/contract tests with coverage,
+production build, and Capacitor inventory. GitHub-hosted execution remains
+blocked before runner allocation by the account billing lock, so #167 stays
+draft and does not yet clear version 1.0.1 for release.
 
 ## Current status
 
@@ -145,6 +148,6 @@ clear version 1.0.1 for release.
 | Exact-build screenshots | BLOCKED until tested 1.0.1 build exists |
 | App Privacy reconciliation | NOT STARTED for 1.0.1 binary |
 | Node release runtime | VERIFIED; typecheck passes under CI-standard Node 22 |
-| Dependency audit | TRIAGED in draft PR #167; proposed lock has 0 critical and 2 high, but CI is pending |
+| Dependency audit | LOCALLY VERIFIED in draft PR #167; proposed lock has 0 critical and 2 high; hosted CI is billing-blocked before runner allocation |
 | App Store version 1.0.1 | NOT CREATED |
 | Binary upload | NOT AUTHORIZED |
