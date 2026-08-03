@@ -117,9 +117,10 @@ git diff --check
 ## Release-environment findings
 
 The isolated verification checkout installed the existing lockfile with Node
-24.13.1. The project declares Node 22.x, so release verification must be rerun
-under Node 22 before a build is approved. `npm ci --ignore-scripts` also reported
-38 dependency audit findings (2 low, 19 moderate, 13 high, and 4 critical).
+24.13.1, while PeacePad's production-gate workflow standardizes Node 22. A
+second typecheck run under Node 22.23.2 passed. `npm ci --ignore-scripts` also
+reported 38 dependency audit findings (2 low, 19 moderate, 13 high, and 4
+critical).
 
 These findings were not auto-fixed in this metadata-only branch because
 `npm audit fix --force` can introduce breaking production changes. They require
@@ -138,7 +139,7 @@ a separate dependency/security triage before version 1.0.1 release approval.
 | Six-screen storyboard | PREPARED |
 | Exact-build screenshots | BLOCKED until tested 1.0.1 build exists |
 | App Privacy reconciliation | NOT STARTED for 1.0.1 binary |
-| Node release runtime | BLOCKED; verify under required Node 22.x |
+| Node release runtime | VERIFIED; typecheck passes under CI-standard Node 22 |
 | Dependency audit | BLOCKED; 4 critical and 13 high findings require triage |
 | App Store version 1.0.1 | NOT CREATED |
 | Binary upload | NOT AUTHORIZED |
