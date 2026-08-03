@@ -1,40 +1,50 @@
-name: Continuous Improvement — Nightly Auto-Assign
+name: Continuous Improvement - Assign Reviewed Issue
 
 on:
-  schedule:
-    # 02:00 ET = 06:00 UTC (during EST). DST drift acceptable.
-    - cron: '0 6 * * *'
   workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Reviewed issue number to assign'
+        required: true
+        type: string
+      confirm_assignment:
+        description: 'Type ASSIGN to confirm possible Copilot usage'
+        required: true
+        type: string
 
 permissions:
   contents: read
   issues: write
-  pull-requests: write
+
+concurrency:
+  group: continuous-improvement-agent
+  cancel-in-progress: false
 
 jobs:
-  graze:
+  assign:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Pick top 3 unassigned `continuous-improvement` issues and assign @copilot
+      - name: Validate and assign one reviewed issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          CONFIRM_ASSIGNMENT: ${{ inputs.confirm_assignment }}
         run: |
           set -e
-          # Top 3 oldest open, unassigned, labeled `continuous-improvement`
-          issues=$(gh issue list \
-            --repo "$GITHUB_REPOSITORY" \
-            --state open \
-            --label continuous-improvement \
-            --search "no:assignee" \
-            --limit 3 \
-            --json number \
-            --jq '.[].number')
-          if [ -z "$issues" ]; then
-            echo "No unassigned continuous-improvement issues. Done."
-            exit 0
+          if [ "$CONFIRM_ASSIGNMENT" != "ASSIGN" ]; then
+            echo "Confirmation must be ASSIGN."
+            exit 1
           fi
-          for n in $issues; do
-            echo "Assigning @copilot to issue #$n"
-            gh issue edit "$n" --repo "$GITHUB_REPOSITORY" --add-assignee copilot || \
-              echo "(could not assign #$n — copilot may not be available on this repo)"
-          done
+          issue=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+            --json state,assignees,labels,body)
+          state=$(echo "$issue" | jq -r '.state')
+          assignees=$(echo "$issue" | jq '.assignees | length')
+          has_ci=$(echo "$issue" | jq '[.labels[].name] | index("continuous-improvement") != null')
+          has_ready=$(echo "$issue" | jq '[.labels[].name] | index("agent-ready") != null')
+          if [ "$state" != "OPEN" ] || [ "$assignees" != "0" ] || \
+             [ "$has_ci" != "true" ] || [ "$has_ready" != "true" ]; then
+            echo "Issue must be open, unassigned, continuous-improvement, and agent-ready."
+            exit 1
+          fi
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-assignee copilot

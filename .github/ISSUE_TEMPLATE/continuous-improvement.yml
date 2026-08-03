@@ -1,5 +1,5 @@
-name: "🔁 Continuous Improvement"
-description: "Small, low-risk, agent-safe job. Auto-grazed nightly by the Coding Agent."
+name: "Continuous Improvement"
+description: "Evidence-backed maintenance; autonomous only after agent-ready review."
 title: "[CI] "
 labels: ["continuous-improvement"]
 body:
@@ -7,13 +7,21 @@ body:
     attributes:
       value: |
         ## Continuous Improvement
-        Small jobs the agent can pick up overnight without supervision.
-        Examples: typo fixes, dep bumps, README polish, test coverage, lint warnings, dead code, a11y tweaks, SEO meta tags, doc sync.
+        The scheduled agent only picks up issues that also carry `agent-ready`.
+        Dependencies, production configuration, auth, billing, legal/privacy,
+        data migrations, native signing, and cloud builds require owner review.
   - type: textarea
     id: goal
     attributes:
       label: Goal
-      placeholder: "Fix all ESLint warnings in APPS/peacepad/client/src/"
+      placeholder: "Fix the verified issue in one app or tightly related scope."
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Observed evidence
+      placeholder: "Exact file, command output, failing check, or reproducible behavior."
     validations:
       required: true
   - type: textarea
@@ -21,8 +29,8 @@ body:
     attributes:
       label: Acceptance Criteria
       value: |
-        - [ ] 
-        - [ ] 
+        - [ ]
+        - [ ]
     validations:
       required: true
   - type: input
@@ -36,11 +44,21 @@ body:
     id: verification
     attributes:
       label: Verification command
-      placeholder: "cd APPS/peacepad && npm run lint"
+      placeholder: "npm --prefix APPS/peacepad run check"
+    validations:
+      required: true
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Risk class
+      options:
+        - Low - eligible for agent-ready review
+        - Medium - discovery and owner review only
+        - High - owner-only change
     validations:
       required: true
   - type: textarea
     id: boundaries
     attributes:
-      label: Don't touch
-      placeholder: "No behavioral changes; cosmetic/structural only."
+      label: Do not touch
+      placeholder: "Production, secrets, billing, legal text, signing, unrelated apps."

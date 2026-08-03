@@ -4,6 +4,8 @@ This repository contains multiple FTC projects and product experiments. Treat it
 
 ## Skills (load on demand)
 
+For recurring cross-app audits, repository hygiene, contribution discipline, and safe maintenance pull requests, load `.github/skills/portfolio-continuous-improvement/SKILL.md`.
+
 Two skill libraries live in this monorepo. Load the matching `SKILL.md` before acting whenever a request matches its description; never duplicate skill content into prompts.
 
 - `.github/skills/` — governance and product-shape skills:
@@ -53,6 +55,10 @@ Path-specific instructions auto-load from `.github/instructions/anion-*.instruct
 - Always include testing notes in the pull request summary.
 - Do not claim tests passed unless they were actually run.
 - If tests cannot be run, explain why.
+
+## Portfolio continuous improvement
+
+Use `.github/agents/ftc-portfolio-maintainer.agent.md` with `.github/skills/portfolio-continuous-improvement/SKILL.md` for recurring maintenance. Scheduled discovery may create issues. Autonomous implementation requires both `continuous-improvement` and `agent-ready`, must use a branch and pull request, and may never merge, deploy, trigger paid builds, or change owner-only systems.
 
 ## Expected project documentation
 
