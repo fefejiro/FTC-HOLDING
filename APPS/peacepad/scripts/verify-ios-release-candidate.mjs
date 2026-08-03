@@ -16,6 +16,8 @@ const uniqueMatches = (pattern) =>
 const marketingVersions = uniqueMatches(/MARKETING_VERSION = ([^;]+);/g);
 const buildNumbers = uniqueMatches(/CURRENT_PROJECT_VERSION = ([^;]+);/g);
 const bundleIds = uniqueMatches(/PRODUCT_BUNDLE_IDENTIFIER = ([^;]+);/g);
+const developmentTeams = uniqueMatches(/DEVELOPMENT_TEAM = ([^;]+);/g);
+const expectedDevelopmentTeam = "G6UNC88GQ5";
 
 const failures = [];
 const requireCondition = (condition, message) => {
@@ -55,6 +57,10 @@ requireCondition(
   `all Xcode configurations must use ${metadata.bundleId}; found ${bundleIds.join(", ") || "none"}`,
 );
 requireCondition(
+  developmentTeams.length === 1 && developmentTeams[0] === expectedDevelopmentTeam,
+  `all Xcode target configurations must use development team ${expectedDevelopmentTeam}; found ${developmentTeams.join(", ") || "none"}`,
+);
+requireCondition(
   capacitorConfig.includes(`appId: '${metadata.bundleId}'`),
   "Capacitor appId must match the App Store bundle identifier",
 );
@@ -84,6 +90,8 @@ if (failures.length > 0) {
 }
 
 console.log("iOS release candidate identity verification passed.");
-console.log(`version=${metadata.targetVersion} build=${buildNumbers[0]} bundle=${metadata.bundleId}`);
+console.log(
+  `version=${metadata.targetVersion} build=${buildNumbers[0]} bundle=${metadata.bundleId} team=${developmentTeams[0]}`,
+);
 console.log("status=prepared-not-submitted productionMutationAllowed=false");
 console.log("Capacitor SDK privacy manifest=present");
