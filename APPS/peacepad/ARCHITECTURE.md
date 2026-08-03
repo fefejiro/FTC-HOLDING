@@ -45,6 +45,7 @@ Served by the Cloudflare Pages project `ftc-holding`.
 - **Build command:** `npm run build:frontend`
 - **Output directory:** `dist/public`
 - **Domains:** `peacepad.ca`, `www.peacepad.ca`, `ftc-holding.pages.dev`
+- **Automatic Git deployments:** disabled; verified releases use Wrangler direct deployment
 
 The frontend and the Git-connected Cloudflare Worker named `peacepad` are
 different deployments. The Worker has no PeacePad custom domain or route and
@@ -155,7 +156,7 @@ Dev vs prod AI behaviour:
 Frontend:
 
 ```text
-local branch -> pull request -> main -> Cloudflare Pages project ftc-holding
+local branch -> pull request -> main -> verified local build -> Wrangler direct deploy -> Cloudflare Pages project ftc-holding
 ```
 
 Backend:
@@ -171,7 +172,9 @@ wrangler pages deploy dist/public --project-name ftc-holding --branch main --com
 ```
 
 Use a commit that passed the frontend checks and record the Cloudflare deployment
-ID. Do not deploy documentation-only or unrelated monorepo changes.
+ID. Automatic production and preview deployments were disabled on 2026-08-02
+because the Git integration repeatedly failed during repository cloning. Do not
+deploy documentation-only or unrelated monorepo changes.
 
 For a manual backend redeploy, first link the correct Railway project and service,
 then run `railway up --detach` from `C:\FTC HOLDING\APPS\peacepad`. A local

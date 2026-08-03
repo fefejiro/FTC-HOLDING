@@ -23,6 +23,7 @@ to change website discovery links or editable metadata.
 ### Release Infrastructure
 - [x] Confirm Cloudflare Pages project `ftc-holding` as the production frontend owner
 - [x] Deploy and verify the App Store discovery update from commit `eba4ddd3`
+- [x] Disable the failing Pages Git auto-deploy and retain verified Wrangler direct deploys
 - [ ] Disconnect the unused Git integration from the legacy Cloudflare Worker `peacepad`
 - [ ] Confirm whether Android release is PWA/TWA, wrapper, or native package
 - [x] Verify `peacepad.ca` and `www.peacepad.ca` are attached to the Pages project

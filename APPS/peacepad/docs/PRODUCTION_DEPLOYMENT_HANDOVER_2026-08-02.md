@@ -23,6 +23,8 @@ separate Cloudflare Worker named `peacepad`.
 | Build command | `npm run build:frontend` |
 | Output directory | `dist/public` |
 | Production domains | `peacepad.ca`, `www.peacepad.ca` |
+| Automatic Git deployments | Disabled for production and preview |
+| PR deployment comments | Disabled |
 
 The verified recovery command was:
 
@@ -62,6 +64,17 @@ monorepo controls for Git-connected builds:
 
 - <https://developers.cloudflare.com/workers/ci-cd/builds/configuration/>
 - <https://developers.cloudflare.com/workers/ci-cd/builds/build-watch-paths/>
+
+Because this account's Pages source integration repeatedly failed while cloning
+the repository, automatic production and preview deployments were disabled on
+2026-08-02 through the Pages API. Cloudflare explicitly supports disabling Git
+deployments while continuing to deploy the same Pages project with Wrangler:
+
+- <https://developers.cloudflare.com/pages/get-started/git-integration/>
+
+The live deployment and custom domains were rechecked after this setting change
+and remained available. Direct Wrangler deployment is now the authoritative
+frontend release path until the Git installation is repaired and re-verified.
 
 ### Legacy Worker named `peacepad`
 
