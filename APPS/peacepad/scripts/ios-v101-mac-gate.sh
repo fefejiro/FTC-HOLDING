@@ -40,7 +40,7 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
   exit 1
 fi
 
-for command_name in git node npm npx xcodebuild; do
+for command_name in git node npm xcodebuild; do
   if ! command -v "$command_name" >/dev/null 2>&1; then
     echo "BLOCKED: required command is unavailable: $command_name" >&2
     exit 1
@@ -104,7 +104,13 @@ run_logged "05-secret-scan" npm run guard:openai-secrets:all
 run_logged "06-typecheck" npm run check
 run_logged "07-tests" npm test -- --coverage
 run_logged "08-production-build" npm run build
-run_logged "09-capacitor-sync" npx cap sync ios
+CAPACITOR_BIN="$APP_ROOT/node_modules/.bin/cap"
+if [[ ! -x "$CAPACITOR_BIN" ]]; then
+  echo "BLOCKED: the local Capacitor CLI is unavailable after npm ci." >&2
+  exit 1
+fi
+
+run_logged "09-capacitor-sync" "$CAPACITOR_BIN" sync ios
 
 if [[ -n "$(git -C "$REPO_ROOT" status --porcelain)" ]]; then
   echo "BLOCKED: Capacitor sync or a verification step changed tracked release source." >&2
