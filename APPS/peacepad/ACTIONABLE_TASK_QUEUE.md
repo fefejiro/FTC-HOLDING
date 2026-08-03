@@ -24,14 +24,15 @@ to change website discovery links or editable metadata.
 - [x] Confirm Cloudflare Pages project `ftc-holding` as the production frontend owner
 - [x] Deploy and verify the App Store discovery update from commit `eba4ddd3`
 - [x] Disable the failing Pages Git auto-deploy and retain verified Wrangler direct deploys
-- [ ] Disconnect the unused Git integration from the legacy Cloudflare Worker `peacepad`
+- [x] Disconnect the unused Git integration from the legacy Cloudflare Worker `peacepad`
 - [ ] Confirm whether Android release is PWA/TWA, wrapper, or native package
 - [x] Verify `peacepad.ca` and `www.peacepad.ca` are attached to the Pages project
 - [x] Verify privacy policy, terms, and support URLs are reachable on the production domain
 
 See `docs/PRODUCTION_DEPLOYMENT_HANDOVER_2026-08-02.md`. Do not delete the
 legacy Worker until its lack of domains, routes, bindings, and traffic is
-reconfirmed. Disconnecting its Git integration is the current safe cleanup.
+reconfirmed. Its Git integration was disconnected on 2026-08-02 without
+deleting the Worker.
 
 ### Store Readiness
 - [ ] Finalize app icon, screenshots, store descriptions, and support contact details

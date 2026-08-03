@@ -78,8 +78,8 @@ frontend release path until the Git installation is repaired and re-verified.
 
 ### Legacy Worker named `peacepad`
 
-The red `Latest build failed` badge in the Cloudflare screenshot belongs to a
-separate Git-connected Worker named `peacepad`.
+The red `Latest build failed` badge in the original Cloudflare screenshot
+belonged to a separate Worker named `peacepad` that was still Git-connected.
 
 Read-only checks showed:
 
@@ -92,26 +92,27 @@ Read-only checks showed:
 This Worker is not serving `peacepad.ca`. Its failed check is noise on unrelated
 pull requests, not a production outage.
 
-## Required dashboard cleanup
+## Completed dashboard cleanup
 
-Safest action:
+On 2026-08-02 the repository integration was disconnected through **Worker
+Settings -> Build**. The result was verified in the dashboard:
 
-1. Open Cloudflare Dashboard.
-2. Select **Workers & Pages**.
-3. Open the Worker **peacepad** (not Pages project `ftc-holding`).
-4. Open **Settings -> Build**.
-5. Disconnect the Git integration.
-6. Confirm `peacepad.ca` still returns HTTP 200.
+- the Worker remained present;
+- the Build section no longer displayed a Git repository and offered
+  **Connect** instead;
+- no domain, route, binding, or runtime configuration was deleted;
+- `peacepad.ca`, `www.peacepad.ca`, Privacy, Terms, Support, and the Canadian
+  App Store listing each returned HTTP 200 after the change.
 
 Do not delete the Worker until its lack of domains, routes, bindings, secrets,
-and traffic is reconfirmed. Disconnecting Git is sufficient to stop irrelevant
-builds while preserving a recovery path.
+and traffic is reconfirmed. The completed Git disconnect is sufficient to stop
+new irrelevant repository builds while preserving a recovery path.
 
 The current Wrangler OAuth session can deploy Pages and inspect Worker
 deployments, but it cannot edit Workers Builds configuration. The Workers
 Builds API returned Cloudflare authentication error `10000`. Automatic cleanup
-therefore requires a user-scoped token with Workers Builds Configuration edit
-permission, or the dashboard action above.
+would have required a user-scoped token with Workers Builds Configuration edit
+permission, so the authenticated dashboard was used instead.
 
 ## GitHub check note
 

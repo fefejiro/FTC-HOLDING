@@ -47,9 +47,10 @@ Served by the Cloudflare Pages project `ftc-holding`.
 - **Domains:** `peacepad.ca`, `www.peacepad.ca`, `ftc-holding.pages.dev`
 - **Automatic Git deployments:** disabled; verified releases use Wrangler direct deployment
 
-The frontend and the Git-connected Cloudflare Worker named `peacepad` are
-different deployments. The Worker has no PeacePad custom domain or route and
-must not be treated as the website's production owner. See
+The frontend and the legacy Cloudflare Worker named `peacepad` are different
+deployments. The Worker's Git integration was disconnected on 2026-08-02. It
+has no PeacePad custom domain or route and must not be treated as the website's
+production owner. See
 `docs/PRODUCTION_DEPLOYMENT_HANDOVER_2026-08-02.md`.
 
 The backend remains API-only (`DEPLOY_ROLE=api`).
