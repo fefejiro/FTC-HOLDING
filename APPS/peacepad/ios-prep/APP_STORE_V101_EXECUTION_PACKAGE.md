@@ -45,7 +45,8 @@ especially in the United States. Version 1.0.1 therefore uses:
 
 Promotional text is useful for conversion but is not an App Store search-ranking
 field. The saved 145-character text remains appropriate for version 1.0 and
-1.0.1.
+1.0.1. Apple's public Canada and United States storefront pages showed the new
+promotional opening and the subtitle `Calmer co-parenting tools` on 2026-08-02.
 
 ## Localization gate
 
@@ -123,8 +124,12 @@ reported 38 dependency audit findings (2 low, 19 moderate, 13 high, and 4
 critical).
 
 These findings were not auto-fixed in this metadata-only branch because
-`npm audit fix --force` can introduce breaking production changes. They require
-a separate dependency/security triage before version 1.0.1 release approval.
+`npm audit fix --force` can introduce breaking production changes. The isolated
+security triage is now in draft PR #167. Its proposed lockfile reports 0
+critical, 2 high, and 9 moderate findings. The two remaining high findings are
+the deliberately deferred Drizzle ORM and Sharp semver-major migrations. PR
+#167 still requires clean-install CI evidence before merge and does not yet
+clear version 1.0.1 for release.
 
 ## Current status
 
@@ -133,13 +138,13 @@ a separate dependency/security triage before version 1.0.1 release approval.
 | Version 1.0 public listing | VERIFIED |
 | Exact-name discovery | VERIFIED, rank 1 in CA and US sample |
 | Category-intent discovery | WEAK; baseline recorded |
-| 1.0 promotional text | SAVED; storefront propagation pending |
+| 1.0 promotional text | VERIFIED on public Canada and US storefronts |
 | English 1.0.1 metadata | PREPARED AND MACHINE-VALIDATED |
 | French Canadian metadata | DRAFT; HUMAN REVIEW REQUIRED |
 | Six-screen storyboard | PREPARED |
 | Exact-build screenshots | BLOCKED until tested 1.0.1 build exists |
 | App Privacy reconciliation | NOT STARTED for 1.0.1 binary |
 | Node release runtime | VERIFIED; typecheck passes under CI-standard Node 22 |
-| Dependency audit | BLOCKED; 4 critical and 13 high findings require triage |
+| Dependency audit | TRIAGED in draft PR #167; proposed lock has 0 critical and 2 high, but CI is pending |
 | App Store version 1.0.1 | NOT CREATED |
 | Binary upload | NOT AUTHORIZED |
