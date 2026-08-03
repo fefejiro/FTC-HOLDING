@@ -56,6 +56,30 @@ Before archive approval:
 
 ## Remaining release gates
 
+Run the repeatable Mac gate from `APPS/peacepad`:
+
+```bash
+bash scripts/ios-v101-mac-gate.sh
+```
+
+That command runs the application verification suite, confirms a clean
+Capacitor sync, checks the Release build settings, and produces an unsigned
+Release simulator build. When the Apple signing account is available, run:
+
+```bash
+bash scripts/ios-v101-mac-gate.sh --archive
+```
+
+The archive option validates the archived app identity and prints the exact
+Xcode Organizer privacy-report step. Neither mode exports, uploads, submits, or
+changes App Store Connect. Evidence is written under the ignored
+`.local/peacepad-ios-v101/<commit>` directory.
+
+Remote SSH from the current Windows environment was attempted using public-key
+authentication and was rejected by the Mac host. This is an access boundary,
+not a candidate failure; no password was embedded in source or used by the
+gate.
+
 - BLOCKED: Xcode archive and privacy report on the Mac
 - BLOCKED: exact-build iPhone and iPad screenshots
 - BLOCKED: controlled TestFlight device pass
