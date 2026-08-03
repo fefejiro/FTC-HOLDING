@@ -11,6 +11,7 @@ EXPECTED_VERSION="1.0.1"
 EXPECTED_BUILD="2"
 EXPECTED_BUNDLE_ID="ca.peacepad.family"
 EXPECTED_DEVELOPMENT_TEAM="G6UNC88GQ5"
+EXPECTED_PROVISIONING_PROFILE="PeacePad App Store 2026"
 ARCHIVE_REQUESTED="false"
 
 usage() {
@@ -90,6 +91,7 @@ expected_version=$EXPECTED_VERSION
 expected_build=$EXPECTED_BUILD
 expected_bundle_id=$EXPECTED_BUNDLE_ID
 expected_development_team=$EXPECTED_DEVELOPMENT_TEAM
+expected_provisioning_profile=$EXPECTED_PROVISIONING_PROFILE
 archive_requested=$ARCHIVE_REQUESTED
 production_upload_authorized=false
 EOF
@@ -151,6 +153,8 @@ assert_build_setting "PRODUCT_BUNDLE_IDENTIFIER" "$EXPECTED_BUNDLE_ID"
 assert_build_setting "MARKETING_VERSION" "$EXPECTED_VERSION"
 assert_build_setting "CURRENT_PROJECT_VERSION" "$EXPECTED_BUILD"
 assert_build_setting "DEVELOPMENT_TEAM" "$EXPECTED_DEVELOPMENT_TEAM"
+assert_build_setting "CODE_SIGN_IDENTITY" "Apple Distribution"
+assert_build_setting "PROVISIONING_PROFILE_SPECIFIER" "$EXPECTED_PROVISIONING_PROFILE"
 
 run_logged "11-release-simulator-build" xcodebuild \
   -workspace ios/App/App.xcworkspace \
@@ -169,7 +173,6 @@ if [[ "$ARCHIVE_REQUESTED" == "true" ]]; then
     -configuration Release \
     -destination "generic/platform=iOS" \
     -archivePath "$ARCHIVE_PATH" \
-    -allowProvisioningUpdates \
     archive
 
   ARCHIVE_INFO_PLIST="$ARCHIVE_PATH/Products/Applications/App.app/Info.plist"
