@@ -1,0 +1,56 @@
+name: PeacePad PR Validation
+
+on:
+  pull_request:
+    paths:
+      - "APPS/peacepad/**"
+      - ".github/workflows/peacepad-pr-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: peacepad-pr-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Install, security, tests, and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: APPS/peacepad
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: APPS/peacepad/package-lock.json
+
+      - name: Clean install from lockfile
+        run: npm ci --workspaces=false
+
+      - name: Enforce dependency audit baseline
+        run: npm run verify:dependency-audit
+
+      - name: Scan tracked source for OpenAI key patterns
+        run: npm run guard:openai-secrets:all
+
+      - name: Typecheck
+        run: npm run check
+
+      - name: Run unit and contract tests with coverage
+        run: npm test -- --coverage
+
+      - name: Build production web and API bundles
+        run: npm run build
+
+      - name: Validate Capacitor project configuration
+        run: npx cap ls
