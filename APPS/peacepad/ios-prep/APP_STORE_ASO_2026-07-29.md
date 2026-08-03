@@ -50,6 +50,29 @@ and usage data. Reconcile those answers against observed version 1.0 network
 and storage behaviour before removing or retaining any category. Accuracy is
 the objective; a shorter privacy label is not a marketing exercise.
 
+### Authenticated metadata audit — 2026-08-02
+
+The distributed 1.0 record was inspected in App Store Connect before any edit.
+The observed values were:
+
+| Field | Value before edit | Edit state |
+|---|---|---|
+| Promotional text | `Co-parenting tools for calmer messages, shared schedules, expenses, and practical next steps.` | Separately editable |
+| Keywords | `co-parenting,coparent,custody,divorce,separated,family,calendar,expenses,communication,shared` | Locked on distributed 1.0 |
+| Support URL | `https://peacepad.ca/help` | Locked on distributed 1.0 |
+| Marketing URL | `https://peacepad.ca` | Locked on distributed 1.0 |
+
+The 145-character promotional text in this document was saved successfully.
+The saved App Store Connect field now reads:
+
+```text
+Pause before you send. PeacePad helps co-parents check tone, prepare for difficult conversations, and keep practical parenting details organized.
+```
+
+The public Canadian product page still exposed the prior text immediately after
+the save, so storefront propagation remains pending. The Support URL was not
+forced or changed; set `/support` when version 1.0.1 makes that field editable.
+
 ## Change boundary
 
 ### Safe to update now
@@ -320,15 +343,15 @@ time, beginning with the first three screenshots.
 - [x] Confirm version 1.0 installs from the public App Store on a real iPhone.
 - [x] Record the current live name, subtitle, description, categories,
       version, rating, seller, and minimum iOS version.
-- [ ] Record the non-public keyword field and current promotional text from App
+- [x] Record the non-public keyword field and current promotional text from App
       Store Connect before editing.
 - [x] Recheck public screenshot propagation; two iPhone images are public.
 - [ ] Replace the two-image set with a six-screen, exact-build conversion set
       in version 1.0.1.
 - [ ] Record the remaining live URLs and tags before editing.
-- [ ] Update only the 145-character promotional text for version 1.0.
-- [ ] Set the canonical Support URL to `https://peacepad.ca/support` if the
-      current field is editable without a new version.
+- [x] Update only the 145-character promotional text for version 1.0.
+- [x] Confirm the Support URL is locked on distributed version 1.0; stage
+      `https://peacepad.ca/support` for version 1.0.1.
 - [ ] Review App Store tags and keep only accurate shipped-function tags.
 - [ ] Save and verify the public product page after Apple's propagation window.
 - [ ] Create version 1.0.1 only when the tested premium UI build is ready.
@@ -349,14 +372,15 @@ time, beginning with the first three screenshots.
 | Public social image | PLACEHOLDER still observed |
 | Public URLs | VERIFIED, HTTP 200 |
 | Character limits | VERIFIED |
-| Promotional copy | READY TO APPLY |
+| Promotional copy | SAVED IN APP STORE CONNECT; PUBLIC PROPAGATION PENDING |
 | Smart App Banner and store links | DEPLOYED AND LIVE VERIFIED, commit `eba4ddd3` |
 | Rating prompt destination | DEPLOYED; unit contract verified before publication |
 | Public ratings | ZERO DISPLAYED |
 | Metadata languages | ENGLISH ONLY |
 | App Privacy answers | RECONCILIATION REQUIRED |
-| Live metadata field audit | BLOCKED by authenticated browser-control handoff |
-| Live App Store save | NOT PERFORMED |
+| Live metadata field audit | VERIFIED, 2026-08-02 |
+| Live App Store save | PROMOTIONAL TEXT ONLY; VERIFIED |
+| Support URL | `/help` LOCKED ON 1.0; `/support` STAGED FOR 1.0.1 |
 | Version 1.0.1 metadata | STAGED, NOT SUBMITTED |
 | Screenshot replacement | NOT STARTED |
 | Product Page Optimization | DEFERRED pending traffic baseline |
