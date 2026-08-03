@@ -121,9 +121,15 @@ function extractEmailAddress(fromHeader: string): string {
 
 function guessRole(subject: string, body: string): string {
   const knownRoles = [
+    "Senior IT Business Analyst",
+    "Senior Business Systems Analyst",
+    "IT Business Systems Manager",
     "Technical Program Manager",
+    "Information Technology Manager",
+    "IT Business Analyst",
     "Business Systems Analyst",
     "ERP Systems Analyst",
+    "Senior Business Analyst",
     "Business Analyst",
     "Project Manager",
     "WMS Consultant",

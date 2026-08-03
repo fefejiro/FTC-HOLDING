@@ -118,6 +118,7 @@ export interface RulesConfig {
   };
   filters: {
     min_match_score: number;
+    recruiter_lookback_days?: number;
     score_bands?: {
       auto_send_min: number;
       draft_min: number;
@@ -145,6 +146,8 @@ export interface RulesConfig {
   resume_tailoring?: {
     enabled: boolean;
     template_path: string;
+    business_analysis_template_path?: string;
+    it_management_template_path?: string;
     output_dir: string;
     attach_mode: "docx_only" | "docx_and_pdf" | "pdf_only";
     auto_send: boolean;
@@ -170,6 +173,11 @@ export interface RulesConfig {
       keywords: string[];
       max_jobs_per_run: number;
     };
+    linkedin?: {
+      enabled: boolean;
+      keywords: string[];
+      max_jobs_per_run: number;
+    };
   };
 }
 
@@ -191,9 +199,11 @@ export interface ApplicationAnswersConfig {
   portfolio_url?: string;
   city?: string;
   location?: string;
+  postal_code?: string;
   current_title?: string;
   current_company?: string;
   work_authorization_text?: string;
+  sponsorship_required?: string;
   relocation_preference?: string;
   salary_expectation?: string;
   preferred_role_types?: string[];

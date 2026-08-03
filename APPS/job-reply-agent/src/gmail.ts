@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import { google, gmail_v1 } from "googleapis";
 import type { Credentials } from "google-auth-library";
 import type { RecruiterMessage } from "./types.js";
@@ -13,20 +14,49 @@ export interface GmailAuthConfig {
 }
 
 export interface GmailStatusLabelConfig {
+  inbound: string;
   drafted: string;
   needs_review: string;
   sent: string;
   skipped: string;
   blocked: string;
   approved: string;
+  error?: string;
 }
 
-export type GmailStatusLabelState = keyof GmailStatusLabelConfig;
+export type GmailStatusLabelState =
+  | "drafted"
+  | "needs_review"
+  | "sent"
+  | "skipped"
+  | "blocked"
+  | "approved";
+
+export interface GmailSentMessageProof {
+  messageId: string;
+  threadId: string;
+  recipientHeader: string;
+  subject: string;
+  sentAt: string;
+}
+
+export function getManagedGmailStatusLabelNames(labels: GmailStatusLabelConfig): string[] {
+  return [
+    labels.inbound,
+    labels.drafted,
+    labels.needs_review,
+    labels.sent,
+    labels.skipped,
+    labels.blocked,
+    labels.approved,
+    labels.error
+  ].filter((label): label is string => Boolean(label));
+}
 
 function ensureOauthConfigured(cfg: GmailAuthConfig): void {
   if (!cfg.gmailClientId || !cfg.gmailClientSecret || !cfg.gmailRedirectUri) {
     throw new Error(
-      "Missing OAuth config. Set GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, and GMAIL_REDIRECT_URI."
+      "Missing OAuth config. Set GMAIL_CLIENT_ID/GMAIL_CLIENT_SECRET/GMAIL_REDIRECT_URI or GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET/GOOGLE_REDIRECT_URI."
     );
   }
 }
@@ -34,6 +64,55 @@ function ensureOauthConfigured(cfg: GmailAuthConfig): void {
 function createOAuthClient(cfg: GmailAuthConfig) {
   ensureOauthConfigured(cfg);
   return new google.auth.OAuth2(cfg.gmailClientId, cfg.gmailClientSecret, cfg.gmailRedirectUri);
+}
+
+function pkcePath(cfg: GmailAuthConfig): string {
+  return path.join(path.dirname(path.resolve(cfg.gmailTokensPath)), "gmail_oauth_pkce.json");
+}
+
+function base64Url(buffer: Buffer): string {
+  return buffer
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function createPkcePair(): { verifier: string; challenge: string } {
+  const verifier = base64Url(crypto.randomBytes(64));
+  return { verifier, challenge: createPkceChallenge(verifier) };
+}
+
+function createPkceChallenge(verifier: string): string {
+  return base64Url(crypto.createHash("sha256").update(verifier).digest());
+}
+
+function savePkceVerifier(cfg: GmailAuthConfig, verifier: string): void {
+  const file = pkcePath(cfg);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify({ verifier, createdAt: new Date().toISOString() }, null, 2), "utf8");
+}
+
+function readPkceVerifier(cfg: GmailAuthConfig): string | null {
+  const file = pkcePath(cfg);
+  if (!fs.existsSync(file)) return null;
+  try {
+    const parsed = JSON.parse(fs.readFileSync(file, "utf8")) as { verifier?: string };
+    return parsed.verifier || null;
+  } catch {
+    return null;
+  }
+}
+
+function getReusablePkcePair(cfg: GmailAuthConfig): { verifier: string; challenge: string } {
+  const existingVerifier = readPkceVerifier(cfg);
+  if (existingVerifier) {
+    return { verifier: existingVerifier, challenge: createPkceChallenge(existingVerifier) };
+  }
+
+  const pkce = createPkcePair();
+  savePkceVerifier(cfg, pkce.verifier);
+  return pkce;
 }
 
 function decodeBase64Url(input: string): string {
@@ -53,17 +132,134 @@ function encodeBase64Url(input: Buffer | string): string {
 function readTokenFile(tokensPath: string): Credentials {
   if (!fs.existsSync(tokensPath)) {
     throw new Error(
-      `OAuth tokens not found at ${tokensPath}. Run gmail:auth:url and gmail:auth:save first.`
+      `OAuth tokens not found at ${tokensPath}. Run npm run serve, then npm run gmail:auth:url.`
     );
   }
   const raw = fs.readFileSync(tokensPath, "utf8");
   return JSON.parse(raw) as Credentials;
 }
 
+function getTokenCandidates(tokensPath: string): string[] {
+  const resolved = path.resolve(tokensPath);
+  const dir = path.dirname(resolved);
+  const base = path.basename(resolved);
+  const prefix = base.replace(/\.json$/i, "").split(".")[0] || "gmail_tokens";
+
+  const candidates = new Set<string>([resolved]);
+  if (!fs.existsSync(dir)) {
+    return [resolved];
+  }
+
+  const files = fs
+    .readdirSync(dir)
+    .filter((name) => name.startsWith(prefix) && name.endsWith(".json"))
+    .map((name) => path.join(dir, name))
+    .sort((a, b) => {
+      const aTime = fs.statSync(a).mtimeMs;
+      const bTime = fs.statSync(b).mtimeMs;
+      return bTime - aTime;
+    });
+
+  for (const file of files) {
+    candidates.add(file);
+  }
+
+  return Array.from(candidates);
+}
+
+function isInvalidGrant(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error || "");
+  if (/invalid_grant/i.test(message)) {
+    return true;
+  }
+
+  const maybeResponse = (error as any)?.response?.data;
+  return /invalid_grant/i.test(String(maybeResponse?.error || ""));
+}
+
+function buildReauthHint(cfg: GmailAuthConfig): string {
+  const consentUrl = getGmailConsentUrl(cfg);
+  return [
+    `Gmail OAuth token is invalid/revoked at ${cfg.gmailTokensPath}.`,
+    `Configured redirect URI: ${cfg.gmailRedirectUri}`,
+    "Google Cloud must allow that exact redirect URI for this OAuth client.",
+    "Re-auth steps:",
+    "1) Start the local callback server: npm run serve",
+    `2) Open consent URL: ${consentUrl}`,
+    "3) Finish Google consent; the callback should save tokens automatically.",
+    "4) Verify with: npm run gmail:status",
+    "Fallback: if Google leaves a code in the browser URL instead of hitting the callback, run npm run gmail:auth:save -- --code=<PASTE_CODE>."
+  ].join("\n");
+}
+
 async function getGmailClient(cfg: GmailAuthConfig): Promise<gmail_v1.Gmail> {
-  const oauth = createOAuthClient(cfg);
-  oauth.setCredentials(readTokenFile(cfg.gmailTokensPath));
-  return google.gmail({ version: "v1", auth: oauth });
+  const candidates = getTokenCandidates(cfg.gmailTokensPath);
+  let lastError: unknown;
+
+  for (const candidatePath of candidates) {
+    try {
+      const oauth = createOAuthClient(cfg);
+      oauth.setCredentials(readTokenFile(candidatePath));
+      const gmail = google.gmail({ version: "v1", auth: oauth });
+
+      // Force a lightweight authenticated call so revoked tokens fail early.
+      await gmail.users.getProfile({ userId: "me" });
+
+      if (candidatePath !== path.resolve(cfg.gmailTokensPath)) {
+        fs.mkdirSync(path.dirname(cfg.gmailTokensPath), { recursive: true });
+        fs.copyFileSync(candidatePath, cfg.gmailTokensPath);
+      }
+
+      return gmail;
+    } catch (error) {
+      lastError = error;
+      if (!isInvalidGrant(error)) {
+        throw error;
+      }
+    }
+  }
+
+  const hint = buildReauthHint(cfg);
+  throw new Error(`${hint}\n\nOriginal error: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
+}
+
+export async function checkGmailAuthStatus(cfg: GmailAuthConfig): Promise<{
+  ok: boolean;
+  accountEmail: string;
+  tokenPath: string;
+  redirectUri: string;
+  message: string;
+}> {
+  try {
+    const gmail = await getGmailClient(cfg);
+    const profile = await gmail.users.getProfile({ userId: "me" });
+    const accountEmail = (profile.data.emailAddress || "").trim().toLowerCase();
+    const expectedEmail = (cfg.gmailAccountEmail || "").trim().toLowerCase();
+    if (expectedEmail && accountEmail !== expectedEmail) {
+      return {
+        ok: false,
+        accountEmail,
+        tokenPath: path.resolve(cfg.gmailTokensPath),
+        redirectUri: cfg.gmailRedirectUri,
+        message: `Gmail identity mismatch: expected ${expectedEmail}, authenticated as ${accountEmail || "(unknown)"}.`
+      };
+    }
+    return {
+      ok: true,
+      accountEmail,
+      tokenPath: path.resolve(cfg.gmailTokensPath),
+      redirectUri: cfg.gmailRedirectUri,
+      message: "Gmail OAuth token is valid."
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      accountEmail: cfg.gmailAccountEmail || "",
+      tokenPath: path.resolve(cfg.gmailTokensPath),
+      redirectUri: cfg.gmailRedirectUri,
+      message: error instanceof Error ? error.message : String(error)
+    };
+  }
 }
 
 function getHeaderValue(headers: gmail_v1.Schema$MessagePartHeader[] | undefined, name: string): string {
@@ -138,10 +334,90 @@ const RECRUITER_QUERY =
   "OR from:(recruiter OR staffing OR talent OR \"talent acquisition\" OR hiring)) " +
   "in:inbox";
 
+export function buildRecruiterScanQuery(
+  inboundLabelName: string,
+  processedLabelNames: string[] = [],
+  lookbackDays = 14,
+  accountEmail = ""
+): string {
+  const excludedLabels = Array.from(
+    new Set([inboundLabelName, ...processedLabelNames].map((label) => label.trim()).filter(Boolean))
+  );
+  const exclusions = excludedLabels
+    .map((label) => `-label:"${label.replace(/"/g, "\\\"")}"`)
+    .join(" ");
+  const selfExclusion = accountEmail.trim() ? `-from:"${accountEmail.trim()}"` : "";
+  return `${RECRUITER_QUERY} newer_than:${lookbackDays}d ${selfExclusion} ${exclusions}`.trim();
+}
+
+export function buildRecruiterInboundQuery(accountEmail: string, lookbackDays = 14): string {
+  const selfExclusion = accountEmail.trim() ? ` -from:"${accountEmail.trim()}"` : "";
+  return `in:inbox newer_than:${lookbackDays}d${selfExclusion}`;
+}
+
+export function buildProcessedInboundCleanupQuery(
+  inboundLabelName: string,
+  processedLabelNames: string[]
+): string {
+  const processed = Array.from(
+    new Set(processedLabelNames.map((label) => label.trim()).filter(Boolean))
+  );
+  if (processed.length === 0) return "";
+  const processedClause = processed
+    .map((label) => `label:"${label.replace(/"/g, "\\\"")}"`)
+    .join(" ");
+  return `label:"${inboundLabelName.replace(/"/g, "\\\"")}" {${processedClause}}`;
+}
+
+export async function removeInboundLabelFromProcessedMessages(
+  cfg: GmailAuthConfig,
+  inboundLabelName: string,
+  processedLabelNames: string[],
+  maxResults = 1000
+): Promise<{ found: number; removed: number }> {
+  const query = buildProcessedInboundCleanupQuery(inboundLabelName, processedLabelNames);
+  if (!query) return { found: 0, removed: 0 };
+
+  const gmail = await getGmailClient(cfg);
+  const inboundLabelId = await resolveLabelId(gmail, inboundLabelName);
+  if (!inboundLabelId) return { found: 0, removed: 0 };
+
+  const ids: string[] = [];
+  let pageToken: string | undefined;
+  do {
+    const remaining = Math.max(1, maxResults - ids.length);
+    const list = await gmail.users.messages.list({
+      userId: "me",
+      q: query,
+      maxResults: Math.min(500, remaining),
+      pageToken
+    });
+    ids.push(
+      ...(list.data.messages ?? [])
+        .map((message) => message.id)
+        .filter((id): id is string => Boolean(id))
+    );
+    pageToken = list.data.nextPageToken || undefined;
+  } while (pageToken && ids.length < maxResults);
+
+  if (ids.length > 0) {
+    await gmail.users.messages.batchModify({
+      userId: "me",
+      requestBody: {
+        ids,
+        removeLabelIds: [inboundLabelId]
+      }
+    });
+  }
+  return { found: ids.length, removed: ids.length };
+}
+
 export async function scanInboxForRecruiters(
   cfg: GmailAuthConfig,
   inboundLabelName: string,
-  maxScan = 50
+  maxScan = 50,
+  processedLabelNames: string[] = [],
+  lookbackDays = 14
 ): Promise<{ scanned: number; labeled: number }> {
   const gmail = await getGmailClient(cfg);
   const labelId = await getOrCreateLabel(gmail, inboundLabelName);
@@ -149,7 +425,12 @@ export async function scanInboxForRecruiters(
   // Search inbox for recruiter-like emails not already labeled
   const list = await gmail.users.messages.list({
     userId: "me",
-    q: `${RECRUITER_QUERY} -label:"${inboundLabelName}"`,
+    q: buildRecruiterScanQuery(
+      inboundLabelName,
+      processedLabelNames,
+      lookbackDays,
+      cfg.gmailAccountEmail
+    ),
     maxResults: maxScan
   });
 
@@ -169,11 +450,17 @@ export async function scanInboxForRecruiters(
   return { scanned: messages.length, labeled };
 }
 
-export function getGmailConsentUrl(cfg: GmailAuthConfig): string {
+export function getGmailConsentUrl(cfg: GmailAuthConfig, options: { fresh?: boolean } = {}): string {
   const oauth = createOAuthClient(cfg);
+  const pkce = options.fresh ? createPkcePair() : getReusablePkcePair(cfg);
+  if (options.fresh) {
+    savePkceVerifier(cfg, pkce.verifier);
+  }
   return oauth.generateAuthUrl({
     access_type: "offline",
     prompt: "consent",
+    code_challenge: pkce.challenge,
+    code_challenge_method: "S256" as any,
     scope: [
       "https://www.googleapis.com/auth/gmail.modify",
       "https://www.googleapis.com/auth/gmail.send",
@@ -185,7 +472,11 @@ export function getGmailConsentUrl(cfg: GmailAuthConfig): string {
 export async function exchangeCodeAndSaveTokens(cfg: GmailAuthConfig, code: string): Promise<void> {
   const oauth = createOAuthClient(cfg);
   const normalizedCode = code.trim();
-  const { tokens } = await oauth.getToken(normalizedCode);
+  const codeVerifier = readPkceVerifier(cfg);
+  const response = codeVerifier
+    ? await oauth.getToken({ code: normalizedCode, codeVerifier } as any)
+    : await oauth.getToken(normalizedCode);
+  const { tokens } = response;
 
   if (!tokens.refresh_token) {
     throw new Error("No refresh_token returned. Re-run auth with prompt=consent.");
@@ -194,12 +485,14 @@ export async function exchangeCodeAndSaveTokens(cfg: GmailAuthConfig, code: stri
   const targetPath = cfg.gmailTokensPath;
   fs.mkdirSync(path.dirname(targetPath), { recursive: true });
   fs.writeFileSync(targetPath, JSON.stringify(tokens, null, 2), "utf8");
+  fs.rmSync(pkcePath(cfg), { force: true });
 }
 
 export async function listRecruiterInboundMessages(
   cfg: GmailAuthConfig,
   inboundLabelName: string,
-  maxResults = 20
+  maxResults = 20,
+  lookbackDays = 14
 ): Promise<RecruiterMessage[]> {
   const gmail = await getGmailClient(cfg);
   const labelId = await resolveLabelId(gmail, inboundLabelName);
@@ -210,6 +503,7 @@ export async function listRecruiterInboundMessages(
   const list = await gmail.users.messages.list({
     userId: "me",
     labelIds: [labelId],
+    q: buildRecruiterInboundQuery(cfg.gmailAccountEmail, lookbackDays),
     maxResults
   });
 
@@ -253,6 +547,66 @@ export async function listRecruiterInboundMessages(
       references: references || undefined
     });
   }
+
+  return output;
+}
+
+export async function listSentMessagesForThreads(
+  cfg: GmailAuthConfig,
+  threadIds: string[],
+  lookbackDays = 30,
+  maxResults = 500
+): Promise<GmailSentMessageProof[]> {
+  if (threadIds.length === 0) return [];
+
+  const gmail = await getGmailClient(cfg);
+  const targetThreads = new Set(threadIds);
+  const output: GmailSentMessageProof[] = [];
+  let pageToken: string | undefined;
+  let inspected = 0;
+
+  do {
+    const remaining = Math.max(1, maxResults - inspected);
+    const list = await gmail.users.messages.list({
+      userId: "me",
+      q: `in:sent newer_than:${lookbackDays}d`,
+      maxResults: Math.min(500, remaining),
+      pageToken
+    });
+
+    const messages = list.data.messages ?? [];
+    inspected += messages.length;
+
+    for (const message of messages) {
+      if (!message.id || !message.threadId || !targetThreads.has(message.threadId)) continue;
+
+      const metadata = await gmail.users.messages.get({
+        userId: "me",
+        id: message.id,
+        format: "metadata",
+        metadataHeaders: ["To", "Subject", "Date"]
+      });
+      const headers = metadata.data.payload?.headers;
+      const internalDate = Number(metadata.data.internalDate || 0);
+      const dateHeader = getHeaderValue(headers, "Date");
+      const headerDate = dateHeader ? new Date(dateHeader) : null;
+      const sentAt = internalDate > 0
+        ? new Date(internalDate).toISOString()
+        : headerDate && !Number.isNaN(headerDate.getTime())
+          ? headerDate.toISOString()
+          : new Date().toISOString();
+
+      output.push({
+        messageId: message.id,
+        threadId: message.threadId,
+        recipientHeader: getHeaderValue(headers, "To"),
+        subject: getHeaderValue(headers, "Subject"),
+        sentAt
+      });
+    }
+
+    pageToken = list.data.nextPageToken || undefined;
+  } while (pageToken && inspected < maxResults);
 
   return output;
 }
@@ -387,14 +741,60 @@ export async function createReplyDraftInThread(params: {
   };
 }
 
-export async function sendDraftById(cfg: GmailAuthConfig, draftId: string): Promise<void> {
+export async function sendDraftById(
+  cfg: GmailAuthConfig,
+  draftId: string
+): Promise<{ messageId: string; threadId: string; sentAt: string }> {
   const gmail = await getGmailClient(cfg);
-  await gmail.users.drafts.send({
+  const sent = await gmail.users.drafts.send({
     userId: "me",
     requestBody: {
       id: draftId
     }
   });
+  if (!sent.data.id) {
+    throw new Error("Gmail sent the draft but did not return a sent message id.");
+  }
+  return {
+    messageId: sent.data.id,
+    threadId: sent.data.threadId || "",
+    sentAt: sent.data.internalDate
+      ? new Date(Number(sent.data.internalDate)).toISOString()
+      : new Date().toISOString()
+  };
+}
+
+export async function createDraftFromStoredContent(params: {
+  cfg: GmailAuthConfig;
+  threadId: string;
+  to: string;
+  subject: string;
+  body: string;
+  resumePath?: string;
+}): Promise<{ draftId: string }> {
+  const gmail = await getGmailClient(params.cfg);
+  const rawMime = buildMimeMessage({
+    to: params.to,
+    subject: params.subject,
+    body: params.body,
+    attachmentPath: params.resumePath
+  });
+
+  const draft = await gmail.users.drafts.create({
+    userId: "me",
+    requestBody: {
+      message: {
+        threadId: params.threadId,
+        raw: encodeBase64Url(rawMime)
+      }
+    }
+  });
+
+  if (!draft.data.id) {
+    throw new Error("Failed to recreate Gmail draft: missing draft id.");
+  }
+
+  return { draftId: draft.data.id };
 }
 
 export async function sendPlainTextEmail(params: {
@@ -432,7 +832,7 @@ export async function applyStatusLabel(params: {
   const desiredLabelId = await getOrCreateLabel(gmail, desiredLabelName);
 
   const managedLabelIds: string[] = [];
-  for (const labelName of Object.values(params.labels)) {
+  for (const labelName of getManagedGmailStatusLabelNames(params.labels)) {
     const labelId = await getOrCreateLabel(gmail, labelName);
     managedLabelIds.push(labelId);
   }
@@ -447,4 +847,49 @@ export async function applyStatusLabel(params: {
       removeLabelIds
     }
   });
+}
+
+export async function applyStatusLabelToThreads(params: {
+  cfg: GmailAuthConfig;
+  threadIds: string[];
+  labels: GmailStatusLabelConfig;
+  status: GmailStatusLabelState;
+}): Promise<{ updatedThreadIds: string[]; errors: Array<{ threadId: string; error: string }> }> {
+  const threadIds = Array.from(new Set(params.threadIds.filter(Boolean)));
+  if (threadIds.length === 0) {
+    return { updatedThreadIds: [], errors: [] };
+  }
+
+  const gmail = await getGmailClient(params.cfg);
+  const desiredLabelName = params.labels[params.status];
+  const desiredLabelId = await getOrCreateLabel(gmail, desiredLabelName);
+  const managedLabelIds: string[] = [];
+  for (const labelName of getManagedGmailStatusLabelNames(params.labels)) {
+    const labelId = await getOrCreateLabel(gmail, labelName);
+    managedLabelIds.push(labelId);
+  }
+  const removeLabelIds = managedLabelIds.filter((labelId) => labelId !== desiredLabelId);
+  const updatedThreadIds: string[] = [];
+  const errors: Array<{ threadId: string; error: string }> = [];
+
+  for (const threadId of threadIds) {
+    try {
+      await gmail.users.threads.modify({
+        userId: "me",
+        id: threadId,
+        requestBody: {
+          addLabelIds: [desiredLabelId],
+          removeLabelIds
+        }
+      });
+      updatedThreadIds.push(threadId);
+    } catch (error) {
+      errors.push({
+        threadId,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
+  return { updatedThreadIds, errors };
 }

@@ -25,6 +25,8 @@ test-results/
 **/.cache/
 **/.turbo/
 **/.vite/
+**/__pycache__/
+**/*.py[cod]
 **/.env
 **/.env.*
 !**/.env.example
@@ -77,10 +79,18 @@ play-store-key.json
 secrets/
 
 # Job agent runtime/generated artifacts
+APPS/job-reply-agent/.local-*
 APPS/job-reply-agent/data/*.sqlite-shm
 APPS/job-reply-agent/data/*.db
 APPS/job-reply-agent/data/*.sqlite
 APPS/job-reply-agent/data/gmail_tokens*.json
+APPS/job-reply-agent/data/gmail_oauth_pkce.json
+APPS/job-reply-agent/instances/*/resumes/
+APPS/job-reply-agent/instances/*/secrets/
+APPS/job-reply-agent/instances/*/data/
+APPS/job-reply-agent/instances/*/logs/
+APPS/job-reply-agent/instances/*/proof/
+APPS/job-reply-agent/instances/*/browser/
 APPS/job-reply-agent/data/playwright-profile/
 APPS/job-reply-agent/client_secret_*.json
 APPS/job-reply-agent/config/application_answers.yaml
@@ -93,12 +103,9 @@ APPS/job-reply-agent/scripts/probe-*.ts
 APPS/job-reply-agent/scripts/promote-*.ts
 APPS/job-reply-agent/scripts/run-*.cmd
 APPS/job-reply-agent/scripts/test-*.ts
-APPS/job-reply-agent/src/automation.ts
-APPS/job-reply-agent/src/hunt/
-APPS/job-reply-agent/tests/automation.test.ts
-
 # Generated resume bank (compiled from agent)
-DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes/
+DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes/*
+!DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes/Fejiro_Efiuvwere_Default_Job_Agent_Resume_Template_RQ11067.docx
 
 # Local dev mounts / artifacts
 APPS/fefejiro

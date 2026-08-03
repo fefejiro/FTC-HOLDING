@@ -53,6 +53,7 @@
     "verify:peacepad:ownership": "npm --workspace=@ftc/peacepad run verify:deployment-ownership"
   },
   "devDependencies": {
+    "qs": "6.15.3",
     "unenv": "^2.0.0-rc.24"
   }
 }

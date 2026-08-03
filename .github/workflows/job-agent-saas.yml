@@ -1,0 +1,141 @@
+name: JobAgent SaaS release gates
+
+on:
+  pull_request:
+    paths:
+      - "APPS/job-reply-agent/**"
+      - ".railwayignore"
+      - ".github/workflows/job-agent-saas.yml"
+      - ".github/workflows/job-agent-uptime.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "APPS/job-reply-agent/**"
+      - ".railwayignore"
+      - ".github/workflows/job-agent-saas.yml"
+      - ".github/workflows/job-agent-uptime.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jobagent-saas-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: APPS/job-reply-agent
+
+jobs:
+  standalone-and-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: jobagent_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d jobagent_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql://postgres@127.0.0.1:5432/jobagent_test
+      DATABASE_URL: postgresql://postgres@127.0.0.1:5432/jobagent_test
+      DATABASE_SSL: "false"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: APPS/job-reply-agent/package-lock.json
+
+      - name: Clean standalone install
+        run: npm ci --workspaces=false
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --workspaces=false
+
+      - name: Static release and secret checks
+        run: npm run production:check --workspaces=false
+
+      - name: Compile and lint
+        run: npm run lint --workspaces=false
+
+      - name: Unit, integration, RLS, and document audits
+        run: npm test --workspaces=false
+
+      - name: Validate strict production configuration
+        env:
+          NODE_ENV: production
+          APP_ORIGIN: https://jobagent.unalabs.cloud
+          DATABASE_URL: postgresql://jobagent_app:example@private-postgres:5432/jobagent
+          MIGRATION_DATABASE_URL: postgresql://jobagent_migrator:example@private-postgres:5432/jobagent
+          JOB_QUEUE_DATABASE_URL: postgresql://jobagent_queue:example@private-postgres:5432/jobagent
+          OBJECT_STORAGE_DRIVER: s3
+          OBJECT_STORAGE_BUCKET: jobagent-private
+          OBJECT_STORAGE_REGION: ca-central-1
+          OBJECT_STORAGE_ENDPOINT: https://storage.example.test
+          AWS_ACCESS_KEY_ID: release-check-access
+          AWS_SECRET_ACCESS_KEY: release-check-secret
+          GMAIL_CLIENT_ID: release-check-client
+          GMAIL_CLIENT_SECRET: release-check-secret
+          OAUTH_TOKEN_ACTIVE_KEY_VERSION: v1
+          OAUTH_TOKEN_ENCRYPTION_KEYS: '{"v1":"MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="}'
+          RESEND_API_KEY: re_release_check
+          RESEND_INBOUND_WEBHOOK_SECRET: whsec_release_check
+          INBOUND_EMAIL_DOMAIN: jobs.unalabs.cloud
+          TRANSACTIONAL_EMAIL_FROM: Una Labs JobAgent <jobagent@unalabs.cloud>
+          AUTO_MIGRATE: "false"
+        run: npm run production:check:strict --workspaces=false
+
+      - name: Scan application tree for secrets
+        working-directory: ${{ github.workspace }}
+        run: >-
+          docker run --rm
+          -v "$PWD:/repo"
+          zricethezav/gitleaks:v8.28.0
+          dir /repo/APPS/job-reply-agent
+          --no-banner --redact
+
+  immutable-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/una-jobagent
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build immutable web and worker image
+        run: >-
+          docker build
+          --tag una-jobagent:${{ github.sha }}
+          --tag "${IMAGE_NAME}:${{ github.sha }}"
+          .
+
+      - name: Prove image contains all entrypoints and public assets
+        run: >-
+          docker run --rm
+          --entrypoint node
+          una-jobagent:${{ github.sha }}
+          -e
+          "const fs=require('fs'); for (const f of ['dist/product_entrypoint.js','dist/product_server.js','dist/product_worker.js','dist/product_migrate.js','dist/product_pilot_import.js','public/index.html','public/icon.png','public/privacy.html']) { fs.accessSync(f, fs.constants.R_OK); }"
+
+      - name: Authenticate to GitHub Container Registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Publish commit-addressed image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: docker push "${IMAGE_NAME}:${{ github.sha }}"
