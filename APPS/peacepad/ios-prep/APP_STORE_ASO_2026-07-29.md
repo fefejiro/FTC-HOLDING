@@ -98,6 +98,26 @@ the bundle ID `ca.peacepad.family`.
 
 ## Search positioning
 
+### Measured search baseline — 2026-08-02
+
+Apple's public Search API returned PeacePad at rank 1 for the exact `PeacePad`
+query in both Canada and the United States. The same sample showed weak
+category-intent visibility:
+
+| Search term | Canada | United States |
+|---|---:|---:|
+| `co parenting` | 59 | Not in top 200 |
+| `coparenting` | 62 | Not in top 200 |
+| `co parent communication` | 50 | Not in top 200 |
+| `parenting calendar` | 84 | Not in top 200 |
+| `custody communication` | 39 | Not in top 200 |
+
+Search positions are volatile. This snapshot is a prioritization baseline, not
+a permanent ranking claim. It supports adding `Co-Parenting` to the 1.0.1 name,
+keeping distinct message/planning concepts in the subtitle, and using the
+keyword field for calendar, expense, communication, custody, and coordination
+intent.
+
 Primary intent:
 
 > A co-parent communication app that helps a parent pause, check message tone,
@@ -182,10 +202,10 @@ does not claim legal, therapeutic, or guaranteed outcomes.
 Limit: 100 bytes
 
 ```text
-custody,divorce,separation,calendar,schedule,expense,communication,shared family,organizer,clarity
+custody,divorce,separation,calendar,schedule,expense,communication,family,organizer,coordination
 ```
 
-Count: 98 ASCII bytes
+Count: 96 ASCII bytes
 
 The list does not repeat `PeacePad`, `Co-Parenting`, `Messages`, `Planning`, or
 the Lifestyle category. It contains no competitor names or unsupported court,
@@ -384,3 +404,5 @@ time, beginning with the first three screenshots.
 | Version 1.0.1 metadata | STAGED, NOT SUBMITTED |
 | Screenshot replacement | NOT STARTED |
 | Product Page Optimization | DEFERRED pending traffic baseline |
+| Category search baseline | VERIFIED, 2026-08-02 |
+| Machine-readable 1.0.1 package | PREPARED; validator required before use |

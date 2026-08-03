@@ -29,6 +29,7 @@
         "test:e2e:human-workflow:mobile": "playwright test --project=human-workflow-mobile-pixel-7",
         "smoke:e2e:update-lifecycle": "playwright test tests/e2e/p1-critical/update-lifecycle.spec.ts --project=p1-critical-chromium --project=mobile-pixel-7",
         "smoke:e2e:production-readiness": "playwright test tests/e2e/p1-critical/auth.spec.ts tests/e2e/p1-critical/guest-onboarding.spec.ts tests/e2e/p1-critical/update-lifecycle.spec.ts --project=p1-critical-chromium --project=mobile-pixel-7 && playwright test tests/e2e/p2-important/expense-tracking.spec.ts tests/e2e/p2-important/calendar.spec.ts tests/e2e/p2-important/personality.spec.ts --project=p2-important-chromium && playwright test tests/e2e/p3-nice-to-have/therapist-directory.spec.ts --project=p3-nice-to-have-chromium",
+        "verify:app-store-metadata": "node scripts/validate-app-store-metadata.mjs",
         "verify:deployment-ownership": "node scripts/verify-deployment-ownership.mjs",
         "guard:openai-secrets": "node scripts/guard-openai-secrets.mjs",
         "guard:openai-secrets:all": "node scripts/guard-openai-secrets.mjs --all",
