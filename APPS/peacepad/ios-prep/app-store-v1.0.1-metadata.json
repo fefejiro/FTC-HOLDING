@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "appStoreId": "6793350735",
+  "bundleId": "ca.peacepad.family",
+  "targetVersion": "1.0.1",
+  "packageStatus": "prepared-not-submitted",
+  "productionMutationAllowed": false,
+  "notes": [
+    "Create the App Store version only after the exact Capacitor build passes release QA.",
+    "Do not apply this package to the React Native lab bundle ca.peacepad.nextnative.lab.",
+    "Do not upload screenshots until they are captured from the exact submitted build."
+  ],
+  "localizations": {
+    "en-CA": {
+      "readyForSubmission": true,
+      "name": "PeacePad: Co-Parenting",
+      "subtitle": "Calmer Messages & Planning",
+      "promotionalText": "Pause before you send. PeacePad helps co-parents check tone, prepare for difficult conversations, and keep practical parenting details organized.",
+      "keywords": "custody,divorce,separation,calendar,schedule,expense,communication,family,organizer,coordination",
+      "description": "PeacePad helps co-parents pause before sending difficult messages, consider clearer wording, and keep everyday parenting details organized.\n\nCALMER COMMUNICATION\n\n- Draft messages before sharing them with your co-parent\n- Review rule-based clarity and tone cues\n- Choose whether to keep or revise your original words\n- Prepare for difficult conversations with Prep Chat\n\nPRACTICAL COORDINATION\n\n- Keep schedules, tasks, expenses, and child-focused updates together\n- Invite a co-parent when you are ready\n- Start privately with the guest compose experience\n\nYOUR CHOICES\n\n- Optional AI-assisted rewriting requires separate consent\n- Access privacy, support, export, and account-deletion controls\n- Use the core message preview without enabling optional AI processing\n\nPeacePad supports communication and everyday co-parenting organization. It does not provide legal advice, legal representation, or determine parenting outcomes. Some shared features require both participants to use PeacePad. Internet access is required for shared and optional AI features.",
+      "supportUrl": "https://peacepad.ca/support",
+      "marketingUrl": "https://peacepad.ca",
+      "privacyPolicyUrl": "https://peacepad.ca/privacy"
+    },
+    "en-US": {
+      "readyForSubmission": true,
+      "name": "PeacePad: Co-Parenting",
+      "subtitle": "Calmer Messages & Planning",
+      "promotionalText": "Pause before you send. PeacePad helps co-parents check tone, prepare for difficult conversations, and keep practical parenting details organized.",
+      "keywords": "custody,divorce,separation,calendar,schedule,expense,communication,family,organizer,coordination",
+      "description": "PeacePad helps co-parents pause before sending difficult messages, consider clearer wording, and keep everyday parenting details organized.\n\nCALMER COMMUNICATION\n\n- Draft messages before sharing them with your co-parent\n- Review rule-based clarity and tone cues\n- Choose whether to keep or revise your original words\n- Prepare for difficult conversations with Prep Chat\n\nPRACTICAL COORDINATION\n\n- Keep schedules, tasks, expenses, and child-focused updates together\n- Invite a co-parent when you are ready\n- Start privately with the guest compose experience\n\nYOUR CHOICES\n\n- Optional AI-assisted rewriting requires separate consent\n- Access privacy, support, export, and account-deletion controls\n- Use the core message preview without enabling optional AI processing\n\nPeacePad supports communication and everyday co-parenting organization. It does not provide legal advice, legal representation, or determine parenting outcomes. Some shared features require both participants to use PeacePad. Internet access is required for shared and optional AI features.",
+      "supportUrl": "https://peacepad.ca/support",
+      "marketingUrl": "https://peacepad.ca",
+      "privacyPolicyUrl": "https://peacepad.ca/privacy"
+    },
+    "fr-CA": {
+      "readyForSubmission": false,
+      "reviewRequirement": "Native French product and support review required before publication.",
+      "name": "PeacePad : Coparentalité",
+      "subtitle": "Messages et plans plus calmes",
+      "promotionalText": "Prenez une pause avant d'envoyer. PeacePad aide les coparents à vérifier le ton, à préparer les échanges difficiles et à organiser les détails familiaux.",
+      "keywords": "garde,divorce,séparation,calendrier,horaire,dépense,communication,famille,organisation",
+      "description": "PeacePad aide les coparents à prendre une pause avant d'envoyer un message difficile, à envisager une formulation plus claire et à organiser les détails quotidiens de la coparentalité.\n\nCOMMUNICATION PLUS CALME\n\n- Rédigez un message avant de le partager avec l'autre parent\n- Consultez des indications fondées sur des règles concernant la clarté et le ton\n- Choisissez de conserver ou de modifier vos propres mots\n- Préparez les conversations difficiles avec Prep Chat\n\nCOORDINATION PRATIQUE\n\n- Regroupez horaires, tâches, dépenses et nouvelles concernant les enfants\n- Invitez l'autre parent lorsque vous êtes prêt\n- Commencez en privé avec la rédaction en mode invité\n\nVOS CHOIX\n\n- La reformulation facultative assistée par IA exige un consentement distinct\n- Accédez aux options de confidentialité, de soutien, d'exportation et de suppression du compte\n- Utilisez l'aperçu de base sans activer le traitement facultatif par IA\n\nPeacePad soutient la communication et l'organisation quotidienne de la coparentalité. L'application ne fournit pas de conseils ou de représentation juridiques et ne détermine pas les résultats parentaux. Certaines fonctions partagées exigent que les deux participants utilisent PeacePad. Une connexion Internet est requise pour les fonctions partagées et facultatives d'IA.",
+      "supportUrl": "https://peacepad.ca/support",
+      "marketingUrl": "https://peacepad.ca",
+      "privacyPolicyUrl": "https://peacepad.ca/privacy"
+    }
+  },
+  "screenshots": [
+    {
+      "order": 1,
+      "headline": "Pause before you send",
+      "surface": "Compose with a realistic synthetic draft",
+      "requiredState": "Draft present; no error, warning, or disabled primary action"
+    },
+    {
+      "order": 2,
+      "headline": "Find clearer words",
+      "surface": "Rule-based message preview and user-controlled revision",
+      "requiredState": "Original draft remains visible or recoverable; no automatic send"
+    },
+    {
+      "order": 3,
+      "headline": "Prepare at your pace",
+      "surface": "Prep Chat entry",
+      "requiredState": "Concise, populated, branded screen"
+    },
+    {
+      "order": 4,
+      "headline": "Keep plans together",
+      "surface": "Schedule or calendar context",
+      "requiredState": "Synthetic plan with readable date and owner context"
+    },
+    {
+      "order": 5,
+      "headline": "Track shared expenses",
+      "surface": "Expense overview",
+      "requiredState": "Synthetic amount and status; no payment-processing claim"
+    },
+    {
+      "order": 6,
+      "headline": "Stay in control",
+      "surface": "Privacy, export, support, and deletion controls",
+      "requiredState": "All destinations functional in the exact submitted build"
+    }
+  ]
+}
