@@ -2,6 +2,11 @@
 
 set -euo pipefail
 
+# CocoaPods requires a UTF-8 locale, while non-interactive Mac sessions may
+# leave LANG and LC_ALL unset and fall back to ASCII-8BIT.
+export LANG="en_US.UTF-8"
+export LC_ALL="en_US.UTF-8"
+
 EXPECTED_VERSION="1.0.1"
 EXPECTED_BUILD="2"
 EXPECTED_BUNDLE_ID="ca.peacepad.family"
@@ -79,6 +84,7 @@ branch=$BRANCH_NAME
 node=$(node --version)
 npm=$(npm --version)
 xcode=$(xcodebuild -version | tr '\n' ' ')
+locale=$LANG
 expected_version=$EXPECTED_VERSION
 expected_build=$EXPECTED_BUILD
 expected_bundle_id=$EXPECTED_BUNDLE_ID
