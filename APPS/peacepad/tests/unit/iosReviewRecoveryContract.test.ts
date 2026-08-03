@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 function readSource(relativePath: string): string {
-  return readFileSync(new URL(relativePath, import.meta.url), "utf8");
+  // Keep source-contract assertions stable across Windows and Linux runners.
+  return readFileSync(new URL(relativePath, import.meta.url), "utf8").replace(/\r\n/g, "\n");
 }
 
 function sliceBetween(source: string, start: string, end: string): string {
@@ -51,9 +52,7 @@ describe("PeacePad iOS review recovery contract", () => {
     expect(reviewerSeed).toMatch(/isAdmin:\s*false/);
     expect(reviewerSeed).toMatch(/aiMessageConsent:\s*false/);
     expect(reviewerSeed).toMatch(/aiCallConsent:\s*false/);
-    expect(reviewerRoute).not.toMatch(
-      /console\.(?:log|warn|error)\([^)]*(?:email|password)/si,
-    );
+    expect(reviewerRoute).not.toMatch(/console\.(?:log|warn|error)\([^)]*(?:email|password)/is);
   });
 
   it("requires exact confirmation and immediately invokes permanent deletion", () => {
@@ -69,9 +68,7 @@ describe("PeacePad iOS review recovery contract", () => {
     expect(client).toContain("JSON.stringify({ confirmation: confirmedValue })");
     expect(client).not.toMatch(/deactivat|grace period|30[- ]day/i);
 
-    expect(deletionRoute).toMatch(
-      /app\.delete\("\/api\/user\/account",\s*isAuthenticatedEither/,
-    );
+    expect(deletionRoute).toMatch(/app\.delete\("\/api\/user\/account",\s*isAuthenticatedEither/);
     expect(deletionRoute).toMatch(/confirmation\s*!==\s*["']DELETE["']/);
     expect(deletionRoute).toContain("storage.deleteUser(userId)");
     expect(deletionRoute).toContain("quarantineUserOwnedUploadFiles");
@@ -94,12 +91,8 @@ describe("PeacePad iOS review recovery contract", () => {
   it("lets either supported authenticated session export its own data", () => {
     const routes = readSource("../../server/routes.ts");
 
-    expect(routes).toMatch(
-      /app\.get\("\/api\/user\/export",\s*isAuthenticatedEither,\s*async/,
-    );
-    expect(routes).not.toMatch(
-      /app\.get\("\/api\/user\/export",\s*requireAuthOnly,\s*async/,
-    );
+    expect(routes).toMatch(/app\.get\("\/api\/user\/export",\s*isAuthenticatedEither,\s*async/);
+    expect(routes).not.toMatch(/app\.get\("\/api\/user\/export",\s*requireAuthOnly,\s*async/);
   });
 
   it("does not log API response payloads or message-body excerpts", () => {
@@ -108,12 +101,8 @@ describe("PeacePad iOS review recovery contract", () => {
     const webSocket = readSource("../../client/src/hooks/useReconnectingWebSocket.ts");
 
     expect(server).not.toMatch(/capturedJsonResponse|JSON\.stringify\(bodyJson\)/);
-    expect(chat).not.toMatch(
-      /console\.log\([^)]*(?:message|tone)[^)]*content\.substring/si,
-    );
-    expect(webSocket).not.toMatch(
-      /console\.log\([^)]*messageEvent\.data\??\.substring/si,
-    );
+    expect(chat).not.toMatch(/console\.log\([^)]*(?:message|tone)[^)]*content\.substring/is);
+    expect(webSocket).not.toMatch(/console\.log\([^)]*messageEvent\.data\??\.substring/is);
   });
 
   it("keeps local preview available while gating or disabling external AI paths", () => {
@@ -129,9 +118,7 @@ describe("PeacePad iOS review recovery contract", () => {
     expect(routes).toMatch(
       /app\.use\(\s*"\/v2\/modules\/rewrite-message",\s*isAuthenticatedEither,\s*requireV2AiMessageConsent/s,
     );
-    expect(routes).toMatch(
-      /app\.get\("\/api\/geocode\/ip"[\s\S]*?IP-based location is disabled/,
-    );
+    expect(routes).toMatch(/app\.get\("\/api\/geocode\/ip"[\s\S]*?IP-based location is disabled/);
     expect(routes).toMatch(
       /app\.post\("\/api\/location\/ai-enhance"[\s\S]*?aiProcessed:\s*false[\s\S]*?aiDisabled:\s*true/,
     );
