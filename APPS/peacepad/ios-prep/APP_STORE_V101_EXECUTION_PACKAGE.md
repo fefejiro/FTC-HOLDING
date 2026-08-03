@@ -145,8 +145,9 @@ draft and does not yet clear version 1.0.1 for release.
 | English 1.0.1 metadata | PREPARED AND MACHINE-VALIDATED |
 | French Canadian metadata | DRAFT; HUMAN REVIEW REQUIRED |
 | Six-screen storyboard | PREPARED |
-| Exact-build screenshots | BLOCKED until tested 1.0.1 build exists |
-| App Privacy reconciliation | NOT STARTED for 1.0.1 binary |
+| Signed 1.0.1 (2) archive | VERIFIED on Xcode 26.5 at commit `0f567b21e138642dec387b6a7b9244ba057c212f` |
+| Exact-build screenshots | BLOCKED; archive exists but device-size capture is not complete |
+| App Privacy reconciliation | BLOCKED on Xcode Organizer privacy report; SDK manifests verified in archive |
 | Node release runtime | VERIFIED; typecheck passes under CI-standard Node 22 |
 | Dependency audit | LOCALLY VERIFIED in draft PR #167; proposed lock has 0 critical and 2 high; hosted CI is billing-blocked before runner allocation |
 | App Store version 1.0.1 | NOT CREATED |
