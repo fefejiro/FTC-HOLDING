@@ -3,6 +3,7 @@
   "appStoreId": "6793350735",
   "bundleId": "ca.peacepad.family",
   "targetVersion": "1.0.1",
+  "targetBuild": "2",
   "packageStatus": "prepared-not-submitted",
   "productionMutationAllowed": false,
   "notes": [

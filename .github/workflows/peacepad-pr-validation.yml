@@ -40,6 +40,9 @@ jobs:
       - name: Enforce dependency audit baseline
         run: npm run verify:dependency-audit
 
+      - name: Validate App Store and iOS candidate identity
+        run: npm run verify:app-store-metadata && npm run verify:ios-release-candidate
+
       - name: Scan tracked source for OpenAI key patterns
         run: npm run guard:openai-secrets:all
 
