@@ -10,6 +10,7 @@ export LC_ALL="en_US.UTF-8"
 EXPECTED_VERSION="1.0.1"
 EXPECTED_BUILD="2"
 EXPECTED_BUNDLE_ID="ca.peacepad.family"
+EXPECTED_DEVELOPMENT_TEAM="G6UNC88GQ5"
 ARCHIVE_REQUESTED="false"
 
 usage() {
@@ -88,6 +89,7 @@ locale=$LANG
 expected_version=$EXPECTED_VERSION
 expected_build=$EXPECTED_BUILD
 expected_bundle_id=$EXPECTED_BUNDLE_ID
+expected_development_team=$EXPECTED_DEVELOPMENT_TEAM
 archive_requested=$ARCHIVE_REQUESTED
 production_upload_authorized=false
 EOF
@@ -148,6 +150,7 @@ assert_build_setting() {
 assert_build_setting "PRODUCT_BUNDLE_IDENTIFIER" "$EXPECTED_BUNDLE_ID"
 assert_build_setting "MARKETING_VERSION" "$EXPECTED_VERSION"
 assert_build_setting "CURRENT_PROJECT_VERSION" "$EXPECTED_BUILD"
+assert_build_setting "DEVELOPMENT_TEAM" "$EXPECTED_DEVELOPMENT_TEAM"
 
 run_logged "11-release-simulator-build" xcodebuild \
   -workspace ios/App/App.xcworkspace \
@@ -166,6 +169,7 @@ if [[ "$ARCHIVE_REQUESTED" == "true" ]]; then
     -configuration Release \
     -destination "generic/platform=iOS" \
     -archivePath "$ARCHIVE_PATH" \
+    -allowProvisioningUpdates \
     archive
 
   ARCHIVE_INFO_PLIST="$ARCHIVE_PATH/Products/Applications/App.app/Info.plist"
@@ -177,8 +181,9 @@ if [[ "$ARCHIVE_REQUESTED" == "true" ]]; then
   ARCHIVED_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$ARCHIVE_INFO_PLIST")"
   ARCHIVED_BUILD="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$ARCHIVE_INFO_PLIST")"
   ARCHIVED_BUNDLE_ID="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$ARCHIVE_INFO_PLIST")"
+  ARCHIVED_TEAM="$(/usr/libexec/PlistBuddy -c 'Print :ApplicationProperties:Team' "$ARCHIVE_PATH/Info.plist")"
 
-  if [[ "$ARCHIVED_VERSION" != "$EXPECTED_VERSION" || "$ARCHIVED_BUILD" != "$EXPECTED_BUILD" || "$ARCHIVED_BUNDLE_ID" != "$EXPECTED_BUNDLE_ID" ]]; then
+  if [[ "$ARCHIVED_VERSION" != "$EXPECTED_VERSION" || "$ARCHIVED_BUILD" != "$EXPECTED_BUILD" || "$ARCHIVED_BUNDLE_ID" != "$EXPECTED_BUNDLE_ID" || "$ARCHIVED_TEAM" != "$EXPECTED_DEVELOPMENT_TEAM" ]]; then
     echo "BLOCKED: archived identity does not match the approved candidate." >&2
     exit 1
   fi
@@ -187,12 +192,13 @@ if [[ "$ARCHIVE_REQUESTED" == "true" ]]; then
 version=$ARCHIVED_VERSION
 build=$ARCHIVED_BUILD
 bundle_id=$ARCHIVED_BUNDLE_ID
+development_team=$ARCHIVED_TEAM
 archive_path=$ARCHIVE_PATH
 upload_performed=false
 EOF
 
   echo
-  echo "PASS: signed archive identity is ${ARCHIVED_VERSION} (${ARCHIVED_BUILD}), ${ARCHIVED_BUNDLE_ID}."
+  echo "PASS: signed archive identity is ${ARCHIVED_VERSION} (${ARCHIVED_BUILD}), ${ARCHIVED_BUNDLE_ID}, team ${ARCHIVED_TEAM}."
   echo "MANUAL EVIDENCE GATE: open this archive in Xcode Organizer, control-click it,"
   echo "choose Generate Privacy Report, and retain the report beside:"
   echo "  $EVIDENCE_DIR"
