@@ -2,6 +2,13 @@
 
 Status: release worksheet, not evidence of a submitted App Store Connect answer.
 
+Exact native archive evidence is recorded in
+`IOS_V101_ARCHIVE_PRIVACY_INVENTORY.md`. The signed `1.0.1 (2)` archive contains
+two embedded SDK privacy manifests with empty collection/tracking/API arrays
+and no app-level manifest. That inventory does not replace this worksheet:
+App Store answers must still cover the hosted web view, server processing, and
+optional feature flows.
+
 Complete this worksheet against the deployed production runtime and the exact
 submitted binary. App Privacy answers must cover PeacePad, its hosted web view,
 server processing, and every included or invoked third-party SDK. When a row is
@@ -111,6 +118,11 @@ the exact release rather than relying only on package names.
 
 Verify unauthenticated `200` responses, current copy, mobile layout, and valid
 TLS immediately before resubmission:
+
+On 2026-08-04 all four routes below returned unauthenticated HTTP `200`
+responses with valid TLS. Rendered route-content verification remains open in
+this evidence pass because the in-app browser runtime was unavailable; the HTTP
+result must not be treated as visual/mobile proof.
 
 ```text
 Privacy: https://peacepad.ca/privacy

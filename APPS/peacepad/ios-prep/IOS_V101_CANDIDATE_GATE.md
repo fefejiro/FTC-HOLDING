@@ -1,6 +1,6 @@
 # PeacePad iOS 1.0.1 candidate gate
 
-Updated: 2026-08-03
+Updated: 2026-08-04
 
 ## Candidate identity
 
@@ -75,16 +75,23 @@ The retained screenshot is
 
 ## Privacy-manifest boundary
 
-The installed Capacitor iOS 7.6.2 SDK contains its required
-`PrivacyInfo.xcprivacy` files. Apple requires Xcode to aggregate the privacy
-manifests across the app and embedded SDKs. Do not add an empty app manifest or
-copy App Store privacy answers into source without first generating the Xcode
-privacy report from this exact candidate.
+The signed archive has now been inspected directly. It contains exactly two
+`PrivacyInfo.xcprivacy` files, from Capacitor and Cordova. Both declare no
+tracking, no tracking domains, no collected-data types, and no required-reason
+APIs. No app-level manifest exists at the app-bundle root. The complete result
+is recorded in `IOS_V101_ARCHIVE_PRIVACY_INVENTORY.md`.
+
+Apple's supported report flow remains an Xcode Organizer context-menu action;
+Xcode 26.5 exposes no documented `xcodebuild` equivalent. The remote Mac did not
+grant command-line UI automation access, so the official PDF remains blocked.
+The deterministic inventory must not be labelled as Apple's report.
 
 Before archive approval:
 
-1. run Xcode's privacy report for the exact archive;
-2. reconcile the report with the app's actual server-side collection and App
+1. generate Xcode's official privacy report for the exact archive when GUI
+   access is available;
+2. reconcile the archive inventory and report with actual hosted-web and
+   server-side collection and App
    Store privacy answers;
 3. add an app-level `PrivacyInfo.xcprivacy` only with validated data types and
    required-reason APIs;
@@ -119,13 +126,18 @@ isolated, so the successful archive was produced from the authenticated visible
 Terminal session and independently verified afterward.
 
 - VERIFIED: signed Xcode archive on the Mac
-- BLOCKED: Xcode Organizer privacy report; the remote UI did not open the
-  archive after one controlled retry
+- AUTOMATED VERIFIED: exact signed-archive privacy inventory, including all
+  embedded manifests, native frameworks, and permission purpose strings
+- BLOCKED: official Xcode Organizer privacy-report PDF; Apple documents a GUI
+  action and the remote session denied command-line UI automation after one
+  controlled retry
 - PARTIAL: exact Release simulator build launched on iPhone 17 / iOS 26.5 and
-  rendered the corrected live-web compose flow; full iPhone/iPad screenshot
-  sets remain incomplete
+  rendered the corrected live-web compose flow; one iPad Pro 13-inch / iOS 26.5
+  attempt booted the device but timed out before producing a screenshot, so the
+  complete iPhone/iPad set remains incomplete
 - BLOCKED: controlled TestFlight device pass
-- BLOCKED: App Privacy reconciliation against the exact archive
+- PARTIAL: App Privacy reconciliation; native archive inventory is verified,
+  while hosted-web/server answers and the official Organizer PDF remain open
 - BLOCKED: accessibility declaration backed by device evidence
 - NOT AUTHORIZED: App Store version creation, binary upload, or submission
 
