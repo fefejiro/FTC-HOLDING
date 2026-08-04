@@ -88,6 +88,15 @@ const screenTitles: Record<AppScreen, string> = {
   export: "Export Preview"
 };
 
+const headerlessScreens = new Set<AppScreen>([
+  "foundation",
+  "home",
+  "messages",
+  "calendar",
+  "records",
+  "more"
+]);
+
 type SharedScreenProps = {
   draft: string;
   setDraft: (draft: string) => void;
@@ -122,7 +131,14 @@ export function PeacePadLabApp({ startScreen }: { startScreen?: string }) {
         }}
       >
         {(Object.keys(screenTitles) as AppScreen[]).map((routeName) => (
-          <Stack.Screen key={routeName} name={routeName} options={{ title: screenTitles[routeName] }}>
+          <Stack.Screen
+            key={routeName}
+            name={routeName}
+            options={{
+              headerShown: !headerlessScreens.has(routeName),
+              title: screenTitles[routeName]
+            }}
+          >
             {({ route }) => (
               <LabRoute
                 activeScreen={routeName}
