@@ -10,6 +10,7 @@ describe("LabButton", () => {
 
     const button = screen.getByRole("button", { name: "Create invitation" });
     expect(button.props.accessibilityState).toEqual({ disabled: false });
+    expect(button).toHaveStyle({ minHeight: 48 });
 
     fireEvent.press(button);
 

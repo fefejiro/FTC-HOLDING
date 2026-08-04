@@ -87,6 +87,12 @@ for (const file of sourceFiles) {
   if (!isTestFixture && /api\.peacepad\.ca/.test(text)) {
     failures.push(`${rel} references production API api.peacepad.ca.`);
   }
+  if (!isTestFixture && /allowFontScaling\s*=\s*(?:\{\s*)?false/.test(text)) {
+    failures.push(`${rel} disables Dynamic Type font scaling.`);
+  }
+  if (!isTestFixture && /(?:\u00e2\u20ac|\u00c3[\u0080-\u00bf])/.test(text)) {
+    failures.push(`${rel} contains likely mojibake encoding artifacts.`);
+  }
   const affirmativeText = text
     .split(/\r?\n/)
     .filter((line) => !/^\s*[-*]?\s*do not\b/i.test(line))

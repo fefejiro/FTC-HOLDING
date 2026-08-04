@@ -42,9 +42,9 @@ approved Capacitor app, production data/API, App Store record, and
 ```text
 guardrails       passed
 typecheck        passed
-Jest/RNTL        23 suites / 127 tests passed
+Jest/RNTL        24 suites / 133 tests passed
 embedded SQL     migration, constraints, HTTP restart, acceptance, grant, audit passed
-coverage         85.87 statements / 80.08 branches / 80.09 functions / 88.95 lines
+coverage         86.02 statements / 80.19 branches / 80.59 functions / 89.04 lines
 Expo Doctor      17/18 in monorepo; isolated native install 18/18
 Expo config      PeacePad; ca.peacepad.nextnative.lab; diagnostics/writes false
 iOS export       passed; 846 modules bundled
@@ -159,6 +159,13 @@ commit and are not relabelled as current evidence.
 - Reusable Maestro flows now pass for invitation QR and calendar sharing. The
   first-run bootstrap flow documents the one Expo Go onboarding tap that is not
   exposed through the native accessibility hierarchy.
+- Core navigation, invitation mode, calendar view, layer visibility/sharing,
+  Message Check disclosure, and opt-out controls now expose named roles and
+  selected, checked, expanded, or disabled state. Primary and compact controls
+  have 44- or 48-point minimum targets. A release guard rejects disabled font
+  scaling and likely encoding corruption. This is automated accessibility
+  verification only; VoiceOver, large-text layout, contrast, Switch Control,
+  and real-device evidence remain open.
 - The shared monorepo Expo Doctor run is 17/18 because web workspaces expose
   React 18 above the native workspace's React 19. A clean standalone install of
   the native manifest passed Expo Doctor 18/18, confirming the native app's own
@@ -181,14 +188,15 @@ commit and are not relabelled as current evidence.
 | Typed staging compatibility client | 75% |
 | Staging invitation server core | 80% |
 | Automated verification | 95% |
+| Accessibility foundation | 35% |
 | Current device verification | 82% |
-| Overall production-native v2 | 38% |
+| Overall production-native v2 | 39% |
 
 ## Next best move
 
-Move the now-repeatable invitation and calendar journeys to one controlled
-real-iPhone staging pass. The database migration no longer needs a paid host
-for local regression proof. The next persistence gate is one isolated,
-networked staging database and service with a least-privilege runtime role,
-followed by concurrency, restart, and live API checks. Do not expand into
-calling, billing, or production migration before those gates pass.
+Complete the no-cost theme and large-text layout gate, then move the repeatable
+invitation and calendar journeys to one controlled real-iPhone staging pass.
+The database migration no longer needs a paid host for local regression proof.
+The next persistence gate remains one isolated networked staging database and
+service with a least-privilege runtime role. Do not expand into calling,
+billing, or production migration before those gates pass.

@@ -218,9 +218,10 @@ export function InvitationScreen({ initialCode }: { initialCode?: string }) {
       <Text style={styles.title}>Family connection</Text>
       <Text style={styles.body}>Invite a co-parent or enter a code you received.</Text>
 
-      <View accessibilityLabel="Invitation action" style={styles.segmented}>
+      <View accessibilityLabel="Invitation action" accessibilityRole="tablist" style={styles.segmented}>
         <Pressable
-          accessibilityRole="button"
+          accessibilityLabel="Invite someone"
+          accessibilityRole="tab"
           accessibilityState={{ selected: mode === "create" }}
           onPress={() => setMode("create")}
           style={[styles.segment, mode === "create" ? styles.segmentActive : null]}
@@ -228,7 +229,8 @@ export function InvitationScreen({ initialCode }: { initialCode?: string }) {
           <Text style={[styles.segmentText, mode === "create" ? styles.segmentTextActive : null]}>Invite someone</Text>
         </Pressable>
         <Pressable
-          accessibilityRole="button"
+          accessibilityLabel="Enter a code"
+          accessibilityRole="tab"
           accessibilityState={{ selected: mode === "join" }}
           onPress={() => setMode("join")}
           style={[styles.segment, mode === "join" ? styles.segmentActive : null]}
@@ -357,10 +359,11 @@ export function CalendarScreen() {
         </View>
       </View>
 
-      <View accessibilityLabel="Calendar view" style={styles.segmented}>
+      <View accessibilityLabel="Calendar view" accessibilityRole="tablist" style={styles.segmented}>
         {views.map((view) => (
           <Pressable
-            accessibilityRole="button"
+            accessibilityLabel={`${view[0].toUpperCase() + view.slice(1)} calendar view`}
+            accessibilityRole="tab"
             accessibilityState={{ selected: calendarView === view }}
             key={view}
             onPress={() => setCalendarView(view)}
@@ -427,6 +430,7 @@ export function CalendarScreen() {
         <View style={styles.wrap}>
           {layers.map((layer) => (
             <Pressable
+              accessibilityLabel={`Use ${layer.name} calendar`}
               accessibilityRole="button"
               accessibilityState={{ selected: selectedLayerId === layer.id }}
               key={layer.id}
@@ -493,7 +497,13 @@ export function MessagesScreen() {
           <Text style={styles.body}>Get suggestions for clarity and tone before you send. You choose what changes.</Text>
           <LabButton label="Turn on" onPress={() => void setMessageCheckEnabled(true)} />
           <LabButton label="Not now" onPress={() => setShowHowItWorks(false)} variant="secondary" />
-          <Pressable accessibilityRole="button" onPress={() => setShowHowItWorks((current) => !current)}>
+          <Pressable
+            accessibilityLabel="How Message Check works"
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showHowItWorks }}
+            onPress={() => setShowHowItWorks((current) => !current)}
+            style={styles.linkButton}
+          >
             <Text style={styles.link}>How it works</Text>
           </Pressable>
           {showHowItWorks ? (
@@ -503,7 +513,12 @@ export function MessagesScreen() {
       ) : (
         <View style={styles.enabledRow}>
           <Text style={styles.successText}>Message Check on</Text>
-          <Pressable accessibilityRole="button" onPress={() => void setMessageCheckEnabled(false)}>
+          <Pressable
+            accessibilityLabel="Turn off Message Check"
+            accessibilityRole="button"
+            onPress={() => void setMessageCheckEnabled(false)}
+            style={styles.linkButton}
+          >
             <Text style={styles.link}>Turn off</Text>
           </Pressable>
         </View>
@@ -616,7 +631,7 @@ const styles = StyleSheet.create({
   brandHeroCopy: { flex: 1, gap: spacing.xs },
   logo: { height: 64, width: 64 },
   actionGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
-  actionCard: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 22, borderWidth: 1, gap: spacing.sm, minWidth: "46%", padding: spacing.lg, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 1 },
+  actionCard: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 22, borderWidth: 1, gap: spacing.sm, justifyContent: "center", minHeight: 88, minWidth: "46%", padding: spacing.lg, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 1 },
   actionTitle: { ...typography.subheading, color: colors.text },
   pressed: { opacity: 0.72 },
   summaryCard: { backgroundColor: colors.brand, borderRadius: 24, gap: spacing.sm, padding: spacing.lg },
@@ -633,7 +648,7 @@ const styles = StyleSheet.create({
   error: { ...typography.body, color: "#B42318", fontWeight: "700" },
   titleRow: { flexDirection: "row", justifyContent: "space-between" },
   segmented: { backgroundColor: colors.brandSoft, borderRadius: 18, flexDirection: "row", padding: spacing.xs },
-  segment: { alignItems: "center", borderRadius: 14, flex: 1, paddingVertical: spacing.md },
+  segment: { alignItems: "center", borderRadius: 14, flex: 1, justifyContent: "center", minHeight: 48, paddingVertical: spacing.md },
   segmentActive: { backgroundColor: colors.surface },
   segmentText: { ...typography.body, color: colors.muted, fontWeight: "700" },
   segmentTextActive: { color: colors.brand },
@@ -651,20 +666,21 @@ const styles = StyleSheet.create({
   scheduleContent: { flex: 1, gap: spacing.xs },
   scheduleEvent: { backgroundColor: colors.brandSoft, borderLeftColor: colors.brand, borderLeftWidth: 3, borderRadius: 12, gap: 2, padding: spacing.sm },
   layerRow: { alignItems: "center", borderTopColor: colors.border, borderTopWidth: 1, flexDirection: "row", gap: spacing.sm, paddingTop: spacing.md },
-  layerIdentity: { alignItems: "center", flex: 1, flexDirection: "row", gap: spacing.md },
+  layerIdentity: { alignItems: "center", flex: 1, flexDirection: "row", gap: spacing.md, minHeight: 44 },
   layerCopy: { flex: 1 },
   layerDot: { borderRadius: 999, height: 16, width: 16 },
-  smallButton: { backgroundColor: colors.brandSoft, borderRadius: 999, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  smallButton: { alignItems: "center", backgroundColor: colors.brandSoft, borderRadius: 999, justifyContent: "center", minHeight: 44, minWidth: 64, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   smallButtonText: { ...typography.caption, color: colors.brand, fontWeight: "800" },
   input: { ...typography.body, backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 18, borderWidth: 1, color: colors.text, minHeight: 52, padding: spacing.md },
   messageInput: { minHeight: 120, textAlignVertical: "top" },
   wrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  chip: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 999, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  chip: { alignItems: "center", backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 999, borderWidth: 1, justifyContent: "center", minHeight: 44, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   chipActive: { backgroundColor: colors.brand, borderColor: colors.brand },
   chipText: { ...typography.caption, color: colors.muted, fontWeight: "700" },
   chipTextActive: { color: colors.white },
   enabledRow: { alignItems: "center", backgroundColor: "#E9F9F4", borderRadius: 18, flexDirection: "row", justifyContent: "space-between", padding: spacing.md },
   successText: { ...typography.body, color: "#087A64", fontWeight: "800" },
   link: { ...typography.body, color: colors.brand, fontWeight: "800", textAlign: "center" },
+  linkButton: { alignItems: "center", justifyContent: "center", minHeight: 44, paddingHorizontal: spacing.sm },
   sentBubble: { alignSelf: "flex-end", backgroundColor: colors.brandSoft, borderRadius: 20, maxWidth: "86%", padding: spacing.md }
 });

@@ -57,6 +57,15 @@ describe("PeacePad task navigation", () => {
     expect(screen.getByText(expected)).toBeOnTheScreen();
   });
 
+  it("exposes a single selected primary tab", () => {
+    renderApp();
+    const primaryLabels = ["Home", "Messages", "Calendar", "Records", "More"];
+    const primaryTabs = screen.getAllByRole("tab").filter((tab) => primaryLabels.includes(tab.props.accessibilityLabel));
+    expect(primaryTabs).toHaveLength(5);
+    expect(primaryTabs.filter((tab) => tab.props.accessibilityState?.selected)).toHaveLength(1);
+    expect(screen.getByRole("tab", { name: "Home" }).props.accessibilityState).toEqual({ selected: true });
+  });
+
   it("falls back safely for unsupported startup routes", () => {
     expect(resolveLabStartScreen("production-dashboard")).toBe("foundation");
     expect(resolveLabStartScreen("evidence-detail")).toBe("evidence-detail");
@@ -73,6 +82,13 @@ describe("PeacePad task navigation", () => {
 });
 
 describe("secure invitation flow", () => {
+  it("exposes explicit invitation-mode tabs without connecting anyone", () => {
+    renderApp("invite");
+    expect(screen.getByRole("tab", { name: "Invite someone" }).props.accessibilityState).toEqual({ selected: true });
+    expect(screen.getByRole("tab", { name: "Enter a code" }).props.accessibilityState).toEqual({ selected: false });
+    expect(screen.queryByLabelText("Invitation accepted")).not.toBeOnTheScreen();
+  });
+
   it("routes a lab deep link to a prefilled invitation without accepting it", async () => {
     const linkedState = getStateFromPath("invite/CALM26", peacePadLinking.config);
     expect(linkedState?.routes[0]).toMatchObject({ name: "invite", params: { code: "CALM26" } });
@@ -132,6 +148,13 @@ describe("secure invitation flow", () => {
 });
 
 describe("calendar coordination", () => {
+  it("exposes named view tabs and non-colour layer controls", () => {
+    renderApp("calendar");
+    expect(screen.getByRole("tab", { name: "Month calendar view" }).props.accessibilityState).toEqual({ selected: true });
+    expect(screen.getByRole("checkbox", { name: "Hide Parenting Time" }).props.accessibilityState).toEqual({ checked: true });
+    expect(screen.getByRole("button", { name: "Share Parenting Time" })).toBeOnTheScreen();
+  });
+
   it("supports deterministic lab calendar proof starts and safely falls back", () => {
     expect(resolveCalendarStartView("week")).toBe("week");
     expect(resolveCalendarStartView("day")).toBe("day");
@@ -166,6 +189,17 @@ describe("calendar coordination", () => {
 });
 
 describe("per-chat Message Check", () => {
+  it("announces its disclosure state and explicit opt-out control", async () => {
+    renderApp("messages");
+    const disclosure = screen.getByRole("button", { name: "How Message Check works" });
+    expect(disclosure.props.accessibilityState).toEqual({ expanded: false });
+    fireEvent.press(disclosure);
+    expect(screen.getByRole("button", { name: "How Message Check works" }).props.accessibilityState).toEqual({ expanded: true });
+
+    fireEvent.press(screen.getByText("Turn on"));
+    expect(await screen.findByRole("button", { name: "Turn off Message Check" })).toBeOnTheScreen();
+  });
+
   it("is off by default and never sends until the user chooses", async () => {
     renderApp("messages");
     expect(screen.getByText("Message Check")).toBeOnTheScreen();

@@ -196,7 +196,7 @@ function LabRoute({
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.shell}>
-        <ScrollView contentContainerStyle={styles.container}>
+        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           {activeScreen === "foundation" ? <FoundationScreen onOpenLab={() => setScreen("home")} /> : null}
           {activeScreen === "home" ? <CoordinationHomeScreen setScreen={setScreen} /> : null}
           {activeScreen === "messages" ? <MessagesScreen /> : null}

@@ -34,6 +34,8 @@ const styles = StyleSheet.create({
   base: {
     alignItems: "center",
     borderRadius: 999,
+    justifyContent: "center",
+    minHeight: 48,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md
   },

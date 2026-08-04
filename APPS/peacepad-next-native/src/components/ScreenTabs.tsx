@@ -23,7 +23,9 @@ export function ScreenTabs({ active, onSelect }: Props) {
     <View style={styles.wrap}>
       {tabs.map((tab) => (
         <Pressable
-          accessibilityRole="button"
+          accessibilityLabel={tab.label}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: active === tab.id }}
           key={tab.id}
           onPress={() => onSelect(tab.id)}
           style={[styles.tab, active === tab.id ? styles.activeTab : null]}
@@ -42,10 +44,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm
   },
   tab: {
+    alignItems: "center",
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderRadius: 999,
     borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 44,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm
   },
