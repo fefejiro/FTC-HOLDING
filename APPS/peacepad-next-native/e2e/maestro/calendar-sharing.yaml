@@ -8,9 +8,21 @@ name: PeacePad calendar sharing simulator proof
 - extendedWaitUntil:
     visible: "Calendar"
     timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: "Share Parenting Time"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Share Parenting Time"
-- assertVisible: "Share this calendar?"
+- scrollUntilVisible:
+    element:
+      text: "Share this calendar?"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Confirm sharing"
-- extendedWaitUntil:
-    visible: "Shared with family"
-    timeout: 10000
+- scrollUntilVisible:
+    element:
+      text: "Shared with family"
+    direction: UP
+    centerElement: true
+- assertVisible: "Make private Parenting Time"
