@@ -47,7 +47,8 @@ headers.
 
 - Provision an isolated PostgreSQL database and staging API service.
 - Apply the migration and grant a dedicated runtime role only the operations it
-  needs. The migration was not executed locally because `psql` is unavailable.
+  needs. The same migration now executes idempotently against disposable
+  embedded PostgreSQL in `npm run test:sql`.
 - Deploy the reviewed host and bind its database pool, hashed synthetic staging
   session, and authorized family-directory configuration.
 - Supply invitation and rate-limit peppers through the server secret store.
@@ -57,16 +58,22 @@ Local host verification proved `/health` returns 200 and `/readyz` fails closed
 with 500 when the database is intentionally unavailable. No external service,
 database, migration, or production credential was created or changed.
 
+The embedded PostgreSQL proof executes the real DDL and repository SQL. It
+verifies database privacy constraints and the create, resolve, accept, grant,
+and hash-linked audit path. It is not evidence of network/TLS behavior,
+least-privilege runtime roles, backups, or multi-process concurrency.
+
 ## Dependency gate
 
-TypeScript, guardrails, all 117 tests, Expo config, and an iOS production export
-pass. The shared monorepo Expo Doctor run is 17/18 because web workspaces expose
+TypeScript, guardrails, all 123 Jest tests, embedded PostgreSQL verification,
+Expo config, and an iOS production export pass. The shared monorepo Expo Doctor
+run is 17/18 because web workspaces expose
 React 18 above the native workspace's React 19; a clean standalone native npm
 install passes 18/18. Use the standalone install strategy in CI rather than
-changing unrelated web dependencies. The production-dependency audit also
-reports 25 inherited Expo/React Native advisories. Do not use `npm audit
-fix --force`; triage those advisories through a reviewed upgrade plan before
-deployment promotion.
+changing unrelated web dependencies. A standalone native audit reports 11
+inherited Expo toolchain advisories (10 moderate and 1 high). Do not use
+`npm audit fix --force`; triage those advisories through a reviewed Expo
+upgrade plan before deployment promotion.
 
 ## Promotion gate
 

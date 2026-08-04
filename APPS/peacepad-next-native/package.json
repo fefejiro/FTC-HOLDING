@@ -9,8 +9,9 @@
     "android": "expo run:android",
     "web": "expo start --web",
     "guardrails": "node scripts/check-lab-guardrails.cjs",
-    "test": "jest --runInBand",
-    "test:coverage": "jest --runInBand --coverage",
+    "test": "jest --runInBand && npm run test:sql",
+    "test:sql": "tsx scripts/verify-postgres-migration.ts",
+    "test:coverage": "jest --runInBand --coverage && npm run test:sql",
     "typecheck": "tsc --noEmit",
     "staging:start": "tsx src/staging/server.ts",
     "sim:prepare": "node scripts/prepare-ios-sim-workdir.cjs",
@@ -36,6 +37,7 @@
     "react-native-svg": "15.12.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.4",
     "@testing-library/react-native": "^13.3.3",
     "@types/jest": "^29.5.14",
     "@types/react": "~19.1.0",

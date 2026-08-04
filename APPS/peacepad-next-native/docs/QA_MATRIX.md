@@ -34,6 +34,9 @@ and `NOT STARTED`.
 | Hash-linked append-only audit sequence | AUTOMATED VERIFIED | staging audit-chain test |
 | Invitation/grant/idempotency/audit writes are atomic | AUTOMATED VERIFIED | transaction rollback test |
 | Postgres compare-and-swap persistence adapter | AUTOMATED VERIFIED | SQL contract tests |
+| Postgres migration executes idempotently | AUTOMATED VERIFIED | `npm run test:sql` against disposable embedded PostgreSQL |
+| Database rejects invalid regions/plaintext invitation codes | AUTOMATED VERIFIED | embedded PostgreSQL constraint proof |
+| Postgres create/resolve/accept/grant/audit transaction | AUTOMATED VERIFIED | embedded PostgreSQL repository integration proof |
 | Shared rate-limit keys are hashed before persistence | AUTOMATED VERIFIED | Postgres limiter test |
 | Trusted bearer session ignores actor spoofing headers | AUTOMATED VERIFIED | HTTP bridge test |
 | Runtime rejects non-staging service origins | AUTOMATED VERIFIED | runtime factory tests |
@@ -57,6 +60,7 @@ and `NOT STARTED`.
 | TypeScript | AUTOMATED VERIFIED | passed |
 | Guardrails | AUTOMATED VERIFIED | passed |
 | Jest/RNTL | AUTOMATED VERIFIED | 22 suites / 123 tests |
+| Embedded PostgreSQL | AUTOMATED VERIFIED | migration, constraints, invitation acceptance, grant, and audit chain passed |
 | Coverage | AUTOMATED VERIFIED | 85.29 / 80.06 / 79.74 / 88.42 |
 | Expo config | AUTOMATED VERIFIED | lab bundle; diagnostics/writes false |
 | Expo Doctor | BLOCKED | 17/18; app React 19 and monorepo-root React 18 duplicate |
@@ -117,7 +121,8 @@ The historical records screenshots in
 
 ## Remaining promotion gates
 
-- Provision an isolated staging Postgres instance and service runtime.
+- Provision an isolated networked staging Postgres instance and service
+  runtime; embedded PostgreSQL regression proof now passes locally.
 - Run Expo Doctor from a clean standalone native install in CI; the native
   dependency graph itself passes 18/18. Keep the shared web dependency tree
   unchanged and triage the inherited advisories separately.

@@ -52,6 +52,7 @@ no App Store submission
 npm --workspace=@ftc/peacepad-next-native run guardrails
 npm --workspace=@ftc/peacepad-next-native run typecheck
 npm --workspace=@ftc/peacepad-next-native test
+npm --workspace=@ftc/peacepad-next-native run test:sql
 npm --workspace=@ftc/peacepad-next-native run test:coverage
 npm --workspace=@ftc/peacepad-next-native run sim:doctor
 npm --workspace=@ftc/peacepad-next-native run start

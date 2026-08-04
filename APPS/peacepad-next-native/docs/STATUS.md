@@ -30,7 +30,7 @@ approved Capacitor app, production data/API, App Store record, and
 | Maestro invitation and calendar-sharing flows | SIMULATOR VERIFIED | iPhone 17 Pro / iOS 26.5; `docs/evidence/maestro-2026-08-04` |
 | Real-iPhone staging evidence | NOT STARTED | Requires deployed staging slice and controlled device session |
 | Staging `/api/v2` invitation handler core | AUTOMATED VERIFIED | Reviewed Node host plus framework-neutral route/service tests; not deployed |
-| Postgres staging repository and migration | AUTOMATED VERIFIED | Transaction/rollback/CAS and durable resolution-claim tests; migration prepared but not applied |
+| Postgres staging repository and migration | AUTOMATED VERIFIED | Migration executed twice against embedded PostgreSQL; database constraints plus create/resolve/accept/grant/audit path passed |
 | Shared staging rate limiter | AUTOMATED VERIFIED | Atomic Postgres upsert contract; not deployed |
 | Trusted staging session boundary | AUTOMATED VERIFIED | Bearer authenticator bridge ignores spoofed actor headers |
 | Staging host health/fail-closed readiness | AUTOMATED VERIFIED | Local `/health` returned 200; `/readyz` returned 500 with the database intentionally unavailable |
@@ -42,6 +42,7 @@ approved Capacitor app, production data/API, App Store record, and
 guardrails       passed
 typecheck        passed
 Jest/RNTL        22 suites / 123 tests passed
+embedded SQL     migration, constraints, invitation acceptance, grant, audit passed
 coverage         85.29 statements / 80.06 branches / 79.74 functions / 88.42 lines
 Expo Doctor      17/18 in monorepo; isolated native install 18/18
 Expo config      PeacePad; ca.peacepad.nextnative.lab; diagnostics/writes false
@@ -125,13 +126,17 @@ commit and are not relabelled as current evidence.
   In-memory adapters remain available only for deterministic tests.
 - A Postgres-backed store, transactional unit-of-work boundary, shared
   Postgres rate limiter, trusted-session bridge, staging-only runtime factory,
-  and isolated schema migration now exist. They are automated-verified but
-  have not been connected to a database or deployed service.
+  and isolated schema migration now exist. The migration and complete
+  invitation acceptance transaction run successfully against embedded
+  PostgreSQL, but no networked staging service has been provisioned.
 - Invitation-resolution proof is persisted as an expiring peppered subject
   hash, so accept/decline authorization survives a process restart or a second
   service instance without storing the submitted code or bearer token.
-- PostgreSQL CLI tooling was unavailable locally, so the migration received
-  static guardrail and adapter-contract verification but no live SQL execution.
+- The migration is executed by `npm run test:sql` using a disposable embedded
+  PostgreSQL engine. This proves DDL compatibility, database constraints, and
+  repository behavior without a paid service. It does not prove network/TLS,
+  runtime roles, multi-process concurrency, backups, or managed-service
+  operations.
 - Durable idempotency values and rate-limit subjects are peppered before
   persistence; plaintext invitation codes, deep links, and raw limiter keys are
   not represented by the staging schema.
@@ -169,16 +174,16 @@ commit and are not relabelled as current evidence.
 | Layered calendar product flow | 65% |
 | Per-chat Message Check | 70% |
 | Typed staging compatibility client | 75% |
-| Staging invitation server core | 70% |
+| Staging invitation server core | 74% |
 | Automated verification | 94% |
 | Current device verification | 82% |
-| Overall production-native v2 | 35% |
+| Overall production-native v2 | 36% |
 
 ## Next best move
 
 Move the now-repeatable invitation and calendar journeys to one controlled
-real-iPhone staging pass. In parallel, make an explicit cost/hosting decision
-for one isolated staging database and service; after approval, apply the
-prepared migration, grant a least-privilege runtime role, and run live API
-checks. Do not expand into calling, billing, or production migration before
-those gates pass.
+real-iPhone staging pass. The database migration no longer needs a paid host
+for local regression proof. The next persistence gate is one isolated,
+networked staging database and service with a least-privilege runtime role,
+followed by concurrency, restart, and live API checks. Do not expand into
+calling, billing, or production migration before those gates pass.
