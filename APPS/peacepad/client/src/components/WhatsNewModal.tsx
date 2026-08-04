@@ -5,10 +5,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Bug, Zap, Heart } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { decideWhatsNewAutoOpen, WHATS_NEW_LAST_SEEN_KEY } from "@/lib/whatsNewState";
 
 interface ChangelogEntry {
   version: string;
-  date: string;
   changes: {
     type: "feature" | "improvement" | "bugfix" | "announcement";
     title: string;
@@ -19,7 +19,6 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     version: "1.0.9",
-    date: "April 14, 2026",
     changes: [
       {
         type: "improvement",
@@ -85,7 +84,6 @@ export function WhatsNewModal({ open: controlledOpen, onOpenChange, trigger }: W
   const setOpen = isControlled ? onOpenChange : setInternalOpen;
 
   const latestVersion = changelog[0].version;
-  const LAST_SEEN_KEY = "lastSeenChangelogVersion";
 
   useEffect(() => {
     // Only auto-show if uncontrolled (no explicit trigger)
@@ -98,25 +96,33 @@ export function WhatsNewModal({ open: controlledOpen, onOpenChange, trigger }: W
           const { timestamp } = JSON.parse(justJoinedData);
           const twoMinutesAgo = Date.now() - 2 * 60 * 1000;
           if (timestamp > twoMinutesAgo) {
-            // User just joined, skip What's New and mark as seen
-            localStorage.setItem(LAST_SEEN_KEY, latestVersion);
+            localStorage.setItem(WHATS_NEW_LAST_SEEN_KEY, latestVersion);
             return;
           }
         } catch (e) {
-          // Invalid data, remove it
           localStorage.removeItem("just_joined_partnership");
         }
       }
-      
-      const lastSeenVersion = localStorage.getItem(LAST_SEEN_KEY);
-      if (lastSeenVersion !== latestVersion) {
+
+      const decision = decideWhatsNewAutoOpen({
+        lastSeenVersion: localStorage.getItem(WHATS_NEW_LAST_SEEN_KEY),
+        latestVersion,
+      });
+
+      if (decision.markSeen) {
+        // A new installation has no previous release to compare against. Avoid
+        // stacking a product-update modal on top of welcome and consent.
+        localStorage.setItem(WHATS_NEW_LAST_SEEN_KEY, latestVersion);
+      }
+
+      if (decision.shouldOpen) {
         setInternalOpen(true);
       }
     }
   }, [isControlled, trigger, latestVersion]);
 
   const handleClose = () => {
-    localStorage.setItem(LAST_SEEN_KEY, latestVersion);
+    localStorage.setItem(WHATS_NEW_LAST_SEEN_KEY, latestVersion);
     setOpen?.(false);
   };
 
@@ -149,8 +155,7 @@ export function WhatsNewModal({ open: controlledOpen, onOpenChange, trigger }: W
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="text-lg font-semibold">Version {entry.version}</h3>
-                        <p className="text-sm text-muted-foreground">{entry.date}</p>
+                        <h3 className="text-lg font-semibold">Current release</h3>
                       </div>
                       {entryIndex === 0 && (
                         <Badge variant="default" data-testid="badge-latest">Latest</Badge>
