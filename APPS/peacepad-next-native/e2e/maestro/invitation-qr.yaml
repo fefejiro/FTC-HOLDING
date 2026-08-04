@@ -10,7 +10,6 @@ name: PeacePad invitation QR simulator proof
     timeout: 30000
 - tapOn: "Create invitation"
 - extendedWaitUntil:
-    visible: "Invitation ready"
+    visible: "Invitation code P00001"
     timeout: 10000
-- assertVisible: "Scan to review access"
-- assertVisible: "P00001"
+- assertVisible: "Scannable invitation QR"
