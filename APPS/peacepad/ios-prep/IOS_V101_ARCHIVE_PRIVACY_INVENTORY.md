@@ -71,6 +71,16 @@ The archived app declares purpose strings for:
 
 No location usage-description key was found in the archived `Info.plist`.
 
+## Required-reason API heuristic
+
+A read-only symbol and string scan covered the app executable and all five
+embedded framework executables. It checked the current required-reason API
+families for file timestamps, system boot time, disk space, active keyboards,
+and user defaults. No matches were found.
+
+This is a useful preflight signal, not an Apple validation and not a substitute
+for the Organizer report or App Store Connect processing.
+
 ## Reconciliation result
 
 | Check | Result |
@@ -81,6 +91,7 @@ No location usage-description key was found in the archived `Info.plist`.
 | Embedded SDK required-reason API declaration | None declared |
 | App-level manifest | Absent |
 | Native permission strings | Camera, microphone, and photo library present |
+| Required-reason API static preflight | No known-family matches; heuristic only |
 | Official Organizer privacy-report PDF | BLOCKED after one controlled GUI retry |
 | App Store Connect privacy answers | PARTIAL; worksheet exists but final answers require hosted-web/server reconciliation |
 

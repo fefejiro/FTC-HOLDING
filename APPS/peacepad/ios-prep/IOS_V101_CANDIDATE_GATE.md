@@ -34,6 +34,8 @@ Verified locally with Node.js 22.23.0, including the quiet first-run regression:
 - tracked-source secret scan and self-test: PASS
 - TypeScript: PASS
 - Vitest: PASS (`42/42` files, `185/185` tests)
+- focused privacy/reviewer/deletion regression: PASS (`7/7` files, `51/51`
+  tests; rerun 2026-08-04)
 - coverage generation: PASS; baseline measured, not a readiness claim
 - production web/API build: PASS WITH WARNINGS
 - Capacitor plugin inventory: PASS
@@ -53,6 +55,8 @@ macOS session produced and verified a signed App Store archive:
 - profile: `PeacePad App Store 2026`
 - profile UUID: `c8078374-c73c-4a25-8dbb-f5699c0fc802`
 - embedded SDK privacy manifests: `2`
+- required-reason API static preflight: no known-family matches across the app
+  and five embedded framework executables; heuristic only
 - evidence directory: `.local/peacepad-ios-v101/e513851363c2`
 
 The gate explicitly confirmed that no binary was exported, uploaded, or

@@ -9,6 +9,11 @@ and no app-level manifest. That inventory does not replace this worksheet:
 App Store answers must still cover the hosted web view, server processing, and
 optional feature flows.
 
+The focused privacy, reviewer-session, consent, notification, and account
+deletion regression suite passed `7/7` files and `51/51` tests on 2026-08-04.
+This is automated contract evidence; device and production-data lifecycle
+checks remain separate gates.
+
 Complete this worksheet against the deployed production runtime and the exact
 submitted binary. App Privacy answers must cover PeacePad, its hosted web view,
 server processing, and every included or invoked third-party SDK. When a row is
