@@ -62,16 +62,17 @@ and `NOT STARTED`.
 | --- | --- | --- |
 | TypeScript | AUTOMATED VERIFIED | passed |
 | Guardrails | AUTOMATED VERIFIED | passed |
-| Jest/RNTL | AUTOMATED VERIFIED | 24 suites / 133 tests |
+| Jest/RNTL | AUTOMATED VERIFIED | 25 suites / 137 tests |
 | Embedded PostgreSQL | AUTOMATED VERIFIED | migration, constraints, invitation acceptance, grant, and audit chain passed |
-| Coverage | AUTOMATED VERIFIED | 86.02 / 80.19 / 80.59 / 89.04 |
+| Coverage | AUTOMATED VERIFIED | 86.09 / 80.31 / 80.64 / 89.10 |
 | Primary navigation roles and selected state | AUTOMATED VERIFIED | five named tabs; exactly one selected |
 | Invitation and calendar selector semantics | AUTOMATED VERIFIED | named tabs expose selected state |
 | Calendar layer controls do not depend on colour | AUTOMATED VERIFIED | named checkbox and sharing button states |
 | Message Check disclosure and opt-out semantics | AUTOMATED VERIFIED | expanded state and named opt-out control |
 | Core interactive target sizes | AUTOMATED VERIFIED | 44-point compact controls; 48-point primary/navigation controls |
 | Dynamic Type not disabled | AUTOMATED VERIFIED | release guard rejects `allowFontScaling={false}` |
-| VoiceOver and large-text layout | NOT STARTED | requires controlled Simulator and real-device evidence |
+| Large-text adaptive layout | AUTOMATED VERIFIED | 1.6x rendered tests stack Home and enlarge two-line navigation |
+| VoiceOver and 200% text visual pass | NOT STARTED | requires controlled Simulator and real-device evidence |
 | Expo config | AUTOMATED VERIFIED | lab bundle; diagnostics/writes false |
 | Expo Doctor | BLOCKED | 17/18; app React 19 and monorepo-root React 18 duplicate |
 | Expo Doctor (standalone native install) | AUTOMATED VERIFIED | 18/18 with a clean temporary npm install outside the monorepo |

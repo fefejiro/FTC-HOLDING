@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Image, Pressable, Share, StyleSheet, Text, TextInput, View } from "react-native";
+import { Image, Pressable, Share, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
 import { InvitationQr } from "../components/InvitationQr";
 import { LabButton } from "../components/LabButton";
 import type { LabScreen } from "../screens";
 import { useLabState } from "../state/LabState";
-import { colors, spacing, typography } from "../theme";
+import { colors, spacing, typography, usesLargeTextLayout } from "../theme";
 import { useCoordinationState, type CalendarView } from "./CoordinationState";
 
 type Navigate = (screen: LabScreen) => void;
@@ -116,6 +116,7 @@ function CalendarViewPanel({
 }
 
 export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
+  const largeText = usesLargeTextLayout(useWindowDimensions().fontScale);
   const { binder, evidence, timelineEntry } = useLabState();
   const { events, invitationGrant, sentMessages } = useCoordinationState();
   const recordCount = [binder, evidence, timelineEntry].filter(Boolean).length;
@@ -137,14 +138,14 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
         </View>
       </View>
 
-      <View style={styles.actionGrid}>
+      <View style={[styles.actionGrid, largeText ? styles.stack : null]}>
         {actions.map((action) => (
           <Pressable
             accessibilityLabel={action.label}
             accessibilityRole="button"
             key={action.label}
             onPress={() => setScreen(action.route)}
-            style={({ pressed }) => [styles.actionCard, pressed ? styles.pressed : null]}
+            style={({ pressed }) => [styles.actionCard, largeText ? styles.actionCardLargeText : null, pressed ? styles.pressed : null]}
           >
             <Text style={styles.actionTitle}>{action.label}</Text>
             <Text style={styles.caption}>{action.detail}</Text>
@@ -331,6 +332,7 @@ export function InvitationScreen({ initialCode }: { initialCode?: string }) {
 }
 
 export function CalendarScreen() {
+  const largeText = usesLargeTextLayout(useWindowDimensions().fontScale);
   const {
     addEvent,
     calendarView,
@@ -384,7 +386,7 @@ export function CalendarScreen() {
           const visible = visibleLayerIds.includes(layer.id);
           const shared = layer.visibility.scope !== "private";
           return (
-            <View key={layer.id} style={styles.layerRow}>
+            <View key={layer.id} style={[styles.layerRow, largeText ? styles.layerRowLargeText : null]}>
               <Pressable
                 accessibilityLabel={`${visible ? "Hide" : "Show"} ${layer.name}`}
                 accessibilityRole="checkbox"
@@ -472,6 +474,7 @@ export function CalendarScreen() {
 }
 
 export function MessagesScreen() {
+  const largeText = usesLargeTextLayout(useWindowDimensions().fontScale);
   const {
     checkMessage,
     messageCheckBusy,
@@ -511,7 +514,7 @@ export function MessagesScreen() {
           ) : null}
         </View>
       ) : (
-        <View style={styles.enabledRow}>
+        <View style={[styles.enabledRow, largeText ? styles.enabledRowLargeText : null]}>
           <Text style={styles.successText}>Message Check on</Text>
           <Pressable
             accessibilityLabel="Turn off Message Check"
@@ -632,6 +635,7 @@ const styles = StyleSheet.create({
   logo: { height: 64, width: 64 },
   actionGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
   actionCard: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 22, borderWidth: 1, gap: spacing.sm, justifyContent: "center", minHeight: 88, minWidth: "46%", padding: spacing.lg, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 1 },
+  actionCardLargeText: { minWidth: "100%", width: "100%" },
   actionTitle: { ...typography.subheading, color: colors.text },
   pressed: { opacity: 0.72 },
   summaryCard: { backgroundColor: colors.brand, borderRadius: 24, gap: spacing.sm, padding: spacing.lg },
@@ -666,6 +670,7 @@ const styles = StyleSheet.create({
   scheduleContent: { flex: 1, gap: spacing.xs },
   scheduleEvent: { backgroundColor: colors.brandSoft, borderLeftColor: colors.brand, borderLeftWidth: 3, borderRadius: 12, gap: 2, padding: spacing.sm },
   layerRow: { alignItems: "center", borderTopColor: colors.border, borderTopWidth: 1, flexDirection: "row", gap: spacing.sm, paddingTop: spacing.md },
+  layerRowLargeText: { alignItems: "stretch", flexDirection: "column" },
   layerIdentity: { alignItems: "center", flex: 1, flexDirection: "row", gap: spacing.md, minHeight: 44 },
   layerCopy: { flex: 1 },
   layerDot: { borderRadius: 999, height: 16, width: 16 },
@@ -679,6 +684,7 @@ const styles = StyleSheet.create({
   chipText: { ...typography.caption, color: colors.muted, fontWeight: "700" },
   chipTextActive: { color: colors.white },
   enabledRow: { alignItems: "center", backgroundColor: "#E9F9F4", borderRadius: 18, flexDirection: "row", justifyContent: "space-between", padding: spacing.md },
+  enabledRowLargeText: { alignItems: "stretch", flexDirection: "column", gap: spacing.sm },
   successText: { ...typography.body, color: "#087A64", fontWeight: "800" },
   link: { ...typography.body, color: colors.brand, fontWeight: "800", textAlign: "center" },
   linkButton: { alignItems: "center", justifyContent: "center", minHeight: 44, paddingHorizontal: spacing.sm },

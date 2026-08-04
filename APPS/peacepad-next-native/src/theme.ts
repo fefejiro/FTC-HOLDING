@@ -19,6 +19,12 @@ export const spacing = {
   xl: 28
 };
 
+export const largeTextScaleThreshold = 1.35;
+
+export function usesLargeTextLayout(fontScale: number): boolean {
+  return Number.isFinite(fontScale) && fontScale >= largeTextScaleThreshold;
+}
+
 export const typography = {
   title: {
     fontSize: 34,

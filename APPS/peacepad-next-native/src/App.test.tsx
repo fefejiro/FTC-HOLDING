@@ -1,12 +1,24 @@
 import React from "react";
 import { getStateFromPath } from "@react-navigation/native";
-import { Share } from "react-native";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { Dimensions, Share } from "react-native";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { peacePadLinking, PeacePadLabApp, resolveLabStartScreen } from "./App";
 import { SyntheticCoordinationApi } from "./api/SyntheticCoordinationApi";
 import { InvitationScreen } from "./coordination/CoordinationScreens";
 import { CoordinationStateProvider, resolveCalendarStartView, type CalendarView } from "./coordination/CoordinationState";
 import { LabStateProvider } from "./state/LabState";
+
+function setFontScale(fontScale: number) {
+  act(() => {
+    Dimensions.set({
+      screen: { fontScale, height: 844, scale: 3, width: 390 },
+      window: { fontScale, height: 844, scale: 3, width: 390 }
+    });
+  });
+}
+
+beforeEach(() => setFontScale(1));
+afterEach(() => setFontScale(1));
 
 function createTestApi() {
   return new SyntheticCoordinationApi([{
@@ -55,6 +67,14 @@ describe("PeacePad task navigation", () => {
     renderApp();
     fireEvent.press(screen.getByLabelText(label));
     expect(screen.getByText(expected)).toBeOnTheScreen();
+  });
+
+  it("stacks Home actions at large Dynamic Type sizes", () => {
+    setFontScale(1.6);
+
+    renderApp();
+    expect(screen.getByRole("button", { name: "Send a message" })).toHaveStyle({ minWidth: "100%", width: "100%" });
+
   });
 
   it("exposes a single selected primary tab", () => {

@@ -1,6 +1,6 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, spacing, typography } from "../theme";
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { colors, spacing, typography, usesLargeTextLayout } from "../theme";
 
 export type PrimaryTaskScreen = "home" | "messages" | "calendar" | "records" | "more";
 
@@ -19,8 +19,10 @@ export function TaskNavigation({
   active: PrimaryTaskScreen;
   onSelect: (screen: PrimaryTaskScreen) => void;
 }) {
+  const largeText = usesLargeTextLayout(useWindowDimensions().fontScale);
+
   return (
-    <View accessibilityLabel="Primary navigation" style={styles.bar}>
+    <View accessibilityLabel="Primary navigation" style={[styles.bar, largeText ? styles.barLargeText : null]}>
       {tasks.map((task) => {
         const selected = task.id === active;
         return (
@@ -30,10 +32,10 @@ export function TaskNavigation({
             accessibilityState={{ selected }}
             key={task.id}
             onPress={() => onSelect(task.id)}
-            style={({ pressed }) => [styles.item, pressed ? styles.pressed : null]}
+            style={({ pressed }) => [styles.item, largeText ? styles.itemLargeText : null, pressed ? styles.pressed : null]}
           >
             <Text style={[styles.symbol, selected ? styles.selected : null]}>{task.symbol}</Text>
-            <Text style={[styles.label, selected ? styles.selected : null]} numberOfLines={1}>{task.label}</Text>
+            <Text style={[styles.label, selected ? styles.selected : null]} numberOfLines={largeText ? 2 : 1}>{task.label}</Text>
           </Pressable>
         );
       })}
@@ -53,6 +55,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
     paddingTop: spacing.sm
   },
+  barLargeText: { paddingTop: spacing.md },
   item: {
     alignItems: "center",
     flex: 1,
@@ -60,6 +63,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     justifyContent: "center"
   },
+  itemLargeText: { minHeight: 68 },
   pressed: { opacity: 0.65 },
   symbol: { color: colors.muted, fontSize: 20, fontWeight: "800" },
   label: { ...typography.caption, color: colors.muted, fontSize: 10, fontWeight: "700" },
