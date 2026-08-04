@@ -63,9 +63,15 @@ verifies database privacy constraints and the create, resolve, accept, grant,
 and hash-linked audit path. It is not evidence of network/TLS behavior,
 least-privilege runtime roles, backups, or multi-process concurrency.
 
+The same proof runs the dependency-injected staging host over a real loopback
+TCP socket. It verifies health/readiness, strict origin handling, bounded JSON,
+redacted logs, two fictional bearer sessions, and acceptance after the HTTP
+host is stopped and recreated. The database remains alive during that host
+restart; managed-database restart and failover remain deployment gates.
+
 ## Dependency gate
 
-TypeScript, guardrails, all 123 Jest tests, embedded PostgreSQL verification,
+TypeScript, guardrails, all 127 Jest tests, embedded PostgreSQL and HTTP restart verification,
 Expo config, and an iOS production export pass. The shared monorepo Expo Doctor
 run is 17/18 because web workspaces expose
 React 18 above the native workspace's React 19; a clean standalone native npm

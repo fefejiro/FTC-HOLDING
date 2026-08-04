@@ -37,6 +37,9 @@ and `NOT STARTED`.
 | Postgres migration executes idempotently | AUTOMATED VERIFIED | `npm run test:sql` against disposable embedded PostgreSQL |
 | Database rejects invalid regions/plaintext invitation codes | AUTOMATED VERIFIED | embedded PostgreSQL constraint proof |
 | Postgres create/resolve/accept/grant/audit transaction | AUTOMATED VERIFIED | embedded PostgreSQL repository integration proof |
+| HTTP create/resolve/restart/accept lifecycle | AUTOMATED VERIFIED | real loopback TCP host backed by embedded PostgreSQL |
+| HTTP origin/media/body/readiness boundaries | AUTOMATED VERIFIED | focused host regression tests |
+| HTTP logs exclude tokens and invitation codes | AUTOMATED VERIFIED | log-redaction assertions |
 | Shared rate-limit keys are hashed before persistence | AUTOMATED VERIFIED | Postgres limiter test |
 | Trusted bearer session ignores actor spoofing headers | AUTOMATED VERIFIED | HTTP bridge test |
 | Runtime rejects non-staging service origins | AUTOMATED VERIFIED | runtime factory tests |
@@ -59,15 +62,16 @@ and `NOT STARTED`.
 | --- | --- | --- |
 | TypeScript | AUTOMATED VERIFIED | passed |
 | Guardrails | AUTOMATED VERIFIED | passed |
-| Jest/RNTL | AUTOMATED VERIFIED | 22 suites / 123 tests |
+| Jest/RNTL | AUTOMATED VERIFIED | 23 suites / 127 tests |
 | Embedded PostgreSQL | AUTOMATED VERIFIED | migration, constraints, invitation acceptance, grant, and audit chain passed |
-| Coverage | AUTOMATED VERIFIED | 85.29 / 80.06 / 79.74 / 88.42 |
+| Coverage | AUTOMATED VERIFIED | 85.87 / 80.08 / 80.09 / 88.95 |
 | Expo config | AUTOMATED VERIFIED | lab bundle; diagnostics/writes false |
 | Expo Doctor | BLOCKED | 17/18; app React 19 and monorepo-root React 18 duplicate |
 | Expo Doctor (standalone native install) | AUTOMATED VERIFIED | 18/18 with a clean temporary npm install outside the monorepo |
 | iOS export | AUTOMATED VERIFIED | 846 modules |
-| Local staging host health | AUTOMATED VERIFIED | `/health` 200 |
+| Local staging host health | AUTOMATED VERIFIED | `/health` and database-backed `/readyz` 200 over real TCP |
 | Readiness without database | AUTOMATED VERIFIED | `/readyz` fails closed with 500 |
+| Host restart with durable resolution claim | AUTOMATED VERIFIED | resolve before restart; accept after restart passed |
 | Standalone production dependency audit | BLOCKED | 11 inherited Expo toolchain advisories: 1 high, 10 moderate, 0 critical; breaking Expo 57 force-upgrade rejected |
 | Diff/secret checks | AUTOMATED VERIFIED | passed |
 | Native lab GitHub workflow | BLOCKED | GitHub account billing lock prevented job start; local isolated checks passed |

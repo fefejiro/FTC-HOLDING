@@ -34,6 +34,7 @@ approved Capacitor app, production data/API, App Store record, and
 | Shared staging rate limiter | AUTOMATED VERIFIED | Atomic Postgres upsert contract; not deployed |
 | Trusted staging session boundary | AUTOMATED VERIFIED | Bearer authenticator bridge ignores spoofed actor headers |
 | Staging host health/fail-closed readiness | AUTOMATED VERIFIED | Local `/health` returned 200; `/readyz` returned 500 with the database intentionally unavailable |
+| Real HTTP invitation lifecycle and host restart | AUTOMATED VERIFIED | Loopback create/resolve, host restart, accept, persisted grant/audit, CORS and log-redaction proof |
 | Persistent staging deployment | NOT STARTED | Requires isolated database/service provisioning and secret injection |
 
 ## Verification
@@ -41,9 +42,9 @@ approved Capacitor app, production data/API, App Store record, and
 ```text
 guardrails       passed
 typecheck        passed
-Jest/RNTL        22 suites / 123 tests passed
-embedded SQL     migration, constraints, invitation acceptance, grant, audit passed
-coverage         85.29 statements / 80.06 branches / 79.74 functions / 88.42 lines
+Jest/RNTL        23 suites / 127 tests passed
+embedded SQL     migration, constraints, HTTP restart, acceptance, grant, audit passed
+coverage         85.87 statements / 80.08 branches / 80.09 functions / 88.95 lines
 Expo Doctor      17/18 in monorepo; isolated native install 18/18
 Expo config      PeacePad; ca.peacepad.nextnative.lab; diagnostics/writes false
 iOS export       passed; 846 modules bundled
@@ -120,6 +121,10 @@ commit and are not relabelled as current evidence.
   origins/database/session configuration, exposes health/readiness endpoints,
   bounds JSON bodies, applies strict CORS, and logs no request bodies or tokens.
   It does not auto-apply migrations.
+- The HTTP host is dependency-injected and verified over a real loopback TCP
+  socket. A fictional owner creates an invitation, a fictional recipient
+  resolves it, the host restarts, and acceptance succeeds from the persisted
+  resolution claim. This is not a managed database failover or load test.
 - The invitation handler core now verifies trusted actors, family permission,
   region/version headers, idempotency, peppered code hashes, expiry, single
   use, resolution claims, local rate limits, and hash-linked audit events.
@@ -174,10 +179,10 @@ commit and are not relabelled as current evidence.
 | Layered calendar product flow | 65% |
 | Per-chat Message Check | 70% |
 | Typed staging compatibility client | 75% |
-| Staging invitation server core | 74% |
-| Automated verification | 94% |
+| Staging invitation server core | 80% |
+| Automated verification | 95% |
 | Current device verification | 82% |
-| Overall production-native v2 | 36% |
+| Overall production-native v2 | 38% |
 
 ## Next best move
 

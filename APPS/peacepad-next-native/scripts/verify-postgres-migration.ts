@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { webcrypto } from "node:crypto";
 import { readFileSync } from "node:fs";
+import type { Server } from "node:http";
 import path from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { createWriteContext } from "../src/domain/v2";
@@ -15,6 +17,8 @@ import {
   type SqlPool,
   type SqlResult
 } from "../src/staging/PostgresInvitationStore";
+import { createStagingHttpServer } from "../src/staging/StagingHttpServer";
+import { createStagingInvitationRuntime } from "../src/staging/createStagingInvitationRuntime";
 
 const migration = readFileSync(
   path.resolve(process.cwd(), "staging/migrations/0001_invitation_slice.sql"),
@@ -83,6 +87,19 @@ const expectDatabaseFailure = async (work: () => Promise<unknown>, label: string
   }
   assert.equal(failed, true, `${label} must be rejected by a database check constraint`);
 };
+
+const listen = (server: Server) => new Promise<string>((resolve, reject) => {
+  server.once("error", reject);
+  server.listen(0, "127.0.0.1", () => {
+    const address = server.address();
+    if (!address || typeof address === "string") return reject(new Error("HTTP proof did not receive a TCP port."));
+    resolve(`http://127.0.0.1:${address.port}`);
+  });
+});
+
+const close = (server: Server) => new Promise<void>((resolve, reject) => {
+  server.close((error) => error ? reject(error) : resolve());
+});
 
 async function verify() {
   const database = new PGlite();
@@ -194,7 +211,109 @@ async function verify() {
     assert.equal(audit.rows[0]?.previous_event_hash, null);
     assert.ok(audit.rows[1]?.previous_event_hash);
 
-    process.stdout.write("Embedded PostgreSQL verification passed: migration, constraints, invitation acceptance, grant, and audit chain.\n");
+    const ownerToken = "fictional-owner-session";
+    const recipientToken = "fictional-recipient-session";
+    const authenticator = {
+      authenticate: async (token: string) => token === ownerToken
+        ? owner
+        : token === recipientToken ? recipient : undefined
+    };
+    const createRuntime = () => createStagingInvitationRuntime({
+      runtimeEnvironment: "staging",
+      serviceOrigin: "http://127.0.0.1",
+      invitationPepper: "fictional-http-invitation-pepper",
+      rateLimitPepper: "fictional-http-rate-limit-pepper",
+      idempotencyPepper: "fictional-http-idempotency-pepper",
+      sqlPool: pool,
+      authenticator,
+      directory: { familyName: async (id) => id === "family-1" ? "Morgan family" : undefined },
+      subtle: webcrypto.subtle
+    });
+    const logs: string[] = [];
+    const logger = {
+      info: (message?: unknown) => { logs.push(String(message)); },
+      error: (message?: unknown) => { logs.push(String(message)); }
+    };
+    const createHttpServer = () => createStagingHttpServer({
+      serviceOrigin: "http://127.0.0.1",
+      appOrigin: "https://native.staging.peacepad.ca",
+      bridge: createRuntime().bridge,
+      readiness: async () => { await pool.query("SELECT 1"); },
+      logger
+    });
+    const headersFor = (token: string, idempotencyKey: string, version?: number) => ({
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      "Idempotency-Key": idempotencyKey,
+      Origin: "https://native.staging.peacepad.ca",
+      "X-PeacePad-Region": "ca",
+      "X-PeacePad-Schema-Version": "2.0",
+      ...(version === undefined ? {} : { "If-Match": String(version) })
+    });
+
+    let httpServer = createHttpServer();
+    let baseUrl = await listen(httpServer);
+    const health = await fetch(`${baseUrl}/health`);
+    const readiness = await fetch(`${baseUrl}/readyz`);
+    assert.equal(health.status, 200);
+    assert.equal(readiness.status, 200);
+
+    const deniedOrigin = await fetch(`${baseUrl}/api/v2/invitations`, {
+      method: "POST",
+      headers: { ...headersFor(ownerToken, "http-denied-origin"), Origin: "https://not-peacepad.example" },
+      body: JSON.stringify({})
+    });
+    assert.equal(deniedOrigin.status, 403);
+
+    const createdResponse = await fetch(`${baseUrl}/api/v2/invitations`, {
+      method: "POST",
+      headers: headersFor(ownerToken, "http-create"),
+      body: JSON.stringify({
+        familyCircleId: "family-1",
+        invitedRole: "parent",
+        permissions: ["messages:read", "calendar:read"],
+        expiresInHours: 24
+      })
+    });
+    assert.equal(createdResponse.status, 201);
+    const httpCreated = await createdResponse.json() as {
+      code: string;
+      invitation: { id: string };
+    };
+
+    const resolvedResponse = await fetch(`${baseUrl}/api/v2/invitations/resolve`, {
+      method: "POST",
+      headers: headersFor(recipientToken, "http-resolve"),
+      body: JSON.stringify({ code: httpCreated.code })
+    });
+    assert.equal(resolvedResponse.status, 200);
+
+    await close(httpServer);
+    httpServer = createHttpServer();
+    baseUrl = await listen(httpServer);
+    try {
+      const acceptedResponse = await fetch(
+        `${baseUrl}/api/v2/invitations/${encodeURIComponent(httpCreated.invitation.id)}/accept`,
+        {
+          method: "POST",
+          headers: headersFor(recipientToken, "http-accept", 1),
+          body: JSON.stringify({})
+        }
+      );
+      assert.equal(acceptedResponse.status, 200);
+      const acceptedGrant = await acceptedResponse.json() as { identityId: string };
+      assert.equal(acceptedGrant.identityId, recipient.identityId);
+    } finally {
+      await close(httpServer);
+    }
+    const serializedLogs = logs.join("\n");
+    assert.equal(serializedLogs.includes(ownerToken), false);
+    assert.equal(serializedLogs.includes(recipientToken), false);
+    assert.equal(serializedLogs.includes(httpCreated.code), false);
+
+    process.stdout.write(
+      "Embedded PostgreSQL and HTTP restart verification passed: migration, constraints, invitation acceptance, grant, and audit chain.\n"
+    );
   } finally {
     await database.close();
   }
