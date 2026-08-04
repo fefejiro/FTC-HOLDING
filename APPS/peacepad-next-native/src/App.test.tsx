@@ -5,7 +5,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react-nativ
 import { peacePadLinking, PeacePadLabApp, resolveLabStartScreen } from "./App";
 import { SyntheticCoordinationApi } from "./api/SyntheticCoordinationApi";
 import { InvitationScreen } from "./coordination/CoordinationScreens";
-import { CoordinationStateProvider } from "./coordination/CoordinationState";
+import { CoordinationStateProvider, resolveCalendarStartView, type CalendarView } from "./coordination/CoordinationState";
 import { LabStateProvider } from "./state/LabState";
 
 function createTestApi() {
@@ -22,10 +22,10 @@ function createTestApi() {
   }]);
 }
 
-function renderApp(startScreen = "home") {
+function renderApp(startScreen = "home", initialCalendarView?: CalendarView) {
   const api = createTestApi();
   return render(
-    <CoordinationStateProvider api={api}>
+    <CoordinationStateProvider api={api} initialCalendarView={initialCalendarView}>
       <LabStateProvider>
         <PeacePadLabApp startScreen={startScreen} />
       </LabStateProvider>
@@ -132,6 +132,15 @@ describe("secure invitation flow", () => {
 });
 
 describe("calendar coordination", () => {
+  it("supports deterministic lab calendar proof starts and safely falls back", () => {
+    expect(resolveCalendarStartView("week")).toBe("week");
+    expect(resolveCalendarStartView("day")).toBe("day");
+    expect(resolveCalendarStartView("unsupported")).toBe("month");
+
+    renderApp("calendar", "week");
+    expect(screen.getByLabelText("week calendar")).toBeOnTheScreen();
+  });
+
   it("starts private, confirms sharing, switches views, and creates an event", async () => {
     renderApp("calendar");
     expect(screen.getByLabelText("month calendar")).toBeOnTheScreen();

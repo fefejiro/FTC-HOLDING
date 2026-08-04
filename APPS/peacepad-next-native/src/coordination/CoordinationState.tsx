@@ -16,7 +16,15 @@ import {
   type ScheduleEvent
 } from "../domain/v2";
 
+declare const process: {
+  env?: Record<string, string | undefined>;
+};
+
 export type CalendarView = "month" | "week" | "day";
+
+export function resolveCalendarStartView(value?: string): CalendarView {
+  return value === "week" || value === "day" ? value : "month";
+}
 
 export type SentMessage = Readonly<{
   id: string;
@@ -93,10 +101,12 @@ function invitationMessage(error: unknown): string {
 
 export function CoordinationStateProvider({
   api = createDefaultApi(),
-  children
+  children,
+  initialCalendarView = resolveCalendarStartView(process.env?.EXPO_PUBLIC_PEACEPAD_LAB_START_CALENDAR_VIEW)
 }: {
   api?: PeacePadCoordinationApi;
   children: ReactNode;
+  initialCalendarView?: CalendarView;
 }) {
   const [invitationCode, setInvitationCodeState] = useState("");
   const [createdInvitation, setCreatedInvitation] = useState<CreatedInvitation>();
@@ -104,7 +114,7 @@ export function CoordinationStateProvider({
   const [invitationGrant, setInvitationGrant] = useState<ParticipantGrant>();
   const [invitationError, setInvitationError] = useState<string>();
   const [invitationBusy, setInvitationBusy] = useState(false);
-  const [calendarView, setCalendarView] = useState<CalendarView>("month");
+  const [calendarView, setCalendarView] = useState<CalendarView>(initialCalendarView);
   const [layers, setLayers] = useState<readonly CalendarLayer[]>(defaultCalendarLayers);
   const [visibleLayerIds, setVisibleLayerIds] = useState<readonly string[]>(defaultCalendarLayers.map((layer) => layer.id));
   const [events, setEvents] = useState<readonly ScheduleEvent[]>([]);
