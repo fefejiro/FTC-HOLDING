@@ -22,7 +22,7 @@ name: PeacePad calendar sharing simulator proof
 - tapOn: "Confirm sharing"
 - scrollUntilVisible:
     element:
-      text: "Shared with family"
+      text: "Make private Parenting Time"
     direction: UP
     centerElement: true
 - assertVisible: "Make private Parenting Time"
