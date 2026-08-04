@@ -27,7 +27,7 @@ approved Capacitor app, production data/API, App Store record, and
 | Original draft preserved; no automatic send | AUTOMATED VERIFIED | explicit-send tests |
 | Third-party AI consent separate/off | AUTOMATED VERIFIED | consent and preference tests |
 | Current quiet-premium Simulator evidence | SIMULATOR VERIFIED | iPhone 17 / iOS 26.5 Month, Week, and Day evidence captured on `e0936d2e` |
-| Maestro invitation and calendar-sharing flows | IMPLEMENTED | `e2e/maestro`; deterministic Expo URL supplied at runtime |
+| Maestro invitation and calendar-sharing flows | SIMULATOR VERIFIED | iPhone 17 Pro / iOS 26.5; `docs/evidence/maestro-2026-08-04` |
 | Real-iPhone staging evidence | NOT STARTED | Requires deployed staging slice and controlled device session |
 | Staging `/api/v2` invitation handler core | AUTOMATED VERIFIED | Reviewed Node host plus framework-neutral route/service tests; not deployed |
 | Postgres staging repository and migration | AUTOMATED VERIFIED | Transaction/rollback/CAS and durable resolution-claim tests; migration prepared but not applied |
@@ -41,7 +41,7 @@ approved Capacitor app, production data/API, App Store record, and
 ```text
 guardrails       passed
 typecheck        passed
-Jest/RNTL        21 suites / 121 tests passed
+Jest/RNTL        22 suites / 123 tests passed
 coverage         85.29 statements / 80.06 branches / 79.74 functions / 88.42 lines
 Expo Doctor      17/18 in monorepo; isolated native install 18/18
 Expo config      PeacePad; ca.peacepad.nextnative.lab; diagnostics/writes false
@@ -93,13 +93,16 @@ remained `ca.peacepad.nextnative.lab`, and production writes remained disabled.
 They remain historical evidence for the earlier shell and are not used as proof
 of the current calendar presentation.
 
-Calendar layer sharing and the current invitation-QR sender proof remain
-**BLOCKED** for new Simulator evidence. Maestro 2.8.0 connected to the iPhone 17
-Simulator and the checked-in flows opened the deterministic Expo URL, but Expo
-Go remained pinned to an earlier `useContext` red-screen state. On the permitted
-retry, the Maestro XCUITest cleanup also reported a SpringBoard crash. The
-standalone source at `66cd4108` was clean and isolated; no further simulator
-retries were made. Neither interaction is marked Simulator verified.
+The screenshots under `docs/evidence/maestro-2026-08-04` prove the current
+invitation sender and calendar-layer sharing journeys on an iPhone 17 Pro
+Simulator running iOS 26.5. Maestro 2.8.0 created invitation code `P00001`,
+verified the scannable QR accessibility element, scrolled the calendar action
+fully into view, confirmed sharing, and verified the resulting **Make private
+Parenting Time** control. The product runtime was prepared from clean source
+commit `7f01845c`; the corrected proof definitions were executed at
+`afefbe31`. The bundle remained `ca.peacepad.nextnative.lab`, diagnostics and
+production writes remained disabled, and every value was fictional and
+session-only.
 
 The six screenshots under
 `docs/evidence/premium-vertical-slice-2026-07-31` prove the earlier records
@@ -134,18 +137,18 @@ commit and are not relabelled as current evidence.
   not represented by the staging schema.
 - The product adapter is memory-only; only the earlier guest session uses
   SecureStore.
-- Invitation creation, native share-sheet delivery, deep-link prefill,
-  acceptance, revocation, and scannable QR presentation are automated-verified.
-  Device proof for the new sender flow remains open.
+- Invitation creation and scannable QR presentation are Simulator verified.
+  Native share-sheet delivery, deep-link handoff, acceptance, and revocation
+  remain automated-verified and still require a real-device pass.
 - Calendar view selection/layers/events and Month/Week/Day presentations are
   implemented for the fixed fictional August 2026 fixture. Date navigation,
   recurrence, offline behavior, and production persistence are later gates.
 - Message Check is rule-based and does not call third-party AI.
-- Calendar layer-sharing Simulator proof and all real-iPhone staging evidence
-  remain required.
-- Reusable Maestro flows now exist for invitation QR and calendar sharing. The
-  Mac has a user-local Temurin 17 runtime and Maestro 2.8.0, but the current
-  iOS 26.5 Simulator session must be reset before those flows are rerun.
+- Calendar layer sharing is Simulator verified; all real-iPhone staging
+  evidence remains required.
+- Reusable Maestro flows now pass for invitation QR and calendar sharing. The
+  first-run bootstrap flow documents the one Expo Go onboarding tap that is not
+  exposed through the native accessibility hierarchy.
 - The shared monorepo Expo Doctor run is 17/18 because web workspaces expose
   React 18 above the native workspace's React 19. A clean standalone install of
   the native manifest passed Expo Doctor 18/18, confirming the native app's own
@@ -168,17 +171,14 @@ commit and are not relabelled as current evidence.
 | Typed staging compatibility client | 75% |
 | Staging invitation server core | 70% |
 | Automated verification | 94% |
-| Current device verification | 72% |
+| Current device verification | 82% |
 | Overall production-native v2 | 35% |
 
 ## Next best move
 
-Reset the disposable iPhone 17 Simulator/Expo Go session, then run the two
-checked-in Maestro flows once to capture the scannable invitation QR and
-calendar-sharing confirmation. If the simulator remains unstable, move the
-same checks to the real-iPhone staging pass instead of retrying remote input.
-After an explicit
-cost/hosting decision, provision one isolated staging database and service,
-apply the prepared migration, grant a least-privilege runtime role, and run live
-API checks. Do not expand into calling, billing, or production migration before
+Move the now-repeatable invitation and calendar journeys to one controlled
+real-iPhone staging pass. In parallel, make an explicit cost/hosting decision
+for one isolated staging database and service; after approval, apply the
+prepared migration, grant a least-privilege runtime role, and run live API
+checks. Do not expand into calling, billing, or production migration before
 those gates pass.

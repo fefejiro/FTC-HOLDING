@@ -56,7 +56,7 @@ and `NOT STARTED`.
 | --- | --- | --- |
 | TypeScript | AUTOMATED VERIFIED | passed |
 | Guardrails | AUTOMATED VERIFIED | passed |
-| Jest/RNTL | AUTOMATED VERIFIED | 21 suites / 121 tests |
+| Jest/RNTL | AUTOMATED VERIFIED | 22 suites / 123 tests |
 | Coverage | AUTOMATED VERIFIED | 85.29 / 80.06 / 79.74 / 88.42 |
 | Expo config | AUTOMATED VERIFIED | lab bundle; diagnostics/writes false |
 | Expo Doctor | BLOCKED | 17/18; app React 19 and monorepo-root React 18 duplicate |
@@ -67,7 +67,7 @@ and `NOT STARTED`.
 | Standalone production dependency audit | BLOCKED | 11 inherited Expo toolchain advisories: 1 high, 10 moderate, 0 critical; breaking Expo 57 force-upgrade rejected |
 | Diff/secret checks | AUTOMATED VERIFIED | passed |
 | Native lab GitHub workflow | BLOCKED | GitHub account billing lock prevented job start; local isolated checks passed |
-| Maestro invitation/calendar flows | IMPLEMENTED | Maestro 2.8.0 flow definitions added; current iOS 26.5 run blocked by stale Expo Go red screen and SpringBoard/XCUITest crash |
+| Maestro invitation/calendar flows | SIMULATOR VERIFIED | Maestro 2.8.0 passed both flows on disposable iPhone 17 Pro / iOS 26.5 Simulator |
 
 The path-scoped native workflow is
 `.github/workflows/peacepad-native-lab-gates.yml`. It is intentionally
@@ -82,21 +82,19 @@ PeacePad production service.
 | Invitation preview and acceptance | SIMULATOR VERIFIED |
 | Earlier Month/Week/Day selection on commit `02d19cf5` | SIMULATOR VERIFIED |
 | Current Month grid, Week schedule, and Day agenda | SIMULATOR VERIFIED |
-| Current invitation QR sender flow | BLOCKED |
-| Layer sharing | BLOCKED |
+| Current invitation QR sender flow | SIMULATOR VERIFIED |
+| Layer sharing | SIMULATOR VERIFIED |
 | Message Check opt-in, review, explicit send | SIMULATOR VERIFIED |
 | Real-iPhone staging pass | NOT STARTED |
 
 Current calendar evidence is in `docs/evidence/calendar-proof-2026-08-04` and
 was captured from an iPhone 17 Simulator running iOS 26.5 at source commit
 `e0936d2e`. It proves the current Month grid, Week schedule, and Day agenda with
-an honest fictional empty state. Automated tests prove view switching. Layer
-sharing remains automated-verified only because its visible Simulator control
-did not activate through the remote pointer after the permitted retry. The new
-Maestro flows connected to the iPhone 17 Simulator, but Expo Go remained pinned
-to an earlier `useContext` red screen and the retry ended with a
-SpringBoard/XCUITest cleanup crash. The device evidence gate therefore remains
-blocked rather than being inferred from automated tests.
+an honest fictional empty state. The additional evidence in
+`docs/evidence/maestro-2026-08-04` proves invitation QR creation and explicit
+calendar sharing on a disposable iPhone 17 Pro Simulator running iOS 26.5. The
+clean product runtime came from `7f01845c`; proof definitions ran at
+`afefbe31`. No historical screenshot was used as current evidence.
 
 The evidence in `docs/evidence/quiet-premium-2026-08-01` remains historical
 proof for Home, invitation, the earlier calendar selector, and Message Check on
@@ -128,9 +126,7 @@ The historical records screenshots in
 - Inject server-only peppers and connect a real staging session authenticator.
 - Run live concurrency, rollback, rate-limit, and audit-restoration tests.
 - Verify native share-sheet, deep-link, and scannable QR behavior on device.
-- Verify calendar layer sharing on Simulator or real iPhone.
-- Rerun `e2e/maestro` only after the disposable Simulator/Expo Go session is
-  reset; stop after one failure and move the proof to the real iPhone.
+- Repeat invitation creation/acceptance and calendar sharing on a real iPhone.
 - Run one real-iPhone staging pass with fictional accounts.
 - Complete accessibility, dark mode, dynamic type, offline, and weak-network
   matrices before any production migration decision.
