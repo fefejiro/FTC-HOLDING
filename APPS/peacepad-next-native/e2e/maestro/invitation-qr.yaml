@@ -1,0 +1,13 @@
+appId: host.exp.Exponent
+name: PeacePad invitation QR simulator proof
+---
+- openLink: ${EXPO_URL}
+- extendedWaitUntil:
+    visible: "Family connection"
+    timeout: 30000
+- tapOn: "Create invitation"
+- extendedWaitUntil:
+    visible: "Invitation ready"
+    timeout: 10000
+- assertVisible: "Scan to review access"
+- assertVisible: "P00001"

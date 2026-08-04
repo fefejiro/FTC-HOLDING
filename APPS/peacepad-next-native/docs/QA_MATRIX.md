@@ -67,6 +67,7 @@ and `NOT STARTED`.
 | Standalone production dependency audit | BLOCKED | 11 inherited Expo toolchain advisories: 1 high, 10 moderate, 0 critical; breaking Expo 57 force-upgrade rejected |
 | Diff/secret checks | AUTOMATED VERIFIED | passed |
 | Native lab GitHub workflow | BLOCKED | GitHub account billing lock prevented job start; local isolated checks passed |
+| Maestro invitation/calendar flows | IMPLEMENTED | Maestro 2.8.0 flow definitions added; current iOS 26.5 run blocked by stale Expo Go red screen and SpringBoard/XCUITest crash |
 
 The path-scoped native workflow is
 `.github/workflows/peacepad-native-lab-gates.yml`. It is intentionally
@@ -81,6 +82,7 @@ PeacePad production service.
 | Invitation preview and acceptance | SIMULATOR VERIFIED |
 | Earlier Month/Week/Day selection on commit `02d19cf5` | SIMULATOR VERIFIED |
 | Current Month grid, Week schedule, and Day agenda | SIMULATOR VERIFIED |
+| Current invitation QR sender flow | BLOCKED |
 | Layer sharing | BLOCKED |
 | Message Check opt-in, review, explicit send | SIMULATOR VERIFIED |
 | Real-iPhone staging pass | NOT STARTED |
@@ -90,7 +92,11 @@ was captured from an iPhone 17 Simulator running iOS 26.5 at source commit
 `e0936d2e`. It proves the current Month grid, Week schedule, and Day agenda with
 an honest fictional empty state. Automated tests prove view switching. Layer
 sharing remains automated-verified only because its visible Simulator control
-did not activate through the remote pointer after the permitted retry.
+did not activate through the remote pointer after the permitted retry. The new
+Maestro flows connected to the iPhone 17 Simulator, but Expo Go remained pinned
+to an earlier `useContext` red screen and the retry ended with a
+SpringBoard/XCUITest cleanup crash. The device evidence gate therefore remains
+blocked rather than being inferred from automated tests.
 
 The evidence in `docs/evidence/quiet-premium-2026-08-01` remains historical
 proof for Home, invitation, the earlier calendar selector, and Message Check on
@@ -123,6 +129,8 @@ The historical records screenshots in
 - Run live concurrency, rollback, rate-limit, and audit-restoration tests.
 - Verify native share-sheet, deep-link, and scannable QR behavior on device.
 - Verify calendar layer sharing on Simulator or real iPhone.
+- Rerun `e2e/maestro` only after the disposable Simulator/Expo Go session is
+  reset; stop after one failure and move the proof to the real iPhone.
 - Run one real-iPhone staging pass with fictional accounts.
 - Complete accessibility, dark mode, dynamic type, offline, and weak-network
   matrices before any production migration decision.

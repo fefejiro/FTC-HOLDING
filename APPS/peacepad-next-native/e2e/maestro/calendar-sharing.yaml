@@ -1,0 +1,13 @@
+appId: host.exp.Exponent
+name: PeacePad calendar sharing simulator proof
+---
+- openLink: ${EXPO_URL}
+- extendedWaitUntil:
+    visible: "Calendar"
+    timeout: 30000
+- tapOn: "Share Parenting Time"
+- assertVisible: "Share this calendar?"
+- tapOn: "Confirm sharing"
+- extendedWaitUntil:
+    visible: "Shared with family"
+    timeout: 10000

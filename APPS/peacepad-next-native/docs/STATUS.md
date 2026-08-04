@@ -27,6 +27,7 @@ approved Capacitor app, production data/API, App Store record, and
 | Original draft preserved; no automatic send | AUTOMATED VERIFIED | explicit-send tests |
 | Third-party AI consent separate/off | AUTOMATED VERIFIED | consent and preference tests |
 | Current quiet-premium Simulator evidence | SIMULATOR VERIFIED | iPhone 17 / iOS 26.5 Month, Week, and Day evidence captured on `e0936d2e` |
+| Maestro invitation and calendar-sharing flows | IMPLEMENTED | `e2e/maestro`; deterministic Expo URL supplied at runtime |
 | Real-iPhone staging evidence | NOT STARTED | Requires deployed staging slice and controlled device session |
 | Staging `/api/v2` invitation handler core | AUTOMATED VERIFIED | Reviewed Node host plus framework-neutral route/service tests; not deployed |
 | Postgres staging repository and migration | AUTOMATED VERIFIED | Transaction/rollback/CAS and durable resolution-claim tests; migration prepared but not applied |
@@ -92,10 +93,13 @@ remained `ca.peacepad.nextnative.lab`, and production writes remained disabled.
 They remain historical evidence for the earlier shell and are not used as proof
 of the current calendar presentation.
 
-Calendar layer sharing remains **BLOCKED** for Simulator evidence. The control
-was visible and its confirmation behavior is automated-verified, but the remote
-pointer did not activate that one control after the permitted retry. It is not
-marked Simulator verified.
+Calendar layer sharing and the current invitation-QR sender proof remain
+**BLOCKED** for new Simulator evidence. Maestro 2.8.0 connected to the iPhone 17
+Simulator and the checked-in flows opened the deterministic Expo URL, but Expo
+Go remained pinned to an earlier `useContext` red-screen state. On the permitted
+retry, the Maestro XCUITest cleanup also reported a SpringBoard crash. The
+standalone source at `66cd4108` was clean and isolated; no further simulator
+retries were made. Neither interaction is marked Simulator verified.
 
 The six screenshots under
 `docs/evidence/premium-vertical-slice-2026-07-31` prove the earlier records
@@ -139,6 +143,9 @@ commit and are not relabelled as current evidence.
 - Message Check is rule-based and does not call third-party AI.
 - Calendar layer-sharing Simulator proof and all real-iPhone staging evidence
   remain required.
+- Reusable Maestro flows now exist for invitation QR and calendar sharing. The
+  Mac has a user-local Temurin 17 runtime and Maestro 2.8.0, but the current
+  iOS 26.5 Simulator session must be reset before those flows are rerun.
 - The shared monorepo Expo Doctor run is 17/18 because web workspaces expose
   React 18 above the native workspace's React 19. A clean standalone install of
   the native manifest passed Expo Doctor 18/18, confirming the native app's own
@@ -166,8 +173,11 @@ commit and are not relabelled as current evidence.
 
 ## Next best move
 
-Capture device evidence for the scannable invitation QR and calendar sharing
-confirmation, then run the real-iPhone staging pass. After an explicit
+Reset the disposable iPhone 17 Simulator/Expo Go session, then run the two
+checked-in Maestro flows once to capture the scannable invitation QR and
+calendar-sharing confirmation. If the simulator remains unstable, move the
+same checks to the real-iPhone staging pass instead of retrying remote input.
+After an explicit
 cost/hosting decision, provision one isolated staging database and service,
 apply the prepared migration, grant a least-privilege runtime role, and run live
 API checks. Do not expand into calling, billing, or production migration before
