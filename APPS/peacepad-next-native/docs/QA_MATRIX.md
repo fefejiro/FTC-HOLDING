@@ -1,6 +1,6 @@
 # PeacePad Next Native QA Matrix
 
-Last updated: 2026-08-02
+Last updated: 2026-08-04
 
 Statuses: `IMPLEMENTED`, `AUTOMATED VERIFIED`, `SIMULATOR VERIFIED`, `BLOCKED`,
 and `NOT STARTED`.
@@ -56,8 +56,8 @@ and `NOT STARTED`.
 | --- | --- | --- |
 | TypeScript | AUTOMATED VERIFIED | passed |
 | Guardrails | AUTOMATED VERIFIED | passed |
-| Jest/RNTL | AUTOMATED VERIFIED | 20 suites / 119 tests |
-| Coverage | AUTOMATED VERIFIED | 85.04 / 79.86 / 79.48 / 88.24 |
+| Jest/RNTL | AUTOMATED VERIFIED | 21 suites / 121 tests |
+| Coverage | AUTOMATED VERIFIED | 85.29 / 80.06 / 79.74 / 88.42 |
 | Expo config | AUTOMATED VERIFIED | lab bundle; diagnostics/writes false |
 | Expo Doctor | BLOCKED | 17/18; app React 19 and monorepo-root React 18 duplicate |
 | Expo Doctor (standalone native install) | AUTOMATED VERIFIED | 18/18 with a clean temporary npm install outside the monorepo |
@@ -80,17 +80,21 @@ PeacePad production service.
 | Home | SIMULATOR VERIFIED |
 | Invitation preview and acceptance | SIMULATOR VERIFIED |
 | Earlier Month/Week/Day selection on commit `02d19cf5` | SIMULATOR VERIFIED |
-| Current Month grid, Week schedule, and Day agenda | BLOCKED |
+| Current Month grid, Week schedule, and Day agenda | SIMULATOR VERIFIED |
 | Layer sharing | BLOCKED |
 | Message Check opt-in, review, explicit send | SIMULATOR VERIFIED |
 | Real-iPhone staging pass | NOT STARTED |
 
-Current evidence is in `docs/evidence/quiet-premium-2026-08-01` and was
-captured from an iPhone 17 simulator running iOS 26.5 at source commit
-`02d19cf5`. It predates the current grid/schedule/agenda presentation and is not
-relabelled as proof of that change. Layer sharing is automated-verified, but its
-visible Simulator control did not activate through the remote pointer after
-the permitted retry.
+Current calendar evidence is in `docs/evidence/calendar-proof-2026-08-04` and
+was captured from an iPhone 17 Simulator running iOS 26.5 at source commit
+`e0936d2e`. It proves the current Month grid, Week schedule, and Day agenda with
+an honest fictional empty state. Automated tests prove view switching. Layer
+sharing remains automated-verified only because its visible Simulator control
+did not activate through the remote pointer after the permitted retry.
+
+The evidence in `docs/evidence/quiet-premium-2026-08-01` remains historical
+proof for Home, invitation, the earlier calendar selector, and Message Check on
+commit `02d19cf5`; it is not relabelled as current calendar evidence.
 
 The historical records screenshots in
 `docs/evidence/premium-vertical-slice-2026-07-31` remain valid only for commit
@@ -117,7 +121,7 @@ The historical records screenshots in
   least-privilege runtime role.
 - Inject server-only peppers and connect a real staging session authenticator.
 - Run live concurrency, rollback, rate-limit, and audit-restoration tests.
-- Verify native share-sheet and deep-link behavior on device; add scannable QR.
+- Verify native share-sheet, deep-link, and scannable QR behavior on device.
 - Verify calendar layer sharing on Simulator or real iPhone.
 - Run one real-iPhone staging pass with fictional accounts.
 - Complete accessibility, dark mode, dynamic type, offline, and weak-network

@@ -1,6 +1,6 @@
 # PeacePad Next Native Status
 
-Last updated: 2026-08-02
+Last updated: 2026-08-04
 
 ## Scope boundary
 
@@ -26,7 +26,7 @@ approved Capacitor app, production data/API, App Store record, and
 | Per-chat Message Check, default off | AUTOMATED VERIFIED | UI and adapter tests |
 | Original draft preserved; no automatic send | AUTOMATED VERIFIED | explicit-send tests |
 | Third-party AI consent separate/off | AUTOMATED VERIFIED | consent and preference tests |
-| Current quiet-premium Simulator evidence | BLOCKED | iPhone 17 / iOS 26.5 evidence exists for commit `02d19cf5`; the newer full calendar presentations require fresh screenshots |
+| Current quiet-premium Simulator evidence | SIMULATOR VERIFIED | iPhone 17 / iOS 26.5 Month, Week, and Day evidence captured on `e0936d2e` |
 | Real-iPhone staging evidence | NOT STARTED | Requires deployed staging slice and controlled device session |
 | Staging `/api/v2` invitation handler core | AUTOMATED VERIFIED | Reviewed Node host plus framework-neutral route/service tests; not deployed |
 | Postgres staging repository and migration | AUTOMATED VERIFIED | Transaction/rollback/CAS and durable resolution-claim tests; migration prepared but not applied |
@@ -40,8 +40,8 @@ approved Capacitor app, production data/API, App Store record, and
 ```text
 guardrails       passed
 typecheck        passed
-Jest/RNTL        20 suites / 119 tests passed
-coverage         85.04 statements / 79.86 branches / 79.48 functions / 88.24 lines
+Jest/RNTL        21 suites / 121 tests passed
+coverage         85.29 statements / 80.06 branches / 79.74 functions / 88.42 lines
 Expo Doctor      17/18 in monorepo; isolated native install 18/18
 Expo config      PeacePad; ca.peacepad.nextnative.lab; diagnostics/writes false
 iOS export       passed; 846 modules bundled
@@ -76,13 +76,21 @@ write was used.
 
 ## Simulator evidence boundary
 
+The screenshots under `docs/evidence/calendar-proof-2026-08-04` prove the
+current Month grid, seven-day Week schedule, and Day agenda on commit
+`e0936d2e`. They were captured from an iPhone 17 Simulator running iOS 26.5
+after the primary task chrome was simplified. The prepared source was clean,
+the bundle remained `ca.peacepad.nextnative.lab`, production writes remained
+disabled, and the empty calendar state was fictional and session-only.
+Automated interaction coverage separately proves view switching.
+
 The screenshots under `docs/evidence/quiet-premium-2026-08-01` prove the
 quiet-premium Home, invitation, earlier Month/Week/Day selection, and Message
 Check explicit-send journeys on commit `02d19cf5`. The simulator was an iPhone
 17 running iOS 26.5. All records and messages were fictional, the bundle
 remained `ca.peacepad.nextnative.lab`, and production writes remained disabled.
-They do not yet prove the newer calendar grid, seven-day schedule, or day
-agenda, so those presentations remain automated-verified only.
+They remain historical evidence for the earlier shell and are not used as proof
+of the current calendar presentation.
 
 Calendar layer sharing remains **BLOCKED** for Simulator evidence. The control
 was visible and its confirmation behavior is automated-verified, but the remote
@@ -123,8 +131,8 @@ commit and are not relabelled as current evidence.
 - The product adapter is memory-only; only the earlier guest session uses
   SecureStore.
 - Invitation creation, native share-sheet delivery, deep-link prefill,
-  acceptance, and revocation are automated-verified. Scannable QR presentation
-  and device proof for the new sender flow remain open.
+  acceptance, revocation, and scannable QR presentation are automated-verified.
+  Device proof for the new sender flow remains open.
 - Calendar view selection/layers/events and Month/Week/Day presentations are
   implemented for the fixed fictional August 2026 fixture. Date navigation,
   recurrence, offline behavior, and production persistence are later gates.
@@ -153,14 +161,14 @@ commit and are not relabelled as current evidence.
 | Typed staging compatibility client | 75% |
 | Staging invitation server core | 70% |
 | Automated verification | 94% |
-| Current device verification | 65% |
-| Overall production-native v2 | 34% |
+| Current device verification | 72% |
+| Overall production-native v2 | 35% |
 
 ## Next best move
 
-Capture one controlled current-calendar Simulator pass without retry loops,
-then add a scannable invitation QR and its accessibility/expiry proof. After an
-explicit cost/hosting decision, provision one isolated staging database and
-service, apply the prepared migration, grant a least-privilege runtime role,
-and run live API plus real-iPhone staging checks. Do not expand into calling,
-billing, or production migration before those gates pass.
+Capture device evidence for the scannable invitation QR and calendar sharing
+confirmation, then run the real-iPhone staging pass. After an explicit
+cost/hosting decision, provision one isolated staging database and service,
+apply the prepared migration, grant a least-privilege runtime role, and run live
+API checks. Do not expand into calling, billing, or production migration before
+those gates pass.
