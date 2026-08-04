@@ -27,13 +27,13 @@ The candidate combines the App Store metadata package from draft PR #166 with
 the dependency and CI hardening from draft PR #167. It does not include React
 Native lab work or new product features.
 
-Verified locally with Node.js 22.23.0:
+Verified locally with Node.js 22.23.0, including the quiet first-run regression:
 
 - App Store metadata validator: PASS
 - dependency threshold: PASS (`0` critical, `2` high, `9` moderate)
 - tracked-source secret scan and self-test: PASS
 - TypeScript: PASS
-- Vitest: PASS (`41/41` files, `181/181` tests)
+- Vitest: PASS (`42/42` files, `185/185` tests)
 - coverage generation: PASS; baseline measured, not a readiness claim
 - production web/API build: PASS WITH WARNINGS
 - Capacitor plugin inventory: PASS
@@ -42,8 +42,8 @@ Verified locally with Node.js 22.23.0:
 The generated main JavaScript chunk remains above the soft target. This is a
 recorded optimization defect, not a hidden hard-gate pass.
 
-The complete Mac gate was rerun on 2026-08-03 at exact commit
-`0f567b21e138642dec387b6a7b9244ba057c212f` with Xcode 26.5. The authenticated
+The complete Mac gate was rerun on 2026-08-04 at exact commit
+`e513851363c2ae9fe903404c426774020a9af6a0` with Xcode 26.5. The authenticated
 macOS session produced and verified a signed App Store archive:
 
 - archive identity: `1.0.1 (2)`
@@ -53,10 +53,25 @@ macOS session produced and verified a signed App Store archive:
 - profile: `PeacePad App Store 2026`
 - profile UUID: `c8078374-c73c-4a25-8dbb-f5699c0fc802`
 - embedded SDK privacy manifests: `2`
-- evidence directory: `.local/peacepad-ios-v101/0f567b21e138`
+- evidence directory: `.local/peacepad-ios-v101/e513851363c2`
 
 The gate explicitly confirmed that no binary was exported, uploaded, or
-submitted.
+submitted. A direct Cloudflare Pages preview then passed a synthetic browser
+journey from welcome through required consent to compose with optional AI
+processing off and no automatic What's New interruption. The verified two-file
+frontend delta was promoted to the documented `ftc-holding` Pages production
+project; live ownership verification identified asset
+`/assets/index-DQd33p3p.js`.
+
+The Capacitor production configuration intentionally loads
+`https://peacepad.ca`. Therefore the installed binary's visible web interface
+is controlled by the live Pages deployment, not solely by the packaged
+`dist/public` directory. After the production promotion, the exact Release
+simulator build was relaunched on iPhone 17 / iOS 26.5 and captured at the
+compose screen without the stale 1.0.9 modal. This is a combined binary-shell
+and live-web smoke, not proof that the packaged fallback client rendered.
+The retained screenshot is
+`.local/peacepad-ios-v101/e513851363c2/exact-build-live-web-after-fix.png`.
 
 ## Privacy-manifest boundary
 
@@ -106,7 +121,9 @@ Terminal session and independently verified afterward.
 - VERIFIED: signed Xcode archive on the Mac
 - BLOCKED: Xcode Organizer privacy report; the remote UI did not open the
   archive after one controlled retry
-- BLOCKED: exact-build iPhone and iPad screenshots
+- PARTIAL: exact Release simulator build launched on iPhone 17 / iOS 26.5 and
+  rendered the corrected live-web compose flow; full iPhone/iPad screenshot
+  sets remain incomplete
 - BLOCKED: controlled TestFlight device pass
 - BLOCKED: App Privacy reconciliation against the exact archive
 - BLOCKED: accessibility declaration backed by device evidence

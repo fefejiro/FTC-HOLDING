@@ -145,8 +145,10 @@ draft and does not yet clear version 1.0.1 for release.
 | English 1.0.1 metadata | PREPARED AND MACHINE-VALIDATED |
 | French Canadian metadata | DRAFT; HUMAN REVIEW REQUIRED |
 | Six-screen storyboard | PREPARED |
-| Signed 1.0.1 (2) archive | VERIFIED on Xcode 26.5 at commit `0f567b21e138642dec387b6a7b9244ba057c212f` |
-| Exact-build screenshots | BLOCKED; archive exists but device-size capture is not complete |
+| Signed 1.0.1 (2) archive | VERIFIED on Xcode 26.5 at commit `e513851363c2ae9fe903404c426774020a9af6a0` |
+| First-run regression | AUTOMATED VERIFIED; 42 files / 185 tests, preview and live synthetic browser smoke pass |
+| Production web shell | VERIFIED on Cloudflare Pages asset `/assets/index-DQd33p3p.js`; stale 1.0.9 modal no longer interrupts the returning simulator session |
+| Exact-build screenshots | PARTIAL; iPhone 17 / iOS 26.5 compose evidence exists, but complete iPhone/iPad capture is not complete |
 | App Privacy reconciliation | BLOCKED on Xcode Organizer privacy report; SDK manifests verified in archive |
 | Node release runtime | VERIFIED; typecheck passes under CI-standard Node 22 |
 | Dependency audit | LOCALLY VERIFIED in draft PR #167; proposed lock has 0 critical and 2 high; hosted CI is billing-blocked before runner allocation |
