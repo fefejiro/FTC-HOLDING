@@ -1,0 +1,14 @@
+appId: host.exp.Exponent
+name: Expo Go first-run bootstrap for PeacePad proof
+---
+- openLink: ${EXPO_URL}
+- waitForAnimationToEnd
+- tapOn:
+    text: "Open"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    point: "50%,90%"
+- extendedWaitUntil:
+    visible: "Family connection"
+    timeout: 30000

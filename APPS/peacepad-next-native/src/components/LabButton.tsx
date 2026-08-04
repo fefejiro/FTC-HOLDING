@@ -12,6 +12,8 @@ type Props = {
 export function LabButton({ disabled = false, label, onPress, variant = "primary" }: Props) {
   return (
     <Pressable
+      accessible
+      accessibilityLabel={label}
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       disabled={disabled}

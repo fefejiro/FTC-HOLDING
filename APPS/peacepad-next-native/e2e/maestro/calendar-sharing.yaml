@@ -2,6 +2,9 @@ appId: host.exp.Exponent
 name: PeacePad calendar sharing simulator proof
 ---
 - openLink: ${EXPO_URL}
+- tapOn:
+    text: "Open"
+    optional: true
 - extendedWaitUntil:
     visible: "Calendar"
     timeout: 30000
