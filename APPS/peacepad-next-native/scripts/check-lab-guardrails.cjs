@@ -18,6 +18,10 @@ if (appJson.expo?.name !== "PeacePad") {
   failures.push("The visible app name must remain PeacePad.");
 }
 
+if (appJson.expo?.userInterfaceStyle !== "automatic") {
+  failures.push("PeacePad must continue following the system light/dark appearance.");
+}
+
 if (iosBundle !== "ca.peacepad.nextnative.lab" || androidPackage !== "ca.peacepad.nextnative.lab") {
   failures.push("Native lab identifiers must remain ca.peacepad.nextnative.lab.");
 }

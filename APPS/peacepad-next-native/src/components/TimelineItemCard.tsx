@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   },
   meta: {
     ...typography.caption,
-    backgroundColor: "#F3EEF9",
+    backgroundColor: colors.subtleSurface,
     borderRadius: 999,
     color: colors.muted,
     overflow: "hidden",

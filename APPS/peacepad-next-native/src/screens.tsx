@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     gap: spacing.md,
     padding: spacing.xl,
-    shadowColor: "#2D0C66",
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.18,
     shadowRadius: 24,
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 6
   },
-  heroPillText: { color: colors.white, fontSize: 12, fontWeight: "800", letterSpacing: 0.2 },
+  heroPillText: { color: colors.onBrand, fontSize: 12, fontWeight: "800", letterSpacing: 0.2 },
   eyebrow: {
     color: colors.brandSoft,
     fontSize: 13,
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase"
   },
   eyebrowDark: { ...typography.caption, color: colors.brand, fontWeight: "800", textTransform: "uppercase" },
-  title: { ...typography.title, color: colors.white },
+  title: { ...typography.title, color: colors.onBrand },
   heroBody: { ...typography.body, color: colors.brandSoft },
   section: { gap: spacing.md },
   eyebrowBlock: { gap: spacing.xs },
@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     gap: spacing.xs,
     padding: spacing.lg,
-    shadowColor: "#2D0C66",
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.06,
     shadowRadius: 14,
@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: spacing.md,
     padding: spacing.lg,
-    shadowColor: "#2D0C66",
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.06,
     shadowRadius: 18,
@@ -561,7 +561,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: spacing.sm,
     padding: spacing.lg,
-    shadowColor: "#2D0C66",
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.05,
     shadowRadius: 14,
@@ -586,15 +586,15 @@ const styles = StyleSheet.create({
     minHeight: 88
   },
   inputError: {
-    borderColor: "#DC2626",
+    borderColor: colors.dangerBorder,
     borderWidth: 2
   },
   fieldLabel: { ...typography.caption, color: colors.text, fontWeight: "800", textTransform: "uppercase" },
-  errorText: { ...typography.caption, color: "#B91C1C", fontWeight: "700" },
+  errorText: { ...typography.caption, color: colors.dangerText, fontWeight: "700" },
   suggestion: { backgroundColor: colors.brandSoft, borderRadius: 20, gap: spacing.sm, padding: spacing.lg },
   premiumInsight: {
-    backgroundColor: "#ECFDF7",
-    borderColor: "#BFEBDD",
+    backgroundColor: colors.successSurface,
+    borderColor: colors.successBorder,
     borderRadius: 20,
     borderWidth: 1,
     gap: spacing.sm,
@@ -607,20 +607,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: spacing.sm,
     padding: spacing.lg,
-    shadowColor: "#2D0C66",
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
     shadowRadius: 10,
     elevation: 1
   },
   cardPremium: {
-    backgroundColor: "#FFF8E8",
-    borderColor: "#F0D48B",
+    backgroundColor: colors.warningSurface,
+    borderColor: colors.warningBorder,
     borderRadius: 20,
     borderWidth: 1,
     gap: spacing.sm,
     padding: spacing.lg,
-    shadowColor: "#2D0C66",
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
     shadowRadius: 10,
@@ -637,7 +637,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     textTransform: "uppercase"
   },
-  lockedPill: { backgroundColor: "#F3F4F6", color: colors.muted },
+  lockedPill: { backgroundColor: colors.subtleSurface, color: colors.muted },
   guardrail: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 22, borderWidth: 1, padding: spacing.lg },
   guardrailTitle: { ...typography.subheading, color: colors.text },
   exportCard: {
@@ -647,7 +647,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: spacing.sm,
     padding: spacing.lg,
-    shadowColor: "#2D0C66",
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.05,
     shadowRadius: 14,
@@ -665,7 +665,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg
   },
   checkText: { flex: 1, gap: spacing.xs },
-  checkRowActive: { borderColor: colors.accent, backgroundColor: "#ECFDF7" },
+  checkRowActive: { borderColor: colors.accent, backgroundColor: colors.successSurface },
   checkMark: { color: colors.accent, fontSize: 22, fontWeight: "800" },
   inlineOptions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   inlineOption: {
@@ -678,6 +678,6 @@ const styles = StyleSheet.create({
   },
   inlineOptionActive: { backgroundColor: colors.brand, borderColor: colors.brand },
   inlineOptionText: { ...typography.caption, color: colors.muted, fontWeight: "800" },
-  inlineOptionTextActive: { color: colors.white }
+  inlineOptionTextActive: { color: colors.onBrand }
 });
 

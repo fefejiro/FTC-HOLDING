@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { NavigationContainer, useNavigation, type LinkingOptions } from "@react-navigation/native";
 import { createNativeStackNavigator, type NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { ScrollView, StatusBar, StyleSheet, View } from "react-native";
+import { ScrollView, StatusBar, StyleSheet, useColorScheme, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { TaskNavigation, type PrimaryTaskScreen } from "./components/TaskNavigation";
 import { FoundationScreen } from "./foundation/FoundationScreen";
@@ -26,7 +26,7 @@ import {
 } from "./coordination/CoordinationScreens";
 import { CoordinationStateProvider } from "./coordination/CoordinationState";
 import { LabStateProvider, useLabState } from "./state/LabState";
-import { colors, spacing } from "./theme";
+import { colors, darkColors, lightColors, spacing } from "./theme";
 
 export type AppScreen = LabScreen | "foundation";
 
@@ -103,6 +103,7 @@ type SharedScreenProps = {
 };
 
 export function PeacePadLabApp({ startScreen }: { startScreen?: string }) {
+  const colorScheme = useColorScheme();
   const [draft, setDraft] = useState("I need the pickup time confirmed because the last change was confusing.");
   const { selectedGoal, selectGoal } = useLabState();
 
@@ -118,16 +119,19 @@ export function PeacePadLabApp({ startScreen }: { startScreen?: string }) {
 
   return (
     <NavigationContainer linking={startScreen ? undefined : peacePadLinking}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={colorScheme === "dark" ? "light-content" : "dark-content"} />
       <Stack.Navigator
         initialRouteName={resolveLabStartScreen(startScreen ?? process.env?.EXPO_PUBLIC_PEACEPAD_LAB_START_SCREEN)}
         screenOptions={{
-          contentStyle: styles.screen,
+          contentStyle: { backgroundColor: colorScheme === "dark" ? darkColors.background : lightColors.background },
           headerBackTitle: "Back",
           headerShadowVisible: false,
-          headerStyle: styles.header,
-          headerTintColor: colors.brand,
-          headerTitleStyle: styles.headerTitle
+          headerStyle: { backgroundColor: colorScheme === "dark" ? darkColors.background : lightColors.background },
+          headerTintColor: colorScheme === "dark" ? darkColors.brand : lightColors.brand,
+          headerTitleStyle: {
+            ...styles.headerTitle,
+            color: colorScheme === "dark" ? darkColors.text : lightColors.text
+          }
         }}
       >
         {(Object.keys(screenTitles) as AppScreen[]).map((routeName) => (

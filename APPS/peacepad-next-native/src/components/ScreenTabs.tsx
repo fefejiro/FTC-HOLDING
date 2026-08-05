@@ -64,6 +64,6 @@ const styles = StyleSheet.create({
     fontWeight: "700"
   },
   activeLabel: {
-    color: colors.white
+    color: colors.onBrand
   }
 });

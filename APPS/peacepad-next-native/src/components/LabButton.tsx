@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
   },
   primaryText: {
     ...typography.subheading,
-    color: colors.white
+    color: colors.onBrand
   },
   secondaryText: {
     ...typography.subheading,

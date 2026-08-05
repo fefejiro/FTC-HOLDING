@@ -42,9 +42,9 @@ approved Capacitor app, production data/API, App Store record, and
 ```text
 guardrails       passed
 typecheck        passed
-Jest/RNTL        25 suites / 137 tests passed
+Jest/RNTL        25 suites / 146 tests passed
 embedded SQL     migration, constraints, HTTP restart, acceptance, grant, audit passed
-coverage         86.09 statements / 80.31 branches / 80.64 functions / 89.10 lines
+coverage         86.08 statements / 79.93 branches / 80.74 functions / 89.15 lines
 Expo Doctor      17/18 in monorepo; isolated native install 18/18
 Expo config      PeacePad; ca.peacepad.nextnative.lab; diagnostics/writes false
 iOS export       passed; 846 modules bundled
@@ -172,6 +172,12 @@ commit and are not relabelled as current evidence.
   stops forcing side-by-side content. Unit and rendered integration tests prove
   the responsive switch at 1.6x. A 200% Simulator screenshot/VoiceOver pass is
   still required before this becomes device-verified.
+- iOS now uses native adaptive semantic colours while Android retains the
+  reviewed light palette until its separate theme implementation. App chrome,
+  primary surfaces, cards, inputs, success/warning/error states, and status bar
+  follow the iOS system appearance. Automated contrast checks keep core light
+  and dark text/action pairs at WCAG AA (4.5:1 or greater). A dark Simulator
+  screenshot and assistive-technology pass remain required.
 - The shared monorepo Expo Doctor run is 17/18 because web workspaces expose
   React 18 above the native workspace's React 19. A clean standalone install of
   the native manifest passed Expo Doctor 18/18, confirming the native app's own
@@ -195,12 +201,13 @@ commit and are not relabelled as current evidence.
 | Staging invitation server core | 80% |
 | Automated verification | 95% |
 | Accessibility foundation | 45% |
+| Adaptive theme foundation | 55% |
 | Current device verification | 82% |
-| Overall production-native v2 | 39% |
+| Overall production-native v2 | 40% |
 
 ## Next best move
 
-Complete the no-cost dark-theme conversion and 200% text visual pass, then move the repeatable
+Complete the dark-theme and 200% text Simulator visual pass, then move the repeatable
 invitation and calendar journeys to one controlled real-iPhone staging pass.
 The database migration no longer needs a paid host for local regression proof.
 The next persistence gate remains one isolated networked staging database and

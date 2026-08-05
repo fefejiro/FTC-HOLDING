@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand
   },
   checkmark: {
-    color: colors.white,
+    color: colors.onBrand,
     fontWeight: "900"
   },
   primaryButton: {
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     ...typography.subheading,
-    color: colors.white
+    color: colors.onBrand
   },
   secondaryButton: {
     minHeight: 48,
@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.accent,
-    backgroundColor: "#ECFBF7"
+    backgroundColor: colors.successSurface
   },
   resultTone: {
     ...typography.subheading,
@@ -502,12 +502,12 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#E7A9A9",
-    backgroundColor: "#FFF3F3"
+    borderColor: colors.dangerBorder,
+    backgroundColor: colors.dangerSurface
   },
   errorText: {
     ...typography.body,
-    color: "#8B2323"
+    color: colors.dangerText
   },
   safetyNote: {
     gap: spacing.xs,
@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.accent,
-    backgroundColor: "#ECFBF7"
+    backgroundColor: colors.successSurface
   },
   safetyNoteTitle: {
     ...typography.subheading,
