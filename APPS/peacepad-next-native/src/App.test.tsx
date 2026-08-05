@@ -235,6 +235,17 @@ describe("per-chat Message Check", () => {
     fireEvent.press(screen.getByText("Send original"));
     await waitFor(() => expect(screen.getByText("You never confirm anything!!")).toBeOnTheScreen());
   });
+
+  it("searches only within the active conversation after an explicit send", async () => {
+    renderApp("messages");
+    fireEvent.changeText(screen.getByLabelText("Message draft"), "School pickup is at 6 PM.");
+    fireEvent.press(screen.getByText("Send message"));
+    await waitFor(() => expect(screen.getByText("School pickup is at 6 PM.")).toBeOnTheScreen());
+
+    fireEvent.changeText(screen.getByLabelText("Search messages"), "pickup");
+    fireEvent.press(screen.getByText("Search"));
+    expect(await screen.findByLabelText("Message search result")).toHaveTextContent("School pickup is at 6 PM.");
+  });
 });
 
 describe("records vertical slice", () => {

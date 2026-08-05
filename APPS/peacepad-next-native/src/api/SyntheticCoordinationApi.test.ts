@@ -83,6 +83,22 @@ describe("SyntheticCoordinationApi safety behavior", () => {
     });
   });
 
+  it("keeps originals immutable while search returns the latest correction", async () => {
+    const api = new SyntheticCoordinationApi();
+    const original = await api.sendMessage({ familyCircleId: "family-current", conversationId: "conversation-1", body: "Pickup at five." }, context);
+    const correction = await api.correctMessage({
+      familyCircleId: "family-current", conversationId: "conversation-1", originalMessageEventId: original.id, body: "Pickup at six."
+    }, context);
+    await expect(api.listMessages("conversation-1")).resolves.toEqual([
+      expect.objectContaining({ id: original.id, eventType: "sent", body: "Pickup at five." }),
+      expect.objectContaining({ id: correction.id, eventType: "correction", body: "Pickup at six.", originalMessageEventId: original.id })
+    ]);
+    await expect(api.searchMessages("conversation-1", "six")).resolves.toEqual([
+      expect.objectContaining({ originalMessageEventId: original.id, body: "Pickup at six.", corrected: true })
+    ]);
+    await expect(api.searchMessages("conversation-1", "five")).resolves.toEqual([]);
+  });
+
   it("supports the in-memory layer and event lifecycle without a backend", async () => {
     const api = new SyntheticCoordinationApi();
     const createdLayer = await api.createCalendarLayer({

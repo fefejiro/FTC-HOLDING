@@ -59,6 +59,40 @@ describe("MessagingService", () => {
     const outsider = { ...recipient, identityId: "outsider", sessionId: "outsider-session" };
     await expect(service.recordLifecycle(input, createWriteContext({ idempotencyKey: "outsider", region: "ca", actor: { identityId: outsider.identityId, sessionId: outsider.sessionId } }), outsider)).rejects.toMatchObject({ status: 404 });
   });
+  it("appends sender-only corrections while preserving the original record and excluding content from audit", async () => {
+    const { store, service } = setup();
+    const conversation = await service.createConversation({ familyCircleId: "family", participantIdentityIds: ["parent-a", "parent-b"] }, context("c"), actor);
+    const original = await service.sendMessage({ familyCircleId: "family", conversationId: conversation.id, body: "Pickup is at 5 PM." }, context("m"), actor);
+    const input = { familyCircleId: "family", conversationId: conversation.id, originalMessageEventId: original.id, body: "Pickup is at 6 PM." };
+    const correction = await service.correctMessage(input, context("correction"), actor);
+    await expect(service.correctMessage(input, context("correction"), actor)).resolves.toEqual(correction);
+    expect(store.messages).toEqual([
+      expect.objectContaining({ id: original.id, eventType: "sent", body: "Pickup is at 5 PM.", originalMessageEventId: null }),
+      expect.objectContaining({ id: correction.id, eventType: "correction", body: "Pickup is at 6 PM.", originalMessageEventId: original.id })
+    ]);
+    expect(JSON.stringify(store.audits)).not.toContain("Pickup is at 6 PM.");
+  });
+  it("prevents recipients from correcting a sender's message", async () => {
+    const { service } = setup();
+    const conversation = await service.createConversation({ familyCircleId: "family", participantIdentityIds: ["parent-a", "parent-b"] }, context("c"), actor);
+    const original = await service.sendMessage({ familyCircleId: "family", conversationId: conversation.id, body: "Pickup is at 5 PM." }, context("m"), actor);
+    await expect(service.correctMessage({
+      familyCircleId: "family", conversationId: conversation.id, originalMessageEventId: original.id, body: "Changed by recipient"
+    }, recipientContext("recipient-correction"), recipient)).rejects.toMatchObject({ status: 403 });
+  });
+  it("searches only effective message text for authorized conversation participants", async () => {
+    const { service } = setup();
+    const conversation = await service.createConversation({ familyCircleId: "family", participantIdentityIds: ["parent-a", "parent-b"] }, context("c"), actor);
+    const original = await service.sendMessage({ familyCircleId: "family", conversationId: conversation.id, body: "Pickup is at five." }, context("m"), actor);
+    await service.correctMessage({ familyCircleId: "family", conversationId: conversation.id, originalMessageEventId: original.id, body: "Pickup is at six." }, context("correction"), actor);
+    await expect(service.searchMessages(conversation.id, "SIX", 20, recipient)).resolves.toEqual([
+      expect.objectContaining({ originalMessageEventId: original.id, body: "Pickup is at six.", corrected: true })
+    ]);
+    await expect(service.searchMessages(conversation.id, "five", 20, recipient)).resolves.toEqual([]);
+    await expect(service.searchMessages(conversation.id, "x", 20, recipient)).rejects.toMatchObject({ status: 400 });
+    const outsider = { ...recipient, identityId: "outsider", sessionId: "outsider-session" };
+    await expect(service.searchMessages(conversation.id, "six", 20, outsider)).rejects.toMatchObject({ status: 404 });
+  });
   it("defaults Message Check off, persists it per participant, and rejects implied AI consent", async () => {
     const { service } = setup(); const conversation = await service.createConversation({ familyCircleId: "family", participantIdentityIds: ["parent-a", "parent-b"] }, context("c"), actor);
     await expect(service.getPreference(conversation.id, actor)).resolves.toMatchObject({ enabled: false, aiAssistanceEnabled: false });

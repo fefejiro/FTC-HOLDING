@@ -482,10 +482,16 @@ export function MessagesScreen() {
     messageDraft,
     messageError,
     messagePreview,
+    messageSearchBusy,
+    messageSearchError,
+    messageSearchQuery,
+    messageSearchResults,
+    searchMessages,
     sendMessage,
     sentMessages,
     setMessageCheckEnabled,
-    setMessageDraft
+    setMessageDraft,
+    setMessageSearchQuery
   } = useCoordinationState();
   const [showHowItWorks, setShowHowItWorks] = useState(false);
 
@@ -493,6 +499,33 @@ export function MessagesScreen() {
     <View style={styles.stack}>
       <Text style={styles.title}>Messages</Text>
       <Text style={styles.body}>Write to your co-parent. PeacePad never sends without your confirmation.</Text>
+
+      <View style={styles.card}>
+        <Text style={styles.heading}>Find a message</Text>
+        <TextInput
+          accessibilityLabel="Search messages"
+          autoCapitalize="none"
+          onChangeText={setMessageSearchQuery}
+          placeholder="Search this conversation"
+          returnKeyType="search"
+          onSubmitEditing={() => void searchMessages()}
+          style={styles.input}
+          value={messageSearchQuery}
+        />
+        <LabButton
+          disabled={messageSearchQuery.trim().length < 2 || messageSearchBusy}
+          label={messageSearchBusy ? "Searching..." : "Search"}
+          onPress={() => void searchMessages()}
+          variant="secondary"
+        />
+        {messageSearchError ? <Text accessibilityRole="alert" style={styles.error}>{messageSearchError}</Text> : null}
+        {messageSearchResults.map((result) => (
+          <View accessibilityLabel="Message search result" key={result.originalMessageEventId} style={styles.searchResult}>
+            <Text style={styles.body}>{result.body}</Text>
+            {result.corrected ? <Text style={styles.caption}>Corrected</Text> : null}
+          </View>
+        ))}
+      </View>
 
       {!messageCheckEnabled ? (
         <View style={styles.assistCard}>
@@ -530,7 +563,7 @@ export function MessagesScreen() {
       {sentMessages.map((message) => (
         <View accessibilityLabel="Sent message" key={message.id} style={styles.sentBubble}>
           <Text style={styles.body}>{message.sentBody}</Text>
-          <Text style={styles.caption}>{message.status === "waiting" ? "Waiting to send" : message.status}</Text>
+          <Text style={styles.caption}>{message.corrected ? "Corrected · " : ""}{message.status === "waiting" ? "Waiting to send" : message.status}</Text>
         </View>
       ))}
 
@@ -689,5 +722,6 @@ const styles = StyleSheet.create({
   successText: { ...typography.body, color: colors.successText, fontWeight: "800" },
   link: { ...typography.body, color: colors.brand, fontWeight: "800", textAlign: "center" },
   linkButton: { alignItems: "center", justifyContent: "center", minHeight: 44, paddingHorizontal: spacing.sm },
-  sentBubble: { alignSelf: "flex-end", backgroundColor: colors.brandSoft, borderRadius: 20, maxWidth: "86%", padding: spacing.md }
+  sentBubble: { alignSelf: "flex-end", backgroundColor: colors.brandSoft, borderRadius: 20, maxWidth: "86%", padding: spacing.md },
+  searchResult: { borderTopColor: colors.border, borderTopWidth: 1, gap: spacing.xs, paddingTop: spacing.sm }
 });

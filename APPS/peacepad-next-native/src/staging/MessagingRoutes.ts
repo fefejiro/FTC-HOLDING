@@ -1,4 +1,4 @@
-import type { CreateConversationInput, RecordMessageLifecycleInput, SendMessageInput } from "../api/CoordinationApi";
+import type { CorrectMessageInput, CreateConversationInput, RecordMessageLifecycleInput, SendMessageInput } from "../api/CoordinationApi";
 import { createWriteContext, PEACEPAD_V2_SCHEMA_VERSION, type DataRegion } from "../domain/v2";
 import { InvitationServiceError } from "./InvitationService";
 import type { StagingInvitationRequest, StagingInvitationResponse } from "./InvitationRoutes";
@@ -36,6 +36,14 @@ export class StagingMessagingRoutes {
         if (!body || body.conversationId !== id) throw new InvitationServiceError("INVALID_REQUEST", "Conversation ID mismatch.", 400);
         return { status: 201, body: await this.service.sendMessage(body, context(request), request.actor) };
       }
+      const search = url.pathname.match(/^\/api\/v2\/conversations\/([^/]+)\/messages\/search$/);
+      if (search && request.method === "POST") {
+        const body = request.body as { query?: unknown; limit?: unknown };
+        if (typeof body?.query !== "string" || (body.limit !== undefined && (!Number.isInteger(body.limit) || Number(body.limit) < 1 || Number(body.limit) > 50))) {
+          throw new InvitationServiceError("INVALID_REQUEST", "A valid message search is required.", 400);
+        }
+        return { status: 200, body: await this.service.searchMessages(decodeURIComponent(search[1]), body.query, body.limit === undefined ? 20 : Number(body.limit), request.actor) };
+      }
       const lifecycle = url.pathname.match(/^\/api\/v2\/conversations\/([^/]+)\/messages\/([^/]+)\/events$/);
       if (lifecycle && request.method === "POST") {
         const conversationId = decodeURIComponent(lifecycle[1]); const messageId = decodeURIComponent(lifecycle[2]);
@@ -44,6 +52,15 @@ export class StagingMessagingRoutes {
           throw new InvitationServiceError("INVALID_REQUEST", "A valid message lifecycle event is required.", 400);
         }
         return { status: 201, body: await this.service.recordLifecycle(body, context(request), request.actor) };
+      }
+      const correction = url.pathname.match(/^\/api\/v2\/conversations\/([^/]+)\/messages\/([^/]+)\/corrections$/);
+      if (correction && request.method === "POST") {
+        const conversationId = decodeURIComponent(correction[1]); const messageId = decodeURIComponent(correction[2]);
+        const body = request.body as CorrectMessageInput;
+        if (!body || body.conversationId !== conversationId || body.originalMessageEventId !== messageId || typeof body.body !== "string") {
+          throw new InvitationServiceError("INVALID_REQUEST", "A valid message correction is required.", 400);
+        }
+        return { status: 201, body: await this.service.correctMessage(body, context(request), request.actor) };
       }
       const preference = url.pathname.match(/^\/api\/v2\/conversations\/([^/]+)\/message-check$/);
       if (preference && request.method === "GET") return { status: 200, body: await this.service.getPreference(decodeURIComponent(preference[1]), request.actor) };

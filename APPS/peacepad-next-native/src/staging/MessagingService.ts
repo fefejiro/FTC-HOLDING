@@ -1,5 +1,5 @@
 import type { MessagePreviewResponse } from "../api/contracts";
-import type { CreateConversationInput, RecordMessageLifecycleInput, SendMessageInput } from "../api/CoordinationApi";
+import type { CorrectMessageInput, CreateConversationInput, MessageSearchResult, RecordMessageLifecycleInput, SendMessageInput } from "../api/CoordinationApi";
 import {
   PEACEPAD_V2_SCHEMA_VERSION,
   type AuditEvent,
@@ -141,6 +141,63 @@ export class MessagingService {
     });
   }
 
+  async correctMessage(input: CorrectMessageInput, context: WriteContext, actor: StagingActor) {
+    this.assertContext(context, actor);
+    const body = input.body.trim();
+    if (!body || body.length > 10000) throw new InvitationServiceError("INVALID_REQUEST", "Enter a correction under 10,000 characters.", 400);
+    const conversation = await this.requireConversation(input.conversationId, actor, "messages:write");
+    if (conversation.familyCircleId !== input.familyCircleId) throw new InvitationServiceError("NOT_FOUND", "Conversation not found.", 404);
+    return this.options.store.transaction(async (store) => {
+      const operation = await this.operationHash("message.correct", context);
+      const prior = await store.findIdempotentResult(operation);
+      if (prior) {
+        const existing = (await store.listMessages(conversation.id)).find((item) => item.id === prior);
+        if (!existing) throw new Error("Message correction receipt points to a missing record.");
+        return existing;
+      }
+      const events = await store.listMessages(conversation.id);
+      const original = events.find((item) => item.id === input.originalMessageEventId);
+      if (!original || original.eventType !== "sent" || original.familyCircleId !== conversation.familyCircleId) {
+        throw new InvitationServiceError("NOT_FOUND", "Message not found.", 404);
+      }
+      if (original.provenance.createdBy.identityId !== actor.identityId) {
+        throw new InvitationServiceError("FORBIDDEN", "Only the sender can correct this message.", 403);
+      }
+      const current = this.effectiveMessage(original, events);
+      if (current.body === body) throw new InvitationServiceError("INVALID_REQUEST", "The correction must change the message.", 400);
+      const occurredAt = this.clock.now().toISOString();
+      const id = await this.entityId("message-correction", original.id, context);
+      const correction: MessageEvent = {
+        id, schemaVersion: PEACEPAD_V2_SCHEMA_VERSION, version: 1, region: context.region,
+        provenance: { createdAt: occurredAt, createdBy: context.actor, source: "app" },
+        familyCircleId: conversation.familyCircleId, conversationId: conversation.id,
+        eventType: "correction", originalMessageEventId: original.id, body, occurredAt
+      };
+      await store.appendMessage(correction);
+      await store.saveIdempotentResult(operation, id);
+      await this.audit("message.corrected", "MessageEvent", id, context, {
+        conversationId: conversation.id,
+        originalMessageEventId: original.id,
+        bodyLength: body.length
+      }, store);
+      return correction;
+    });
+  }
+
+  async searchMessages(conversationId: string, query: string, limit: number, actor: StagingActor): Promise<readonly MessageSearchResult[]> {
+    const conversation = await this.requireConversation(conversationId, actor, "messages:read");
+    const normalized = query.trim().toLocaleLowerCase();
+    if (normalized.length < 2 || normalized.length > 100) throw new InvitationServiceError("INVALID_REQUEST", "Enter between 2 and 100 characters to search.", 400);
+    if (!Number.isInteger(limit) || limit < 1 || limit > 50) throw new InvitationServiceError("INVALID_REQUEST", "Search limit must be between 1 and 50.", 400);
+    const events = await this.options.store.listMessages(conversation.id);
+    return events
+      .filter((event) => event.eventType === "sent" && event.body)
+      .map((original) => this.effectiveMessage(original, events))
+      .filter((result) => result.body.toLocaleLowerCase().includes(normalized))
+      .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt) || right.originalMessageEventId.localeCompare(left.originalMessageEventId))
+      .slice(0, limit);
+  }
+
   async getPreference(conversationId: string, actor: StagingActor) {
     const conversation = await this.requireConversation(conversationId, actor, "messages:read");
     return (await this.options.store.findPreference(actor.identityId, conversationId)) ?? this.defaultPreference(actor, conversationId, conversation.region);
@@ -179,6 +236,20 @@ export class MessagingService {
       id: `message-check-${actor.identityId}-${conversationId}`, schemaVersion: PEACEPAD_V2_SCHEMA_VERSION,
       version: 0, region, provenance: { createdAt: now, createdBy: { identityId: actor.identityId, sessionId: actor.sessionId }, source: "app" },
       identityId: actor.identityId, conversationId, enabled: false, aiAssistanceEnabled: false
+    };
+  }
+
+  private effectiveMessage(original: MessageEvent, events: readonly MessageEvent[]): MessageSearchResult {
+    const corrections = events
+      .filter((event) => event.eventType === "correction" && event.originalMessageEventId === original.id && event.body)
+      .sort((left, right) => left.occurredAt.localeCompare(right.occurredAt) || left.id.localeCompare(right.id));
+    const effective = corrections[corrections.length - 1] ?? original;
+    return {
+      originalMessageEventId: original.id,
+      effectiveMessageEventId: effective.id,
+      body: effective.body ?? "",
+      occurredAt: original.occurredAt,
+      corrected: effective.id !== original.id
     };
   }
 

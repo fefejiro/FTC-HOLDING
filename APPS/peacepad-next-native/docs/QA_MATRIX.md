@@ -71,6 +71,10 @@ and `NOT STARTED`.
 | Sent messages are append-only and idempotent | AUTOMATED VERIFIED | service replay test plus runtime-role UPDATE/DELETE revocation |
 | Delivery/viewed receipts are recipient-authored and immutable | AUTOMATED VERIFIED | sender rejection, participant authorization, null-body lifecycle events, and idempotent service tests |
 | Delivery/viewed receipts survive HTTP and database restart | AUTOMATED VERIFIED | two fictional actors over loopback HTTP backed by disposable PostgreSQL |
+| Message corrections preserve the original and append a linked event | AUTOMATED VERIFIED | sender correction, original immutability, idempotency, audit redaction, and PostgreSQL restart proof |
+| Recipients cannot correct another participant's message | AUTOMATED VERIFIED | sender identity authorization and forbidden-recipient regression test |
+| Search is bounded to an authorized conversation | AUTOMATED VERIFIED | participant membership, query/limit validation, cross-participant denial, and body-only HTTP contract tests that keep terms out of URLs |
+| Search returns latest effective wording without rewriting originals | AUTOMATED VERIFIED | corrected-text match, stale-original exclusion, UI result, and HTTP restart proof |
 | Message bodies are absent from audit metadata and server logs | AUTOMATED VERIFIED | audit serialization and loopback log assertions |
 | Messages survive an HTTP host restart | AUTOMATED VERIFIED | disposable PostgreSQL restart proof |
 | Transient message failures enter a bounded device-only outbox | AUTOMATED VERIFIED | SecureStore entry/index tests, five-entry and 800-character bounds |
@@ -86,9 +90,9 @@ and `NOT STARTED`.
 | --- | --- | --- |
 | TypeScript | AUTOMATED VERIFIED | passed |
 | Guardrails | AUTOMATED VERIFIED | passed |
-| Jest/RNTL | AUTOMATED VERIFIED | 35 suites / 218 tests |
-| Embedded PostgreSQL | AUTOMATED VERIFIED | two actors, invitation, calendar, conversation, message exchange, delivery/view events, isolated preferences, restart reads, grant, and audit chain passed |
-| Coverage | AUTOMATED VERIFIED | 82.35 / 77.62 / 78.61 / 87.73 |
+| Jest/RNTL | AUTOMATED VERIFIED | 35 suites / 228 tests |
+| Embedded PostgreSQL | AUTOMATED VERIFIED | two actors, invitation, calendar, conversation, message exchange, delivery/view/correction events, effective-text search, isolated preferences, restart reads, grant, and audit chain passed |
+| Coverage | AUTOMATED VERIFIED | 82.43 / 77.29 / 79.04 / 87.81 |
 | Primary navigation roles and selected state | AUTOMATED VERIFIED | five named tabs; exactly one selected |
 | Invitation and calendar selector semantics | AUTOMATED VERIFIED | named tabs expose selected state |
 | Calendar layer controls do not depend on colour | AUTOMATED VERIFIED | named checkbox and sharing button states |
@@ -104,7 +108,7 @@ and `NOT STARTED`.
 | Expo config | AUTOMATED VERIFIED | lab bundle; diagnostics/writes false |
 | Expo Doctor | BLOCKED | 17/18; app React 19 and monorepo-root React 18 duplicate |
 | Expo Doctor (standalone native install) | AUTOMATED VERIFIED | 18/18 with a clean temporary npm install outside the monorepo |
-| iOS export | AUTOMATED VERIFIED | 962 modules |
+| iOS export | AUTOMATED VERIFIED | 963 modules |
 | Local staging host health | AUTOMATED VERIFIED | `/health` and database-backed `/readyz` 200 over real TCP |
 | Readiness without database | AUTOMATED VERIFIED | `/readyz` fails closed with 500 |
 | Host restart with durable resolution claim | AUTOMATED VERIFIED | resolve before restart; accept after restart passed |

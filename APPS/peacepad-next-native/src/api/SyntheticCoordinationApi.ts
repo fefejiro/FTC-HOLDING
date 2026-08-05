@@ -2,12 +2,14 @@ import type { MessagePreviewResponse } from "./contracts";
 import { PeacePadApiError } from "./PeacePadApiClient";
 import {
   InvitationError,
+  type CorrectMessageInput,
   type CreateCalendarLayerInput,
   type CreateConversationInput,
   type CreateInvitationInput,
   type CreatedInvitation,
   type CreateScheduleEventInput,
   type RecordMessageLifecycleInput,
+  type MessageSearchResult,
   type SendMessageInput,
   type PeacePadCoordinationApi
 } from "./CoordinationApi";
@@ -298,6 +300,44 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
     return event;
   }
 
+  async correctMessage(input: CorrectMessageInput, _context: WriteContext): Promise<MessageEvent> {
+    const conversation = this.assertConversation(input.conversationId);
+    const body = input.body.trim();
+    const original = this.messages.find((message) => message.id === input.originalMessageEventId && message.eventType === "sent");
+    if (!original || original.familyCircleId !== input.familyCircleId || conversation.familyCircleId !== input.familyCircleId) {
+      throw new PeacePadApiError("Message not found.", "http", 404);
+    }
+    if (original.provenance.createdBy.identityId !== "identity-current") {
+      throw new PeacePadApiError("Only the sender can correct this message.", "http", 403);
+    }
+    if (!body || body.length > 10000) throw new PeacePadApiError("Enter a correction under 10,000 characters.", "http", 400);
+    if (this.effectiveMessage(original).body === body) throw new PeacePadApiError("The correction must change the message.", "http", 400);
+    const correction: MessageEvent = {
+      ...versioned(`message-correction-${Date.now().toString(36)}`),
+      familyCircleId: input.familyCircleId,
+      conversationId: input.conversationId,
+      eventType: "correction",
+      originalMessageEventId: original.id,
+      body,
+      occurredAt: new Date().toISOString()
+    };
+    this.messages = [...this.messages, correction];
+    return correction;
+  }
+
+  async searchMessages(conversationId: EntityId, query: string, limit = 20): Promise<readonly MessageSearchResult[]> {
+    this.assertConversation(conversationId);
+    const normalized = query.trim().toLocaleLowerCase();
+    if (normalized.length < 2 || normalized.length > 100) throw new PeacePadApiError("Enter between 2 and 100 characters to search.", "http", 400);
+    const boundedLimit = Math.max(1, Math.min(50, Math.trunc(limit)));
+    return this.messages
+      .filter((message) => message.conversationId === conversationId && message.eventType === "sent" && message.body)
+      .map((message) => this.effectiveMessage(message))
+      .filter((message) => message.body.toLocaleLowerCase().includes(normalized))
+      .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt) || right.originalMessageEventId.localeCompare(left.originalMessageEventId))
+      .slice(0, boundedLimit);
+  }
+
   async getMessageCheckPreference(conversationId: EntityId): Promise<MessageCheckPreference> {
     this.assertConversation(conversationId);
     return this.messageCheckPreferences.get(conversationId) ?? {
@@ -365,5 +405,19 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
       throw new PeacePadApiError("Conversation not found.", "http", 404);
     }
     return conversation;
+  }
+
+  private effectiveMessage(original: MessageEvent): MessageSearchResult {
+    const corrections = this.messages
+      .filter((message) => message.eventType === "correction" && message.originalMessageEventId === original.id && message.body)
+      .sort((left, right) => left.occurredAt.localeCompare(right.occurredAt) || left.id.localeCompare(right.id));
+    const effective = corrections[corrections.length - 1] ?? original;
+    return {
+      originalMessageEventId: original.id,
+      effectiveMessageEventId: effective.id,
+      body: effective.body ?? "",
+      occurredAt: original.occurredAt,
+      corrected: effective.id !== original.id
+    };
   }
 }

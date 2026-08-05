@@ -4,6 +4,7 @@ import {
   HttpPeacePadCoordinationApi,
   InvitationError,
   type CreatedInvitation,
+  type MessageSearchResult,
   type PeacePadCoordinationApi
 } from "../api/CoordinationApi";
 import { defaultCalendarLayers, SyntheticCoordinationApi } from "../api/SyntheticCoordinationApi";
@@ -41,6 +42,7 @@ export type SentMessage = Readonly<{
   sentBody: string;
   sentAt: string;
   status: "waiting" | "sent" | "delivered" | "viewed";
+  corrected: boolean;
 }>;
 
 type CoordinationStateValue = {
@@ -60,6 +62,10 @@ type CoordinationStateValue = {
   messageCheckBusy: boolean;
   messageError?: string;
   sentMessages: readonly SentMessage[];
+  messageSearchQuery: string;
+  messageSearchResults: readonly MessageSearchResult[];
+  messageSearchBusy: boolean;
+  messageSearchError?: string;
   setInvitationCode: (code: string) => void;
   createInvitation: () => Promise<void>;
   revokeCreatedInvitation: () => Promise<void>;
@@ -75,6 +81,8 @@ type CoordinationStateValue = {
   setMessageCheckEnabled: (enabled: boolean) => Promise<void>;
   checkMessage: () => Promise<void>;
   sendMessage: (useSuggestion: boolean) => Promise<void>;
+  setMessageSearchQuery: (query: string) => void;
+  searchMessages: () => Promise<void>;
 };
 
 const CoordinationStateContext = createContext<CoordinationStateValue | undefined>(undefined);
@@ -116,12 +124,16 @@ function invitationMessage(error: unknown): string {
 function visibleMessages(events: readonly MessageEvent[]): readonly SentMessage[] {
   return events.filter((event) => event.eventType === "sent" && event.body).map((message) => {
     const lifecycle = events.filter((event) => event.originalMessageEventId === message.id);
+    const corrections = lifecycle
+      .filter((event) => event.eventType === "correction" && event.body)
+      .sort((left, right) => left.occurredAt.localeCompare(right.occurredAt) || left.id.localeCompare(right.id));
+    const effective = corrections[corrections.length - 1] ?? message;
     const status = lifecycle.some((event) => event.eventType === "viewed")
       ? "viewed" as const
       : lifecycle.some((event) => event.eventType === "delivered")
         ? "delivered" as const
         : "sent" as const;
-    return { id: message.id, originalBody: message.body ?? "", sentBody: message.body ?? "", sentAt: message.occurredAt, status };
+    return { id: message.id, originalBody: message.body ?? "", sentBody: effective.body ?? "", sentAt: message.occurredAt, status, corrected: effective.id !== message.id };
   });
 }
 
@@ -152,6 +164,10 @@ export function CoordinationStateProvider({
   const [messageCheckBusy, setMessageCheckBusy] = useState(false);
   const [messageError, setMessageError] = useState<string>();
   const [sentMessages, setSentMessages] = useState<readonly SentMessage[]>([]);
+  const [messageSearchQuery, setMessageSearchQueryState] = useState("");
+  const [messageSearchResults, setMessageSearchResults] = useState<readonly MessageSearchResult[]>([]);
+  const [messageSearchBusy, setMessageSearchBusy] = useState(false);
+  const [messageSearchError, setMessageSearchError] = useState<string>();
 
   useEffect(() => {
     if (environmentConfig.environment !== "staging") return;
@@ -186,6 +202,10 @@ export function CoordinationStateProvider({
     messageCheckBusy,
     messageError,
     sentMessages,
+    messageSearchQuery,
+    messageSearchResults,
+    messageSearchBusy,
+    messageSearchError,
     createInvitation: async () => {
       setInvitationBusy(true);
       setInvitationError(undefined);
@@ -327,7 +347,8 @@ export function CoordinationStateProvider({
           originalBody,
           sentBody: message.body ?? sentBody,
           sentAt: message.occurredAt,
-          status: "sent"
+          status: "sent",
+          corrected: false
         }]);
         setMessageDraftState("");
         setMessagePreview(undefined);
@@ -343,7 +364,7 @@ export function CoordinationStateProvider({
               queuedAt,
               attempts: 0
             });
-            setSentMessages((current) => [...current, { id: queueId, originalBody, sentBody, sentAt: queuedAt, status: "waiting" }]);
+            setSentMessages((current) => [...current, { id: queueId, originalBody, sentBody, sentAt: queuedAt, status: "waiting", corrected: false }]);
             setMessageDraftState("");
             setMessagePreview(undefined);
             setMessageError("Waiting for a connection. PeacePad will retry this message safely.");
@@ -355,6 +376,27 @@ export function CoordinationStateProvider({
         }
       } finally {
         setMessageCheckBusy(false);
+      }
+    },
+    setMessageSearchQuery: (query) => {
+      setMessageSearchQueryState(query.slice(0, 100));
+      setMessageSearchError(undefined);
+      if (!query.trim()) setMessageSearchResults([]);
+    },
+    searchMessages: async () => {
+      const query = messageSearchQuery.trim();
+      if (query.length < 2) {
+        setMessageSearchError("Enter at least two characters to search.");
+        return;
+      }
+      setMessageSearchBusy(true);
+      setMessageSearchError(undefined);
+      try {
+        setMessageSearchResults(await api.searchMessages("conversation-primary", query));
+      } catch (error) {
+        setMessageSearchError(error instanceof Error ? error.message : "PeacePad could not search messages.");
+      } finally {
+        setMessageSearchBusy(false);
       }
     }
   }), [
@@ -373,6 +415,10 @@ export function CoordinationStateProvider({
     messageDraft,
     messageError,
     messagePreview,
+    messageSearchBusy,
+    messageSearchError,
+    messageSearchQuery,
+    messageSearchResults,
     outbox,
     sentMessages,
     visibleLayerIds

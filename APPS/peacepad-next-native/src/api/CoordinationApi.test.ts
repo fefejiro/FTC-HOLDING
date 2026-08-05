@@ -81,6 +81,8 @@ describe("HttpPeacePadCoordinationApi", () => {
     await api.listMessages("conversation-1");
     await api.sendMessage({ familyCircleId: "family-current", conversationId: "conversation-1", body: "Pickup at 5." }, context);
     await api.recordMessageLifecycle({ familyCircleId: "family-current", conversationId: "conversation-1", originalMessageEventId: "message-1", eventType: "viewed" }, context);
+    await api.correctMessage({ familyCircleId: "family-current", conversationId: "conversation-1", originalMessageEventId: "message-1", body: "Pickup at 6." }, context);
+    await api.searchMessages("conversation-1", "pickup time", 10);
     await api.getMessageCheckPreference("conversation-1");
     await api.setMessageCheckPreference("conversation-1", true, context);
     await api.previewMessage("conversation-1", " Pickup at 5. ");
@@ -94,6 +96,8 @@ describe("HttpPeacePadCoordinationApi", () => {
       "https://staging-api.peacepad.test/api/v2/conversations?familyCircleId=family-current",
       "https://staging-api.peacepad.test/api/v2/conversations/conversation-1/messages",
       "https://staging-api.peacepad.test/api/v2/conversations/conversation-1/messages/message-1/events",
+      "https://staging-api.peacepad.test/api/v2/conversations/conversation-1/messages/message-1/corrections",
+      "https://staging-api.peacepad.test/api/v2/conversations/conversation-1/messages/search",
       "https://staging-api.peacepad.test/api/v2/conversations/conversation-1/message-check",
       "https://staging-api.peacepad.test/api/v2/message-previews"
     ]));
@@ -178,6 +182,22 @@ describe("HttpPeacePadCoordinationApi", () => {
       accessToken
     );
     await expect(api.resolveInvitation("CALM26")).rejects.toMatchObject({ reason: "offline" });
+  });
+
+  it("rejects unsafe message search bounds before a network request", async () => {
+    const fetcher = jest.fn();
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
+    await expect(api.searchMessages("conversation-1", "x")).rejects.toMatchObject({ status: 400 });
+    await expect(api.searchMessages("conversation-1", "x".repeat(101))).rejects.toMatchObject({ status: 400 });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("keeps message search terms out of URLs", async () => {
+    const fetcher = jest.fn(async (_input: string, _init?: RequestInit) => response(200, []));
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
+    await api.searchMessages("conversation-1", "private pickup phrase", 7);
+    expect(fetcher.mock.calls[0]?.[0]).toBe("https://staging-api.peacepad.test/api/v2/conversations/conversation-1/messages/search");
+    expect(JSON.parse((fetcher.mock.calls[0]?.[1] as RequestInit).body as string)).toEqual({ query: "private pickup phrase", limit: 7 });
   });
 
   it("classifies message transport failures for the bounded retry outbox", async () => {

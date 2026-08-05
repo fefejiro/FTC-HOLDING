@@ -309,6 +309,7 @@ async function verify() {
     let messageId = "";
     let deliveredEventId = "";
     let viewedEventId = "";
+    let correctionEventId = "";
     let replyId = "";
     try {
       const acceptedResponse = await fetch(
@@ -410,6 +411,24 @@ async function verify() {
       assert.equal(viewedEvent.body, null);
       assert.equal(viewedEvent.originalMessageEventId, messageId);
 
+      const correctionResponse = await fetch(`${baseUrl}/api/v2/conversations/${conversationId}/messages/${messageId}/corrections`, {
+        method: "POST",
+        headers: headersFor(ownerToken, "http-message-correction"),
+        body: JSON.stringify({ familyCircleId: "family-1", conversationId, originalMessageEventId: messageId, body: "Synthetic pickup is at 6 PM." })
+      });
+      assert.equal(correctionResponse.status, 201);
+      const correctionEvent = await correctionResponse.json() as { id: string; eventType: string; originalMessageEventId: string };
+      correctionEventId = correctionEvent.id;
+      assert.equal(correctionEvent.eventType, "correction");
+      assert.equal(correctionEvent.originalMessageEventId, messageId);
+
+      const forbiddenCorrection = await fetch(`${baseUrl}/api/v2/conversations/${conversationId}/messages/${messageId}/corrections`, {
+        method: "POST",
+        headers: headersFor(recipientToken, "http-forbidden-correction"),
+        body: JSON.stringify({ familyCircleId: "family-1", conversationId, originalMessageEventId: messageId, body: "Recipient cannot replace it." })
+      });
+      assert.equal(forbiddenCorrection.status, 403);
+
       const recipientPreferenceResponse = await fetch(`${baseUrl}/api/v2/conversations/${conversationId}/message-check`, {
         headers: headersFor(recipientToken, "http-recipient-message-check")
       });
@@ -469,7 +488,7 @@ async function verify() {
       assert.equal(preferenceResponse.status, 200);
       assert.deepEqual((await layersResponse.json() as Array<{ id: string }>).map(({ id }) => id), [calendarLayerId]);
       assert.deepEqual((await eventsResponse.json() as Array<{ id: string }>).map(({ id }) => id), [scheduleEventId]);
-      assert.deepEqual((await messagesResponse.json() as Array<{ id: string }>).map(({ id }) => id), [messageId, deliveredEventId, viewedEventId, replyId]);
+      assert.deepEqual((await messagesResponse.json() as Array<{ id: string }>).map(({ id }) => id), [messageId, deliveredEventId, viewedEventId, correctionEventId, replyId]);
       assert.equal((await preferenceResponse.json() as { enabled: boolean }).enabled, true);
 
       const recipientMessagesResponse = await fetch(`${baseUrl}/api/v2/conversations/${conversationId}/messages`, {
@@ -480,8 +499,31 @@ async function verify() {
       });
       assert.equal(recipientMessagesResponse.status, 200);
       assert.equal(recipientPreferenceResponse.status, 200);
-      assert.deepEqual((await recipientMessagesResponse.json() as Array<{ id: string }>).map(({ id }) => id), [messageId, deliveredEventId, viewedEventId, replyId]);
+      assert.deepEqual((await recipientMessagesResponse.json() as Array<{ id: string }>).map(({ id }) => id), [messageId, deliveredEventId, viewedEventId, correctionEventId, replyId]);
       assert.equal((await recipientPreferenceResponse.json() as { enabled: boolean }).enabled, false);
+
+      const correctedSearchResponse = await fetch(`${baseUrl}/api/v2/conversations/${conversationId}/messages/search`, {
+        method: "POST",
+        headers: headersFor(recipientToken, "http-search-corrected"),
+        body: JSON.stringify({ query: "6 PM", limit: 20 })
+      });
+      const staleSearchResponse = await fetch(`${baseUrl}/api/v2/conversations/${conversationId}/messages/search`, {
+        method: "POST",
+        headers: headersFor(recipientToken, "http-search-stale"),
+        body: JSON.stringify({ query: "5 PM", limit: 20 })
+      });
+      assert.equal(correctedSearchResponse.status, 200);
+      assert.equal(staleSearchResponse.status, 200);
+      const correctedResults = await correctedSearchResponse.json() as Array<{ originalMessageEventId: string; body: string; corrected: boolean }>;
+      const staleResults = await staleSearchResponse.json() as Array<{ originalMessageEventId: string; body: string; corrected: boolean }>;
+      assert.equal(correctedResults.length, 1);
+      assert.equal(correctedResults[0]?.originalMessageEventId, messageId);
+      assert.equal(correctedResults[0]?.body, "Synthetic pickup is at 6 PM.");
+      assert.equal(correctedResults[0]?.corrected, true);
+      assert.equal(staleResults.length, 1);
+      assert.equal(staleResults[0]?.originalMessageEventId, replyId);
+      assert.equal(staleResults[0]?.body, "Synthetic reply confirms 5 PM.");
+      assert.equal(staleResults[0]?.corrected, false);
     } finally {
       await close(httpServer);
     }
@@ -490,10 +532,11 @@ async function verify() {
     assert.equal(serializedLogs.includes(recipientToken), false);
     assert.equal(serializedLogs.includes(httpCreated.code), false);
     assert.equal(serializedLogs.includes("Synthetic pickup is at 5 PM."), false);
+    assert.equal(serializedLogs.includes("Synthetic pickup is at 6 PM."), false);
     assert.equal(serializedLogs.includes("Synthetic reply confirms 5 PM."), false);
 
     process.stdout.write(
-      "Embedded PostgreSQL and HTTP restart verification passed: migration, constraints, invitation acceptance, two-actor durable calendar/message plus delivery/view persistence, isolated Message Check preferences, grant, and audit chain.\n"
+      "Embedded PostgreSQL and HTTP restart verification passed: migration, constraints, invitation acceptance, two-actor durable calendar/message plus delivery/view/correction persistence, participant-safe effective-text search, isolated Message Check preferences, grant, and audit chain.\n"
     );
   } finally {
     await database.close();

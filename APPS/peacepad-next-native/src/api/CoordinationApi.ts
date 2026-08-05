@@ -91,6 +91,21 @@ export type RecordMessageLifecycleInput = Readonly<{
   eventType: "delivered" | "viewed";
 }>;
 
+export type CorrectMessageInput = Readonly<{
+  familyCircleId: EntityId;
+  conversationId: EntityId;
+  originalMessageEventId: EntityId;
+  body: string;
+}>;
+
+export type MessageSearchResult = Readonly<{
+  originalMessageEventId: EntityId;
+  effectiveMessageEventId: EntityId;
+  body: string;
+  occurredAt: string;
+  corrected: boolean;
+}>;
+
 export interface PeacePadCoordinationApi {
   createInvitation(input: CreateInvitationInput, context: WriteContext): Promise<CreatedInvitation>;
   resolveInvitation(code: string): Promise<InvitationPreview>;
@@ -110,6 +125,8 @@ export interface PeacePadCoordinationApi {
   listMessages(conversationId: EntityId): Promise<readonly MessageEvent[]>;
   sendMessage(input: SendMessageInput, context: WriteContext): Promise<MessageEvent>;
   recordMessageLifecycle(input: RecordMessageLifecycleInput, context: WriteContext): Promise<MessageEvent>;
+  correctMessage(input: CorrectMessageInput, context: WriteContext): Promise<MessageEvent>;
+  searchMessages(conversationId: EntityId, query: string, limit?: number): Promise<readonly MessageSearchResult[]>;
   getMessageCheckPreference(conversationId: EntityId): Promise<MessageCheckPreference>;
   setMessageCheckPreference(
     conversationId: EntityId,
@@ -236,6 +253,27 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
       "POST",
       input,
       context
+    );
+  }
+
+  correctMessage(input: CorrectMessageInput, context: WriteContext) {
+    return this.write<MessageEvent>(
+      `/api/v2/conversations/${encodeURIComponent(input.conversationId)}/messages/${encodeURIComponent(input.originalMessageEventId)}/corrections`,
+      "POST",
+      input,
+      context
+    );
+  }
+
+  searchMessages(conversationId: EntityId, query: string, limit = 20) {
+    const normalized = query.trim();
+    if (normalized.length < 2 || normalized.length > 100) {
+      return Promise.reject(new PeacePadApiError("Enter between 2 and 100 characters to search.", "http", 400));
+    }
+    const boundedLimit = Math.max(1, Math.min(50, Math.trunc(limit)));
+    return this.request<readonly MessageSearchResult[]>(
+      `/api/v2/conversations/${encodeURIComponent(conversationId)}/messages/search`,
+      { method: "POST", body: JSON.stringify({ query: normalized, limit: boundedLimit }) }
     );
   }
 
