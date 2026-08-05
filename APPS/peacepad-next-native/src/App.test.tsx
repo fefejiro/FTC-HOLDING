@@ -60,7 +60,7 @@ describe("PeacePad coordination shell", () => {
   it.each([
     ["Messages", "Get suggestions for clarity and tone before you send. You choose what changes."],
     ["Calendar", "August 2026"],
-    ["Records", "No records yet."],
+    ["Records", "Create a Case Binder"],
     ["More", "Family connection"]
   ] as const)("opens %s from primary navigation", (label, expected) => {
     renderApp();
@@ -79,6 +79,27 @@ describe("PeacePad coordination shell", () => {
     expect(tabs.filter((tab) => tab.props.accessibilityState?.selected)).toHaveLength(1);
     fireEvent.press(screen.getByRole("button", { name: "Send a message" }));
     expect(screen.getByText("Message Check")).toBeOnTheScreen();
+  });
+});
+
+describe("private records preparation", () => {
+  it("creates a Case Binder and prepares metadata without an upload", () => {
+    renderApp("records");
+    fireEvent.changeText(screen.getByLabelText("Binder name"), "School records");
+    fireEvent.changeText(screen.getByLabelText("Child label"), "Child A");
+    fireEvent.press(screen.getByText("Create Case Binder"));
+    expect(screen.getByText("School records")).toBeOnTheScreen();
+    fireEvent.changeText(screen.getByLabelText("Original file name"), "school-note.pdf");
+    fireEvent.changeText(screen.getByLabelText("File size in bytes"), "1200");
+    fireEvent.press(screen.getByText("Prepare details"));
+    expect(screen.getByLabelText("Attachment details prepared")).toBeOnTheScreen();
+    expect(screen.getByText("No file was uploaded.")).toBeOnTheScreen();
+  });
+
+  it("shows validation errors without creating records", () => {
+    renderApp("records");
+    fireEvent.press(screen.getByText("Create Case Binder"));
+    expect(screen.getByRole("alert")).toHaveTextContent("Enter a Case Binder name.");
   });
 });
 

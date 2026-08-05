@@ -3,6 +3,8 @@ import { Image, Pressable, Share, StyleSheet, Text, TextInput, useWindowDimensio
 import { InvitationQr } from "../components/InvitationQr";
 import { LabButton } from "../components/LabButton";
 import { colors, spacing, typography, usesLargeTextLayout } from "../theme";
+import { useRecordsState } from "../records/RecordsState";
+import type { AttachmentMediaType } from "../domain/v2";
 import { useCoordinationState, type CalendarView } from "./CoordinationState";
 
 export type CoordinationScreen = "home" | "messages" | "calendar" | "invite" | "records" | "more";
@@ -634,10 +636,48 @@ export function MessagesScreen() {
 }
 
 export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
+  const { binder, attachmentIntent, createBinder, prepareAttachment } = useRecordsState();
+  const [binderName, setBinderName] = useState("");
+  const [childLabel, setChildLabel] = useState("");
+  const [fileName, setFileName] = useState("");
+  const [mediaType, setMediaType] = useState<AttachmentMediaType>("application/pdf");
+  const [byteLength, setByteLength] = useState("");
+  const [error, setError] = useState<string>();
+
+  const saveBinder = () => {
+    try { createBinder(binderName, childLabel); setError(undefined); }
+    catch (caught) { setError(caught instanceof Error ? caught.message : "Check the Case Binder details."); }
+  };
+  const prepare = () => {
+    try {
+      prepareAttachment({ originalFileName: fileName, mediaType, byteLength: Number(byteLength) });
+      setError(undefined);
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "Check the attachment details."); }
+  };
   return (
     <View style={styles.stack}>
       <Text style={styles.title}>Records</Text>
-      <Text style={styles.body}>No records yet.</Text>
+      {!binder ? <View style={styles.card}>
+        <Text style={styles.heading}>Create a Case Binder</Text>
+        <Text style={styles.body}>Keep private records organized by family and child.</Text>
+        <TextInput accessibilityLabel="Binder name" onChangeText={setBinderName} placeholder="Binder name" style={styles.input} value={binderName} />
+        <TextInput accessibilityLabel="Child label" onChangeText={setChildLabel} placeholder="Child label" style={styles.input} value={childLabel} />
+        <LabButton label="Create Case Binder" onPress={saveBinder} />
+      </View> : <View style={styles.card}>
+        <Text style={styles.heading}>{binder.name}</Text>
+        <Text style={styles.caption}>{binder.childLabel} · Private</Text>
+        <Text style={styles.fieldLabel}>Prepare attachment details</Text>
+        <TextInput accessibilityLabel="Original file name" onChangeText={setFileName} placeholder="school-note.pdf" style={styles.input} value={fileName} />
+        <TextInput accessibilityLabel="Media type" onChangeText={(value) => setMediaType(value as AttachmentMediaType)} placeholder="application/pdf" style={styles.input} value={mediaType} />
+        <TextInput accessibilityLabel="File size in bytes" keyboardType="number-pad" onChangeText={setByteLength} placeholder="1200" style={styles.input} value={byteLength} />
+        <LabButton label="Prepare details" onPress={prepare} />
+        {attachmentIntent ? <View accessibilityLabel="Attachment details prepared" style={styles.successCard}>
+          <Text style={styles.heading}>Details prepared</Text>
+          <Text style={styles.body}>{attachmentIntent.originalFileName}</Text>
+          <Text style={styles.caption}>No file was uploaded.</Text>
+        </View> : null}
+      </View>}
+      {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
       <Pressable accessibilityRole="button" onPress={() => setScreen("home")} style={styles.actionCard}>
         <Text style={styles.actionTitle}>Return home</Text>
         <Text style={styles.caption}>Choose another task.</Text>

@@ -188,6 +188,49 @@ export type ScheduleEvent = VersionedEntity &
     visibilityOverride: LayerVisibility | null;
   }>;
 
+export type CaseBinder = VersionedEntity &
+  Readonly<{
+    familyCircleId: EntityId;
+    ownerIdentityId: EntityId;
+    name: string;
+    childLabel: string;
+    status: "active" | "archived";
+  }>;
+
+export type AttachmentMediaType =
+  | "image/jpeg"
+  | "image/png"
+  | "application/pdf"
+  | "text/plain";
+
+export type AttachmentTarget =
+  | Readonly<{ kind: "conversation"; conversationId: EntityId }>
+  | Readonly<{ kind: "private-binder"; binderId: EntityId }>;
+
+export type AttachmentUploadIntent = VersionedEntity &
+  Readonly<{
+    familyCircleId: EntityId;
+    ownerIdentityId: EntityId;
+    target: AttachmentTarget;
+    originalFileName: string;
+    mediaType: AttachmentMediaType;
+    byteLength: number;
+    expiresAt: IsoUtcTimestamp;
+    status: "metadata-prepared";
+    uploadTransport: "disabled";
+    uploadUrl: null;
+  }>;
+
+export type PrepareAttachmentIntentRequest = Readonly<{
+  familyCircleId: EntityId;
+  ownerIdentityId: EntityId;
+  target: AttachmentTarget;
+  originalFileName: string;
+  mediaType: AttachmentMediaType;
+  byteLength: number;
+  idempotencyKey: string;
+}>;
+
 export function createWriteContext(input: {
   idempotencyKey: string;
   expectedVersion?: number | null;

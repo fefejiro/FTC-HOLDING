@@ -15,6 +15,7 @@ import {
 } from "./coordination/CoordinationScreens";
 import { CoordinationStateProvider } from "./coordination/CoordinationState";
 import { FoundationScreen } from "./foundation/FoundationScreen";
+import { RecordsStateProvider } from "./records/RecordsState";
 import { colors, spacing } from "./theme";
 
 export type AppScreen = "foundation" | CoordinationScreen;
@@ -35,6 +36,7 @@ export function resolveStartScreen(value?: string): AppScreen {
 
 export function PeacePadCoordinationApp({ startScreen }: { startScreen?: string }) {
   return (
+    <RecordsStateProvider>
     <NavigationContainer linking={startScreen ? undefined : peacePadLinking}>
       <StatusBar barStyle="dark-content" />
       <Stack.Navigator initialRouteName={resolveStartScreen(startScreen ?? process.env?.EXPO_PUBLIC_PEACEPAD_LAB_START_SCREEN)} screenOptions={{ headerShown: false }}>
@@ -45,6 +47,7 @@ export function PeacePadCoordinationApp({ startScreen }: { startScreen?: string 
         ))}
       </Stack.Navigator>
     </NavigationContainer>
+    </RecordsStateProvider>
   );
 }
 

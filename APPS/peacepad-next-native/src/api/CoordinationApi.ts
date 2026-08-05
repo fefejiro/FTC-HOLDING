@@ -1,4 +1,6 @@
 import type {
+  AttachmentTarget,
+  AttachmentUploadIntent,
   CalendarLayer,
   Conversation,
   EntityId,
@@ -106,7 +108,16 @@ export type MessageSearchResult = Readonly<{
   corrected: boolean;
 }>;
 
+export type CreateAttachmentUploadIntentInput = Readonly<{
+  familyCircleId: EntityId;
+  target: AttachmentTarget;
+  originalFileName: string;
+  mediaType: AttachmentUploadIntent["mediaType"];
+  byteLength: number;
+}>;
+
 export interface PeacePadCoordinationApi {
+  createAttachmentUploadIntent(input: CreateAttachmentUploadIntentInput, context: WriteContext): Promise<AttachmentUploadIntent>;
   createInvitation(input: CreateInvitationInput, context: WriteContext): Promise<CreatedInvitation>;
   resolveInvitation(code: string): Promise<InvitationPreview>;
   acceptInvitation(invitationId: EntityId, context: WriteContext): Promise<ParticipantGrant>;
@@ -224,6 +235,10 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
 
   async deleteScheduleEvent(eventId: EntityId, context: WriteContext) {
     await this.write(`/api/v2/schedule-events/${encodeURIComponent(eventId)}`, "DELETE", undefined, context);
+  }
+
+  createAttachmentUploadIntent(input: CreateAttachmentUploadIntentInput, context: WriteContext) {
+    return this.write<AttachmentUploadIntent>("/api/v2/attachment-upload-intents", "POST", input, context);
   }
 
   listConversations(familyCircleId: EntityId) {
