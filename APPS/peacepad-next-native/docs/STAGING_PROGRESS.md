@@ -12,6 +12,8 @@ Latest commit: `b48ee14e`
 | Strict staging-origin CORS | LOCAL VERIFIED |
 | Health and injectable readiness endpoints | LOCAL VERIFIED |
 | Authenticated `/api/v2/session` | LOCAL VERIFIED |
+| Idempotent staging schema contract | LOCAL VERIFIED |
+| Migration failure is surfaced fail-closed | LOCAL VERIFIED |
 | PostgreSQL migration and restart persistence | NOT STARTED |
 | Railway staging configuration | NOT STARTED |
 | Hosted CI | HOSTED CI BLOCKED BEFORE EXECUTION when monorepo workflow is scoped incorrectly |
