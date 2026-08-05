@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { StagingSessionRegistry } from "./StagingSessionRegistry";
+import { asSessionAuthenticator, StagingSessionRegistry } from "./StagingSessionRegistry";
 
 const pepper = "fictional-staging-pepper-1234";
 const actorA = { identityId: "fictional-a", displayName: "Parent A", sessionId: "session-a", familyPermissions: { family: ["read"] } } as const;
@@ -19,4 +19,9 @@ test("rate limits repeated invalid tokens", () => {
   expect(registry.authenticate("bad")).toBeUndefined();
   expect(registry.authenticate("bad")).toBeUndefined();
   expect(registry.authenticate("token-a")).toBeDefined();
+});
+
+test("adapts to the HTTP session authenticator contract", async () => {
+  const registry = new StagingSessionRegistry(pepper, [{ tokenHash: digest("token-a"), actor: actorA }]);
+  await expect(asSessionAuthenticator(registry).authenticate("token-a")).resolves.toMatchObject({ identityId: "fictional-a" });
 });

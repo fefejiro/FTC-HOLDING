@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 
 import type { StagingActor } from "./StagingServerConfig";
+import type { StagingSessionAuthenticator } from "./HashedStagingSessionAuthenticator";
 
 export type StagingSessionCredential = Readonly<{ tokenHash: string; actor: StagingActor }>;
 
@@ -28,3 +29,7 @@ export class StagingSessionRegistry {
     return undefined;
   }
 }
+
+export const asSessionAuthenticator = (registry: StagingSessionRegistry): StagingSessionAuthenticator => ({
+  authenticate: async (sessionToken) => registry.authenticate(sessionToken),
+});

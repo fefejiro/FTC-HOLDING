@@ -19,6 +19,7 @@ Latest commit: `b48ee14e`
 | Simulated restart verification routine | LOCAL VERIFIED |
 | Typed staging session client | LOCAL VERIFIED |
 | Two-fictional-account session registry | LOCAL VERIFIED |
+| Two-account HTTP session handshake | LOCAL VERIFIED |
 | PostgreSQL migration and restart persistence | NOT STARTED |
 | Railway staging configuration | NOT STARTED |
 | Hosted CI | HOSTED CI BLOCKED BEFORE EXECUTION when monorepo workflow is scoped incorrectly |
