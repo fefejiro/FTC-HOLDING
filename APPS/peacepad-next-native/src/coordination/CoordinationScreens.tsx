@@ -530,6 +530,7 @@ export function MessagesScreen() {
       {sentMessages.map((message) => (
         <View accessibilityLabel="Sent message" key={message.id} style={styles.sentBubble}>
           <Text style={styles.body}>{message.sentBody}</Text>
+          <Text style={styles.caption}>{message.status === "waiting" ? "Waiting to send" : message.status}</Text>
         </View>
       ))}
 

@@ -7,6 +7,7 @@ import {
   type CreateInvitationInput,
   type CreatedInvitation,
   type CreateScheduleEventInput,
+  type RecordMessageLifecycleInput,
   type SendMessageInput,
   type PeacePadCoordinationApi
 } from "./CoordinationApi";
@@ -274,6 +275,27 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
     };
     this.messages = [...this.messages, message];
     return message;
+  }
+
+  async recordMessageLifecycle(input: RecordMessageLifecycleInput, _context: WriteContext): Promise<MessageEvent> {
+    const conversation = this.assertConversation(input.conversationId);
+    const original = this.messages.find((message) => message.id === input.originalMessageEventId && message.eventType === "sent");
+    if (!original || original.familyCircleId !== input.familyCircleId || conversation.familyCircleId !== input.familyCircleId) {
+      throw new PeacePadApiError("Message not found.", "http", 404);
+    }
+    const existing = this.messages.find((message) => message.eventType === input.eventType && message.originalMessageEventId === original.id);
+    if (existing) return existing;
+    const event: MessageEvent = {
+      ...versioned(`message-${input.eventType}-${Date.now().toString(36)}`),
+      familyCircleId: input.familyCircleId,
+      conversationId: input.conversationId,
+      eventType: input.eventType,
+      originalMessageEventId: original.id,
+      body: null,
+      occurredAt: new Date().toISOString()
+    };
+    this.messages = [...this.messages, event];
+    return event;
   }
 
   async getMessageCheckPreference(conversationId: EntityId): Promise<MessageCheckPreference> {

@@ -1,5 +1,5 @@
 import type { MessagePreviewResponse } from "../api/contracts";
-import type { CreateConversationInput, SendMessageInput } from "../api/CoordinationApi";
+import type { CreateConversationInput, RecordMessageLifecycleInput, SendMessageInput } from "../api/CoordinationApi";
 import {
   PEACEPAD_V2_SCHEMA_VERSION,
   type AuditEvent,
@@ -99,6 +99,45 @@ export class MessagingService {
       await store.saveIdempotentResult(operation, id);
       await this.audit("message.sent", "MessageEvent", id, context, { conversationId: conversation.id, bodyLength: body.length }, store);
       return message;
+    });
+  }
+
+  async recordLifecycle(input: RecordMessageLifecycleInput, context: WriteContext, actor: StagingActor) {
+    this.assertContext(context, actor);
+    const conversation = await this.requireConversation(input.conversationId, actor, "messages:read");
+    if (conversation.familyCircleId !== input.familyCircleId) throw new InvitationServiceError("NOT_FOUND", "Conversation not found.", 404);
+    return this.options.store.transaction(async (store) => {
+      const operation = await this.operationHash(`message.${input.eventType}`, context);
+      const prior = await store.findIdempotentResult(operation);
+      if (prior) {
+        const existing = (await store.listMessages(conversation.id)).find((item) => item.id === prior);
+        if (!existing) throw new Error("Message lifecycle receipt points to a missing record.");
+        return existing;
+      }
+      const events = await store.listMessages(conversation.id);
+      const original = events.find((item) => item.id === input.originalMessageEventId);
+      if (!original || original.eventType !== "sent" || original.familyCircleId !== conversation.familyCircleId) {
+        throw new InvitationServiceError("NOT_FOUND", "Message not found.", 404);
+      }
+      if (original.provenance.createdBy.identityId === actor.identityId) {
+        throw new InvitationServiceError("FORBIDDEN", "A sender cannot confirm delivery or viewing of their own message.", 403);
+      }
+      const priorLifecycle = events.find((item) => item.eventType === input.eventType
+        && item.originalMessageEventId === original.id
+        && item.provenance.createdBy.identityId === actor.identityId);
+      if (priorLifecycle) return priorLifecycle;
+      const occurredAt = this.clock.now().toISOString();
+      const id = await this.entityId(`message-${input.eventType}`, original.id, context);
+      const event: MessageEvent = {
+        id, schemaVersion: PEACEPAD_V2_SCHEMA_VERSION, version: 1, region: context.region,
+        provenance: { createdAt: occurredAt, createdBy: context.actor, source: "app" },
+        familyCircleId: conversation.familyCircleId, conversationId: conversation.id,
+        eventType: input.eventType, originalMessageEventId: original.id, body: null, occurredAt
+      };
+      await store.appendMessage(event);
+      await store.saveIdempotentResult(operation, id);
+      await this.audit(`message.${input.eventType}`, "MessageEvent", id, context, { conversationId: conversation.id, originalMessageEventId: original.id }, store);
+      return event;
     });
   }
 

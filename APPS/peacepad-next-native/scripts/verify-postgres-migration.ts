@@ -307,6 +307,8 @@ async function verify() {
     let scheduleEventId = "";
     let conversationId = "";
     let messageId = "";
+    let deliveredEventId = "";
+    let viewedEventId = "";
     let replyId = "";
     try {
       const acceptedResponse = await fetch(
@@ -389,6 +391,25 @@ async function verify() {
       assert.equal(recipientMessagesResponse.status, 200);
       assert.deepEqual((await recipientMessagesResponse.json() as Array<{ id: string }>).map(({ id }) => id), [messageId]);
 
+      const deliveredResponse = await fetch(`${baseUrl}/api/v2/conversations/${conversationId}/messages/${messageId}/events`, {
+        method: "POST",
+        headers: headersFor(recipientToken, "http-message-delivered"),
+        body: JSON.stringify({ familyCircleId: "family-1", conversationId, originalMessageEventId: messageId, eventType: "delivered" })
+      });
+      assert.equal(deliveredResponse.status, 201);
+      deliveredEventId = (await deliveredResponse.json() as { id: string; body: null }).id;
+
+      const viewedResponse = await fetch(`${baseUrl}/api/v2/conversations/${conversationId}/messages/${messageId}/events`, {
+        method: "POST",
+        headers: headersFor(recipientToken, "http-message-viewed"),
+        body: JSON.stringify({ familyCircleId: "family-1", conversationId, originalMessageEventId: messageId, eventType: "viewed" })
+      });
+      assert.equal(viewedResponse.status, 201);
+      const viewedEvent = await viewedResponse.json() as { id: string; body: null; originalMessageEventId: string };
+      viewedEventId = viewedEvent.id;
+      assert.equal(viewedEvent.body, null);
+      assert.equal(viewedEvent.originalMessageEventId, messageId);
+
       const recipientPreferenceResponse = await fetch(`${baseUrl}/api/v2/conversations/${conversationId}/message-check`, {
         headers: headersFor(recipientToken, "http-recipient-message-check")
       });
@@ -448,7 +469,7 @@ async function verify() {
       assert.equal(preferenceResponse.status, 200);
       assert.deepEqual((await layersResponse.json() as Array<{ id: string }>).map(({ id }) => id), [calendarLayerId]);
       assert.deepEqual((await eventsResponse.json() as Array<{ id: string }>).map(({ id }) => id), [scheduleEventId]);
-      assert.deepEqual((await messagesResponse.json() as Array<{ id: string }>).map(({ id }) => id), [messageId, replyId]);
+      assert.deepEqual((await messagesResponse.json() as Array<{ id: string }>).map(({ id }) => id), [messageId, deliveredEventId, viewedEventId, replyId]);
       assert.equal((await preferenceResponse.json() as { enabled: boolean }).enabled, true);
 
       const recipientMessagesResponse = await fetch(`${baseUrl}/api/v2/conversations/${conversationId}/messages`, {
@@ -459,7 +480,7 @@ async function verify() {
       });
       assert.equal(recipientMessagesResponse.status, 200);
       assert.equal(recipientPreferenceResponse.status, 200);
-      assert.deepEqual((await recipientMessagesResponse.json() as Array<{ id: string }>).map(({ id }) => id), [messageId, replyId]);
+      assert.deepEqual((await recipientMessagesResponse.json() as Array<{ id: string }>).map(({ id }) => id), [messageId, deliveredEventId, viewedEventId, replyId]);
       assert.equal((await recipientPreferenceResponse.json() as { enabled: boolean }).enabled, false);
     } finally {
       await close(httpServer);
@@ -472,7 +493,7 @@ async function verify() {
     assert.equal(serializedLogs.includes("Synthetic reply confirms 5 PM."), false);
 
     process.stdout.write(
-      "Embedded PostgreSQL and HTTP restart verification passed: migration, constraints, invitation acceptance, two-actor durable calendar/message persistence, isolated Message Check preferences, grant, and audit chain.\n"
+      "Embedded PostgreSQL and HTTP restart verification passed: migration, constraints, invitation acceptance, two-actor durable calendar/message plus delivery/view persistence, isolated Message Check preferences, grant, and audit chain.\n"
     );
   } finally {
     await database.close();

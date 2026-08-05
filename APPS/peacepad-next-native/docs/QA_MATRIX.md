@@ -1,6 +1,6 @@
 # PeacePad Next Native QA Matrix
 
-Last updated: 2026-08-04
+Last updated: 2026-08-05
 
 Statuses: `IMPLEMENTED`, `AUTOMATED VERIFIED`, `SIMULATOR VERIFIED`, `BLOCKED`,
 and `NOT STARTED`.
@@ -69,8 +69,13 @@ and `NOT STARTED`.
 | Preview never automatically sends | AUTOMATED VERIFIED | explicit-send flow test |
 | Conversations require family permission and participant membership | AUTOMATED VERIFIED | service and route authorization tests |
 | Sent messages are append-only and idempotent | AUTOMATED VERIFIED | service replay test plus runtime-role UPDATE/DELETE revocation |
+| Delivery/viewed receipts are recipient-authored and immutable | AUTOMATED VERIFIED | sender rejection, participant authorization, null-body lifecycle events, and idempotent service tests |
+| Delivery/viewed receipts survive HTTP and database restart | AUTOMATED VERIFIED | two fictional actors over loopback HTTP backed by disposable PostgreSQL |
 | Message bodies are absent from audit metadata and server logs | AUTOMATED VERIFIED | audit serialization and loopback log assertions |
 | Messages survive an HTTP host restart | AUTOMATED VERIFIED | disposable PostgreSQL restart proof |
+| Transient message failures enter a bounded device-only outbox | AUTOMATED VERIFIED | SecureStore entry/index tests, five-entry and 800-character bounds |
+| Retry preserves the original idempotency key | AUTOMATED VERIFIED | transient retry test and same write context assertion |
+| Authentication pauses without loss; validation failures never retry | AUTOMATED VERIFIED | auth-retention, permanent-failure, and five-attempt terminal-state tests |
 | Message Check preference survives restart and remains identity-scoped | AUTOMATED VERIFIED | Postgres route/restart proof |
 | Third-party AI cannot be implied by Message Check preference | AUTOMATED VERIFIED | server rejects `aiAssistanceEnabled=true` without separate consent |
 | Production host/writes blocked | AUTOMATED VERIFIED | config and guardrails |
@@ -81,9 +86,9 @@ and `NOT STARTED`.
 | --- | --- | --- |
 | TypeScript | AUTOMATED VERIFIED | passed |
 | Guardrails | AUTOMATED VERIFIED | passed |
-| Jest/RNTL | AUTOMATED VERIFIED | 34 suites / 204 tests |
-| Embedded PostgreSQL | AUTOMATED VERIFIED | two actors, invitation, calendar, conversation, message exchange, isolated preferences, restart reads, grant, and audit chain passed |
-| Coverage | AUTOMATED VERIFIED | 83.02 / 78.39 / 79.50 / 88.38 |
+| Jest/RNTL | AUTOMATED VERIFIED | 35 suites / 218 tests |
+| Embedded PostgreSQL | AUTOMATED VERIFIED | two actors, invitation, calendar, conversation, message exchange, delivery/view events, isolated preferences, restart reads, grant, and audit chain passed |
+| Coverage | AUTOMATED VERIFIED | 82.35 / 77.62 / 78.61 / 87.73 |
 | Primary navigation roles and selected state | AUTOMATED VERIFIED | five named tabs; exactly one selected |
 | Invitation and calendar selector semantics | AUTOMATED VERIFIED | named tabs expose selected state |
 | Calendar layer controls do not depend on colour | AUTOMATED VERIFIED | named checkbox and sharing button states |

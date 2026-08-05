@@ -10,9 +10,17 @@ import { defaultCalendarLayers, SyntheticCoordinationApi } from "../api/Syntheti
 import { environmentConfig } from "../config/environment";
 import { secureStagingSessionStore } from "../session/secureStagingSession";
 import {
+  MAX_OUTBOX_BODY_LENGTH,
+  isTransientMessageError,
+  retryQueuedMessages,
+  secureMessageOutboxStore,
+  type MessageOutboxStore
+} from "../messaging/secureMessageOutbox";
+import {
   createWriteContext,
   type CalendarLayer,
   type InvitationPreview,
+  type MessageEvent,
   type ParticipantGrant,
   type ScheduleEvent
 } from "../domain/v2";
@@ -32,6 +40,7 @@ export type SentMessage = Readonly<{
   originalBody: string;
   sentBody: string;
   sentAt: string;
+  status: "waiting" | "sent" | "delivered" | "viewed";
 }>;
 
 type CoordinationStateValue = {
@@ -104,14 +113,28 @@ function invitationMessage(error: unknown): string {
   return "PeacePad could not verify that invitation. Try again.";
 }
 
+function visibleMessages(events: readonly MessageEvent[]): readonly SentMessage[] {
+  return events.filter((event) => event.eventType === "sent" && event.body).map((message) => {
+    const lifecycle = events.filter((event) => event.originalMessageEventId === message.id);
+    const status = lifecycle.some((event) => event.eventType === "viewed")
+      ? "viewed" as const
+      : lifecycle.some((event) => event.eventType === "delivered")
+        ? "delivered" as const
+        : "sent" as const;
+    return { id: message.id, originalBody: message.body ?? "", sentBody: message.body ?? "", sentAt: message.occurredAt, status };
+  });
+}
+
 export function CoordinationStateProvider({
   api = createDefaultApi(),
   children,
-  initialCalendarView = resolveCalendarStartView(process.env?.EXPO_PUBLIC_PEACEPAD_LAB_START_CALENDAR_VIEW)
+  initialCalendarView = resolveCalendarStartView(process.env?.EXPO_PUBLIC_PEACEPAD_LAB_START_CALENDAR_VIEW),
+  outbox = secureMessageOutboxStore
 }: {
   api?: PeacePadCoordinationApi;
   children: ReactNode;
   initialCalendarView?: CalendarView;
+  outbox?: MessageOutboxStore;
 }) {
   const [invitationCode, setInvitationCodeState] = useState("");
   const [createdInvitation, setCreatedInvitation] = useState<CreatedInvitation>();
@@ -133,23 +156,18 @@ export function CoordinationStateProvider({
   useEffect(() => {
     if (environmentConfig.environment !== "staging") return;
     let active = true;
-    void Promise.all([
+    void secureStagingSessionStore.read().then((session) => session ? retryQueuedMessages(api, outbox) : undefined).then(() => Promise.all([
       api.getMessageCheckPreference("conversation-primary"),
       api.listMessages("conversation-primary")
-    ]).then(([preference, messages]) => {
+    ])).then(([preference, messages]) => {
       if (!active) return;
       setMessageCheckEnabledState(preference.enabled);
-      setSentMessages(messages.filter((message) => message.eventType === "sent" && message.body).map((message) => ({
-        id: message.id,
-        originalBody: message.body ?? "",
-        sentBody: message.body ?? "",
-        sentAt: message.occurredAt
-      })));
+      setSentMessages(visibleMessages(messages));
     }).catch(() => {
       // A conversation is established only after both staging participants connect.
     });
     return () => { active = false; };
-  }, [api]);
+  }, [api, outbox]);
 
   const value = useMemo<CoordinationStateValue>(() => ({
     invitationCode,
@@ -297,22 +315,44 @@ export function CoordinationStateProvider({
         : originalBody;
       setMessageCheckBusy(true);
       setMessageError(undefined);
+      const context = writeContext();
       try {
         const message = await api.sendMessage({
           familyCircleId: "family-current",
           conversationId: "conversation-primary",
           body: sentBody
-        }, writeContext());
+        }, context);
         setSentMessages((current) => [...current, {
           id: message.id,
           originalBody,
           sentBody: message.body ?? sentBody,
-          sentAt: message.occurredAt
+          sentAt: message.occurredAt,
+          status: "sent"
         }]);
         setMessageDraftState("");
         setMessagePreview(undefined);
       } catch (error) {
-        setMessageError(error instanceof Error ? error.message : "PeacePad could not send that message.");
+        if (environmentConfig.environment === "staging" && isTransientMessageError(error) && sentBody.length <= MAX_OUTBOX_BODY_LENGTH) {
+          const queueId = `outbox_${context.idempotencyKey.replace(/[^a-zA-Z0-9_-]/g, "").slice(-64)}`;
+          try {
+            const queuedAt = new Date().toISOString();
+            await outbox.enqueue({
+              id: queueId,
+              input: { familyCircleId: "family-current", conversationId: "conversation-primary", body: sentBody },
+              context,
+              queuedAt,
+              attempts: 0
+            });
+            setSentMessages((current) => [...current, { id: queueId, originalBody, sentBody, sentAt: queuedAt, status: "waiting" }]);
+            setMessageDraftState("");
+            setMessagePreview(undefined);
+            setMessageError("Waiting for a connection. PeacePad will retry this message safely.");
+          } catch (queueError) {
+            setMessageError(queueError instanceof Error ? queueError.message : "PeacePad could not queue that message.");
+          }
+        } else {
+          setMessageError(error instanceof Error ? error.message : "PeacePad could not send that message.");
+        }
       } finally {
         setMessageCheckBusy(false);
       }
@@ -333,6 +373,7 @@ export function CoordinationStateProvider({
     messageDraft,
     messageError,
     messagePreview,
+    outbox,
     sentMessages,
     visibleLayerIds
   ]);

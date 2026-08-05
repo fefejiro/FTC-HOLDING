@@ -84,6 +84,13 @@ export type SendMessageInput = Readonly<{
   body: string;
 }>;
 
+export type RecordMessageLifecycleInput = Readonly<{
+  familyCircleId: EntityId;
+  conversationId: EntityId;
+  originalMessageEventId: EntityId;
+  eventType: "delivered" | "viewed";
+}>;
+
 export interface PeacePadCoordinationApi {
   createInvitation(input: CreateInvitationInput, context: WriteContext): Promise<CreatedInvitation>;
   resolveInvitation(code: string): Promise<InvitationPreview>;
@@ -102,6 +109,7 @@ export interface PeacePadCoordinationApi {
   createConversation(input: CreateConversationInput, context: WriteContext): Promise<Conversation>;
   listMessages(conversationId: EntityId): Promise<readonly MessageEvent[]>;
   sendMessage(input: SendMessageInput, context: WriteContext): Promise<MessageEvent>;
+  recordMessageLifecycle(input: RecordMessageLifecycleInput, context: WriteContext): Promise<MessageEvent>;
   getMessageCheckPreference(conversationId: EntityId): Promise<MessageCheckPreference>;
   setMessageCheckPreference(
     conversationId: EntityId,
@@ -139,15 +147,22 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
     return this.write<CreatedInvitation>("/api/v2/invitations", "POST", input, context);
   }
 
-  resolveInvitation(code: string) {
+  async resolveInvitation(code: string) {
     const normalized = normalizeCode(code);
     if (!/^[A-Z0-9]{6}$/.test(normalized)) {
-      return Promise.reject(new InvitationError("invalid", "Enter a valid six-character invitation code."));
+      throw new InvitationError("invalid", "Enter a valid six-character invitation code.");
     }
-    return this.request<InvitationPreview>("/api/v2/invitations/resolve", {
-      method: "POST",
-      body: JSON.stringify({ code: normalized })
-    });
+    try {
+      return await this.request<InvitationPreview>("/api/v2/invitations/resolve", {
+        method: "POST",
+        body: JSON.stringify({ code: normalized })
+      });
+    } catch (error) {
+      if (error instanceof PeacePadApiError && (error.kind === "network" || error.kind === "timeout")) {
+        throw new InvitationError("offline", "PeacePad cannot verify that invitation right now.");
+      }
+      throw error;
+    }
   }
 
   acceptInvitation(invitationId: EntityId, context: WriteContext) {
@@ -209,6 +224,15 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
   sendMessage(input: SendMessageInput, context: WriteContext) {
     return this.write<MessageEvent>(
       `/api/v2/conversations/${encodeURIComponent(input.conversationId)}/messages`,
+      "POST",
+      input,
+      context
+    );
+  }
+
+  recordMessageLifecycle(input: RecordMessageLifecycleInput, context: WriteContext) {
+    return this.write<MessageEvent>(
+      `/api/v2/conversations/${encodeURIComponent(input.conversationId)}/messages/${encodeURIComponent(input.originalMessageEventId)}/events`,
       "POST",
       input,
       context
@@ -299,7 +323,7 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
       if (error instanceof Error && error.name === "AbortError") {
         throw new PeacePadApiError("PeacePad took too long to respond. Try again.", "timeout");
       }
-      throw new InvitationError("offline", "PeacePad cannot verify that invitation right now.");
+      throw new PeacePadApiError("PeacePad cannot reach the staging service right now.", "network");
     } finally {
       clearTimeout(timeout);
     }

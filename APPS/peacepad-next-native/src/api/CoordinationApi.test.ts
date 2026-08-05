@@ -80,6 +80,7 @@ describe("HttpPeacePadCoordinationApi", () => {
     await api.createConversation({ familyCircleId: "family-current", participantIdentityIds: ["identity-current", "identity-other"] }, context);
     await api.listMessages("conversation-1");
     await api.sendMessage({ familyCircleId: "family-current", conversationId: "conversation-1", body: "Pickup at 5." }, context);
+    await api.recordMessageLifecycle({ familyCircleId: "family-current", conversationId: "conversation-1", originalMessageEventId: "message-1", eventType: "viewed" }, context);
     await api.getMessageCheckPreference("conversation-1");
     await api.setMessageCheckPreference("conversation-1", true, context);
     await api.previewMessage("conversation-1", " Pickup at 5. ");
@@ -92,6 +93,7 @@ describe("HttpPeacePadCoordinationApi", () => {
       "https://staging-api.peacepad.test/api/v2/schedule-events?familyCircleId=family-current",
       "https://staging-api.peacepad.test/api/v2/conversations?familyCircleId=family-current",
       "https://staging-api.peacepad.test/api/v2/conversations/conversation-1/messages",
+      "https://staging-api.peacepad.test/api/v2/conversations/conversation-1/messages/message-1/events",
       "https://staging-api.peacepad.test/api/v2/conversations/conversation-1/message-check",
       "https://staging-api.peacepad.test/api/v2/message-previews"
     ]));
@@ -176,6 +178,18 @@ describe("HttpPeacePadCoordinationApi", () => {
       accessToken
     );
     await expect(api.resolveInvitation("CALM26")).rejects.toMatchObject({ reason: "offline" });
+  });
+
+  it("classifies message transport failures for the bounded retry outbox", async () => {
+    const api = new HttpPeacePadCoordinationApi(
+      config,
+      jest.fn(async (): Promise<Response> => { throw new Error("private network details"); }),
+      accessToken
+    );
+    await expect(api.sendMessage(
+      { familyCircleId: "family-current", conversationId: "conversation-1", body: "Pickup at 5." },
+      context
+    )).rejects.toMatchObject({ kind: "network", message: "PeacePad cannot reach the staging service right now." });
   });
 
   it("fails closed without a secure staging session and sends bearer auth when present", async () => {

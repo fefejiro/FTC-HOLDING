@@ -21,6 +21,8 @@ class MemoryStore implements MessagingStore {
 const digest = { digest: async (value: string) => createHash("sha256").update(value).digest("hex") };
 const actor = { identityId: "parent-a", displayName: "Parent A", sessionId: "session-a", familyPermissions: { family: ["messages:read", "messages:write"] } } as const;
 const context = (key: string, expectedVersion: number | null = null) => createWriteContext({ idempotencyKey: key, expectedVersion, region: "ca", actor: { identityId: actor.identityId, sessionId: actor.sessionId } });
+const recipient = { identityId: "parent-b", displayName: "Parent B", sessionId: "session-b", familyPermissions: { family: ["messages:read", "messages:write"] } } as const;
+const recipientContext = (key: string) => createWriteContext({ idempotencyKey: key, region: "ca", actor: { identityId: recipient.identityId, sessionId: recipient.sessionId } });
 
 describe("MessagingService", () => {
   const setup = () => { const store = new MemoryStore(); const service = new MessagingService({ store, digest, idempotencyPepper: "messaging-pepper-long", clock: { now: () => new Date("2026-08-04T12:00:00Z") } }); return { store, service }; };
@@ -33,6 +35,29 @@ describe("MessagingService", () => {
     const { store, service } = setup(); const conversation = await service.createConversation({ familyCircleId: "family", participantIdentityIds: ["parent-a", "parent-b"] }, context("c"), actor);
     const message = await service.sendMessage({ familyCircleId: "family", conversationId: conversation.id, body: "Pickup is at 6 PM." }, context("m"), actor);
     expect(await service.listMessages(conversation.id, actor)).toEqual([message]); expect(JSON.stringify(store.audits)).not.toContain("Pickup is at 6 PM.");
+  });
+  it("appends recipient delivery and view receipts without duplicating message content", async () => {
+    const { store, service } = setup();
+    const conversation = await service.createConversation({ familyCircleId: "family", participantIdentityIds: ["parent-a", "parent-b"] }, context("c"), actor);
+    const message = await service.sendMessage({ familyCircleId: "family", conversationId: conversation.id, body: "Pickup is at 6 PM." }, context("m"), actor);
+    const delivered = await service.recordLifecycle({ familyCircleId: "family", conversationId: conversation.id, originalMessageEventId: message.id, eventType: "delivered" }, recipientContext("delivered"), recipient);
+    const viewed = await service.recordLifecycle({ familyCircleId: "family", conversationId: conversation.id, originalMessageEventId: message.id, eventType: "viewed" }, recipientContext("viewed"), recipient);
+    await expect(service.recordLifecycle({ familyCircleId: "family", conversationId: conversation.id, originalMessageEventId: message.id, eventType: "viewed" }, recipientContext("viewed-again"), recipient)).resolves.toEqual(viewed);
+    expect([delivered, viewed]).toEqual([
+      expect.objectContaining({ eventType: "delivered", originalMessageEventId: message.id, body: null }),
+      expect.objectContaining({ eventType: "viewed", originalMessageEventId: message.id, body: null })
+    ]);
+    expect(store.messages).toHaveLength(3);
+    expect(JSON.stringify(store.audits)).not.toContain("Pickup is at 6 PM.");
+  });
+  it("prevents senders and outsiders from manufacturing lifecycle receipts", async () => {
+    const { service } = setup();
+    const conversation = await service.createConversation({ familyCircleId: "family", participantIdentityIds: ["parent-a", "parent-b"] }, context("c"), actor);
+    const message = await service.sendMessage({ familyCircleId: "family", conversationId: conversation.id, body: "Synthetic message" }, context("m"), actor);
+    const input = { familyCircleId: "family", conversationId: conversation.id, originalMessageEventId: message.id, eventType: "viewed" as const };
+    await expect(service.recordLifecycle(input, context("self-view"), actor)).rejects.toMatchObject({ status: 403 });
+    const outsider = { ...recipient, identityId: "outsider", sessionId: "outsider-session" };
+    await expect(service.recordLifecycle(input, createWriteContext({ idempotencyKey: "outsider", region: "ca", actor: { identityId: outsider.identityId, sessionId: outsider.sessionId } }), outsider)).rejects.toMatchObject({ status: 404 });
   });
   it("defaults Message Check off, persists it per participant, and rejects implied AI consent", async () => {
     const { service } = setup(); const conversation = await service.createConversation({ familyCircleId: "family", participantIdentityIds: ["parent-a", "parent-b"] }, context("c"), actor);

@@ -1,4 +1,4 @@
-import type { CreateConversationInput, SendMessageInput } from "../api/CoordinationApi";
+import type { CreateConversationInput, RecordMessageLifecycleInput, SendMessageInput } from "../api/CoordinationApi";
 import { createWriteContext, PEACEPAD_V2_SCHEMA_VERSION, type DataRegion } from "../domain/v2";
 import { InvitationServiceError } from "./InvitationService";
 import type { StagingInvitationRequest, StagingInvitationResponse } from "./InvitationRoutes";
@@ -35,6 +35,15 @@ export class StagingMessagingRoutes {
         const id = decodeURIComponent(messages[1]); const body = request.body as SendMessageInput;
         if (!body || body.conversationId !== id) throw new InvitationServiceError("INVALID_REQUEST", "Conversation ID mismatch.", 400);
         return { status: 201, body: await this.service.sendMessage(body, context(request), request.actor) };
+      }
+      const lifecycle = url.pathname.match(/^\/api\/v2\/conversations\/([^/]+)\/messages\/([^/]+)\/events$/);
+      if (lifecycle && request.method === "POST") {
+        const conversationId = decodeURIComponent(lifecycle[1]); const messageId = decodeURIComponent(lifecycle[2]);
+        const body = request.body as RecordMessageLifecycleInput;
+        if (!body || body.conversationId !== conversationId || body.originalMessageEventId !== messageId || (body.eventType !== "delivered" && body.eventType !== "viewed")) {
+          throw new InvitationServiceError("INVALID_REQUEST", "A valid message lifecycle event is required.", 400);
+        }
+        return { status: 201, body: await this.service.recordLifecycle(body, context(request), request.actor) };
       }
       const preference = url.pathname.match(/^\/api\/v2\/conversations\/([^/]+)\/message-check$/);
       if (preference && request.method === "GET") return { status: 200, body: await this.service.getPreference(decodeURIComponent(preference[1]), request.actor) };

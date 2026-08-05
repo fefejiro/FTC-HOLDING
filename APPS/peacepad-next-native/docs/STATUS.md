@@ -1,6 +1,6 @@
 # PeacePad Next Native Status
 
-Last updated: 2026-08-04
+Last updated: 2026-08-05
 
 ## Scope boundary
 
@@ -29,6 +29,8 @@ approved Capacitor app, production data/API, App Store record, and
 | Original draft preserved; no automatic send | AUTOMATED VERIFIED | explicit-send tests |
 | Third-party AI consent separate/off | AUTOMATED VERIFIED | consent and preference tests |
 | Permanent staging conversation/message ledger | AUTOMATED VERIFIED | participant authorization, idempotent append, immutable Postgres message events, and HTTP restart proof |
+| Immutable delivery and viewed receipts | AUTOMATED VERIFIED | recipient-only lifecycle authorization, null-body events, idempotency, and PostgreSQL HTTP restart proof |
+| Bounded secure message retry outbox | AUTOMATED VERIFIED | device-only per-entry storage, five-entry/five-attempt limits, transient-only retry, preserved idempotency, and permanent-failure discard |
 | Durable per-participant Message Check preference | AUTOMATED VERIFIED | default-off read, consent-safe update, optimistic concurrency, and HTTP restart proof |
 | Sensitive message bodies excluded from audit/log metadata | AUTOMATED VERIFIED | audit payload contains body length only; loopback log-redaction assertion passed |
 | Current quiet-premium Simulator evidence | SIMULATOR VERIFIED | iPhone 17 / iOS 26.5 Month, Week, and Day evidence captured on `e0936d2e` |
@@ -50,12 +52,12 @@ approved Capacitor app, production data/API, App Store record, and
 ```text
 guardrails       passed
 typecheck        passed
-Jest/RNTL        34 suites / 204 tests passed
-embedded SQL     two-actor invitation/calendar/message and HTTP restart persistence passed
-coverage         83.02 statements / 78.39 branches / 79.50 functions / 88.38 lines
+Jest/RNTL        35 suites / 218 tests passed
+embedded SQL     two-actor invitation/calendar/message/receipt and HTTP restart persistence passed
+coverage         82.35 statements / 77.62 branches / 78.61 functions / 87.73 lines
 Expo Doctor      17/18 in monorepo; isolated native install 18/18
 Expo config      PeacePad; ca.peacepad.nextnative.lab; diagnostics/writes false
-iOS export       passed; 962 modules bundled
+iOS export       passed; 963 modules bundled
 diff check       passed
 secret scan      no credential value found in changed runtime files
 ```
@@ -180,6 +182,16 @@ commit and are not relabelled as current evidence.
   restart recovery are automated verified. Date navigation, recurrence
   execution, offline behavior, networked staging, and production migration are
   later gates.
+- Delivery and viewed states are immutable recipient-authored events linked to
+  the original sent event. They contain no duplicate message body, cannot be
+  manufactured by the sender, and persist across an HTTP/PostgreSQL restart.
+- Explicit sends that fail with a classified staging network/timeout error can
+  enter a device-only SecureStore outbox. Each entry preserves its original
+  idempotency key, is capped at 800 characters, and the outbox is limited to
+  five entries and five attempts. Authentication pauses retain the intent
+  without consuming an attempt; validation/authorization failures are not
+  retried. This is foreground restart recovery, not a background delivery
+  service or production offline-sync claim.
 - Message Check is rule-based and does not call third-party AI.
 - Calendar layer sharing is Simulator verified; all real-iPhone staging
   evidence remains required.
@@ -235,13 +247,13 @@ commit and are not relabelled as current evidence.
 | Typed staging compatibility client | 88% |
 | Staging invitation server core | 85% |
 | Staging calendar server core | 78% |
-| Staging messaging server core | 82% |
+| Staging messaging server core | 88% |
 | Secure staging account/session bridge | 80% |
 | Automated verification | 98% |
 | Accessibility foundation | 45% |
 | Adaptive theme foundation | 55% |
 | Current device verification | 82% |
-| Overall production-native v2 | 49% |
+| Overall production-native v2 | 50% |
 
 ## Feature completion view
 
@@ -252,14 +264,14 @@ These percentages measure production readiness, not how many screens exist.
 | Home and task navigation | 85% | polished shell and state-driven actions; device accessibility pass remains |
 | Secure family invitations | 75% | durable staging core; network deployment and real-device handoff remain |
 | Calendar and parenting plans | 73% | durable authorized layers/events; recurrence engine, offline queue, and date navigation remain |
-| Messaging | 66% | two-actor participant-bound append-only ledger and restart recovery pass; delivery/read states, corrections, attachments, search, offline queue, and deployed two-device proof remain |
+| Messaging | 72% | two-actor append-only ledger, durable delivery/viewed receipts, and bounded foreground retry pass; corrections, attachments, search, background sync, and deployed two-device proof remain |
 | Message Check | 80% | rule-based, per-chat, explicit-send flow with durable default-off preference; networked staging and real-device proof remain |
 | Records / Case Binder | 38% | synthetic vertical slice exists; secure uploads, immutable originals, hashing, and export verification remain |
 | Calls | 15% | typed contracts and prior-repo design evidence only; no authenticated WebRTC/CallKit implementation |
 | Expenses and reimbursements | 10% | domain direction only; no ledger, receipts, splits, balances, or payment adapter |
 | Account and secure session | 80% | fail-closed hash-only multi-actor staging handshake and device-only token storage; production identity remains |
 | Notifications and reminders | 8% | product rules identified; no production push delivery |
-| Offline and conflict recovery | 5% | not implemented beyond local session behavior |
+| Offline and conflict recovery | 18% | bounded secure message retry with preserved idempotency passes; calendar/records queues, connectivity orchestration, conflicts, and device proof remain |
 | Professional portal | 5% | roles/contracts identified; no operational portal |
 | Accessibility | 45% | semantic/contrast/large-text automation; assistive-device evidence remains |
 | English/French/Spanish localization | 5% | locale contracts only |
@@ -268,9 +280,13 @@ These percentages measure production readiness, not how many screens exist.
 ## Next best move
 
 Do not repeat the blocked Expo Go remote-control attempt. The permanent staging
-message ledger, hash-only multi-actor sessions, and per-person Message Check
-preferences now pass embedded PostgreSQL and HTTP restart verification. The next gate is an isolated networked
-staging database/service, followed by the reviewed migration, post-deploy smoke,
-and one two-iPhone fictional-account pass covering send, restart recovery, and
-preference isolation. Delivery/read events and offline retry follow that proof;
-calling starts only after the two-user communication foundation is reliable.
+message ledger, recipient-authored delivery/viewed receipts, hash-only
+multi-actor sessions, per-person Message Check preferences, and bounded secure
+retry outbox now pass local automation and PostgreSQL/HTTP restart proof. The
+next promotion gate is an isolated networked staging database/service, followed
+by the reviewed migration, post-deploy smoke, and one two-iPhone
+fictional-account pass covering send, delivery, view, connection loss, restart
+recovery, and preference isolation. If external staging remains unavailable,
+the next local product slice is linked message corrections plus participant-safe
+search; calling starts only after the two-user messaging foundation is deployed
+and reliable.

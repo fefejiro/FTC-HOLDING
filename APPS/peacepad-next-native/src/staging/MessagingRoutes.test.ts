@@ -11,6 +11,7 @@ describe("StagingMessagingRoutes", () => {
     const service = {
       listConversations: jest.fn(async () => []), createConversation: jest.fn(async () => ({ id: "conversation-1" })),
       listMessages: jest.fn(async () => []), sendMessage: jest.fn(async () => ({ id: "message-1" })),
+      recordLifecycle: jest.fn(async () => ({ id: "message-viewed-1" })),
       getPreference: jest.fn(async () => ({ enabled: false })), setPreference: jest.fn(async () => ({ enabled: true })),
       preview: jest.fn(async () => ({ tone: "clear" }))
     };
@@ -28,6 +29,12 @@ describe("StagingMessagingRoutes", () => {
     expect((await routes.handle(request("POST", "/api/v2/conversations/conversation-1/messages", body))).status).toBe(201);
     expect(service.sendMessage).toHaveBeenCalledWith(body, expect.objectContaining({ idempotencyKey: "request-1" }), actor);
   });
+  it("routes typed delivery and view events to the immutable lifecycle service", async () => {
+    const { routes, service } = setup();
+    const body = { familyCircleId: "family", conversationId: "conversation-1", originalMessageEventId: "message-1", eventType: "viewed" };
+    expect((await routes.handle(request("POST", "/api/v2/conversations/conversation-1/messages/message-1/events", body))).status).toBe(201);
+    expect(service.recordLifecycle).toHaveBeenCalledWith(body, expect.objectContaining({ idempotencyKey: "request-1" }), actor);
+  });
   it("routes default-off preference read, update, and rule preview", async () => {
     const { routes, service } = setup();
     expect((await routes.handle(request("GET", "/api/v2/conversations/conversation-1/message-check"))).status).toBe(200);
@@ -38,6 +45,7 @@ describe("StagingMessagingRoutes", () => {
   it.each([
     [request("GET", "/api/v2/conversations"), 400],
     [request("POST", "/api/v2/conversations/conversation-1/messages", { conversationId: "other", body: "x" }), 400],
+    [request("POST", "/api/v2/conversations/conversation-1/messages/message-1/events", { conversationId: "conversation-1", originalMessageEventId: "wrong", eventType: "viewed" }), 400],
     [request("PUT", "/api/v2/conversations/conversation-1/message-check", { enabled: "yes", aiAssistanceEnabled: false }), 400],
     [request("POST", "/api/v2/message-previews", { conversationId: 1, content: "x" }), 400],
     [request("GET", "/api/v2/conversations", undefined, false), 401],
