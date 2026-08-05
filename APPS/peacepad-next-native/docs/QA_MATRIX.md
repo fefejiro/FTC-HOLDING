@@ -72,10 +72,10 @@ and `NOT STARTED`.
 | Core interactive target sizes | AUTOMATED VERIFIED | 44-point compact controls; 48-point primary/navigation controls |
 | Dynamic Type not disabled | AUTOMATED VERIFIED | release guard rejects `allowFontScaling={false}` |
 | Large-text adaptive layout | AUTOMATED VERIFIED | 1.6x rendered tests stack Home and enlarge two-line navigation |
-| VoiceOver and 200% text visual pass | NOT STARTED | requires controlled Simulator and real-device evidence |
+| VoiceOver and 200% text visual pass | BLOCKED | commit `959698dc` bundled on iPhone 17 Pro / iOS 26.5 at accessibility-extra-large; Expo Go first-run sheet obscured the app and remote GUI automation was unavailable; no screenshot retained |
 | iOS system light/dark appearance | AUTOMATED VERIFIED | native dynamic semantic colour tokens and adaptive status/header chrome |
 | Core light/dark text contrast | AUTOMATED VERIFIED | WCAG AA ratio tests cover body, secondary, primary action, success, and error pairs |
-| Dark appearance visual pass | NOT STARTED | current Simulator screenshots required |
+| Dark appearance visual pass | BLOCKED | dark appearance was configured and the app bundled, but the same Expo Go first-run sheet prevented valid product evidence after the single allowed retry |
 | Android dark appearance | NOT STARTED | Android intentionally retains reviewed light palette in this gate |
 | Expo config | AUTOMATED VERIFIED | lab bundle; diagnostics/writes false |
 | Expo Doctor | BLOCKED | 17/18; app React 19 and monorepo-root React 18 duplicate |

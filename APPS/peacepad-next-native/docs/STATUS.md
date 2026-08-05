@@ -178,6 +178,14 @@ commit and are not relabelled as current evidence.
   follow the iOS system appearance. Automated contrast checks keep core light
   and dark text/action pairs at WCAG AA (4.5:1 or greater). A dark Simulator
   screenshot and assistive-technology pass remain required.
+- A controlled iPhone 17 Pro / iOS 26.5 dark-theme and accessibility-extra-large
+  Simulator attempt on source commit `959698dc` bundled successfully. Expo Go's
+  first-run developer sheet then obscured the product. The single retry used a
+  direct Simulator URL to avoid SSH GUI activation, but the sheet could not be
+  dismissed because Maestro had no Java runtime and macOS denied SSH Apple
+  Events access. No obscured screenshot was retained or represented as product
+  evidence. This visual gate is **BLOCKED** until a local GUI session can dismiss
+  the one-time sheet or a signed development build replaces Expo Go.
 - The shared monorepo Expo Doctor run is 17/18 because web workspaces expose
   React 18 above the native workspace's React 19. A clean standalone install of
   the native manifest passed Expo Doctor 18/18, confirming the native app's own
@@ -207,9 +215,10 @@ commit and are not relabelled as current evidence.
 
 ## Next best move
 
-Complete the dark-theme and 200% text Simulator visual pass, then move the repeatable
-invitation and calendar journeys to one controlled real-iPhone staging pass.
-The database migration no longer needs a paid host for local regression proof.
-The next persistence gate remains one isolated networked staging database and
-service with a least-privilege runtime role. Do not expand into calling,
-billing, or production migration before those gates pass.
+Do not repeat the blocked Expo Go remote-control attempt. Prepare the isolated
+networked staging deployment with an explicit migration command, least-privilege
+runtime role, and post-deploy readiness smoke test. After that gate passes, use
+one controlled real-iPhone staging session for invitation, calendar, theme, and
+large-text evidence. A future Mac GUI session may close the one-time Expo Go
+sheet, or a signed development build can replace Expo Go. Do not expand into
+calling, billing, or production migration before these gates pass.
