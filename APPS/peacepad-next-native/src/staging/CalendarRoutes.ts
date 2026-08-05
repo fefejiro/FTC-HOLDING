@@ -86,13 +86,15 @@ export class CompositeStagingRoutes {
   constructor(
     private readonly invitations: { handle(request: StagingInvitationRequest): Promise<StagingInvitationResponse> },
     private readonly calendar: StagingCalendarRoutes,
-    private readonly messaging?: { handle(request: StagingInvitationRequest): Promise<StagingInvitationResponse> }
+    private readonly messaging?: { handle(request: StagingInvitationRequest): Promise<StagingInvitationResponse> },
+    private readonly attachments?: { handle(request: StagingInvitationRequest): Promise<StagingInvitationResponse> }
   ) {}
 
   handle(request: StagingInvitationRequest) {
     const path = new URL(request.path, "https://api.staging.peacepad.ca").pathname;
     if (path.startsWith("/api/v2/calendar-layers") || path.startsWith("/api/v2/schedule-events")) return this.calendar.handle(request);
     if (this.messaging && (path.startsWith("/api/v2/conversations") || path === "/api/v2/message-previews")) return this.messaging.handle(request);
+    if (this.attachments && path === "/api/v2/attachment-upload-intents") return this.attachments.handle(request);
     return this.invitations.handle(request);
   }
 }

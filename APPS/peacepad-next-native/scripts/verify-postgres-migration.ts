@@ -61,7 +61,7 @@ const owner: StagingActor = {
   identityId: "identity-owner",
   displayName: "Alex Morgan",
   sessionId: "session-owner",
-  familyPermissions: { "family-1": ["invite", "calendar:read", "calendar:write", "messages:read", "messages:write"] }
+  familyPermissions: { "family-1": ["invite", "calendar:read", "calendar:write", "messages:read", "messages:write", "records:write"] }
 };
 
 const recipient: StagingActor = {
@@ -118,6 +118,7 @@ async function verify() {
         WHERE table_schema = 'peacepad_native_staging' ORDER BY table_name`
     );
     assert.deepEqual(tables.rows.map(({ table_name }) => table_name), [
+      "attachment_upload_intents",
       "audit_events",
       "calendar_layers",
       "conversations",
@@ -311,6 +312,7 @@ async function verify() {
     let viewedEventId = "";
     let correctionEventId = "";
     let replyId = "";
+    let attachmentIntentId = "";
     try {
       const acceptedResponse = await fetch(
         `${baseUrl}/api/v2/invitations/${encodeURIComponent(httpCreated.invitation.id)}/accept`,
@@ -367,6 +369,40 @@ async function verify() {
       });
       assert.equal(conversationResponse.status, 201);
       conversationId = (await conversationResponse.json() as { id: string }).id;
+
+      const attachmentResponse = await fetch(`${baseUrl}/api/v2/attachment-upload-intents`, {
+        method: "POST",
+        headers: headersFor(ownerToken, "http-attachment-intent"),
+        body: JSON.stringify({
+          familyCircleId: "family-1",
+          target: { kind: "conversation", conversationId },
+          originalFileName: "school-note.pdf",
+          mediaType: "application/pdf",
+          byteLength: 1024
+        })
+      });
+      assert.equal(attachmentResponse.status, 201);
+      const attachmentIntent = await attachmentResponse.json() as {
+        id: string; uploadTransport: string; uploadUrl: null; status: string;
+      };
+      attachmentIntentId = attachmentIntent.id;
+      assert.equal(attachmentIntent.uploadTransport, "disabled");
+      assert.equal(attachmentIntent.uploadUrl, null);
+      assert.equal(attachmentIntent.status, "metadata-prepared");
+
+      const byteInjectionResponse = await fetch(`${baseUrl}/api/v2/attachment-upload-intents`, {
+        method: "POST",
+        headers: headersFor(ownerToken, "http-attachment-byte-injection"),
+        body: JSON.stringify({
+          familyCircleId: "family-1",
+          target: { kind: "conversation", conversationId },
+          originalFileName: "unsafe.pdf",
+          mediaType: "application/pdf",
+          byteLength: 4,
+          fileBytes: "AAAA"
+        })
+      });
+      assert.equal(byteInjectionResponse.status, 400);
 
       const preferenceResponse = await fetch(`${baseUrl}/api/v2/conversations/${conversationId}/message-check`, {
         method: "PUT",
@@ -463,6 +499,13 @@ async function verify() {
           calendarLayerId
         })]
       ), "cross-family calendar reference", /foreign key constraint/i);
+      await expectDatabaseFailure(() => pool.query(
+        `INSERT INTO peacepad_native_staging.attachment_upload_intents
+          (id, region, version, family_circle_id, owner_identity_id, target_kind, expires_at, intent_record)
+         VALUES ('unsafe-transport', 'ca', 1, 'family-1', 'identity-owner', 'conversation',
+                 '2026-08-05T13:00:00Z', $1::jsonb)`,
+        [JSON.stringify({ uploadTransport: "enabled", uploadUrl: "https://unsafe.example/upload" })]
+      ), "enabled attachment transport");
     } finally {
       await close(httpServer);
     }
@@ -486,6 +529,13 @@ async function verify() {
       assert.equal(eventsResponse.status, 200);
       assert.equal(messagesResponse.status, 200);
       assert.equal(preferenceResponse.status, 200);
+      const storedAttachment = await pool.query<{ id: string; upload_transport: string; upload_url: null }>(
+        `SELECT id, intent_record->>'uploadTransport' AS upload_transport,
+                intent_record->'uploadUrl' AS upload_url
+           FROM peacepad_native_staging.attachment_upload_intents WHERE id = $1`,
+        [attachmentIntentId]
+      );
+      assert.deepEqual(storedAttachment.rows, [{ id: attachmentIntentId, upload_transport: "disabled", upload_url: null }]);
       assert.deepEqual((await layersResponse.json() as Array<{ id: string }>).map(({ id }) => id), [calendarLayerId]);
       assert.deepEqual((await eventsResponse.json() as Array<{ id: string }>).map(({ id }) => id), [scheduleEventId]);
       assert.deepEqual((await messagesResponse.json() as Array<{ id: string }>).map(({ id }) => id), [messageId, deliveredEventId, viewedEventId, correctionEventId, replyId]);
@@ -536,7 +586,7 @@ async function verify() {
     assert.equal(serializedLogs.includes("Synthetic reply confirms 5 PM."), false);
 
     process.stdout.write(
-      "Embedded PostgreSQL and HTTP restart verification passed: migration, constraints, invitation acceptance, two-actor durable calendar/message plus delivery/view/correction persistence, participant-safe effective-text search, isolated Message Check preferences, grant, and audit chain.\n"
+      "Embedded PostgreSQL and HTTP restart verification passed: migration, constraints, invitation acceptance, two-actor durable calendar/message plus delivery/view/correction persistence, metadata-only attachment intents with byte transport disabled, participant-safe effective-text search, isolated Message Check preferences, grant, and audit chain.\n"
     );
   } finally {
     await database.close();

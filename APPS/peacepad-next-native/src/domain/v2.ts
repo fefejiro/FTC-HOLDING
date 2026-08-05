@@ -225,6 +225,24 @@ export type SourceArtifact = VersionedEntity &
     capturedAt: IsoUtcTimestamp | null;
   }>;
 
+export type AttachmentTarget =
+  | Readonly<{ kind: "conversation"; conversationId: EntityId }>
+  | Readonly<{ kind: "private-binder"; binderId: EntityId }>;
+
+export type AttachmentUploadIntent = VersionedEntity &
+  Readonly<{
+    familyCircleId: EntityId;
+    ownerIdentityId: EntityId;
+    target: AttachmentTarget;
+    originalFileName: string;
+    mediaType: "image/jpeg" | "image/png" | "application/pdf" | "text/plain";
+    byteLength: number;
+    expiresAt: IsoUtcTimestamp;
+    status: "metadata-prepared";
+    uploadTransport: "disabled";
+    uploadUrl: null;
+  }>;
+
 export type EvidenceRecord = VersionedEntity &
   Readonly<{
     familyCircleId: EntityId;

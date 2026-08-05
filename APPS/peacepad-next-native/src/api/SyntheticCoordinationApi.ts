@@ -3,6 +3,7 @@ import { PeacePadApiError } from "./PeacePadApiClient";
 import {
   InvitationError,
   type CorrectMessageInput,
+  type CreateAttachmentUploadIntentInput,
   type CreateCalendarLayerInput,
   type CreateConversationInput,
   type CreateInvitationInput,
@@ -15,6 +16,7 @@ import {
 } from "./CoordinationApi";
 import {
   PEACEPAD_V2_SCHEMA_VERSION,
+  type AttachmentUploadIntent,
   type ActorReference,
   type CalendarLayer,
   type Conversation,
@@ -139,6 +141,24 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
     this.invitationsById.set(invitationId, seed);
     this.invitationStates.set(invitationId, "pending");
     return { invitation, code, deepLink: `peacepadnextlab://invite/${code}` };
+  }
+
+  async createAttachmentUploadIntent(input: CreateAttachmentUploadIntentInput, _context: WriteContext): Promise<AttachmentUploadIntent> {
+    this.assertCurrentFamily(input.familyCircleId);
+    const now = new Date();
+    return {
+      ...versioned(`attachment-intent-${Date.now().toString(36)}`),
+      familyCircleId: input.familyCircleId,
+      ownerIdentityId: "identity-current",
+      target: input.target,
+      originalFileName: input.originalFileName,
+      mediaType: input.mediaType,
+      byteLength: input.byteLength,
+      expiresAt: new Date(now.getTime() + 10 * 60 * 1000).toISOString(),
+      status: "metadata-prepared",
+      uploadTransport: "disabled",
+      uploadUrl: null
+    };
   }
 
   async resolveInvitation(code: string): Promise<InvitationPreview> {

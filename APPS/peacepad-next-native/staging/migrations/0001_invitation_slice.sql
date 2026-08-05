@@ -121,6 +121,31 @@ CREATE TABLE IF NOT EXISTS peacepad_native_staging.message_check_preferences (
   CHECK ((preference_record ->> 'aiAssistanceEnabled')::boolean = false)
 );
 
+CREATE TABLE IF NOT EXISTS peacepad_native_staging.attachment_upload_intents (
+  id text PRIMARY KEY,
+  region text NOT NULL CHECK (region IN ('ca', 'us')),
+  version integer NOT NULL CHECK (version > 0),
+  family_circle_id text NOT NULL,
+  owner_identity_id text NOT NULL,
+  target_kind text NOT NULL CHECK (target_kind IN ('conversation', 'private-binder')),
+  expires_at timestamptz NOT NULL,
+  intent_record jsonb NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT attachment_intent_identity_matches CHECK ((intent_record ->> 'id') = id),
+  CONSTRAINT attachment_intent_region_matches CHECK ((intent_record ->> 'region') = region),
+  CONSTRAINT attachment_intent_family_matches CHECK ((intent_record ->> 'familyCircleId') = family_circle_id),
+  CONSTRAINT attachment_intent_owner_matches CHECK ((intent_record ->> 'ownerIdentityId') = owner_identity_id),
+  CONSTRAINT attachment_intent_target_matches CHECK ((intent_record -> 'target' ->> 'kind') = target_kind),
+  CONSTRAINT attachment_intent_expiry_matches CHECK ((intent_record ->> 'expiresAt')::timestamptz = expires_at),
+  CONSTRAINT attachment_intent_expiry_future CHECK (expires_at > created_at),
+  CONSTRAINT attachment_intent_status_prepared CHECK (intent_record ->> 'status' = 'metadata-prepared'),
+  CONSTRAINT attachment_intent_transport_disabled CHECK (intent_record ->> 'uploadTransport' = 'disabled'),
+  CONSTRAINT attachment_intent_url_absent CHECK ((intent_record -> 'uploadUrl') = 'null'::jsonb)
+);
+
+CREATE INDEX IF NOT EXISTS attachment_upload_intents_family_owner_idx
+  ON peacepad_native_staging.attachment_upload_intents (family_circle_id, owner_identity_id, created_at);
+
 CREATE TABLE IF NOT EXISTS peacepad_native_staging.idempotency_receipts (
   operation_hash text PRIMARY KEY,
   target_id text NOT NULL,

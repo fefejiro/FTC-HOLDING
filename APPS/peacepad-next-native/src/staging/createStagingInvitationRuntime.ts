@@ -9,6 +9,9 @@ import { PostgresCalendarStore } from "./PostgresCalendarStore";
 import { MessagingService } from "./MessagingService";
 import { PostgresMessagingStore } from "./PostgresMessagingStore";
 import { StagingMessagingRoutes } from "./MessagingRoutes";
+import { AttachmentIntentService } from "./AttachmentIntentService";
+import { PostgresAttachmentIntentStore } from "./PostgresAttachmentIntentStore";
+import { StagingAttachmentIntentRoutes } from "./AttachmentIntentRoutes";
 import {
   PostgresInvitationRateLimiter,
   PostgresInvitationStore,
@@ -71,10 +74,13 @@ export function createStagingInvitationRuntime(config: StagingInvitationRuntimeC
   });
   const messagingStore = new PostgresMessagingStore(config.sqlPool, digest, config.idempotencyPepper);
   const messagingService = new MessagingService({ store: messagingStore, digest, idempotencyPepper: config.idempotencyPepper });
+  const attachmentStore = new PostgresAttachmentIntentStore(config.sqlPool, digest, config.idempotencyPepper);
+  const attachmentService = new AttachmentIntentService({ store: attachmentStore, digest, idempotencyPepper: config.idempotencyPepper });
   const routes = new CompositeStagingRoutes(
     new StagingInvitationRoutes(service),
     new StagingCalendarRoutes(calendarService),
-    new StagingMessagingRoutes(messagingService)
+    new StagingMessagingRoutes(messagingService),
+    new StagingAttachmentIntentRoutes(attachmentService)
   );
   return {
     bridge: new TrustedInvitationHttpBridge(routes, config.authenticator),
@@ -84,6 +90,8 @@ export function createStagingInvitationRuntime(config: StagingInvitationRuntimeC
     calendarService,
     calendarStore,
     messagingService,
-    messagingStore
+    messagingStore,
+    attachmentService,
+    attachmentStore
   } as const;
 }

@@ -86,6 +86,13 @@ describe("HttpPeacePadCoordinationApi", () => {
     await api.getMessageCheckPreference("conversation-1");
     await api.setMessageCheckPreference("conversation-1", true, context);
     await api.previewMessage("conversation-1", " Pickup at 5. ");
+    await api.createAttachmentUploadIntent({
+      familyCircleId: "family-current",
+      target: { kind: "conversation", conversationId: "conversation-1" },
+      originalFileName: "school-note.pdf",
+      mediaType: "application/pdf",
+      byteLength: 1024
+    }, context);
 
     const urls = fetcher.mock.calls.map(([url]) => url);
     expect(urls).toEqual(expect.arrayContaining([
@@ -99,7 +106,8 @@ describe("HttpPeacePadCoordinationApi", () => {
       "https://staging-api.peacepad.test/api/v2/conversations/conversation-1/messages/message-1/corrections",
       "https://staging-api.peacepad.test/api/v2/conversations/conversation-1/messages/search",
       "https://staging-api.peacepad.test/api/v2/conversations/conversation-1/message-check",
-      "https://staging-api.peacepad.test/api/v2/message-previews"
+      "https://staging-api.peacepad.test/api/v2/message-previews",
+      "https://staging-api.peacepad.test/api/v2/attachment-upload-intents"
     ]));
   });
 

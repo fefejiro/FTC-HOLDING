@@ -36,6 +36,7 @@ approved Capacitor app, production data/API, App Store record, and
 | Bounded secure message retry outbox | AUTOMATED VERIFIED | device-only per-entry storage, five-entry/five-attempt limits, transient-only retry, preserved idempotency, and permanent-failure discard |
 | Durable per-participant Message Check preference | AUTOMATED VERIFIED | default-off read, consent-safe update, optimistic concurrency, and HTTP restart proof |
 | Sensitive message bodies excluded from audit/log metadata | AUTOMATED VERIFIED | audit payload contains body length only; loopback log-redaction assertion passed |
+| Metadata-only attachment upload intent | AUTOMATED VERIFIED | conversation/private-binder authorization, filename/type/size limits, idempotency, expiry, byte-injection rejection, disabled transport, database constraints, and HTTP restart persistence |
 | Current quiet-premium Simulator evidence | SIMULATOR VERIFIED | iPhone 17 / iOS 26.5 Month, Week, and Day evidence captured on `e0936d2e` |
 | Maestro invitation and calendar-sharing flows | SIMULATOR VERIFIED | iPhone 17 Pro / iOS 26.5; `docs/evidence/maestro-2026-08-04` |
 | Real-iPhone staging evidence | NOT STARTED | Requires deployed staging slice and controlled device session |
@@ -55,9 +56,9 @@ approved Capacitor app, production data/API, App Store record, and
 ```text
 guardrails       passed
 typecheck        passed
-Jest/RNTL        35 suites / 231 tests passed
-embedded SQL     two-actor invitation/calendar/message/receipt/correction/search and HTTP restart persistence passed
-coverage         82.42 statements / 77.44 branches / 79.71 functions / 87.72 lines
+Jest/RNTL        37 suites / 244 tests passed
+embedded SQL     two-actor invitation/calendar/message/receipt/correction/search plus metadata-only attachment intent and HTTP restart persistence passed
+coverage         81.31 statements / 76.88 branches / 78.64 functions / 86.64 lines
 Expo Doctor      17/18 in monorepo; isolated native install 18/18
 Expo config      PeacePad; ca.peacepad.nextnative.lab; diagnostics/writes false
 iOS export       passed; 963 modules bundled
@@ -140,6 +141,12 @@ commit and are not relabelled as current evidence.
   restart, and clears invalid saved sessions. No key is embedded in source or
   public Expo configuration. This is automated local proof, not a deployed
   authentication claim.
+- Attachment preparation now accepts metadata only for an authorized
+  conversation or private binder. It validates filename, media type, and size,
+  expires after ten minutes, persists with `uploadTransport: disabled`, returns
+  no upload URL, rejects byte-bearing request shapes, and records only safe
+  audit metadata. It does not upload, retain, hash, scan, or verify file bytes;
+  create a `SourceArtifact`; or claim evidence integrity.
 - The reviewed Node staging host is locally runnable, validates staging-only
   origins/database/session configuration, exposes health/readiness endpoints,
   bounds JSON bodies, applies strict CORS, and logs no request bodies or tokens.
@@ -253,16 +260,16 @@ commit and are not relabelled as current evidence.
 | Secure invitation product flow | 75% |
 | Layered calendar product flow | 73% |
 | Per-chat Message Check | 80% |
-| Typed staging compatibility client | 90% |
+| Typed staging compatibility client | 92% |
 | Staging invitation server core | 85% |
 | Staging calendar server core | 78% |
-| Staging messaging server core | 92% |
+| Staging messaging server core | 93% |
 | Secure staging account/session bridge | 84% |
 | Automated verification | 98% |
 | Accessibility foundation | 45% |
 | Adaptive theme foundation | 55% |
 | Current device verification | 82% |
-| Overall production-native v2 | 52% |
+| Overall production-native v2 | 53% |
 
 ## Feature completion view
 
@@ -273,9 +280,9 @@ These percentages measure production readiness, not how many screens exist.
 | Home and task navigation | 85% | polished shell and state-driven actions; device accessibility pass remains |
 | Secure family invitations | 75% | durable staging core; network deployment and real-device handoff remain |
 | Calendar and parenting plans | 73% | durable authorized layers/events; recurrence engine, offline queue, and date navigation remain |
-| Messaging | 83% | two-actor append-only ledger, durable receipts, verified-actor correction composer, participant-safe effective-text search, and bounded foreground retry pass; attachments, background sync, and deployed two-device proof remain |
+| Messaging | 85% | two-actor append-only ledger, durable receipts, verified-actor correction composer, participant-safe search, bounded retry, and authorized attachment metadata preparation pass; byte upload/storage, background sync, and deployed two-device proof remain |
 | Message Check | 80% | rule-based, per-chat, explicit-send flow with durable default-off preference; networked staging and real-device proof remain |
-| Records / Case Binder | 38% | synthetic vertical slice exists; secure uploads, immutable originals, hashing, and export verification remain |
+| Records / Case Binder | 42% | synthetic vertical slice plus authorized private-binder attachment metadata preparation exist; byte storage, immutable originals, hashing, scanning, source-artifact ingestion, and export verification remain |
 | Calls | 15% | typed contracts and prior-repo design evidence only; no authenticated WebRTC/CallKit implementation |
 | Expenses and reimbursements | 10% | domain direction only; no ledger, receipts, splits, balances, or payment adapter |
 | Account and secure session | 84% | fail-closed hash-only multi-actor staging handshake plus device-only verified identity/token storage and restore re-verification; production identity remains |
@@ -291,8 +298,9 @@ These percentages measure production readiness, not how many screens exist.
 Do not repeat the blocked Expo Go remote-control attempt. The permanent staging
 message ledger, recipient-authored delivery/viewed receipts, verified-actor
 linked corrections and composer, participant-safe search, hash-only
-multi-actor sessions, per-person Message Check preferences, and bounded secure
-retry outbox now pass local automation and PostgreSQL/HTTP restart proof. The
+multi-actor sessions, per-person Message Check preferences, bounded secure
+retry, and metadata-only attachment intents now pass local automation and
+PostgreSQL/HTTP restart proof. The
 next promotion gate is an isolated networked staging database/service, followed
 by the reviewed migration, post-deploy smoke, and one two-iPhone
 fictional-account pass covering send, delivery, view, connection loss, restart
@@ -301,5 +309,6 @@ staging remains unavailable, the next local product slice is the current-actor
 session bridge plus a correction composer, followed by attachment metadata and
 safe upload contracts. Calling starts only after the two-user messaging
 foundation is deployed and reliable. If staging remains unavailable, the next
-local value slice is attachment metadata plus a safe upload-intent contract;
-no file bytes or production storage are introduced yet.
+local value slice is deterministic `SourceArtifact` ingestion state and hash
+verification contracts over generated test bytes only—still without production
+object storage or real family files.

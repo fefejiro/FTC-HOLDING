@@ -404,6 +404,13 @@ backend review decides whether to alias or version them.
 
 ### 6.3 Evidence
 
+The current staging compatibility boundary also exposes
+`POST /api/v2/attachment-upload-intents` for authorized conversation or
+private-binder metadata. It deliberately returns `uploadTransport: disabled`
+and `uploadUrl: null`; it is not the binary-ingestion API described below and
+must not create a `SourceArtifact` or imply that an original was received,
+hashed, scanned, or verified.
+
 | Method and path | Purpose |
 | --- | --- |
 | `POST /api/v1/binders/{binderId}/evidence` | Create metadata and ingest intent |

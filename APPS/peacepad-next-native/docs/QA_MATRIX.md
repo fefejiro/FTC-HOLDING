@@ -76,6 +76,8 @@ and `NOT STARTED`.
 | Search is bounded to an authorized conversation | AUTOMATED VERIFIED | participant membership, query/limit validation, cross-participant denial, and body-only HTTP contract tests that keep terms out of URLs |
 | Search returns latest effective wording without rewriting originals | AUTOMATED VERIFIED | corrected-text match, stale-original exclusion, UI result, and HTTP restart proof |
 | Message bodies are absent from audit metadata and server logs | AUTOMATED VERIFIED | audit serialization and loopback log assertions |
+| Attachment intent accepts metadata only for authorized message/private-binder targets | AUTOMATED VERIFIED | service, route, client, and embedded PostgreSQL/HTTP tests |
+| File bytes and enabled upload transport are rejected | AUTOMATED VERIFIED | request-shape rejection plus database checks require disabled transport and null upload URL |
 | Messages survive an HTTP host restart | AUTOMATED VERIFIED | disposable PostgreSQL restart proof |
 | Transient message failures enter a bounded device-only outbox | AUTOMATED VERIFIED | SecureStore entry/index tests, five-entry and 800-character bounds |
 | Retry preserves the original idempotency key | AUTOMATED VERIFIED | transient retry test and same write context assertion |
@@ -90,9 +92,9 @@ and `NOT STARTED`.
 | --- | --- | --- |
 | TypeScript | AUTOMATED VERIFIED | passed |
 | Guardrails | AUTOMATED VERIFIED | passed |
-| Jest/RNTL | AUTOMATED VERIFIED | 35 suites / 231 tests |
-| Embedded PostgreSQL | AUTOMATED VERIFIED | two actors, invitation, calendar, conversation, message exchange, delivery/view/correction events, effective-text search, isolated preferences, restart reads, grant, and audit chain passed |
-| Coverage | AUTOMATED VERIFIED | 82.42 / 77.44 / 79.71 / 87.72 |
+| Jest/RNTL | AUTOMATED VERIFIED | 37 suites / 244 tests |
+| Embedded PostgreSQL | AUTOMATED VERIFIED | two actors, invitation, calendar, conversation, message exchange, delivery/view/correction events, metadata-only attachment intent, effective-text search, isolated preferences, restart reads, grant, and audit chain passed |
+| Coverage | AUTOMATED VERIFIED | 81.31 / 76.88 / 78.64 / 86.64 |
 | Primary navigation roles and selected state | AUTOMATED VERIFIED | five named tabs; exactly one selected |
 | Invitation and calendar selector semantics | AUTOMATED VERIFIED | named tabs expose selected state |
 | Calendar layer controls do not depend on colour | AUTOMATED VERIFIED | named checkbox and sharing button states |
