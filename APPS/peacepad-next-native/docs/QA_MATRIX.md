@@ -81,9 +81,9 @@ and `NOT STARTED`.
 | --- | --- | --- |
 | TypeScript | AUTOMATED VERIFIED | passed |
 | Guardrails | AUTOMATED VERIFIED | passed |
-| Jest/RNTL | AUTOMATED VERIFIED | 34 suites / 201 tests |
-| Embedded PostgreSQL | AUTOMATED VERIFIED | invitation, calendar, conversation, message, preference, restart reads, grant, and audit chain passed |
-| Coverage | AUTOMATED VERIFIED | 82.89 / 78.19 / 79.21 / 88.30 |
+| Jest/RNTL | AUTOMATED VERIFIED | 34 suites / 204 tests |
+| Embedded PostgreSQL | AUTOMATED VERIFIED | two actors, invitation, calendar, conversation, message exchange, isolated preferences, restart reads, grant, and audit chain passed |
+| Coverage | AUTOMATED VERIFIED | 83.02 / 78.39 / 79.50 / 88.38 |
 | Primary navigation roles and selected state | AUTOMATED VERIFIED | five named tabs; exactly one selected |
 | Invitation and calendar selector semantics | AUTOMATED VERIFIED | named tabs expose selected state |
 | Calendar layer controls do not depend on colour | AUTOMATED VERIFIED | named checkbox and sharing button states |
@@ -103,6 +103,8 @@ and `NOT STARTED`.
 | Local staging host health | AUTOMATED VERIFIED | `/health` and database-backed `/readyz` 200 over real TCP |
 | Readiness without database | AUTOMATED VERIFIED | `/readyz` fails closed with 500 |
 | Host restart with durable resolution claim | AUTOMATED VERIFIED | resolve before restart; accept after restart passed |
+| Hash-only multi-actor staging authentication | AUTOMATED VERIFIED | unique peppered token hashes map two fictional parents to independent identities and permissions |
+| Two-actor messaging and preference isolation | AUTOMATED VERIFIED | both actors read/reply; owner preference remains on while recipient remains default-off across restart |
 | Migration/runtime database identities are distinct | AUTOMATED VERIFIED | configuration rejects shared credentials |
 | Migration serialization and runtime grants | AUTOMATED VERIFIED | advisory lock, PUBLIC revocation, and non-owner CRUD grants tested |
 | Post-deploy smoke target and readiness | AUTOMATED VERIFIED | production/non-staging targets rejected; `/health` and `/readyz` fail closed |
@@ -167,7 +169,7 @@ The historical records screenshots in
   unchanged and triage the inherited advisories separately.
 - Apply `staging/migrations/0001_invitation_slice.sql` and grant a dedicated,
   least-privilege runtime role.
-- Inject server-only peppers and connect a real staging session authenticator.
+- Inject server-only peppers and the hash-only multi-actor staging session configuration; plaintext tokens remain device-only.
 - Deploy and live-verify the new `/api/v2/session` handshake with fictional
   staging accounts; no access key is checked into the app.
 - Run live concurrency, rollback, rate-limit, and audit-restoration tests.

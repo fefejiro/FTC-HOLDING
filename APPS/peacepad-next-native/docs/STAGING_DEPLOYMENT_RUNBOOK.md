@@ -20,6 +20,10 @@ approved Capacitor application, production data, or production API host.
    role. Do not reuse production credentials.
 2. Configure the server-only values listed in `staging/.env.server.example`.
    Never expose them through `EXPO_PUBLIC_*` variables.
+   `PEACEPAD_STAGING_ACTORS_JSON` contains only unique peppered SHA-256 token
+   hashes and fictional actor metadata. Give each test parent a separate token,
+   identity, session ID, and least-privilege family permissions. Plaintext
+   bearer tokens stay only in each test device's SecureStore.
 3. Railway runs `npm run staging:migrate` as its pre-deploy command. The
    migrator takes an advisory lock, applies migration `0001`, revokes PUBLIC
    access, grants only data access to the runtime role, and releases the lock.
@@ -39,3 +43,8 @@ Do not connect an iPhone until migration, runtime startup, and the readiness
 smoke pass. A passing smoke check proves service and database readiness only;
 it does not prove invitation correctness, concurrency, backup restoration, or
 production suitability.
+
+Before a two-device pass, verify `/api/v2/session` independently with both
+fictional bearer tokens. Confirm that each response returns the expected
+identity and family IDs, then confirm per-conversation Message Check remains
+isolated after a service restart.

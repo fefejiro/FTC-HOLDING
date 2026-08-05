@@ -37,10 +37,10 @@ approved Capacitor app, production data/API, App Store record, and
 | Staging `/api/v2` invitation handler core | AUTOMATED VERIFIED | Reviewed Node host plus framework-neutral route/service tests; not deployed |
 | Postgres staging repository and migration | AUTOMATED VERIFIED | Migration executed twice against embedded PostgreSQL; invitation, calendar, conversation, immutable message, preference, grant, and audit paths passed |
 | Shared staging rate limiter | AUTOMATED VERIFIED | Atomic Postgres upsert contract; not deployed |
-| Trusted staging session boundary | AUTOMATED VERIFIED | Bearer authenticator bridge ignores spoofed actor headers |
+| Trusted staging session boundary | AUTOMATED VERIFIED | Hash-only multi-actor bearer authenticator maps independent fictional parents and ignores spoofed actor headers |
 | Secure native staging session | AUTOMATED VERIFIED | Access key is verified by `/api/v2/session`, saved in device-only SecureStore only after required consent, and attached to staging requests |
 | Staging host health/fail-closed readiness | AUTOMATED VERIFIED | Local `/health` returned 200; `/readyz` returned 500 with the database intentionally unavailable |
-| Real HTTP coordination lifecycle and host restart | AUTOMATED VERIFIED | Loopback invitation lifecycle plus calendar/event/conversation/message/preference creation, host restart, persisted reads, CORS and log-redaction proof |
+| Real HTTP coordination lifecycle and host restart | AUTOMATED VERIFIED | Two fictional actors exchange durable messages across host restart with isolated Message Check preferences, CORS, and log-redaction proof |
 | Staging migration and runtime-role separation | AUTOMATED VERIFIED | distinct database identities, advisory-locked migration, PUBLIC revocation, least-privilege grants, and guardrails |
 | Post-deploy readiness smoke | AUTOMATED VERIFIED | safe-target validation plus `/health` and `/readyz` response tests; not run against a deployed service |
 | Persistent staging deployment | NOT STARTED | Requires isolated database/service provisioning and secret injection |
@@ -50,9 +50,9 @@ approved Capacitor app, production data/API, App Store record, and
 ```text
 guardrails       passed
 typecheck        passed
-Jest/RNTL        34 suites / 201 tests passed
-embedded SQL     invitation/calendar/message constraints and HTTP restart persistence passed
-coverage         82.89 statements / 78.19 branches / 79.21 functions / 88.30 lines
+Jest/RNTL        34 suites / 204 tests passed
+embedded SQL     two-actor invitation/calendar/message and HTTP restart persistence passed
+coverage         83.02 statements / 78.39 branches / 79.50 functions / 88.38 lines
 Expo Doctor      17/18 in monorepo; isolated native install 18/18
 Expo config      PeacePad; ca.peacepad.nextnative.lab; diagnostics/writes false
 iOS export       passed; 962 modules bundled
@@ -235,13 +235,13 @@ commit and are not relabelled as current evidence.
 | Typed staging compatibility client | 88% |
 | Staging invitation server core | 85% |
 | Staging calendar server core | 78% |
-| Staging messaging server core | 78% |
-| Secure staging account/session bridge | 75% |
+| Staging messaging server core | 82% |
+| Secure staging account/session bridge | 80% |
 | Automated verification | 98% |
 | Accessibility foundation | 45% |
 | Adaptive theme foundation | 55% |
 | Current device verification | 82% |
-| Overall production-native v2 | 48% |
+| Overall production-native v2 | 49% |
 
 ## Feature completion view
 
@@ -252,12 +252,12 @@ These percentages measure production readiness, not how many screens exist.
 | Home and task navigation | 85% | polished shell and state-driven actions; device accessibility pass remains |
 | Secure family invitations | 75% | durable staging core; network deployment and real-device handoff remain |
 | Calendar and parenting plans | 73% | durable authorized layers/events; recurrence engine, offline queue, and date navigation remain |
-| Messaging | 62% | participant-bound append-only staging ledger and restart recovery pass; delivery/read states, corrections, attachments, search, offline queue, and deployed two-device proof remain |
+| Messaging | 66% | two-actor participant-bound append-only ledger and restart recovery pass; delivery/read states, corrections, attachments, search, offline queue, and deployed two-device proof remain |
 | Message Check | 80% | rule-based, per-chat, explicit-send flow with durable default-off preference; networked staging and real-device proof remain |
 | Records / Case Binder | 38% | synthetic vertical slice exists; secure uploads, immutable originals, hashing, and export verification remain |
 | Calls | 15% | typed contracts and prior-repo design evidence only; no authenticated WebRTC/CallKit implementation |
 | Expenses and reimbursements | 10% | domain direction only; no ledger, receipts, splits, balances, or payment adapter |
-| Account and secure session | 75% | fail-closed staging handshake and device-only token storage; multi-user production identity remains |
+| Account and secure session | 80% | fail-closed hash-only multi-actor staging handshake and device-only token storage; production identity remains |
 | Notifications and reminders | 8% | product rules identified; no production push delivery |
 | Offline and conflict recovery | 5% | not implemented beyond local session behavior |
 | Professional portal | 5% | roles/contracts identified; no operational portal |
@@ -268,8 +268,8 @@ These percentages measure production readiness, not how many screens exist.
 ## Next best move
 
 Do not repeat the blocked Expo Go remote-control attempt. The permanent staging
-message ledger and per-conversation Message Check preference now pass embedded
-PostgreSQL and HTTP restart verification. The next gate is an isolated networked
+message ledger, hash-only multi-actor sessions, and per-person Message Check
+preferences now pass embedded PostgreSQL and HTTP restart verification. The next gate is an isolated networked
 staging database/service, followed by the reviewed migration, post-deploy smoke,
 and one two-iPhone fictional-account pass covering send, restart recovery, and
 preference isolation. Delivery/read events and offline retry follow that proof;

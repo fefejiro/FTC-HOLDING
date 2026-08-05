@@ -35,8 +35,7 @@ const digest = new WebCryptoSha256Digest(webcrypto.subtle);
 const authenticator = new HashedStagingSessionAuthenticator(
   digest,
   config.sessionPepper,
-  config.sessionTokenHash,
-  config.actor
+  config.sessions
 );
 const runtime = createStagingInvitationRuntime({
   runtimeEnvironment: "staging",

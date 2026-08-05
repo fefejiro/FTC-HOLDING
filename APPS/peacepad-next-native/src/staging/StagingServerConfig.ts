@@ -1,4 +1,4 @@
-import type { StagingActor } from "./InvitationService";
+import type { HashedStagingSession } from "./HashedStagingSessionAuthenticator";
 
 export type StagingServerConfig = Readonly<{
   port: number;
@@ -9,8 +9,7 @@ export type StagingServerConfig = Readonly<{
   rateLimitPepper: string;
   idempotencyPepper: string;
   sessionPepper: string;
-  sessionTokenHash: string;
-  actor: StagingActor;
+  sessions: readonly HashedStagingSession[];
   families: Readonly<Record<string, string>>;
 }>;
 
@@ -48,6 +47,42 @@ const permissionMap = (value: string, name: string) => Object.fromEntries(
   })
 );
 
+const sessions = (value: string, families: Readonly<Record<string, string>>): readonly HashedStagingSession[] => {
+  let parsed: unknown;
+  try { parsed = JSON.parse(value); } catch { throw new Error("PEACEPAD_STAGING_ACTORS_JSON must be valid JSON."); }
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    throw new Error("PEACEPAD_STAGING_ACTORS_JSON must contain at least one synthetic actor.");
+  }
+  const result = parsed.map((entry, index) => {
+    if (!entry || Array.isArray(entry) || typeof entry !== "object") {
+      throw new Error(`PEACEPAD_STAGING_ACTORS_JSON actor ${index + 1} must be an object.`);
+    }
+    const item = entry as Record<string, unknown>;
+    const tokenHash = typeof item.tokenHash === "string" ? item.tokenHash.toLowerCase().trim() : "";
+    const identityId = typeof item.identityId === "string" ? item.identityId.trim() : "";
+    const displayName = typeof item.displayName === "string" ? item.displayName.trim() : "";
+    const sessionId = typeof item.sessionId === "string" ? item.sessionId.trim() : "";
+    if (!/^[a-f0-9]{64}$/.test(tokenHash)) throw new Error("Every staging actor requires a SHA-256 tokenHash.");
+    if (!identityId || !displayName || !sessionId) throw new Error("Every staging actor requires identityId, displayName, and sessionId.");
+    const rawPermissions = item.familyPermissions;
+    if (!rawPermissions || Array.isArray(rawPermissions) || typeof rawPermissions !== "object") {
+      throw new Error("Every staging actor requires a familyPermissions object.");
+    }
+    const familyPermissions = permissionMap(JSON.stringify(rawPermissions), `staging actor ${identityId} familyPermissions`);
+    if (Object.keys(familyPermissions).some((familyId) => !(familyId in families))) {
+      throw new Error("Every staging actor family permission must reference a configured synthetic family.");
+    }
+    return { tokenHash, actor: { identityId, displayName, sessionId, familyPermissions } };
+  });
+  const unique = (values: readonly string[], label: string) => {
+    if (new Set(values).size !== values.length) throw new Error(`Staging actor ${label} values must be unique.`);
+  };
+  unique(result.map(({ tokenHash }) => tokenHash), "token hash");
+  unique(result.map(({ actor }) => actor.identityId), "identity ID");
+  unique(result.map(({ actor }) => actor.sessionId), "session ID");
+  return result;
+};
+
 const stagingDatabase = (value: string) => {
   let url: URL;
   try { url = new URL(value); } catch { throw new Error("PEACEPAD_STAGING_DATABASE_URL must be a valid PostgreSQL URL."); }
@@ -71,15 +106,7 @@ export function readStagingServerConfig(environment: Environment): StagingServer
     throw new Error("The PeacePad native server is staging-only.");
   }
   const families = stringMap(required(environment, "PEACEPAD_STAGING_FAMILIES_JSON"), "PEACEPAD_STAGING_FAMILIES_JSON");
-  const familyPermissions = permissionMap(
-    required(environment, "PEACEPAD_STAGING_FAMILY_PERMISSIONS_JSON"),
-    "PEACEPAD_STAGING_FAMILY_PERMISSIONS_JSON"
-  );
-  if (Object.keys(familyPermissions).some((familyId) => !(familyId in families))) {
-    throw new Error("Every staging family permission entry must reference a configured synthetic family.");
-  }
-  const sessionTokenHash = required(environment, "PEACEPAD_STAGING_SESSION_TOKEN_HASH").toLowerCase();
-  if (!/^[a-f0-9]{64}$/.test(sessionTokenHash)) throw new Error("PEACEPAD_STAGING_SESSION_TOKEN_HASH must be a SHA-256 hex digest.");
+  const configuredSessions = sessions(required(environment, "PEACEPAD_STAGING_ACTORS_JSON"), families);
   const port = Number(environment.PORT ?? 8787);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("PORT must be a valid TCP port.");
 
@@ -92,13 +119,7 @@ export function readStagingServerConfig(environment: Environment): StagingServer
     rateLimitPepper: required(environment, "PEACEPAD_RATE_LIMIT_PEPPER"),
     idempotencyPepper: required(environment, "PEACEPAD_IDEMPOTENCY_PEPPER"),
     sessionPepper: required(environment, "PEACEPAD_STAGING_SESSION_PEPPER"),
-    sessionTokenHash,
-    actor: {
-      identityId: required(environment, "PEACEPAD_STAGING_ACTOR_ID"),
-      displayName: required(environment, "PEACEPAD_STAGING_ACTOR_DISPLAY_NAME"),
-      sessionId: required(environment, "PEACEPAD_STAGING_SESSION_ID"),
-      familyPermissions
-    },
+    sessions: configuredSessions,
     families
   };
 }

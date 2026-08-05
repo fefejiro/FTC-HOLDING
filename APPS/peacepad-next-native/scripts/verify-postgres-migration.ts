@@ -19,6 +19,7 @@ import {
 } from "../src/staging/PostgresInvitationStore";
 import { createStagingHttpServer } from "../src/staging/StagingHttpServer";
 import { createStagingInvitationRuntime } from "../src/staging/createStagingInvitationRuntime";
+import { HashedStagingSessionAuthenticator } from "../src/staging/HashedStagingSessionAuthenticator";
 
 const migration = readFileSync(
   path.resolve(process.cwd(), "staging/migrations/0001_invitation_slice.sql"),
@@ -67,7 +68,7 @@ const recipient: StagingActor = {
   identityId: "identity-recipient",
   displayName: "Jordan Lee",
   sessionId: "session-recipient",
-  familyPermissions: {}
+  familyPermissions: { "family-1": ["messages:read", "messages:write"] }
 };
 
 const context = (actor: StagingActor, key: string, expectedVersion: number | null = null) =>
@@ -222,11 +223,13 @@ async function verify() {
 
     const ownerToken = "fictional-owner-session";
     const recipientToken = "fictional-recipient-session";
-    const authenticator = {
-      authenticate: async (token: string) => token === ownerToken
-        ? owner
-        : token === recipientToken ? recipient : undefined
-    };
+    const sessionPepper = "fictional-session-pepper";
+    const ownerTokenHash = await digest.digest(`${sessionPepper}:${ownerToken}`);
+    const recipientTokenHash = await digest.digest(`${sessionPepper}:${recipientToken}`);
+    const authenticator = new HashedStagingSessionAuthenticator(digest, sessionPepper, [
+      { tokenHash: ownerTokenHash, actor: owner },
+      { tokenHash: recipientTokenHash, actor: recipient }
+    ]);
     const createRuntime = () => createStagingInvitationRuntime({
       runtimeEnvironment: "staging",
       serviceOrigin: "http://127.0.0.1",
@@ -304,6 +307,7 @@ async function verify() {
     let scheduleEventId = "";
     let conversationId = "";
     let messageId = "";
+    let replyId = "";
     try {
       const acceptedResponse = await fetch(
         `${baseUrl}/api/v2/invitations/${encodeURIComponent(httpCreated.invitation.id)}/accept`,
@@ -379,6 +383,26 @@ async function verify() {
       assert.equal(messageResponse.status, 201);
       messageId = (await messageResponse.json() as { id: string }).id;
 
+      const recipientMessagesResponse = await fetch(`${baseUrl}/api/v2/conversations/${conversationId}/messages`, {
+        headers: headersFor(recipientToken, "http-recipient-list")
+      });
+      assert.equal(recipientMessagesResponse.status, 200);
+      assert.deepEqual((await recipientMessagesResponse.json() as Array<{ id: string }>).map(({ id }) => id), [messageId]);
+
+      const recipientPreferenceResponse = await fetch(`${baseUrl}/api/v2/conversations/${conversationId}/message-check`, {
+        headers: headersFor(recipientToken, "http-recipient-message-check")
+      });
+      assert.equal(recipientPreferenceResponse.status, 200);
+      assert.equal((await recipientPreferenceResponse.json() as { enabled: boolean }).enabled, false);
+
+      const replyResponse = await fetch(`${baseUrl}/api/v2/conversations/${conversationId}/messages`, {
+        method: "POST",
+        headers: headersFor(recipientToken, "http-recipient-reply"),
+        body: JSON.stringify({ familyCircleId: "family-1", conversationId, body: "Synthetic reply confirms 5 PM." })
+      });
+      assert.equal(replyResponse.status, 201);
+      replyId = (await replyResponse.json() as { id: string }).id;
+
       await expectDatabaseFailure(() => pool.query(
         `INSERT INTO peacepad_native_staging.schedule_events
           (id, region, version, family_circle_id, calendar_layer_id, starts_at, ends_at, status, event_record)
@@ -424,8 +448,19 @@ async function verify() {
       assert.equal(preferenceResponse.status, 200);
       assert.deepEqual((await layersResponse.json() as Array<{ id: string }>).map(({ id }) => id), [calendarLayerId]);
       assert.deepEqual((await eventsResponse.json() as Array<{ id: string }>).map(({ id }) => id), [scheduleEventId]);
-      assert.deepEqual((await messagesResponse.json() as Array<{ id: string }>).map(({ id }) => id), [messageId]);
+      assert.deepEqual((await messagesResponse.json() as Array<{ id: string }>).map(({ id }) => id), [messageId, replyId]);
       assert.equal((await preferenceResponse.json() as { enabled: boolean }).enabled, true);
+
+      const recipientMessagesResponse = await fetch(`${baseUrl}/api/v2/conversations/${conversationId}/messages`, {
+        headers: headersFor(recipientToken, "http-recipient-list-after-restart")
+      });
+      const recipientPreferenceResponse = await fetch(`${baseUrl}/api/v2/conversations/${conversationId}/message-check`, {
+        headers: headersFor(recipientToken, "http-recipient-preference-after-restart")
+      });
+      assert.equal(recipientMessagesResponse.status, 200);
+      assert.equal(recipientPreferenceResponse.status, 200);
+      assert.deepEqual((await recipientMessagesResponse.json() as Array<{ id: string }>).map(({ id }) => id), [messageId, replyId]);
+      assert.equal((await recipientPreferenceResponse.json() as { enabled: boolean }).enabled, false);
     } finally {
       await close(httpServer);
     }
@@ -434,9 +469,10 @@ async function verify() {
     assert.equal(serializedLogs.includes(recipientToken), false);
     assert.equal(serializedLogs.includes(httpCreated.code), false);
     assert.equal(serializedLogs.includes("Synthetic pickup is at 5 PM."), false);
+    assert.equal(serializedLogs.includes("Synthetic reply confirms 5 PM."), false);
 
     process.stdout.write(
-      "Embedded PostgreSQL and HTTP restart verification passed: migration, constraints, invitation acceptance, durable calendar/event/message persistence, Message Check preference, grant, and audit chain.\n"
+      "Embedded PostgreSQL and HTTP restart verification passed: migration, constraints, invitation acceptance, two-actor durable calendar/message persistence, isolated Message Check preferences, grant, and audit chain.\n"
     );
   } finally {
     await database.close();
