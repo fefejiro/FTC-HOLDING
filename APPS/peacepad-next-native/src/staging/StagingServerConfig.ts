@@ -87,7 +87,7 @@ export function readStagingServerConfig(environment: Environment): StagingServer
     port,
     serviceOrigin: stagingWebOrigin(required(environment, "PEACEPAD_SERVICE_ORIGIN"), "PEACEPAD_SERVICE_ORIGIN"),
     appOrigin: stagingWebOrigin(required(environment, "PEACEPAD_STAGING_APP_ORIGIN"), "PEACEPAD_STAGING_APP_ORIGIN"),
-    databaseUrl: stagingDatabase(required(environment, "PEACEPAD_STAGING_DATABASE_URL")),
+    databaseUrl: stagingDatabase(required(environment, "PEACEPAD_STAGING_RUNTIME_DATABASE_URL")),
     invitationPepper: required(environment, "PEACEPAD_INVITATION_PEPPER"),
     rateLimitPepper: required(environment, "PEACEPAD_RATE_LIMIT_PEPPER"),
     idempotencyPepper: required(environment, "PEACEPAD_IDEMPOTENCY_PEPPER"),

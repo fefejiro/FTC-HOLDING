@@ -6,6 +6,8 @@ const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 
 const appJson = JSON.parse(read("app.json"));
 const packageJson = JSON.parse(read("package.json"));
+const railwayJson = JSON.parse(read("staging/railway.json"));
+const stagingEnvironmentExample = read("staging/.env.server.example");
 const stagingInvitationMigration = read("staging/migrations/0001_invitation_slice.sql");
 
 const iosBundle = appJson.expo?.ios?.bundleIdentifier;
@@ -48,6 +50,20 @@ if (!packageJson.private) {
 
 if (packageJson.scripts?.["staging:start"] !== "tsx src/staging/server.ts") {
   failures.push("The isolated staging server must use the reviewed staging entrypoint.");
+}
+
+if (packageJson.scripts?.["staging:migrate"] !== "tsx scripts/run-staging-migrations.ts") {
+  failures.push("The staging schema must use the reviewed explicit migration entrypoint.");
+}
+
+if (railwayJson.deploy?.preDeployCommand !== "npm run staging:migrate") {
+  failures.push("Railway must run the staging migration before starting the service.");
+}
+
+if (!stagingEnvironmentExample.includes("PEACEPAD_STAGING_MIGRATION_DATABASE_URL=") ||
+    !stagingEnvironmentExample.includes("PEACEPAD_STAGING_RUNTIME_DATABASE_URL=") ||
+    stagingEnvironmentExample.includes("PEACEPAD_STAGING_DATABASE_URL=")) {
+  failures.push("Staging migration-owner and runtime database credentials must remain separate.");
 }
 
 if (!/\bcode_hash\s+text\s+not\s+null\s+unique\b/i.test(stagingInvitationMigration)) {

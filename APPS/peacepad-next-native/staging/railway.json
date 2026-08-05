@@ -1,6 +1,7 @@
 {
   "$schema": "https://railway.com/railway.schema.json",
   "deploy": {
+    "preDeployCommand": "npm run staging:migrate",
     "startCommand": "npm run staging:start",
     "healthcheckPath": "/readyz",
     "healthcheckTimeout": 30,

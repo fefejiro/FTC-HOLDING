@@ -4,7 +4,7 @@ const valid = {
   PEACEPAD_RUNTIME_ENV: "staging",
   PEACEPAD_SERVICE_ORIGIN: "https://api.staging.peacepad.ca",
   PEACEPAD_STAGING_APP_ORIGIN: "https://app.staging.peacepad.ca",
-  PEACEPAD_STAGING_DATABASE_URL: "postgresql://synthetic@db.example/peacepad_native_staging",
+  PEACEPAD_STAGING_RUNTIME_DATABASE_URL: "postgresql://synthetic@db.example/peacepad_native_staging",
   PEACEPAD_INVITATION_PEPPER: "invitation-staging-pepper",
   PEACEPAD_RATE_LIMIT_PEPPER: "rate-limit-staging-pepper",
   PEACEPAD_IDEMPOTENCY_PEPPER: "idempotency-staging-pepper",
@@ -29,8 +29,8 @@ describe("readStagingServerConfig", () => {
 
   it.each([
     [{ PEACEPAD_RUNTIME_ENV: "production" }, /staging-only/i],
-    [{ PEACEPAD_STAGING_DATABASE_URL: "postgresql://synthetic@db.example/peacepad" }, /isolated staging database/i],
-    [{ PEACEPAD_STAGING_DATABASE_URL: "https://db.example/peacepad_native_staging" }, /PostgreSQL/i],
+    [{ PEACEPAD_STAGING_RUNTIME_DATABASE_URL: "postgresql://synthetic@db.example/peacepad" }, /isolated staging database/i],
+    [{ PEACEPAD_STAGING_RUNTIME_DATABASE_URL: "https://db.example/peacepad_native_staging" }, /PostgreSQL/i],
     [{ PEACEPAD_STAGING_APP_ORIGIN: "https://peacepad.ca" }, /isolated staging HTTPS origin/i],
     [{ PEACEPAD_STAGING_SESSION_TOKEN_HASH: "plaintext-token" }, /SHA-256/i],
     [{ PEACEPAD_STAGING_FAMILY_PERMISSIONS_JSON: JSON.stringify({ unknown: ["invite"] }) }, /configured synthetic family/i],

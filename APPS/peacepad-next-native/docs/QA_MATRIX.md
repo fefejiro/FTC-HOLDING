@@ -62,9 +62,9 @@ and `NOT STARTED`.
 | --- | --- | --- |
 | TypeScript | AUTOMATED VERIFIED | passed |
 | Guardrails | AUTOMATED VERIFIED | passed |
-| Jest/RNTL | AUTOMATED VERIFIED | 25 suites / 146 tests |
+| Jest/RNTL | AUTOMATED VERIFIED | 27 suites / 155 tests |
 | Embedded PostgreSQL | AUTOMATED VERIFIED | migration, constraints, invitation acceptance, grant, and audit chain passed |
-| Coverage | AUTOMATED VERIFIED | 86.08 / 79.93 / 80.74 / 89.15 |
+| Coverage | AUTOMATED VERIFIED | 86.28 / 80.37 / 81.11 / 89.45 |
 | Primary navigation roles and selected state | AUTOMATED VERIFIED | five named tabs; exactly one selected |
 | Invitation and calendar selector semantics | AUTOMATED VERIFIED | named tabs expose selected state |
 | Calendar layer controls do not depend on colour | AUTOMATED VERIFIED | named checkbox and sharing button states |
@@ -84,6 +84,9 @@ and `NOT STARTED`.
 | Local staging host health | AUTOMATED VERIFIED | `/health` and database-backed `/readyz` 200 over real TCP |
 | Readiness without database | AUTOMATED VERIFIED | `/readyz` fails closed with 500 |
 | Host restart with durable resolution claim | AUTOMATED VERIFIED | resolve before restart; accept after restart passed |
+| Migration/runtime database identities are distinct | AUTOMATED VERIFIED | configuration rejects shared credentials |
+| Migration serialization and runtime grants | AUTOMATED VERIFIED | advisory lock, PUBLIC revocation, and non-owner CRUD grants tested |
+| Post-deploy smoke target and readiness | AUTOMATED VERIFIED | production/non-staging targets rejected; `/health` and `/readyz` fail closed |
 | Standalone production dependency audit | BLOCKED | 11 inherited Expo toolchain advisories: 1 high, 10 moderate, 0 critical; breaking Expo 57 force-upgrade rejected |
 | Diff/secret checks | AUTOMATED VERIFIED | passed |
 | Native lab GitHub workflow | BLOCKED | GitHub account billing lock prevented job start; local isolated checks passed |

@@ -35,6 +35,8 @@ approved Capacitor app, production data/API, App Store record, and
 | Trusted staging session boundary | AUTOMATED VERIFIED | Bearer authenticator bridge ignores spoofed actor headers |
 | Staging host health/fail-closed readiness | AUTOMATED VERIFIED | Local `/health` returned 200; `/readyz` returned 500 with the database intentionally unavailable |
 | Real HTTP invitation lifecycle and host restart | AUTOMATED VERIFIED | Loopback create/resolve, host restart, accept, persisted grant/audit, CORS and log-redaction proof |
+| Staging migration and runtime-role separation | AUTOMATED VERIFIED | distinct database identities, advisory-locked migration, PUBLIC revocation, least-privilege grants, and guardrails |
+| Post-deploy readiness smoke | AUTOMATED VERIFIED | safe-target validation plus `/health` and `/readyz` response tests; not run against a deployed service |
 | Persistent staging deployment | NOT STARTED | Requires isolated database/service provisioning and secret injection |
 
 ## Verification
@@ -42,9 +44,9 @@ approved Capacitor app, production data/API, App Store record, and
 ```text
 guardrails       passed
 typecheck        passed
-Jest/RNTL        25 suites / 146 tests passed
+Jest/RNTL        27 suites / 155 tests passed
 embedded SQL     migration, constraints, HTTP restart, acceptance, grant, audit passed
-coverage         86.08 statements / 79.93 branches / 80.74 functions / 89.15 lines
+coverage         86.28 statements / 80.37 branches / 81.11 functions / 89.45 lines
 Expo Doctor      17/18 in monorepo; isolated native install 18/18
 Expo config      PeacePad; ca.peacepad.nextnative.lab; diagnostics/writes false
 iOS export       passed; 846 modules bundled
@@ -121,6 +123,11 @@ commit and are not relabelled as current evidence.
   origins/database/session configuration, exposes health/readiness endpoints,
   bounds JSON bodies, applies strict CORS, and logs no request bodies or tokens.
   It does not auto-apply migrations.
+- Railway config now runs the reviewed migration entrypoint before service
+  startup. The migration owner and runtime database credentials must be
+  distinct. An advisory lock serializes migration; PUBLIC access is revoked;
+  and only schema usage plus table CRUD and sequence usage are granted to the
+  dedicated runtime role. Provisioning and a live smoke test remain open.
 - The HTTP host is dependency-injected and verified over a real loopback TCP
   socket. A fictional owner creates an invitation, a fictional recipient
   resolves it, the host restarts, and acceptance succeeds from the persisted
@@ -206,12 +213,12 @@ commit and are not relabelled as current evidence.
 | Layered calendar product flow | 65% |
 | Per-chat Message Check | 70% |
 | Typed staging compatibility client | 75% |
-| Staging invitation server core | 80% |
+| Staging invitation server core | 85% |
 | Automated verification | 95% |
 | Accessibility foundation | 45% |
 | Adaptive theme foundation | 55% |
 | Current device verification | 82% |
-| Overall production-native v2 | 40% |
+| Overall production-native v2 | 42% |
 
 ## Next best move
 
