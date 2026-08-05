@@ -11,6 +11,8 @@ strictly synthetic and fail-closed:
   routes exposed by this rail;
 - no production host, production identity, database write, upload, or App
   Store configuration is reachable from these files.
+- `staging.env.example` contains placeholders only; secrets and fictional
+  session hashes must be injected at runtime.
 
 The HTTP rail uses an injectable readiness probe. A small typed PostgreSQL
 adapter now defines the harmless `SELECT 1` readiness boundary without adding
