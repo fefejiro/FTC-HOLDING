@@ -33,6 +33,7 @@ approved Capacitor app, production data/API, App Store record, and
 | Postgres staging repository and migration | AUTOMATED VERIFIED | Migration executed twice against embedded PostgreSQL; database constraints plus create/resolve/accept/grant/audit path passed |
 | Shared staging rate limiter | AUTOMATED VERIFIED | Atomic Postgres upsert contract; not deployed |
 | Trusted staging session boundary | AUTOMATED VERIFIED | Bearer authenticator bridge ignores spoofed actor headers |
+| Secure native staging session | AUTOMATED VERIFIED | Access key is verified by `/api/v2/session`, saved in device-only SecureStore only after required consent, and attached to staging requests |
 | Staging host health/fail-closed readiness | AUTOMATED VERIFIED | Local `/health` returned 200; `/readyz` returned 500 with the database intentionally unavailable |
 | Real HTTP invitation lifecycle and host restart | AUTOMATED VERIFIED | Loopback create/resolve, host restart, accept, persisted grant/audit, CORS and log-redaction proof |
 | Staging migration and runtime-role separation | AUTOMATED VERIFIED | distinct database identities, advisory-locked migration, PUBLIC revocation, least-privilege grants, and guardrails |
@@ -44,12 +45,12 @@ approved Capacitor app, production data/API, App Store record, and
 ```text
 guardrails       passed
 typecheck        passed
-Jest/RNTL        27 suites / 155 tests passed
+Jest/RNTL        29 suites / 166 tests passed
 embedded SQL     migration, constraints, HTTP restart, acceptance, grant, audit passed
-coverage         86.28 statements / 80.37 branches / 81.11 functions / 89.45 lines
+coverage         85.91 statements / 80.78 branches / 81.01 functions / 89.48 lines
 Expo Doctor      17/18 in monorepo; isolated native install 18/18
 Expo config      PeacePad; ca.peacepad.nextnative.lab; diagnostics/writes false
-iOS export       passed; 846 modules bundled
+iOS export       passed; 962 modules bundled
 diff check       passed
 secret scan      no credential value found in changed runtime files
 ```
@@ -119,6 +120,13 @@ commit and are not relabelled as current evidence.
 
 - Staging server authorization, hashed single-use codes, persisted
   idempotency/audit events, and infrastructure rate limits are not deployed.
+- The native staging client now has a fail-closed account handshake. It sends an
+  opaque access key only in the Authorization header, verifies the account
+  against `/api/v2/session`, stores it with device-only SecureStore protection
+  only after Terms and privacy acceptance, restores it by re-verifying on app
+  restart, and clears invalid saved sessions. No key is embedded in source or
+  public Expo configuration. This is automated local proof, not a deployed
+  authentication claim.
 - The reviewed Node staging host is locally runnable, validates staging-only
   origins/database/session configuration, exposes health/readiness endpoints,
   bounds JSON bodies, applies strict CORS, and logs no request bodies or tokens.
@@ -212,20 +220,21 @@ commit and are not relabelled as current evidence.
 | Secure invitation product flow | 75% |
 | Layered calendar product flow | 65% |
 | Per-chat Message Check | 70% |
-| Typed staging compatibility client | 75% |
+| Typed staging compatibility client | 82% |
 | Staging invitation server core | 85% |
-| Automated verification | 95% |
+| Secure staging account/session bridge | 75% |
+| Automated verification | 96% |
 | Accessibility foundation | 45% |
 | Adaptive theme foundation | 55% |
 | Current device verification | 82% |
-| Overall production-native v2 | 42% |
+| Overall production-native v2 | 44% |
 
 ## Next best move
 
-Do not repeat the blocked Expo Go remote-control attempt. Prepare the isolated
-networked staging deployment with an explicit migration command, least-privilege
-runtime role, and post-deploy readiness smoke test. After that gate passes, use
-one controlled real-iPhone staging session for invitation, calendar, theme, and
-large-text evidence. A future Mac GUI session may close the one-time Expo Go
-sheet, or a signed development build can replace Expo Go. Do not expand into
-calling, billing, or production migration before these gates pass.
+Do not repeat the blocked Expo Go remote-control attempt. Provision the isolated
+networked staging database and service, inject server-only session and hashing
+secrets, run the reviewed migration with the least-privilege runtime role, and
+execute the post-deploy readiness smoke. The client handshake is ready for that
+gate. After it passes, use one controlled real-iPhone staging session for
+account restore, invitation, calendar, theme, and large-text evidence. Do not
+expand into calling, billing, or production migration before these gates pass.

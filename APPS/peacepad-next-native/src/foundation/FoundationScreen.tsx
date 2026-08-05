@@ -6,6 +6,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View
 } from "react-native";
 import type { ConsentPreferences } from "../api/contracts";
@@ -14,12 +15,18 @@ import {
   type PeacePadFoundationApi
 } from "../api/PeacePadApiClient";
 import { createFoundationApi } from "../api/SyntheticLabFoundationApi";
+import { verifyStagingSession, type StagingSessionProfile } from "../api/StagingSessionApi";
 import { environmentConfig } from "../config/environment";
 import {
   createStoredGuestSession,
   secureGuestSessionStore,
   type GuestSessionStore
 } from "../session/secureGuestSession";
+import {
+  secureStagingSessionStore,
+  validStagingAccessToken,
+  type StagingSessionStore
+} from "../session/secureStagingSession";
 import { colors, spacing, typography } from "../theme";
 
 type FoundationPhase = "welcome" | "account" | "consent" | "compose";
@@ -27,7 +34,10 @@ type AsyncState = "idle" | "loading" | "ready";
 
 type Props = {
   api?: PeacePadFoundationApi;
+  environment?: "lab" | "staging";
   sessionStore?: GuestSessionStore;
+  stagingSessionStore?: StagingSessionStore;
+  verifySession?: (accessToken: string) => Promise<StagingSessionProfile>;
   onOpenLab?: () => void;
 };
 
@@ -46,13 +56,18 @@ function friendlyError(error: unknown): string {
 
 export function FoundationScreen({
   api = defaultApi,
+  environment = environmentConfig.environment,
   sessionStore = secureGuestSessionStore,
+  stagingSessionStore = secureStagingSessionStore,
+  verifySession = (accessToken) => verifyStagingSession(environmentConfig, accessToken),
   onOpenLab
 }: Props) {
   const [phase, setPhase] = useState<FoundationPhase>("welcome");
   const [consent, setConsent] = useState<ConsentPreferences>(initialConsent);
   const [sessionState, setSessionState] = useState<AsyncState>("idle");
   const [sessionMessage, setSessionMessage] = useState<string | null>(null);
+  const [accountToken, setAccountToken] = useState("");
+  const [accountProfile, setAccountProfile] = useState<StagingSessionProfile>();
 
   const requiredConsentAccepted =
     consent.termsAccepted && consent.privacyAcknowledged;
@@ -61,7 +76,22 @@ export function FoundationScreen({
     let active = true;
     setSessionState("loading");
 
-    sessionStore
+    const restore = environment === "staging"
+      ? stagingSessionStore.read().then(async (stored) => {
+          if (!active) return;
+          if (!stored) {
+            setSessionState("idle");
+            return;
+          }
+          const restoredProfile = await verifySession(stored.accessToken);
+          if (!active) return;
+          setConsent(stored.consent);
+          setAccountProfile(restoredProfile);
+          setPhase("compose");
+          setSessionMessage(`Welcome back, ${restoredProfile.displayName}.`);
+          setSessionState("ready");
+        })
+      : sessionStore
       .read()
       .then(async (stored) => {
         if (!active) return;
@@ -93,10 +123,56 @@ export function FoundationScreen({
         setPhase("welcome");
       });
 
+    restore.catch(async (error) => {
+      if (environment === "staging") await stagingSessionStore.clear().catch(() => undefined);
+      if (!active) return;
+      setSessionMessage(friendlyError(error));
+      setSessionState("idle");
+      setPhase("welcome");
+    });
+
     return () => {
       active = false;
     };
-  }, [api, sessionStore]);
+  }, [api, environment, sessionStore, stagingSessionStore]);
+
+  async function prepareExistingAccount() {
+    if (!validStagingAccessToken(accountToken)) {
+      setSessionMessage("Enter the complete secure access key.");
+      return;
+    }
+    setSessionState("loading");
+    setSessionMessage(null);
+    try {
+      setAccountProfile(await verifySession(accountToken));
+      setPhase("consent");
+      setSessionState("idle");
+    } catch (error) {
+      setSessionState("idle");
+      setSessionMessage(friendlyError(error));
+    }
+  }
+
+  async function startStagingSession() {
+    if (!requiredConsentAccepted || !accountProfile || !validStagingAccessToken(accountToken)) return;
+    setSessionState("loading");
+    setSessionMessage(null);
+    try {
+      await stagingSessionStore.save({
+        accessToken: accountToken,
+        actorDisplayName: accountProfile.displayName,
+        consent,
+        savedAt: new Date().toISOString()
+      });
+      setAccountToken("");
+      setPhase("compose");
+      setSessionState("ready");
+      setSessionMessage(`Secure access ready for ${accountProfile.displayName}.`);
+    } catch (error) {
+      setSessionState("idle");
+      setSessionMessage(friendlyError(error));
+    }
+  }
 
   async function startGuestSession() {
     if (!requiredConsentAccepted) {
@@ -125,6 +201,7 @@ export function FoundationScreen({
 
   async function resetDeviceSession() {
     await sessionStore.clear();
+    await stagingSessionStore.clear();
     setConsent(initialConsent);
     setSessionMessage("This device session was cleared.");
     setSessionState("idle");
@@ -174,10 +251,31 @@ export function FoundationScreen({
       {phase === "account" ? (
         <View style={styles.card}>
           <Text style={styles.heading}>Existing account</Text>
-          <Text style={styles.body}>
-            Sign-in is temporarily unavailable. You can continue as a guest.
-          </Text>
-          <PrimaryButton label="Continue as guest" onPress={() => setPhase("consent")} />
+          {environment === "staging" ? (
+            <>
+              <Text style={styles.body}>Enter the secure access key supplied for your account.</Text>
+              <TextInput
+                accessibilityLabel="Secure access key"
+                autoCapitalize="none"
+                autoCorrect={false}
+                onChangeText={setAccountToken}
+                placeholder="Secure access key"
+                secureTextEntry
+                style={styles.secureInput}
+                value={accountToken}
+              />
+              <PrimaryButton
+                label={sessionState === "loading" ? "Checking…" : "Continue securely"}
+                onPress={prepareExistingAccount}
+                disabled={!validStagingAccessToken(accountToken) || sessionState === "loading"}
+              />
+            </>
+          ) : (
+            <>
+              <Text style={styles.body}>Sign-in is temporarily unavailable. You can continue as a guest.</Text>
+              <PrimaryButton label="Continue as guest" onPress={() => setPhase("consent")} />
+            </>
+          )}
           <SecondaryButton label="Back to welcome" onPress={() => setPhase("welcome")} />
           <LegalLinks />
         </View>
@@ -221,8 +319,8 @@ export function FoundationScreen({
             }
           />
           <PrimaryButton
-            label={sessionState === "loading" ? "Starting…" : "Continue as guest"}
-            onPress={startGuestSession}
+            label={sessionState === "loading" ? "Starting…" : accountProfile ? "Continue securely" : "Continue as guest"}
+            onPress={accountProfile ? startStagingSession : startGuestSession}
             disabled={!requiredConsentAccepted || sessionState === "loading"}
           />
           <SecondaryButton label="Back" onPress={() => setPhase("welcome")} />
@@ -383,6 +481,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface
+  },
+  secureInput: {
+    minHeight: 48,
+    paddingHorizontal: spacing.md,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+    color: colors.text,
+    ...typography.body
   },
   title: {
     ...typography.title,

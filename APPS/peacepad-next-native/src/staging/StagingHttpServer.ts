@@ -7,7 +7,7 @@ const MAX_BODY_BYTES = 16 * 1024;
 export type StagingHttpServerOptions = Readonly<{
   serviceOrigin: string;
   appOrigin: string;
-  bridge: Pick<TrustedInvitationHttpBridge, "handle">;
+  bridge: Pick<TrustedInvitationHttpBridge, "handle" | "session">;
   readiness: () => Promise<void>;
   logger?: Pick<Console, "info" | "error">;
 }>;
@@ -80,10 +80,16 @@ export function createStagingHttpServer(options: StagingHttpServerOptions): Serv
       if (request.method === "OPTIONS") {
         send(response, 204, undefined, {
           "Access-Control-Allow-Headers": "Authorization, Content-Type, Idempotency-Key, If-Match, X-PeacePad-Region, X-PeacePad-Schema-Version",
-          "Access-Control-Allow-Methods": "POST, DELETE, OPTIONS",
+          "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
           "Access-Control-Allow-Origin": options.appOrigin,
           "Access-Control-Max-Age": "600"
         });
+        return;
+      }
+      if (request.method === "GET" && url.pathname === "/api/v2/session") {
+        const routed = await options.bridge.session(headers(request));
+        send(response, routed.status, routed.body, origin ? { "Access-Control-Allow-Origin": options.appOrigin } : {});
+        logger.info(JSON.stringify({ requestId, method: request.method, path: url.pathname, status: routed.status }));
         return;
       }
       if (request.method !== "POST" && request.method !== "DELETE") {

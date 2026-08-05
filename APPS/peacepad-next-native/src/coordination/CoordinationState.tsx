@@ -8,6 +8,7 @@ import {
 } from "../api/CoordinationApi";
 import { defaultCalendarLayers, SyntheticCoordinationApi } from "../api/SyntheticCoordinationApi";
 import { environmentConfig } from "../config/environment";
+import { secureStagingSessionStore } from "../session/secureStagingSession";
 import {
   createWriteContext,
   type CalendarLayer,
@@ -80,7 +81,11 @@ const seededInvitation: InvitationPreview = {
 
 function createDefaultApi(): PeacePadCoordinationApi {
   if (environmentConfig.environment === "staging") {
-    return new HttpPeacePadCoordinationApi(environmentConfig);
+    return new HttpPeacePadCoordinationApi(
+      environmentConfig,
+      fetch,
+      async () => (await secureStagingSessionStore.read())?.accessToken
+    );
   }
   return new SyntheticCoordinationApi([{ code: "CALM26", preview: seededInvitation }]);
 }

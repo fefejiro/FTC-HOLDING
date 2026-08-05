@@ -42,6 +42,11 @@ and `NOT STARTED`.
 | HTTP logs exclude tokens and invitation codes | AUTOMATED VERIFIED | log-redaction assertions |
 | Shared rate-limit keys are hashed before persistence | AUTOMATED VERIFIED | Postgres limiter test |
 | Trusted bearer session ignores actor spoofing headers | AUTOMATED VERIFIED | HTTP bridge test |
+| Session handshake rejects missing/invalid bearer access | AUTOMATED VERIFIED | authenticated `GET /api/v2/session` bridge and client tests |
+| Access key never enters URL, body, logs, or public Expo config | AUTOMATED VERIFIED | transport assertions, log checks, and release guard |
+| Required consent precedes device persistence | AUTOMATED VERIFIED | rendered onboarding test and device-only SecureStore test |
+| Saved staging session re-verifies and invalid state clears | AUTOMATED VERIFIED | secure-session store and foundation restore tests |
+| Staging API requests fail closed without saved access | AUTOMATED VERIFIED | coordination HTTP client test |
 | Runtime rejects non-staging service origins | AUTOMATED VERIFIED | runtime factory tests |
 | SQL schema excludes plaintext code/deep-link columns | AUTOMATED VERIFIED | migration guardrail |
 | Layers private by default | AUTOMATED VERIFIED | adapter/UI tests |
@@ -62,9 +67,9 @@ and `NOT STARTED`.
 | --- | --- | --- |
 | TypeScript | AUTOMATED VERIFIED | passed |
 | Guardrails | AUTOMATED VERIFIED | passed |
-| Jest/RNTL | AUTOMATED VERIFIED | 27 suites / 155 tests |
+| Jest/RNTL | AUTOMATED VERIFIED | 29 suites / 166 tests |
 | Embedded PostgreSQL | AUTOMATED VERIFIED | migration, constraints, invitation acceptance, grant, and audit chain passed |
-| Coverage | AUTOMATED VERIFIED | 86.28 / 80.37 / 81.11 / 89.45 |
+| Coverage | AUTOMATED VERIFIED | 85.91 / 80.78 / 81.01 / 89.48 |
 | Primary navigation roles and selected state | AUTOMATED VERIFIED | five named tabs; exactly one selected |
 | Invitation and calendar selector semantics | AUTOMATED VERIFIED | named tabs expose selected state |
 | Calendar layer controls do not depend on colour | AUTOMATED VERIFIED | named checkbox and sharing button states |
@@ -80,7 +85,7 @@ and `NOT STARTED`.
 | Expo config | AUTOMATED VERIFIED | lab bundle; diagnostics/writes false |
 | Expo Doctor | BLOCKED | 17/18; app React 19 and monorepo-root React 18 duplicate |
 | Expo Doctor (standalone native install) | AUTOMATED VERIFIED | 18/18 with a clean temporary npm install outside the monorepo |
-| iOS export | AUTOMATED VERIFIED | 846 modules |
+| iOS export | AUTOMATED VERIFIED | 962 modules |
 | Local staging host health | AUTOMATED VERIFIED | `/health` and database-backed `/readyz` 200 over real TCP |
 | Readiness without database | AUTOMATED VERIFIED | `/readyz` fails closed with 500 |
 | Host restart with durable resolution claim | AUTOMATED VERIFIED | resolve before restart; accept after restart passed |
@@ -148,6 +153,8 @@ The historical records screenshots in
 - Apply `staging/migrations/0001_invitation_slice.sql` and grant a dedicated,
   least-privilege runtime role.
 - Inject server-only peppers and connect a real staging session authenticator.
+- Deploy and live-verify the new `/api/v2/session` handshake with fictional
+  staging accounts; no access key is checked into the app.
 - Run live concurrency, rollback, rate-limit, and audit-restoration tests.
 - Verify native share-sheet, deep-link, and scannable QR behavior on device.
 - Repeat invitation creation/acceptance and calendar sharing on a real iPhone.

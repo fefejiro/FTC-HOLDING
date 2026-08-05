@@ -29,17 +29,19 @@ describe("createStagingHttpServer", () => {
   const setup = async (overrides: {
     readiness?: () => Promise<void>;
     handle?: jest.Mock;
+    session?: jest.Mock;
   } = {}) => {
     const handle = overrides.handle ?? jest.fn(async () => ({ status: 200, body: { ok: true } }));
+    const session = overrides.session ?? jest.fn(async () => ({ status: 200, body: { identityId: "synthetic-owner" } }));
     const logger = { info: jest.fn(), error: jest.fn() };
     server = createStagingHttpServer({
       serviceOrigin: "http://127.0.0.1",
       appOrigin,
-      bridge: { handle },
+      bridge: { handle, session },
       readiness: overrides.readiness ?? (async () => undefined),
       logger
     });
-    return { baseUrl: await listen(server), handle, logger };
+    return { baseUrl: await listen(server), handle, session, logger };
   };
 
   it("reports health and database readiness without invoking product routes", async () => {
@@ -141,5 +143,19 @@ describe("createStagingHttpServer", () => {
     const routedRequest = (handle.mock.calls as unknown[][])[0]?.[0] as { requesterKey: string };
     expect(routedRequest.requesterKey).not.toContain(token);
     expect(JSON.stringify(logger.info.mock.calls)).not.toContain(token);
+  });
+
+  it("routes the authenticated session handshake without accepting a body", async () => {
+    const session = jest.fn(async () => ({
+      status: 200,
+      body: { identityId: "synthetic-owner", displayName: "Alex Example", familyIds: ["family-staging"] }
+    }));
+    const { baseUrl } = await setup({ session });
+    const response = await fetch(`${baseUrl}/api/v2/session`, {
+      headers: { Authorization: "Bearer fictional-session", Origin: appOrigin }
+    });
+    expect(response.status).toBe(200);
+    expect(session).toHaveBeenCalledWith(expect.objectContaining({ authorization: "Bearer fictional-session" }));
+    expect(response.headers.get("access-control-allow-origin")).toBe(appOrigin);
   });
 });

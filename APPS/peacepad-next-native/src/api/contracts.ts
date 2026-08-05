@@ -45,6 +45,7 @@ export type MessagePreviewResponse = {
 };
 
 export type ApiErrorKind =
+  | "auth-required"
   | "consent-required"
   | "expired"
   | "http"

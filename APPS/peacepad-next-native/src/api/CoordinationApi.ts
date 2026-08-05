@@ -94,6 +94,7 @@ export interface PeacePadCoordinationApi {
 }
 
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
+export type AccessTokenProvider = () => Promise<string | undefined>;
 
 type ErrorPayload = { code?: string; message?: string };
 
@@ -112,7 +113,8 @@ function normalizeCode(code: string): string {
 export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
   constructor(
     private readonly config: PeacePadEnvironmentConfig,
-    private readonly fetcher: FetchLike = fetch
+    private readonly fetcher: FetchLike = fetch,
+    private readonly accessToken: AccessTokenProvider = async () => undefined
   ) {}
 
   createInvitation(input: CreateInvitationInput, context: WriteContext) {
@@ -216,12 +218,17 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.config.requestTimeoutMs);
     try {
+      const token = await this.accessToken();
+      if (this.config.environment === "staging" && !token) {
+        throw new PeacePadApiError("Sign in to the isolated staging account first.", "auth-required");
+      }
       const response = await this.fetcher(`${this.config.apiBaseUrl}${path}`, {
         ...init,
         credentials: "include",
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
           ...init.headers
         },
         signal: controller.signal

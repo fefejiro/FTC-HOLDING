@@ -105,6 +105,9 @@ for (const file of sourceFiles) {
   const text = fs.readFileSync(file, "utf8");
   const isTestFixture = /\.(?:test|spec)\.[cm]?[jt]sx?$/.test(rel);
   const isAppSource = rel.startsWith(`src${path.sep}`) && /\.[cm]?[jt]sx?$/.test(rel);
+  if (/EXPO_PUBLIC_[A-Z0-9_]*(?:TOKEN|SECRET|ACCESS_KEY)/.test(text)) {
+    failures.push(`${rel} exposes an authentication secret through public Expo configuration.`);
+  }
   if (!isTestFixture && /api\.peacepad\.ca/.test(text)) {
     failures.push(`${rel} references production API api.peacepad.ca.`);
   }

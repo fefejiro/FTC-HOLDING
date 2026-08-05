@@ -17,6 +17,7 @@ const context: WriteContext = {
   schemaVersion: "2.0",
   actor: { identityId: "identity-current", sessionId: "session-current" }
 };
+const accessToken = async () => "a".repeat(48);
 
 function response(status: number, payload: unknown): Response {
   return {
@@ -29,7 +30,7 @@ function response(status: number, payload: unknown): Response {
 describe("HttpPeacePadCoordinationApi", () => {
   it("routes the complete v2 coordination contract through versioned endpoints", async () => {
     const fetcher = jest.fn(async (_input: string, _init?: RequestInit) => response(200, {}));
-    const api = new HttpPeacePadCoordinationApi(config, fetcher);
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
     const layer = {
       id: "layer-1",
       schemaVersion: "2.0" as const,
@@ -91,7 +92,7 @@ describe("HttpPeacePadCoordinationApi", () => {
     const fetcher = jest.fn(async (_input: string, _init?: RequestInit) =>
       response(200, { invitationId: "invitation-1" })
     );
-    const api = new HttpPeacePadCoordinationApi(config, fetcher);
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
 
     await api.resolveInvitation(" ca lm26 ");
 
@@ -105,7 +106,7 @@ describe("HttpPeacePadCoordinationApi", () => {
 
   it("rejects malformed invitation codes before a network request", async () => {
     const fetcher = jest.fn();
-    const api = new HttpPeacePadCoordinationApi(config, fetcher);
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
 
     await expect(api.resolveInvitation("short")).rejects.toEqual(
       new InvitationError("invalid", "Enter a valid six-character invitation code.")
@@ -115,7 +116,7 @@ describe("HttpPeacePadCoordinationApi", () => {
 
   it("adds region, schema, idempotency, and concurrency headers to writes", async () => {
     const fetcher = jest.fn(async (_input: string, _init?: RequestInit) => response(200, {}));
-    const api = new HttpPeacePadCoordinationApi(config, fetcher);
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
 
     await api.setMessageCheckPreference("conversation/1", true, context);
 
@@ -143,7 +144,8 @@ describe("HttpPeacePadCoordinationApi", () => {
       config,
       jest.fn(async (_input: string, _init?: RequestInit) =>
         response(409, { code, message: "This invitation is unavailable." })
-      )
+      ),
+      accessToken
     );
 
     await expect(api.resolveInvitation("CALM26")).rejects.toMatchObject({ reason });
@@ -151,7 +153,7 @@ describe("HttpPeacePadCoordinationApi", () => {
 
   it("rejects blank message previews before a network request", async () => {
     const fetcher = jest.fn();
-    const api = new HttpPeacePadCoordinationApi(config, fetcher);
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
     await expect(api.previewMessage("conversation-1", "   ")).rejects.toMatchObject({ status: 400 });
     expect(fetcher).not.toHaveBeenCalled();
   });
@@ -161,8 +163,22 @@ describe("HttpPeacePadCoordinationApi", () => {
       config,
       jest.fn(async (_input: string, _init?: RequestInit): Promise<Response> => {
         throw new Error("private network details");
-      })
+      }),
+      accessToken
     );
     await expect(api.resolveInvitation("CALM26")).rejects.toMatchObject({ reason: "offline" });
+  });
+
+  it("fails closed without a secure staging session and sends bearer auth when present", async () => {
+    const fetcher = jest.fn(async (_input: string, _init?: RequestInit) => response(200, {}));
+    const missing = new HttpPeacePadCoordinationApi(config, fetcher);
+    await expect(missing.listCalendarLayers("family-current")).rejects.toMatchObject({ kind: "auth-required" });
+    expect(fetcher).not.toHaveBeenCalled();
+
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
+    await api.listCalendarLayers("family-current");
+    expect((fetcher.mock.calls[0]?.[1] as RequestInit).headers).toMatchObject({
+      Authorization: `Bearer ${"a".repeat(48)}`
+    });
   });
 });

@@ -57,4 +57,20 @@ describe("TrustedInvitationHttpBridge", () => {
       headers: { Authorization: "Bearer invalid-session" }
     })).resolves.toMatchObject({ status: 401 });
   });
+
+  it("returns only the verified synthetic session profile", async () => {
+    const bridge = new TrustedInvitationHttpBridge(
+      { handle: jest.fn() } as never,
+      { authenticate: async (token) => token === "valid-session" ? actor : undefined }
+    );
+    await expect(bridge.session({ Authorization: "Bearer valid-session" })).resolves.toEqual({
+      status: 200,
+      body: {
+        identityId: "trusted-owner",
+        displayName: "Alex Morgan",
+        familyIds: ["family"]
+      }
+    });
+    await expect(bridge.session({ Authorization: "Bearer invalid-session" })).resolves.toMatchObject({ status: 401 });
+  });
 });
