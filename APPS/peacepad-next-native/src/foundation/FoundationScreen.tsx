@@ -111,8 +111,8 @@ export function FoundationScreen({
   const statusLabel = useMemo(
     () =>
       environmentConfig.environment === "staging"
-        ? "Connected to staging"
-        : "Native lab foundation",
+        ? "Connected securely"
+        : "PeacePad",
     []
   );
 
@@ -203,7 +203,7 @@ export function FoundationScreen({
             onPress={() => setPhase("account")}
           />
           <SecondaryButton
-            label="Open synthetic Premium lab"
+            label="Continue to PeacePad"
             onPress={onOpenLab ?? (() => undefined)}
           />
           <LegalLinks />
@@ -214,17 +214,8 @@ export function FoundationScreen({
         <View style={styles.card}>
           <Text style={styles.heading}>Existing account</Text>
           <Text style={styles.body}>
-            Account sign-in is not connected in this isolated native lab. This
-            shell reserves the route without touching production credentials or
-            user data.
+            Account sign-in is not available yet.
           </Text>
-          <View style={styles.safetyNote}>
-            <Text style={styles.safetyNoteTitle}>Staging gate</Text>
-            <Text style={styles.body}>
-              Authentication will be enabled only after the versioned staging
-              contract and account-recovery tests pass.
-            </Text>
-          </View>
           <SecondaryButton label="Back to welcome" onPress={() => setPhase("welcome")} />
           <LegalLinks />
         </View>
@@ -282,8 +273,8 @@ export function FoundationScreen({
         <View style={styles.card}>
           <Text style={styles.heading}>Check your message before sending</Text>
           <Text style={styles.body}>
-            This Gate 1 flow calls the existing rule-based preview endpoint.
-            PeacePad does not send this message to a co-parent.
+            Review your wording before deciding what to send. PeacePad does not
+            send this message to a co-parent.
           </Text>
           <TextInput
             accessibilityLabel="Message draft"

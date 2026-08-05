@@ -8,7 +8,8 @@ const config: PeacePadEnvironmentConfig = {
   environment: "staging",
   apiBaseUrl: "https://staging-api.peacepad.test",
   requestTimeoutMs: 50,
-  productionApiWritesEnabled: false
+  productionApiWritesEnabled: false,
+  diagnosticsEnabled: false
 };
 
 function response(status: number, payload: unknown): Response {

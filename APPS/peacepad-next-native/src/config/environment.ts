@@ -5,6 +5,7 @@ export type PeacePadEnvironmentConfig = {
   apiBaseUrl: string;
   requestTimeoutMs: number;
   productionApiWritesEnabled: false;
+  diagnosticsEnabled: boolean;
 };
 
 type EnvironmentValues = Record<string, string | undefined>;
@@ -31,6 +32,7 @@ export function resolveEnvironmentConfig(
   }
 
   const apiBaseUrl = trimTrailingSlash(configuredUrl || DEFAULT_LAB_API_URL);
+  const diagnosticsEnabled = values.EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS === "true";
 
   if (!/^https?:\/\//i.test(apiBaseUrl)) {
     throw new Error("PeacePad API base URL must use HTTP or HTTPS.");
@@ -40,11 +42,16 @@ export function resolveEnvironmentConfig(
     throw new Error("The native Gate 1 client must not target the production PeacePad API.");
   }
 
+  if (diagnosticsEnabled && environment !== "lab") {
+    throw new Error("PeacePad diagnostics are allowed only in the local lab environment.");
+  }
+
   return {
     environment,
     apiBaseUrl,
     requestTimeoutMs: 12_000,
-    productionApiWritesEnabled: false
+    productionApiWritesEnabled: false,
+    diagnosticsEnabled
   };
 }
 

@@ -40,7 +40,7 @@ function createHarness(stored: StoredGuestSession | null = null) {
   return { api, sessionStore };
 }
 
-describe("PeacePad native Gate 1 foundation", () => {
+describe("PeacePad native foundation", () => {
   it("shows the real conch brand and creates no session on welcome", async () => {
     const { api, sessionStore } = createHarness();
     render(<FoundationScreen api={api} sessionStore={sessionStore} />);
@@ -53,15 +53,14 @@ describe("PeacePad native Gate 1 foundation", () => {
     expect(sessionStore.save).not.toHaveBeenCalled();
   });
 
-  it("keeps existing-account access as a staging-only shell", async () => {
+  it("keeps existing-account access as a clear unavailable state", async () => {
     const { api, sessionStore } = createHarness();
     render(<FoundationScreen api={api} sessionStore={sessionStore} />);
 
     fireEvent.press(await screen.findByText("Existing account"));
     expect(
-      screen.getByText(/Account sign-in is not connected in this isolated native lab/)
+      screen.getByText("Account sign-in is not available yet.")
     ).toBeOnTheScreen();
-    expect(screen.getByText("Staging gate")).toBeOnTheScreen();
     expect(api.startGuest).not.toHaveBeenCalled();
     expect(sessionStore.save).not.toHaveBeenCalled();
   });

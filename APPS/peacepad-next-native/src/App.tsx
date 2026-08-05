@@ -1,8 +1,52 @@
 import React, { Component, type ErrorInfo, type ReactNode } from "react";
-import { ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
+import { NavigationContainer, useNavigation, type LinkingOptions } from "@react-navigation/native";
+import { createNativeStackNavigator, type NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { ScrollView, StatusBar, StyleSheet, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { TaskNavigation, type PrimaryTaskScreen } from "./components/TaskNavigation";
+import {
+  CalendarScreen,
+  CoordinationHomeScreen,
+  InvitationScreen,
+  MessagesScreen,
+  MoreScreen,
+  RecordsHomeScreen,
+  type CoordinationScreen
+} from "./coordination/CoordinationScreens";
+import { CoordinationStateProvider } from "./coordination/CoordinationState";
 import { FoundationScreen } from "./foundation/FoundationScreen";
-import { colors, spacing, typography } from "./theme";
+import { colors, spacing } from "./theme";
+
+export type AppScreen = "foundation" | CoordinationScreen;
+type RootStackParamList = Record<AppScreen, { code?: string } | undefined>;
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
+export const peacePadLinking: LinkingOptions<RootStackParamList> = {
+  prefixes: ["peacepadnextlab://"],
+  config: { screens: { invite: "invite/:code" } }
+};
+
+declare const process: { env?: Record<string, string | undefined> };
+
+export function resolveStartScreen(value?: string): AppScreen {
+  const supported = new Set<AppScreen>(["foundation", "home", "messages", "calendar", "invite", "records", "more"]);
+  return value && supported.has(value as AppScreen) ? value as AppScreen : "foundation";
+}
+
+export function PeacePadCoordinationApp({ startScreen }: { startScreen?: string }) {
+  return (
+    <NavigationContainer linking={startScreen ? undefined : peacePadLinking}>
+      <StatusBar barStyle="dark-content" />
+      <Stack.Navigator initialRouteName={resolveStartScreen(startScreen ?? process.env?.EXPO_PUBLIC_PEACEPAD_LAB_START_SCREEN)} screenOptions={{ headerShown: false }}>
+        {(["foundation", "home", "messages", "calendar", "invite", "records", "more"] as const).map((name) => (
+          <Stack.Screen key={name} name={name}>
+            {({ route }) => <CoordinationRoute activeScreen={name} invitationCode={route.params?.code} />}
+          </Stack.Screen>
+        ))}
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
 
 type BoundaryState = { failed: boolean };
 
@@ -14,53 +58,53 @@ export class PeacePadErrorBoundary extends Component<{ children: ReactNode }, Bo
   }
 
   componentDidCatch(_error: Error, _info: ErrorInfo) {
-    // Native crash reporting is intentionally not connected in this isolated foundation.
+    // Crash reporting is deliberately disconnected in the isolated client.
   }
 
   render() {
     if (this.state.failed) {
-      return (
-        <View accessibilityRole="alert" style={styles.boundary}>
-          <Text style={styles.boundaryTitle}>PeacePad could not open this screen.</Text>
-          <Text style={styles.boundaryBody}>Close and reopen the app to try again.</Text>
-        </View>
-      );
+      return <FoundationScreen />;
     }
     return this.props.children;
   }
 }
 
-export function PeacePadFoundationApp() {
-  return (
-    <SafeAreaProvider>
-      <StatusBar barStyle="dark-content" />
-      <SafeAreaView style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <FoundationScreen />
-        </ScrollView>
-      </SafeAreaView>
-    </SafeAreaProvider>
-  );
-}
-
 export default function App() {
   return (
     <PeacePadErrorBoundary>
-      <PeacePadFoundationApp />
+      <SafeAreaProvider>
+        <CoordinationStateProvider>
+          <PeacePadCoordinationApp />
+        </CoordinationStateProvider>
+      </SafeAreaProvider>
     </PeacePadErrorBoundary>
   );
 }
 
+function CoordinationRoute({ activeScreen, invitationCode }: { activeScreen: AppScreen; invitationCode?: string }) {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const setScreen = (screen: CoordinationScreen) => navigation.navigate(screen);
+  const primary: PrimaryTaskScreen = activeScreen === "invite" || activeScreen === "foundation" ? "home" : activeScreen;
+  return (
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.shell}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          {activeScreen === "foundation" ? <FoundationScreen onOpenLab={() => setScreen("home")} /> : null}
+          {activeScreen === "home" ? <CoordinationHomeScreen setScreen={setScreen} /> : null}
+          {activeScreen === "messages" ? <MessagesScreen /> : null}
+          {activeScreen === "calendar" ? <CalendarScreen /> : null}
+          {activeScreen === "invite" ? <InvitationScreen initialCode={invitationCode} /> : null}
+          {activeScreen === "records" ? <RecordsHomeScreen setScreen={setScreen} /> : null}
+          {activeScreen === "more" ? <MoreScreen setScreen={setScreen} /> : null}
+        </ScrollView>
+        {activeScreen !== "foundation" ? <TaskNavigation active={primary} onSelect={setScreen} /> : null}
+      </View>
+    </SafeAreaView>
+  );
+}
+
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  content: { flexGrow: 1, padding: spacing.lg },
-  boundary: {
-    flex: 1,
-    justifyContent: "center",
-    gap: spacing.sm,
-    padding: spacing.xl,
-    backgroundColor: colors.background
-  },
-  boundaryTitle: { ...typography.heading, color: colors.text },
-  boundaryBody: { ...typography.body, color: colors.muted }
+  safe: { backgroundColor: colors.background, flex: 1 },
+  shell: { flex: 1 },
+  content: { flexGrow: 1, padding: spacing.lg }
 });
