@@ -3,19 +3,23 @@ import { PeacePadApiError } from "./PeacePadApiClient";
 import {
   InvitationError,
   type CreateCalendarLayerInput,
+  type CreateConversationInput,
   type CreateInvitationInput,
   type CreatedInvitation,
   type CreateScheduleEventInput,
+  type SendMessageInput,
   type PeacePadCoordinationApi
 } from "./CoordinationApi";
 import {
   PEACEPAD_V2_SCHEMA_VERSION,
   type ActorReference,
   type CalendarLayer,
+  type Conversation,
   type EntityId,
   type FamilyInvitation,
   type InvitationPreview,
   type MessageCheckPreference,
+  type MessageEvent,
   type ParticipantGrant,
   type RecordProvenance,
   type ScheduleEvent,
@@ -79,6 +83,19 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
   private createdInvitationCount = 0;
   private layers = [...defaultCalendarLayers];
   private events: ScheduleEvent[] = [];
+  private conversations: Conversation[] = [{
+    ...versioned("conversation-primary"),
+    familyCircleId: "family-current",
+    participantIdentityIds: ["identity-current", "identity-coparent"],
+    status: "active"
+  }, {
+    ...versioned("conversation-1"),
+    familyCircleId: "family-current",
+    participantIdentityIds: ["identity-current", "identity-coparent"],
+    status: "active"
+  }];
+  private messages: MessageEvent[] = [];
+  private messageCheckPreferences = new Map<string, MessageCheckPreference>();
   private previewAttempts = 0;
 
   constructor(seedInvitations: readonly SeedInvitation[] = []) {
@@ -216,21 +233,79 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
     this.events = this.events.filter((event) => event.id !== eventId);
   }
 
+  async listConversations(familyCircleId: EntityId): Promise<readonly Conversation[]> {
+    return this.conversations.filter((conversation) => conversation.familyCircleId === familyCircleId);
+  }
+
+  async createConversation(input: CreateConversationInput, _context: WriteContext): Promise<Conversation> {
+    this.assertCurrentFamily(input.familyCircleId);
+    const participants = [...new Set(input.participantIdentityIds)];
+    if (!participants.includes("identity-current") || participants.length < 2) {
+      throw new PeacePadApiError("Choose at least two conversation participants.", "http", 400);
+    }
+    const conversation: Conversation = {
+      ...versioned(`conversation-${Date.now().toString(36)}`),
+      familyCircleId: input.familyCircleId,
+      participantIdentityIds: participants,
+      status: "active"
+    };
+    this.conversations = [...this.conversations, conversation];
+    return conversation;
+  }
+
+  async listMessages(conversationId: EntityId): Promise<readonly MessageEvent[]> {
+    this.assertConversation(conversationId);
+    return this.messages.filter((message) => message.conversationId === conversationId);
+  }
+
+  async sendMessage(input: SendMessageInput, _context: WriteContext): Promise<MessageEvent> {
+    const conversation = this.assertConversation(input.conversationId);
+    if (conversation.familyCircleId !== input.familyCircleId || !input.body.trim()) {
+      throw new PeacePadApiError("Enter a message for this conversation.", "http", 400);
+    }
+    const message: MessageEvent = {
+      ...versioned(`message-${Date.now().toString(36)}`),
+      familyCircleId: input.familyCircleId,
+      conversationId: input.conversationId,
+      eventType: "sent",
+      originalMessageEventId: null,
+      body: input.body.trim(),
+      occurredAt: new Date().toISOString()
+    };
+    this.messages = [...this.messages, message];
+    return message;
+  }
+
+  async getMessageCheckPreference(conversationId: EntityId): Promise<MessageCheckPreference> {
+    this.assertConversation(conversationId);
+    return this.messageCheckPreferences.get(conversationId) ?? {
+      ...versioned(`message-check-${conversationId}`),
+      identityId: "identity-current",
+      conversationId,
+      enabled: false,
+      aiAssistanceEnabled: false
+    };
+  }
+
   async setMessageCheckPreference(
     conversationId: EntityId,
     enabled: boolean,
     _context: WriteContext
   ): Promise<MessageCheckPreference> {
-    return {
+    this.assertConversation(conversationId);
+    const preference: MessageCheckPreference = {
       ...versioned(`message-check-${conversationId}`),
       identityId: "identity-current",
       conversationId,
       enabled,
       aiAssistanceEnabled: false
     };
+    this.messageCheckPreferences.set(conversationId, preference);
+    return preference;
   }
 
-  async previewMessage(_conversationId: EntityId, content: string): Promise<MessagePreviewResponse> {
+  async previewMessage(conversationId: EntityId, content: string): Promise<MessagePreviewResponse> {
+    this.assertConversation(conversationId);
     const originalMessage = content.trim();
     if (!originalMessage) throw new Error("Enter a message to check.");
     const needsPause = /\b(always|never|your fault|lying|liar|useless)\b|!{2,}/i.test(originalMessage);
@@ -259,5 +334,14 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
     if (familyCircleId !== "family-current") {
       throw new PeacePadApiError("You do not have access to that family.", "http", 403);
     }
+  }
+
+
+  private assertConversation(conversationId: EntityId) {
+    const conversation = this.conversations.find((item) => item.id === conversationId);
+    if (!conversation || !conversation.participantIdentityIds.includes("identity-current")) {
+      throw new PeacePadApiError("Conversation not found.", "http", 404);
+    }
+    return conversation;
   }
 }

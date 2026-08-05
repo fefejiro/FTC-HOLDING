@@ -24,6 +24,7 @@ describe("staging migration boundary", () => {
     expect(sql).toContain("REVOKE ALL ON SCHEMA peacepad_native_staging FROM PUBLIC");
     expect(sql).toContain(`GRANT USAGE ON SCHEMA peacepad_native_staging TO ${valid.PEACEPAD_STAGING_RUNTIME_ROLE}`);
     expect(sql).toContain("GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES");
+    expect(sql).toContain(`REVOKE UPDATE, DELETE ON peacepad_native_staging.message_events FROM ${valid.PEACEPAD_STAGING_RUNTIME_ROLE}`);
     expect(sql).not.toMatch(/GRANT\s+(ALL|CREATE)/i);
   });
 

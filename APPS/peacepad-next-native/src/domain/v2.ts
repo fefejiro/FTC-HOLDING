@@ -117,6 +117,13 @@ export type ConsentRecord = VersionedEntity &
     withdrawnAt: IsoUtcTimestamp | null;
   }>;
 
+export type Conversation = VersionedEntity &
+  Readonly<{
+    familyCircleId: EntityId;
+    participantIdentityIds: readonly EntityId[];
+    status: "active" | "archived";
+  }>;
+
 export type MessageEvent = VersionedEntity &
   Readonly<{
     familyCircleId: EntityId;

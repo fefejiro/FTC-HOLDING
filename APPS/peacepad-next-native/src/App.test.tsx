@@ -233,7 +233,7 @@ describe("per-chat Message Check", () => {
     expect(await screen.findByText("Please confirm the practical details when you can.")).toBeOnTheScreen();
     expect(screen.queryByLabelText("Sent message")).not.toBeOnTheScreen();
     fireEvent.press(screen.getByText("Send original"));
-    expect(screen.getByText("You never confirm anything!!")).toBeOnTheScreen();
+    await waitFor(() => expect(screen.getByText("You never confirm anything!!")).toBeOnTheScreen());
   });
 });
 

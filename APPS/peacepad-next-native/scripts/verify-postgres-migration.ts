@@ -60,7 +60,7 @@ const owner: StagingActor = {
   identityId: "identity-owner",
   displayName: "Alex Morgan",
   sessionId: "session-owner",
-  familyPermissions: { "family-1": ["invite", "calendar:read", "calendar:write"] }
+  familyPermissions: { "family-1": ["invite", "calendar:read", "calendar:write", "messages:read", "messages:write"] }
 };
 
 const recipient: StagingActor = {
@@ -119,9 +119,12 @@ async function verify() {
     assert.deepEqual(tables.rows.map(({ table_name }) => table_name), [
       "audit_events",
       "calendar_layers",
+      "conversations",
       "idempotency_receipts",
       "invitation_resolution_claims",
       "invitations",
+      "message_check_preferences",
+      "message_events",
       "participant_grants",
       "rate_limits",
       "schedule_events"
@@ -299,6 +302,8 @@ async function verify() {
     baseUrl = await listen(httpServer);
     let calendarLayerId = "";
     let scheduleEventId = "";
+    let conversationId = "";
+    let messageId = "";
     try {
       const acceptedResponse = await fetch(
         `${baseUrl}/api/v2/invitations/${encodeURIComponent(httpCreated.invitation.id)}/accept`,
@@ -348,6 +353,32 @@ async function verify() {
       assert.equal(eventResponse.status, 201);
       scheduleEventId = (await eventResponse.json() as { id: string }).id;
 
+      const conversationResponse = await fetch(`${baseUrl}/api/v2/conversations`, {
+        method: "POST",
+        headers: headersFor(ownerToken, "http-conversation"),
+        body: JSON.stringify({ familyCircleId: "family-1", participantIdentityIds: [owner.identityId, recipient.identityId] })
+      });
+      assert.equal(conversationResponse.status, 201);
+      conversationId = (await conversationResponse.json() as { id: string }).id;
+
+      const preferenceResponse = await fetch(`${baseUrl}/api/v2/conversations/${conversationId}/message-check`, {
+        method: "PUT",
+        headers: headersFor(ownerToken, "http-message-check"),
+        body: JSON.stringify({ enabled: true, aiAssistanceEnabled: false })
+      });
+      assert.equal(preferenceResponse.status, 200);
+      const preference = await preferenceResponse.json() as { enabled: boolean; aiAssistanceEnabled: boolean };
+      assert.equal(preference.enabled, true);
+      assert.equal(preference.aiAssistanceEnabled, false);
+
+      const messageResponse = await fetch(`${baseUrl}/api/v2/conversations/${conversationId}/messages`, {
+        method: "POST",
+        headers: headersFor(ownerToken, "http-message"),
+        body: JSON.stringify({ familyCircleId: "family-1", conversationId, body: "Synthetic pickup is at 5 PM." })
+      });
+      assert.equal(messageResponse.status, 201);
+      messageId = (await messageResponse.json() as { id: string }).id;
+
       await expectDatabaseFailure(() => pool.query(
         `INSERT INTO peacepad_native_staging.schedule_events
           (id, region, version, family_circle_id, calendar_layer_id, starts_at, ends_at, status, event_record)
@@ -381,10 +412,20 @@ async function verify() {
       const eventsResponse = await fetch(`${baseUrl}/api/v2/schedule-events?familyCircleId=family-1`, {
         headers: headersFor(ownerToken, "http-list-events")
       });
+      const messagesResponse = await fetch(`${baseUrl}/api/v2/conversations/${conversationId}/messages`, {
+        headers: headersFor(ownerToken, "http-list-messages")
+      });
+      const preferenceResponse = await fetch(`${baseUrl}/api/v2/conversations/${conversationId}/message-check`, {
+        headers: headersFor(ownerToken, "http-get-message-check")
+      });
       assert.equal(layersResponse.status, 200);
       assert.equal(eventsResponse.status, 200);
+      assert.equal(messagesResponse.status, 200);
+      assert.equal(preferenceResponse.status, 200);
       assert.deepEqual((await layersResponse.json() as Array<{ id: string }>).map(({ id }) => id), [calendarLayerId]);
       assert.deepEqual((await eventsResponse.json() as Array<{ id: string }>).map(({ id }) => id), [scheduleEventId]);
+      assert.deepEqual((await messagesResponse.json() as Array<{ id: string }>).map(({ id }) => id), [messageId]);
+      assert.equal((await preferenceResponse.json() as { enabled: boolean }).enabled, true);
     } finally {
       await close(httpServer);
     }
@@ -392,9 +433,10 @@ async function verify() {
     assert.equal(serializedLogs.includes(ownerToken), false);
     assert.equal(serializedLogs.includes(recipientToken), false);
     assert.equal(serializedLogs.includes(httpCreated.code), false);
+    assert.equal(serializedLogs.includes("Synthetic pickup is at 5 PM."), false);
 
     process.stdout.write(
-      "Embedded PostgreSQL and HTTP restart verification passed: migration, constraints, invitation acceptance, durable calendar/event persistence, grant, and audit chain.\n"
+      "Embedded PostgreSQL and HTTP restart verification passed: migration, constraints, invitation acceptance, durable calendar/event/message persistence, Message Check preference, grant, and audit chain.\n"
     );
   } finally {
     await database.close();

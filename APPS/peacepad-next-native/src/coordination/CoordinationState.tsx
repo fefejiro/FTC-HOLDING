@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { MessagePreviewResponse } from "../api/contracts";
 import {
   HttpPeacePadCoordinationApi,
@@ -65,7 +65,7 @@ type CoordinationStateValue = {
   setMessageDraft: (draft: string) => void;
   setMessageCheckEnabled: (enabled: boolean) => Promise<void>;
   checkMessage: () => Promise<void>;
-  sendMessage: (useSuggestion: boolean) => void;
+  sendMessage: (useSuggestion: boolean) => Promise<void>;
 };
 
 const CoordinationStateContext = createContext<CoordinationStateValue | undefined>(undefined);
@@ -129,6 +129,27 @@ export function CoordinationStateProvider({
   const [messageCheckBusy, setMessageCheckBusy] = useState(false);
   const [messageError, setMessageError] = useState<string>();
   const [sentMessages, setSentMessages] = useState<readonly SentMessage[]>([]);
+
+  useEffect(() => {
+    if (environmentConfig.environment !== "staging") return;
+    let active = true;
+    void Promise.all([
+      api.getMessageCheckPreference("conversation-primary"),
+      api.listMessages("conversation-primary")
+    ]).then(([preference, messages]) => {
+      if (!active) return;
+      setMessageCheckEnabledState(preference.enabled);
+      setSentMessages(messages.filter((message) => message.eventType === "sent" && message.body).map((message) => ({
+        id: message.id,
+        originalBody: message.body ?? "",
+        sentBody: message.body ?? "",
+        sentAt: message.occurredAt
+      })));
+    }).catch(() => {
+      // A conversation is established only after both staging participants connect.
+    });
+    return () => { active = false; };
+  }, [api]);
 
   const value = useMemo<CoordinationStateValue>(() => ({
     invitationCode,
@@ -268,21 +289,33 @@ export function CoordinationStateProvider({
         setMessageCheckBusy(false);
       }
     },
-    sendMessage: (useSuggestion) => {
+    sendMessage: async (useSuggestion) => {
       const originalBody = messageDraft.trim();
       if (!originalBody) return;
       const sentBody = useSuggestion && messagePreview?.rewordingSuggestion
         ? messagePreview.rewordingSuggestion
         : originalBody;
-      setSentMessages((current) => [...current, {
-        id: `message-${Date.now().toString(36)}`,
-        originalBody,
-        sentBody,
-        sentAt: new Date().toISOString()
-      }]);
-      setMessageDraftState("");
-      setMessagePreview(undefined);
+      setMessageCheckBusy(true);
       setMessageError(undefined);
+      try {
+        const message = await api.sendMessage({
+          familyCircleId: "family-current",
+          conversationId: "conversation-primary",
+          body: sentBody
+        }, writeContext());
+        setSentMessages((current) => [...current, {
+          id: message.id,
+          originalBody,
+          sentBody: message.body ?? sentBody,
+          sentAt: message.occurredAt
+        }]);
+        setMessageDraftState("");
+        setMessagePreview(undefined);
+      } catch (error) {
+        setMessageError(error instanceof Error ? error.message : "PeacePad could not send that message.");
+      } finally {
+        setMessageCheckBusy(false);
+      }
     }
   }), [
     api,

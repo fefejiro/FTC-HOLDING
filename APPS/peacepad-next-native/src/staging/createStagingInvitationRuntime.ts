@@ -6,6 +6,9 @@ import { StagingInvitationRoutes } from "./InvitationRoutes";
 import { CalendarService } from "./CalendarService";
 import { CompositeStagingRoutes, StagingCalendarRoutes } from "./CalendarRoutes";
 import { PostgresCalendarStore } from "./PostgresCalendarStore";
+import { MessagingService } from "./MessagingService";
+import { PostgresMessagingStore } from "./PostgresMessagingStore";
+import { StagingMessagingRoutes } from "./MessagingRoutes";
 import {
   PostgresInvitationRateLimiter,
   PostgresInvitationStore,
@@ -66,9 +69,12 @@ export function createStagingInvitationRuntime(config: StagingInvitationRuntimeC
     digest,
     idempotencyPepper: config.idempotencyPepper
   });
+  const messagingStore = new PostgresMessagingStore(config.sqlPool, digest, config.idempotencyPepper);
+  const messagingService = new MessagingService({ store: messagingStore, digest, idempotencyPepper: config.idempotencyPepper });
   const routes = new CompositeStagingRoutes(
     new StagingInvitationRoutes(service),
-    new StagingCalendarRoutes(calendarService)
+    new StagingCalendarRoutes(calendarService),
+    new StagingMessagingRoutes(messagingService)
   );
   return {
     bridge: new TrustedInvitationHttpBridge(routes, config.authenticator),
@@ -76,6 +82,8 @@ export function createStagingInvitationRuntime(config: StagingInvitationRuntimeC
     store,
     rateLimiter,
     calendarService,
-    calendarStore
+    calendarStore,
+    messagingService,
+    messagingStore
   } as const;
 }

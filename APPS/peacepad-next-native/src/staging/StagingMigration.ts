@@ -51,6 +51,7 @@ REVOKE ALL ON SCHEMA peacepad_native_staging FROM PUBLIC;
 REVOKE ALL ON ALL TABLES IN SCHEMA peacepad_native_staging FROM PUBLIC;
 GRANT USAGE ON SCHEMA peacepad_native_staging TO ${safeRole};
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA peacepad_native_staging TO ${safeRole};
+REVOKE UPDATE, DELETE ON peacepad_native_staging.message_events FROM ${safeRole};
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA peacepad_native_staging TO ${safeRole};
 ALTER DEFAULT PRIVILEGES IN SCHEMA peacepad_native_staging
   GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${safeRole};

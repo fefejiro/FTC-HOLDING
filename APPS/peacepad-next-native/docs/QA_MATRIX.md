@@ -67,6 +67,12 @@ and `NOT STARTED`.
 | Rule-based preview works with AI off | AUTOMATED VERIFIED | adapter test |
 | Original draft preserved | AUTOMATED VERIFIED | adapter/UI tests |
 | Preview never automatically sends | AUTOMATED VERIFIED | explicit-send flow test |
+| Conversations require family permission and participant membership | AUTOMATED VERIFIED | service and route authorization tests |
+| Sent messages are append-only and idempotent | AUTOMATED VERIFIED | service replay test plus runtime-role UPDATE/DELETE revocation |
+| Message bodies are absent from audit metadata and server logs | AUTOMATED VERIFIED | audit serialization and loopback log assertions |
+| Messages survive an HTTP host restart | AUTOMATED VERIFIED | disposable PostgreSQL restart proof |
+| Message Check preference survives restart and remains identity-scoped | AUTOMATED VERIFIED | Postgres route/restart proof |
+| Third-party AI cannot be implied by Message Check preference | AUTOMATED VERIFIED | server rejects `aiAssistanceEnabled=true` without separate consent |
 | Production host/writes blocked | AUTOMATED VERIFIED | config and guardrails |
 
 ## Tooling
@@ -75,9 +81,9 @@ and `NOT STARTED`.
 | --- | --- | --- |
 | TypeScript | AUTOMATED VERIFIED | passed |
 | Guardrails | AUTOMATED VERIFIED | passed |
-| Jest/RNTL | AUTOMATED VERIFIED | 32 suites / 187 tests |
-| Embedded PostgreSQL | AUTOMATED VERIFIED | invitation plus calendar constraints, acceptance, persistent restart reads, grant, and audit chain passed |
-| Coverage | AUTOMATED VERIFIED | 86.10 / 80.66 / 82.92 / 90.24 |
+| Jest/RNTL | AUTOMATED VERIFIED | 34 suites / 201 tests |
+| Embedded PostgreSQL | AUTOMATED VERIFIED | invitation, calendar, conversation, message, preference, restart reads, grant, and audit chain passed |
+| Coverage | AUTOMATED VERIFIED | 82.89 / 78.19 / 79.21 / 88.30 |
 | Primary navigation roles and selected state | AUTOMATED VERIFIED | five named tabs; exactly one selected |
 | Invitation and calendar selector semantics | AUTOMATED VERIFIED | named tabs expose selected state |
 | Calendar layer controls do not depend on colour | AUTOMATED VERIFIED | named checkbox and sharing button states |

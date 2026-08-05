@@ -554,10 +554,10 @@ export function MessagesScreen() {
             <>
               <Text style={styles.fieldLabel}>Suggested wording</Text>
               <Text style={styles.body}>{messagePreview.rewordingSuggestion}</Text>
-              <LabButton label="Send suggested message" onPress={() => sendMessage(true)} />
+              <LabButton label="Send suggested message" onPress={() => void sendMessage(true)} />
             </>
           ) : null}
-          <LabButton label="Send original" onPress={() => sendMessage(false)} variant="secondary" />
+          <LabButton label="Send original" onPress={() => void sendMessage(false)} variant="secondary" />
         </View>
       ) : null}
 
@@ -565,12 +565,12 @@ export function MessagesScreen() {
         <View accessibilityRole="alert" style={styles.confirmCard}>
           <Text style={styles.error}>{messageError}</Text>
           <LabButton label="Try again" onPress={() => void checkMessage()} />
-          <LabButton label="Send original" onPress={() => sendMessage(false)} variant="secondary" />
+          <LabButton label="Send original" onPress={() => void sendMessage(false)} variant="secondary" />
         </View>
       ) : null}
 
       {!messageCheckEnabled && messageDraft.trim() ? (
-        <LabButton label="Send message" onPress={() => sendMessage(false)} />
+        <LabButton label="Send message" onPress={() => void sendMessage(false)} />
       ) : null}
     </View>
   );

@@ -28,16 +28,19 @@ approved Capacitor app, production data/API, App Store record, and
 | Per-chat Message Check, default off | AUTOMATED VERIFIED | UI and adapter tests |
 | Original draft preserved; no automatic send | AUTOMATED VERIFIED | explicit-send tests |
 | Third-party AI consent separate/off | AUTOMATED VERIFIED | consent and preference tests |
+| Permanent staging conversation/message ledger | AUTOMATED VERIFIED | participant authorization, idempotent append, immutable Postgres message events, and HTTP restart proof |
+| Durable per-participant Message Check preference | AUTOMATED VERIFIED | default-off read, consent-safe update, optimistic concurrency, and HTTP restart proof |
+| Sensitive message bodies excluded from audit/log metadata | AUTOMATED VERIFIED | audit payload contains body length only; loopback log-redaction assertion passed |
 | Current quiet-premium Simulator evidence | SIMULATOR VERIFIED | iPhone 17 / iOS 26.5 Month, Week, and Day evidence captured on `e0936d2e` |
 | Maestro invitation and calendar-sharing flows | SIMULATOR VERIFIED | iPhone 17 Pro / iOS 26.5; `docs/evidence/maestro-2026-08-04` |
 | Real-iPhone staging evidence | NOT STARTED | Requires deployed staging slice and controlled device session |
 | Staging `/api/v2` invitation handler core | AUTOMATED VERIFIED | Reviewed Node host plus framework-neutral route/service tests; not deployed |
-| Postgres staging repository and migration | AUTOMATED VERIFIED | Migration executed twice against embedded PostgreSQL; invitation and calendar constraints plus create/resolve/accept/grant/calendar/event/audit paths passed |
+| Postgres staging repository and migration | AUTOMATED VERIFIED | Migration executed twice against embedded PostgreSQL; invitation, calendar, conversation, immutable message, preference, grant, and audit paths passed |
 | Shared staging rate limiter | AUTOMATED VERIFIED | Atomic Postgres upsert contract; not deployed |
 | Trusted staging session boundary | AUTOMATED VERIFIED | Bearer authenticator bridge ignores spoofed actor headers |
 | Secure native staging session | AUTOMATED VERIFIED | Access key is verified by `/api/v2/session`, saved in device-only SecureStore only after required consent, and attached to staging requests |
 | Staging host health/fail-closed readiness | AUTOMATED VERIFIED | Local `/health` returned 200; `/readyz` returned 500 with the database intentionally unavailable |
-| Real HTTP coordination lifecycle and host restart | AUTOMATED VERIFIED | Loopback invitation lifecycle plus private calendar/event creation, host restart, persisted reads, CORS and log-redaction proof |
+| Real HTTP coordination lifecycle and host restart | AUTOMATED VERIFIED | Loopback invitation lifecycle plus calendar/event/conversation/message/preference creation, host restart, persisted reads, CORS and log-redaction proof |
 | Staging migration and runtime-role separation | AUTOMATED VERIFIED | distinct database identities, advisory-locked migration, PUBLIC revocation, least-privilege grants, and guardrails |
 | Post-deploy readiness smoke | AUTOMATED VERIFIED | safe-target validation plus `/health` and `/readyz` response tests; not run against a deployed service |
 | Persistent staging deployment | NOT STARTED | Requires isolated database/service provisioning and secret injection |
@@ -47,9 +50,9 @@ approved Capacitor app, production data/API, App Store record, and
 ```text
 guardrails       passed
 typecheck        passed
-Jest/RNTL        32 suites / 187 tests passed
-embedded SQL     invitation/calendar constraints and HTTP restart persistence passed
-coverage         86.10 statements / 80.66 branches / 82.92 functions / 90.24 lines
+Jest/RNTL        34 suites / 201 tests passed
+embedded SQL     invitation/calendar/message constraints and HTTP restart persistence passed
+coverage         82.89 statements / 78.19 branches / 79.21 functions / 88.30 lines
 Expo Doctor      17/18 in monorepo; isolated native install 18/18
 Expo config      PeacePad; ca.peacepad.nextnative.lab; diagnostics/writes false
 iOS export       passed; 962 modules bundled
@@ -228,16 +231,17 @@ commit and are not relabelled as current evidence.
 | Quiet-premium information architecture | 85% |
 | Secure invitation product flow | 75% |
 | Layered calendar product flow | 73% |
-| Per-chat Message Check | 70% |
-| Typed staging compatibility client | 82% |
+| Per-chat Message Check | 80% |
+| Typed staging compatibility client | 88% |
 | Staging invitation server core | 85% |
 | Staging calendar server core | 78% |
+| Staging messaging server core | 78% |
 | Secure staging account/session bridge | 75% |
-| Automated verification | 96% |
+| Automated verification | 98% |
 | Accessibility foundation | 45% |
 | Adaptive theme foundation | 55% |
 | Current device verification | 82% |
-| Overall production-native v2 | 46% |
+| Overall production-native v2 | 48% |
 
 ## Feature completion view
 
@@ -248,8 +252,8 @@ These percentages measure production readiness, not how many screens exist.
 | Home and task navigation | 85% | polished shell and state-driven actions; device accessibility pass remains |
 | Secure family invitations | 75% | durable staging core; network deployment and real-device handoff remain |
 | Calendar and parenting plans | 73% | durable authorized layers/events; recurrence engine, offline queue, and date navigation remain |
-| Messaging | 48% | compose/review UX exists; permanent shared message ledger, delivery/read states, attachments, and search remain |
-| Message Check | 70% | rule-based, per-chat, explicit-send flow; durable preference and production service remain |
+| Messaging | 62% | participant-bound append-only staging ledger and restart recovery pass; delivery/read states, corrections, attachments, search, offline queue, and deployed two-device proof remain |
+| Message Check | 80% | rule-based, per-chat, explicit-send flow with durable default-off preference; networked staging and real-device proof remain |
 | Records / Case Binder | 38% | synthetic vertical slice exists; secure uploads, immutable originals, hashing, and export verification remain |
 | Calls | 15% | typed contracts and prior-repo design evidence only; no authenticated WebRTC/CallKit implementation |
 | Expenses and reimbursements | 10% | domain direction only; no ledger, receipts, splits, balances, or payment adapter |
@@ -263,11 +267,10 @@ These percentages measure production readiness, not how many screens exist.
 
 ## Next best move
 
-Do not repeat the blocked Expo Go remote-control attempt. The best zero-cost
-engineering move is to persist the shared message record and per-conversation
-Message Check preference on the same authorization, concurrency, idempotency,
-and audit foundation. In parallel, provision the isolated networked staging
-database/service when a free target is available, then run the reviewed
-migration and post-deploy smoke. Calling follows only after two fictional
-authenticated participants and durable messaging/calendar state pass a real
-iPhone staging session.
+Do not repeat the blocked Expo Go remote-control attempt. The permanent staging
+message ledger and per-conversation Message Check preference now pass embedded
+PostgreSQL and HTTP restart verification. The next gate is an isolated networked
+staging database/service, followed by the reviewed migration, post-deploy smoke,
+and one two-iPhone fictional-account pass covering send, restart recovery, and
+preference isolation. Delivery/read events and offline retry follow that proof;
+calling starts only after the two-user communication foundation is reliable.

@@ -1,10 +1,12 @@
 import type {
   CalendarLayer,
+  Conversation,
   EntityId,
   FamilyInvitation,
   InvitationPreview,
   LayerVisibility,
   MessageCheckPreference,
+  MessageEvent,
   ParticipantGrant,
   ScheduleEvent,
   WriteContext
@@ -71,6 +73,17 @@ export type CreateScheduleEventInput = Readonly<
   >
 >;
 
+export type CreateConversationInput = Readonly<{
+  familyCircleId: EntityId;
+  participantIdentityIds: readonly EntityId[];
+}>;
+
+export type SendMessageInput = Readonly<{
+  familyCircleId: EntityId;
+  conversationId: EntityId;
+  body: string;
+}>;
+
 export interface PeacePadCoordinationApi {
   createInvitation(input: CreateInvitationInput, context: WriteContext): Promise<CreatedInvitation>;
   resolveInvitation(code: string): Promise<InvitationPreview>;
@@ -85,6 +98,11 @@ export interface PeacePadCoordinationApi {
   createScheduleEvent(input: CreateScheduleEventInput, context: WriteContext): Promise<ScheduleEvent>;
   updateScheduleEvent(event: ScheduleEvent, context: WriteContext): Promise<ScheduleEvent>;
   deleteScheduleEvent(eventId: EntityId, context: WriteContext): Promise<void>;
+  listConversations(familyCircleId: EntityId): Promise<readonly Conversation[]>;
+  createConversation(input: CreateConversationInput, context: WriteContext): Promise<Conversation>;
+  listMessages(conversationId: EntityId): Promise<readonly MessageEvent[]>;
+  sendMessage(input: SendMessageInput, context: WriteContext): Promise<MessageEvent>;
+  getMessageCheckPreference(conversationId: EntityId): Promise<MessageCheckPreference>;
   setMessageCheckPreference(
     conversationId: EntityId,
     enabled: boolean,
@@ -174,6 +192,33 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
 
   async deleteScheduleEvent(eventId: EntityId, context: WriteContext) {
     await this.write(`/api/v2/schedule-events/${encodeURIComponent(eventId)}`, "DELETE", undefined, context);
+  }
+
+  listConversations(familyCircleId: EntityId) {
+    return this.request<readonly Conversation[]>(`/api/v2/conversations?familyCircleId=${encodeURIComponent(familyCircleId)}`);
+  }
+
+  createConversation(input: CreateConversationInput, context: WriteContext) {
+    return this.write<Conversation>("/api/v2/conversations", "POST", input, context);
+  }
+
+  listMessages(conversationId: EntityId) {
+    return this.request<readonly MessageEvent[]>(`/api/v2/conversations/${encodeURIComponent(conversationId)}/messages`);
+  }
+
+  sendMessage(input: SendMessageInput, context: WriteContext) {
+    return this.write<MessageEvent>(
+      `/api/v2/conversations/${encodeURIComponent(input.conversationId)}/messages`,
+      "POST",
+      input,
+      context
+    );
+  }
+
+  getMessageCheckPreference(conversationId: EntityId) {
+    return this.request<MessageCheckPreference>(
+      `/api/v2/conversations/${encodeURIComponent(conversationId)}/message-check`
+    );
   }
 
   setMessageCheckPreference(conversationId: EntityId, enabled: boolean, context: WriteContext) {

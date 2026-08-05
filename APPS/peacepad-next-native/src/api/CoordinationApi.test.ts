@@ -76,6 +76,12 @@ describe("HttpPeacePadCoordinationApi", () => {
     await api.createScheduleEvent(event, context);
     await api.updateScheduleEvent(event, context);
     await api.deleteScheduleEvent(event.id, context);
+    await api.listConversations("family-current");
+    await api.createConversation({ familyCircleId: "family-current", participantIdentityIds: ["identity-current", "identity-other"] }, context);
+    await api.listMessages("conversation-1");
+    await api.sendMessage({ familyCircleId: "family-current", conversationId: "conversation-1", body: "Pickup at 5." }, context);
+    await api.getMessageCheckPreference("conversation-1");
+    await api.setMessageCheckPreference("conversation-1", true, context);
     await api.previewMessage("conversation-1", " Pickup at 5. ");
 
     const urls = fetcher.mock.calls.map(([url]) => url);
@@ -84,6 +90,9 @@ describe("HttpPeacePadCoordinationApi", () => {
       "https://staging-api.peacepad.test/api/v2/invitations/invitation-1/accept",
       "https://staging-api.peacepad.test/api/v2/calendar-layers?familyCircleId=family-current",
       "https://staging-api.peacepad.test/api/v2/schedule-events?familyCircleId=family-current",
+      "https://staging-api.peacepad.test/api/v2/conversations?familyCircleId=family-current",
+      "https://staging-api.peacepad.test/api/v2/conversations/conversation-1/messages",
+      "https://staging-api.peacepad.test/api/v2/conversations/conversation-1/message-check",
       "https://staging-api.peacepad.test/api/v2/message-previews"
     ]));
   });
