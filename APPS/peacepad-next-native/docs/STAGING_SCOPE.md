@@ -12,10 +12,11 @@ strictly synthetic and fail-closed:
 - no production host, production identity, database write, upload, or App
   Store configuration is reachable from these files.
 
-The HTTP rail currently uses an injectable readiness probe. PostgreSQL-backed
-readiness, migration verification, restart persistence, and Railway staging
-configuration remain explicit PR D gates; they are not claimed complete by
-this commit.
+The HTTP rail uses an injectable readiness probe. A small typed PostgreSQL
+adapter now defines the harmless `SELECT 1` readiness boundary without adding
+a database dependency to the client package. Migration verification, restart
+persistence, and Railway staging configuration remain explicit PR D gates; they
+are not claimed complete by this commit.
 
 Verification performed locally:
 
