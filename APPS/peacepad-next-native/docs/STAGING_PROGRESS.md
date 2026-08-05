@@ -18,6 +18,7 @@ Latest commit: `b48ee14e`
 | Runtime stops and closes database client | LOCAL VERIFIED |
 | Simulated restart verification routine | LOCAL VERIFIED |
 | Typed staging session client | LOCAL VERIFIED |
+| Two-fictional-account session registry | LOCAL VERIFIED |
 | PostgreSQL migration and restart persistence | NOT STARTED |
 | Railway staging configuration | NOT STARTED |
 | Hosted CI | HOSTED CI BLOCKED BEFORE EXECUTION when monorepo workflow is scoped incorrectly |
