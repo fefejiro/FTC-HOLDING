@@ -26,6 +26,20 @@ function invitation(state: "pending" | "expired" | "revoked" | "used" = "pending
 }
 
 describe("SyntheticCoordinationApi safety behavior", () => {
+  it("proves the synthetic coordination journey from invitation to corrected message search", async () => {
+    const api = new SyntheticCoordinationApi([invitation()]);
+    const created = await api.createInvitation({ familyCircleId: "family-current", invitedRole: "parent", permissions: ["messages", "calendar"], expiresInHours: 24 }, context);
+    const preview = await api.resolveInvitation(created.code);
+    expect(preview.invitationId).toBe(created.invitation.id);
+    await expect(api.acceptInvitation(preview.invitationId, context)).resolves.toMatchObject({ permissions: ["messages", "calendar"] });
+    const conversation = await api.createConversation({ familyCircleId: "family-current", participantIdentityIds: ["identity-current", "identity-coparent"] }, context);
+    const sent = await api.sendMessage({ familyCircleId: "family-current", conversationId: conversation.id, body: "Pickup at 5." }, context);
+    await api.recordMessageLifecycle({ familyCircleId: "family-current", conversationId: conversation.id, originalMessageEventId: sent.id, eventType: "delivered" }, context);
+    const correction = await api.correctMessage({ familyCircleId: "family-current", conversationId: conversation.id, originalMessageEventId: sent.id, body: "Pickup at 6." }, context);
+    expect(correction.body).toBe("Pickup at 6.");
+    await expect(api.searchMessages(conversation.id, "Pickup at 6.")).resolves.toEqual(expect.arrayContaining([expect.objectContaining({ corrected: true, body: "Pickup at 6." })]));
+  });
+
   it.each(["expired", "revoked", "used"] as const)("rejects a %s invitation", async (state) => {
     const api = new SyntheticCoordinationApi([invitation(state)]);
     await expect(api.resolveInvitation("CALM26")).rejects.toMatchObject({ reason: state });
