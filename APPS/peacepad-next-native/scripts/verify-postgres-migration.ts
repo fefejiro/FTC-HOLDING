@@ -60,7 +60,7 @@ const owner: StagingActor = {
   identityId: "identity-owner",
   displayName: "Alex Morgan",
   sessionId: "session-owner",
-  familyPermissions: { "family-1": ["invite"] }
+  familyPermissions: { "family-1": ["invite", "calendar:read", "calendar:write"] }
 };
 
 const recipient: StagingActor = {
@@ -78,12 +78,16 @@ const context = (actor: StagingActor, key: string, expectedVersion: number | nul
     actor: { identityId: actor.identityId, sessionId: actor.sessionId }
   });
 
-const expectDatabaseFailure = async (work: () => Promise<unknown>, label: string) => {
+const expectDatabaseFailure = async (
+  work: () => Promise<unknown>,
+  label: string,
+  pattern: RegExp = /check constraint/i
+) => {
   let failed = false;
   try {
     await work();
   } catch (error) {
-    failed = /check constraint/i.test(error instanceof Error ? error.message : String(error));
+    failed = pattern.test(error instanceof Error ? error.message : String(error));
   }
   assert.equal(failed, true, `${label} must be rejected by a database check constraint`);
 };
@@ -114,11 +118,13 @@ async function verify() {
     );
     assert.deepEqual(tables.rows.map(({ table_name }) => table_name), [
       "audit_events",
+      "calendar_layers",
       "idempotency_receipts",
       "invitation_resolution_claims",
       "invitations",
       "participant_grants",
-      "rate_limits"
+      "rate_limits",
+      "schedule_events"
     ]);
 
     const pool = new EmbeddedPostgresPool(database);
@@ -291,6 +297,8 @@ async function verify() {
     await close(httpServer);
     httpServer = createHttpServer();
     baseUrl = await listen(httpServer);
+    let calendarLayerId = "";
+    let scheduleEventId = "";
     try {
       const acceptedResponse = await fetch(
         `${baseUrl}/api/v2/invitations/${encodeURIComponent(httpCreated.invitation.id)}/accept`,
@@ -303,6 +311,80 @@ async function verify() {
       assert.equal(acceptedResponse.status, 200);
       const acceptedGrant = await acceptedResponse.json() as { identityId: string };
       assert.equal(acceptedGrant.identityId, recipient.identityId);
+
+      const layerResponse = await fetch(`${baseUrl}/api/v2/calendar-layers`, {
+        method: "POST",
+        headers: headersFor(ownerToken, "http-calendar-layer"),
+        body: JSON.stringify({
+          familyCircleId: "family-1",
+          ownerIdentityId: owner.identityId,
+          name: "Parenting time",
+          kind: "parenting-time",
+          icon: "calendar",
+          colorToken: "teal",
+          visibility: { scope: "private" }
+        })
+      });
+      assert.equal(layerResponse.status, 201);
+      calendarLayerId = (await layerResponse.json() as { id: string }).id;
+
+      const eventResponse = await fetch(`${baseUrl}/api/v2/schedule-events`, {
+        method: "POST",
+        headers: headersFor(ownerToken, "http-schedule-event"),
+        body: JSON.stringify({
+          familyCircleId: "family-1",
+          calendarLayerId,
+          childProfileIds: [],
+          eventType: "parenting-time",
+          title: "Synthetic weekend parenting time",
+          description: null,
+          startsAt: "2026-08-08T14:00:00.000Z",
+          endsAt: "2026-08-09T20:00:00.000Z",
+          status: "planned",
+          recurrence: null,
+          visibilityOverride: null
+        })
+      });
+      assert.equal(eventResponse.status, 201);
+      scheduleEventId = (await eventResponse.json() as { id: string }).id;
+
+      await expectDatabaseFailure(() => pool.query(
+        `INSERT INTO peacepad_native_staging.schedule_events
+          (id, region, version, family_circle_id, calendar_layer_id, starts_at, ends_at, status, event_record)
+         VALUES ('invalid-time', 'ca', 1, 'family-1', $1, '2026-08-10T12:00:00Z',
+                 '2026-08-10T11:00:00Z', 'planned', $2::jsonb)`,
+        [calendarLayerId, JSON.stringify({ familyCircleId: "family-1", calendarLayerId })]
+      ), "invalid event time");
+      await expectDatabaseFailure(() => pool.query(
+        `INSERT INTO peacepad_native_staging.schedule_events
+          (id, region, version, family_circle_id, calendar_layer_id, starts_at, ends_at, status, event_record)
+         VALUES ('cross-family-event', 'ca', 1, 'family-2', $1, '2026-08-10T11:00:00Z',
+                 '2026-08-10T12:00:00Z', 'planned', $2::jsonb)`,
+        [calendarLayerId, JSON.stringify({
+          id: "cross-family-event",
+          region: "ca",
+          version: 1,
+          familyCircleId: "family-2",
+          calendarLayerId
+        })]
+      ), "cross-family calendar reference", /foreign key constraint/i);
+    } finally {
+      await close(httpServer);
+    }
+
+    httpServer = createHttpServer();
+    baseUrl = await listen(httpServer);
+    try {
+      const layersResponse = await fetch(`${baseUrl}/api/v2/calendar-layers?familyCircleId=family-1`, {
+        headers: headersFor(ownerToken, "http-list-layers")
+      });
+      const eventsResponse = await fetch(`${baseUrl}/api/v2/schedule-events?familyCircleId=family-1`, {
+        headers: headersFor(ownerToken, "http-list-events")
+      });
+      assert.equal(layersResponse.status, 200);
+      assert.equal(eventsResponse.status, 200);
+      assert.deepEqual((await layersResponse.json() as Array<{ id: string }>).map(({ id }) => id), [calendarLayerId]);
+      assert.deepEqual((await eventsResponse.json() as Array<{ id: string }>).map(({ id }) => id), [scheduleEventId]);
     } finally {
       await close(httpServer);
     }
@@ -312,7 +394,7 @@ async function verify() {
     assert.equal(serializedLogs.includes(httpCreated.code), false);
 
     process.stdout.write(
-      "Embedded PostgreSQL and HTTP restart verification passed: migration, constraints, invitation acceptance, grant, and audit chain.\n"
+      "Embedded PostgreSQL and HTTP restart verification passed: migration, constraints, invitation acceptance, durable calendar/event persistence, grant, and audit chain.\n"
     );
   } finally {
     await database.close();

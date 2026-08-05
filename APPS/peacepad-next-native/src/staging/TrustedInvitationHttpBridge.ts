@@ -1,9 +1,5 @@
 import type { StagingActor } from "./InvitationService";
-import {
-  StagingInvitationRoutes,
-  type StagingInvitationRequest,
-  type StagingInvitationResponse
-} from "./InvitationRoutes";
+import type { StagingInvitationRequest, StagingInvitationResponse } from "./InvitationRoutes";
 
 export interface StagingSessionAuthenticator {
   authenticate(sessionToken: string): Promise<StagingActor | undefined>;
@@ -21,7 +17,7 @@ const bearerToken = (headers: Readonly<Record<string, string | undefined>>) => {
 
 export class TrustedInvitationHttpBridge {
   constructor(
-    private readonly routes: StagingInvitationRoutes,
+    private readonly routes: { handle(request: StagingInvitationRequest): Promise<StagingInvitationResponse> },
     private readonly authenticator: StagingSessionAuthenticator
   ) {}
 

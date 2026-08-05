@@ -236,6 +236,9 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
       const payload = (await response.json().catch(() => null)) as T | ErrorPayload | null;
       if (!response.ok) {
         const error = (payload ?? {}) as ErrorPayload;
+        if (response.status === 401) {
+          throw new PeacePadApiError("Your staging session expired. Sign in again.", "auth-required", 401);
+        }
         const invitationReason = error.code ? INVITATION_REASONS[error.code] : undefined;
         if (invitationReason) {
           throw new InvitationError(invitationReason, error.message || "This invitation is not available.");

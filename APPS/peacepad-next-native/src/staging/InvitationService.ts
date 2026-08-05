@@ -13,6 +13,7 @@ export type StagingActor = Readonly<{
   identityId: string;
   displayName: string;
   sessionId: string;
+  participantGrantIds?: readonly string[];
   familyPermissions: Readonly<Record<string, readonly string[]>>;
 }>;
 
@@ -68,6 +69,7 @@ export class InvitationServiceError extends Error {
     readonly code:
       | "UNAUTHENTICATED"
       | "FORBIDDEN"
+      | "NOT_FOUND"
       | "INVALID_REQUEST"
       | "INVITATION_INVALID"
       | "INVITATION_EXPIRED"

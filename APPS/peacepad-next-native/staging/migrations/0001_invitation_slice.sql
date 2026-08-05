@@ -28,6 +28,47 @@ CREATE TABLE IF NOT EXISTS peacepad_native_staging.participant_grants (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS peacepad_native_staging.calendar_layers (
+  id text PRIMARY KEY,
+  region text NOT NULL CHECK (region IN ('ca', 'us')),
+  version integer NOT NULL CHECK (version > 0),
+  family_circle_id text NOT NULL,
+  owner_identity_id text NOT NULL,
+  visibility_scope text NOT NULL CHECK (visibility_scope IN ('private', 'family', 'selected')),
+  layer_record jsonb NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (id, family_circle_id),
+  CHECK ((layer_record ->> 'id') = id),
+  CHECK ((layer_record ->> 'region') = region),
+  CHECK ((layer_record ->> 'version')::integer = version),
+  CHECK ((layer_record ->> 'familyCircleId') = family_circle_id),
+  CHECK ((layer_record ->> 'ownerIdentityId') = owner_identity_id)
+);
+
+CREATE TABLE IF NOT EXISTS peacepad_native_staging.schedule_events (
+  id text PRIMARY KEY,
+  region text NOT NULL CHECK (region IN ('ca', 'us')),
+  version integer NOT NULL CHECK (version > 0),
+  family_circle_id text NOT NULL,
+  calendar_layer_id text NOT NULL,
+  starts_at timestamptz NOT NULL,
+  ends_at timestamptz NOT NULL,
+  status text NOT NULL CHECK (status IN ('planned', 'requested', 'accepted', 'declined', 'cancelled')),
+  event_record jsonb NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (calendar_layer_id, family_circle_id)
+    REFERENCES peacepad_native_staging.calendar_layers(id, family_circle_id)
+    ON DELETE CASCADE,
+  CHECK (ends_at > starts_at),
+  CHECK ((event_record ->> 'id') = id),
+  CHECK ((event_record ->> 'region') = region),
+  CHECK ((event_record ->> 'version')::integer = version),
+  CHECK ((event_record ->> 'familyCircleId') = family_circle_id),
+  CHECK ((event_record ->> 'calendarLayerId') = calendar_layer_id)
+);
+
 CREATE TABLE IF NOT EXISTS peacepad_native_staging.idempotency_receipts (
   operation_hash text PRIMARY KEY,
   target_id text NOT NULL,
@@ -72,6 +113,12 @@ CREATE INDEX IF NOT EXISTS invitations_expiry_idx
 
 CREATE INDEX IF NOT EXISTS invitation_resolution_claims_expiry_idx
   ON peacepad_native_staging.invitation_resolution_claims (expires_at);
+
+CREATE INDEX IF NOT EXISTS calendar_layers_family_idx
+  ON peacepad_native_staging.calendar_layers (family_circle_id, created_at);
+
+CREATE INDEX IF NOT EXISTS schedule_events_family_time_idx
+  ON peacepad_native_staging.schedule_events (family_circle_id, starts_at, ends_at);
 
 REVOKE ALL ON SCHEMA peacepad_native_staging FROM PUBLIC;
 REVOKE ALL ON ALL TABLES IN SCHEMA peacepad_native_staging FROM PUBLIC;

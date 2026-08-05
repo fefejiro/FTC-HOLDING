@@ -80,7 +80,7 @@ describe("createStagingHttpServer", () => {
       headers: { Origin: "https://attacker.example", "Content-Type": "application/json" },
       body: "{}"
     });
-    const wrongMethod = await fetch(`${baseUrl}/api/v2/invitations`);
+    const wrongMethod = await fetch(`${baseUrl}/api/v2/invitations`, { method: "HEAD" });
     const wrongType = await fetch(`${baseUrl}/api/v2/invitations`, {
       method: "POST",
       headers: { Origin: appOrigin, "Content-Type": "text/plain" },
@@ -108,7 +108,36 @@ describe("createStagingHttpServer", () => {
     expect(tooLarge.status).toBe(413);
     expect(preflight.status).toBe(204);
     expect(preflight.headers.get("access-control-allow-origin")).toBe(appOrigin);
+    expect(preflight.headers.get("access-control-allow-methods")).toContain("PATCH");
     expect(handle).not.toHaveBeenCalled();
+  });
+
+  it("preserves query parameters and accepts JSON patch requests for calendar routes", async () => {
+    const { baseUrl, handle } = await setup();
+    const listed = await fetch(`${baseUrl}/api/v2/calendar-layers?familyCircleId=family-1`, {
+      headers: { Authorization: "Bearer fictional-session", Origin: appOrigin }
+    });
+    const patched = await fetch(`${baseUrl}/api/v2/calendar-layers/layer-1`, {
+      method: "PATCH",
+      headers: {
+        Authorization: "Bearer fictional-session",
+        Origin: appOrigin,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ id: "layer-1" })
+    });
+
+    expect(listed.status).toBe(200);
+    expect(patched.status).toBe(200);
+    expect(handle).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      method: "GET",
+      path: "/api/v2/calendar-layers?familyCircleId=family-1"
+    }));
+    expect(handle).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      method: "PATCH",
+      path: "/api/v2/calendar-layers/layer-1",
+      body: { id: "layer-1" }
+    }));
   });
 
   it("routes a bounded request using a hashed requester key and redacted logs", async () => {

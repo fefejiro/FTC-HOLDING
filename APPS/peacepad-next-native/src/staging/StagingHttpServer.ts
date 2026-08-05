@@ -80,7 +80,7 @@ export function createStagingHttpServer(options: StagingHttpServerOptions): Serv
       if (request.method === "OPTIONS") {
         send(response, 204, undefined, {
           "Access-Control-Allow-Headers": "Authorization, Content-Type, Idempotency-Key, If-Match, X-PeacePad-Region, X-PeacePad-Schema-Version",
-          "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+          "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
           "Access-Control-Allow-Origin": options.appOrigin,
           "Access-Control-Max-Age": "600"
         });
@@ -92,21 +92,22 @@ export function createStagingHttpServer(options: StagingHttpServerOptions): Serv
         logger.info(JSON.stringify({ requestId, method: request.method, path: url.pathname, status: routed.status }));
         return;
       }
-      if (request.method !== "POST" && request.method !== "DELETE") {
+      if (!["GET", "POST", "PUT", "PATCH", "DELETE"].includes(request.method ?? "")) {
         send(response, 405, { code: "METHOD_NOT_ALLOWED", message: "Method not allowed." });
         return;
       }
+      const method = request.method as "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
       if (
         request.headers["content-type"]?.split(";", 1)[0].trim().toLowerCase() !== "application/json"
-        && request.method === "POST"
+        && (request.method === "POST" || request.method === "PUT" || request.method === "PATCH")
       ) {
         send(response, 415, { code: "UNSUPPORTED_MEDIA_TYPE", message: "Use application/json." });
         return;
       }
 
       const routed = await options.bridge.handle({
-        method: request.method,
-        path: url.pathname,
+        method,
+        path: `${url.pathname}${url.search}`,
         body: await body(request),
         headers: headers(request),
         requesterKey: requesterKey(request)

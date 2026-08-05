@@ -55,6 +55,14 @@ and `NOT STARTED`.
 | Sharing expansion requires confirmation | AUTOMATED VERIFIED | UI interaction test |
 | Month grid, seven-day schedule, and day agenda | AUTOMATED VERIFIED | rendered switching and event-placement test |
 | Event create/update/delete contract | AUTOMATED VERIFIED | adapter lifecycle test |
+| Calendar server requires trusted family permission | AUTOMATED VERIFIED | service and route authorization tests |
+| Private and selected layers enforce participant visibility | AUTOMATED VERIFIED | service visibility tests |
+| Event overrides cannot expand layer access | AUTOMATED VERIFIED | restrictive-sharing regression test |
+| Calendar create/update/delete operations are idempotent | AUTOMATED VERIFIED | replay tests and peppered Postgres receipts |
+| Calendar ownership and creator provenance cannot be reassigned | AUTOMATED VERIFIED | immutable ownership/provenance tests |
+| Calendar/event optimistic concurrency | AUTOMATED VERIFIED | service and Postgres compare-and-swap tests |
+| Calendar/event audit chain and transaction boundary | AUTOMATED VERIFIED | service audit tests and embedded PostgreSQL integration |
+| Calendar/event persistence survives HTTP host restart | AUTOMATED VERIFIED | loopback host backed by disposable PostgreSQL |
 | Message Check defaults off per chat | AUTOMATED VERIFIED | UI/adapter tests |
 | Rule-based preview works with AI off | AUTOMATED VERIFIED | adapter test |
 | Original draft preserved | AUTOMATED VERIFIED | adapter/UI tests |
@@ -67,9 +75,9 @@ and `NOT STARTED`.
 | --- | --- | --- |
 | TypeScript | AUTOMATED VERIFIED | passed |
 | Guardrails | AUTOMATED VERIFIED | passed |
-| Jest/RNTL | AUTOMATED VERIFIED | 29 suites / 166 tests |
-| Embedded PostgreSQL | AUTOMATED VERIFIED | migration, constraints, invitation acceptance, grant, and audit chain passed |
-| Coverage | AUTOMATED VERIFIED | 85.91 / 80.78 / 81.01 / 89.48 |
+| Jest/RNTL | AUTOMATED VERIFIED | 32 suites / 187 tests |
+| Embedded PostgreSQL | AUTOMATED VERIFIED | invitation plus calendar constraints, acceptance, persistent restart reads, grant, and audit chain passed |
+| Coverage | AUTOMATED VERIFIED | 86.10 / 80.66 / 82.92 / 90.24 |
 | Primary navigation roles and selected state | AUTOMATED VERIFIED | five named tabs; exactly one selected |
 | Invitation and calendar selector semantics | AUTOMATED VERIFIED | named tabs expose selected state |
 | Calendar layer controls do not depend on colour | AUTOMATED VERIFIED | named checkbox and sharing button states |
@@ -146,7 +154,8 @@ The historical records screenshots in
 ## Remaining promotion gates
 
 - Provision an isolated networked staging Postgres instance and service
-  runtime; embedded PostgreSQL regression proof now passes locally.
+  runtime; invitation and calendar/event embedded PostgreSQL regression proof
+  now passes locally.
 - Run Expo Doctor from a clean standalone native install in CI; the native
   dependency graph itself passes 18/18. Keep the shared web dependency tree
   unchanged and triage the inherited advisories separately.

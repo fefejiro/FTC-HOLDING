@@ -24,7 +24,9 @@ describe("createStagingInvitationRuntime", () => {
       bridge: expect.any(Object),
       service: expect.any(Object),
       store: expect.any(Object),
-      rateLimiter: expect.any(Object)
+      rateLimiter: expect.any(Object),
+      calendarService: expect.any(Object),
+      calendarStore: expect.any(Object)
     });
   });
 

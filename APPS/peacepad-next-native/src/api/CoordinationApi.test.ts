@@ -181,4 +181,17 @@ describe("HttpPeacePadCoordinationApi", () => {
       Authorization: `Bearer ${"a".repeat(48)}`
     });
   });
+
+  it("maps an expired server session back to the secure sign-in flow", async () => {
+    const api = new HttpPeacePadCoordinationApi(
+      config,
+      jest.fn(async () => response(401, { code: "UNAUTHENTICATED", message: "private server detail" })),
+      accessToken
+    );
+    await expect(api.listCalendarLayers("family-current")).rejects.toMatchObject({
+      kind: "auth-required",
+      status: 401,
+      message: "Your staging session expired. Sign in again."
+    });
+  });
 });

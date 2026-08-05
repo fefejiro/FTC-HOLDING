@@ -22,6 +22,8 @@ approved Capacitor app, production data/API, App Store record, and
 | Invitation creation, native sharing, deep-link prefill, and revocation | AUTOMATED VERIFIED | rendered UI, link-routing, and adapter lifecycle tests |
 | Private-by-default calendar layers | AUTOMATED VERIFIED | UI and authorization tests |
 | Month/Week/Day calendar presentations and event lifecycle | AUTOMATED VERIFIED | rendered view-switching and event-placement tests plus adapter lifecycle tests |
+| Durable calendar layer/event staging API | AUTOMATED VERIFIED | authorized service/routes, Postgres repository, compare-and-swap writes, idempotent mutations, and restart proof |
+| Calendar sharing enforcement | AUTOMATED VERIFIED | private/family/selected visibility, restrictive event overrides, cross-family denial, and immutable ownership tests |
 | Explicit calendar sharing confirmation | AUTOMATED VERIFIED | rendered interaction test |
 | Per-chat Message Check, default off | AUTOMATED VERIFIED | UI and adapter tests |
 | Original draft preserved; no automatic send | AUTOMATED VERIFIED | explicit-send tests |
@@ -30,12 +32,12 @@ approved Capacitor app, production data/API, App Store record, and
 | Maestro invitation and calendar-sharing flows | SIMULATOR VERIFIED | iPhone 17 Pro / iOS 26.5; `docs/evidence/maestro-2026-08-04` |
 | Real-iPhone staging evidence | NOT STARTED | Requires deployed staging slice and controlled device session |
 | Staging `/api/v2` invitation handler core | AUTOMATED VERIFIED | Reviewed Node host plus framework-neutral route/service tests; not deployed |
-| Postgres staging repository and migration | AUTOMATED VERIFIED | Migration executed twice against embedded PostgreSQL; database constraints plus create/resolve/accept/grant/audit path passed |
+| Postgres staging repository and migration | AUTOMATED VERIFIED | Migration executed twice against embedded PostgreSQL; invitation and calendar constraints plus create/resolve/accept/grant/calendar/event/audit paths passed |
 | Shared staging rate limiter | AUTOMATED VERIFIED | Atomic Postgres upsert contract; not deployed |
 | Trusted staging session boundary | AUTOMATED VERIFIED | Bearer authenticator bridge ignores spoofed actor headers |
 | Secure native staging session | AUTOMATED VERIFIED | Access key is verified by `/api/v2/session`, saved in device-only SecureStore only after required consent, and attached to staging requests |
 | Staging host health/fail-closed readiness | AUTOMATED VERIFIED | Local `/health` returned 200; `/readyz` returned 500 with the database intentionally unavailable |
-| Real HTTP invitation lifecycle and host restart | AUTOMATED VERIFIED | Loopback create/resolve, host restart, accept, persisted grant/audit, CORS and log-redaction proof |
+| Real HTTP coordination lifecycle and host restart | AUTOMATED VERIFIED | Loopback invitation lifecycle plus private calendar/event creation, host restart, persisted reads, CORS and log-redaction proof |
 | Staging migration and runtime-role separation | AUTOMATED VERIFIED | distinct database identities, advisory-locked migration, PUBLIC revocation, least-privilege grants, and guardrails |
 | Post-deploy readiness smoke | AUTOMATED VERIFIED | safe-target validation plus `/health` and `/readyz` response tests; not run against a deployed service |
 | Persistent staging deployment | NOT STARTED | Requires isolated database/service provisioning and secret injection |
@@ -45,9 +47,9 @@ approved Capacitor app, production data/API, App Store record, and
 ```text
 guardrails       passed
 typecheck        passed
-Jest/RNTL        29 suites / 166 tests passed
-embedded SQL     migration, constraints, HTTP restart, acceptance, grant, audit passed
-coverage         85.91 statements / 80.78 branches / 81.01 functions / 89.48 lines
+Jest/RNTL        32 suites / 187 tests passed
+embedded SQL     invitation/calendar constraints and HTTP restart persistence passed
+coverage         86.10 statements / 80.66 branches / 82.92 functions / 90.24 lines
 Expo Doctor      17/18 in monorepo; isolated native install 18/18
 Expo config      PeacePad; ca.peacepad.nextnative.lab; diagnostics/writes false
 iOS export       passed; 962 modules bundled
@@ -76,9 +78,11 @@ Home
 `- Add record -> binder -> detail -> timeline -> export preview
 ```
 
-All current state is fictional and session-only. No real family message,
-invitation code, child information, court document, credential, or production
-write was used.
+All current state is fictional. Normal lab UI state remains session-only; the
+automated staging proof persists fictional invitations, grants, calendar
+layers, events, receipts, and audit events in disposable embedded PostgreSQL.
+No real family message, invitation code, child information, court document,
+credential, or production write was used.
 
 ## Simulator evidence boundary
 
@@ -118,8 +122,9 @@ commit and are not relabelled as current evidence.
 
 ## Known limitations
 
-- Staging server authorization, hashed single-use codes, persisted
-  idempotency/audit events, and infrastructure rate limits are not deployed.
+- Staging server authorization, hashed single-use codes, durable calendar
+  layers/events, persisted idempotency/audit events, and infrastructure rate
+  limits are locally verified but not deployed.
 - The native staging client now has a fail-closed account handshake. It sends an
   opaque access key only in the Authorization header, verifies the account
   against `/api/v2/session`, stores it with device-only SecureStore protection
@@ -160,14 +165,18 @@ commit and are not relabelled as current evidence.
 - Durable idempotency values and rate-limit subjects are peppered before
   persistence; plaintext invitation codes, deep links, and raw limiter keys are
   not represented by the staging schema.
-- The product adapter is memory-only; only the earlier guest session uses
-  SecureStore.
+- Lab mode intentionally uses its in-memory adapter. Authenticated staging mode
+  now routes invitations and calendar layers/events through the versioned HTTP
+  client; the access key remains device-only in SecureStore.
 - Invitation creation and scannable QR presentation are Simulator verified.
   Native share-sheet delivery, deep-link handoff, acceptance, and revocation
   remain automated-verified and still require a real-device pass.
 - Calendar view selection/layers/events and Month/Week/Day presentations are
-  implemented for the fixed fictional August 2026 fixture. Date navigation,
-  recurrence, offline behavior, and production persistence are later gates.
+  implemented for fictional data. Authorized Postgres persistence, private and
+  selected sharing, restrictive event overrides, optimistic concurrency, and
+  restart recovery are automated verified. Date navigation, recurrence
+  execution, offline behavior, networked staging, and production migration are
+  later gates.
 - Message Check is rule-based and does not call third-party AI.
 - Calendar layer sharing is Simulator verified; all real-iPhone staging
   evidence remains required.
@@ -218,23 +227,47 @@ commit and are not relabelled as current evidence.
 | --- | ---: |
 | Quiet-premium information architecture | 85% |
 | Secure invitation product flow | 75% |
-| Layered calendar product flow | 65% |
+| Layered calendar product flow | 73% |
 | Per-chat Message Check | 70% |
 | Typed staging compatibility client | 82% |
 | Staging invitation server core | 85% |
+| Staging calendar server core | 78% |
 | Secure staging account/session bridge | 75% |
 | Automated verification | 96% |
 | Accessibility foundation | 45% |
 | Adaptive theme foundation | 55% |
 | Current device verification | 82% |
-| Overall production-native v2 | 44% |
+| Overall production-native v2 | 46% |
+
+## Feature completion view
+
+These percentages measure production readiness, not how many screens exist.
+
+| Feature | Completion | Current boundary |
+| --- | ---: | --- |
+| Home and task navigation | 85% | polished shell and state-driven actions; device accessibility pass remains |
+| Secure family invitations | 75% | durable staging core; network deployment and real-device handoff remain |
+| Calendar and parenting plans | 73% | durable authorized layers/events; recurrence engine, offline queue, and date navigation remain |
+| Messaging | 48% | compose/review UX exists; permanent shared message ledger, delivery/read states, attachments, and search remain |
+| Message Check | 70% | rule-based, per-chat, explicit-send flow; durable preference and production service remain |
+| Records / Case Binder | 38% | synthetic vertical slice exists; secure uploads, immutable originals, hashing, and export verification remain |
+| Calls | 15% | typed contracts and prior-repo design evidence only; no authenticated WebRTC/CallKit implementation |
+| Expenses and reimbursements | 10% | domain direction only; no ledger, receipts, splits, balances, or payment adapter |
+| Account and secure session | 75% | fail-closed staging handshake and device-only token storage; multi-user production identity remains |
+| Notifications and reminders | 8% | product rules identified; no production push delivery |
+| Offline and conflict recovery | 5% | not implemented beyond local session behavior |
+| Professional portal | 5% | roles/contracts identified; no operational portal |
+| Accessibility | 45% | semantic/contrast/large-text automation; assistive-device evidence remains |
+| English/French/Spanish localization | 5% | locale contracts only |
+| Billing and hardship access | 0% | intentionally deferred |
 
 ## Next best move
 
-Do not repeat the blocked Expo Go remote-control attempt. Provision the isolated
-networked staging database and service, inject server-only session and hashing
-secrets, run the reviewed migration with the least-privilege runtime role, and
-execute the post-deploy readiness smoke. The client handshake is ready for that
-gate. After it passes, use one controlled real-iPhone staging session for
-account restore, invitation, calendar, theme, and large-text evidence. Do not
-expand into calling, billing, or production migration before these gates pass.
+Do not repeat the blocked Expo Go remote-control attempt. The best zero-cost
+engineering move is to persist the shared message record and per-conversation
+Message Check preference on the same authorization, concurrency, idempotency,
+and audit foundation. In parallel, provision the isolated networked staging
+database/service when a free target is available, then run the reviewed
+migration and post-deploy smoke. Calling follows only after two fictional
+authenticated participants and durable messaging/calendar state pass a real
+iPhone staging session.
