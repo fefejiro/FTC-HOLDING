@@ -252,63 +252,62 @@ commit and are not relabelled as current evidence.
   passes; the remaining blanket repair requires a breaking Expo 57 upgrade and
   was intentionally not applied. See `docs/DEPENDENCY_RISK_REGISTER.md`.
 
-## Honest completion map
+## Promotion gates
 
-| Area | Status |
-| --- | ---: |
-| Quiet-premium information architecture | 85% |
-| Secure invitation product flow | 75% |
-| Layered calendar product flow | 73% |
-| Per-chat Message Check | 80% |
-| Typed staging compatibility client | 92% |
-| Staging invitation server core | 85% |
-| Staging calendar server core | 78% |
-| Staging messaging server core | 93% |
-| Secure staging account/session bridge | 84% |
-| Automated verification | 98% |
-| Accessibility foundation | 45% |
-| Adaptive theme foundation | 55% |
-| Current device verification | 82% |
-| Overall production-native v2 | 53% |
+Percent-complete estimates are intentionally retired. They implied more
+precision than the current evidence supports. Promotion now depends on proof at
+explicit gates.
 
-## Feature completion view
+| Promotion gate | Current truth | Required exit evidence |
+| --- | --- | --- |
+| Version 1 production baseline | VERIFIED | Approved Capacitor app and rollback path remain untouched |
+| Native Simulator foundation | VERIFIED | Current synthetic journeys, isolated bundle, and production-write guardrails |
+| Local durable API/database proof | VERIFIED | PostgreSQL migration/restart and real loopback HTTP proof |
+| PR integration and reviewability | BLOCKED | PR #148 disposition approved and PR #160 decomposed into reviewable units |
+| Isolated deployed staging | NOT STARTED | Networked service/database, TLS, separate roles, readiness, restart, concurrency, redaction, and backup/restore smoke |
+| Real-iPhone staging proof | NOT STARTED | Two fictional accounts complete the approved matrix on real devices |
+| Version 1 account/data compatibility | PARTIAL / UNPROVEN | Sign-in, guest flow, deep links, legal/support routes, export, deletion, and existing-data compatibility |
+| Secure byte ingestion | NOT STARTED | Single-use stream reception, quarantine, content sniffing, actual-size check, and no public retrieval |
+| Evidence integrity pipeline | PROPOSED | Server SHA-256, immutable original, scanner result, independent re-read verification, and synthetic adversarial proof |
+| Production migration | NOT AUTHORIZED | Approved parity, privacy, threat, device, rollback, and data-migration gates |
+| Native v2 App Store release | NOT STARTED | Existing App Store record, signed candidate, TestFlight, privacy, migration, and release approval |
 
-These percentages measure production readiness, not how many screens exist.
+## Workstream boundaries
 
-| Feature | Completion | Current boundary |
-| --- | ---: | --- |
-| Home and task navigation | 85% | polished shell and state-driven actions; device accessibility pass remains |
-| Secure family invitations | 75% | durable staging core; network deployment and real-device handoff remain |
-| Calendar and parenting plans | 73% | durable authorized layers/events; recurrence engine, offline queue, and date navigation remain |
-| Messaging | 85% | two-actor append-only ledger, durable receipts, verified-actor correction composer, participant-safe search, bounded retry, and authorized attachment metadata preparation pass; byte upload/storage, background sync, and deployed two-device proof remain |
-| Message Check | 80% | rule-based, per-chat, explicit-send flow with durable default-off preference; networked staging and real-device proof remain |
-| Records / Case Binder | 42% | synthetic vertical slice plus authorized private-binder attachment metadata preparation exist; byte storage, immutable originals, hashing, scanning, source-artifact ingestion, and export verification remain |
-| Calls | 15% | typed contracts and prior-repo design evidence only; no authenticated WebRTC/CallKit implementation |
-| Expenses and reimbursements | 10% | domain direction only; no ledger, receipts, splits, balances, or payment adapter |
-| Account and secure session | 84% | fail-closed hash-only multi-actor staging handshake plus device-only verified identity/token storage and restore re-verification; production identity remains |
-| Notifications and reminders | 8% | product rules identified; no production push delivery |
-| Offline and conflict recovery | 18% | bounded secure message retry with preserved idempotency passes; calendar/records queues, connectivity orchestration, conflicts, and device proof remain |
-| Professional portal | 5% | roles/contracts identified; no operational portal |
-| Accessibility | 45% | semantic/contrast/large-text automation; assistive-device evidence remains |
-| English/French/Spanish localization | 5% | locale contracts only |
-| Billing and hardship access | 0% | intentionally deferred |
+| Workstream | Current boundary | Next evidence gate |
+| --- | --- | --- |
+| Foundation | Local environment, session, API, database, and guardrail proof | Isolated deployed staging |
+| Coordination | Invitations, calendar, messaging, Message Check, receipts, corrections, and search pass locally | Two-account real-device staging proof |
+| Records | Synthetic binder plus metadata-only attachment intent | Harden intent boundary before generated-byte ingestion |
+| Evidence | Integrity specification only | Deterministic local SourceArtifact proof after boundary hardening |
+| Deferred | Calls, recording, expenses, payments, broad notifications, professional accounts, court forms, AI OCR, production migration | Remain paused until the current gates pass |
 
 ## Next best move
 
-Do not repeat the blocked Expo Go remote-control attempt. The permanent staging
-message ledger, recipient-authored delivery/viewed receipts, verified-actor
-linked corrections and composer, participant-safe search, hash-only
-multi-actor sessions, per-person Message Check preferences, bounded secure
-retry, and metadata-only attachment intents now pass local automation and
-PostgreSQL/HTTP restart proof. The
-next promotion gate is an isolated networked staging database/service, followed
-by the reviewed migration, post-deploy smoke, and one two-iPhone
-fictional-account pass covering send, delivery, view, connection loss, restart
-recovery, correction visibility, search, and preference isolation. If external
-staging remains unavailable, the next local product slice is the current-actor
-session bridge plus a correction composer, followed by attachment metadata and
-safe upload contracts. Calling starts only after the two-user messaging
-foundation is deployed and reliable. If staging remains unavailable, the next
-local value slice is deterministic `SourceArtifact` ingestion state and hash
-verification contracts over generated test bytes only—still without production
-object storage or real family files.
+Freeze broad feature work. Do not add calling, expenses, payments,
+notifications, professional accounts, court-form generation, AI OCR, or
+production migration.
+
+Execute in this order:
+
+1. Reconcile PR #148 and approve the PR #160 split/integration plan.
+2. Harden attachment intents with strict runtime parsing, private-binder
+   existence/family/owner/status checks, idempotency fingerprints and 409
+   conflicts, explicit target integrity, complete expiry/cancellation/
+   consumption rules, and scoped audit streams.
+3. Provision an isolated staging service and PostgreSQL database with TLS,
+   separate migration/runtime identities, least privilege, fictional accounts,
+   restart/concurrency/redaction checks, and backup/restore smoke.
+4. Complete a two-account real-iPhone staging pass across LTE and Wi-Fi,
+   including backgrounding, session expiry, permission denial, interruption,
+   slow network, and device restart.
+5. Close review-critical version 1 parity and existing-account/data
+   compatibility.
+6. Only then build deterministic SourceArtifact ingestion from generated test
+   bytes. Keep production storage, real family files, and admissibility claims
+   out of scope.
+7. Add private staging object storage only after the local ingestion and
+   staging gates pass.
+
+The detailed continuation contract is
+[Next handover](./NEXT_HANDOVER_2026-08-05.md).

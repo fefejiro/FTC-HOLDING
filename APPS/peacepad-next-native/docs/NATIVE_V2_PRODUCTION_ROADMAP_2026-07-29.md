@@ -22,26 +22,28 @@ This decision does not authorize:
 
 ## Verified starting point
 
-The native workspace currently has:
+The isolated native workspace currently records:
 
 - Expo SDK 54 and React Native 0.81;
 - bundle ID `ca.peacepad.nextnative.lab`;
-- production API writes disabled;
-- typed in-memory state for one synthetic Premium flow;
-- React Navigation;
-- 8 passing test suites and 47 passing tests;
-- passing TypeScript and lab guardrails;
-- a typed lab/staging API adapter with production targeting blocked;
-- SecureStore-backed guest-session recovery;
-- explicit required consent and optional AI consent;
-- the real PeacePad conch asset and a staging-only existing-account shell;
-- standalone Expo Doctor 18/18 and an enforced 75% coverage floor.
+- production writes and diagnostics disabled;
+- typed native task shell and coordination client;
+- trusted fictional staging sessions stored device-only after consent;
+- durable local PostgreSQL proof for invitations, calendar, messaging,
+  receipts, corrections, search, Message Check preferences, and metadata-only
+  attachment intents;
+- real loopback HTTP and host-restart proof;
+- 37 passing Jest/RNTL suites and 244 passing tests;
+- 81.31% statements, 76.88% branches, 78.64% functions, and 86.64% lines;
+- standalone Expo Doctor 18/18;
+- passing iOS export with 963 modules bundled;
+- current Simulator evidence using fictional values only.
 
-It does not yet have production authentication, API integration, database
-storage, secure evidence storage, offline recovery, real uploads, real export,
-billing, or a complete device and accessibility matrix.
-
-Overall production readiness is approximately 16-18%.
+This proof is local and Simulator-based. It does not prove a deployed staging
+service, real-iPhone networking, existing-account/data compatibility, secure
+byte ingestion, object storage, backup restoration, production migration, or
+App Store readiness. Production readiness is therefore reported by promotion
+gate, not a percentage.
 
 ## Delivery sequence
 
@@ -214,52 +216,41 @@ signing, privacy, and TestFlight requirements have passed.
 Uploading a native v2 TestFlight candidate must not remove or replace the public
 version 1 binary.
 
-## Current completion
+## Current promotion position
 
-| Area | Estimate |
-|---|---:|
-| React Native / Expo shell and tooling | 70% |
-| Synthetic native UX prototype | 60% |
-| Gate 1 environment/API/session foundation | 55% |
-| Production authentication and API integration | 5% |
-| Review-critical version 1 parity | 10% |
-| Secure evidence upload and export | 0-5% |
-| Offline and restart recovery | 0% |
-| Device and accessibility QA | 5-10% |
-| App Store v2 readiness | 5% |
-| Overall production-native v2 | Approximately 16-18% |
+| Gate | Current truth |
+| --- | --- |
+| Version 1 production baseline | VERIFIED |
+| Native Simulator foundation | VERIFIED |
+| Local durable API/database proof | VERIFIED |
+| PR integration and reviewability | BLOCKED |
+| Isolated deployed staging | NOT STARTED |
+| Real-iPhone staging proof | NOT STARTED |
+| Review-critical version 1 parity | PARTIAL / UNPROVEN |
+| Secure byte ingestion | NOT STARTED |
+| Evidence integrity pipeline | PROPOSED |
+| Production migration | NOT AUTHORIZED |
+| Native v2 App Store release | NOT STARTED |
 
-Planning estimate:
+Planning ranges remain directional only. They are not completion claims. Calls,
+recording, expenses, payments, broad notifications, professional accounts,
+court-form generation, AI OCR, and production migration remain paused.
 
-- core native TestFlight candidate: roughly 8-14 focused weeks;
-- full replacement: longer if calling, notifications, calendar, expenses, and
-  every broad version 1 capability remain mandatory.
+## Immediate execution order
 
-These are planning ranges, not delivery guarantees.
+Do not add more standalone mock screens or another broad feature batch.
 
-## Immediate sprint
+1. Approve the PR #148 disposition and PR #160 decomposition.
+2. Finish the attachment-intent boundary without accepting bytes.
+3. Deploy isolated staging with fictional accounts and operational smoke proof.
+4. Complete a two-account real-iPhone pass.
+5. Close review-critical version 1 parity and compatibility.
+6. Build generated-byte SourceArtifact proof locally.
+7. Introduce private staging object storage only after the prior gates pass.
 
-Do not add more standalone mock screens.
+The current Gate 1 automated and Simulator foundation is verified. Gate 1 is
+not complete because isolated deployed staging, real-iPhone proof, weak-network
+and offline matrices, and production-compatible identity remain open.
 
-The next implementation sprint is Gate 1:
-
-```text
-staging environment
--> typed API client
--> secure guest session
--> explicit consent
--> rule-based message preview
--> restart and error recovery
-```
-
-The sprint must end with automated tests plus one controlled Simulator and
-real-iPhone staging pass.
-
-Current sprint result:
-
-- automated portion: passed;
-- standalone Expo Doctor: 18/18;
-- coverage: enforced and passing;
-- Simulator: pending one controlled Mac pass;
-- real iPhone staging: not started;
-- production writes: still disabled.
+See [Next handover](./NEXT_HANDOVER_2026-08-05.md) for the exact continuation
+contract and stop conditions.
