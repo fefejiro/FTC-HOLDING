@@ -21,6 +21,7 @@ Latest commit: `b48ee14e`
 | Two-fictional-account session registry | LOCAL VERIFIED |
 | Two-account HTTP session handshake | LOCAL VERIFIED |
 | Staging coordination client guard | LOCAL VERIFIED |
+| Explicit family/permission authorization guard | LOCAL VERIFIED |
 | PostgreSQL migration and restart persistence | NOT STARTED |
 | Railway staging configuration | NOT STARTED |
 | Hosted CI | HOSTED CI BLOCKED BEFORE EXECUTION when monorepo workflow is scoped incorrectly |
