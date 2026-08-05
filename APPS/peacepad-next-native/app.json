@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "PeacePad",
+    "slug": "peacepad-next-native-lab",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "scheme": "peacepadnextlab",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "ca.peacepad.nextnative.lab"
+    },
+    "android": {
+      "package": "ca.peacepad.nextnative.lab"
+    },
+    "extra": {
+      "environment": "lab",
+      "diagnosticsEnabled": false,
+      "productionApiWritesEnabled": false,
+      "submittedBundleId": "ca.peacepad.family"
+    },
+    "plugins": [
+      "expo-secure-store"
+    ]
+  }
+}
