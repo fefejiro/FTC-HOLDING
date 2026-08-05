@@ -15,7 +15,7 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "ES2022",
-    "types": ["react", "jest"]
+    "types": ["node", "react", "jest"]
   },
   "include": ["src", "index.ts"]
 }
