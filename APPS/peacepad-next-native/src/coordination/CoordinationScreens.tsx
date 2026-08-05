@@ -476,7 +476,12 @@ export function CalendarScreen() {
 export function MessagesScreen() {
   const largeText = usesLargeTextLayout(useWindowDimensions().fontScale);
   const {
+    cancelCorrection,
     checkMessage,
+    correctingMessageId,
+    correctionBusy,
+    correctionDraft,
+    correctionError,
     messageCheckBusy,
     messageCheckEnabled,
     messageDraft,
@@ -487,11 +492,14 @@ export function MessagesScreen() {
     messageSearchQuery,
     messageSearchResults,
     searchMessages,
+    saveCorrection,
     sendMessage,
     sentMessages,
+    setCorrectionDraft,
     setMessageCheckEnabled,
     setMessageDraft,
-    setMessageSearchQuery
+    setMessageSearchQuery,
+    startCorrection
   } = useCoordinationState();
   const [showHowItWorks, setShowHowItWorks] = useState(false);
 
@@ -563,6 +571,24 @@ export function MessagesScreen() {
       {sentMessages.map((message) => (
         <View accessibilityLabel="Sent message" key={message.id} style={styles.sentBubble}>
           <Text style={styles.body}>{message.sentBody}</Text>
+          {message.canCorrect && message.status !== "waiting" && correctingMessageId !== message.id ? (
+            <LabButton label="Correct message" onPress={() => startCorrection(message.id)} variant="secondary" />
+          ) : null}
+          {correctingMessageId === message.id ? (
+            <View accessibilityLabel="Message correction editor" style={styles.stack}>
+              <Text style={styles.caption}>The original remains in the record.</Text>
+              <TextInput
+                accessibilityLabel="Correction wording"
+                multiline
+                onChangeText={setCorrectionDraft}
+                style={[styles.input, styles.messageInput]}
+                value={correctionDraft}
+              />
+              {correctionError ? <Text accessibilityRole="alert" style={styles.error}>{correctionError}</Text> : null}
+              <LabButton disabled={correctionBusy} label={correctionBusy ? "Saving..." : "Save correction"} onPress={() => void saveCorrection()} />
+              <LabButton disabled={correctionBusy} label="Cancel correction" onPress={cancelCorrection} variant="secondary" />
+            </View>
+          ) : null}
           <Text style={styles.caption}>{message.corrected ? "Corrected · " : ""}{message.status === "waiting" ? "Waiting to send" : message.status}</Text>
         </View>
       ))}

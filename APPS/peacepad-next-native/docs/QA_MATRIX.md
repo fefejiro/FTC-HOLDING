@@ -90,9 +90,9 @@ and `NOT STARTED`.
 | --- | --- | --- |
 | TypeScript | AUTOMATED VERIFIED | passed |
 | Guardrails | AUTOMATED VERIFIED | passed |
-| Jest/RNTL | AUTOMATED VERIFIED | 35 suites / 228 tests |
+| Jest/RNTL | AUTOMATED VERIFIED | 35 suites / 231 tests |
 | Embedded PostgreSQL | AUTOMATED VERIFIED | two actors, invitation, calendar, conversation, message exchange, delivery/view/correction events, effective-text search, isolated preferences, restart reads, grant, and audit chain passed |
-| Coverage | AUTOMATED VERIFIED | 82.43 / 77.29 / 79.04 / 87.81 |
+| Coverage | AUTOMATED VERIFIED | 82.42 / 77.44 / 79.71 / 87.72 |
 | Primary navigation roles and selected state | AUTOMATED VERIFIED | five named tabs; exactly one selected |
 | Invitation and calendar selector semantics | AUTOMATED VERIFIED | named tabs expose selected state |
 | Calendar layer controls do not depend on colour | AUTOMATED VERIFIED | named checkbox and sharing button states |
@@ -114,6 +114,7 @@ and `NOT STARTED`.
 | Host restart with durable resolution claim | AUTOMATED VERIFIED | resolve before restart; accept after restart passed |
 | Hash-only multi-actor staging authentication | AUTOMATED VERIFIED | unique peppered token hashes map two fictional parents to independent identities and permissions |
 | Two-actor messaging and preference isolation | AUTOMATED VERIFIED | both actors read/reply; owner preference remains on while recipient remains default-off across restart |
+| Verified-actor correction composer | AUTOMATED VERIFIED | secure session identity is server-derived and restore-refreshed; sender can append a correction, recipient cannot, and the original event remains unchanged |
 | Migration/runtime database identities are distinct | AUTOMATED VERIFIED | configuration rejects shared credentials |
 | Migration serialization and runtime grants | AUTOMATED VERIFIED | advisory lock, PUBLIC revocation, and non-owner CRUD grants tested |
 | Post-deploy smoke target and readiness | AUTOMATED VERIFIED | production/non-staging targets rejected; `/health` and `/readyz` fail closed |

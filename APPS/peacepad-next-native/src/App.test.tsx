@@ -5,7 +5,8 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-
 import { peacePadLinking, PeacePadLabApp, resolveLabStartScreen } from "./App";
 import { SyntheticCoordinationApi } from "./api/SyntheticCoordinationApi";
 import { InvitationScreen } from "./coordination/CoordinationScreens";
-import { CoordinationStateProvider, resolveCalendarStartView, type CalendarView } from "./coordination/CoordinationState";
+import { CoordinationStateProvider, resolveCalendarStartView, visibleMessages, type CalendarView } from "./coordination/CoordinationState";
+import type { MessageEvent } from "./domain/v2";
 import { LabStateProvider } from "./state/LabState";
 
 function setFontScale(fontScale: number) {
@@ -34,8 +35,7 @@ function createTestApi() {
   }]);
 }
 
-function renderApp(startScreen = "home", initialCalendarView?: CalendarView) {
-  const api = createTestApi();
+function renderApp(startScreen = "home", initialCalendarView?: CalendarView, api = createTestApi()) {
   return render(
     <CoordinationStateProvider api={api} initialCalendarView={initialCalendarView}>
       <LabStateProvider>
@@ -245,6 +245,47 @@ describe("per-chat Message Check", () => {
     fireEvent.changeText(screen.getByLabelText("Search messages"), "pickup");
     fireEvent.press(screen.getByText("Search"));
     expect(await screen.findByLabelText("Message search result")).toHaveTextContent("School pickup is at 6 PM.");
+  });
+
+  it("saves an append-only sender correction while preserving the original event", async () => {
+    const api = createTestApi();
+    renderApp("messages", undefined, api);
+    fireEvent.changeText(screen.getByLabelText("Message draft"), "Pickup is at 5 PM.");
+    fireEvent.press(screen.getByText("Send message"));
+    await waitFor(() => expect(screen.getByText("Pickup is at 5 PM.")).toBeOnTheScreen());
+
+    fireEvent.press(screen.getByText("Correct message"));
+    expect(screen.getByText("The original remains in the record.")).toBeOnTheScreen();
+    fireEvent.changeText(screen.getByLabelText("Correction wording"), "Pickup is at 6 PM.");
+    fireEvent.press(screen.getByText("Save correction"));
+    await waitFor(() => expect(screen.getByText("Pickup is at 6 PM.")).toBeOnTheScreen());
+
+    const events = await api.listMessages("conversation-primary");
+    expect(events.map((event) => event.eventType)).toEqual(["sent", "correction"]);
+    expect(events[0]?.body).toBe("Pickup is at 5 PM.");
+    expect(events[1]?.body).toBe("Pickup is at 6 PM.");
+  });
+
+  it("does not permit corrections on messages authored by another participant", () => {
+    const event: MessageEvent = {
+      id: "message-coparent",
+      schemaVersion: "2.0",
+      version: 1,
+      region: "ca",
+      provenance: {
+        createdAt: "2026-08-05T12:00:00.000Z",
+        createdBy: { identityId: "identity-coparent", sessionId: "session-coparent" },
+        source: "app"
+      },
+      familyCircleId: "family-current",
+      conversationId: "conversation-primary",
+      eventType: "sent",
+      originalMessageEventId: null,
+      body: "I will confirm shortly.",
+      occurredAt: "2026-08-05T12:00:00.000Z"
+    };
+    expect(visibleMessages([event], "identity-current")[0]?.canCorrect).toBe(false);
+    expect(visibleMessages([event], "identity-coparent")[0]?.canCorrect).toBe(true);
   });
 });
 

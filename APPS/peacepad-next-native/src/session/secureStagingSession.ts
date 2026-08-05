@@ -5,6 +5,7 @@ const STAGING_SESSION_STORAGE_KEY = "peacepad.native.staging-session.v1";
 
 export type StoredStagingSession = Readonly<{
   accessToken: string;
+  actorIdentityId: string;
   actorDisplayName: string;
   consent: ConsentPreferences;
   savedAt: string;
@@ -25,6 +26,8 @@ function validSession(value: unknown): value is StoredStagingSession {
   const session = value as Partial<StoredStagingSession>;
   return typeof session.accessToken === "string"
     && validStagingAccessToken(session.accessToken)
+    && typeof session.actorIdentityId === "string"
+    && session.actorIdentityId.trim().length > 0
     && typeof session.actorDisplayName === "string"
     && session.actorDisplayName.trim().length > 0
     && typeof session.savedAt === "string"

@@ -43,6 +43,7 @@ export type SentMessage = Readonly<{
   sentAt: string;
   status: "waiting" | "sent" | "delivered" | "viewed";
   corrected: boolean;
+  canCorrect: boolean;
 }>;
 
 type CoordinationStateValue = {
@@ -66,6 +67,10 @@ type CoordinationStateValue = {
   messageSearchResults: readonly MessageSearchResult[];
   messageSearchBusy: boolean;
   messageSearchError?: string;
+  correctingMessageId?: string;
+  correctionDraft: string;
+  correctionBusy: boolean;
+  correctionError?: string;
   setInvitationCode: (code: string) => void;
   createInvitation: () => Promise<void>;
   revokeCreatedInvitation: () => Promise<void>;
@@ -83,6 +88,10 @@ type CoordinationStateValue = {
   sendMessage: (useSuggestion: boolean) => Promise<void>;
   setMessageSearchQuery: (query: string) => void;
   searchMessages: () => Promise<void>;
+  startCorrection: (messageId: string) => void;
+  cancelCorrection: () => void;
+  setCorrectionDraft: (draft: string) => void;
+  saveCorrection: () => Promise<void>;
 };
 
 const CoordinationStateContext = createContext<CoordinationStateValue | undefined>(undefined);
@@ -107,12 +116,12 @@ function createDefaultApi(): PeacePadCoordinationApi {
   return new SyntheticCoordinationApi([{ code: "CALM26", preview: seededInvitation }]);
 }
 
-function writeContext(expectedVersion: number | null = null) {
+function writeContext(actorIdentityId: string, expectedVersion: number | null = null) {
   return createWriteContext({
     idempotencyKey: `device-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
     expectedVersion,
     region: "ca",
-    actor: { identityId: "identity-current", sessionId: "session-device" }
+    actor: { identityId: actorIdentityId, sessionId: "verified-device-session" }
   });
 }
 
@@ -121,7 +130,7 @@ function invitationMessage(error: unknown): string {
   return "PeacePad could not verify that invitation. Try again.";
 }
 
-function visibleMessages(events: readonly MessageEvent[]): readonly SentMessage[] {
+export function visibleMessages(events: readonly MessageEvent[], actorIdentityId: string): readonly SentMessage[] {
   return events.filter((event) => event.eventType === "sent" && event.body).map((message) => {
     const lifecycle = events.filter((event) => event.originalMessageEventId === message.id);
     const corrections = lifecycle
@@ -133,7 +142,15 @@ function visibleMessages(events: readonly MessageEvent[]): readonly SentMessage[
       : lifecycle.some((event) => event.eventType === "delivered")
         ? "delivered" as const
         : "sent" as const;
-    return { id: message.id, originalBody: message.body ?? "", sentBody: effective.body ?? "", sentAt: message.occurredAt, status, corrected: effective.id !== message.id };
+    return {
+      id: message.id,
+      originalBody: message.body ?? "",
+      sentBody: effective.body ?? "",
+      sentAt: message.occurredAt,
+      status,
+      corrected: effective.id !== message.id,
+      canCorrect: message.provenance.createdBy.identityId === actorIdentityId
+    };
   });
 }
 
@@ -168,17 +185,28 @@ export function CoordinationStateProvider({
   const [messageSearchResults, setMessageSearchResults] = useState<readonly MessageSearchResult[]>([]);
   const [messageSearchBusy, setMessageSearchBusy] = useState(false);
   const [messageSearchError, setMessageSearchError] = useState<string>();
+  const [actorIdentityId, setActorIdentityId] = useState("identity-current");
+  const [correctingMessageId, setCorrectingMessageId] = useState<string>();
+  const [correctionDraft, setCorrectionDraftState] = useState("");
+  const [correctionBusy, setCorrectionBusy] = useState(false);
+  const [correctionError, setCorrectionError] = useState<string>();
 
   useEffect(() => {
     if (environmentConfig.environment !== "staging") return;
     let active = true;
-    void secureStagingSessionStore.read().then((session) => session ? retryQueuedMessages(api, outbox) : undefined).then(() => Promise.all([
+    void secureStagingSessionStore.read().then(async (session) => {
+      if (!session) return null;
+      if (active) setActorIdentityId(session.actorIdentityId);
+      await retryQueuedMessages(api, outbox);
+      return session;
+    }).then((session) => session ? Promise.all([
       api.getMessageCheckPreference("conversation-primary"),
       api.listMessages("conversation-primary")
-    ])).then(([preference, messages]) => {
+    ]).then(([preference, messages]) => ({ preference, messages, session })) : null).then((result) => {
+      if (!result) return;
       if (!active) return;
-      setMessageCheckEnabledState(preference.enabled);
-      setSentMessages(visibleMessages(messages));
+      setMessageCheckEnabledState(result.preference.enabled);
+      setSentMessages(visibleMessages(result.messages, result.session.actorIdentityId));
     }).catch(() => {
       // A conversation is established only after both staging participants connect.
     });
@@ -206,6 +234,10 @@ export function CoordinationStateProvider({
     messageSearchResults,
     messageSearchBusy,
     messageSearchError,
+    correctingMessageId,
+    correctionDraft,
+    correctionBusy,
+    correctionError,
     createInvitation: async () => {
       setInvitationBusy(true);
       setInvitationError(undefined);
@@ -215,7 +247,7 @@ export function CoordinationStateProvider({
           invitedRole: "parent",
           permissions: ["messages", "calendar", "shared-records"],
           expiresInHours: 72
-        }, writeContext()));
+        }, writeContext(actorIdentityId)));
       } catch (error) {
         setInvitationError(invitationMessage(error));
       } finally {
@@ -227,7 +259,7 @@ export function CoordinationStateProvider({
       setInvitationBusy(true);
       setInvitationError(undefined);
       try {
-        await api.revokeInvitation(createdInvitation.invitation.id, writeContext(createdInvitation.invitation.version));
+        await api.revokeInvitation(createdInvitation.invitation.id, writeContext(actorIdentityId, createdInvitation.invitation.version));
         setCreatedInvitation(undefined);
       } catch (error) {
         setInvitationError(invitationMessage(error));
@@ -257,7 +289,7 @@ export function CoordinationStateProvider({
       setInvitationBusy(true);
       setInvitationError(undefined);
       try {
-        setInvitationGrant(await api.acceptInvitation(invitationPreview.invitationId, writeContext()));
+        setInvitationGrant(await api.acceptInvitation(invitationPreview.invitationId, writeContext(actorIdentityId)));
         setInvitationPreview(undefined);
       } catch (error) {
         setInvitationError(invitationMessage(error));
@@ -266,7 +298,7 @@ export function CoordinationStateProvider({
       }
     },
     declineInvitation: async () => {
-      if (invitationPreview) await api.declineInvitation(invitationPreview.invitationId, writeContext());
+      if (invitationPreview) await api.declineInvitation(invitationPreview.invitationId, writeContext(actorIdentityId));
       setInvitationPreview(undefined);
       setInvitationCodeState("");
     },
@@ -279,7 +311,7 @@ export function CoordinationStateProvider({
       if (!layer) return;
       const updated = await api.updateCalendarLayer(
         { ...layer, visibility: shared ? { scope: "family" } : { scope: "private" } },
-        writeContext(layer.version)
+        writeContext(actorIdentityId, layer.version)
       );
       setLayers((current) => current.map((item) => (item.id === updated.id ? updated : item)));
     },
@@ -298,11 +330,11 @@ export function CoordinationStateProvider({
         status: "planned",
         recurrence: null,
         visibilityOverride: null
-      }, writeContext());
+      }, writeContext(actorIdentityId));
       setEvents((current) => [...current, event]);
     },
     deleteEvent: async (eventId) => {
-      await api.deleteScheduleEvent(eventId, writeContext());
+      await api.deleteScheduleEvent(eventId, writeContext(actorIdentityId));
       setEvents((current) => current.filter((event) => event.id !== eventId));
     },
     setMessageDraft: (draft) => {
@@ -311,7 +343,7 @@ export function CoordinationStateProvider({
       setMessageError(undefined);
     },
     setMessageCheckEnabled: async (enabled) => {
-      await api.setMessageCheckPreference("conversation-primary", enabled, writeContext());
+      await api.setMessageCheckPreference("conversation-primary", enabled, writeContext(actorIdentityId));
       setMessageCheckEnabledState(enabled);
       if (!enabled) setMessagePreview(undefined);
     },
@@ -335,7 +367,7 @@ export function CoordinationStateProvider({
         : originalBody;
       setMessageCheckBusy(true);
       setMessageError(undefined);
-      const context = writeContext();
+      const context = writeContext(actorIdentityId);
       try {
         const message = await api.sendMessage({
           familyCircleId: "family-current",
@@ -348,7 +380,8 @@ export function CoordinationStateProvider({
           sentBody: message.body ?? sentBody,
           sentAt: message.occurredAt,
           status: "sent",
-          corrected: false
+          corrected: false,
+          canCorrect: true
         }]);
         setMessageDraftState("");
         setMessagePreview(undefined);
@@ -364,7 +397,7 @@ export function CoordinationStateProvider({
               queuedAt,
               attempts: 0
             });
-            setSentMessages((current) => [...current, { id: queueId, originalBody, sentBody, sentAt: queuedAt, status: "waiting", corrected: false }]);
+            setSentMessages((current) => [...current, { id: queueId, originalBody, sentBody, sentAt: queuedAt, status: "waiting", corrected: false, canCorrect: false }]);
             setMessageDraftState("");
             setMessagePreview(undefined);
             setMessageError("Waiting for a connection. PeacePad will retry this message safely.");
@@ -398,10 +431,62 @@ export function CoordinationStateProvider({
       } finally {
         setMessageSearchBusy(false);
       }
+    },
+    startCorrection: (messageId) => {
+      const message = sentMessages.find((item) => item.id === messageId);
+      if (!message?.canCorrect || message.status === "waiting") return;
+      setCorrectingMessageId(message.id);
+      setCorrectionDraftState(message.sentBody);
+      setCorrectionError(undefined);
+    },
+    cancelCorrection: () => {
+      setCorrectingMessageId(undefined);
+      setCorrectionDraftState("");
+      setCorrectionError(undefined);
+    },
+    setCorrectionDraft: (draft) => {
+      setCorrectionDraftState(draft.slice(0, 10000));
+      setCorrectionError(undefined);
+    },
+    saveCorrection: async () => {
+      const message = sentMessages.find((item) => item.id === correctingMessageId);
+      const body = correctionDraft.trim();
+      if (!message?.canCorrect || message.status === "waiting") return;
+      if (!body || body === message.sentBody) {
+        setCorrectionError("Enter changed wording before saving the correction.");
+        return;
+      }
+      setCorrectionBusy(true);
+      setCorrectionError(undefined);
+      try {
+        const correction = await api.correctMessage({
+          familyCircleId: "family-current",
+          conversationId: "conversation-primary",
+          originalMessageEventId: message.id,
+          body
+        }, writeContext(actorIdentityId));
+        setSentMessages((current) => current.map((item) => item.id === message.id ? {
+          ...item,
+          sentBody: correction.body ?? body,
+          corrected: true
+        } : item));
+        setCorrectingMessageId(undefined);
+        setCorrectionDraftState("");
+        setMessageSearchResults([]);
+      } catch (error) {
+        setCorrectionError(error instanceof Error ? error.message : "PeacePad could not save that correction.");
+      } finally {
+        setCorrectionBusy(false);
+      }
     }
   }), [
     api,
+    actorIdentityId,
     calendarView,
+    correctingMessageId,
+    correctionBusy,
+    correctionDraft,
+    correctionError,
     createdInvitation,
     events,
     invitationBusy,

@@ -106,6 +106,7 @@ describe("PeacePad welcome and consent", () => {
     fireEvent.press(screen.getByText("Continue securely"));
     await waitFor(() => expect(stagingSessionStore.save).toHaveBeenCalledWith(expect.objectContaining({
       accessToken: "a".repeat(48),
+      actorIdentityId: "synthetic-owner",
       actorDisplayName: "Alex Example",
       consent: { termsAccepted: true, privacyAcknowledged: true, aiMessageConsent: false }
     })));
@@ -116,6 +117,7 @@ describe("PeacePad welcome and consent", () => {
     const { api, sessionStore } = createHarness();
     const stored: StoredStagingSession = {
       accessToken: "b".repeat(48),
+      actorIdentityId: "stale-identity-is-not-trusted",
       actorDisplayName: "Saved name is not trusted",
       consent: { termsAccepted: true, privacyAcknowledged: true, aiMessageConsent: false },
       savedAt: "2026-08-04T12:00:00.000Z"
@@ -142,6 +144,10 @@ describe("PeacePad welcome and consent", () => {
     );
 
     await waitFor(() => expect(verifySession).toHaveBeenCalledWith(stored.accessToken));
+    expect(stagingSessionStore.save).toHaveBeenCalledWith(expect.objectContaining({
+      actorIdentityId: "synthetic-owner",
+      actorDisplayName: "Alex Example"
+    }));
     expect(await screen.findByText("Welcome back, Alex Example.")).toBeOnTheScreen();
     expect(screen.getByText("You’re ready")).toBeOnTheScreen();
     expect(api.startGuest).not.toHaveBeenCalled();
@@ -153,6 +159,7 @@ describe("PeacePad welcome and consent", () => {
       clear: jest.fn(async () => undefined),
       read: jest.fn(async () => ({
         accessToken: "c".repeat(48),
+        actorIdentityId: "synthetic-owner",
         actorDisplayName: "Alex Example",
         consent: { termsAccepted: true, privacyAcknowledged: true, aiMessageConsent: false },
         savedAt: "2026-08-04T12:00:00.000Z"

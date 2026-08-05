@@ -31,6 +31,7 @@ approved Capacitor app, production data/API, App Store record, and
 | Permanent staging conversation/message ledger | AUTOMATED VERIFIED | participant authorization, idempotent append, immutable Postgres message events, and HTTP restart proof |
 | Immutable delivery and viewed receipts | AUTOMATED VERIFIED | recipient-only lifecycle authorization, null-body events, idempotency, and PostgreSQL HTTP restart proof |
 | Linked message corrections | AUTOMATED VERIFIED | sender-only append events preserve originals, reject recipient mutation, omit content from audit/log metadata, and survive HTTP/PostgreSQL restart |
+| Verified-actor correction composer | AUTOMATED VERIFIED | server-verified identity is stored device-only, refreshed on restore, and enables corrections only for sender-authored messages while preserving originals |
 | Participant-safe message search | AUTOMATED VERIFIED | authorized conversation scope, bounded body-only queries/results, effective corrected text, UI search, and cross-participant denial tests |
 | Bounded secure message retry outbox | AUTOMATED VERIFIED | device-only per-entry storage, five-entry/five-attempt limits, transient-only retry, preserved idempotency, and permanent-failure discard |
 | Durable per-participant Message Check preference | AUTOMATED VERIFIED | default-off read, consent-safe update, optimistic concurrency, and HTTP restart proof |
@@ -54,9 +55,9 @@ approved Capacitor app, production data/API, App Store record, and
 ```text
 guardrails       passed
 typecheck        passed
-Jest/RNTL        35 suites / 228 tests passed
+Jest/RNTL        35 suites / 231 tests passed
 embedded SQL     two-actor invitation/calendar/message/receipt/correction/search and HTTP restart persistence passed
-coverage         82.43 statements / 77.29 branches / 79.04 functions / 87.81 lines
+coverage         82.42 statements / 77.44 branches / 79.71 functions / 87.72 lines
 Expo Doctor      17/18 in monorepo; isolated native install 18/18
 Expo config      PeacePad; ca.peacepad.nextnative.lab; diagnostics/writes false
 iOS export       passed; 963 modules bundled
@@ -189,11 +190,10 @@ commit and are not relabelled as current evidence.
   manufactured by the sender, and persist across an HTTP/PostgreSQL restart.
 - Corrections are immutable sender-authored events linked to the original sent
   record. The original remains byte-for-byte unchanged, recipients cannot
-  author a correction, and participant search returns only the latest effective
-  wording in the authorized conversation. Correction entry is API-verified;
-  the native correction composer is intentionally deferred until the secure
-  session exposes the current actor identity to the UI without trusting a
-  client-supplied identity.
+  author or see a correction action, and participant search returns only the
+  latest effective wording in the authorized conversation. The native composer
+  uses identity returned by `/api/v2/session`, stores it only in device SecureStore,
+  re-verifies it on restore, and never relies on a user-entered identity.
 - Explicit sends that fail with a classified staging network/timeout error can
   enter a device-only SecureStore outbox. Each entry preserves its original
   idempotency key, is capped at 800 characters, and the outbox is limited to
@@ -253,16 +253,16 @@ commit and are not relabelled as current evidence.
 | Secure invitation product flow | 75% |
 | Layered calendar product flow | 73% |
 | Per-chat Message Check | 80% |
-| Typed staging compatibility client | 88% |
+| Typed staging compatibility client | 90% |
 | Staging invitation server core | 85% |
 | Staging calendar server core | 78% |
 | Staging messaging server core | 92% |
-| Secure staging account/session bridge | 80% |
+| Secure staging account/session bridge | 84% |
 | Automated verification | 98% |
 | Accessibility foundation | 45% |
 | Adaptive theme foundation | 55% |
 | Current device verification | 82% |
-| Overall production-native v2 | 51% |
+| Overall production-native v2 | 52% |
 
 ## Feature completion view
 
@@ -273,12 +273,12 @@ These percentages measure production readiness, not how many screens exist.
 | Home and task navigation | 85% | polished shell and state-driven actions; device accessibility pass remains |
 | Secure family invitations | 75% | durable staging core; network deployment and real-device handoff remain |
 | Calendar and parenting plans | 73% | durable authorized layers/events; recurrence engine, offline queue, and date navigation remain |
-| Messaging | 78% | two-actor append-only ledger, durable receipts, sender-only linked corrections, participant-safe effective-text search, and bounded foreground retry pass; correction composer, attachments, background sync, and deployed two-device proof remain |
+| Messaging | 83% | two-actor append-only ledger, durable receipts, verified-actor correction composer, participant-safe effective-text search, and bounded foreground retry pass; attachments, background sync, and deployed two-device proof remain |
 | Message Check | 80% | rule-based, per-chat, explicit-send flow with durable default-off preference; networked staging and real-device proof remain |
 | Records / Case Binder | 38% | synthetic vertical slice exists; secure uploads, immutable originals, hashing, and export verification remain |
 | Calls | 15% | typed contracts and prior-repo design evidence only; no authenticated WebRTC/CallKit implementation |
 | Expenses and reimbursements | 10% | domain direction only; no ledger, receipts, splits, balances, or payment adapter |
-| Account and secure session | 80% | fail-closed hash-only multi-actor staging handshake and device-only token storage; production identity remains |
+| Account and secure session | 84% | fail-closed hash-only multi-actor staging handshake plus device-only verified identity/token storage and restore re-verification; production identity remains |
 | Notifications and reminders | 8% | product rules identified; no production push delivery |
 | Offline and conflict recovery | 18% | bounded secure message retry with preserved idempotency passes; calendar/records queues, connectivity orchestration, conflicts, and device proof remain |
 | Professional portal | 5% | roles/contracts identified; no operational portal |
@@ -289,8 +289,8 @@ These percentages measure production readiness, not how many screens exist.
 ## Next best move
 
 Do not repeat the blocked Expo Go remote-control attempt. The permanent staging
-message ledger, recipient-authored delivery/viewed receipts, sender-only linked
-corrections, participant-safe search, hash-only
+message ledger, recipient-authored delivery/viewed receipts, verified-actor
+linked corrections and composer, participant-safe search, hash-only
 multi-actor sessions, per-person Message Check preferences, and bounded secure
 retry outbox now pass local automation and PostgreSQL/HTTP restart proof. The
 next promotion gate is an isolated networked staging database/service, followed
@@ -300,4 +300,6 @@ recovery, correction visibility, search, and preference isolation. If external
 staging remains unavailable, the next local product slice is the current-actor
 session bridge plus a correction composer, followed by attachment metadata and
 safe upload contracts. Calling starts only after the two-user messaging
-foundation is deployed and reliable.
+foundation is deployed and reliable. If staging remains unavailable, the next
+local value slice is attachment metadata plus a safe upload-intent contract;
+no file bytes or production storage are introduced yet.

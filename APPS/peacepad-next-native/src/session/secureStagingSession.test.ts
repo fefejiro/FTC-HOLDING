@@ -4,6 +4,7 @@ import { secureStagingSessionStore, validStagingAccessToken, type StoredStagingS
 const secureStore = SecureStore as jest.Mocked<typeof SecureStore>;
 const session: StoredStagingSession = {
   accessToken: "a".repeat(48),
+  actorIdentityId: "synthetic-owner",
   actorDisplayName: "Alex Example",
   consent: { termsAccepted: true, privacyAcknowledged: true, aiMessageConsent: false },
   savedAt: "2026-08-04T20:00:00.000Z"
@@ -31,6 +32,13 @@ describe("secure staging session", () => {
     secureStore.getItemAsync.mockResolvedValueOnce(JSON.stringify(session));
     await expect(secureStagingSessionStore.read()).resolves.toEqual(session);
     secureStore.getItemAsync.mockResolvedValueOnce(JSON.stringify({ ...session, accessToken: "bad" }));
+    await expect(secureStagingSessionStore.read()).resolves.toBeNull();
+    expect(secureStore.deleteItemAsync).toHaveBeenCalledWith("peacepad.native.staging-session.v1");
+  });
+
+  it("clears legacy state that lacks a server-verified actor identity", async () => {
+    const { actorIdentityId: _removed, ...legacySession } = session;
+    secureStore.getItemAsync.mockResolvedValueOnce(JSON.stringify(legacySession));
     await expect(secureStagingSessionStore.read()).resolves.toBeNull();
     expect(secureStore.deleteItemAsync).toHaveBeenCalledWith("peacepad.native.staging-session.v1");
   });

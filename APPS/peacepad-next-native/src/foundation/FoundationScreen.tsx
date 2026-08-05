@@ -85,6 +85,13 @@ export function FoundationScreen({
           }
           const restoredProfile = await verifySession(stored.accessToken);
           if (!active) return;
+          await stagingSessionStore.save({
+            ...stored,
+            actorIdentityId: restoredProfile.identityId,
+            actorDisplayName: restoredProfile.displayName,
+            savedAt: new Date().toISOString()
+          });
+          if (!active) return;
           setConsent(stored.consent);
           setAccountProfile(restoredProfile);
           setPhase("compose");
@@ -160,6 +167,7 @@ export function FoundationScreen({
     try {
       await stagingSessionStore.save({
         accessToken: accountToken,
+        actorIdentityId: accountProfile.identityId,
         actorDisplayName: accountProfile.displayName,
         consent,
         savedAt: new Date().toISOString()
