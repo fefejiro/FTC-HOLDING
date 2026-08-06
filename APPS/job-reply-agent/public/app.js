@@ -402,10 +402,9 @@
         connector.source.toUpperCase(),
         [
           statusLabel(connector.status),
-          connector.accountIdentifier ? `Identity: ${connector.accountIdentifier}` : null,
-          connector.evidenceReference ? "Certification evidence recorded" : "No live certification evidence",
-          connector.expiresAt ? `Certification expires ${dateLabel(connector.expiresAt)}` : null,
-          connector.blockingReason || null
+          connector.schedulerEligible ? "Scheduler eligible" : "Scheduler gated",
+          connector.certificationEvidenceRecorded ? "Certification evidence recorded" : "No live certification evidence",
+          connector.certificationExpiresAt ? `Certification expires ${dateLabel(connector.certificationExpiresAt)}` : null
         ]
       ),
       "No channel capabilities are configured."

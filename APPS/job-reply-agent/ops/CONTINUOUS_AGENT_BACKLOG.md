@@ -6,9 +6,15 @@ record evidence below the item, and commit its own changes.
 
 ## Safe Autonomous Queue
 
-- [ ] Add focused release-gate coverage proving scheduler and connector status
+- [x] Add focused release-gate coverage proving scheduler and connector status
   surfaces distinguish `blocked_auth`, `manual_only`, `pilot_only`, and
   `certified_live` without exposing credentials or candidate message content.
+  - Evidence (2026-08-06): added allow-listed connector and scheduler status
+    projections plus focused coverage for all four gates; 11 relevant Vitest
+    checks, targeted strict TypeScript checking, JavaScript syntax checking, and
+    the static production release check passed. The full build remains
+    environment-blocked by missing installed `resend`, S3 presigner, and
+    `pg-boss` dependencies.
 - [ ] Add responsive Playwright coverage for match explanations, ATS gap reports,
   application timelines, interview preparation, and approval flows at one mobile
   and one desktop viewport; keep unavailable live-service checks clearly separate.
