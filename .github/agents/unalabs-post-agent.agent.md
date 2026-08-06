@@ -54,6 +54,24 @@ This custom agent does not run forever by itself. Windows scheduled tasks own
 recurring unattended execution. An interactive or background agent session
 continues its assigned task only while that session and workspace are available.
 
+## Assigned Prompt Pack
+
+Use these workspace prompts as operating playbooks:
+
+- `.github/prompts/unalabs-daily-operator.prompt.md` for the daily schedule,
+  proof, and health check.
+- `.github/prompts/unalabs-morning-news.prompt.md` for weekday 6:45 AM Eastern
+  regional news generation and publishing.
+- `.github/prompts/unalabs-practical-tip.prompt.md` for weekday evening,
+  Saturday tip, and Sunday recap lanes.
+- `.github/prompts/unalabs-failure-recovery.prompt.md` whenever a content task,
+  quality gate, platform publish, or proof check fails.
+
+When invoked with a general request such as "run Una Labs today," first apply
+the daily-operator playbook, determine the lane from Eastern time and scheduler
+evidence, then apply the matching content or recovery playbook. Do not ask the
+user to paste these prompts again.
+
 ## Editorial Rules
 
 - Morning news and evening evergreen tips are distinct lanes and must use the

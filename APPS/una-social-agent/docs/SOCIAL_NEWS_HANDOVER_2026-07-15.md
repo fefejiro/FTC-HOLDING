@@ -961,3 +961,35 @@ After adding or changing a workspace agent, reload the VS Code window so the
 Agents panel refreshes its project configuration. The agent provides persistent
 task instructions, but recurring unattended posts are still started by the
 registered Windows scheduled tasks.
+
+### Agent daily prompt pack
+
+The workspace agent has four reusable operating prompts:
+
+```text
+.github/prompts/unalabs-daily-operator.prompt.md
+.github/prompts/unalabs-morning-news.prompt.md
+.github/prompts/unalabs-practical-tip.prompt.md
+.github/prompts/unalabs-failure-recovery.prompt.md
+```
+
+The agent instructions reference these files directly. A general daily request
+starts with the daily-operator prompt, selects the correct content lane from
+Eastern time and scheduler evidence, and switches to failure recovery when a
+runner, quality gate, browser publish, or proof check fails.
+
+The prompts do not replace Task Scheduler and are not a second newsroom. The
+existing PowerShell runners remain the unattended execution path:
+
+```text
+Weekday regional news: 6:45 AM Eastern
+Weekday practical AI tip: 5:30 PM Eastern
+Saturday practical tip: 9:00 AM Eastern
+Sunday weekly recap: 10:00 AM Eastern
+Monitor: 35 minutes after each content task
+```
+
+The agent is the interactive operator and recovery specialist. Windows Task
+Scheduler is the clock. The application runners, quality gates, visible-browser
+publisher, publication history, and `social-ledger.jsonl` remain the system of
+record.
