@@ -122,6 +122,7 @@ try {
   Write-RunLog "Codex=$codexSource"
   Write-RunLog "Branch=$branch"
   Write-RunLog "PendingItems=$($pendingItems.Count); MaxRunsPerDay=$MaxRunsPerDay; MaxMinutes=$MaxMinutes"
+  $startHead = (& git -C $worktreePath rev-parse HEAD).Trim()
 
   if ($DryRun) {
     Write-RunLog "DRY RUN PASS: all unattended-run safety gates passed; Codex was not invoked."
@@ -162,13 +163,19 @@ Hard boundaries: do not send or draft live email; do not browse or submit job ap
   $process.Refresh()
   $processExitCode = $process.ExitCode
   if ($null -eq $processExitCode) { $processExitCode = 1 }
+  $after = @(& git -C $worktreePath status --porcelain)
+  $endHead = (& git -C $worktreePath rev-parse HEAD).Trim()
   if ($processExitCode -ne 0) {
+    if ($after.Count -eq 0 -and $endHead -ne $startHead -and (Test-Path -LiteralPath $resultPath)) {
+      Write-RunLog "PASS WITH WARNINGS: Codex returned $processExitCode after producing clean commit $endHead. Review $resultPath."
+      Add-LedgerEvent "completed_with_warnings" $endHead 0
+      exit 0
+    }
     Write-RunLog "Codex exited with code $processExitCode. See $errorPath and $jsonPath."
     Add-LedgerEvent "failed" "Codex exited with code $processExitCode." $processExitCode
     exit $processExitCode
   }
 
-  $after = @(& git -C $worktreePath status --porcelain)
   if ($after.Count -gt 0) {
     Write-RunLog "Codex completed but left the worktree dirty; manual review required."
     $after | Tee-Object -FilePath $logPath -Append

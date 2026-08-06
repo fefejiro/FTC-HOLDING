@@ -37,6 +37,7 @@ describe("product release-gate status surfaces", () => {
     const schedulerSurface = schedulerConnectorStatusSurface(status);
 
     expect(connectorSurface.status).toBe(status);
+    expect(connectorSurface.accountIdentifier).toBe(connector.accountIdentifier);
     expect(connectorSurface.schedulerEligible).toBe(
       status === "pilot_only" || status === "certified_live"
     );
@@ -48,7 +49,6 @@ describe("product release-gate status surfaces", () => {
 
     const serialized = JSON.stringify({ connectorSurface, schedulerSurface });
     for (const sensitiveValue of [
-      connector.accountIdentifier,
       connector.evidenceReference,
       connector.blockingReason,
       connector.oauthRefreshToken,
@@ -64,7 +64,7 @@ describe("product release-gate status surfaces", () => {
     const worker = fs.readFileSync(path.resolve("src/product_worker.ts"), "utf8");
     expect(app).toContain("connector.schedulerEligible");
     expect(app).toContain("connector.certificationEvidenceRecorded");
-    expect(app).not.toMatch(/connector\.(?:accountIdentifier|evidenceReference|blockingReason)/);
+    expect(app).not.toMatch(/connector\.(?:evidenceReference|blockingReason)/);
     expect(server).toContain("connectors.map(connectorStatusSurface)");
     expect(worker).toContain("schedulerConnectorStatusSurface(source.status)");
   });

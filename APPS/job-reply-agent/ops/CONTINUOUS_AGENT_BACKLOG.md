@@ -12,9 +12,9 @@ record evidence below the item, and commit its own changes.
   - Evidence (2026-08-06): added allow-listed connector and scheduler status
     projections plus focused coverage for all four gates; 11 relevant Vitest
     checks, targeted strict TypeScript checking, JavaScript syntax checking, and
-    the static production release check passed. The full build remains
-    environment-blocked by missing installed `resend`, S3 presigner, and
-    `pg-boss` dependencies.
+    the static production release check passed in the isolated worktree. The
+    dependency-complete release checkout independently passed the focused tests,
+    full TypeScript build, and lint after integration review.
 - [ ] Add responsive Playwright coverage for match explanations, ATS gap reports,
   application timelines, interview preparation, and approval flows at one mobile
   and one desktop viewport; keep unavailable live-service checks clearly separate.

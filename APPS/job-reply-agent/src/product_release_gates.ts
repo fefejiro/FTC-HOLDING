@@ -9,6 +9,7 @@ export interface SchedulerConnectorStatusSurface {
 export interface ConnectorStatusSurface {
   source: ConnectorCapability["source"];
   status: ConnectorStatus;
+  accountIdentifier: string | null;
   discovery: boolean;
   packageGeneration: boolean;
   assistedSubmission: boolean;
@@ -35,6 +36,7 @@ export function connectorStatusSurface(
   return {
     source: connector.source,
     status: connector.status,
+    accountIdentifier: connector.accountIdentifier || null,
     discovery: connector.discovery,
     packageGeneration: connector.packageGeneration,
     assistedSubmission: connector.assistedSubmission,
