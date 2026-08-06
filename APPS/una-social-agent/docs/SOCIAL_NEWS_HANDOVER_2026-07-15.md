@@ -942,3 +942,22 @@ The agent and scheduler have different responsibilities:
 The agent must continue until the requested outcome is visibly verified or an
 external blocker is recorded. It must not bypass quality gates, loop endlessly,
 claim unverified publication, or modify unrelated FTC applications.
+
+### VS Code GitHub Copilot agent
+
+The FTC workspace Agents panel shown in VS Code reads project agents from:
+
+```text
+.github/agents/unalabs-post-agent.agent.md
+name: Una Labs Post Agent
+```
+
+This is separate from the Codex project agent above. The `.codex/agents` TOML
+file is used by Codex surfaces, while the `.github/agents` Markdown file is the
+agent that appears in the VS Code GitHub Copilot Agents list. Both point to this
+handover and the same existing Una Labs newsroom implementation.
+
+After adding or changing a workspace agent, reload the VS Code window so the
+Agents panel refreshes its project configuration. The agent provides persistent
+task instructions, but recurring unattended posts are still started by the
+registered Windows scheduled tasks.
