@@ -82,12 +82,12 @@ the earlier unverified 53% planning estimate.
 
 | Verification | Commit | Environment | Date | Result | Evidence |
 | --- | --- | --- | --- | --- | --- |
-| App-local clean dependency install | this commit | D: release worktree | 2026-08-06 | LOCAL VERIFIED | `npm ci --workspaces=false`; 1,006 locked package records |
+| Standalone clean dependency install | this commit | isolated D: copy | 2026-08-06 | LOCAL VERIFIED | `npm ci --workspaces=false`; 994 packages installed from 1,006 locked records without repository-root dependencies |
 | Secret and production-boundary scans | this commit | Windows local | 2026-08-06 | LOCAL VERIFIED | 73 files scanned; lab bundle and disabled production writes confirmed |
 | TypeScript | this commit | Windows local | 2026-08-06 | LOCAL VERIFIED | `npm run typecheck` exited 0 |
 | Jest/RNTL coverage | this commit | Windows local | 2026-08-06 | LOCAL VERIFIED | 24 suites, 139 tests; 79.60% branch and 86.00% statement coverage |
-| Expo config and Doctor | this commit | Windows local | 2026-08-06 | LOCAL VERIFIED | Safe public config; Expo Doctor 1.20.1 passed 18/18 checks |
-| App-local iOS export | this commit | Windows local | 2026-08-06 | LOCAL VERIFIED | 952 modules, 17 assets, 2.58 MB Hermes bundle in D: verification cache |
+| Expo config and Doctor | this commit | isolated D: copy | 2026-08-06 | LOCAL VERIFIED | Safe public config; Expo Doctor 1.20.1 passed 18/18 checks |
+| Standalone iOS export | this commit | isolated D: copy | 2026-08-06 | LOCAL VERIFIED | 952 modules, 17 assets, 2.58 MB Hermes bundle in D: verification cache |
 | Hosted path-scoped CI | n/a | GitHub Actions | 2026-08-06 | NOT STARTED | Workflow is prepared but not yet pushed/executed |
 | Focused staging smokes | earlier PR #172 commits | Windows local, fictional adapters | Historical | HISTORICAL EVIDENCE | `STAGING_RUNTIME_SMOKE_PASS`, `STAGING_RESTART_SMOKE_PASS`, `TWO_ACCOUNT_HTTP_SMOKE_PASS`, `SYNTHETIC_COORDINATION_JOURNEY_PASS`, `STAGING_AUTHORIZATION_SMOKE_PASS` |
 | Real PostgreSQL, deployed staging, simulator, device, TestFlight, production | n/a | n/a | n/a | NOT STARTED | No current qualifying evidence |
