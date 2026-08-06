@@ -14,6 +14,11 @@ Read `ops/PRODUCT_ARCHITECTURE.md` before substantial work and
 branch, HEAD, and worktree state before editing. Preserve unrelated changes and
 use an isolated worktree for autonomous engineering.
 
+Read `ops/CONTINUOUS_AGENT_HANDOVER.md` at the start of each engineering run.
+Before the final commit, update it with verified results, commits, blockers,
+next tasks, and the exact resume instruction. Treat it as the durable context
+across sessions instead of relying on chat history.
+
 ## Product boundaries
 
 - JobAgent is a multi-user Una Labs product, not a Fejiro-only script.
