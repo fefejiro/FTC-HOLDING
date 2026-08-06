@@ -3,6 +3,7 @@ param(
   [Parameter(Mandatory=$true)]
   [string]$WorktreeRoot,
   [string]$StateRoot = "",
+  [string]$CodexPath = "",
   [ValidateRange(1, 8)]
   [int]$MaxRunsPerDay = 2,
   [ValidateRange(10, 120)]
@@ -105,8 +106,12 @@ try {
     exit 0
   }
 
-  $codex = Get-Command codex -ErrorAction Stop
-  $loginStatus = (& cmd.exe /d /s /c "`"$($codex.Source)`" login status 2>&1" | Out-String).Trim()
+  if ($CodexPath) {
+    $codexSource = (Resolve-Path -LiteralPath $CodexPath).Path
+  } else {
+    $codexSource = (Get-Command codex -ErrorAction Stop).Source
+  }
+  $loginStatus = (& cmd.exe /d /s /c "`"$codexSource`" login status 2>&1" | Out-String).Trim()
   $loginExitCode = $LASTEXITCODE
   if ($loginExitCode -ne 0 -or $loginStatus -notmatch "Logged in") {
     Write-RunLog "Blocked: Codex CLI is not authenticated. $loginStatus"
@@ -114,7 +119,7 @@ try {
     exit 21
   }
 
-  Write-RunLog "Codex=$($codex.Source)"
+  Write-RunLog "Codex=$codexSource"
   Write-RunLog "Branch=$branch"
   Write-RunLog "PendingItems=$($pendingItems.Count); MaxRunsPerDay=$MaxRunsPerDay; MaxMinutes=$MaxMinutes"
 
@@ -143,7 +148,7 @@ Hard boundaries: do not send or draft live email; do not browse or submit job ap
     "--output-last-message", ('"' + $resultPath + '"'),
     "--json", "-"
   )
-  $process = Start-Process -FilePath $codex.Source -ArgumentList $arguments `
+  $process = Start-Process -FilePath $codexSource -ArgumentList $arguments `
     -RedirectStandardInput $promptPath -RedirectStandardOutput $jsonPath `
     -RedirectStandardError $errorPath -WindowStyle Hidden -PassThru
 
