@@ -7,6 +7,7 @@ import {
   ensureConnectorCapabilities,
   getAutomationPolicy
 } from "./product_public_beta_repository.js";
+import { schedulerConnectorStatusSurface } from "./product_release_gates.js";
 import {
   createProductQueue,
   enqueueProductJob,
@@ -74,8 +75,9 @@ async function runSafeOperation(envelope: QueueJobEnvelope): Promise<Record<stri
   const source = envelope.operation === "gmail.sync" || envelope.operation === "recruiter.send_approved"
     ? connectors.find((item) => item.source === "gmail")
     : null;
-  if (source && !["certified_live", "pilot_only"].includes(source.status)) {
-    return { outcome: "paused", reason: `connector_${source.status}` };
+  const schedulerStatus = source ? schedulerConnectorStatusSurface(source.status) : null;
+  if (schedulerStatus && !schedulerStatus.schedulerEligible) {
+    return { outcome: "paused", reason: schedulerStatus.schedulerGate, ...schedulerStatus };
   }
   if (envelope.operation === "recruiter.send_approved") {
     const policy = await getAutomationPolicy(db, envelope.userId);
@@ -85,7 +87,8 @@ async function runSafeOperation(envelope: QueueJobEnvelope): Promise<Record<stri
   }
   return {
     outcome: "shadow_ready",
-    reason: "external_action_requires_certified_connector_handler"
+    reason: "external_action_requires_certified_connector_handler",
+    ...(schedulerStatus || {})
   };
 }
 

@@ -109,6 +109,7 @@ import {
   verifyResendWebhook
 } from "./product_email.js";
 import type { ApplicationProof, ConnectorSource, ConnectorStatus } from "./product_domain.js";
+import { connectorStatusSurface } from "./product_release_gates.js";
 import { validateResumeUpload } from "./product_resume.js";
 import { productSecretKeyring } from "./product_secret_crypto.js";
 
@@ -1018,7 +1019,8 @@ export async function createProductServer(storage: ProductObjectStorage = create
         });
       }
       if (req.method === "GET" && url.pathname === "/api/v1/connectors/capabilities") {
-        return json(res, 200, { connectors: await ensureConnectorCapabilities(db, user.id) });
+        const connectors = await ensureConnectorCapabilities(db, user.id);
+        return json(res, 200, { connectors: connectors.map(connectorStatusSurface) });
       }
       if (req.method === "POST" && url.pathname === "/api/v1/inbound-alias") {
         if (!user.emailVerifiedAt) return json(res, 403, { error: "Verify your email first." });
