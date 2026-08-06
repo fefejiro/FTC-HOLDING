@@ -915,3 +915,30 @@ Verification:
   cross-lane image-history gate.
 - Windows Task Scheduler was re-registered and the actual actions show the new
   scheduled times and lateness limits.
+
+## August 6: Dedicated Codex Agent
+
+Project-scoped agent:
+
+```text
+.codex/agents/una-labs-post-agent.toml
+name: una_labs_post_agent
+```
+
+Use this agent for Una Labs newsroom operation, failed-run diagnosis, bounded
+quality recovery, visible Instagram and LinkedIn publishing, proof checks, and
+small evidence-backed improvements. It reads this handover before acting and
+must reuse the existing runners, scheduler, quality gates, and social ledger.
+
+The agent and scheduler have different responsibilities:
+
+- The custom agent supplies the durable specialist instructions and appears in
+  the project's Agents list after Codex refreshes its project configuration.
+- Windows tasks wake the newsroom on its recurring schedule when Fejiro is
+  away. The agent file alone does not start background work.
+- Goal mode can keep one bounded repair or improvement task running while its
+  Codex session and workspace remain available.
+
+The agent must continue until the requested outcome is visibly verified or an
+external blocker is recorded. It must not bypass quality gates, loop endlessly,
+claim unverified publication, or modify unrelated FTC applications.
