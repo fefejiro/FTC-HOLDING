@@ -18,6 +18,8 @@ describe("continuous product-agent scheduler", () => {
     expect(runner).toContain('"--ask-for-approval", "never", "exec"');
     expect(runner).toContain('"exec", "--sandbox", "workspace-write"');
     expect(runner).toContain("process.Refresh()");
+    expect(runner).toContain('Add-LedgerEvent "completed_with_warnings"');
+    expect(runner).toContain("$endHead -ne $startHead");
     expect(runner).not.toContain("dangerously-bypass-approvals-and-sandbox");
     expect(registrar).toContain("MultipleInstances IgnoreNew");
     expect(registrar).toContain("ExecutionTimeLimit");
