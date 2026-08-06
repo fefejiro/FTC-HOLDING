@@ -12,7 +12,8 @@ describe("continuous product-agent scheduler", () => {
     expect(runner).toContain("MaxRunsPerDay = 2");
     expect(runner).toContain("MaxMinutes = 45");
     expect(runner).toContain("continuous-agent.lock");
-    expect(runner).toContain("codex.Source login status");
+    expect(runner).toContain("login status 2>&1");
+    expect(runner).toContain("cmd.exe /d /s /c");
     expect(runner).toContain('"--sandbox", "workspace-write"');
     expect(runner).toContain('"--ask-for-approval", "never"');
     expect(runner).not.toContain("dangerously-bypass-approvals-and-sandbox");

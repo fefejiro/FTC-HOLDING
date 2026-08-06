@@ -106,8 +106,9 @@ try {
   }
 
   $codex = Get-Command codex -ErrorAction Stop
-  $loginStatus = (& $codex.Source login status 2>&1 | Out-String).Trim()
-  if ($LASTEXITCODE -ne 0 -or $loginStatus -notmatch "Logged in") {
+  $loginStatus = (& cmd.exe /d /s /c "`"$($codex.Source)`" login status 2>&1" | Out-String).Trim()
+  $loginExitCode = $LASTEXITCODE
+  if ($loginExitCode -ne 0 -or $loginStatus -notmatch "Logged in") {
     Write-RunLog "Blocked: Codex CLI is not authenticated. $loginStatus"
     Add-LedgerEvent "blocked_auth" "Codex CLI authentication is required." 21
     exit 21

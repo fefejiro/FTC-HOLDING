@@ -31,8 +31,9 @@ $runnerPath = Join-Path $projectPath "scripts\continuous-agent-run.ps1"
 if (-not (Test-Path -LiteralPath $runnerPath)) { throw "Missing runner: $runnerPath" }
 
 $codex = Get-Command codex -ErrorAction Stop
-$loginStatus = (& $codex.Source login status 2>&1 | Out-String).Trim()
-if ($LASTEXITCODE -ne 0 -or $loginStatus -notmatch "Logged in") {
+$loginStatus = (& cmd.exe /d /s /c "`"$($codex.Source)`" login status 2>&1" | Out-String).Trim()
+$loginExitCode = $LASTEXITCODE
+if ($loginExitCode -ne 0 -or $loginStatus -notmatch "Logged in") {
   throw "Codex CLI must be authenticated before task registration."
 }
 
