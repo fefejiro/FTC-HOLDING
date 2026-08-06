@@ -1,0 +1,59 @@
+name: PeacePad V2 Infrastructure Static Gates
+
+on:
+  pull_request:
+    paths:
+      - "APPS/peacepad-v2-platform/**"
+      - ".github/workflows/peacepad-v2-infra-static-gates.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "APPS/peacepad-v2-platform/**"
+      - ".github/workflows/peacepad-v2-infra-static-gates.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: peacepad-v2-infra-static-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-gates:
+    name: Format, validate, and mock-plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.8
+
+      - name: Assert no AWS credentials are present
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "${AWS_ACCESS_KEY_ID:-}"
+          test -z "${AWS_SECRET_ACCESS_KEY:-}"
+          test -z "${AWS_SESSION_TOKEN:-}"
+
+      - name: Run static infrastructure gates
+        shell: pwsh
+        run: ./APPS/peacepad-v2-platform/scripts/validate-infra.ps1
+
+      - name: Confirm workflow cannot deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RniE --include='*.ps1' --include='*.sh' \
+            '(^|[;&|[:space:]])terraform[[:space:]]+apply([[:space:]]|$)' \
+            APPS/peacepad-v2-platform/infra APPS/peacepad-v2-platform/scripts; then
+            echo "Deployment capability is prohibited in the static Gate 1 workflow." >&2
+            exit 1
+          fi

@@ -117,3 +117,17 @@ APPS/job-reply-agent/resumes/*_Cover_Letter.docx
 # Local capture inbox (flushed to GitHub Issues by scripts/flush-inbox.mjs)
 INBOX.md
 tmp/ai-queue/
+
+# Terraform local state and generated plans (never commit credentials or state)
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfplan.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform.tfstate.lock.info

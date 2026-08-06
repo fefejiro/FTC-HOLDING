@@ -3,7 +3,7 @@
 ## Snapshot
 
 - Snapshot date: 2026-08-06
-- Branch: `release/peacepad-native-v2-rc1`
+- Branch: `feat/peacepad-v2-gate1-regional-foundation`
 - Verified source baseline: `eb329c278e5bb6f43cfa723f55449ebcc6172220`
 - Gate evidence applies to the commit containing this status document
 - App version: `0.0.1`
@@ -18,19 +18,23 @@ is historical and cannot independently pass a release gate.
 
 ## Release verdict
 
-**BLOCKED — Gate 0 is LOCAL VERIFIED; 1 of 7 release gates has local proof.**
+**BLOCKED — Gate 0 is LOCAL VERIFIED; Gate 1 has local mock-plan proof only.**
 
 Native V2 is implemented partly as a synthetic/staging prototype. It is not
 ready for production identity, real family information, TestFlight, or App
 Store submission. The reproducible local foundation now passes. The immediate
-blocker is Gate 1: isolated Canadian and U.S. platform infrastructure with real
-PostgreSQL persistence, restoration, and regional isolation proof. Hosted CI
-must also execute successfully before Gate 0 becomes hosted evidence.
+Gate 1 now has an isolated, no-deploy Terraform foundation for Canadian and
+U.S. staging. Its regional mapping, private storage/database defaults, and
+credential-free plans pass locally with a mock AWS provider. This is not AWS,
+PostgreSQL, backup-restoration, or residency proof. Hosted CI must also execute
+successfully before either gate has hosted evidence.
 
 ## Evidence vocabulary
 
 - **IMPLEMENTED:** source exists but has no fresh qualifying verification.
 - **LOCAL VERIFIED:** fresh automated proof on the exact commit.
+- **LOCAL MOCK-PLAN VERIFIED:** deterministic infrastructure plans passed with
+  a mock provider; no cloud account or live service was contacted.
 - **POSTGRES VERIFIED:** proof against an isolated real PostgreSQL instance.
 - **DEPLOYED STAGING VERIFIED:** proof against the deployed regional staging rail.
 - **SIMULATOR VERIFIED:** current screenshot-backed iOS Simulator proof.
@@ -49,14 +53,14 @@ mandatory gate passes.
 | Gate | Weight | Implementation | Evidence | Current blocker | Next proof |
 | --- | ---: | ---: | --- | --- | --- |
 | Gate 0: reproducible foundation | 10% | 100% | LOCAL VERIFIED | Hosted CI has not yet executed | Push the path-scoped workflow and retain hosted logs/artifacts |
-| Gate 1: Canada/U.S. platform | 15% | 0% | NOT STARTED | No regional AWS infrastructure | IaC deployment, real PostgreSQL migration/restart, backup restoration, and isolation tests |
+| Gate 1: Canada/U.S. platform | 15% | 25% | LOCAL MOCK-PLAN VERIFIED | No AWS accounts, deployment, real PostgreSQL, or restoration proof | Approve account topology and cost controls, then deploy isolated staging for migration/restart/restoration tests |
 | Gate 2: identity and coordination | 20% | 25% | HISTORICAL EVIDENCE | Current flows use fictional/in-memory adapters | Two fictional accounts against deployed staging, then audited V1 identity migration |
 | Gate 3: records, evidence, exports | 15% | 5% | IMPLEMENTED | Metadata-only attachment intent; bytes and persistence disabled | Encrypted regional object storage, hashing, provenance, timeline, and independently verified export |
 | Gate 4: calls, offline, parity | 15% | 2% | NOT STARTED | No calling service or durable offline database | Regional audio/video call and offline conflict/recovery device suites |
 | Gate 5: trust, accessibility, localization | 10% | 5% | IMPLEMENTED | Baseline only; no independent audit or translations | Security/privacy/accessibility clearance and EN/FR/ES matrix |
 | Gate 6: migration and App Store | 15% | 0% | NOT STARTED | Gates 0–5 are incomplete | Migration/rollback rehearsal, TestFlight soak, sign-offs, and App Review submission |
 
-Weighted implementation estimate: **about 17% production-ready**. This replaces
+Weighted implementation estimate: **about 21% production-ready**. This replaces
 the earlier unverified 53% planning estimate.
 
 ## Feature dashboard
@@ -88,7 +92,10 @@ the earlier unverified 53% planning estimate.
 | Jest/RNTL coverage | this commit | Windows local | 2026-08-06 | LOCAL VERIFIED | 24 suites, 139 tests; 79.60% branch and 86.00% statement coverage |
 | Expo config and Doctor | this commit | isolated D: copy | 2026-08-06 | LOCAL VERIFIED | Safe public config; Expo Doctor 1.20.1 passed 18/18 checks |
 | Standalone iOS export | this commit | isolated D: copy | 2026-08-06 | LOCAL VERIFIED | 952 modules, 17 assets, 2.58 MB Hermes bundle in D: verification cache |
-| Hosted path-scoped CI | n/a | GitHub Actions | 2026-08-06 | NOT STARTED | Workflow is prepared but not yet pushed/executed |
+| Dual-region infrastructure source scan | this commit | Windows local | 2026-08-06 | LOCAL VERIFIED | 26 platform files scanned; no credential patterns found |
+| Terraform formatting and validation | this commit | Windows local, no backend | 2026-08-06 | LOCAL VERIFIED | Terraform 1.15.8; pinned signed AWS provider 6.58.0; module and both staging roots valid |
+| Canadian/U.S. regional plans | this commit | Terraform mock provider | 2026-08-06 | LOCAL MOCK-PLAN VERIFIED | `ca-central-1` and `us-east-2` plans passed 2/2; no AWS credentials or API calls |
+| Hosted path-scoped CI | n/a | GitHub Actions | 2026-08-06 | BLOCKED | New workflow cannot execute for a pull request until it exists on the default branch; hosted checks are blocked before execution |
 | Focused staging smokes | earlier PR #172 commits | Windows local, fictional adapters | Historical | HISTORICAL EVIDENCE | `STAGING_RUNTIME_SMOKE_PASS`, `STAGING_RESTART_SMOKE_PASS`, `TWO_ACCOUNT_HTTP_SMOKE_PASS`, `SYNTHETIC_COORDINATION_JOURNEY_PASS`, `STAGING_AUTHORIZATION_SMOKE_PASS` |
 | Real PostgreSQL, deployed staging, simulator, device, TestFlight, production | n/a | n/a | n/a | NOT STARTED | No current qualifying evidence |
 
