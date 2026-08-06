@@ -1,4 +1,7 @@
-import { createStagingDatabase, type StagingDatabaseClient } from "./StagingDatabase";
+import {
+  createStagingDatabase,
+  type StagingDatabaseClientFactory,
+} from "./StagingDatabase";
 import { runStagingMigrations } from "./StagingMigrations";
 
 export type StagingVerificationResult = Readonly<{
@@ -8,16 +11,38 @@ export type StagingVerificationResult = Readonly<{
 }>;
 
 /** Verifies the database contract without creating application or family records. */
-export async function verifyStagingDatabase(client: StagingDatabaseClient): Promise<StagingVerificationResult> {
-  const database = createStagingDatabase(client);
-  const initialReady = await database.ready();
-  if (!initialReady) return { initialReady: false, migrationsRun: 0, restartReady: false };
-  const first = await runStagingMigrations(client);
-  await database.close();
-  const restartDatabase = createStagingDatabase(client);
+export async function verifyStagingDatabase(
+  createClient: StagingDatabaseClientFactory,
+): Promise<StagingVerificationResult> {
+  const initialClient = await createClient();
+  const initialDatabase = createStagingDatabase(initialClient);
+  const initialReady = await initialDatabase.ready();
+  if (!initialReady) {
+    await initialDatabase.close();
+    return { initialReady: false, migrationsRun: 0, restartReady: false };
+  }
+  let first;
+  try {
+    first = await runStagingMigrations(initialClient);
+  } finally {
+    await initialDatabase.close();
+  }
+
+  const restartClient = await createClient();
+  if (restartClient === initialClient) {
+    throw new Error("Restart verification requires a new PostgreSQL client instance.");
+  }
+  const restartDatabase = createStagingDatabase(restartClient);
   const restartReady = await restartDatabase.ready();
-  if (!restartReady) return { initialReady: true, migrationsRun: first.length, restartReady: false };
-  const second = await runStagingMigrations(client);
-  await restartDatabase.close();
+  if (!restartReady) {
+    await restartDatabase.close();
+    return { initialReady: true, migrationsRun: first.length, restartReady: false };
+  }
+  let second;
+  try {
+    second = await runStagingMigrations(restartClient);
+  } finally {
+    await restartDatabase.close();
+  }
   return { initialReady: true, migrationsRun: new Set([...first, ...second].map(({ id }) => id)).size, restartReady: true };
 }

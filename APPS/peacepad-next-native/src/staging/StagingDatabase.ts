@@ -1,8 +1,11 @@
 /** Minimal database contract so the native rail never imports a production ORM. */
 export type StagingDatabaseClient = Readonly<{
-  query: (sql: string, parameter?: string) => Promise<unknown>;
+  query: (sql: string, parameters?: readonly unknown[]) => Promise<unknown>;
   end?: () => Promise<void>;
 }>;
+
+export type StagingDatabaseClientFactory =
+  () => StagingDatabaseClient | Promise<StagingDatabaseClient>;
 
 export type StagingDatabase = Readonly<{
   ready: () => Promise<boolean>;

@@ -95,6 +95,7 @@ the earlier unverified 53% planning estimate.
 | Dual-region infrastructure source scan | this commit | Windows local | 2026-08-06 | LOCAL VERIFIED | 26 platform files scanned; no credential patterns found |
 | Terraform formatting and validation | this commit | Windows local, no backend | 2026-08-06 | LOCAL VERIFIED | Terraform 1.15.8; pinned signed AWS provider 6.58.0; module and both staging roots valid |
 | Canadian/U.S. regional plans | this commit | Terraform mock provider | 2026-08-06 | LOCAL MOCK-PLAN VERIFIED | `ca-central-1` and `us-east-2` plans passed 2/2; no AWS credentials or API calls |
+| PostgreSQL lifecycle contract | this commit | Windows local, mocked clients | 2026-08-06 | LOCAL VERIFIED | A new client is required after close; migrations use a transaction-scoped advisory lock, SHA-256 checksums, and rollback on drift; 24 suites and 141 tests pass |
 | Hosted path-scoped CI | n/a | GitHub Actions | 2026-08-06 | BLOCKED | New workflow cannot execute for a pull request until it exists on the default branch; hosted checks are blocked before execution |
 | Focused staging smokes | earlier PR #172 commits | Windows local, fictional adapters | Historical | HISTORICAL EVIDENCE | `STAGING_RUNTIME_SMOKE_PASS`, `STAGING_RESTART_SMOKE_PASS`, `TWO_ACCOUNT_HTTP_SMOKE_PASS`, `SYNTHETIC_COORDINATION_JOURNEY_PASS`, `STAGING_AUTHORIZATION_SMOKE_PASS` |
 | Real PostgreSQL, deployed staging, simulator, device, TestFlight, production | n/a | n/a | n/a | NOT STARTED | No current qualifying evidence |
