@@ -30,11 +30,21 @@ if (!packageJson.private) {
 }
 
 const sourceFiles = [];
+const ignoredDirectories = new Set([
+  "node_modules",
+  ".expo",
+  ".sim",
+  "coverage",
+  "dist",
+  "build",
+  "ios",
+  "android",
+]);
 const walk = (dir) => {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (["node_modules", ".expo", "ios", "android"].includes(entry.name)) continue;
+      if (ignoredDirectories.has(entry.name) || entry.name.startsWith(".node_modules-")) continue;
       walk(full);
     } else if (/\.(ts|tsx|js|json|md)$/.test(entry.name)) {
       sourceFiles.push(full);

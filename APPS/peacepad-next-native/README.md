@@ -1,13 +1,22 @@
-# PeacePad Native Foundation
+# PeacePad Native V2
 
-This workspace is an isolated React Native and Expo foundation reconstructed from the published PeacePad Native draft history.
+This workspace is the isolated React Native and Expo successor to the live
+PeacePad Capacitor application. It currently contains the native foundation,
+synthetic coordination flows, metadata-only records preparation, and a
+staging-only HTTP/session rail.
 
 - iOS and Android identifier: `ca.peacepad.nextnative.lab`
 - production API writes: disabled
 - live Capacitor application: untouched
 - data: synthetic or device-local only
 
-The foundation contains the consent-first welcome flow, optional AI-consent boundary, device-only guest-session interface, typed API client, adaptive theme, accessibility baseline, error boundary, and safety guardrails. Coordination, records, staging services, and proof artifacts are added only by later stacked branches.
+The live release remains the rollback product. Native V2 must not use production
+identity, data, services, or the App Store bundle until every mandatory release
+gate is evidenced.
+
+Current release truth, feature status, blockers, and verification evidence are
+maintained in [docs/STATUS.md](docs/STATUS.md). Historical scope documents record
+what individual stacked changes proved; they are not current release claims.
 
 ## Verify
 
@@ -15,5 +24,7 @@ The foundation contains the consent-first welcome flow, optional AI-consent boun
 npm run guardrails
 npm run typecheck
 npm run test:coverage
-npx expo config --type public
+npm run expo:config
+npx --yes expo-doctor@1.20.1 .
+npm run export:ios -- --output-dir ./dist/ios
 ```

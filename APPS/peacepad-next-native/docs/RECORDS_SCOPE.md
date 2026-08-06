@@ -1,5 +1,8 @@
 # PeacePad Native Records Reconstruction Scope
 
+> Historical PR #171 scope record. For current release status and the active
+> metadata-only limitation, see [STATUS.md](STATUS.md).
+
 ## Purpose
 
 This stacked draft reconstructs only the private Case Binder boundary and metadata-only attachment preparation for the isolated PeacePad Native app.

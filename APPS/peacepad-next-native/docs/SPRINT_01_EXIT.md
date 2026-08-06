@@ -1,10 +1,15 @@
-# Sprint 01 — Networked staging foundation
+# Sprint 01 - historical staging checkpoint
+
+> Historical evidence only. This document records the state of the former
+> staging-foundation sprint. For the current release truth and evidence
+> classification, use [STATUS.md](./STATUS.md).
 
 ## Exit status
 
-**PARTIALLY COMPLETE — LOCAL VERIFIED.** The native branch now has the
-contracts and tests needed to connect two fictional accounts to staging. It is
-not a production release and no deployment was triggered.
+**PARTIALLY COMPLETE - LOCAL VERIFIED.** The native branch had the contracts
+and tests needed to connect two fictional accounts to a synthetic staging
+adapter. It was not a production release and no production deployment was
+triggered.
 
 ## Verified in this sprint
 
@@ -17,32 +22,22 @@ not a production release and no deployment was triggered.
 - idempotent synthetic migrations;
 - simulated restart verification;
 - staging coordination-client binding;
-- synthetic invitation → acceptance → conversation → message → correction →
-  search journey;
+- synthetic invitation -> acceptance -> conversation -> message -> correction
+  -> search journey;
 - explicit family and permission authorization guards.
 
-## Blocked or not started
+## Blocked or not started at this checkpoint
 
-- real PostgreSQL provisioning (Docker and `psql` are unavailable locally);
+- real PostgreSQL provisioning;
 - real migration and restart proof against PostgreSQL;
-- two real iPhone staging pass;
-- network delivery/retry behavior against a deployed service;
+- two-real-iPhone staging verification;
+- network delivery and retry behavior against a deployed service;
 - production identity migration, billing, calls, notifications, or App Store
   release work.
 
-## Next sprint order
-
-1. Provision an isolated staging PostgreSQL service and inject secrets from the
-   runtime environment only.
-2. Run the migration and restart suite against that service.
-3. Deploy the staging rail without production routes.
-4. Run two-fictional-account invitation, messaging, correction, search, and
-   calendar authorization tests against the deployed rail.
-5. Capture one simulator and one real-iPhone evidence pass.
-6. Start PR E with QA matrix, governance, and release/rollback documentation.
-
 ## Release rule
 
-V2 remains unreleasable until the blocked gates above are evidenced. The live
-Capacitor app, production APIs, App Store record, and real family data remain
-untouched.
+These historical results cannot be promoted to production evidence. Native V2
+remains unreleasable until the current gates in `STATUS.md` are evidenced. The
+live Capacitor app, production APIs, App Store record, and real family data
+remain untouched.

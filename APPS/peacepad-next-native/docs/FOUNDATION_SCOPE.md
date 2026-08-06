@@ -1,5 +1,8 @@
 # Native Foundation Scope
 
+> Historical PR #169 scope record. For current release status, see
+> [STATUS.md](STATUS.md).
+
 Status: LOCAL VERIFICATION REQUIRED
 
 Source mapping:

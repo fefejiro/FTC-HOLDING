@@ -1,5 +1,8 @@
 # PeacePad Native V2 staging rail
 
+> Historical early PR #172 scope record. For current release status and later
+> staging additions, see [STATUS.md](STATUS.md).
+
 This branch adds the first isolated staging rail for the native client. It is
 strictly synthetic and fail-closed:
 

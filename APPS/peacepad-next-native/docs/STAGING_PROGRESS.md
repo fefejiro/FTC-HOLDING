@@ -1,8 +1,11 @@
 # Native V2 staging progress
 
+> Historical staging progress record. The authoritative current dashboard is
+> [STATUS.md](STATUS.md).
+
 Branch: `agent/peacepad-native-staging-clean`  
 Draft PR: [#172](https://github.com/fefejiro/FTC-HOLDING/pull/172)  
-Latest commit: `b48ee14e`
+Latest staging branch commit: `eb329c27`
 
 | Gate | Status |
 | --- | --- |
@@ -23,8 +26,9 @@ Latest commit: `b48ee14e`
 | Staging coordination client guard | LOCAL VERIFIED |
 | Explicit family/permission authorization guard | LOCAL VERIFIED |
 | PostgreSQL migration and restart persistence | NOT STARTED |
-| Railway staging configuration | NOT STARTED |
-| Hosted CI | HOSTED CI BLOCKED BEFORE EXECUTION when monorepo workflow is scoped incorrectly |
+| Superseded Railway staging configuration | NOT STARTED |
+| AWS Canada/U.S. staging configuration | NOT STARTED |
+| Hosted CI | NO CHECKS REPORTED |
 
 This is not a production release. The native client remains a staging/lab
 build with `ca.peacepad.nextnative.lab` and production writes disabled.

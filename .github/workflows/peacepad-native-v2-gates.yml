@@ -1,0 +1,92 @@
+name: PeacePad Native V2 Gates
+
+on:
+  pull_request:
+    paths:
+      - "APPS/peacepad-next-native/**"
+      - ".github/workflows/peacepad-native-v2-gates.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "APPS/peacepad-next-native/**"
+      - ".github/workflows/peacepad-native-v2-gates.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: peacepad-native-v2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  standalone-native:
+    name: Standalone native quality gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: APPS/peacepad-next-native/package-lock.json
+
+      - name: Create isolated native workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/peacepad-next-native"
+          mkdir -p "$RUNNER_TEMP/peacepad-next-native"
+          rsync -a --delete \
+            --exclude node_modules \
+            --exclude .sim \
+            --exclude coverage \
+            APPS/peacepad-next-native/ \
+            "$RUNNER_TEMP/peacepad-next-native/"
+
+      - name: Scan Native V2 source for committed secrets
+        working-directory: ${{ runner.temp }}/peacepad-next-native
+        run: node scripts/check-secrets.cjs
+
+      - name: Install native dependencies in isolation
+        working-directory: ${{ runner.temp }}/peacepad-next-native
+        run: npm ci --ignore-scripts --no-audit --no-fund --workspaces=false
+
+      - name: Guardrails
+        working-directory: ${{ runner.temp }}/peacepad-next-native
+        run: npm run guardrails
+
+      - name: Typecheck
+        working-directory: ${{ runner.temp }}/peacepad-next-native
+        run: npm run typecheck
+
+      - name: Jest with coverage
+        working-directory: ${{ runner.temp }}/peacepad-next-native
+        run: npm run test:coverage
+
+      - name: Expo Doctor
+        working-directory: ${{ runner.temp }}/peacepad-next-native
+        run: npx --yes expo-doctor@1.20.1 .
+
+      - name: Expo config and iOS export
+        working-directory: ${{ runner.temp }}/peacepad-next-native
+        run: |
+          npm run --silent expo:config > "$RUNNER_TEMP/peacepad-expo-config.json"
+          npm run export:ios -- --output-dir "$RUNNER_TEMP/peacepad-ios-export"
+
+      - name: Upload verification artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: peacepad-native-v2-verification
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/peacepad-expo-config.json
+            ${{ runner.temp }}/peacepad-ios-export
+            ${{ runner.temp }}/peacepad-next-native/coverage

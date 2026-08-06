@@ -1,5 +1,8 @@
 # PeacePad Native Coordination Scope
 
+> Historical PR #170 scope record. Its verification applies only to the commit
+> stated below. For current release status, see [STATUS.md](STATUS.md).
+
 ## Purpose
 
 This stacked change adds the reviewable coordination layer on top of the isolated native foundation. It remains a non-production React Native/Expo client with fictional in-memory coordination data and device-local retry intent storage.
