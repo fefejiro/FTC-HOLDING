@@ -143,7 +143,7 @@ Hard boundaries: do not send or draft live email; do not browse or submit job ap
 "@ | Set-Content -LiteralPath $promptPath -Encoding UTF8
 
   $arguments = @(
-    "exec", "--sandbox", "workspace-write", "--ask-for-approval", "never",
+    "--ask-for-approval", "never", "exec", "--sandbox", "workspace-write",
     "-C", ('"' + $worktreePath + '"'),
     "--output-last-message", ('"' + $resultPath + '"'),
     "--json", "-"
@@ -159,10 +159,13 @@ Hard boundaries: do not send or draft live email; do not browse or submit job ap
     exit 22
   }
 
-  if ($process.ExitCode -ne 0) {
-    Write-RunLog "Codex exited with code $($process.ExitCode). See $errorPath and $jsonPath."
-    Add-LedgerEvent "failed" "Codex exited with code $($process.ExitCode)." $process.ExitCode
-    exit $process.ExitCode
+  $process.Refresh()
+  $processExitCode = $process.ExitCode
+  if ($null -eq $processExitCode) { $processExitCode = 1 }
+  if ($processExitCode -ne 0) {
+    Write-RunLog "Codex exited with code $processExitCode. See $errorPath and $jsonPath."
+    Add-LedgerEvent "failed" "Codex exited with code $processExitCode." $processExitCode
+    exit $processExitCode
   }
 
   $after = @(& git -C $worktreePath status --porcelain)

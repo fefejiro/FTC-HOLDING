@@ -15,8 +15,9 @@ describe("continuous product-agent scheduler", () => {
     expect(runner).toContain("login status 2>&1");
     expect(runner).toContain("cmd.exe /d /s /c");
     expect(registrar).toContain('-CodexPath `"$codexSource`"');
-    expect(runner).toContain('"--sandbox", "workspace-write"');
-    expect(runner).toContain('"--ask-for-approval", "never"');
+    expect(runner).toContain('"--ask-for-approval", "never", "exec"');
+    expect(runner).toContain('"exec", "--sandbox", "workspace-write"');
+    expect(runner).toContain("process.Refresh()");
     expect(runner).not.toContain("dangerously-bypass-approvals-and-sandbox");
     expect(registrar).toContain("MultipleInstances IgnoreNew");
     expect(registrar).toContain("ExecutionTimeLimit");
