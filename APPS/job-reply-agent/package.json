@@ -57,6 +57,8 @@
     "schedule:gmail:run-now": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/gmail-run.ps1",
     "schedule:run-now": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/daily-run.ps1",
     "schedule:run-browser": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/daily-run.ps1 -BrowserCycle",
+    "schedule:continuous:register": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/register-continuous-agent-task.ps1",
+    "schedule:continuous:dry-run": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/continuous-agent-run.ps1 -DryRun",
     "schedule:status": "powershell -NoProfile -Command \"Get-ScheduledTask | Where-Object { $_.TaskName -like 'JobReplyAgent-*' } | ForEach-Object { $info=$_ | Get-ScheduledTaskInfo; [pscustomobject]@{ TaskName=$_.TaskName; State=$_.State; LastRunTime=$info.LastRunTime; LastTaskResult=$info.LastTaskResult; NextRunTime=$info.NextRunTime } } | Format-Table -AutoSize\"",
     "browser:attach-chrome": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-chrome-cdp.ps1",
     "browser:fejiro-status": "python scripts/fejiro_chrome_status.py",
