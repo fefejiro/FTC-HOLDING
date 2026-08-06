@@ -6,6 +6,11 @@ const root = path.resolve(".");
 const runner = fs.readFileSync(path.join(root, "scripts", "continuous-agent-run.ps1"), "utf8");
 const registrar = fs.readFileSync(path.join(root, "scripts", "register-continuous-agent-task.ps1"), "utf8");
 const backlog = fs.readFileSync(path.join(root, "ops", "CONTINUOUS_AGENT_BACKLOG.md"), "utf8");
+const handover = fs.readFileSync(path.join(root, "ops", "CONTINUOUS_AGENT_HANDOVER.md"), "utf8");
+const continuePrompt = fs.readFileSync(
+  path.resolve(root, "..", "..", ".github", "prompts", "jobagent-continue.prompt.md"),
+  "utf8",
+);
 
 describe("continuous product-agent scheduler", () => {
   it("uses bounded, non-overlapping, authenticated Codex runs", () => {
@@ -29,6 +34,8 @@ describe("continuous product-agent scheduler", () => {
     expect(runner).toContain('agent/job-agent-continuous*');
     expect(runner).toContain("status --porcelain");
     expect(runner).toContain("Select exactly one highest-priority unchecked item");
+    expect(runner).toContain("CONTINUOUS_AGENT_HANDOVER.md");
+    expect(runner).toContain("update the durable handover");
     expect(runner).toContain("Do not push.");
     expect(backlog.replace(/\s+/g, " ")).toContain(
       "Each scheduled run may complete at most one unchecked item",
@@ -46,5 +53,14 @@ describe("continuous product-agent scheduler", () => {
       expect(runner).toContain(boundary);
     }
     expect(backlog).toContain("Manual Or Live Gates");
+  });
+
+  it("persists reusable continuation context across sessions", () => {
+    expect(continuePrompt).toContain("CONTINUOUS_AGENT_HANDOVER.md");
+    expect(continuePrompt).toContain("Required Handover Update");
+    expect(continuePrompt).toContain("does not authorize live recruiter sends");
+    expect(handover).toContain("Last Verified State");
+    expect(handover).toContain("Next Highest-Impact Work");
+    expect(handover).toContain("## Resume Command");
   });
 });

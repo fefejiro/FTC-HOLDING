@@ -136,9 +136,9 @@ try {
   $errorPath = Join-Path $logDir "continuous-agent-$stamp.stderr.log"
   $resultPath = Join-Path $logDir "continuous-agent-$stamp.result.md"
   @"
-Read .github/agents/jobagent-continuous-operator.agent.md and APPS/job-reply-agent/ops/CONTINUOUS_AGENT_BACKLOG.md before acting.
+Read .github/agents/jobagent-continuous-operator.agent.md, APPS/job-reply-agent/ops/CONTINUOUS_AGENT_HANDOVER.md, and APPS/job-reply-agent/ops/CONTINUOUS_AGENT_BACKLOG.md before acting.
 
-This is an unattended, product-engineering-only run. Select exactly one highest-priority unchecked item in the Safe Autonomous Queue. Inspect the current implementation before editing. Implement the smallest coherent change, add or update focused tests, run relevant verification, update only that backlog item's checkbox and evidence note, and commit only your intentional changes with a descriptive JobAgent commit message.
+This is an unattended, product-engineering-only run. Select exactly one highest-priority unchecked item in the Safe Autonomous Queue. Inspect the current implementation before editing. Implement the smallest coherent change, add or update focused tests, run relevant verification, update only that backlog item's checkbox and evidence note, update the durable handover with verified results and the next resume instruction, and commit only your intentional changes with a descriptive JobAgent commit message.
 
 Hard boundaries: do not send or draft live email; do not browse or submit job applications; do not operate authenticated browsers; do not deploy; do not modify production, DNS, OAuth, secrets, tokens, billing, legal terms, user data, scheduler registrations, or candidate operational state. Do not weaken identity, proof, CAPTCHA, tenant isolation, approval, or privacy controls. Do not push. Do not touch files outside APPS/job-reply-agent except the JobAgent agent policy when the selected item explicitly requires it. Stop safely if the item requires credentials, live services, user input, or an external action. Keep the worktree clean by committing successful work; on failure, preserve evidence and explain the blocker in the final response.
 "@ | Set-Content -LiteralPath $promptPath -Encoding UTF8
