@@ -26,9 +26,24 @@ scripts/
   verify-local-postgres-restoration.ps1
 docs/
   ADR-001-dual-region-aws-foundation.md
+  ADR-002-zero-cost-supabase-staging.md
   AWS_STAGING_PREREQUISITES.md
   POSTGRES_RESTORATION_RUNBOOK.md
 ```
+
+## Zero-cost staging path
+
+Until a paid production platform is funded, ADR-002 defines a provider-neutral
+Supabase Free staging bridge. It preserves `/api/v2`, regional isolation, and
+the PostgreSQL contract while keeping database credentials out of the app.
+
+Validate its safe example configuration with:
+
+```powershell
+./scripts/validate-supabase-free-staging.ps1
+```
+
+This is fictional staging only. It is not production deployment evidence.
 
 ## Local verification
 

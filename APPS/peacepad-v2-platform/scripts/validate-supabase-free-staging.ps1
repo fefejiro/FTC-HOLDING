@@ -1,0 +1,35 @@
+[CmdletBinding()]
+param(
+  [string]$ConfigPath = (Join-Path $PSScriptRoot "..\config\supabase-free-staging.example.json")
+)
+
+$ErrorActionPreference = "Stop"
+$resolved = (Resolve-Path -LiteralPath $ConfigPath).Path
+$config = Get-Content -LiteralPath $resolved -Raw | ConvertFrom-Json
+
+if ($config.schemaVersion -ne 1) { throw "Unsupported Supabase staging schemaVersion." }
+if ($config.deploymentApproved -ne $false) { throw "Example/config must remain unapproved until the release gate is signed." }
+if ($config.fictionalDataOnly -ne $true) { throw "Supabase free staging must be fictional-data-only." }
+if ($config.productionApiWritesEnabled -ne $false) { throw "Production API writes must remain disabled." }
+
+$ca = $config.regions.ca
+$us = $config.regions.us
+if (-not $ca -or -not $us) { throw "Both Canadian and U.S. staging regions are required." }
+if ($ca.supabaseRegion -ne "ca-central-1") { throw "Canadian staging must be pinned to ca-central-1." }
+if ($us.supabaseRegion -ne "us-east-2") { throw "U.S. staging must be pinned to us-east-2." }
+if ($ca.projectRef -eq $us.projectRef) { throw "Canadian and U.S. staging must use different Supabase projects." }
+
+foreach ($region in @($ca, $us)) {
+  if ($region.projectRef -match "[./:]" -or $region.projectRef -match "\s") {
+    throw "Store only the public project reference in configuration, never a URL or secret."
+  }
+  if ($region.apiBaseUrl -notmatch '^https://') { throw "Staging API base URLs must use HTTPS." }
+  if ($region.apiBaseUrl -match 'api\.peacepad\.ca') { throw "Production PeacePad API targets are forbidden." }
+}
+
+$raw = Get-Content -LiteralPath $resolved -Raw
+if ($raw -match '(?i)(service_role|service-role|secret[_-]?key|postgres(?:ql)?://|password\s*[=:])') {
+  throw "Supabase configuration contains a forbidden secret or database connection string."
+}
+
+Write-Output "SUPABASE_FREE_STAGING_CONFIG_PASS"

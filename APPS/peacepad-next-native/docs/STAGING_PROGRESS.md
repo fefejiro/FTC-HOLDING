@@ -27,7 +27,9 @@ Latest staging branch commit: `eb329c27`
 | Explicit family/permission authorization guard | LOCAL VERIFIED |
 | PostgreSQL migration and restart persistence | NOT STARTED |
 | Superseded Railway staging configuration | NOT STARTED |
-| AWS Canada/U.S. staging configuration | NOT STARTED |
+| AWS Canada/U.S. staging configuration | DEFERRED - funding unavailable |
+| Supabase Canada/U.S. free staging boundary | LOCAL VERIFIED |
+| Supabase regional projects and API adapters | NOT STARTED |
 | Hosted CI | NO CHECKS REPORTED |
 
 This is not a production release. The native client remains a staging/lab
