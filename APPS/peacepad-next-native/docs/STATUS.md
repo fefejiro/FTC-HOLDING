@@ -56,14 +56,14 @@ mandatory gate passes.
 | Gate | Weight | Implementation | Evidence | Current blocker | Next proof |
 | --- | ---: | ---: | --- | --- | --- |
 | Gate 0: reproducible foundation | 10% | 100% | HOSTED VERIFIED | None for this gate | Retain hosted logs and keep the workflow green |
-| Gate 1: Canada/U.S. platform | 15% | 50% | POSTGRES VERIFIED locally / SUPABASE CONFIG LOCAL VERIFIED | No two empty regional Supabase projects, deployed API adapters, managed restoration, or residency proof | Create two empty free projects, deploy the provider-neutral adapter, then verify isolation and restoration |
+| Gate 1: Canada/U.S. platform | 15% | 55% | CANADIAN SUPABASE STAGING VERIFIED | Canadian schema is deployed; the free-project limit blocks U.S. staging, and API adapter/restoration/residency proof remain absent | Deploy the Canadian `/api/v2` adapter; fund or free a separate slot before U.S. regional verification |
 | Gate 2: identity and coordination | 20% | 25% | HISTORICAL EVIDENCE | Current flows use fictional/in-memory adapters | Two fictional accounts against deployed staging, then audited V1 identity migration |
 | Gate 3: records, evidence, exports | 15% | 5% | IMPLEMENTED | Metadata-only attachment intent; bytes and persistence disabled | Encrypted regional object storage, hashing, provenance, timeline, and independently verified export |
 | Gate 4: calls, offline, parity | 15% | 2% | NOT STARTED | No calling service or durable offline database | Regional audio/video call and offline conflict/recovery device suites |
 | Gate 5: trust, accessibility, localization | 10% | 5% | IMPLEMENTED | Baseline only; no independent audit or translations | Security/privacy/accessibility clearance and EN/FR/ES matrix |
 | Gate 6: migration and App Store | 15% | 0% | NOT STARTED | Gates 0–5 are incomplete | Migration/rollback rehearsal, TestFlight soak, sign-offs, and App Review submission |
 
-Weighted implementation estimate: **about 25% production-ready**. This replaces
+Weighted implementation estimate: **about 26% production-ready**. This replaces
 the earlier unverified 53% planning estimate.
 
 ## Feature dashboard
@@ -109,6 +109,7 @@ the earlier unverified 53% planning estimate.
 | macOS native automated gates | `d938c4c5` | MacinCloud macOS 26.3.1, Node 22 | 2026-08-07 | LOCAL VERIFIED | Clean app-local install; guardrails; 75-file secret scan; TypeScript; 25 suites/144 tests; public Expo config; Expo Doctor 18/18 |
 | Foundation simulator smoke | `d938c4c5` | iPhone 17 Simulator, iOS 26.5, Maestro | 2026-08-07 | SIMULATOR VERIFIED / BLOCKED | Welcome, required consent, and AI default-off passed with current screenshots. Guest compose correctly failed closed because staging is not deployed; no session or production fallback was created |
 | Supabase free staging boundary | this commit | Windows local, no Supabase mutation | 2026-08-07 | LOCAL VERIFIED | Two-project regional config validates; production writes and secrets are rejected; migration denies direct mobile roles and makes audit events append-only |
+| Canadian Supabase fictional staging | this commit | Supabase Free, `ca-central-1` | 2026-08-07 | DEPLOYED STAGING VERIFIED (SCHEMA ONLY) | Healthy project; PostgreSQL 17.6; boundary schema applied; append-only triggers present; direct `anon`/`authenticated` table privileges absent; fictional write rolled back. API adapter, restoration, device, and production proof remain absent |
 | Focused staging smokes | earlier PR #172 commits | Windows local, fictional adapters | Historical | HISTORICAL EVIDENCE | `STAGING_RUNTIME_SMOKE_PASS`, `STAGING_RESTART_SMOKE_PASS`, `TWO_ACCOUNT_HTTP_SMOKE_PASS`, `SYNTHETIC_COORDINATION_JOURNEY_PASS`, `STAGING_AUTHORIZATION_SMOKE_PASS` |
 | Current-branch Terraform execution | this commit | Windows local after laptop restart | 2026-08-06 | BLOCKED | Terraform binary hung even on `terraform -version`; orphaned process was stopped. PR #174 hosted Terraform proof remains valid only for its earlier commit |
 | Deployed regional staging, managed restoration, simulator, device, TestFlight, production | n/a | n/a | n/a | NOT STARTED | No current qualifying evidence |
