@@ -18,7 +18,7 @@ is historical and cannot independently pass a release gate.
 
 ## Release verdict
 
-**BLOCKED — Gate 0 is LOCAL VERIFIED; Gate 1 has local mock-plan proof only.**
+**BLOCKED — Gate 0 is HOSTED VERIFIED; Gate 1 has local PostgreSQL proof only.**
 
 Native V2 is implemented partly as a synthetic/staging prototype. It is not
 ready for production identity, real family information, TestFlight, or App
@@ -26,13 +26,15 @@ Store submission. The reproducible local foundation now passes. The immediate
 Gate 1 now has an isolated, no-deploy Terraform foundation for Canadian and
 U.S. staging. Its regional mapping, private storage/database defaults, and
 credential-free plans pass locally with a mock AWS provider. This is not AWS,
-PostgreSQL, backup-restoration, or residency proof. Hosted CI must also execute
-successfully before either gate has hosted evidence.
+PostgreSQL, backup-restoration, or residency proof. The stacked native quality
+workflow now passes on GitHub, but no infrastructure workflow or cloud proof
+has executed.
 
 ## Evidence vocabulary
 
 - **IMPLEMENTED:** source exists but has no fresh qualifying verification.
 - **LOCAL VERIFIED:** fresh automated proof on the exact commit.
+- **HOSTED VERIFIED:** the scoped GitHub workflow executed and passed.
 - **LOCAL MOCK-PLAN VERIFIED:** deterministic infrastructure plans passed with
   a mock provider; no cloud account or live service was contacted.
 - **POSTGRES VERIFIED:** proof against an isolated real PostgreSQL instance.
@@ -52,7 +54,7 @@ mandatory gate passes.
 
 | Gate | Weight | Implementation | Evidence | Current blocker | Next proof |
 | --- | ---: | ---: | --- | --- | --- |
-| Gate 0: reproducible foundation | 10% | 100% | LOCAL VERIFIED | Hosted CI has not yet executed | Push the path-scoped workflow and retain hosted logs/artifacts |
+| Gate 0: reproducible foundation | 10% | 100% | HOSTED VERIFIED | None for this gate | Retain hosted logs and keep the workflow green |
 | Gate 1: Canada/U.S. platform | 15% | 35% | POSTGRES VERIFIED locally | No AWS accounts, regional deployment, backup restoration, or residency proof | Approve account topology and cost controls, then deploy isolated staging for regional and restoration tests |
 | Gate 2: identity and coordination | 20% | 25% | HISTORICAL EVIDENCE | Current flows use fictional/in-memory adapters | Two fictional accounts against deployed staging, then audited V1 identity migration |
 | Gate 3: records, evidence, exports | 15% | 5% | IMPLEMENTED | Metadata-only attachment intent; bytes and persistence disabled | Encrypted regional object storage, hashing, provenance, timeline, and independently verified export |
@@ -98,7 +100,8 @@ the earlier unverified 53% planning estimate.
 | PostgreSQL lifecycle contract | this commit | Windows local plus loopback PostgreSQL | 2026-08-06 | POSTGRES VERIFIED | A new client is required after close; migrations use a transaction-scoped advisory lock, SHA-256 checksums, and rollback on drift; 25 suites and 144 tests pass |
 | Real PostgreSQL migration/restart | this commit | PostgreSQL 18.3, loopback-only D: cluster | 2026-08-06 | POSTGRES VERIFIED | Fictional `peacepad_v2_staging`; two distinct `pg.Pool` lifecycles; 2 migrations persisted with valid SHA-256 checksums; focused tests 9/9 |
 | Dependency audit | this commit | npm audit, app-local lockfile | 2026-08-06 | BLOCKED | 0 critical, 1 transitive high, 11 moderate; high is PostCSS through Expo/Metro and npm proposes an unapproved Expo major upgrade |
-| Hosted path-scoped CI | n/a | GitHub Actions | 2026-08-06 | BLOCKED | New workflow cannot execute for a pull request until it exists on the default branch; hosted checks are blocked before execution |
+| Hosted native quality gates | `769c0220` | GitHub Actions, PR #175 | 2026-08-06 | HOSTED VERIFIED | Standalone native quality gates completed successfully |
+| Hosted infrastructure static gates | n/a | GitHub Actions, PR #174 | 2026-08-06 | BLOCKED | Infrastructure workflow has not executed because it is new on that PR branch |
 | Focused staging smokes | earlier PR #172 commits | Windows local, fictional adapters | Historical | HISTORICAL EVIDENCE | `STAGING_RUNTIME_SMOKE_PASS`, `STAGING_RESTART_SMOKE_PASS`, `TWO_ACCOUNT_HTTP_SMOKE_PASS`, `SYNTHETIC_COORDINATION_JOURNEY_PASS`, `STAGING_AUTHORIZATION_SMOKE_PASS` |
 | Deployed regional staging, restoration, simulator, device, TestFlight, production | n/a | n/a | n/a | NOT STARTED | No current qualifying evidence |
 
