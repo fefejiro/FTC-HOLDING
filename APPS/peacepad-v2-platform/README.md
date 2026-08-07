@@ -22,8 +22,12 @@ infra/terraform/
   environments/staging/us-east-2/
 scripts/
   validate-infra.ps1
+  validate-prerequisites.ps1
+  verify-local-postgres-restoration.ps1
 docs/
   ADR-001-dual-region-aws-foundation.md
+  AWS_STAGING_PREREQUISITES.md
+  POSTGRES_RESTORATION_RUNBOOK.md
 ```
 
 ## Local verification
@@ -37,6 +41,9 @@ Install Terraform and run:
 The script scans source for credential patterns, formats, initializes without a
 backend, validates both regional roots, and runs mock-provider plan tests. It
 never calls `terraform apply`.
+
+The local restoration drill uses temporary fictional databases and writes its
+generated evidence under `D:\FTC-HOLDING-cache`; it does not deploy anything.
 
 ## Deployment stop conditions
 

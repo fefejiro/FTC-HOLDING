@@ -3,7 +3,7 @@
 ## Snapshot
 
 - Snapshot date: 2026-08-06
-- Branch: `feat/peacepad-v2-postgres-contract-hardening`
+- Branch: `feat/peacepad-v2-staging-prerequisites`
 - Verified source baseline: `eb329c278e5bb6f43cfa723f55449ebcc6172220`
 - Gate evidence applies to the commit containing this status document
 - App version: `0.0.1`
@@ -25,10 +25,11 @@ ready for production identity, real family information, TestFlight, or App
 Store submission. The reproducible local foundation now passes. The immediate
 Gate 1 now has an isolated, no-deploy Terraform foundation for Canadian and
 U.S. staging. Its regional mapping, private storage/database defaults, and
-credential-free plans pass locally with a mock AWS provider. This is not AWS,
-PostgreSQL, backup-restoration, or residency proof. The stacked native quality
-workflow now passes on GitHub, but no infrastructure workflow or cloud proof
-has executed.
+credential-free plans passed locally with a mock AWS provider on PR #174. This
+is not AWS or residency proof. A local PostgreSQL 18.3 custom-format backup and
+restore drill now passes with fictional data, verified migration checksums,
+and cleanup of both temporary databases. The current prerequisite change still
+needs its own hosted run. No cloud deployment or managed restoration occurred.
 
 ## Evidence vocabulary
 
@@ -55,14 +56,14 @@ mandatory gate passes.
 | Gate | Weight | Implementation | Evidence | Current blocker | Next proof |
 | --- | ---: | ---: | --- | --- | --- |
 | Gate 0: reproducible foundation | 10% | 100% | HOSTED VERIFIED | None for this gate | Retain hosted logs and keep the workflow green |
-| Gate 1: Canada/U.S. platform | 15% | 35% | POSTGRES VERIFIED locally | No AWS accounts, regional deployment, backup restoration, or residency proof | Approve account topology and cost controls, then deploy isolated staging for regional and restoration tests |
+| Gate 1: Canada/U.S. platform | 15% | 45% | POSTGRES VERIFIED locally | No approved AWS account topology, regional deployment, managed backup restoration, or residency proof | Approve account topology and cost controls, then deploy isolated staging for regional and restoration tests |
 | Gate 2: identity and coordination | 20% | 25% | HISTORICAL EVIDENCE | Current flows use fictional/in-memory adapters | Two fictional accounts against deployed staging, then audited V1 identity migration |
 | Gate 3: records, evidence, exports | 15% | 5% | IMPLEMENTED | Metadata-only attachment intent; bytes and persistence disabled | Encrypted regional object storage, hashing, provenance, timeline, and independently verified export |
 | Gate 4: calls, offline, parity | 15% | 2% | NOT STARTED | No calling service or durable offline database | Regional audio/video call and offline conflict/recovery device suites |
 | Gate 5: trust, accessibility, localization | 10% | 5% | IMPLEMENTED | Baseline only; no independent audit or translations | Security/privacy/accessibility clearance and EN/FR/ES matrix |
 | Gate 6: migration and App Store | 15% | 0% | NOT STARTED | Gates 0–5 are incomplete | Migration/rollback rehearsal, TestFlight soak, sign-offs, and App Review submission |
 
-Weighted implementation estimate: **about 22% production-ready**. This replaces
+Weighted implementation estimate: **about 24% production-ready**. This replaces
 the earlier unverified 53% planning estimate.
 
 ## Feature dashboard
@@ -99,11 +100,14 @@ the earlier unverified 53% planning estimate.
 | Canadian/U.S. regional plans | this commit | Terraform mock provider | 2026-08-06 | LOCAL MOCK-PLAN VERIFIED | `ca-central-1` and `us-east-2` plans passed 2/2; no AWS credentials or API calls |
 | PostgreSQL lifecycle contract | this commit | Windows local plus loopback PostgreSQL | 2026-08-06 | POSTGRES VERIFIED | A new client is required after close; migrations use a transaction-scoped advisory lock, SHA-256 checksums, and rollback on drift; 25 suites and 144 tests pass |
 | Real PostgreSQL migration/restart | this commit | PostgreSQL 18.3, loopback-only D: cluster | 2026-08-06 | POSTGRES VERIFIED | Fictional `peacepad_v2_staging`; two distinct `pg.Pool` lifecycles; 2 migrations persisted with valid SHA-256 checksums; focused tests 9/9 |
+| Local PostgreSQL backup restoration | this commit | PostgreSQL 18.3, loopback-only D: cluster | 2026-08-06 | POSTGRES VERIFIED | Custom-format dump restored into a separate temporary database; 2 fictional records, 2 migration checksums, `ca` and `us` labels, and dump SHA-256 verified; temporary databases removed; evidence written outside source on D: |
+| Staging deployment prerequisites | this commit | Windows local, no cloud access | 2026-08-06 | LOCAL VERIFIED | Approval manifest is fail-closed; deployment, account topology, budget, owners, and six governance approvals remain unset; remote-state templates contain placeholders only |
 | Dependency audit | this commit | npm audit, app-local lockfile | 2026-08-06 | BLOCKED | 0 critical, 1 transitive high, 11 moderate; high is PostCSS through Expo/Metro and npm proposes an unapproved Expo major upgrade |
 | Hosted native quality gates | `769c0220` | GitHub Actions, PR #175 | 2026-08-06 | HOSTED VERIFIED | Standalone native quality gates completed successfully |
 | Hosted infrastructure static gates | `cb6ca7c6` | GitHub Actions, PR #174 | 2026-08-06 | HOSTED VERIFIED | Secret scan, Terraform formatting, validation, and both regional mock plans completed successfully |
 | Focused staging smokes | earlier PR #172 commits | Windows local, fictional adapters | Historical | HISTORICAL EVIDENCE | `STAGING_RUNTIME_SMOKE_PASS`, `STAGING_RESTART_SMOKE_PASS`, `TWO_ACCOUNT_HTTP_SMOKE_PASS`, `SYNTHETIC_COORDINATION_JOURNEY_PASS`, `STAGING_AUTHORIZATION_SMOKE_PASS` |
-| Deployed regional staging, restoration, simulator, device, TestFlight, production | n/a | n/a | n/a | NOT STARTED | No current qualifying evidence |
+| Current-branch Terraform execution | this commit | Windows local after laptop restart | 2026-08-06 | BLOCKED | Terraform binary hung even on `terraform -version`; orphaned process was stopped. PR #174 hosted Terraform proof remains valid only for its earlier commit |
+| Deployed regional staging, managed restoration, simulator, device, TestFlight, production | n/a | n/a | n/a | NOT STARTED | No current qualifying evidence |
 
 ## Mandatory release gates
 

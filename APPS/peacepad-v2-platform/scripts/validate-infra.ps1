@@ -12,6 +12,7 @@ $environments = @(
   (Join-Path $terraformRoot "environments/staging/us-east-2")
 )
 $secretScan = Join-Path $PSScriptRoot "check-secrets.ps1"
+$prerequisiteCheck = Join-Path $PSScriptRoot "validate-prerequisites.ps1"
 
 function Invoke-Terraform {
   param([string]$WorkingDirectory, [string[]]$Arguments)
@@ -26,6 +27,10 @@ function Invoke-Terraform {
 & $secretScan
 if (-not $?) {
   throw "Infrastructure secret scan failed."
+}
+& $prerequisiteCheck
+if (-not $?) {
+  throw "Staging prerequisite validation failed."
 }
 
 Invoke-Terraform -WorkingDirectory $terraformRoot -Arguments @("fmt", "-check", "-recursive")
