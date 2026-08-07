@@ -70,7 +70,7 @@ the earlier unverified 53% planning estimate.
 
 | Feature | Implementation | Evidence | Notes |
 | --- | ---: | --- | --- |
-| Home and task navigation | 70% | LOCAL VERIFIED | Source, navigation tests, TypeScript, Jest, and iOS export pass; device proof remains pending |
+| Home and task navigation | 70% | SIMULATOR VERIFIED | Welcome and consent screens are screenshot-backed on iPhone 17 / iOS 26.5; task shell and real-device proof remain pending |
 | Identity, session, consent, deletion | 25% | IMPLEMENTED | Device/staging sessions exist; production identity, migration, and deletion are incomplete |
 | Secure invitations | 55% | LOCAL VERIFIED | Explicit preview/acceptance tests pass against fictional adapters; deployed proof is absent |
 | Messaging and Message Check | 60% | LOCAL VERIFIED | Rule-based preview, correction, and search tests pass; deployed delivery is unverified |
@@ -106,6 +106,8 @@ the earlier unverified 53% planning estimate.
 | Hosted native quality gates | `769c0220` | GitHub Actions, PR #175 | 2026-08-06 | HOSTED VERIFIED | Standalone native quality gates completed successfully |
 | Hosted infrastructure static gates | `cb6ca7c6` | GitHub Actions, PR #174 | 2026-08-06 | HOSTED VERIFIED | Secret scan, Terraform formatting, validation, and both regional mock plans completed successfully |
 | Hosted prerequisite and native gates | `b047615d` | GitHub Actions, PR #176 | 2026-08-06 | HOSTED VERIFIED | Infrastructure format/validate/mock-plan and standalone native quality workflows both completed successfully |
+| macOS native automated gates | `d938c4c5` | MacinCloud macOS 26.3.1, Node 22 | 2026-08-07 | LOCAL VERIFIED | Clean app-local install; guardrails; 75-file secret scan; TypeScript; 25 suites/144 tests; public Expo config; Expo Doctor 18/18 |
+| Foundation simulator smoke | `d938c4c5` | iPhone 17 Simulator, iOS 26.5, Maestro | 2026-08-07 | SIMULATOR VERIFIED / BLOCKED | Welcome, required consent, and AI default-off passed with current screenshots. Guest compose correctly failed closed because staging is not deployed; no session or production fallback was created |
 | Focused staging smokes | earlier PR #172 commits | Windows local, fictional adapters | Historical | HISTORICAL EVIDENCE | `STAGING_RUNTIME_SMOKE_PASS`, `STAGING_RESTART_SMOKE_PASS`, `TWO_ACCOUNT_HTTP_SMOKE_PASS`, `SYNTHETIC_COORDINATION_JOURNEY_PASS`, `STAGING_AUTHORIZATION_SMOKE_PASS` |
 | Current-branch Terraform execution | this commit | Windows local after laptop restart | 2026-08-06 | BLOCKED | Terraform binary hung even on `terraform -version`; orphaned process was stopped. PR #174 hosted Terraform proof remains valid only for its earlier commit |
 | Deployed regional staging, managed restoration, simulator, device, TestFlight, production | n/a | n/a | n/a | NOT STARTED | No current qualifying evidence |
