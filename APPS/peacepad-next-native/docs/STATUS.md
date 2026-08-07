@@ -28,8 +28,8 @@ U.S. staging. Its regional mapping, private storage/database defaults, and
 credential-free plans passed locally with a mock AWS provider on PR #174. This
 is not AWS or residency proof. A local PostgreSQL 18.3 custom-format backup and
 restore drill now passes with fictional data, verified migration checksums,
-and cleanup of both temporary databases. The current prerequisite change still
-needs its own hosted run. No cloud deployment or managed restoration occurred.
+and cleanup of both temporary databases. Both hosted workflows pass on PR #176
+for the prerequisite commit. No cloud deployment or managed restoration occurred.
 
 ## Evidence vocabulary
 
@@ -105,6 +105,7 @@ the earlier unverified 53% planning estimate.
 | Dependency audit | this commit | npm audit, app-local lockfile | 2026-08-06 | BLOCKED | 0 critical, 1 transitive high, 11 moderate; high is PostCSS through Expo/Metro and npm proposes an unapproved Expo major upgrade |
 | Hosted native quality gates | `769c0220` | GitHub Actions, PR #175 | 2026-08-06 | HOSTED VERIFIED | Standalone native quality gates completed successfully |
 | Hosted infrastructure static gates | `cb6ca7c6` | GitHub Actions, PR #174 | 2026-08-06 | HOSTED VERIFIED | Secret scan, Terraform formatting, validation, and both regional mock plans completed successfully |
+| Hosted prerequisite and native gates | `b047615d` | GitHub Actions, PR #176 | 2026-08-06 | HOSTED VERIFIED | Infrastructure format/validate/mock-plan and standalone native quality workflows both completed successfully |
 | Focused staging smokes | earlier PR #172 commits | Windows local, fictional adapters | Historical | HISTORICAL EVIDENCE | `STAGING_RUNTIME_SMOKE_PASS`, `STAGING_RESTART_SMOKE_PASS`, `TWO_ACCOUNT_HTTP_SMOKE_PASS`, `SYNTHETIC_COORDINATION_JOURNEY_PASS`, `STAGING_AUTHORIZATION_SMOKE_PASS` |
 | Current-branch Terraform execution | this commit | Windows local after laptop restart | 2026-08-06 | BLOCKED | Terraform binary hung even on `terraform -version`; orphaned process was stopped. PR #174 hosted Terraform proof remains valid only for its earlier commit |
 | Deployed regional staging, managed restoration, simulator, device, TestFlight, production | n/a | n/a | n/a | NOT STARTED | No current qualifying evidence |
