@@ -5,9 +5,10 @@ $ErrorActionPreference = 'Stop'
 $platformRoot = Split-Path -Parent $PSScriptRoot
 $functionPath = Join-Path $platformRoot 'supabase/functions/peacepad-v2-api/index.ts'
 $migrationPath = Join-Path $platformRoot 'supabase/migrations/202608070002_v2_edge_function_boundary.sql'
+$authorizationMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608070003_v2_identity_family_invitation.sql'
 $configPath = Join-Path $platformRoot 'supabase/config.toml'
 
-foreach ($path in @($functionPath, $migrationPath, $configPath)) {
+foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $configPath)) {
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
     throw "Required Supabase staging file is missing: $path"
   }
@@ -15,6 +16,7 @@ foreach ($path in @($functionPath, $migrationPath, $configPath)) {
 
 $function = Get-Content -LiteralPath $functionPath -Raw
 $migration = Get-Content -LiteralPath $migrationPath -Raw
+$authorizationMigration = Get-Content -LiteralPath $authorizationMigrationPath -Raw
 $config = Get-Content -LiteralPath $configPath -Raw
 
 $requiredFunctionPatterns = @(
@@ -54,6 +56,20 @@ if ($migration -notmatch 'grant execute on function public\.peacepad_v2_ready\(\
 }
 if ($migration -notmatch 'revoke all on function public\.peacepad_v2_get_region_binding') {
   throw 'Region-binding RPC lacks an explicit public revoke.'
+}
+foreach ($table in @('identity', 'consent_record', 'family_circle', 'participant_grant', 'family_invitation')) {
+  if ($authorizationMigration -notmatch "create table if not exists peacepad_v2\.$table") {
+    throw "Authorization migration is missing table: $table"
+  }
+  if ($authorizationMigration -notmatch "alter table peacepad_v2\.$table enable row level security") {
+    throw "Authorization migration is missing fail-closed RLS: $table"
+  }
+}
+if ($authorizationMigration -match '(?i)\b(code|invitation_code)\s+text') {
+  throw 'Invitation codes must never be persisted in plaintext.'
+}
+if ($authorizationMigration -notmatch 'code_hash bytea') {
+  throw 'Invitation storage must use a hash.'
 }
 if (
   $config -notmatch '\[functions\.peacepad-v2-api\]' -or
