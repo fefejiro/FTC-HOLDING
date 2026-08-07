@@ -17,3 +17,9 @@ schema_paths = []
 
 [db.seed]
 enabled = false
+
+[functions.peacepad-v2-api]
+# Health and readiness stay public. Protected routes validate the bearer token
+# inside the function so one router can serve both public and authenticated
+# /api/v2 endpoints without trusting caller-supplied identity fields.
+verify_jwt = false

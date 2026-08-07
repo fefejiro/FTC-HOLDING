@@ -31,7 +31,7 @@ Latest staging branch commit: `eb329c27`
 | Supabase Canada/U.S. free staging boundary | LOCAL VERIFIED |
 | Supabase Canadian regional project and boundary schema | DEPLOYED STAGING VERIFIED |
 | Supabase U.S. regional project and boundary schema | DEPLOYED STAGING VERIFIED |
-| Supabase regional API adapters | NOT STARTED |
+| Supabase regional API adapters | LOCAL VERIFIED / DEPLOYMENT BLOCKED BY PROJECT ROLE |
 | Hosted CI | NO CHECKS REPORTED |
 
 This is not a production release. The native client remains a staging/lab

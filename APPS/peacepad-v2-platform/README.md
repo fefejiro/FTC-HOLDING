@@ -23,12 +23,15 @@ infra/terraform/
 scripts/
   validate-infra.ps1
   validate-prerequisites.ps1
+  validate-supabase-edge-function.ps1
+  deploy-supabase-free-staging.ps1
   verify-local-postgres-restoration.ps1
 docs/
   ADR-001-dual-region-aws-foundation.md
   ADR-002-zero-cost-supabase-staging.md
   AWS_STAGING_PREREQUISITES.md
   POSTGRES_RESTORATION_RUNBOOK.md
+  SUPABASE_FREE_STAGING_RUNBOOK.md
 ```
 
 ## Zero-cost staging path
@@ -41,6 +44,7 @@ Validate its safe example configuration with:
 
 ```powershell
 ./scripts/validate-supabase-free-staging.ps1
+./scripts/validate-supabase-edge-function.ps1
 ```
 
 This is fictional staging only. It is not production deployment evidence.
