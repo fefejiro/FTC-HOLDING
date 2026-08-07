@@ -3,7 +3,7 @@
 ## Snapshot
 
 - Snapshot date: 2026-08-06
-- Branch: `feat/peacepad-v2-gate1-regional-foundation`
+- Branch: `feat/peacepad-v2-postgres-contract-hardening`
 - Verified source baseline: `eb329c278e5bb6f43cfa723f55449ebcc6172220`
 - Gate evidence applies to the commit containing this status document
 - App version: `0.0.1`
@@ -53,14 +53,14 @@ mandatory gate passes.
 | Gate | Weight | Implementation | Evidence | Current blocker | Next proof |
 | --- | ---: | ---: | --- | --- | --- |
 | Gate 0: reproducible foundation | 10% | 100% | LOCAL VERIFIED | Hosted CI has not yet executed | Push the path-scoped workflow and retain hosted logs/artifacts |
-| Gate 1: Canada/U.S. platform | 15% | 25% | LOCAL MOCK-PLAN VERIFIED | No AWS accounts, deployment, real PostgreSQL, or restoration proof | Approve account topology and cost controls, then deploy isolated staging for migration/restart/restoration tests |
+| Gate 1: Canada/U.S. platform | 15% | 35% | POSTGRES VERIFIED locally | No AWS accounts, regional deployment, backup restoration, or residency proof | Approve account topology and cost controls, then deploy isolated staging for regional and restoration tests |
 | Gate 2: identity and coordination | 20% | 25% | HISTORICAL EVIDENCE | Current flows use fictional/in-memory adapters | Two fictional accounts against deployed staging, then audited V1 identity migration |
 | Gate 3: records, evidence, exports | 15% | 5% | IMPLEMENTED | Metadata-only attachment intent; bytes and persistence disabled | Encrypted regional object storage, hashing, provenance, timeline, and independently verified export |
 | Gate 4: calls, offline, parity | 15% | 2% | NOT STARTED | No calling service or durable offline database | Regional audio/video call and offline conflict/recovery device suites |
 | Gate 5: trust, accessibility, localization | 10% | 5% | IMPLEMENTED | Baseline only; no independent audit or translations | Security/privacy/accessibility clearance and EN/FR/ES matrix |
 | Gate 6: migration and App Store | 15% | 0% | NOT STARTED | Gates 0–5 are incomplete | Migration/rollback rehearsal, TestFlight soak, sign-offs, and App Review submission |
 
-Weighted implementation estimate: **about 21% production-ready**. This replaces
+Weighted implementation estimate: **about 22% production-ready**. This replaces
 the earlier unverified 53% planning estimate.
 
 ## Feature dashboard
@@ -95,10 +95,12 @@ the earlier unverified 53% planning estimate.
 | Dual-region infrastructure source scan | this commit | Windows local | 2026-08-06 | LOCAL VERIFIED | 26 platform files scanned; no credential patterns found |
 | Terraform formatting and validation | this commit | Windows local, no backend | 2026-08-06 | LOCAL VERIFIED | Terraform 1.15.8; pinned signed AWS provider 6.58.0; module and both staging roots valid |
 | Canadian/U.S. regional plans | this commit | Terraform mock provider | 2026-08-06 | LOCAL MOCK-PLAN VERIFIED | `ca-central-1` and `us-east-2` plans passed 2/2; no AWS credentials or API calls |
-| PostgreSQL lifecycle contract | this commit | Windows local, mocked clients | 2026-08-06 | LOCAL VERIFIED | A new client is required after close; migrations use a transaction-scoped advisory lock, SHA-256 checksums, and rollback on drift; 24 suites and 141 tests pass |
+| PostgreSQL lifecycle contract | this commit | Windows local plus loopback PostgreSQL | 2026-08-06 | POSTGRES VERIFIED | A new client is required after close; migrations use a transaction-scoped advisory lock, SHA-256 checksums, and rollback on drift; 25 suites and 144 tests pass |
+| Real PostgreSQL migration/restart | this commit | PostgreSQL 18.3, loopback-only D: cluster | 2026-08-06 | POSTGRES VERIFIED | Fictional `peacepad_v2_staging`; two distinct `pg.Pool` lifecycles; 2 migrations persisted with valid SHA-256 checksums; focused tests 9/9 |
+| Dependency audit | this commit | npm audit, app-local lockfile | 2026-08-06 | BLOCKED | 0 critical, 1 transitive high, 11 moderate; high is PostCSS through Expo/Metro and npm proposes an unapproved Expo major upgrade |
 | Hosted path-scoped CI | n/a | GitHub Actions | 2026-08-06 | BLOCKED | New workflow cannot execute for a pull request until it exists on the default branch; hosted checks are blocked before execution |
 | Focused staging smokes | earlier PR #172 commits | Windows local, fictional adapters | Historical | HISTORICAL EVIDENCE | `STAGING_RUNTIME_SMOKE_PASS`, `STAGING_RESTART_SMOKE_PASS`, `TWO_ACCOUNT_HTTP_SMOKE_PASS`, `SYNTHETIC_COORDINATION_JOURNEY_PASS`, `STAGING_AUTHORIZATION_SMOKE_PASS` |
-| Real PostgreSQL, deployed staging, simulator, device, TestFlight, production | n/a | n/a | n/a | NOT STARTED | No current qualifying evidence |
+| Deployed regional staging, restoration, simulator, device, TestFlight, production | n/a | n/a | n/a | NOT STARTED | No current qualifying evidence |
 
 ## Mandatory release gates
 
