@@ -30,7 +30,7 @@ Latest staging branch commit: `eb329c27`
 | AWS Canada/U.S. staging configuration | DEFERRED - funding unavailable |
 | Supabase Canada/U.S. free staging boundary | LOCAL VERIFIED |
 | Supabase Canadian regional project and boundary schema | DEPLOYED STAGING VERIFIED |
-| Supabase U.S. regional project | BLOCKED - free active-project limit |
+| Supabase U.S. regional project and boundary schema | DEPLOYED STAGING VERIFIED |
 | Supabase regional API adapters | NOT STARTED |
 | Hosted CI | NO CHECKS REPORTED |
 
