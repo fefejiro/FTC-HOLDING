@@ -67,7 +67,10 @@ jobs:
 
       - name: Type-check Supabase Edge Function
         shell: bash
-        run: deno check APPS/peacepad-v2-platform/supabase/functions/peacepad-v2-api/index.ts
+        run: >-
+          deno check
+          --config APPS/peacepad-v2-platform/deno.json
+          APPS/peacepad-v2-platform/supabase/functions/peacepad-v2-api/index.ts
 
       - name: Apply and verify Supabase transactions
         shell: bash
