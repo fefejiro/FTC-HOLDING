@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Image, StyleSheet, Text, TextInput, View } from "react-native";
-import type { PeacePadCoordinationApi } from "../api/CoordinationApi";
+import type { CreatedInvitation, PeacePadCoordinationApi } from "../api/CoordinationApi";
 import { createStagingCoordinationClient } from "../staging/StagingCoordinationClient";
 import type { CoordinationRuntime } from "../coordination/CoordinationState";
 import { CoordinationStateProvider } from "../coordination/CoordinationState";
@@ -282,6 +282,11 @@ function FamilySetup({ accountDeletion, api, onReload, onSignOut, verified }: {
             }
             onReload();
           })} />
+          <LabButton disabled={busy} label="Decline invitation" onPress={() => void run(async () => {
+            await api.declineInvitation(preview.invitationId, runtimeWriteContext(verified, preview.version));
+            setPreview(undefined);
+            setInvitationCode("");
+          })} variant="secondary" />
         </View>
       ) : <LabButton disabled={busy || invitationCode.length !== 6} label="Review invitation" onPress={() => void run(async () => setPreview(await api.resolveInvitation(invitationCode)))} variant="secondary" />}
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
@@ -300,7 +305,7 @@ function ConversationSetup({ accountDeletion, api, membership, onReload, onSignO
   verified: VerifiedSessionContext;
 }) {
   const [busy, setBusy] = useState(false);
-  const [code, setCode] = useState<string>();
+  const [createdInvitation, setCreatedInvitation] = useState<CreatedInvitation>();
   const [error, setError] = useState<string>();
   const createInvitation = async () => {
     setBusy(true);
@@ -312,7 +317,7 @@ function ConversationSetup({ accountDeletion, api, membership, onReload, onSignO
         invitedRole: "parent",
         permissions: ["message.write", "calendar.write"]
       }, runtimeWriteContext(verified));
-      setCode(created.code);
+      setCreatedInvitation(created);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "PeacePad could not create an invitation.");
     } finally { setBusy(false); }
@@ -322,8 +327,17 @@ function ConversationSetup({ accountDeletion, api, membership, onReload, onSignO
       <Brand />
       <Text style={styles.title}>Invite your co-parent</Text>
       <Text style={styles.body}>{membership.familyName} is ready. Share a single-use code, then check again after it is accepted.</Text>
-      {code ? <View style={styles.codeCard}><Text accessibilityLabel="Invitation code" selectable style={styles.code}>{code}</Text><Text style={styles.body}>Expires in 72 hours. Do not use real family information in staging.</Text></View> : null}
-      <LabButton disabled={busy} label={code ? "Create a new code" : "Create invitation code"} onPress={() => void createInvitation()} />
+      {createdInvitation ? <View style={styles.codeCard}><Text accessibilityLabel="Invitation code" selectable style={styles.code}>{createdInvitation.code}</Text><Text style={styles.body}>Expires in 72 hours. Do not use real family information in staging.</Text></View> : null}
+      {createdInvitation ? <LabButton disabled={busy} label="Revoke invitation" onPress={() => void (async () => {
+        setBusy(true);
+        setError(undefined);
+        try {
+          await api.revokeInvitation(createdInvitation.invitation.id, runtimeWriteContext(verified, createdInvitation.invitation.version));
+          setCreatedInvitation(undefined);
+        } catch (cause) {
+          setError(cause instanceof Error ? cause.message : "PeacePad could not revoke the invitation.");
+        } finally { setBusy(false); }
+      })()} variant="secondary" /> : <LabButton disabled={busy} label="Create invitation code" onPress={() => void createInvitation()} />}
       <LabButton disabled={busy} label="Check connection" onPress={onReload} variant="secondary" />
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
       <LabButton disabled={busy} label="Sign out" onPress={() => void onSignOut()} variant="secondary" />

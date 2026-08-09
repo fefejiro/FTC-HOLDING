@@ -230,12 +230,65 @@ describe("PeacePadStagingRuntime gates", () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
-  it("creates a scoped single-use invitation for a family without a conversation", async () => {
+  it("declines a reviewed invitation without creating family access", async () => {
     (useSupabaseSession as jest.Mock).mockReturnValue(authValue());
-    const createInvitation = jest.fn(async () => ({ code: "PP2CA1" }));
+    const invitationId = "66666666-6666-4666-8666-666666666666";
+    const resolveInvitation = jest.fn(async () => ({
+      invitationId,
+      version: 3,
+      inviterDisplayName: "Fictional Parent A",
+      familyDisplayName: "Fictional Family",
+      invitedRole: "parent",
+      permissions: ["message.write", "calendar.write"],
+      expiresAt: "2026-08-12T12:00:00.000Z"
+    }));
+    const declineInvitation = jest.fn(async () => undefined);
+    (createStagingCoordinationClient as jest.Mock).mockReturnValue({ declineInvitation, resolveInvitation });
+
+    render(
+      <PeacePadStagingRuntime environment={environment} fetcher={sessionResponse({ ...valid, memberships: [] })} supabase={supabase}>
+        ready
+      </PeacePadStagingRuntime>
+    );
+    await waitFor(() => expect(screen.getByText("Create or join a family")).toBeTruthy());
+    fireEvent.changeText(screen.getByLabelText("Invitation code"), "AB12C3");
+    fireEvent.press(screen.getByRole("button", { name: "Review invitation" }));
+    await waitFor(() => expect(screen.getByText("Fictional Family")).toBeTruthy());
+    fireEvent.press(screen.getByRole("button", { name: "Decline invitation" }));
+
+    await waitFor(() => expect(declineInvitation).toHaveBeenCalledWith(
+      invitationId,
+      expect.objectContaining({ expectedVersion: 3 })
+    ));
+    expect(screen.queryByText("Fictional Family")).toBeNull();
+  });
+
+  it("creates and revokes a scoped single-use invitation for a family without a conversation", async () => {
+    (useSupabaseSession as jest.Mock).mockReturnValue(authValue());
+    const invitationId = "99999999-9999-4999-8999-999999999999";
+    const createInvitation = jest.fn(async () => ({
+      code: "PP2CA1",
+      deepLink: "peacepad://invite/PP2CA1",
+      invitation: {
+        acceptedParticipantGrantId: null,
+        expiresAt: "2026-08-12T12:00:00.000Z",
+        familyCircleId: FAMILY,
+        id: invitationId,
+        invitedByIdentityId: IDENTITY,
+        invitedRole: "parent",
+        permissions: ["message.write", "calendar.write"],
+        provenance: { createdAt: "2026-08-09T12:00:00.000Z", createdBy: { identityId: IDENTITY, sessionId: SESSION }, source: "app" },
+        region: "ca",
+        schemaVersion: "2.0",
+        status: "pending",
+        version: 1
+      }
+    }));
+    const revokeInvitation = jest.fn(async () => undefined);
     (createStagingCoordinationClient as jest.Mock).mockReturnValue({
       createInvitation,
-      listConversations: jest.fn(async () => [])
+      listConversations: jest.fn(async () => []),
+      revokeInvitation
     });
 
     render(
@@ -252,6 +305,13 @@ describe("PeacePadStagingRuntime gates", () => {
       invitedRole: "parent",
       permissions: ["message.write", "calendar.write"]
     }, expect.objectContaining({ actor: { identityId: IDENTITY, sessionId: SESSION }, region: "ca" }));
+    fireEvent.press(screen.getByRole("button", { name: "Revoke invitation" }));
+    await waitFor(() => expect(revokeInvitation).toHaveBeenCalledWith(
+      invitationId,
+      expect.objectContaining({ expectedVersion: 1 })
+    ));
+    expect(screen.queryByText("PP2CA1")).toBeNull();
+    expect(screen.getByRole("button", { name: "Create invitation code" })).toBeTruthy();
   });
 
   it("injects the verified runtime only after an authorized conversation is discovered", async () => {
