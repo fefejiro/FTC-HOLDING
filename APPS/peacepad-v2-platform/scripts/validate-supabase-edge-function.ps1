@@ -15,10 +15,11 @@ $messageCheckMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608
 $sessionMembershipMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090007_v2_session_memberships.sql'
 $sessionIdentityVersionMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090008_v2_session_identity_version.sql'
 $authCleanupMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090009_v2_auth_cleanup_outbox.sql'
+$deletionMinimizationMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090010_v2_account_deletion_minimization.sql'
 $authCleanupRunnerPath = Join-Path $platformRoot 'scripts/run-auth-cleanup.ps1'
 $configPath = Join-Path $platformRoot 'supabase/config.toml'
 
-foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $authCleanupRunnerPath, $configPath)) {
+foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $authCleanupRunnerPath, $configPath)) {
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
     throw "Required Supabase staging file is missing: $path"
   }
@@ -36,6 +37,7 @@ $messageCheckMigration = Get-Content -LiteralPath $messageCheckMigrationPath -Ra
 $sessionMembershipMigration = Get-Content -LiteralPath $sessionMembershipMigrationPath -Raw
 $sessionIdentityVersionMigration = Get-Content -LiteralPath $sessionIdentityVersionMigrationPath -Raw
 $authCleanupMigration = Get-Content -LiteralPath $authCleanupMigrationPath -Raw
+$deletionMinimizationMigration = Get-Content -LiteralPath $deletionMinimizationMigrationPath -Raw
 $authCleanupRunner = Get-Content -LiteralPath $authCleanupRunnerPath -Raw
 $config = Get-Content -LiteralPath $configPath -Raw
 
@@ -159,6 +161,21 @@ foreach ($pattern in @(
 }
 if ($authCleanupMigration -match '(?i)(email|message_body|access_token|refresh_token|provider_error)') {
   throw 'Auth cleanup outbox must not retain identity content, tokens, or provider error text.'
+}
+foreach ($pattern in @(
+  'create or replace function public\.peacepad_v2_delete_account',
+  'code_hash = digest',
+  'delete from peacepad_v2\.invitation_attempt',
+  'delete from peacepad_v2\.region_binding',
+  "family_name = 'Deleted family'",
+  "display_name = 'Deleted account'"
+)) {
+  if ($deletionMinimizationMigration -notmatch $pattern) {
+    throw "Deletion minimization migration is missing required boundary: $pattern"
+  }
+}
+if ($deletionMinimizationMigration -match "code_hash\s*=\s*p_") {
+  throw 'Account deletion must not retain or reuse caller-provided invitation code material.'
 }
 if ($function -match 'candidate\.status\s*===\s*404') {
   throw 'A generic HTTP 404 must not be treated as proof that an Auth principal is absent.'

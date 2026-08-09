@@ -28,6 +28,8 @@ declare
   cleanup_result jsonb;
   first_cleanup_lease uuid;
   invitation_hash bytea := decode(repeat('ab', 32), 'hex');
+  deletion_invitation_id uuid := '10000000-0000-0000-0000-000000000099';
+  deletion_invitation_hash bytea := decode(repeat('cd', 32), 'hex');
 begin
   insert into auth.users (id) values (parent_a), (parent_b) on conflict do nothing;
 
@@ -239,12 +241,28 @@ begin
   exception when insufficient_privilege then null;
   end;
 
+  insert into peacepad_v2.family_invitation (
+    invitation_id, family_id, region, created_by, code_hash, invited_role,
+    permissions, expires_at
+  ) values (
+    deletion_invitation_id, created_family_id, 'ca', parent_b,
+    deletion_invitation_hash, 'caregiver', array['calendar'], now() + interval '1 day'
+  );
+  insert into peacepad_v2.invitation_attempt (
+    invitation_attempt_id, identity_id, region, code_hash
+  ) values (
+    gen_random_uuid(), parent_b, 'ca', deletion_invitation_hash
+  );
+
   deletion_result := public.peacepad_v2_delete_account(parent_b, 'ca', 1, 'delete-parent-b-account', 2);
   if deletion_result ->> 'status' <> 'deleted' then
     raise exception 'Account deletion did not return deleted status.';
   end if;
   if exists (select 1 from public.peacepad_v2_get_region_binding(parent_b)) then
     raise exception 'Deleted identity retained an active session region binding.';
+  end if;
+  if exists (select 1 from peacepad_v2.region_binding where identity_id = parent_b) then
+    raise exception 'Deleted identity retained redundant regional assignment metadata.';
   end if;
   if exists (select 1 from public.peacepad_v2_get_session_binding(parent_b)) then
     raise exception 'Deleted identity retained a versioned session binding.';
@@ -260,6 +278,22 @@ begin
     where identity_id = parent_b
   ) then
     raise exception 'Deleted identity retained a Message Check preference.';
+  end if;
+  if exists (
+    select 1 from peacepad_v2.invitation_attempt where identity_id = parent_b
+  ) then
+    raise exception 'Deleted identity retained invitation-attempt rate-limit metadata.';
+  end if;
+  if not exists (
+    select 1 from peacepad_v2.family_invitation
+    where invitation_id = deletion_invitation_id
+      and status = 'revoked'
+      and revoked_at is not null
+      and code_hash <> deletion_invitation_hash
+      and failed_attempts = 0
+      and last_attempt_at is null
+  ) then
+    raise exception 'Deleted identity retained usable invitation code material.';
   end if;
   if not exists (
     select 1 from peacepad_v2.audit_event
