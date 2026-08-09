@@ -6,6 +6,7 @@ import { colors, spacing, typography, usesLargeTextLayout } from "../theme";
 import { useRecordsState } from "../records/RecordsState";
 import type { AttachmentMediaType } from "../domain/v2";
 import { useOptionalSupabaseSession } from "../session/SupabaseSessionProvider";
+import { useOptionalStagingAccountActions } from "../session/StagingAccountActions";
 import { useCoordinationState, type CalendarView } from "./CoordinationState";
 
 export type CoordinationScreen = "home" | "messages" | "calendar" | "invite" | "records" | "more";
@@ -696,6 +697,8 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
 
 export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
   const stagingSession = useOptionalSupabaseSession();
+  const accountActions = useOptionalStagingAccountActions();
+  const [confirmDelete, setConfirmDelete] = useState(false);
   return (
     <View style={styles.stack}>
       <Text style={styles.title}>More</Text>
@@ -714,6 +717,16 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
       {stagingSession ? <Pressable accessibilityRole="button" onPress={() => void stagingSession.signOut()} style={styles.actionCard}>
         <Text style={styles.actionTitle}>Sign out</Text>
         <Text style={styles.caption}>Remove this fictional staging session from this device.</Text>
+      </Pressable> : null}
+      {accountActions ? confirmDelete ? <View style={styles.confirmCard}>
+        <Text style={styles.actionTitle}>Delete this staging account?</Text>
+        <Text style={styles.caption}>This permanently deletes the fictional staging identity and revokes its family access. This cannot be undone.</Text>
+        <LabButton disabled={accountActions.deleting} label={accountActions.deleting ? "Deleting account..." : "Delete account permanently"} onPress={() => void accountActions.deleteAccount().catch(() => undefined)} />
+        <LabButton disabled={accountActions.deleting} label="Cancel" onPress={() => setConfirmDelete(false)} variant="secondary" />
+        {accountActions.error ? <Text accessibilityRole="alert" style={styles.error}>{accountActions.error}</Text> : null}
+      </View> : <Pressable accessibilityRole="button" onPress={() => setConfirmDelete(true)} style={styles.actionCard}>
+        <Text style={styles.actionTitle}>Delete staging account</Text>
+        <Text style={styles.caption}>Permanently remove this fictional account and its access.</Text>
       </Pressable> : null}
     </View>
   );

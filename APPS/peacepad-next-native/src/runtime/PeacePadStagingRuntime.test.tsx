@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react-nativ
 import { createStagingCoordinationClient } from "../staging/StagingCoordinationClient";
 import { useSupabaseSession } from "../session/SupabaseSessionProvider";
 import { PeacePadStagingRuntime, validateVerifiedSessionContext } from "./PeacePadStagingRuntime";
+import { useOptionalStagingAccountActions } from "../session/StagingAccountActions";
 
 jest.mock("../session/SupabaseSessionProvider", () => ({ useSupabaseSession: jest.fn() }));
 jest.mock("../staging/StagingCoordinationClient", () => ({ createStagingCoordinationClient: jest.fn() }));
@@ -47,7 +48,7 @@ function sessionResponse(value: unknown = valid, ok = true) {
 }
 
 const valid = {
-  actor: { identityId: IDENTITY, sessionId: SESSION, displayName: "Fictional Parent" },
+  actor: { identityId: IDENTITY, sessionId: SESSION, displayName: "Fictional Parent", version: 3 },
   memberships: [{
     familyCircleId: FAMILY,
     participantGrantId: GRANT,
@@ -72,6 +73,8 @@ describe("validateVerifiedSessionContext", () => {
     ["identity mismatch", { ...valid, actor: { ...valid.actor, identityId: "55555555-5555-4555-8555-555555555555" } }, "ca"],
     ["invalid identity", { ...valid, actor: { ...valid.actor, identityId: "identity-current" } }, "ca"],
     ["invalid session", { ...valid, actor: { ...valid.actor, sessionId: "device-session" } }, "ca"],
+    ["missing identity version", { ...valid, actor: { ...valid.actor, version: undefined } }, "ca"],
+    ["invalid identity version", { ...valid, actor: { ...valid.actor, version: 0 } }, "ca"],
     ["region mismatch", { ...valid, region: "us" }, "ca"],
     ["invalid membership", { ...valid, memberships: [{ ...valid.memberships[0], familyCircleId: "family-current" }] }, "ca"],
     ["invalid grant", { ...valid, memberships: [{ ...valid.memberships[0], participantGrantId: "grant-current" }] }, "ca"],
@@ -245,6 +248,120 @@ describe("PeacePadStagingRuntime gates", () => {
     render(<PeacePadStagingRuntime environment={environment} fetcher={sessionResponse()} supabase={supabase}><Text>authorized child</Text></PeacePadStagingRuntime>);
     await waitFor(() => expect(screen.getByText("authorized child")).toBeTruthy());
     expect(createStagingCoordinationClient).toHaveBeenCalled();
+  });
+
+  it("deletes the verified staging account with optimistic concurrency and clears the local session", async () => {
+    const auth = authValue();
+    (useSupabaseSession as jest.Mock).mockReturnValue(auth);
+    const deleteAccount = jest.fn(async () => ({
+      identityId: IDENTITY,
+      region: "ca",
+      status: "deleted",
+      deletedAt: "2026-08-09T12:00:00.000Z",
+      version: 4,
+      authIdentityDeleted: true,
+      refreshSessionsRevoked: true,
+      authCleanupPending: false
+    }));
+    (createStagingCoordinationClient as jest.Mock).mockReturnValue({
+      deleteAccount,
+      listConversations: jest.fn(async () => [{ id: CONVERSATION, status: "active" }]),
+      listCalendarLayers: jest.fn(async () => []),
+      listScheduleEvents: jest.fn(async () => []),
+      listMessages: jest.fn(async () => []),
+      getMessageCheckPreference: jest.fn(async () => ({
+        aiAssistanceEnabled: false,
+        conversationId: CONVERSATION,
+        enabled: false,
+        id: "66666666-6666-4666-8666-666666666666",
+        identityId: IDENTITY,
+        provenance: { createdAt: "2026-08-09T12:00:00.000Z", createdBy: { identityId: IDENTITY, sessionId: SESSION }, source: "app" },
+        region: "ca",
+        schemaVersion: "2.0",
+        version: 0
+      }))
+    });
+
+    function DeleteProbe() {
+      const actions = useOptionalStagingAccountActions();
+      return <Text accessibilityRole="button" onPress={() => void actions?.deleteAccount()}>delete now</Text>;
+    }
+
+    render(<PeacePadStagingRuntime environment={environment} fetcher={sessionResponse()} supabase={supabase}><DeleteProbe /></PeacePadStagingRuntime>);
+    await waitFor(() => expect(screen.getByText("delete now")).toBeTruthy());
+    fireEvent.press(screen.getByText("delete now"));
+    fireEvent.press(screen.getByText("delete now"));
+    await waitFor(() => expect(deleteAccount).toHaveBeenCalledTimes(1));
+    expect(deleteAccount).toHaveBeenCalledWith(expect.objectContaining({
+      actor: { identityId: IDENTITY, sessionId: SESSION },
+      expectedVersion: 3,
+      region: "ca",
+      schemaVersion: "2.0"
+    }));
+    await waitFor(() => expect(auth.signOut).toHaveBeenCalledTimes(1));
+  });
+
+  it("allows an authenticated account with no family to delete after explicit confirmation", async () => {
+    const auth = authValue();
+    (useSupabaseSession as jest.Mock).mockReturnValue(auth);
+    const deleteAccount = jest.fn(async () => ({
+      identityId: IDENTITY,
+      region: "ca",
+      status: "deleted",
+      deletedAt: "2026-08-09T12:00:00.000Z",
+      version: 4,
+      authIdentityDeleted: true,
+      refreshSessionsRevoked: true,
+      authCleanupPending: false
+    }));
+    (createStagingCoordinationClient as jest.Mock).mockReturnValue({ deleteAccount });
+    render(<PeacePadStagingRuntime environment={environment} fetcher={sessionResponse({ ...valid, memberships: [] })} supabase={supabase}>ready</PeacePadStagingRuntime>);
+    await waitFor(() => expect(screen.getByText("Create or join a family")).toBeTruthy());
+    fireEvent.press(screen.getByRole("button", { name: "Delete staging account" }));
+    expect(deleteAccount).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByRole("button", { name: "Delete account permanently" }));
+    await waitFor(() => expect(deleteAccount).toHaveBeenCalledWith(expect.objectContaining({ expectedVersion: 3 })));
+    await waitFor(() => expect(auth.signOut).toHaveBeenCalledTimes(1));
+  });
+
+  it("does not sign out when the verified deletion request fails", async () => {
+    const auth = authValue();
+    (useSupabaseSession as jest.Mock).mockReturnValue(auth);
+    const deleteAccount = jest.fn(async () => { throw new Error("PeacePad could not verify the account deletion receipt."); });
+    (createStagingCoordinationClient as jest.Mock).mockReturnValue({ deleteAccount });
+    render(<PeacePadStagingRuntime environment={environment} fetcher={sessionResponse({ ...valid, memberships: [] })} supabase={supabase}>ready</PeacePadStagingRuntime>);
+    await waitFor(() => expect(screen.getByText("Create or join a family")).toBeTruthy());
+
+    fireEvent.press(screen.getByRole("button", { name: "Delete staging account" }));
+    fireEvent.press(screen.getByRole("button", { name: "Delete account permanently" }));
+
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("PeacePad could not verify the account deletion receipt."));
+    expect(auth.signOut).not.toHaveBeenCalled();
+  });
+
+  it("allows an authenticated account without a conversation to delete after explicit confirmation", async () => {
+    const auth = authValue();
+    (useSupabaseSession as jest.Mock).mockReturnValue(auth);
+    const deleteAccount = jest.fn(async () => ({
+      identityId: IDENTITY,
+      region: "ca",
+      status: "deleted",
+      deletedAt: "2026-08-09T12:00:00.000Z",
+      version: 4,
+      authIdentityDeleted: true,
+      refreshSessionsRevoked: true,
+      authCleanupPending: false
+    }));
+    (createStagingCoordinationClient as jest.Mock).mockReturnValue({
+      deleteAccount,
+      listConversations: jest.fn(async () => [])
+    });
+    render(<PeacePadStagingRuntime environment={environment} fetcher={sessionResponse()} supabase={supabase}>ready</PeacePadStagingRuntime>);
+    await waitFor(() => expect(screen.getByText("Invite your co-parent")).toBeTruthy());
+    fireEvent.press(screen.getByRole("button", { name: "Delete staging account" }));
+    fireEvent.press(screen.getByRole("button", { name: "Delete account permanently" }));
+    await waitFor(() => expect(deleteAccount).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(auth.signOut).toHaveBeenCalledTimes(1));
   });
 
   it("fails closed when the token or verified session is unavailable", async () => {

@@ -12,9 +12,11 @@ $accountDeletionMigrationPath = Join-Path $platformRoot 'supabase/migrations/202
 $messagingMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090004_v2_persistent_messaging.sql'
 $calendarMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090005_v2_persistent_calendar.sql'
 $messageCheckMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090006_v2_message_check.sql'
+$sessionMembershipMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090007_v2_session_memberships.sql'
+$sessionIdentityVersionMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090008_v2_session_identity_version.sql'
 $configPath = Join-Path $platformRoot 'supabase/config.toml'
 
-foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $configPath)) {
+foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $configPath)) {
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
     throw "Required Supabase staging file is missing: $path"
   }
@@ -29,6 +31,8 @@ $accountDeletionMigration = Get-Content -LiteralPath $accountDeletionMigrationPa
 $messagingMigration = Get-Content -LiteralPath $messagingMigrationPath -Raw
 $calendarMigration = Get-Content -LiteralPath $calendarMigrationPath -Raw
 $messageCheckMigration = Get-Content -LiteralPath $messageCheckMigrationPath -Raw
+$sessionMembershipMigration = Get-Content -LiteralPath $sessionMembershipMigrationPath -Raw
+$sessionIdentityVersionMigration = Get-Content -LiteralPath $sessionIdentityVersionMigrationPath -Raw
 $config = Get-Content -LiteralPath $configPath -Raw
 
 $requiredFunctionPatterns = @(
@@ -37,7 +41,7 @@ $requiredFunctionPatterns = @(
   'PEACEPAD_FUNCTION_REGION',
   'x-peacepad-region',
   'peacepad_v2_ready',
-  'peacepad_v2_get_region_binding',
+  'peacepad_v2_get_session_binding',
   '/api/v2/session',
   '/api/v2/session/bootstrap',
   '/api/v2/consents',
@@ -60,6 +64,7 @@ $requiredFunctionPatterns = @(
   'peacepad_v2_set_message_check',
   'peacepad_v2_authorize_message_preview',
   'auth.admin.signOut',
+  'auth.admin.deleteUser',
   'idempotency-key',
   'if-match',
   'x-peacepad-schema-version',
@@ -112,6 +117,20 @@ if ($authorizationMigration -match '(?i)\b(code|invitation_code)\s+text') {
 }
 if ($authorizationMigration -notmatch 'code_hash bytea') {
   throw 'Invitation storage must use a hash.'
+}
+foreach ($pattern in @(
+  'create or replace function public\.peacepad_v2_get_session_binding',
+  'identity\.version',
+  'identity\.deleted_at is null',
+  'revoke all on function public\.peacepad_v2_get_session_binding',
+  'grant execute on function public\.peacepad_v2_get_session_binding\(uuid\) to service_role'
+)) {
+  if ($sessionIdentityVersionMigration -notmatch $pattern) {
+    throw "Session identity-version migration is missing required boundary: $pattern"
+  }
+}
+if ($function -notmatch 'version: binding\.identity_version') {
+  throw 'Authenticated session response must expose the active identity concurrency version.'
 }
 if ($authorizationMigration -match 'professional_read_only') {
   throw 'Persisted participant roles must match the public v2 professional role contract.'

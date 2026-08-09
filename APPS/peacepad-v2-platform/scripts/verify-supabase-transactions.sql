@@ -30,6 +30,9 @@ begin
 
   perform public.peacepad_v2_bootstrap_identity(parent_a, 'ca', 'Alex Example', 'bootstrap-parent-a', 2);
   perform public.peacepad_v2_bootstrap_identity(parent_b, 'ca', 'Jordan Example', 'bootstrap-parent-b', 2);
+  if (select identity_version from public.peacepad_v2_get_session_binding(parent_b)) <> 1 then
+    raise exception 'Verified session binding did not expose the active identity version.';
+  end if;
   perform public.peacepad_v2_record_consent(parent_a, 'ca', 'terms', true, '2026-08', 'consent-parent-a-terms', 2);
 
   family_result := public.peacepad_v2_create_family(parent_a, 'ca', 'Example Family', 'create-example-family', 2);
@@ -238,6 +241,9 @@ begin
   end if;
   if exists (select 1 from public.peacepad_v2_get_region_binding(parent_b)) then
     raise exception 'Deleted identity retained an active session region binding.';
+  end if;
+  if exists (select 1 from public.peacepad_v2_get_session_binding(parent_b)) then
+    raise exception 'Deleted identity retained a versioned session binding.';
   end if;
   if exists (
     select 1 from peacepad_v2.participant_grant

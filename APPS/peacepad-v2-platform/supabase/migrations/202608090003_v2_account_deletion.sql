@@ -37,9 +37,12 @@ declare
 begin
   existing_result := peacepad_v2.prior_write_result(p_identity_id, p_idempotency_key);
   if existing_result is not null then return existing_result; end if;
-  if p_schema_version <> 2 then raise exception using errcode = '22023', message = 'SCHEMA_MISMATCH'; end if;
-  if char_length(p_idempotency_key) not between 8 and 160 then raise exception using errcode = '22023', message = 'IDEMPOTENCY_KEY_INVALID'; end if;
-  if p_expected_version < 1 then raise exception using errcode = '22023', message = 'EXPECTED_VERSION_INVALID'; end if;
+  if p_identity_id is null or p_region is null or p_region not in ('ca', 'us') then
+    raise exception using errcode = '22023', message = 'INVALID_REQUEST';
+  end if;
+  if p_schema_version is null or p_schema_version <> 2 then raise exception using errcode = '22023', message = 'SCHEMA_MISMATCH'; end if;
+  if p_idempotency_key is null or char_length(p_idempotency_key) not between 8 and 160 then raise exception using errcode = '22023', message = 'IDEMPOTENCY_KEY_INVALID'; end if;
+  if p_expected_version is null or p_expected_version < 1 then raise exception using errcode = '22023', message = 'EXPECTED_VERSION_INVALID'; end if;
 
   select * into account
   from peacepad_v2.identity

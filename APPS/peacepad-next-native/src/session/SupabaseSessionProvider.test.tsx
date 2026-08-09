@@ -9,6 +9,15 @@ function Probe() {
   return <Text testID="status">{`${session.status}:${session.session?.access_token ?? "none"}`}</Text>;
 }
 
+function SignOutProbe() {
+  const session = useSupabaseSession();
+  return (
+    <Text testID="sign-out" onPress={() => void session.signOut()}>
+      {`${session.status}:${session.session?.access_token ?? "none"}:${session.error ?? "no-error"}`}
+    </Text>
+  );
+}
+
 function fakeClient(initialSession: any = null) {
   let currentSession = initialSession;
   let listener: ((event: string, session: any) => void) | undefined;
@@ -21,7 +30,10 @@ function fakeClient(initialSession: any = null) {
       return { data: { subscription: { unsubscribe } } };
     }),
     signInWithPassword: jest.fn(async () => ({ data: { session: initialSession }, error: null })),
-    signOut: jest.fn(async () => { currentSession = null; return { error: null }; }),
+    signOut: jest.fn(async (_options?: { scope: "local" }) => {
+      currentSession = null;
+      return { error: null as Error | null };
+    }),
     startAutoRefresh: jest.fn(),
     stopAutoRefresh: jest.fn()
   };
@@ -52,6 +64,35 @@ describe("SupabaseSessionProvider", () => {
     await waitFor(() => expect(screen.getByTestId("status").props.children).toBe("ready:token-a"));
     await act(async () => fake.emit("SIGNED_OUT", null));
     expect(screen.getByTestId("status").props.children).toBe("signed-out:none");
+  });
+
+  it("removes local authorization before the SDK sign-out operation resolves", async () => {
+    const current = { access_token: "token-a", expires_at: Math.floor(Date.now() / 1000) + 3600, user: { id: "user-a" } };
+    const fake = fakeClient(current);
+    let resolveSignOut!: (value: { error: null }) => void;
+    fake.auth.signOut.mockImplementation(() => new Promise((resolve) => { resolveSignOut = resolve; }));
+    render(<SupabaseSessionProvider client={fake.client}><SignOutProbe /></SupabaseSessionProvider>);
+    await waitFor(() => expect(screen.getByTestId("sign-out")).toHaveTextContent("ready:token-a:no-error"));
+
+    act(() => screen.getByTestId("sign-out").props.onPress());
+    await waitFor(() => expect(screen.getByTestId("sign-out")).toHaveTextContent("signed-out:none:no-error"));
+    expect(fake.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
+
+    await act(async () => resolveSignOut({ error: null }));
+  });
+
+  it("remains signed out and reports safe cleanup failure when local SDK cleanup fails", async () => {
+    const current = { access_token: "token-a", expires_at: Math.floor(Date.now() / 1000) + 3600, user: { id: "user-a" } };
+    const fake = fakeClient(current);
+    fake.auth.signOut.mockResolvedValue({ error: new Error("private cleanup detail") });
+    render(<SupabaseSessionProvider client={fake.client}><SignOutProbe /></SupabaseSessionProvider>);
+    await waitFor(() => expect(screen.getByTestId("sign-out")).toHaveTextContent("ready:token-a:no-error"));
+
+    await act(async () => screen.getByTestId("sign-out").props.onPress());
+    await waitFor(() => expect(screen.getByTestId("sign-out")).toHaveTextContent(
+      "signed-out:none:This device was signed out, but the remote session could not be closed."
+    ));
+    expect(fake.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
   });
 
   it("unsubscribes from auth events on unmount", () => {

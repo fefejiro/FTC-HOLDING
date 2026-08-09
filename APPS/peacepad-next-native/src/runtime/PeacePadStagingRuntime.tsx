@@ -7,6 +7,7 @@ import { CoordinationStateProvider } from "../coordination/CoordinationState";
 import { LabButton } from "../components/LabButton";
 import type { PeacePadEnvironmentConfig, PeacePadSupabaseConfig } from "../config/environment";
 import { useSupabaseSession } from "../session/SupabaseSessionProvider";
+import { StagingAccountActionsProvider } from "../session/StagingAccountActions";
 import { createWriteContext, type InvitationPreview } from "../domain/v2";
 import { colors, spacing, typography } from "../theme";
 
@@ -22,7 +23,7 @@ type Membership = Readonly<{
 }>;
 
 type VerifiedSessionContext = Readonly<{
-  actor: { identityId: string; sessionId: string; displayName: string | null };
+  actor: { identityId: string; sessionId: string; displayName: string | null; version: number };
   memberships: readonly Membership[];
   region: "ca" | "us";
   schemaVersion: "2.0";
@@ -60,6 +61,9 @@ export function validateVerifiedSessionContext(
     throw new Error("The staging identity could not be verified.");
   }
   if (!UUID_PATTERN.test(candidate.actor.sessionId)) throw new Error("The staging session context is incomplete.");
+  if (!Number.isInteger(candidate.actor.version) || candidate.actor.version < 1) {
+    throw new Error("The staging account version is invalid.");
+  }
   if (candidate.region !== expectedRegion || candidate.schemaVersion !== "2.0") {
     throw new Error("The staging session belongs to a different regional environment.");
   }
@@ -106,8 +110,37 @@ export function PeacePadStagingRuntime({
   const [password, setPassword] = useState("");
   const [signInBusy, setSignInBusy] = useState(false);
   const [runtimeState, setRuntimeState] = useState<RuntimeState>({ status: "loading" });
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<string>();
   const [reloadVersion, setReloadVersion] = useState(0);
   const generation = useRef(0);
+  const deleteInFlight = useRef(false);
+
+  const deleteVerifiedAccount = async (
+    api: PeacePadCoordinationApi,
+    actor: VerifiedSessionContext["actor"],
+    region: "ca" | "us"
+  ) => {
+    if (deleteInFlight.current) return;
+    deleteInFlight.current = true;
+    setDeleteBusy(true);
+    setDeleteError(undefined);
+    try {
+      await api.deleteAccount(createWriteContext({
+        actor: { identityId: actor.identityId, sessionId: actor.sessionId },
+        expectedVersion: actor.version,
+        idempotencyKey: `account-delete-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+        region
+      }));
+      await auth.signOut();
+    } catch (cause) {
+      setDeleteError(cause instanceof Error ? cause.message : "PeacePad could not delete this staging account.");
+      throw cause;
+    } finally {
+      deleteInFlight.current = false;
+      setDeleteBusy(false);
+    }
+  };
 
   useEffect(() => {
     const currentGeneration = ++generation.current;
@@ -138,6 +171,7 @@ export function PeacePadStagingRuntime({
         api,
         runtime: {
           actorIdentityId: verified.actor.identityId,
+          identityVersion: verified.actor.version,
           sessionId: verified.actor.sessionId,
           familyCircleId: membership.familyCircleId,
           participantGrantId: membership.participantGrantId,
@@ -170,10 +204,24 @@ export function PeacePadStagingRuntime({
     );
   }
   if (runtimeState.status === "loading") return <GateMessage busy title="Opening PeacePad" body="Loading your authorized family space." />;
-  if (runtimeState.status === "membership-empty") return <FamilySetup api={runtimeState.api} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={auth.signOut} verified={runtimeState.verified} />;
-  if (runtimeState.status === "conversation-empty") return <ConversationSetup api={runtimeState.api} membership={runtimeState.membership} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={auth.signOut} verified={runtimeState.verified} />;
+  if (runtimeState.status === "membership-empty") return <FamilySetup accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={auth.signOut} verified={runtimeState.verified} />;
+  if (runtimeState.status === "conversation-empty") return <ConversationSetup accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} membership={runtimeState.membership} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={auth.signOut} verified={runtimeState.verified} />;
   if (runtimeState.status === "error") return <GateMessage title="PeacePad is unavailable" body={runtimeState.message} />;
-  return <CoordinationStateProvider api={runtimeState.api} runtime={runtimeState.runtime}>{children}</CoordinationStateProvider>;
+  const accountActions = {
+    deleting: deleteBusy,
+    error: deleteError,
+    deleteAccount: () => deleteVerifiedAccount(runtimeState.api, {
+      identityId: runtimeState.runtime.actorIdentityId,
+      sessionId: runtimeState.runtime.sessionId,
+      displayName: null,
+      version: runtimeState.runtime.identityVersion
+    }, runtimeState.runtime.region)
+  };
+  return (
+    <StagingAccountActionsProvider value={accountActions}>
+      <CoordinationStateProvider api={runtimeState.api} runtime={runtimeState.runtime}>{children}</CoordinationStateProvider>
+    </StagingAccountActionsProvider>
+  );
 }
 
 function runtimeWriteContext(verified: VerifiedSessionContext, expectedVersion: number | null = null) {
@@ -185,7 +233,8 @@ function runtimeWriteContext(verified: VerifiedSessionContext, expectedVersion: 
   });
 }
 
-function FamilySetup({ api, onReload, onSignOut, verified }: {
+function FamilySetup({ accountDeletion, api, onReload, onSignOut, verified }: {
+  accountDeletion: { deleteAccount: () => Promise<void>; deleting: boolean; error?: string };
   api: PeacePadCoordinationApi;
   onReload: () => void;
   onSignOut: () => Promise<void>;
@@ -237,11 +286,13 @@ function FamilySetup({ api, onReload, onSignOut, verified }: {
       ) : <LabButton disabled={busy || invitationCode.length !== 6} label="Review invitation" onPress={() => void run(async () => setPreview(await api.resolveInvitation(invitationCode)))} variant="secondary" />}
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
       <LabButton disabled={busy} label="Sign out" onPress={() => void onSignOut()} variant="secondary" />
+      <AccountDeletionControls value={accountDeletion} />
     </View>
   );
 }
 
-function ConversationSetup({ api, membership, onReload, onSignOut, verified }: {
+function ConversationSetup({ accountDeletion, api, membership, onReload, onSignOut, verified }: {
+  accountDeletion: { deleteAccount: () => Promise<void>; deleting: boolean; error?: string };
   api: PeacePadCoordinationApi;
   membership: Membership;
   onReload: () => void;
@@ -276,6 +327,25 @@ function ConversationSetup({ api, membership, onReload, onSignOut, verified }: {
       <LabButton disabled={busy} label="Check connection" onPress={onReload} variant="secondary" />
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
       <LabButton disabled={busy} label="Sign out" onPress={() => void onSignOut()} variant="secondary" />
+      <AccountDeletionControls value={accountDeletion} />
+    </View>
+  );
+}
+
+function AccountDeletionControls({ value }: {
+  value: { deleteAccount: () => Promise<void>; deleting: boolean; error?: string };
+}) {
+  const [confirming, setConfirming] = useState(false);
+  if (!confirming) {
+    return <LabButton label="Delete staging account" onPress={() => setConfirming(true)} variant="secondary" />;
+  }
+  return (
+    <View style={styles.card}>
+      <Text style={styles.cardTitle}>Delete this staging account?</Text>
+      <Text style={styles.body}>This permanently deletes the fictional staging identity and revokes its family access. This cannot be undone.</Text>
+      <LabButton disabled={value.deleting} label={value.deleting ? "Deleting account..." : "Delete account permanently"} onPress={() => void value.deleteAccount().catch(() => undefined)} />
+      <LabButton disabled={value.deleting} label="Cancel" onPress={() => setConfirming(false)} variant="secondary" />
+      {value.error ? <Text accessibilityRole="alert" style={styles.error}>{value.error}</Text> : null}
     </View>
   );
 }

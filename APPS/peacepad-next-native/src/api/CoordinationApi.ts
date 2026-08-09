@@ -55,6 +55,17 @@ export type CreatedFamily = Readonly<{
   region: "ca" | "us";
 }>;
 
+export type DeletedAccount = Readonly<{
+  identityId: EntityId;
+  region: "ca" | "us";
+  status: "deleted";
+  deletedAt: string;
+  version: number;
+  authIdentityDeleted: boolean;
+  refreshSessionsRevoked: boolean;
+  authCleanupPending: boolean;
+}>;
+
 export type CreateCalendarLayerInput = Readonly<{
   familyCircleId: EntityId;
   ownerIdentityId: EntityId;
@@ -124,6 +135,7 @@ export type CreateAttachmentUploadIntentInput = Readonly<{
 }>;
 
 export interface PeacePadCoordinationApi {
+  deleteAccount(context: WriteContext): Promise<DeletedAccount>;
   createFamily(familyName: string, context: WriteContext): Promise<CreatedFamily>;
   createAttachmentUploadIntent(input: CreateAttachmentUploadIntentInput, context: WriteContext): Promise<AttachmentUploadIntent>;
   createInvitation(input: CreateInvitationInput, context: WriteContext): Promise<CreatedInvitation>;
@@ -187,6 +199,26 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
 
   createFamily(familyName: string, context: WriteContext) {
     return this.write<CreatedFamily>("/api/v2/families", "POST", { familyName: familyName.trim() }, context);
+  }
+
+  async deleteAccount(context: WriteContext) {
+    const result = await this.write<DeletedAccount>("/api/v2/account", "DELETE", undefined, context);
+    if (
+      !result
+      || result.identityId !== context.actor.identityId
+      || result.region !== context.region
+      || result.status !== "deleted"
+      || !result.deletedAt
+      || Number.isNaN(Date.parse(result.deletedAt))
+      || !Number.isInteger(result.version)
+      || result.version <= (context.expectedVersion ?? 0)
+      || typeof result.authIdentityDeleted !== "boolean"
+      || typeof result.refreshSessionsRevoked !== "boolean"
+      || typeof result.authCleanupPending !== "boolean"
+    ) {
+      throw new PeacePadApiError("PeacePad could not verify the account deletion receipt.", "http", 502);
+    }
+    return result;
   }
 
   createInvitation(input: CreateInvitationInput, context: WriteContext) {

@@ -298,7 +298,7 @@ const handler = async (request: Request): Promise<Response> => {
     if (!authenticated) {
       return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
     }
-    const { data: bindings, error } = await authenticated.admin.rpc("peacepad_v2_get_region_binding", {
+    const { data: bindings, error } = await authenticated.admin.rpc("peacepad_v2_get_session_binding", {
       p_identity_id: authenticated.user.id,
     });
     if (error) {
@@ -327,6 +327,7 @@ const handler = async (request: Request): Promise<Response> => {
         identityId: authenticated.user.id,
         sessionId,
         displayName: authenticated.user.user_metadata?.display_name ?? null,
+        version: binding.identity_version,
       },
       memberships: Array.isArray(memberships) ? memberships : [],
       region: binding.region,
@@ -512,14 +513,21 @@ const handler = async (request: Request): Promise<Response> => {
         p_schema_version: context.schemaVersion,
       });
       if (error) return rpcFailure(request, requestId, config, error.message);
-      const token = bearerToken(request);
-      const { error: signOutError } = token
-        ? await authenticated.admin.auth.admin.signOut(token, "global")
-        : { error: new Error("Missing authenticated token.") };
-      if (signOutError) {
-        return failure(request, 503, "SESSION_REVOCATION_FAILED", "The account is deleted, but session cleanup must be retried.", requestId, config);
+      const deletion = await authenticated.admin.auth.admin.deleteUser(authenticated.user.id, false);
+      let refreshSessionsRevoked = !deletion.error;
+      if (deletion.error) {
+        const token = bearerToken(request);
+        const signOut = token
+          ? await authenticated.admin.auth.admin.signOut(token, "global")
+          : { error: new Error("Missing authenticated token.") };
+        refreshSessionsRevoked = !signOut.error;
       }
-      return json(request, 200, { ...(data as Record<string, unknown>), refreshSessionsRevoked: true }, requestId, config);
+      return json(request, 200, {
+        ...(data as Record<string, unknown>),
+        authIdentityDeleted: !deletion.error,
+        refreshSessionsRevoked,
+        authCleanupPending: Boolean(deletion.error),
+      }, requestId, config);
     }
 
     if (isMessageCheckUpdate && conversationMessageCheckMatch) {

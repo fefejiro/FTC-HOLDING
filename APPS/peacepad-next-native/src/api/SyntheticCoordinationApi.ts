@@ -204,6 +204,19 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
     this.transitionInvitation(invitationId, "used");
   }
 
+  async deleteAccount(context: WriteContext) {
+    return {
+      identityId: context.actor.identityId,
+      region: context.region,
+      status: "deleted" as const,
+      deletedAt: new Date().toISOString(),
+      version: (context.expectedVersion ?? 0) + 1,
+      authIdentityDeleted: true,
+      refreshSessionsRevoked: true,
+      authCleanupPending: false
+    };
+  }
+
   async createFamily(familyName: string, _context: WriteContext): Promise<CreatedFamily> {
     if (!familyName.trim()) throw new PeacePadApiError("Enter a family name.", "http", 400);
     return {

@@ -100,6 +100,7 @@ const CoordinationStateContext = createContext<CoordinationStateValue | undefine
 
 export type CoordinationRuntime = Readonly<{
   actorIdentityId: EntityId;
+  identityVersion: number;
   sessionId: EntityId;
   familyCircleId: EntityId;
   participantGrantId: EntityId;
@@ -109,6 +110,7 @@ export type CoordinationRuntime = Readonly<{
 
 const DEMO_RUNTIME: CoordinationRuntime = {
   actorIdentityId: "identity-current",
+  identityVersion: 1,
   sessionId: "verified-device-session",
   familyCircleId: "family-current",
   participantGrantId: "grant-current",
@@ -121,6 +123,8 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 export function isValidCoordinationRuntime(runtime?: CoordinationRuntime | null): runtime is CoordinationRuntime {
   return Boolean(runtime
     && UUID_PATTERN.test(runtime.actorIdentityId)
+    && Number.isInteger(runtime.identityVersion)
+    && runtime.identityVersion >= 1
     && UUID_PATTERN.test(runtime.sessionId)
     && UUID_PATTERN.test(runtime.familyCircleId)
     && UUID_PATTERN.test(runtime.participantGrantId)

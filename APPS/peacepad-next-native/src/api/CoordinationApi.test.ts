@@ -29,7 +29,18 @@ function response(status: number, payload: unknown): Response {
 
 describe("HttpPeacePadCoordinationApi", () => {
   it("routes the complete v2 coordination contract through versioned endpoints", async () => {
-    const fetcher = jest.fn(async (_input: string, _init?: RequestInit) => response(200, {}));
+    const fetcher = jest.fn(async (input: string, _init?: RequestInit) => response(200,
+      input.endsWith("/api/v2/account") ? {
+        identityId: context.actor.identityId,
+        region: context.region,
+        status: "deleted",
+        deletedAt: "2026-08-09T12:00:00.000Z",
+        version: 5,
+        authIdentityDeleted: true,
+        refreshSessionsRevoked: true,
+        authCleanupPending: false
+      } : {}
+    ));
     const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
     const layer = {
       id: "layer-1",
@@ -65,6 +76,7 @@ describe("HttpPeacePadCoordinationApi", () => {
     };
 
     await api.createFamily("Fictional Family", context);
+    await api.deleteAccount(context);
     await api.createInvitation({ familyCircleId: "family-current", invitedRole: "parent", permissions: ["messages"], expiresInHours: 24 }, context);
     await api.acceptInvitation("invitation-1", context);
     await api.declineInvitation("invitation-2", context);
@@ -98,6 +110,7 @@ describe("HttpPeacePadCoordinationApi", () => {
     const urls = fetcher.mock.calls.map(([url]) => url);
     expect(urls).toEqual(expect.arrayContaining([
       "https://staging-api.peacepad.test/api/v2/families",
+      "https://staging-api.peacepad.test/api/v2/account",
       "https://staging-api.peacepad.test/api/v2/invitations",
       "https://staging-api.peacepad.test/api/v2/invitations/invitation-1/accept",
       "https://staging-api.peacepad.test/api/v2/calendar-layers?familyCircleId=family-current",
@@ -246,5 +259,41 @@ describe("HttpPeacePadCoordinationApi", () => {
       status: 401,
       message: "Your staging session expired. Sign in again."
     });
+  });
+
+  it("validates an irreversible account-deletion receipt", async () => {
+    const validReceipt = {
+      identityId: context.actor.identityId,
+      region: context.region,
+      status: "deleted",
+      deletedAt: "2026-08-09T12:00:00.000Z",
+      version: 5,
+      authIdentityDeleted: true,
+      refreshSessionsRevoked: true,
+      authCleanupPending: false
+    };
+    const fetcher = jest.fn(async () => response(200, validReceipt));
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
+    await expect(api.deleteAccount(context)).resolves.toEqual(validReceipt);
+    expect(fetcher).toHaveBeenCalledWith(
+      "https://staging-api.peacepad.test/api/v2/account",
+      expect.objectContaining({ method: "DELETE", body: undefined })
+    );
+
+    for (const invalid of [
+      {},
+      { ...validReceipt, identityId: "another-identity" },
+      { ...validReceipt, region: "us" },
+      { ...validReceipt, status: "pending" },
+      { ...validReceipt, deletedAt: "not-a-date" },
+      { ...validReceipt, version: 4 },
+      { ...validReceipt, authCleanupPending: "false" }
+    ]) {
+      const invalidApi = new HttpPeacePadCoordinationApi(config, jest.fn(async () => response(200, invalid)), accessToken);
+      await expect(invalidApi.deleteAccount(context)).rejects.toMatchObject({
+        message: "PeacePad could not verify the account deletion receipt.",
+        status: 502
+      });
+    }
   });
 });

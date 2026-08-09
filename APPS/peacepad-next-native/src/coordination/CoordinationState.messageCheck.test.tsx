@@ -18,6 +18,7 @@ const GRANT_A = "66666666-6666-4666-8666-666666666666";
 
 const runtime = (conversationId = CONVERSATION_A): CoordinationRuntime => ({
   actorIdentityId: ACTOR_A,
+  identityVersion: 1,
   conversationId,
   familyCircleId: FAMILY_A,
   participantGrantId: GRANT_A,
@@ -181,6 +182,7 @@ describe("persisted Message Check runtime", () => {
     const api = apiWithMessageCheck();
     renderProbe(api, {
       actorIdentityId: "identity-current",
+      identityVersion: 1,
       conversationId: "conversation-primary",
       familyCircleId: "family-current",
       participantGrantId: "grant-current",
