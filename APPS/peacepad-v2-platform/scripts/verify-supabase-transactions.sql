@@ -285,13 +285,13 @@ begin
     raise exception 'Deleted identity retained invitation-attempt rate-limit metadata.';
   end if;
   if not exists (
-    select 1 from peacepad_v2.family_invitation
-    where invitation_id = deletion_invitation_id
-      and status = 'revoked'
-      and revoked_at is not null
-      and code_hash <> deletion_invitation_hash
-      and failed_attempts = 0
-      and last_attempt_at is null
+    select 1 from peacepad_v2.family_invitation deletion_invitation
+    where deletion_invitation.invitation_id = deletion_invitation_id
+      and deletion_invitation.status = 'revoked'
+      and deletion_invitation.revoked_at is not null
+      and deletion_invitation.code_hash <> deletion_invitation_hash
+      and deletion_invitation.failed_attempts = 0
+      and deletion_invitation.last_attempt_at is null
   ) then
     raise exception 'Deleted identity retained usable invitation code material.';
   end if;
