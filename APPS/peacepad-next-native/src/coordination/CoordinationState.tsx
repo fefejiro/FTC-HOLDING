@@ -269,7 +269,12 @@ export function CoordinationStateProvider({
       }
     },
     declineInvitation: async () => {
-      if (invitationPreview) await api.declineInvitation(invitationPreview.invitationId, writeContext(actorIdentityId));
+      if (invitationPreview) {
+        await api.declineInvitation(
+          invitationPreview.invitationId,
+          writeContext(actorIdentityId, invitationPreview.version),
+        );
+      }
       setInvitationPreview(undefined);
       setInvitationCodeState("");
     },

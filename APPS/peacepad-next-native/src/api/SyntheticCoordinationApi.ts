@@ -198,11 +198,13 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
     };
   }
 
-  async declineInvitation(invitationId: EntityId, _context: WriteContext): Promise<void> {
+  async declineInvitation(invitationId: EntityId, context: WriteContext): Promise<void> {
+    this.assertInvitationVersion(invitationId, context.expectedVersion);
     this.transitionInvitation(invitationId, "used");
   }
 
-  async revokeInvitation(invitationId: EntityId, _context: WriteContext): Promise<void> {
+  async revokeInvitation(invitationId: EntityId, context: WriteContext): Promise<void> {
+    this.assertInvitationVersion(invitationId, context.expectedVersion);
     this.transitionInvitation(invitationId, "revoked");
   }
 
@@ -414,6 +416,13 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
       throw new InvitationError(state, "This invitation is not available.");
     }
     this.invitationStates.set(invitationId, nextState);
+  }
+
+  private assertInvitationVersion(invitationId: EntityId, expectedVersion: number | null) {
+    const seed = this.invitationsById.get(invitationId);
+    if (seed && expectedVersion !== seed.preview.version) {
+      throw new PeacePadApiError("The invitation changed. Review it again before continuing.", "http", 409);
+    }
   }
 
   private assertCurrentFamily(familyCircleId: EntityId) {

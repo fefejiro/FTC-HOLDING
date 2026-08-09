@@ -304,19 +304,24 @@ const handler = async (request: Request): Promise<Response> => {
     return json(request, 200, result, requestId, config);
   }
 
-  if (request.method === "POST" && ([
-    "/api/v2/session/bootstrap",
-    "/api/v2/consents",
-    "/api/v2/families",
-    "/api/v2/invitations",
-  ].includes(path) || /^\/api\/v2\/invitations\/[^/]+\/accept$/.test(path))) {
+  const isInvitationTransition = /^\/api\/v2\/invitations\/[^/]+\/(accept|decline)$/.test(path);
+  const isInvitationRevocation = /^\/api\/v2\/invitations\/[^/]+$/.test(path);
+  if (
+    (request.method === "POST" && ([
+      "/api/v2/session/bootstrap",
+      "/api/v2/consents",
+      "/api/v2/families",
+      "/api/v2/invitations",
+    ].includes(path) || isInvitationTransition)) ||
+    (request.method === "DELETE" && isInvitationRevocation)
+  ) {
     const authenticated = await authenticate(request, config);
     if (!authenticated) {
       return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
     }
     const context = writeHeaders(request, config, requestId);
     if ("error" in context) return context.error;
-    const body = await readJsonObject(request);
+    const body = request.method === "DELETE" ? {} : await readJsonObject(request);
     if (!body) return failure(request, 400, "INVALID_REQUEST", "A valid request body is required.", requestId, config);
 
     if (path === "/api/v2/session/bootstrap") {
@@ -360,22 +365,29 @@ const handler = async (request: Request): Promise<Response> => {
       return error ? rpcFailure(request, requestId, config, error.message) : json(request, 201, data, requestId, config);
     }
 
-    const acceptMatch = path.match(/^\/api\/v2\/invitations\/([^/]+)\/accept$/);
-    if (acceptMatch) {
+    const transitionMatch = path.match(/^\/api\/v2\/invitations\/([^/]+)\/(accept|decline)$/);
+    const revokeMatch = request.method === "DELETE" ? path.match(/^\/api\/v2\/invitations\/([^/]+)$/) : null;
+    if (transitionMatch || revokeMatch) {
       const expectedVersionHeader = (request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? "";
       const expectedVersion = Number(expectedVersionHeader);
       if (!Number.isInteger(expectedVersion) || expectedVersion < 1) {
         return failure(request, 400, "INVALID_REQUEST", "A valid expected version is required.", requestId, config);
       }
-      const { data, error } = await authenticated.admin.rpc("peacepad_v2_accept_invitation", {
+      const invitationId = decodeURIComponent((transitionMatch ?? revokeMatch)![1]);
+      const operation = transitionMatch?.[2] ?? "revoke";
+      const rpcName = operation === "accept" ? "peacepad_v2_accept_invitation"
+        : operation === "decline" ? "peacepad_v2_decline_invitation"
+        : "peacepad_v2_revoke_invitation";
+      const { data, error } = await authenticated.admin.rpc(rpcName, {
         p_identity_id: authenticated.user.id,
         p_region: config.region,
-        p_invitation_id: decodeURIComponent(acceptMatch[1]),
+        p_invitation_id: invitationId,
         p_expected_version: expectedVersion,
         p_idempotency_key: context.idempotencyKey,
         p_schema_version: context.schemaVersion,
       });
       if (error) return rpcFailure(request, requestId, config, error.message);
+      if (operation !== "accept") return json(request, 200, data, requestId, config);
       const grant = (data ?? {}) as Record<string, unknown>;
       const grantedAt = typeof grant.grantedAt === "string" ? grant.grantedAt : new Date().toISOString();
       return json(request, 200, {

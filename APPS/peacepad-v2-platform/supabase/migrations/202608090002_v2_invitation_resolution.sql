@@ -133,7 +133,116 @@ begin
 end;
 $$;
 
+create or replace function public.peacepad_v2_decline_invitation(
+  p_identity_id uuid,
+  p_region text,
+  p_invitation_id uuid,
+  p_expected_version integer,
+  p_idempotency_key text,
+  p_schema_version integer
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = pg_catalog, peacepad_v2
+as $$
+declare
+  invitation peacepad_v2.family_invitation%rowtype;
+  bound_region text;
+  existing_result jsonb;
+  response jsonb;
+begin
+  existing_result := peacepad_v2.prior_write_result(p_identity_id, p_idempotency_key);
+  if existing_result is not null then return existing_result; end if;
+  if p_schema_version <> 2 then raise exception using errcode = '22023', message = 'SCHEMA_MISMATCH'; end if;
+  if char_length(p_idempotency_key) not between 8 and 160 then raise exception using errcode = '22023', message = 'IDEMPOTENCY_KEY_INVALID'; end if;
+  if p_expected_version < 1 then raise exception using errcode = '22023', message = 'EXPECTED_VERSION_INVALID'; end if;
+  select region into bound_region from peacepad_v2.identity where identity_id = p_identity_id and deleted_at is null;
+  if bound_region is null then raise exception using errcode = '42501', message = 'IDENTITY_NOT_BOUND'; end if;
+  if bound_region <> p_region then raise exception using errcode = '42501', message = 'REGION_MISMATCH'; end if;
+
+  select * into invitation from peacepad_v2.family_invitation
+  where invitation_id = p_invitation_id for update;
+  if not found then raise exception using errcode = '22023', message = 'INVITATION_INVALID'; end if;
+  if invitation.region <> p_region then raise exception using errcode = '22023', message = 'INVITATION_INVALID'; end if;
+  if not exists (
+    select 1 from peacepad_v2.invitation_attempt attempt
+    where attempt.identity_id = p_identity_id
+      and attempt.region = p_region
+      and attempt.code_hash = invitation.code_hash
+      and attempt.attempted_at > now() - interval '30 minutes'
+  ) then raise exception using errcode = '22023', message = 'INVITATION_INVALID'; end if;
+  if invitation.status = 'revoked' then raise exception using errcode = '22023', message = 'INVITATION_REVOKED'; end if;
+  if invitation.status <> 'pending' then raise exception using errcode = '22023', message = 'INVITATION_USED'; end if;
+  if invitation.expires_at <= now() then raise exception using errcode = '22023', message = 'INVITATION_EXPIRED'; end if;
+  if invitation.version <> p_expected_version then raise exception using errcode = '40001', message = 'CONCURRENCY_CONFLICT'; end if;
+
+  update peacepad_v2.family_invitation
+  set status = 'declined', declined_at = now(), version = version + 1
+  where invitation_id = p_invitation_id;
+  response := jsonb_build_object('invitationId', p_invitation_id, 'familyId', invitation.family_id, 'region', p_region, 'status', 'declined', 'version', invitation.version + 1);
+  perform peacepad_v2.record_write(p_identity_id, invitation.family_id, p_region, 'invitation.declined', p_schema_version, p_idempotency_key, response);
+  return response;
+end;
+$$;
+
+create or replace function public.peacepad_v2_revoke_invitation(
+  p_identity_id uuid,
+  p_region text,
+  p_invitation_id uuid,
+  p_expected_version integer,
+  p_idempotency_key text,
+  p_schema_version integer
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = pg_catalog, peacepad_v2
+as $$
+declare
+  invitation peacepad_v2.family_invitation%rowtype;
+  bound_region text;
+  existing_result jsonb;
+  response jsonb;
+begin
+  existing_result := peacepad_v2.prior_write_result(p_identity_id, p_idempotency_key);
+  if existing_result is not null then return existing_result; end if;
+  if p_schema_version <> 2 then raise exception using errcode = '22023', message = 'SCHEMA_MISMATCH'; end if;
+  if char_length(p_idempotency_key) not between 8 and 160 then raise exception using errcode = '22023', message = 'IDEMPOTENCY_KEY_INVALID'; end if;
+  if p_expected_version < 1 then raise exception using errcode = '22023', message = 'EXPECTED_VERSION_INVALID'; end if;
+  select region into bound_region from peacepad_v2.identity where identity_id = p_identity_id and deleted_at is null;
+  if bound_region is null then raise exception using errcode = '42501', message = 'IDENTITY_NOT_BOUND'; end if;
+  if bound_region <> p_region then raise exception using errcode = '42501', message = 'REGION_MISMATCH'; end if;
+
+  select * into invitation from peacepad_v2.family_invitation
+  where invitation_id = p_invitation_id for update;
+  if not found then raise exception using errcode = '22023', message = 'INVITATION_INVALID'; end if;
+  if invitation.region <> p_region then raise exception using errcode = '42501', message = 'REGION_MISMATCH'; end if;
+  if invitation.created_by <> p_identity_id and not exists (
+    select 1 from peacepad_v2.participant_grant grant
+    where grant.family_id = invitation.family_id
+      and grant.identity_id = p_identity_id
+      and grant.region = p_region
+      and grant.revoked_at is null
+      and 'invitation.manage' = any(grant.permissions)
+  ) then raise exception using errcode = '42501', message = 'FAMILY_ACCESS_DENIED'; end if;
+  if invitation.status <> 'pending' then raise exception using errcode = '22023', message = 'INVITATION_USED'; end if;
+  if invitation.version <> p_expected_version then raise exception using errcode = '40001', message = 'CONCURRENCY_CONFLICT'; end if;
+
+  update peacepad_v2.family_invitation
+  set status = 'revoked', revoked_at = now(), version = version + 1
+  where invitation_id = p_invitation_id;
+  response := jsonb_build_object('invitationId', p_invitation_id, 'familyId', invitation.family_id, 'region', p_region, 'status', 'revoked', 'version', invitation.version + 1);
+  perform peacepad_v2.record_write(p_identity_id, invitation.family_id, p_region, 'invitation.revoked', p_schema_version, p_idempotency_key, response);
+  return response;
+end;
+$$;
+
 revoke all on function public.peacepad_v2_resolve_invitation(uuid, text, bytea) from public, anon, authenticated;
 revoke all on function public.peacepad_v2_accept_invitation(uuid, text, uuid, integer, text, integer) from public, anon, authenticated;
+revoke all on function public.peacepad_v2_decline_invitation(uuid, text, uuid, integer, text, integer) from public, anon, authenticated;
+revoke all on function public.peacepad_v2_revoke_invitation(uuid, text, uuid, integer, text, integer) from public, anon, authenticated;
 grant execute on function public.peacepad_v2_resolve_invitation(uuid, text, bytea) to service_role;
 grant execute on function public.peacepad_v2_accept_invitation(uuid, text, uuid, integer, text, integer) to service_role;
+grant execute on function public.peacepad_v2_decline_invitation(uuid, text, uuid, integer, text, integer) to service_role;
+grant execute on function public.peacepad_v2_revoke_invitation(uuid, text, uuid, integer, text, integer) to service_role;

@@ -162,14 +162,14 @@ describe("SyntheticCoordinationApi safety behavior", () => {
       expiresInHours: 24
     }, context);
     expect(created).toMatchObject({ code: "P00001", deepLink: "peacepadnextlab://invite/P00001" });
-    await api.revokeInvitation(created.invitation.id, context);
+    await api.revokeInvitation(created.invitation.id, { ...context, expectedVersion: created.invitation.version });
     await expect(api.resolveInvitation(created.code)).rejects.toMatchObject({ reason: "revoked" });
 
-    await api.declineInvitation("invitation-1", context);
+    await api.declineInvitation("invitation-1", { ...context, expectedVersion: 1 });
     await expect(api.resolveInvitation("CALM26")).rejects.toMatchObject({ reason: "used" });
 
     const revoked = new SyntheticCoordinationApi([invitation()]);
-    await revoked.revokeInvitation("invitation-1", context);
+    await revoked.revokeInvitation("invitation-1", { ...context, expectedVersion: 1 });
     await expect(revoked.resolveInvitation("CALM26")).rejects.toMatchObject({ reason: "revoked" });
   });
 

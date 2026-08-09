@@ -35,7 +35,9 @@ $requiredFunctionPatterns = @(
   '/api/v2/consents',
   '/api/v2/families',
   '/api/v2/invitations',
-  '/accept',
+  '(accept|decline)',
+  'peacepad_v2_decline_invitation',
+  'peacepad_v2_revoke_invitation',
   'idempotency-key',
   'if-match',
   'x-peacepad-schema-version',
@@ -111,7 +113,12 @@ if ($transactionMigration -notmatch 'prior_write_result') {
 if ($transactionMigration -notmatch 'perform peacepad_v2\.record_write') {
   throw 'Write transactions must append an audit event atomically.'
 }
-foreach ($rpc in @('peacepad_v2_resolve_invitation', 'peacepad_v2_accept_invitation')) {
+foreach ($rpc in @(
+  'peacepad_v2_resolve_invitation',
+  'peacepad_v2_accept_invitation',
+  'peacepad_v2_decline_invitation',
+  'peacepad_v2_revoke_invitation'
+)) {
   if ($invitationMigration -notmatch "create or replace function public\.$rpc") {
     throw "Invitation migration is missing RPC: $rpc"
   }
@@ -127,6 +134,12 @@ if ($invitationMigration -notmatch 'for update') {
 }
 if ($invitationMigration -notmatch 'p_expected_version') {
   throw 'Invitation acceptance must enforce optimistic concurrency.'
+}
+if ($invitationMigration -notmatch "attempted_at > now\(\) - interval '30 minutes'") {
+  throw 'Invitation decline must require a recent successful preview attempt.'
+}
+if ($invitationMigration -notmatch "message = 'FAMILY_ACCESS_DENIED'") {
+  throw 'Invitation revocation must enforce family management authorization.'
 }
 if (
   $config -notmatch '\[functions\.peacepad-v2-api\]' -or
