@@ -4,7 +4,7 @@
 
 - Snapshot date: 2026-08-09
 - Branch: `feat/peacepad-v2-supabase-free-staging`
-- Verified implementation baseline: `7b15f34b8`
+- Verified implementation baseline: `4bd5649c1`
 - Ledger evidence applies only to the exact commit listed in each row
 - App version: `0.0.1`
 - Staging/lab bundle: `ca.peacepad.nextnative.lab`
@@ -30,7 +30,7 @@ is not AWS or residency proof. A local PostgreSQL 18.3 custom-format backup and
 restore drill now passes with fictional data, verified migration checksums,
 and cleanup of both temporary databases. Both hosted workflows pass on PR #176
 for the prerequisite commit. On current draft PR #177, the PeacePad native and
-infrastructure workflows pass at `47d8aa742`; the overall PR remains unstable
+infrastructure workflows pass at `4bd5649c1`; the overall PR remains unstable
 only because the unrelated Garden workflow cannot load
 `@ftc/config/dist/index.js`. No cloud deployment or managed restoration occurred.
 
@@ -126,7 +126,7 @@ the earlier unverified 53% planning estimate.
 | Explicit invitation lifecycle controls | `6aadbff92` | GitHub Actions native and PostgreSQL 16/Deno, PR #177 | 2026-08-09 | HOSTED VERIFIED / DEPLOYMENT BLOCKED | Runs `31336979617` and `31336979609`: create, preview, accept, decline, and revoke invitation controls passed native and infrastructure gates. The concurrent Garden Portal workflow failure is an unrelated monorepo workflow-scoping defect and no Garden code was changed |
 | Secure staging invitation links | `5b1d338d8` | Windows local and GitHub Actions native/PostgreSQL 16/Deno, PR #177 | 2026-08-09 | HOSTED VERIFIED / DEPLOYMENT BLOCKED | Runs `31338156309` and `31338156303`: canonical `peacepadnextlab://invite/<code>` parsing, explicit review, live-over-cold URL ordering, listener cleanup, cross-account code clearing, 200 passing native tests with 1 skipped, guardrails, secret scan, Expo config/Doctor, iOS export, Edge validation/typecheck, repeatable migrations, and transaction proof passed. Existing-member invitation presentation and managed-project deployment remain unverified |
 | Connected-member invitation routing | `99b0cd8af` | Windows local and GitHub Actions native/PostgreSQL 16/Deno, PR #177 | 2026-08-09 | HOSTED VERIFIED / DEPLOYMENT BLOCKED | Runs `31338952256` and `31338952270`: an authenticated member receiving a staging invitation is routed exactly once to the prefilled invitation screen, still must select Review invitation, and cannot accept implicitly. TypeScript, 29 suites with 201 passing tests and 1 skipped, 78.64% branch coverage, guardrails, secret scan, Expo Doctor 18/18, public config, iOS export, Edge validation/typecheck, repeatable migrations, and transaction proof passed. Managed deployment remains blocked |
-| Invitation code-proof and connected-family safety | `7b15f34b8` | Windows local, fictional adapters and static regional boundary | 2026-08-09 | LOCAL VERIFIED / DEPLOYMENT BLOCKED | TypeScript, guardrails, 29 suites with 203 passing tests and 1 skipped, 78.71% branch coverage, 83-file secret scan, Supabase regional configuration validation, Edge boundary validation, and workflow YAML parsing passed. Acceptance now requires a recent code-resolution attempt; connected multi-family acceptance fails closed; a failed decline remains reviewable. Managed database proof for this commit is pending hosted CI |
+| Invitation code-proof and connected-family safety | `4bd5649c1` | Windows local and GitHub Actions native/PostgreSQL 16/Deno, PR #177 | 2026-08-09 | HOSTED VERIFIED / DEPLOYMENT BLOCKED | Native run `31340381110` and infrastructure run `31340381106` passed: TypeScript, guardrails, 29 suites with 203 passing tests and 1 skipped, 78.71% branch coverage, secret scan, Expo/iOS checks, Edge typecheck, repeatable migrations, and executable transaction proof. Acceptance now requires a recent code-resolution attempt; connected multi-family acceptance fails closed; a failed decline remains reviewable. The unrelated Garden run `31340381137` still fails its anonymous Playwright job because `@ftc/config/dist/index.js` is missing |
 | Canadian Supabase fictional staging | this commit | Supabase Free, `ca-central-1` | 2026-08-07 | DEPLOYED STAGING VERIFIED (SCHEMA ONLY) | Healthy project; PostgreSQL 17.6; boundary schema applied; append-only triggers present; direct `anon`/`authenticated` table privileges absent; fictional write rolled back. API adapter, restoration, device, and production proof remain absent |
 | U.S. Supabase fictional staging | this commit | Supabase Free, `us-east-2` | 2026-08-07 | DEPLOYED STAGING VERIFIED (SCHEMA ONLY) | Healthy company-owned project; PostgreSQL 17.6; boundary schema applied; append-only triggers present; direct `anon`/`authenticated` table privileges absent; fictional write rolled back. API adapter, restoration, device, and production proof remain absent |
 | Focused staging smokes | earlier PR #172 commits | Windows local, fictional adapters | Historical | HISTORICAL EVIDENCE | `STAGING_RUNTIME_SMOKE_PASS`, `STAGING_RESTART_SMOKE_PASS`, `TWO_ACCOUNT_HTTP_SMOKE_PASS`, `SYNTHETIC_COORDINATION_JOURNEY_PASS`, `STAGING_AUTHORIZATION_SMOKE_PASS` |
