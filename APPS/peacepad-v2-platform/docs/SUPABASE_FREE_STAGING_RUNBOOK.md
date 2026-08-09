@@ -57,13 +57,15 @@ Required evidence:
 5. A valid fictional user returns only its JWT-derived identity and immutable
    regional binding.
 
-## Current access blocker (2026-08-07)
+## Current access blocker (2026-08-09)
 
-The locally authenticated Supabase CLI token can list the `FTC Peacepad`
-organization but cannot list either staging project or update its Function
-secrets. Supabase returns `Your account does not have the necessary privileges`.
-Deployment and migration are therefore **BLOCKED BY PROJECT ROLE**, not reported
-as deployed. Resolve by authenticating the CLI as a project Owner/Administrator
-or granting the current CLI identity the required project permissions. Do not
-share passwords or service-role keys in chat.
+The locally authenticated Supabase CLI token can list both regional staging
+projects, but cannot update their Function secrets or deploy the adapter.
+Pending migrations and the Edge Function are therefore **BLOCKED BY PROJECT
+ROLE**, not reported as deployed. Hosted CI applies every migration twice to an
+isolated PostgreSQL 16 service and verifies the fictional invitation,
+messaging, correction, receipt, search, deletion, and access-revocation journey.
+That is hosted database proof, not managed-project execution. Resolve by
+granting the current CLI identity Owner/Administrator access. Do not share
+passwords or service-role keys in chat.
 

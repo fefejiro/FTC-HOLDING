@@ -26,6 +26,10 @@ scripts/
   validate-supabase-edge-function.ps1
   deploy-supabase-free-staging.ps1
   verify-local-postgres-restoration.ps1
+supabase/
+  functions/peacepad-v2-api/
+  migrations/
+deno.json
 docs/
   ADR-001-dual-region-aws-foundation.md
   ADR-002-zero-cost-supabase-staging.md
@@ -47,7 +51,11 @@ Validate its safe example configuration with:
 ./scripts/validate-supabase-edge-function.ps1
 ```
 
-This is fictional staging only. It is not production deployment evidence.
+The current fictional-staging implementation includes regional identity,
+consent, family authorization, secure invitation lifecycle, audited account
+deletion, and immutable messaging transactions. Hosted PostgreSQL applies every
+migration twice and runs the fictional end-to-end transaction proof. This is
+still not deployed-API or production evidence.
 
 ## Local verification
 
