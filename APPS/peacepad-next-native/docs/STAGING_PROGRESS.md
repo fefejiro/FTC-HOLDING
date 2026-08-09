@@ -33,8 +33,8 @@ Latest staging branch commit: `eb329c27`
 | Supabase U.S. regional project and boundary schema | DEPLOYED STAGING VERIFIED |
 | Supabase regional API adapters | HOSTED VERIFIED / DEPLOYMENT BLOCKED BY PROJECT ROLE |
 | Supabase atomic identity/consent/family/invitation transactions | HOSTED VERIFIED / DEPLOYMENT BLOCKED BY PROJECT ROLE |
-| Supabase persisted messaging and calendar transactions | HOSTED VERIFIED / DEPLOYMENT BLOCKED BY PROJECT ROLE |
-| Hosted CI | PASS - PR #177, runs `31329165230` and `31329165250` |
+| Supabase persisted messaging, calendar, and Message Check transactions | HOSTED VERIFIED / DEPLOYMENT BLOCKED BY PROJECT ROLE |
+| Hosted CI | PASS - PR #177, runs `31330073246` and `31330073217` |
 
 This is not a production release. The native client remains a staging/lab
 build with `ca.peacepad.nextnative.lab` and production writes disabled.
