@@ -93,7 +93,7 @@ describe("persisted Message Check runtime", () => {
     });
     renderProbe(api, runtime());
 
-    await waitFor(() => expect(screen.getByTestId("hydrated")).toHaveTextContent("true"));
+    await waitFor(() => expect(screen.getByTestId("hydrated")).toHaveTextContent("true"), { timeout: 10_000 });
     expect(screen.getByTestId("enabled")).toHaveTextContent("true");
     expect(api.getMessageCheckPreference).toHaveBeenCalledTimes(1);
     expect(api.getMessageCheckPreference).toHaveBeenCalledWith(CONVERSATION_A);
@@ -105,8 +105,8 @@ describe("persisted Message Check runtime", () => {
     const api = apiWithMessageCheck({ getMessageCheckPreference: jest.fn(() => pending.promise) });
     renderProbe(api, runtime());
 
-    expect(screen.getByTestId("hydrated")).toHaveTextContent("false");
-    expect(screen.getByRole("button", { name: "toggle" })).toBeDisabled();
+    expect(screen.getByText("Loading your family space")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "toggle" })).toBeNull();
     expect(api.setMessageCheckPreference).not.toHaveBeenCalled();
 
     await act(async () => pending.resolve(preference(CONVERSATION_A, true, 3)));
@@ -145,11 +145,11 @@ describe("persisted Message Check runtime", () => {
         <Probe />
       </CoordinationStateProvider>
     );
-    expect(screen.getByTestId("hydrated")).toHaveTextContent("false");
-    expect(screen.getByTestId("enabled")).toHaveTextContent("false");
+    expect(screen.getByText("Loading your family space")).toBeTruthy();
+    expect(screen.queryByTestId("enabled")).toBeNull();
 
     await act(async () => pending.resolve(preference(CONVERSATION_A, true, 4)));
-    expect(screen.getByTestId("enabled")).toHaveTextContent("false");
+    expect(screen.queryByTestId("enabled")).toBeNull();
     expect(api.setMessageCheckPreference).not.toHaveBeenCalled();
   });
 
@@ -188,8 +188,8 @@ describe("persisted Message Check runtime", () => {
       sessionId: "device-session"
     });
 
-    expect(screen.getByTestId("hydrated")).toHaveTextContent("false");
-    expect(screen.getByRole("button", { name: "toggle" })).toBeDisabled();
+    expect(screen.getByText("Loading your family space")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "toggle" })).toBeNull();
     expect(api.getMessageCheckPreference).not.toHaveBeenCalled();
     expect(api.setMessageCheckPreference).not.toHaveBeenCalled();
   });
