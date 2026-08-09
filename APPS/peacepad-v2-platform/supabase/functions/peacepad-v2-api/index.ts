@@ -125,20 +125,24 @@ const bearerToken = (request: Request): string | null => {
   return authorization.startsWith("Bearer ") ? authorization.slice(7).trim() : null;
 };
 
-const writeHeaders = (request: Request, config: RuntimeConfig, requestId: string) => {
+type WriteHeadersResult =
+  | { ok: true; idempotencyKey: string; schemaVersion: 2 }
+  | { ok: false; error: Response };
+
+const writeHeaders = (request: Request, config: RuntimeConfig, requestId: string): WriteHeadersResult => {
   const idempotencyKey = (request.headers.get("idempotency-key") ?? request.headers.get("x-idempotency-key"))?.trim() ?? "";
   const schemaVersion = (request.headers.get("x-peacepad-schema-version") ?? request.headers.get("x-schema-version"))?.trim() ?? "";
   const requestedRegion = request.headers.get("x-peacepad-region")?.trim() ?? "";
   if (idempotencyKey.length < 8 || idempotencyKey.length > 160) {
-    return { error: failure(request, 400, "IDEMPOTENCY_REQUIRED", "A valid idempotency key is required.", requestId, config) } as const;
+    return { ok: false, error: failure(request, 400, "IDEMPOTENCY_REQUIRED", "A valid idempotency key is required.", requestId, config) };
   }
   if (schemaVersion !== "2.0") {
-    return { error: failure(request, 409, "SCHEMA_MISMATCH", "The write schema is not supported by this regional API.", requestId, config) } as const;
+    return { ok: false, error: failure(request, 409, "SCHEMA_MISMATCH", "The write schema is not supported by this regional API.", requestId, config) };
   }
   if (requestedRegion !== config.region) {
-    return { error: failure(request, 409, "REGION_MISMATCH", "The write context does not match this regional API.", requestId, config) } as const;
+    return { ok: false, error: failure(request, 409, "REGION_MISMATCH", "The write context does not match this regional API.", requestId, config) };
   }
-  return { idempotencyKey, schemaVersion: 2 } as const;
+  return { ok: true, idempotencyKey, schemaVersion: 2 };
 };
 
 const readJsonObject = async (request: Request): Promise<Record<string, unknown> | null> => {
@@ -324,7 +328,7 @@ const handler = async (request: Request): Promise<Response> => {
       return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
     }
     const context = writeHeaders(request, config, requestId);
-    if ("error" in context) return context.error;
+    if (!context.ok) return context.error;
     const body = request.method === "DELETE" ? {} : await readJsonObject(request);
     if (!body) return failure(request, 400, "INVALID_REQUEST", "A valid request body is required.", requestId, config);
 
