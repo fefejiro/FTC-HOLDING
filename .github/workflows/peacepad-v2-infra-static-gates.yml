@@ -5,12 +5,14 @@ on:
     paths:
       - "APPS/peacepad-v2-platform/**"
       - ".github/workflows/peacepad-v2-infra-static-gates.yml"
+      - ".github/workflows/peacepad-v2-supabase-staging-deploy.yml"
   push:
     branches:
       - main
     paths:
       - "APPS/peacepad-v2-platform/**"
       - ".github/workflows/peacepad-v2-infra-static-gates.yml"
+      - ".github/workflows/peacepad-v2-supabase-staging-deploy.yml"
   workflow_dispatch:
 
 permissions:

@@ -63,6 +63,27 @@ The outbox stores only the Auth UUID and regional retry metadata. Successful
 rows are deleted immediately. It never stores email addresses, family data,
 tokens, or provider error text.
 
+### GitHub environment deployment
+
+The manual `PeacePad V2 Supabase Staging Deploy` workflow is the preferred
+non-interactive operator path. It is `workflow_dispatch` only, deploys exactly
+one region per run, and defaults to a non-mutating dry run. Configure the
+following generic secret names independently in both protected environments,
+`peacepad-v2-staging-ca` and `peacepad-v2-staging-us`, without placing their
+values in chat, source, workflow inputs, or screenshots:
+
+- `SUPABASE_ACCESS_TOKEN`
+- `DATABASE_URL`
+- `MAINTENANCE_SECRET`
+
+The access token must be able to see the approved project ref for that one
+region. Every run requires the exact project ref and checked-out commit SHA. A
+real deployment additionally requires the exact confirmation `DEPLOY
+FICTIONAL STAGING`. The workflow dry-runs migrations before any apply, deploys
+only the staging Edge Function, and then verifies health, readiness,
+unauthenticated session denial, and wrong-region denial. It cannot target
+production identifiers or App Store assets.
+
 ## Live acceptance
 
 Invoke Canada with `x-region: ca-central-1` and
@@ -85,13 +106,15 @@ Required evidence:
 
 ## Current access blocker (2026-08-09)
 
-The locally authenticated Supabase CLI token can list both regional staging
-projects, but cannot update their Function secrets or deploy the adapter.
-Pending migrations and the Edge Function are therefore **BLOCKED BY PROJECT
-ROLE**, not reported as deployed. Hosted CI applies every migration twice to an
-isolated PostgreSQL 16 service and verifies the fictional invitation,
-messaging, correction, receipt, search, deletion, and access-revocation journey.
-That is hosted database proof, not managed-project execution. Resolve by
-granting the current CLI identity Owner/Administrator access. Do not share
-passwords or service-role keys in chat.
+The locally authenticated Supabase CLI token cannot currently see either
+approved regional staging project, and the repository has no Supabase
+deployment credentials. Pending migrations and the Edge Function are therefore
+**BLOCKED BY DEPLOYMENT IDENTITY**, not reported as deployed. Hosted CI applies
+every migration twice to an isolated PostgreSQL 16 service and verifies the
+fictional invitation, messaging, correction, receipt, search, deletion, and
+access-revocation journey. That is hosted database proof, not managed-project
+execution. Resolve by granting a dedicated deployment identity access to both
+projects and storing only the five required values in the protected GitHub
+environment. Do not share passwords, database URLs, maintenance secrets, or
+service-role keys in chat.
 
