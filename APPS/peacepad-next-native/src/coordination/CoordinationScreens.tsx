@@ -177,6 +177,7 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 export function InvitationScreen({ initialCode }: { initialCode?: string }) {
   const {
     acceptInvitation,
+    connectedInvitationAcceptanceBlocked,
     createInvitation,
     createdInvitation,
     declineInvitation,
@@ -317,8 +318,14 @@ export function InvitationScreen({ initialCode }: { initialCode?: string }) {
             <Text key={permission} style={styles.body}>• {permission.replace(/-/g, " ")}</Text>
           ))}
           <Text style={styles.caption}>Nothing is shared until you accept.</Text>
-          <LabButton label="Accept invitation" onPress={() => void acceptInvitation()} />
-          <LabButton label="Decline" onPress={() => void declineInvitation()} variant="secondary" />
+          {connectedInvitationAcceptanceBlocked ? (
+            <Text accessibilityRole="alert" style={styles.caption}>
+              This account is already connected to a family. Family switching is not available yet, so this invitation cannot be accepted here.
+            </Text>
+          ) : (
+            <LabButton disabled={invitationBusy} label="Accept invitation" onPress={() => void acceptInvitation()} />
+          )}
+          <LabButton disabled={invitationBusy} label="Decline" onPress={() => void declineInvitation()} variant="secondary" />
         </View>
       ) : null}
 

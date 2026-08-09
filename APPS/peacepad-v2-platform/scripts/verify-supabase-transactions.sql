@@ -48,6 +48,12 @@ begin
     now() + interval '24 hours', 'create-example-invite', 2
   );
   invitation_id := (invitation_result ->> 'invitationId')::uuid;
+  begin
+    perform public.peacepad_v2_accept_invitation(parent_b, 'ca', invitation_id, 1, 'accept-without-code-proof', 2);
+    raise exception 'Invitation acceptance unexpectedly succeeded without prior code resolution.';
+  exception when others then
+    if sqlerrm not like '%INVITATION_INVALID%' then raise; end if;
+  end;
   preview_result := public.peacepad_v2_resolve_invitation(parent_b, 'ca', invitation_hash);
   if preview_result ->> 'invitationId' <> invitation_id::text then
     raise exception 'Invitation preview did not resolve the expected invitation.';

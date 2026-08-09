@@ -101,6 +101,13 @@ begin
   if not found then raise exception using errcode = '22023', message = 'INVITATION_INVALID'; end if;
   if invitation.region <> p_region then raise exception using errcode = '42501', message = 'REGION_MISMATCH'; end if;
   if invitation.created_by = p_identity_id then raise exception using errcode = '42501', message = 'INVITATION_SELF_ACCEPT_DENIED'; end if;
+  if not exists (
+    select 1 from peacepad_v2.invitation_attempt attempt
+    where attempt.identity_id = p_identity_id
+      and attempt.region = p_region
+      and attempt.code_hash = invitation.code_hash
+      and attempt.attempted_at > now() - interval '30 minutes'
+  ) then raise exception using errcode = '22023', message = 'INVITATION_INVALID'; end if;
   if invitation.status = 'revoked' then raise exception using errcode = '22023', message = 'INVITATION_REVOKED'; end if;
   if invitation.status <> 'pending' then raise exception using errcode = '22023', message = 'INVITATION_USED'; end if;
   if invitation.expires_at <= now() then raise exception using errcode = '22023', message = 'INVITATION_EXPIRED'; end if;

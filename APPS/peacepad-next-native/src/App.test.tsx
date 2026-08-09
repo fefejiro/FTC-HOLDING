@@ -3,8 +3,9 @@ import { getStateFromPath } from "@react-navigation/native";
 import { Share } from "react-native";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { PeacePadCoordinationApp, peacePadLinking, resolveStartScreen } from "./App";
+import type { PeacePadCoordinationApi } from "./api/CoordinationApi";
 import { SyntheticCoordinationApi } from "./api/SyntheticCoordinationApi";
-import { CoordinationStateProvider, resolveCalendarStartView } from "./coordination/CoordinationState";
+import { CoordinationStateProvider, resolveCalendarStartView, type CoordinationRuntime } from "./coordination/CoordinationState";
 import { PendingStagingInvitationProvider } from "./runtime/PeacePadStagingRuntime";
 
 function createTestApi() {
@@ -90,6 +91,43 @@ describe("PeacePad coordination shell", () => {
     expect(consume).toHaveBeenCalledTimes(1);
   });
 
+  it("blocks connected accounts from accepting a second family before family switching exists", async () => {
+    const synthetic = createTestApi();
+    const connectedApi = new Proxy({
+      listCalendarLayers: async () => [],
+      listScheduleEvents: async () => [],
+      listMessages: async () => [],
+      getMessageCheckPreference: async () => synthetic.getMessageCheckPreference("conversation-primary")
+    } as unknown as PeacePadCoordinationApi, {
+      get: (target, property) => {
+        const override = (target as unknown as Record<PropertyKey, unknown>)[property];
+        if (override !== undefined) return override;
+        const value = (synthetic as unknown as Record<PropertyKey, unknown>)[property];
+        return typeof value === "function" ? value.bind(synthetic) : value;
+      }
+    });
+    const runtime: CoordinationRuntime = {
+      actorIdentityId: "10000000-0000-4000-8000-000000000001",
+      identityVersion: 1,
+      sessionId: "10000000-0000-4000-8000-000000000002",
+      familyCircleId: "10000000-0000-4000-8000-000000000003",
+      participantGrantId: "10000000-0000-4000-8000-000000000004",
+      conversationId: "10000000-0000-4000-8000-000000000005",
+      region: "ca"
+    };
+    render(
+      <CoordinationStateProvider api={connectedApi} runtime={runtime}>
+        <PeacePadCoordinationApp startScreen="invite" />
+      </CoordinationStateProvider>
+    );
+    fireEvent.press(await screen.findByRole("tab", { name: "Enter a code" }));
+    fireEvent.changeText(screen.getByLabelText("Invitation code"), "CALM26");
+    fireEvent.press(screen.getByRole("button", { name: "Review invitation" }));
+    expect(await screen.findByText("Jordan invited you")).toBeOnTheScreen();
+    expect(screen.getByText(/already connected to a family/i)).toBeOnTheScreen();
+    expect(screen.queryByRole("button", { name: "Accept invitation" })).not.toBeOnTheScreen();
+  });
+
   it("exposes one selected task tab and routes Home actions", () => {
     renderApp();
     const tabs = screen.getAllByRole("tab").filter((tab) => ["Home", "Messages", "Calendar", "Records", "More"].includes(tab.props.accessibilityLabel));
@@ -166,6 +204,18 @@ describe("secure invitation flow", () => {
     fireEvent.press(screen.getByText("Decline"));
     await waitFor(() => expect(screen.queryByText("Jordan invited you")).not.toBeOnTheScreen());
     expect(screen.queryByText("You’re connected")).not.toBeOnTheScreen();
+  });
+  it("keeps a failed decline reviewable and reports the error", async () => {
+    const api = createTestApi();
+    jest.spyOn(api, "declineInvitation").mockRejectedValue(new Error("offline"));
+    renderApp("invite", undefined, api);
+    fireEvent.press(screen.getByText("Enter a code"));
+    fireEvent.changeText(screen.getByLabelText("Invitation code"), "CALM26");
+    fireEvent.press(screen.getByText("Review invitation"));
+    expect(await screen.findByText("Jordan invited you")).toBeOnTheScreen();
+    fireEvent.press(screen.getByText("Decline"));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/could not verify/i);
+    expect(screen.getByText("Jordan invited you")).toBeOnTheScreen();
   });
 });
 

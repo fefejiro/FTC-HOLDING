@@ -54,6 +54,7 @@ type CoordinationStateValue = {
   invitationGrant?: ParticipantGrant;
   invitationError?: string;
   invitationBusy: boolean;
+  connectedInvitationAcceptanceBlocked: boolean;
   calendarView: CalendarView;
   layers: readonly CalendarLayer[];
   visibleLayerIds: readonly string[];
@@ -288,6 +289,7 @@ export function CoordinationStateProvider({
     invitationGrant,
     invitationError,
     invitationBusy,
+    connectedInvitationAcceptanceBlocked: !demoMode,
     calendarView,
     layers,
     visibleLayerIds,
@@ -360,6 +362,9 @@ export function CoordinationStateProvider({
       setInvitationBusy(true);
       setInvitationError(undefined);
       try {
+        if (!demoMode) {
+          throw new Error("Finish this invitation from an account without an active family. Family switching is not available yet.");
+        }
         if (!activeRuntime) throw new Error("Sign in to use family coordination.");
         setInvitationGrant(await resolvedApi.acceptInvitation(
           invitationPreview.invitationId,
@@ -373,15 +378,19 @@ export function CoordinationStateProvider({
       }
     },
     declineInvitation: async () => {
-      if (invitationPreview) {
+      if (!invitationPreview) return;
+      setInvitationBusy(true);
+      setInvitationError(undefined);
+      try {
         if (!activeRuntime) throw new Error("Sign in to use family coordination.");
-        await resolvedApi.declineInvitation(
-          invitationPreview.invitationId,
-          writeContext(activeRuntime, invitationPreview.version),
-        );
+        await resolvedApi.declineInvitation(invitationPreview.invitationId, writeContext(activeRuntime, invitationPreview.version));
+        setInvitationPreview(undefined);
+        setInvitationCodeState("");
+      } catch (error) {
+        setInvitationError(invitationMessage(error));
+      } finally {
+        setInvitationBusy(false);
       }
-      setInvitationPreview(undefined);
-      setInvitationCodeState("");
     },
     setCalendarView,
     toggleLayerFilter: (layerId) => setVisibleLayerIds((current) =>
@@ -594,6 +603,7 @@ export function CoordinationStateProvider({
     correctionDraft,
     correctionError,
     createdInvitation,
+    demoMode,
     events,
     invitationBusy,
     invitationCode,
