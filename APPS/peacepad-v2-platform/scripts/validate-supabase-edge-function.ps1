@@ -11,9 +11,10 @@ $invitationMigrationPath = Join-Path $platformRoot 'supabase/migrations/20260809
 $accountDeletionMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090003_v2_account_deletion.sql'
 $messagingMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090004_v2_persistent_messaging.sql'
 $calendarMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090005_v2_persistent_calendar.sql'
+$messageCheckMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090006_v2_message_check.sql'
 $configPath = Join-Path $platformRoot 'supabase/config.toml'
 
-foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $configPath)) {
+foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $configPath)) {
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
     throw "Required Supabase staging file is missing: $path"
   }
@@ -27,6 +28,7 @@ $invitationMigration = Get-Content -LiteralPath $invitationMigrationPath -Raw
 $accountDeletionMigration = Get-Content -LiteralPath $accountDeletionMigrationPath -Raw
 $messagingMigration = Get-Content -LiteralPath $messagingMigrationPath -Raw
 $calendarMigration = Get-Content -LiteralPath $calendarMigrationPath -Raw
+$messageCheckMigration = Get-Content -LiteralPath $messageCheckMigrationPath -Raw
 $config = Get-Content -LiteralPath $configPath -Raw
 
 $requiredFunctionPatterns = @(
@@ -52,6 +54,11 @@ $requiredFunctionPatterns = @(
   '/api/v2/schedule-events',
   'peacepad_v2_create_calendar_layer',
   'peacepad_v2_create_schedule_event',
+  '/api/v2/message-previews',
+  'message-check',
+  'peacepad_v2_get_message_check',
+  'peacepad_v2_set_message_check',
+  'peacepad_v2_authorize_message_preview',
   'auth.admin.signOut',
   'idempotency-key',
   'if-match',
@@ -184,6 +191,39 @@ foreach ($rpc in @(
 }
 if ($messagingMigration -notmatch 'message_event_append_only') {
   throw 'Message events must be append-only.'
+}
+if ($messageCheckMigration -notmatch 'create table if not exists peacepad_v2\.message_check_preference') {
+  throw 'Message Check migration is missing its persisted preference table.'
+}
+if ($messageCheckMigration -notmatch 'alter table peacepad_v2\.message_check_preference enable row level security') {
+  throw 'Message Check preferences must use fail-closed RLS.'
+}
+foreach ($rpc in @(
+  'peacepad_v2_get_message_check',
+  'peacepad_v2_set_message_check',
+  'peacepad_v2_authorize_message_preview'
+)) {
+  if ($messageCheckMigration -notmatch "create or replace function public\.$rpc") {
+    throw "Message Check migration is missing RPC: $rpc"
+  }
+  if ($messageCheckMigration -notmatch "revoke all on function public\.$rpc") {
+    throw "Message Check RPC is not revoked from mobile roles: $rpc"
+  }
+}
+foreach ($pattern in @(
+  'enabled boolean not null default false',
+  'ai_assistance_enabled boolean not null default false check',
+  'AI_CONSENT_REQUIRED',
+  'CONCURRENCY_CONFLICT',
+  'IDEMPOTENCY_CONFLICT',
+  'pg_advisory_xact_lock',
+  'identity_message_check_cleanup',
+  'perform peacepad_v2\.record_write',
+  "'message_check.updated'"
+)) {
+  if ($messageCheckMigration -notmatch $pattern) {
+    throw "Message Check migration is missing required boundary: $pattern"
+  }
 }
 foreach ($table in @('calendar_layer', 'schedule_event')) {
   if ($calendarMigration -notmatch "create table if not exists peacepad_v2\.$table") {

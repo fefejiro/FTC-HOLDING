@@ -12,6 +12,7 @@ type RuntimeConfig = Readonly<{
 }>;
 
 type ErrorCode =
+  | "AI_CONSENT_REQUIRED"
   | "AUTH_REQUIRED"
   | "CALENDAR_ACCESS_DENIED"
   | "CONFIGURATION_ERROR"
@@ -22,6 +23,7 @@ type ErrorCode =
   | "IDENTITY_DELETED"
   | "IDENTITY_NOT_BOUND"
   | "IDEMPOTENCY_REQUIRED"
+  | "IDEMPOTENCY_CONFLICT"
   | "INVITATION_EXPIRED"
   | "INVITATION_INVALID"
   | "INVITATION_RATE_LIMITED"
@@ -30,6 +32,7 @@ type ErrorCode =
   | "INVITATION_SELF_ACCEPT_DENIED"
   | "METHOD_NOT_ALLOWED"
   | "MESSAGE_ACCESS_DENIED"
+  | "MESSAGE_CHECK_DISABLED"
   | "NOT_FOUND"
   | "ORIGIN_NOT_ALLOWED"
   | "PROJECT_MISMATCH"
@@ -172,12 +175,14 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     CONVERSATION_ACCESS_DENIED: "CONVERSATION_ACCESS_DENIED",
     CALENDAR_ACCESS_DENIED: "CALENDAR_ACCESS_DENIED",
     MESSAGE_ACCESS_DENIED: "MESSAGE_ACCESS_DENIED",
+    AI_CONSENT_REQUIRED: "AI_CONSENT_REQUIRED",
     INVITATION_EXPIRED: "INVITATION_EXPIRED",
     INVITATION_INVALID: "INVITATION_INVALID",
     INVITATION_REVOKED: "INVITATION_REVOKED",
     INVITATION_SELF_ACCEPT_DENIED: "INVITATION_SELF_ACCEPT_DENIED",
     INVITATION_USED: "INVITATION_USED",
     CONCURRENCY_CONFLICT: "CONCURRENCY_CONFLICT",
+    IDEMPOTENCY_CONFLICT: "IDEMPOTENCY_CONFLICT",
   };
   const invalidRequestCodes = new Set([
     "CONSENT_TYPE_INVALID", "DISPLAY_NAME_INVALID", "EXPECTED_VERSION_INVALID",
@@ -185,12 +190,12 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     "INVITATION_HASH_INVALID", "INVITATION_PERMISSIONS_INVALID", "INVITATION_ROLE_INVALID",
     "CONVERSATION_PARTICIPANTS_INVALID", "MESSAGE_BODY_INVALID", "MESSAGE_CORRECTION_UNCHANGED",
     "MESSAGE_EVENT_INVALID", "MESSAGE_SEARCH_INVALID", "POLICY_VERSION_INVALID", "REGION_INVALID",
-    "CALENDAR_LAYER_INVALID", "CALENDAR_LAYER_NOT_EMPTY", "SCHEDULE_EVENT_INVALID",
+    "CALENDAR_LAYER_INVALID", "CALENDAR_LAYER_NOT_EMPTY", "SCHEDULE_EVENT_INVALID", "MESSAGE_CHECK_INVALID",
   ]);
   const safeCode = directCodes[message ?? ""] ?? (invalidRequestCodes.has(message ?? "") ? "INVALID_REQUEST" : "DATABASE_NOT_READY");
   const status = safeCode === "DATABASE_NOT_READY" ? 503
-    : ["REGION_MISMATCH", "CONCURRENCY_CONFLICT"].includes(safeCode) ? 409
-    : ["INVITATION_SELF_ACCEPT_DENIED", "FAMILY_ACCESS_DENIED", "CONVERSATION_ACCESS_DENIED", "MESSAGE_ACCESS_DENIED", "CALENDAR_ACCESS_DENIED"].includes(safeCode) ? 403
+    : ["REGION_MISMATCH", "CONCURRENCY_CONFLICT", "IDEMPOTENCY_CONFLICT"].includes(safeCode) ? 409
+    : ["AI_CONSENT_REQUIRED", "INVITATION_SELF_ACCEPT_DENIED", "FAMILY_ACCESS_DENIED", "CONVERSATION_ACCESS_DENIED", "MESSAGE_ACCESS_DENIED", "MESSAGE_CHECK_DISABLED", "CALENDAR_ACCESS_DENIED"].includes(safeCode) ? 403
     : 400;
   return failure(request, status, safeCode as ErrorCode, safeCode === "DATABASE_NOT_READY" ? "The regional staging database is not ready." : "The request could not be completed.", requestId, config);
 };
@@ -324,6 +329,44 @@ const handler = async (request: Request): Promise<Response> => {
 
   const conversationMessagesMatch = path.match(/^\/api\/v2\/conversations\/([^/]+)\/messages$/);
   const conversationSearchMatch = path.match(/^\/api\/v2\/conversations\/([^/]+)\/messages\/search$/);
+  const conversationMessageCheckMatch = path.match(/^\/api\/v2\/conversations\/([^/]+)\/message-check$/);
+  if (request.method === "GET" && conversationMessageCheckMatch) {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
+    const conversationId = decodeURIComponent(conversationMessageCheckMatch[1]);
+    if (!isUuid(conversationId)) return failure(request, 400, "INVALID_REQUEST", "A valid conversation is required.", requestId, config);
+    const { data, error } = await authenticated.admin.rpc("peacepad_v2_get_message_check", {
+      p_identity_id: authenticated.user.id,
+      p_region: config.region,
+      p_conversation_id: conversationId,
+    });
+    return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
+  }
+
+  if (request.method === "POST" && path === "/api/v2/message-previews") {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
+    const body = await readJsonObject(request);
+    const conversationId = typeof body?.conversationId === "string" ? body.conversationId : "";
+    const content = typeof body?.content === "string" ? body.content : "";
+    if (!isUuid(conversationId) || !content.trim() || content.length > 4000) {
+      return failure(request, 400, "INVALID_REQUEST", "Message preview details are invalid.", requestId, config);
+    }
+    const { data: authorized, error } = await authenticated.admin.rpc("peacepad_v2_authorize_message_preview", {
+      p_identity_id: authenticated.user.id,
+      p_region: config.region,
+      p_conversation_id: conversationId,
+    });
+    if (error) return rpcFailure(request, requestId, config, error.message);
+    if (authorized !== true) return failure(request, 403, "MESSAGE_CHECK_DISABLED", "Turn on Message Check for this conversation first.", requestId, config);
+    const needsPause = /\b(always|never|your fault|lying|liar|useless)\b|!{2,}/i.test(content);
+    return json(request, 200, {
+      tone: needsPause ? "pause suggested" : "clear",
+      summary: needsPause ? "This draft may read as absolute or accusatory." : "This draft is direct and practical.",
+      rewordingSuggestion: needsPause ? "Please confirm the practical details when you can." : null,
+      originalMessage: content,
+    }, requestId, config);
+  }
   if (
     (request.method === "GET" && (path === "/api/v2/conversations" || conversationMessagesMatch)) ||
     (request.method === "POST" && conversationSearchMatch)
@@ -393,6 +436,7 @@ const handler = async (request: Request): Promise<Response> => {
   const calendarLayerMatch = path.match(/^\/api\/v2\/calendar-layers\/([^/]+)$/);
   const isScheduleEventCreation = path === "/api/v2/schedule-events";
   const scheduleEventMatch = path.match(/^\/api\/v2\/schedule-events\/([^/]+)$/);
+  const isMessageCheckUpdate = request.method === "PUT" && Boolean(conversationMessageCheckMatch);
   if (
     (request.method === "POST" && ([
       "/api/v2/session/bootstrap",
@@ -401,6 +445,7 @@ const handler = async (request: Request): Promise<Response> => {
       "/api/v2/invitations",
     ].includes(path) || isInvitationTransition || isConversationCreation || isMessageSend || isMessageLifecycle || isMessageCorrection || isCalendarLayerCreation || isScheduleEventCreation)) ||
     (request.method === "PATCH" && (calendarLayerMatch || scheduleEventMatch)) ||
+    isMessageCheckUpdate ||
     (request.method === "DELETE" && (isInvitationRevocation || isAccountDeletion || calendarLayerMatch || scheduleEventMatch))
   ) {
     const authenticated = await authenticate(request, config);
@@ -446,6 +491,29 @@ const handler = async (request: Request): Promise<Response> => {
         return failure(request, 503, "SESSION_REVOCATION_FAILED", "The account is deleted, but session cleanup must be retried.", requestId, config);
       }
       return json(request, 200, { ...(data as Record<string, unknown>), refreshSessionsRevoked: true }, requestId, config);
+    }
+
+    if (isMessageCheckUpdate && conversationMessageCheckMatch) {
+      const conversationId = decodeURIComponent(conversationMessageCheckMatch[1]);
+      const expectedVersionHeader = (request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? "";
+      const expectedVersion = Number(expectedVersionHeader);
+      if (!isUuid(conversationId) || !Number.isInteger(expectedVersion) || expectedVersion < 0 || typeof body.enabled !== "boolean") {
+        return failure(request, 400, "INVALID_REQUEST", "Message Check details are invalid.", requestId, config);
+      }
+      if (body.aiAssistanceEnabled !== false) {
+        return failure(request, 403, "AI_CONSENT_REQUIRED", "Third-party AI assistance remains separate and disabled.", requestId, config);
+      }
+      const { data, error } = await authenticated.admin.rpc("peacepad_v2_set_message_check", {
+        p_identity_id: authenticated.user.id,
+        p_region: config.region,
+        p_conversation_id: conversationId,
+        p_enabled: body.enabled,
+        p_ai_assistance_enabled: false,
+        p_expected_version: expectedVersion,
+        p_idempotency_key: context.idempotencyKey,
+        p_schema_version: context.schemaVersion,
+      });
+      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
     }
 
     if (path === "/api/v2/consents") {

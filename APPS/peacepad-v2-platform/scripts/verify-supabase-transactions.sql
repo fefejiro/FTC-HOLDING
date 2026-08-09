@@ -16,6 +16,8 @@ declare
   shared_layer_result jsonb;
   event_result jsonb;
   updated_event_result jsonb;
+  message_check_result jsonb;
+  updated_message_check_result jsonb;
   created_family_id uuid;
   invitation_id uuid;
   conversation_id uuid;
@@ -96,6 +98,62 @@ begin
     raise exception 'Message idempotent replay changed its result.';
   end if;
 
+  message_check_result := public.peacepad_v2_get_message_check(parent_a, 'ca', conversation_id);
+  if (message_check_result ->> 'enabled')::boolean or (message_check_result ->> 'version')::integer <> 0 then
+    raise exception 'Message Check did not default off for a new conversation preference.';
+  end if;
+  if public.peacepad_v2_authorize_message_preview(parent_a, 'ca', conversation_id) then
+    raise exception 'Message preview was authorized before explicit opt-in.';
+  end if;
+  updated_message_check_result := public.peacepad_v2_set_message_check(
+    parent_a, 'ca', conversation_id, true, false, 0, 'enable-message-check', 2
+  );
+  if not (updated_message_check_result ->> 'enabled')::boolean
+    or (updated_message_check_result ->> 'version')::integer <> 1
+    or not public.peacepad_v2_authorize_message_preview(parent_a, 'ca', conversation_id) then
+    raise exception 'Message Check opt-in was not persisted or authorized.';
+  end if;
+  if public.peacepad_v2_set_message_check(
+    parent_a, 'ca', conversation_id, true, false, 0, 'enable-message-check', 2
+  ) <> updated_message_check_result then
+    raise exception 'Message Check idempotent replay changed its result.';
+  end if;
+  begin
+    perform public.peacepad_v2_set_message_check(
+      parent_a, 'ca', conversation_id, false, false, 0, 'stale-message-check-update', 2
+    );
+    raise exception 'Stale Message Check update unexpectedly succeeded.';
+  exception when serialization_failure then null;
+  end;
+  message_check_result := public.peacepad_v2_set_message_check(
+    parent_a, 'ca', conversation_id, false, false, 1, 'disable-message-check', 2
+  );
+  if (message_check_result ->> 'enabled')::boolean
+    or (message_check_result ->> 'version')::integer <> 2
+    or public.peacepad_v2_authorize_message_preview(parent_a, 'ca', conversation_id) then
+    raise exception 'Message Check opt-out was not persisted or enforced.';
+  end if;
+  begin
+    perform public.peacepad_v2_set_message_check(
+      parent_a, 'ca', conversation_id, true, true, 2, 'enable-ai-message-check', 2
+    );
+    raise exception 'Third-party AI assistance unexpectedly enabled without consent enforcement.';
+  exception when insufficient_privilege then null;
+  end;
+  message_check_result := public.peacepad_v2_set_message_check(
+    parent_b, 'ca', conversation_id, true, false, 0, 'enable-parent-b-message-check', 2
+  );
+  if not (message_check_result ->> 'enabled')::boolean then
+    raise exception 'Message Check preference was not isolated per conversation participant.';
+  end if;
+  begin
+    perform public.peacepad_v2_set_message_check(
+      parent_a, 'ca', conversation_id, true, false, 2, 'send-example-message', 2
+    );
+    raise exception 'Cross-operation idempotency-key reuse unexpectedly succeeded.';
+  exception when unique_violation then null;
+  end;
+
   layer_result := public.peacepad_v2_create_calendar_layer(
     parent_a, 'ca', created_family_id, 'Parenting Time', 'parenting-time',
     'calendar', 'teal', '{"scope":"private"}'::jsonb,
@@ -173,6 +231,12 @@ begin
     where identity_id = parent_b and revoked_at is null
   ) then
     raise exception 'Deleted identity retained an active participant grant.';
+  end if;
+  if exists (
+    select 1 from peacepad_v2.message_check_preference
+    where identity_id = parent_b
+  ) then
+    raise exception 'Deleted identity retained a Message Check preference.';
   end if;
   if not exists (
     select 1 from peacepad_v2.audit_event

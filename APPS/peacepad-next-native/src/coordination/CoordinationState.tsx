@@ -310,7 +310,9 @@ export function CoordinationStateProvider({
       setEvents((current) => [...current, event]);
     },
     deleteEvent: async (eventId) => {
-      await api.deleteScheduleEvent(eventId, writeContext(actorIdentityId));
+      const event = events.find((item) => item.id === eventId);
+      if (!event) return;
+      await api.deleteScheduleEvent(eventId, writeContext(actorIdentityId, event.version));
       setEvents((current) => current.filter((event) => event.id !== eventId));
     },
     setMessageDraft: (draft) => {
@@ -319,7 +321,8 @@ export function CoordinationStateProvider({
       setMessageError(undefined);
     },
     setMessageCheckEnabled: async (enabled) => {
-      await api.setMessageCheckPreference("conversation-primary", enabled, writeContext(actorIdentityId));
+      const current = await api.getMessageCheckPreference("conversation-primary");
+      await api.setMessageCheckPreference("conversation-primary", enabled, writeContext(actorIdentityId, current.version));
       setMessageCheckEnabledState(enabled);
       if (!enabled) setMessagePreview(undefined);
     },
