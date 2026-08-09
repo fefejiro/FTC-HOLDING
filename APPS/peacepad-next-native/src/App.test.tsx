@@ -11,6 +11,7 @@ function createTestApi() {
     code: "CALM26",
     preview: {
       invitationId: "invitation-test",
+      version: 1,
       inviterDisplayName: "Jordan",
       familyDisplayName: "Shared parenting space",
       invitedRole: "parent",

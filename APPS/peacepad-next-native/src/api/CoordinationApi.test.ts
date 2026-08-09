@@ -166,7 +166,7 @@ describe("HttpPeacePadCoordinationApi", () => {
     const api = new HttpPeacePadCoordinationApi(
       config,
       jest.fn(async (_input: string, _init?: RequestInit) =>
-        response(409, { code, message: "This invitation is unavailable." })
+        response(409, { error: { code, message: "This invitation is unavailable.", requestId: "request-safe" } })
       ),
       accessToken
     );

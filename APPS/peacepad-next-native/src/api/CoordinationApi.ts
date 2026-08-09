@@ -150,7 +150,13 @@ export interface PeacePadCoordinationApi {
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 export type AccessTokenProvider = () => Promise<string | undefined>;
 
-type ErrorPayload = { code?: string; message?: string };
+type ErrorDetail = { code?: string; message?: string; requestId?: string };
+type ErrorPayload = ErrorDetail & { error?: ErrorDetail };
+
+function errorDetail(payload: ErrorPayload | null): ErrorDetail {
+  if (!payload) return {};
+  return payload.error && typeof payload.error === "object" ? payload.error : payload;
+}
 
 const INVITATION_REASONS: Record<string, InvitationFailureReason> = {
   INVITATION_EXPIRED: "expired",
@@ -357,7 +363,7 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
       });
       const payload = (await response.json().catch(() => null)) as T | ErrorPayload | null;
       if (!response.ok) {
-        const error = (payload ?? {}) as ErrorPayload;
+        const error = errorDetail((payload ?? null) as ErrorPayload | null);
         if (response.status === 401) {
           throw new PeacePadApiError("Your staging session expired. Sign in again.", "auth-required", 401);
         }

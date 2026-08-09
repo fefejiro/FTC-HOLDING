@@ -129,6 +129,7 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
       code,
       preview: {
         invitationId,
+        version: invitation.version,
         inviterDisplayName: "PeacePad member",
         familyDisplayName: "Shared parenting space",
         invitedRole: input.invitedRole,
@@ -175,11 +176,14 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
     return seed.preview;
   }
 
-  async acceptInvitation(invitationId: EntityId, _context: WriteContext): Promise<ParticipantGrant> {
+  async acceptInvitation(invitationId: EntityId, context: WriteContext): Promise<ParticipantGrant> {
     const seed = this.invitationsById.get(invitationId);
     const state = seed ? this.invitationStates.get(invitationId) ?? "pending" : "invalid";
     if (!seed || state !== "pending") {
       throw new InvitationError(state === "pending" ? "invalid" : state, "This invitation is not available.");
+    }
+    if (context.expectedVersion !== seed.preview.version) {
+      throw new PeacePadApiError("The invitation changed. Review it again before accepting.", "http", 409);
     }
     this.invitationStates.set(invitationId, "used");
     return {

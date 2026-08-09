@@ -94,6 +94,7 @@ const CoordinationStateContext = createContext<CoordinationStateValue | undefine
 
 const seededInvitation: InvitationPreview = {
   invitationId: "invitation-demo",
+  version: 1,
   inviterDisplayName: "Jordan",
   familyDisplayName: "Shared parenting space",
   invitedRole: "parent",
@@ -256,7 +257,10 @@ export function CoordinationStateProvider({
       setInvitationBusy(true);
       setInvitationError(undefined);
       try {
-        setInvitationGrant(await api.acceptInvitation(invitationPreview.invitationId, writeContext(actorIdentityId)));
+        setInvitationGrant(await api.acceptInvitation(
+          invitationPreview.invitationId,
+          writeContext(actorIdentityId, invitationPreview.version),
+        ));
         setInvitationPreview(undefined);
       } catch (error) {
         setInvitationError(invitationMessage(error));

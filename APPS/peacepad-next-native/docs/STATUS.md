@@ -56,14 +56,14 @@ mandatory gate passes.
 | Gate | Weight | Implementation | Evidence | Current blocker | Next proof |
 | --- | ---: | ---: | --- | --- | --- |
 | Gate 0: reproducible foundation | 10% | 100% | HOSTED VERIFIED | None for this gate | Retain hosted logs and keep the workflow green |
-| Gate 1: Canada/U.S. platform | 15% | 68% | API BOUNDARY LOCAL VERIFIED / DEPLOYMENT BLOCKED | Both regional boundary schemas are deployed. The identical fail-closed Edge Function and service-role RPC boundary pass local validation, but the current CLI identity cannot update either project's Function secrets or deploy. Managed restoration and residency assurance remain absent | Grant the CLI identity Owner/Administrator project access, apply migration `202608070002`, deploy both adapters, and run live contract checks |
-| Gate 2: identity and coordination | 20% | 25% | HISTORICAL EVIDENCE | Current flows use fictional/in-memory adapters | Two fictional accounts against deployed staging, then audited V1 identity migration |
+| Gate 1: Canada/U.S. platform | 15% | 72% | API BOUNDARY LOCAL VERIFIED / DEPLOYMENT BLOCKED | Both regional boundary schemas are deployed. The fail-closed Edge Function now includes atomic identity, consent, family, and invitation transactions, but the current CLI identity cannot update either project's Function secrets or deploy. Managed restoration and residency assurance remain absent | Grant the CLI identity Owner/Administrator project access, apply pending migrations through `202608090002`, deploy both adapters, and run live contract checks |
+| Gate 2: identity and coordination | 20% | 32% | LOCAL VERIFIED / DEPLOYMENT BLOCKED | Typed invitation preview and version-checked acceptance are wired through the native client and regional API, but remote persistence and two-account proof are absent | Deploy the current regional adapter, then complete fictional two-account invitation acceptance |
 | Gate 3: records, evidence, exports | 15% | 5% | IMPLEMENTED | Metadata-only attachment intent; bytes and persistence disabled | Encrypted regional object storage, hashing, provenance, timeline, and independently verified export |
 | Gate 4: calls, offline, parity | 15% | 2% | NOT STARTED | No calling service or durable offline database | Regional audio/video call and offline conflict/recovery device suites |
 | Gate 5: trust, accessibility, localization | 10% | 5% | IMPLEMENTED | Baseline only; no independent audit or translations | Security/privacy/accessibility clearance and EN/FR/ES matrix |
 | Gate 6: migration and App Store | 15% | 0% | NOT STARTED | Gates 0–5 are incomplete | Migration/rollback rehearsal, TestFlight soak, sign-offs, and App Review submission |
 
-Weighted implementation estimate: **about 28% production-ready**. This replaces
+Weighted implementation estimate: **about 29% production-ready**. This replaces
 the earlier unverified 53% planning estimate.
 
 ## Feature dashboard
@@ -71,8 +71,8 @@ the earlier unverified 53% planning estimate.
 | Feature | Implementation | Evidence | Notes |
 | --- | ---: | --- | --- |
 | Home and task navigation | 70% | SIMULATOR VERIFIED | Welcome and consent screens are screenshot-backed on iPhone 17 / iOS 26.5; task shell and real-device proof remain pending |
-| Identity, session, consent, deletion | 25% | IMPLEMENTED | Device/staging sessions exist; production identity, migration, and deletion are incomplete |
-| Secure invitations | 55% | LOCAL VERIFIED | Explicit preview/acceptance tests pass against fictional adapters; deployed proof is absent |
+| Identity, session, consent, deletion | 32% | LOCAL VERIFIED | JWT-derived bootstrap and append-only consent transactions are implemented; remote execution, deletion, and migration are incomplete |
+| Secure invitations | 62% | LOCAL VERIFIED | Hashed creation, rate-limited preview, single-use version-checked acceptance, and client concurrency propagation are implemented; deployed proof is absent |
 | Messaging and Message Check | 60% | LOCAL VERIFIED | Rule-based preview, correction, and search tests pass; deployed delivery is unverified |
 | Calendar and parenting plans | 55% | LOCAL VERIFIED | Layered views and sharing tests pass against fictional state |
 | Expenses and reimbursements | 0% | NOT STARTED | A calendar-layer label is not an expense ledger |
@@ -111,6 +111,7 @@ the earlier unverified 53% planning estimate.
 | Supabase free staging boundary | this commit | Windows local, no Supabase mutation | 2026-08-07 | LOCAL VERIFIED | Two-project regional config validates; production writes and secrets are rejected; migration denies direct mobile roles and makes audit events append-only |
 | Supabase regional Edge Function boundary | this commit | Windows local, no cloud mutation | 2026-08-07 | LOCAL VERIFIED / DEPLOYMENT BLOCKED | JWT-derived identity, project/region checks, public health/readiness, protected session route, request IDs, safe error envelope, service-role-only RPCs, and no-content logging validated. Both regional deployment preflights pass; current Supabase CLI identity lacks project permissions |
 | Supabase identity/family authorization schema | this commit | Windows local, no cloud mutation | 2026-08-07 | LOCAL VERIFIED / DEPLOYMENT BLOCKED | Typed identity, append-only consent history, family circles, participant grants, hashed expiring invitation state, immutable identity region, indexes, and fail-closed RLS validate locally. Migration has not been applied remotely |
+| Supabase atomic family/invitation transactions | this commit | Windows local, no cloud mutation | 2026-08-09 | LOCAL VERIFIED / DEPLOYMENT BLOCKED | Service-role-only idempotent RPCs implement identity bootstrap, consent history, family ownership, hashed invitation creation, rate-limited preview, and atomic version-checked acceptance. Native client headers, nested errors, and preview concurrency now match the regional API. Database execution remains unverified while deployment access is blocked |
 | Canadian Supabase fictional staging | this commit | Supabase Free, `ca-central-1` | 2026-08-07 | DEPLOYED STAGING VERIFIED (SCHEMA ONLY) | Healthy project; PostgreSQL 17.6; boundary schema applied; append-only triggers present; direct `anon`/`authenticated` table privileges absent; fictional write rolled back. API adapter, restoration, device, and production proof remain absent |
 | U.S. Supabase fictional staging | this commit | Supabase Free, `us-east-2` | 2026-08-07 | DEPLOYED STAGING VERIFIED (SCHEMA ONLY) | Healthy company-owned project; PostgreSQL 17.6; boundary schema applied; append-only triggers present; direct `anon`/`authenticated` table privileges absent; fictional write rolled back. API adapter, restoration, device, and production proof remain absent |
 | Focused staging smokes | earlier PR #172 commits | Windows local, fictional adapters | Historical | HISTORICAL EVIDENCE | `STAGING_RUNTIME_SMOKE_PASS`, `STAGING_RESTART_SMOKE_PASS`, `TWO_ACCOUNT_HTTP_SMOKE_PASS`, `SYNTHETIC_COORDINATION_JOURNEY_PASS`, `STAGING_AUTHORIZATION_SMOKE_PASS` |

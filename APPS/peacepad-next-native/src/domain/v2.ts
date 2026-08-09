@@ -84,6 +84,7 @@ export type FamilyInvitation = VersionedEntity &
 
 export type InvitationPreview = Readonly<{
   invitationId: EntityId;
+  version: number;
   inviterDisplayName: string;
   familyDisplayName: string;
   invitedRole: ParticipantRole;
