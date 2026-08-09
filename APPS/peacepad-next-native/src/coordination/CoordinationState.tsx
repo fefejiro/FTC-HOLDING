@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import type { MessagePreviewResponse } from "../api/contracts";
 import {
   InvitationError,
@@ -23,6 +24,7 @@ import {
   type ParticipantGrant,
   type ScheduleEvent
 } from "../domain/v2";
+import { colors, spacing } from "../theme";
 
 declare const process: {
   env?: Record<string, string | undefined>;
@@ -45,6 +47,7 @@ export type SentMessage = Readonly<{
 }>;
 
 type CoordinationStateValue = {
+  coordinationHydrated: boolean;
   invitationCode: string;
   createdInvitation?: CreatedInvitation;
   invitationPreview?: InvitationPreview;
@@ -99,6 +102,7 @@ export type CoordinationRuntime = Readonly<{
   actorIdentityId: EntityId;
   sessionId: EntityId;
   familyCircleId: EntityId;
+  participantGrantId: EntityId;
   conversationId: EntityId;
   region: "ca" | "us";
 }>;
@@ -107,6 +111,7 @@ const DEMO_RUNTIME: CoordinationRuntime = {
   actorIdentityId: "identity-current",
   sessionId: "verified-device-session",
   familyCircleId: "family-current",
+  participantGrantId: "grant-current",
   conversationId: "conversation-primary",
   region: "ca"
 };
@@ -118,6 +123,7 @@ export function isValidCoordinationRuntime(runtime?: CoordinationRuntime | null)
     && UUID_PATTERN.test(runtime.actorIdentityId)
     && UUID_PATTERN.test(runtime.sessionId)
     && UUID_PATTERN.test(runtime.familyCircleId)
+    && UUID_PATTERN.test(runtime.participantGrantId)
     && UUID_PATTERN.test(runtime.conversationId)
     && (runtime.region === "ca" || runtime.region === "us"));
 }
@@ -197,8 +203,9 @@ export function CoordinationStateProvider({
   const [invitationError, setInvitationError] = useState<string>();
   const [invitationBusy, setInvitationBusy] = useState(false);
   const [calendarView, setCalendarView] = useState<CalendarView>(initialCalendarView);
-  const [layers, setLayers] = useState<readonly CalendarLayer[]>(defaultCalendarLayers);
-  const [visibleLayerIds, setVisibleLayerIds] = useState<readonly string[]>(defaultCalendarLayers.map((layer) => layer.id));
+  const [coordinationHydrated, setCoordinationHydrated] = useState(demoMode);
+  const [layers, setLayers] = useState<readonly CalendarLayer[]>(demoMode ? defaultCalendarLayers : []);
+  const [visibleLayerIds, setVisibleLayerIds] = useState<readonly string[]>(demoMode ? defaultCalendarLayers.map((layer) => layer.id) : []);
   const [events, setEvents] = useState<readonly ScheduleEvent[]>([]);
   const [messageCheckEnabled, setMessageCheckEnabledState] = useState(false);
   const [messageCheckHydrated, setMessageCheckHydrated] = useState(demoMode);
@@ -220,12 +227,22 @@ export function CoordinationStateProvider({
 
   useEffect(() => {
     const generation = ++hydrationGeneration.current;
+    setCoordinationHydrated(false);
+    setLayers(demoMode ? defaultCalendarLayers : []);
+    setVisibleLayerIds(demoMode ? defaultCalendarLayers.map((layer) => layer.id) : []);
+    setEvents([]);
+    setSentMessages([]);
+    setMessageSearchResults([]);
+    setMessageSearchQueryState("");
+    setCorrectingMessageId(undefined);
+    setCorrectionDraftState("");
     setMessageCheckEnabledState(false);
     setMessageCheckPreference(undefined);
     setMessagePreview(undefined);
     setMessageError(undefined);
 
     if (demoMode) {
+      setCoordinationHydrated(true);
       setMessageCheckHydrated(true);
       return;
     }
@@ -235,21 +252,32 @@ export function CoordinationStateProvider({
     }
 
     setMessageCheckHydrated(false);
-    void resolvedApi.getMessageCheckPreference(activeRuntime.conversationId)
-      .then((preference) => {
+    void Promise.all([
+      resolvedApi.listCalendarLayers(activeRuntime.familyCircleId),
+      resolvedApi.listScheduleEvents(activeRuntime.familyCircleId),
+      resolvedApi.listMessages(activeRuntime.conversationId),
+      resolvedApi.getMessageCheckPreference(activeRuntime.conversationId)
+    ]).then(([nextLayers, nextEvents, nextMessages, preference]) => {
         if (hydrationGeneration.current !== generation) return;
+        setLayers(nextLayers);
+        setVisibleLayerIds(nextLayers.map((layer) => layer.id));
+        setEvents(nextEvents);
+        setSentMessages(visibleMessages(nextMessages, activeRuntime.actorIdentityId));
         setMessageCheckPreference(preference);
         setMessageCheckEnabledState(preference.enabled);
         setMessageCheckHydrated(true);
+        setCoordinationHydrated(true);
       })
       .catch((error) => {
         if (hydrationGeneration.current !== generation) return;
-        setMessageError(error instanceof Error ? error.message : "Message Check is unavailable.");
+        setMessageError(error instanceof Error ? error.message : "PeacePad coordination is unavailable.");
         setMessageCheckHydrated(false);
+        setCoordinationHydrated(false);
       });
-  }, [activeRuntime?.conversationId, activeRuntime?.actorIdentityId, demoMode, resolvedApi]);
+  }, [activeRuntime?.conversationId, activeRuntime?.familyCircleId, activeRuntime?.actorIdentityId, demoMode, resolvedApi]);
 
   const value = useMemo<CoordinationStateValue>(() => ({
+    coordinationHydrated,
     invitationCode,
     createdInvitation,
     invitationPreview,
@@ -556,6 +584,7 @@ export function CoordinationStateProvider({
   }), [
     activeRuntime,
     calendarView,
+    coordinationHydrated,
     correctingMessageId,
     correctionBusy,
     correctionDraft,
@@ -585,6 +614,9 @@ export function CoordinationStateProvider({
     visibleLayerIds
   ]);
 
+  if (!demoMode && !coordinationHydrated) {
+    return <View style={hydrationStyles.page}><ActivityIndicator color={colors.brand} /><Text style={hydrationStyles.title}>Loading your family space</Text><Text style={hydrationStyles.body}>{messageError ?? "Restoring messages, calendars, and preferences securely."}</Text></View>;
+  }
   return <CoordinationStateContext.Provider value={value}>{children}</CoordinationStateContext.Provider>;
 }
 
@@ -593,3 +625,9 @@ export function useCoordinationState(): CoordinationStateValue {
   if (!value) throw new Error("useCoordinationState must be used inside CoordinationStateProvider");
   return value;
 }
+
+const hydrationStyles = StyleSheet.create({
+  page: { backgroundColor: colors.background, flex: 1, justifyContent: "center", padding: spacing.xl },
+  title: { color: colors.text, fontSize: 24, fontWeight: "800", marginTop: spacing.md },
+  body: { color: colors.muted, fontSize: 16, lineHeight: 24, marginTop: spacing.sm }
+});

@@ -1,4 +1,4 @@
-import { resolveEnvironmentConfig } from "./environment";
+import { resolveEnvironmentConfig, resolveSupabaseStagingConfig } from "./environment";
 
 describe("resolveEnvironmentConfig", () => {
   it("defaults to an isolated local lab with production writes disabled", () => {
@@ -54,5 +54,38 @@ describe("resolveEnvironmentConfig", () => {
         EXPO_PUBLIC_PEACEPAD_API_BASE_URL: productionApiUrl
       })
     ).toThrow("must not target the production PeacePad API");
+  });
+});
+
+describe("resolveSupabaseStagingConfig", () => {
+  const ca = {
+    EXPO_PUBLIC_PEACEPAD_ENV: "staging",
+    EXPO_PUBLIC_PEACEPAD_REGION: "ca",
+    EXPO_PUBLIC_PEACEPAD_SUPABASE_URL: "https://ftdqnhlesqrkstnqgfxr.supabase.co",
+    EXPO_PUBLIC_PEACEPAD_API_BASE_URL: "https://ftdqnhlesqrkstnqgfxr.supabase.co/functions/v1/peacepad-v2-api",
+    EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_fictional"
+  };
+
+  it("accepts only the exact Canadian project for a Canadian build", () => {
+    expect(resolveSupabaseStagingConfig(ca)).toMatchObject({
+      region: "ca",
+      projectRef: "ftdqnhlesqrkstnqgfxr"
+    });
+  });
+
+  it("accepts only the exact US project for a US build", () => {
+    expect(resolveSupabaseStagingConfig({
+      ...ca,
+      EXPO_PUBLIC_PEACEPAD_REGION: "us",
+      EXPO_PUBLIC_PEACEPAD_SUPABASE_URL: "https://kgechdqdtryktfahyqez.supabase.co",
+      EXPO_PUBLIC_PEACEPAD_API_BASE_URL: "https://kgechdqdtryktfahyqez.supabase.co/functions/v1/peacepad-v2-api"
+    })).toMatchObject({ region: "us", projectRef: "kgechdqdtryktfahyqez" });
+  });
+
+  it("rejects project swapping, non-staging use, and service-role material", () => {
+    expect(() => resolveSupabaseStagingConfig({ ...ca, EXPO_PUBLIC_PEACEPAD_REGION: "us" })).toThrow("exact approved Supabase project");
+    expect(() => resolveSupabaseStagingConfig({ ...ca, EXPO_PUBLIC_PEACEPAD_ENV: "lab" })).toThrow("only in staging");
+    expect(() => resolveSupabaseStagingConfig({ ...ca, EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY: "service_role_secret" })).toThrow("secret and legacy JWT keys are prohibited");
+    expect(() => resolveSupabaseStagingConfig({ ...ca, EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY: "ey.a.b" })).toThrow("legacy JWT keys are prohibited");
   });
 });

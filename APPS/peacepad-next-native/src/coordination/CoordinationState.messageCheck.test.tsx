@@ -14,11 +14,13 @@ const CONVERSATION_A = "22222222-2222-4222-8222-222222222222";
 const CONVERSATION_B = "33333333-3333-4333-8333-333333333333";
 const FAMILY_A = "44444444-4444-4444-8444-444444444444";
 const SESSION_A = "55555555-5555-4555-8555-555555555555";
+const GRANT_A = "66666666-6666-4666-8666-666666666666";
 
 const runtime = (conversationId = CONVERSATION_A): CoordinationRuntime => ({
   actorIdentityId: ACTOR_A,
   conversationId,
   familyCircleId: FAMILY_A,
+  participantGrantId: GRANT_A,
   region: "ca",
   sessionId: SESSION_A
 });
@@ -51,6 +53,9 @@ function deferred<T>() {
 
 function apiWithMessageCheck(overrides: Partial<PeacePadCoordinationApi> = {}) {
   return {
+    listCalendarLayers: jest.fn(async () => []),
+    listScheduleEvents: jest.fn(async () => []),
+    listMessages: jest.fn(async () => []),
     getMessageCheckPreference: jest.fn(async (conversationId: string) => preference(conversationId, false, 0)),
     setMessageCheckPreference: jest.fn(async (conversationId: string, enabled: boolean) => preference(conversationId, enabled, 1)),
     previewMessage: jest.fn(),
@@ -178,6 +183,7 @@ describe("persisted Message Check runtime", () => {
       actorIdentityId: "identity-current",
       conversationId: "conversation-primary",
       familyCircleId: "family-current",
+      participantGrantId: "grant-current",
       region: "ca",
       sessionId: "device-session"
     });
