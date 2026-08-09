@@ -483,6 +483,7 @@ export function MessagesScreen() {
     correctionError,
     messageCheckBusy,
     messageCheckEnabled,
+    messageCheckHydrated,
     messageDraft,
     messageError,
     messagePreview,
@@ -538,7 +539,11 @@ export function MessagesScreen() {
         <View style={styles.assistCard}>
           <Text style={styles.heading}>Message Check</Text>
           <Text style={styles.body}>Get suggestions for clarity and tone before you send. You choose what changes.</Text>
-          <LabButton label="Turn on" onPress={() => void setMessageCheckEnabled(true)} />
+          <LabButton
+            disabled={!messageCheckHydrated || messageCheckBusy}
+            label={!messageCheckHydrated ? "Message Check unavailable" : messageCheckBusy ? "Updating..." : "Turn on"}
+            onPress={() => void setMessageCheckEnabled(true)}
+          />
           <LabButton label="Not now" onPress={() => setShowHowItWorks(false)} variant="secondary" />
           <Pressable
             accessibilityLabel="How Message Check works"
@@ -559,6 +564,8 @@ export function MessagesScreen() {
           <Pressable
             accessibilityLabel="Turn off Message Check"
             accessibilityRole="button"
+            accessibilityState={{ disabled: !messageCheckHydrated || messageCheckBusy }}
+            disabled={!messageCheckHydrated || messageCheckBusy}
             onPress={() => void setMessageCheckEnabled(false)}
             style={styles.linkButton}
           >

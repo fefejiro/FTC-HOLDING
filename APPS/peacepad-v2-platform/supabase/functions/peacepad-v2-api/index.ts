@@ -240,6 +240,22 @@ const authenticate = async (request: Request, config: RuntimeConfig) => {
   return error || !data.user ? null : { admin, user: data.user };
 };
 
+const verifiedSessionId = (request: Request): string | null => {
+  const token = bearerToken(request);
+  const encodedPayload = token?.split(".")[1];
+  if (!encodedPayload) return null;
+  try {
+    const normalized = encodedPayload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    const payload = JSON.parse(atob(padded)) as { session_id?: unknown };
+    return typeof payload.session_id === "string" && isUuid(payload.session_id)
+      ? payload.session_id
+      : null;
+  } catch {
+    return null;
+  }
+};
+
 const handler = async (request: Request): Promise<Response> => {
   const requestId = crypto.randomUUID();
   let config: RuntimeConfig;
@@ -295,11 +311,24 @@ const handler = async (request: Request): Promise<Response> => {
     if (binding.region !== config.region) {
       return failure(request, 409, "REGION_MISMATCH", "The identity belongs to a different data region.", requestId, config);
     }
+    const sessionId = verifiedSessionId(request);
+    if (!sessionId) {
+      return failure(request, 401, "AUTH_REQUIRED", "The verified staging session is missing required context.", requestId, config);
+    }
+    const { data: memberships, error: membershipError } = await authenticated.admin.rpc("peacepad_v2_list_active_memberships", {
+      p_identity_id: authenticated.user.id,
+      p_region: config.region,
+    });
+    if (membershipError) {
+      return failure(request, 503, "DATABASE_NOT_READY", "The regional staging database is not ready.", requestId, config);
+    }
     return json(request, 200, {
       actor: {
         identityId: authenticated.user.id,
+        sessionId,
         displayName: authenticated.user.user_metadata?.display_name ?? null,
       },
+      memberships: Array.isArray(memberships) ? memberships : [],
       region: binding.region,
       schemaVersion: "2.0",
     }, requestId, config);

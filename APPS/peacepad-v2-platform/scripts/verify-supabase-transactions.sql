@@ -52,6 +52,19 @@ begin
     raise exception 'Invitation acceptance did not create an active participant grant.';
   end if;
 
+  if jsonb_array_length(public.peacepad_v2_list_active_memberships(parent_a, 'ca')) <> 1 then
+    raise exception 'Family creator could not restore the active membership.';
+  end if;
+  if (public.peacepad_v2_list_active_memberships(parent_b, 'ca') -> 0 ->> 'familyCircleId') <> created_family_id::text then
+    raise exception 'Accepted participant did not restore the expected family membership.';
+  end if;
+  begin
+    perform public.peacepad_v2_list_active_memberships(parent_a, 'us');
+    raise exception 'Cross-region membership restoration unexpectedly succeeded.';
+  exception when others then
+    if sqlerrm not like '%REGION_MISMATCH%' then raise; end if;
+  end;
+
   conversation_result := public.peacepad_v2_create_conversation(
     parent_a, 'ca', created_family_id, array[parent_a, parent_b],
     'create-example-conversation', 2

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { MessagePreviewResponse } from "../api/contracts";
 import {
   InvitationError,
@@ -16,7 +16,9 @@ import {
 import {
   createWriteContext,
   type CalendarLayer,
+  type EntityId,
   type InvitationPreview,
+  type MessageCheckPreference,
   type MessageEvent,
   type ParticipantGrant,
   type ScheduleEvent
@@ -54,6 +56,7 @@ type CoordinationStateValue = {
   visibleLayerIds: readonly string[];
   events: readonly ScheduleEvent[];
   messageCheckEnabled: boolean;
+  messageCheckHydrated: boolean;
   messageDraft: string;
   messagePreview?: MessagePreviewResponse;
   messageCheckBusy: boolean;
@@ -92,6 +95,33 @@ type CoordinationStateValue = {
 
 const CoordinationStateContext = createContext<CoordinationStateValue | undefined>(undefined);
 
+export type CoordinationRuntime = Readonly<{
+  actorIdentityId: EntityId;
+  sessionId: EntityId;
+  familyCircleId: EntityId;
+  conversationId: EntityId;
+  region: "ca" | "us";
+}>;
+
+const DEMO_RUNTIME: CoordinationRuntime = {
+  actorIdentityId: "identity-current",
+  sessionId: "verified-device-session",
+  familyCircleId: "family-current",
+  conversationId: "conversation-primary",
+  region: "ca"
+};
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function isValidCoordinationRuntime(runtime?: CoordinationRuntime | null): runtime is CoordinationRuntime {
+  return Boolean(runtime
+    && UUID_PATTERN.test(runtime.actorIdentityId)
+    && UUID_PATTERN.test(runtime.sessionId)
+    && UUID_PATTERN.test(runtime.familyCircleId)
+    && UUID_PATTERN.test(runtime.conversationId)
+    && (runtime.region === "ca" || runtime.region === "us"));
+}
+
 const seededInvitation: InvitationPreview = {
   invitationId: "invitation-demo",
   version: 1,
@@ -106,12 +136,12 @@ function createDefaultApi(): PeacePadCoordinationApi {
   return new SyntheticCoordinationApi([{ code: "CALM26", preview: seededInvitation }]);
 }
 
-function writeContext(actorIdentityId: string, expectedVersion: number | null = null) {
+function writeContext(runtime: CoordinationRuntime, expectedVersion: number | null = null) {
   return createWriteContext({
     idempotencyKey: `device-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
     expectedVersion,
-    region: "ca",
-    actor: { identityId: actorIdentityId, sessionId: "verified-device-session" }
+    region: runtime.region,
+    actor: { identityId: runtime.actorIdentityId, sessionId: runtime.sessionId }
   });
 }
 
@@ -145,16 +175,21 @@ export function visibleMessages(events: readonly MessageEvent[], actorIdentityId
 }
 
 export function CoordinationStateProvider({
-  api = createDefaultApi(),
+  api,
   children,
   initialCalendarView = resolveCalendarStartView(process.env?.EXPO_PUBLIC_PEACEPAD_LAB_START_CALENDAR_VIEW),
-  outbox = secureMessageOutboxStore
+  outbox = secureMessageOutboxStore,
+  runtime
 }: {
   api?: PeacePadCoordinationApi;
   children: ReactNode;
   initialCalendarView?: CalendarView;
   outbox?: MessageOutboxStore;
+  runtime?: CoordinationRuntime | null;
 }) {
+  const resolvedApi = useMemo(() => api ?? createDefaultApi(), [api]);
+  const demoMode = !api || api instanceof SyntheticCoordinationApi;
+  const activeRuntime = demoMode ? DEMO_RUNTIME : (isValidCoordinationRuntime(runtime) ? runtime : undefined);
   const [invitationCode, setInvitationCodeState] = useState("");
   const [createdInvitation, setCreatedInvitation] = useState<CreatedInvitation>();
   const [invitationPreview, setInvitationPreview] = useState<InvitationPreview>();
@@ -166,6 +201,8 @@ export function CoordinationStateProvider({
   const [visibleLayerIds, setVisibleLayerIds] = useState<readonly string[]>(defaultCalendarLayers.map((layer) => layer.id));
   const [events, setEvents] = useState<readonly ScheduleEvent[]>([]);
   const [messageCheckEnabled, setMessageCheckEnabledState] = useState(false);
+  const [messageCheckHydrated, setMessageCheckHydrated] = useState(demoMode);
+  const [messageCheckPreference, setMessageCheckPreference] = useState<MessageCheckPreference>();
   const [messageDraft, setMessageDraftState] = useState("");
   const [messagePreview, setMessagePreview] = useState<MessagePreviewResponse>();
   const [messageCheckBusy, setMessageCheckBusy] = useState(false);
@@ -175,11 +212,42 @@ export function CoordinationStateProvider({
   const [messageSearchResults, setMessageSearchResults] = useState<readonly MessageSearchResult[]>([]);
   const [messageSearchBusy, setMessageSearchBusy] = useState(false);
   const [messageSearchError, setMessageSearchError] = useState<string>();
-  const [actorIdentityId, setActorIdentityId] = useState("identity-current");
   const [correctingMessageId, setCorrectingMessageId] = useState<string>();
   const [correctionDraft, setCorrectionDraftState] = useState("");
   const [correctionBusy, setCorrectionBusy] = useState(false);
   const [correctionError, setCorrectionError] = useState<string>();
+  const hydrationGeneration = useRef(0);
+
+  useEffect(() => {
+    const generation = ++hydrationGeneration.current;
+    setMessageCheckEnabledState(false);
+    setMessageCheckPreference(undefined);
+    setMessagePreview(undefined);
+    setMessageError(undefined);
+
+    if (demoMode) {
+      setMessageCheckHydrated(true);
+      return;
+    }
+    if (!activeRuntime) {
+      setMessageCheckHydrated(false);
+      return;
+    }
+
+    setMessageCheckHydrated(false);
+    void resolvedApi.getMessageCheckPreference(activeRuntime.conversationId)
+      .then((preference) => {
+        if (hydrationGeneration.current !== generation) return;
+        setMessageCheckPreference(preference);
+        setMessageCheckEnabledState(preference.enabled);
+        setMessageCheckHydrated(true);
+      })
+      .catch((error) => {
+        if (hydrationGeneration.current !== generation) return;
+        setMessageError(error instanceof Error ? error.message : "Message Check is unavailable.");
+        setMessageCheckHydrated(false);
+      });
+  }, [activeRuntime?.conversationId, activeRuntime?.actorIdentityId, demoMode, resolvedApi]);
 
   const value = useMemo<CoordinationStateValue>(() => ({
     invitationCode,
@@ -193,6 +261,7 @@ export function CoordinationStateProvider({
     visibleLayerIds,
     events,
     messageCheckEnabled,
+    messageCheckHydrated,
     messageDraft,
     messagePreview,
     messageCheckBusy,
@@ -210,12 +279,13 @@ export function CoordinationStateProvider({
       setInvitationBusy(true);
       setInvitationError(undefined);
       try {
-        setCreatedInvitation(await api.createInvitation({
-          familyCircleId: "family-current",
+        if (!activeRuntime) throw new Error("Sign in to use family coordination.");
+        setCreatedInvitation(await resolvedApi.createInvitation({
+          familyCircleId: activeRuntime.familyCircleId,
           invitedRole: "parent",
           permissions: ["messages", "calendar", "shared-records"],
           expiresInHours: 72
-        }, writeContext(actorIdentityId)));
+        }, writeContext(activeRuntime)));
       } catch (error) {
         setInvitationError(invitationMessage(error));
       } finally {
@@ -227,7 +297,8 @@ export function CoordinationStateProvider({
       setInvitationBusy(true);
       setInvitationError(undefined);
       try {
-        await api.revokeInvitation(createdInvitation.invitation.id, writeContext(actorIdentityId, createdInvitation.invitation.version));
+        if (!activeRuntime) throw new Error("Sign in to use family coordination.");
+        await resolvedApi.revokeInvitation(createdInvitation.invitation.id, writeContext(activeRuntime, createdInvitation.invitation.version));
         setCreatedInvitation(undefined);
       } catch (error) {
         setInvitationError(invitationMessage(error));
@@ -245,7 +316,7 @@ export function CoordinationStateProvider({
       setInvitationError(undefined);
       setInvitationPreview(undefined);
       try {
-        setInvitationPreview(await api.resolveInvitation(invitationCode));
+        setInvitationPreview(await resolvedApi.resolveInvitation(invitationCode));
       } catch (error) {
         setInvitationError(invitationMessage(error));
       } finally {
@@ -257,9 +328,10 @@ export function CoordinationStateProvider({
       setInvitationBusy(true);
       setInvitationError(undefined);
       try {
-        setInvitationGrant(await api.acceptInvitation(
+        if (!activeRuntime) throw new Error("Sign in to use family coordination.");
+        setInvitationGrant(await resolvedApi.acceptInvitation(
           invitationPreview.invitationId,
-          writeContext(actorIdentityId, invitationPreview.version),
+          writeContext(activeRuntime, invitationPreview.version),
         ));
         setInvitationPreview(undefined);
       } catch (error) {
@@ -270,9 +342,10 @@ export function CoordinationStateProvider({
     },
     declineInvitation: async () => {
       if (invitationPreview) {
-        await api.declineInvitation(
+        if (!activeRuntime) throw new Error("Sign in to use family coordination.");
+        await resolvedApi.declineInvitation(
           invitationPreview.invitationId,
-          writeContext(actorIdentityId, invitationPreview.version),
+          writeContext(activeRuntime, invitationPreview.version),
         );
       }
       setInvitationPreview(undefined);
@@ -285,16 +358,18 @@ export function CoordinationStateProvider({
     setLayerShared: async (layerId, shared) => {
       const layer = layers.find((item) => item.id === layerId);
       if (!layer) return;
-      const updated = await api.updateCalendarLayer(
+      if (!activeRuntime) throw new Error("Sign in to use family coordination.");
+      const updated = await resolvedApi.updateCalendarLayer(
         { ...layer, visibility: shared ? { scope: "family" } : { scope: "private" } },
-        writeContext(actorIdentityId, layer.version)
+        writeContext(activeRuntime, layer.version)
       );
       setLayers((current) => current.map((item) => (item.id === updated.id ? updated : item)));
     },
     addEvent: async ({ layerId, title, startsAt, endsAt }) => {
       const layer = layers.find((item) => item.id === layerId);
       if (!layer || !title.trim()) return;
-      const event = await api.createScheduleEvent({
+      if (!activeRuntime) throw new Error("Sign in to use family coordination.");
+      const event = await resolvedApi.createScheduleEvent({
         familyCircleId: layer.familyCircleId,
         calendarLayerId: layer.id,
         childProfileIds: [],
@@ -306,13 +381,14 @@ export function CoordinationStateProvider({
         status: "planned",
         recurrence: null,
         visibilityOverride: null
-      }, writeContext(actorIdentityId));
+      }, writeContext(activeRuntime));
       setEvents((current) => [...current, event]);
     },
     deleteEvent: async (eventId) => {
       const event = events.find((item) => item.id === eventId);
       if (!event) return;
-      await api.deleteScheduleEvent(eventId, writeContext(actorIdentityId, event.version));
+      if (!activeRuntime) throw new Error("Sign in to use family coordination.");
+      await resolvedApi.deleteScheduleEvent(eventId, writeContext(activeRuntime, event.version));
       setEvents((current) => current.filter((event) => event.id !== eventId));
     },
     setMessageDraft: (draft) => {
@@ -321,17 +397,33 @@ export function CoordinationStateProvider({
       setMessageError(undefined);
     },
     setMessageCheckEnabled: async (enabled) => {
-      const current = await api.getMessageCheckPreference("conversation-primary");
-      await api.setMessageCheckPreference("conversation-primary", enabled, writeContext(actorIdentityId, current.version));
-      setMessageCheckEnabledState(enabled);
-      if (!enabled) setMessagePreview(undefined);
-    },
-    checkMessage: async () => {
-      if (!messageCheckEnabled) return;
+      if (!activeRuntime || (!demoMode && !messageCheckHydrated)) return;
       setMessageCheckBusy(true);
       setMessageError(undefined);
       try {
-        setMessagePreview(await api.previewMessage("conversation-primary", messageDraft));
+        const current = messageCheckPreference
+          ?? await resolvedApi.getMessageCheckPreference(activeRuntime.conversationId);
+        const updated = await resolvedApi.setMessageCheckPreference(
+          activeRuntime.conversationId,
+          enabled,
+          writeContext(activeRuntime, current.version)
+        );
+        setMessageCheckPreference(updated);
+        setMessageCheckEnabledState(updated.enabled);
+        setMessageCheckHydrated(true);
+        if (!updated.enabled) setMessagePreview(undefined);
+      } catch (error) {
+        setMessageError(error instanceof Error ? error.message : "Message Check is unavailable.");
+      } finally {
+        setMessageCheckBusy(false);
+      }
+    },
+    checkMessage: async () => {
+      if (!activeRuntime || !messageCheckHydrated || !messageCheckEnabled) return;
+      setMessageCheckBusy(true);
+      setMessageError(undefined);
+      try {
+        setMessagePreview(await resolvedApi.previewMessage(activeRuntime.conversationId, messageDraft));
       } catch (error) {
         setMessageError(error instanceof Error ? error.message : "Message Check is unavailable.");
       } finally {
@@ -346,11 +438,12 @@ export function CoordinationStateProvider({
         : originalBody;
       setMessageCheckBusy(true);
       setMessageError(undefined);
-      const context = writeContext(actorIdentityId);
+      if (!activeRuntime) return;
+      const context = writeContext(activeRuntime);
       try {
-        const message = await api.sendMessage({
-          familyCircleId: "family-current",
-          conversationId: "conversation-primary",
+        const message = await resolvedApi.sendMessage({
+          familyCircleId: activeRuntime.familyCircleId,
+          conversationId: activeRuntime.conversationId,
           body: sentBody
         }, context);
         setSentMessages((current) => [...current, {
@@ -371,7 +464,7 @@ export function CoordinationStateProvider({
             const queuedAt = new Date().toISOString();
             await outbox.enqueue({
               id: queueId,
-              input: { familyCircleId: "family-current", conversationId: "conversation-primary", body: sentBody },
+              input: { familyCircleId: activeRuntime.familyCircleId, conversationId: activeRuntime.conversationId, body: sentBody },
               context,
               queuedAt,
               attempts: 0
@@ -404,7 +497,8 @@ export function CoordinationStateProvider({
       setMessageSearchBusy(true);
       setMessageSearchError(undefined);
       try {
-        setMessageSearchResults(await api.searchMessages("conversation-primary", query));
+        if (!activeRuntime) throw new Error("Sign in to search family messages.");
+        setMessageSearchResults(await resolvedApi.searchMessages(activeRuntime.conversationId, query));
       } catch (error) {
         setMessageSearchError(error instanceof Error ? error.message : "PeacePad could not search messages.");
       } finally {
@@ -438,12 +532,13 @@ export function CoordinationStateProvider({
       setCorrectionBusy(true);
       setCorrectionError(undefined);
       try {
-        const correction = await api.correctMessage({
-          familyCircleId: "family-current",
-          conversationId: "conversation-primary",
+        if (!activeRuntime) throw new Error("Sign in to correct family messages.");
+        const correction = await resolvedApi.correctMessage({
+          familyCircleId: activeRuntime.familyCircleId,
+          conversationId: activeRuntime.conversationId,
           originalMessageEventId: message.id,
           body
-        }, writeContext(actorIdentityId));
+        }, writeContext(activeRuntime));
         setSentMessages((current) => current.map((item) => item.id === message.id ? {
           ...item,
           sentBody: correction.body ?? body,
@@ -459,8 +554,7 @@ export function CoordinationStateProvider({
       }
     }
   }), [
-    api,
-    actorIdentityId,
+    activeRuntime,
     calendarView,
     correctingMessageId,
     correctionBusy,
@@ -476,6 +570,8 @@ export function CoordinationStateProvider({
     layers,
     messageCheckBusy,
     messageCheckEnabled,
+    messageCheckHydrated,
+    messageCheckPreference,
     messageDraft,
     messageError,
     messagePreview,
@@ -484,6 +580,7 @@ export function CoordinationStateProvider({
     messageSearchQuery,
     messageSearchResults,
     outbox,
+    resolvedApi,
     sentMessages,
     visibleLayerIds
   ]);
