@@ -16,11 +16,12 @@ $sessionMembershipMigrationPath = Join-Path $platformRoot 'supabase/migrations/2
 $sessionIdentityVersionMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090008_v2_session_identity_version.sql'
 $authCleanupMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090009_v2_auth_cleanup_outbox.sql'
 $deletionMinimizationMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090010_v2_account_deletion_minimization.sql'
+$atomicInvitationMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090011_v2_accept_invitation_conversation.sql'
 $authCleanupRunnerPath = Join-Path $platformRoot 'scripts/run-auth-cleanup.ps1'
 $deployRunnerPath = Join-Path $platformRoot 'scripts/deploy-supabase-free-staging.ps1'
 $configPath = Join-Path $platformRoot 'supabase/config.toml'
 
-foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
+foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
     throw "Required Supabase staging file is missing: $path"
   }
@@ -39,6 +40,7 @@ $sessionMembershipMigration = Get-Content -LiteralPath $sessionMembershipMigrati
 $sessionIdentityVersionMigration = Get-Content -LiteralPath $sessionIdentityVersionMigrationPath -Raw
 $authCleanupMigration = Get-Content -LiteralPath $authCleanupMigrationPath -Raw
 $deletionMinimizationMigration = Get-Content -LiteralPath $deletionMinimizationMigrationPath -Raw
+$atomicInvitationMigration = Get-Content -LiteralPath $atomicInvitationMigrationPath -Raw
 $authCleanupRunner = Get-Content -LiteralPath $authCleanupRunnerPath -Raw
 $deployRunner = Get-Content -LiteralPath $deployRunnerPath -Raw
 $config = Get-Content -LiteralPath $configPath -Raw
@@ -252,6 +254,17 @@ if ($invitationMigration -notmatch 'for update') {
 }
 if ($invitationMigration -notmatch 'p_expected_version') {
   throw 'Invitation acceptance must enforce optimistic concurrency.'
+}
+foreach ($pattern in @(
+  'conversation_direct_participants_unique_idx',
+  'peacepad_v2\.can_message\(invitation\.created_by',
+  "'grant', jsonb_build_object",
+  "'conversation', peacepad_v2\.conversation_json",
+  'on conflict \(family_id, participant_identity_ids\)'
+)) {
+  if ($atomicInvitationMigration -notmatch $pattern) {
+    throw "Atomic invitation acceptance is missing required boundary: $pattern"
+  }
 }
 if ($invitationMigration -notmatch "attempted_at > now\(\) - interval '30 minutes'") {
   throw 'Invitation decline must require a recent successful preview attempt.'

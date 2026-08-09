@@ -17,6 +17,7 @@ import {
 } from "./CoordinationApi";
 import {
   PEACEPAD_V2_SCHEMA_VERSION,
+  type AcceptedInvitation,
   type AttachmentUploadIntent,
   type ActorReference,
   type CalendarLayer,
@@ -177,7 +178,7 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
     return seed.preview;
   }
 
-  async acceptInvitation(invitationId: EntityId, context: WriteContext): Promise<ParticipantGrant> {
+  async acceptInvitation(invitationId: EntityId, context: WriteContext): Promise<AcceptedInvitation> {
     const seed = this.invitationsById.get(invitationId);
     const state = seed ? this.invitationStates.get(invitationId) ?? "pending" : "invalid";
     if (!seed || state !== "pending") {
@@ -187,7 +188,7 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
       throw new PeacePadApiError("The invitation changed. Review it again before accepting.", "http", 409);
     }
     this.invitationStates.set(invitationId, "used");
-    return {
+    const grant: ParticipantGrant = {
       ...versioned(`grant-${invitationId}`),
       familyCircleId: "family-current",
       identityId: "identity-current",
@@ -197,6 +198,13 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
       revokedAt: null,
       grantedBy: "identity-inviter"
     };
+    const conversation: Conversation = {
+      ...versioned(`conversation-${invitationId}`),
+      familyCircleId: grant.familyCircleId,
+      participantIdentityIds: [grant.identityId, grant.grantedBy],
+      status: "active"
+    };
+    return { grant, conversation };
   }
 
   async declineInvitation(invitationId: EntityId, context: WriteContext): Promise<void> {

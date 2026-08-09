@@ -16,6 +16,7 @@ import {
 } from "../messaging/secureMessageOutbox";
 import {
   createWriteContext,
+  type AcceptedInvitation,
   type CalendarLayer,
   type EntityId,
   type InvitationPreview,
@@ -189,12 +190,14 @@ export function CoordinationStateProvider({
   api,
   children,
   initialCalendarView = resolveCalendarStartView(process.env?.EXPO_PUBLIC_PEACEPAD_LAB_START_CALENDAR_VIEW),
+  onInvitationAccepted,
   outbox = secureMessageOutboxStore,
   runtime
 }: {
   api?: PeacePadCoordinationApi;
   children: ReactNode;
   initialCalendarView?: CalendarView;
+  onInvitationAccepted?: (result: AcceptedInvitation) => Promise<void>;
   outbox?: MessageOutboxStore;
   runtime?: CoordinationRuntime | null;
 }) {
@@ -289,7 +292,7 @@ export function CoordinationStateProvider({
     invitationGrant,
     invitationError,
     invitationBusy,
-    connectedInvitationAcceptanceBlocked: !demoMode,
+    connectedInvitationAcceptanceBlocked: !demoMode && !onInvitationAccepted,
     calendarView,
     layers,
     visibleLayerIds,
@@ -362,14 +365,16 @@ export function CoordinationStateProvider({
       setInvitationBusy(true);
       setInvitationError(undefined);
       try {
-        if (!demoMode) {
+        if (!demoMode && !onInvitationAccepted) {
           throw new Error("Finish this invitation from an account without an active family. Family switching is not available yet.");
         }
         if (!activeRuntime) throw new Error("Sign in to use family coordination.");
-        setInvitationGrant(await resolvedApi.acceptInvitation(
+        const result = await resolvedApi.acceptInvitation(
           invitationPreview.invitationId,
           writeContext(activeRuntime, invitationPreview.version),
-        ));
+        );
+        if (onInvitationAccepted) await onInvitationAccepted(result);
+        setInvitationGrant(result.grant);
         setInvitationPreview(undefined);
       } catch (error) {
         setInvitationError(invitationMessage(error));
@@ -622,6 +627,7 @@ export function CoordinationStateProvider({
     messageSearchError,
     messageSearchQuery,
     messageSearchResults,
+    onInvitationAccepted,
     outbox,
     resolvedApi,
     sentMessages,

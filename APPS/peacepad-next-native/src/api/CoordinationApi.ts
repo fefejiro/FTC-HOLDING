@@ -1,4 +1,5 @@
 import type {
+  AcceptedInvitation,
   AttachmentTarget,
   AttachmentUploadIntent,
   CalendarLayer,
@@ -140,7 +141,7 @@ export interface PeacePadCoordinationApi {
   createAttachmentUploadIntent(input: CreateAttachmentUploadIntentInput, context: WriteContext): Promise<AttachmentUploadIntent>;
   createInvitation(input: CreateInvitationInput, context: WriteContext): Promise<CreatedInvitation>;
   resolveInvitation(code: string): Promise<InvitationPreview>;
-  acceptInvitation(invitationId: EntityId, context: WriteContext): Promise<ParticipantGrant>;
+  acceptInvitation(invitationId: EntityId, context: WriteContext): Promise<AcceptedInvitation>;
   declineInvitation(invitationId: EntityId, context: WriteContext): Promise<void>;
   revokeInvitation(invitationId: EntityId, context: WriteContext): Promise<void>;
   listCalendarLayers(familyCircleId: EntityId): Promise<readonly CalendarLayer[]>;
@@ -244,7 +245,7 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
   }
 
   acceptInvitation(invitationId: EntityId, context: WriteContext) {
-    return this.write<ParticipantGrant>(`/api/v2/invitations/${encodeURIComponent(invitationId)}/accept`, "POST", {}, context);
+    return this.write<AcceptedInvitation>(`/api/v2/invitations/${encodeURIComponent(invitationId)}/accept`, "POST", {}, context);
   }
 
   async declineInvitation(invitationId: EntityId, context: WriteContext) {

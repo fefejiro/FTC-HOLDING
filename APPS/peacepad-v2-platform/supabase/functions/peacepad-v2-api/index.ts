@@ -807,25 +807,44 @@ const handler = async (request: Request): Promise<Response> => {
       });
       if (error) return rpcFailure(request, requestId, config, error.message);
       if (operation !== "accept") return json(request, 200, data, requestId, config);
-      const grant = (data ?? {}) as Record<string, unknown>;
+      const accepted = (data ?? {}) as Record<string, unknown>;
+      const grant = (accepted.grant ?? {}) as Record<string, unknown>;
+      const conversation = (accepted.conversation ?? {}) as Record<string, unknown>;
       const grantedAt = typeof grant.grantedAt === "string" ? grant.grantedAt : new Date().toISOString();
+      if (
+        !isUuid(String(grant.participantGrantId ?? ""))
+        || !isUuid(String(grant.familyId ?? ""))
+        || !isUuid(String(grant.identityId ?? ""))
+        || grant.identityId !== authenticated.user.id
+        || !isUuid(String(grant.grantedBy ?? ""))
+        || !isUuid(String(conversation.id ?? ""))
+        || conversation.familyCircleId !== grant.familyId
+        || !Array.isArray(conversation.participantIdentityIds)
+        || !conversation.participantIdentityIds.includes(authenticated.user.id)
+        || !conversation.participantIdentityIds.includes(grant.grantedBy)
+      ) {
+        return failure(request, 502, "INVALID_UPSTREAM_RESPONSE", "PeacePad could not verify the accepted invitation.", requestId, config);
+      }
       return json(request, 200, {
-        id: grant.participantGrantId,
-        familyCircleId: grant.familyId,
-        identityId: grant.identityId,
-        role: grant.role,
-        permissions: grant.permissions,
-        grantedAt,
-        revokedAt: null,
-        grantedBy: grant.grantedBy,
-        schemaVersion: "2.0",
-        version: grant.version,
-        region: grant.region,
-        provenance: {
-          createdAt: grantedAt,
-          createdBy: { identityId: authenticated.user.id, sessionId: requestId },
-          source: "app",
+        grant: {
+          id: grant.participantGrantId,
+          familyCircleId: grant.familyId,
+          identityId: grant.identityId,
+          role: grant.role,
+          permissions: grant.permissions,
+          grantedAt,
+          revokedAt: null,
+          grantedBy: grant.grantedBy,
+          schemaVersion: "2.0",
+          version: grant.version,
+          region: grant.region,
+          provenance: {
+            createdAt: grantedAt,
+            createdBy: { identityId: authenticated.user.id, sessionId: requestId },
+            source: "app",
+          },
         },
+        conversation,
       }, requestId, config);
     }
 

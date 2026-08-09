@@ -125,6 +125,11 @@ export type Conversation = VersionedEntity &
     status: "active" | "archived";
   }>;
 
+export type AcceptedInvitation = Readonly<{
+  grant: ParticipantGrant;
+  conversation: Conversation;
+}>;
+
 export type MessageEvent = VersionedEntity &
   Readonly<{
     familyCircleId: EntityId;

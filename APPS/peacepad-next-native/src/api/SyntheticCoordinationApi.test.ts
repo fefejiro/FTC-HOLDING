@@ -32,7 +32,7 @@ describe("SyntheticCoordinationApi safety behavior", () => {
     const created = await api.createInvitation({ familyCircleId: "family-current", invitedRole: "parent", permissions: ["messages", "calendar"], expiresInHours: 24 }, context);
     const preview = await api.resolveInvitation(created.code);
     expect(preview.invitationId).toBe(created.invitation.id);
-    await expect(api.acceptInvitation(preview.invitationId, { ...context, expectedVersion: preview.version })).resolves.toMatchObject({ permissions: ["messages", "calendar"] });
+    await expect(api.acceptInvitation(preview.invitationId, { ...context, expectedVersion: preview.version })).resolves.toMatchObject({ grant: { permissions: ["messages", "calendar"] } });
     const conversation = await api.createConversation({ familyCircleId: "family-current", participantIdentityIds: ["identity-current", "identity-coparent"] }, context);
     const sent = await api.sendMessage({ familyCircleId: "family-current", conversationId: conversation.id, body: "Pickup at 5." }, context);
     await api.recordMessageLifecycle({ familyCircleId: "family-current", conversationId: conversation.id, originalMessageEventId: sent.id, eventType: "delivered" }, context);
@@ -49,8 +49,8 @@ describe("SyntheticCoordinationApi safety behavior", () => {
   it("allows one acceptance and rejects reuse", async () => {
     const api = new SyntheticCoordinationApi([invitation()]);
     await expect(api.acceptInvitation("invitation-1", { ...context, expectedVersion: 1 })).resolves.toMatchObject({
-      role: "parent",
-      permissions: ["messages", "calendar"]
+      grant: { role: "parent", permissions: ["messages", "calendar"] },
+      conversation: { status: "active" }
     });
     await expect(api.acceptInvitation("invitation-1", { ...context, expectedVersion: 1 })).rejects.toMatchObject({ reason: "used" });
     await expect(api.resolveInvitation("CALM26")).rejects.toMatchObject({ reason: "used" });

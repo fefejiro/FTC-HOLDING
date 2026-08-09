@@ -8,7 +8,7 @@ import { LabButton } from "../components/LabButton";
 import type { PeacePadEnvironmentConfig, PeacePadSupabaseConfig } from "../config/environment";
 import { useSupabaseSession } from "../session/SupabaseSessionProvider";
 import { StagingAccountActionsProvider } from "../session/StagingAccountActions";
-import { createWriteContext, type InvitationPreview } from "../domain/v2";
+import { createWriteContext, type AcceptedInvitation, type InvitationPreview } from "../domain/v2";
 import { colors, spacing, typography } from "../theme";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -52,6 +52,7 @@ type VerifiedSessionContext = Readonly<{
 type RuntimeState =
   | { status: "loading" }
   | { status: "membership-empty"; api: PeacePadCoordinationApi; verified: VerifiedSessionContext }
+  | { status: "membership-selection"; api: PeacePadCoordinationApi; memberships: readonly Membership[]; verified: VerifiedSessionContext }
   | { status: "conversation-empty"; api: PeacePadCoordinationApi; membership: Membership; verified: VerifiedSessionContext }
   | { status: "ready"; api: PeacePadCoordinationApi; runtime: CoordinationRuntime }
   | { status: "error"; message: string };
@@ -168,8 +169,16 @@ export function PeacePadStagingRuntime({
   const [deleteError, setDeleteError] = useState<string>();
   const [reloadVersion, setReloadVersion] = useState(0);
   const [incomingInvitationCode, setIncomingInvitationCode] = useState<string>();
+  const [selectedFamilyCircleId, setSelectedFamilyCircleId] = useState<string>();
+  const [pendingActivation, setPendingActivation] = useState<{ familyCircleId: string; conversationId: string }>();
   const generation = useRef(0);
   const deleteInFlight = useRef(false);
+  const activationInFlight = useRef<{
+    familyCircleId: string;
+    conversationId: string;
+    resolve: () => void;
+    reject: (cause: Error) => void;
+  } | undefined>(undefined);
   const lastReadyIdentity = useRef<string | undefined>(undefined);
 
   useEffect(() => {
@@ -196,13 +205,21 @@ export function PeacePadStagingRuntime({
     const identityId = auth.status === "ready" ? auth.session?.user.id : undefined;
     if (identityId) {
       if (lastReadyIdentity.current && lastReadyIdentity.current !== identityId) {
+        activationInFlight.current?.reject(new Error("The signed-in identity changed before family access was verified."));
+        activationInFlight.current = undefined;
         setIncomingInvitationCode(undefined);
+        setSelectedFamilyCircleId(undefined);
+        setPendingActivation(undefined);
       }
       lastReadyIdentity.current = identityId;
       return;
     }
     if (auth.status === "signed-out" && lastReadyIdentity.current) {
+      activationInFlight.current?.reject(new Error("Sign in again to verify the accepted family access."));
+      activationInFlight.current = undefined;
       setIncomingInvitationCode(undefined);
+      setSelectedFamilyCircleId(undefined);
+      setPendingActivation(undefined);
       lastReadyIdentity.current = undefined;
     }
   }, [auth.session?.user.id, auth.status]);
@@ -239,20 +256,35 @@ export function PeacePadStagingRuntime({
       setRuntimeState({ status: "loading" });
       return;
     }
-    setRuntimeState({ status: "loading" });
+    if (!pendingActivation) setRuntimeState({ status: "loading" });
     void auth.getAccessToken().then(async (token) => {
       if (!token) throw new Error("The staging session expired.");
       const verified = await fetchVerifiedSession(supabase, auth.session!.user.id, token, fetcher);
       if (currentGeneration !== generation.current) return;
       const api = createStagingCoordinationClient(environment, auth.getAccessToken, fetcher);
-      const membership = verified.memberships[0];
-      if (!membership) {
+      const memberships = [...verified.memberships].sort((left, right) => left.familyName.localeCompare(right.familyName) || left.familyCircleId.localeCompare(right.familyCircleId));
+      if (!memberships.length) {
+        if (pendingActivation) throw new Error("The accepted family access is not present in the refreshed session.");
         setRuntimeState({ status: "membership-empty", api, verified });
         return;
       }
+      const requestedFamilyId = pendingActivation?.familyCircleId ?? selectedFamilyCircleId;
+      if (!requestedFamilyId && memberships.length > 1) {
+        setRuntimeState({ status: "membership-selection", api, memberships, verified });
+        return;
+      }
+      const membership = requestedFamilyId
+        ? memberships.find((item) => item.familyCircleId === requestedFamilyId)
+        : memberships[0];
+      if (!membership) throw new Error("The selected family is no longer authorized. Choose a family again.");
       const conversations = await api.listConversations(membership.familyCircleId);
       if (currentGeneration !== generation.current) return;
-      const conversation = conversations.find((item) => item.status === "active");
+      const conversation = pendingActivation
+        ? conversations.find((item) => item.id === pendingActivation.conversationId && item.status === "active")
+        : conversations.find((item) => item.status === "active");
+      if (pendingActivation && (!conversation || conversation.familyCircleId !== membership.familyCircleId || !conversation.participantIdentityIds.includes(verified.actor.identityId))) {
+        throw new Error("PeacePad could not verify the newly accepted family conversation.");
+      }
       if (!conversation) {
         setRuntimeState({ status: "conversation-empty", api, membership, verified });
         return;
@@ -270,11 +302,27 @@ export function PeacePadStagingRuntime({
           region: verified.region
         }
       });
+      if (pendingActivation) {
+        const activation = activationInFlight.current;
+        if (!activation || activation.familyCircleId !== membership.familyCircleId || activation.conversationId !== conversation.id) {
+          throw new Error("PeacePad could not match the accepted family activation request.");
+        }
+        activationInFlight.current = undefined;
+        setPendingActivation(undefined);
+        activation.resolve();
+      }
     }).catch((error) => {
       if (currentGeneration !== generation.current) return;
+      if (pendingActivation && activationInFlight.current) {
+        const activation = activationInFlight.current;
+        activationInFlight.current = undefined;
+        setPendingActivation(undefined);
+        activation.reject(error instanceof Error ? error : new Error("PeacePad could not verify the accepted family access."));
+        return;
+      }
       setRuntimeState({ status: "error", message: error instanceof Error ? error.message : "PeacePad staging is unavailable." });
     });
-  }, [auth.getAccessToken, auth.session, auth.status, environment, fetcher, reloadVersion, supabase]);
+  }, [auth.getAccessToken, auth.session, auth.status, environment, fetcher, pendingActivation, reloadVersion, selectedFamilyCircleId, supabase]);
 
   if (auth.status === "loading") return <GateMessage busy title="Restoring your session" body="Checking this device securely." />;
   if (auth.status === "error") return <GateMessage title="Session unavailable" body={auth.error ?? "PeacePad could not restore this session."} />;
@@ -296,6 +344,7 @@ export function PeacePadStagingRuntime({
   }
   if (runtimeState.status === "loading") return <GateMessage busy title="Opening PeacePad" body="Loading your authorized family space." />;
   if (runtimeState.status === "membership-empty") return <FamilySetup accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} initialInvitationCode={incomingInvitationCode} onInvitationCodeConsumed={() => setIncomingInvitationCode(undefined)} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={auth.signOut} verified={runtimeState.verified} />;
+  if (runtimeState.status === "membership-selection") return <FamilySelection accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} memberships={runtimeState.memberships} onSelect={(familyCircleId) => setSelectedFamilyCircleId(familyCircleId)} onSignOut={auth.signOut} />;
   if (runtimeState.status === "conversation-empty") return <ConversationSetup accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} membership={runtimeState.membership} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={auth.signOut} verified={runtimeState.verified} />;
   if (runtimeState.status === "error") return <GateMessage title="PeacePad is unavailable" body={runtimeState.message} />;
   const accountActions = {
@@ -311,7 +360,21 @@ export function PeacePadStagingRuntime({
   return (
     <PendingStagingInvitationProvider code={incomingInvitationCode} onConsumed={() => setIncomingInvitationCode(undefined)}>
       <StagingAccountActionsProvider value={accountActions}>
-        <CoordinationStateProvider api={runtimeState.api} runtime={runtimeState.runtime}>{children}</CoordinationStateProvider>
+        <CoordinationStateProvider api={runtimeState.api} onInvitationAccepted={async (result) => {
+          assertAcceptedInvitation(result, runtimeState.runtime.actorIdentityId, runtimeState.runtime.region);
+          if (activationInFlight.current) throw new Error("PeacePad is already verifying family access.");
+          await new Promise<void>((resolve, reject) => {
+            activationInFlight.current = {
+              familyCircleId: result.grant.familyCircleId,
+              conversationId: result.conversation.id,
+              resolve,
+              reject
+            };
+            setPendingActivation({ familyCircleId: result.grant.familyCircleId, conversationId: result.conversation.id });
+            setSelectedFamilyCircleId(result.grant.familyCircleId);
+          });
+          setIncomingInvitationCode(undefined);
+        }} runtime={runtimeState.runtime}>{children}</CoordinationStateProvider>
       </StagingAccountActionsProvider>
     </PendingStagingInvitationProvider>
   );
@@ -324,6 +387,46 @@ function runtimeWriteContext(verified: VerifiedSessionContext, expectedVersion: 
     idempotencyKey: `device-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
     region: verified.region
   });
+}
+
+function assertAcceptedInvitation(result: AcceptedInvitation, identityId: string, region: "ca" | "us") {
+  if (
+    !UUID_PATTERN.test(result.grant.id)
+    || result.grant.identityId !== identityId
+    || result.grant.region !== region
+    || !UUID_PATTERN.test(result.grant.familyCircleId)
+    || !UUID_PATTERN.test(result.conversation.id)
+    || result.conversation.region !== region
+    || result.conversation.familyCircleId !== result.grant.familyCircleId
+    || result.conversation.status !== "active"
+    || !result.conversation.participantIdentityIds.includes(identityId)
+    || !result.conversation.participantIdentityIds.includes(result.grant.grantedBy)
+  ) throw new Error("PeacePad could not verify the accepted family access.");
+}
+
+function FamilySelection({ accountDeletion, memberships, onSelect, onSignOut }: {
+  accountDeletion: { deleteAccount: () => Promise<void>; deleting: boolean; error?: string };
+  memberships: readonly Membership[];
+  onSelect: (familyCircleId: string) => void;
+  onSignOut: () => Promise<void>;
+}) {
+  return (
+    <View style={styles.page}>
+      <Brand />
+      <Text style={styles.title}>Choose a family</Text>
+      <Text style={styles.body}>Select the family space you want to open.</Text>
+      {memberships.map((membership) => (
+        <LabButton
+          key={membership.familyCircleId}
+          label={`${membership.familyName} - ${membership.role}`}
+          onPress={() => onSelect(membership.familyCircleId)}
+          variant="secondary"
+        />
+      ))}
+      <LabButton label="Sign out" onPress={() => void onSignOut()} variant="secondary" />
+      <AccountDeletionControls value={accountDeletion} />
+    </View>
+  );
 }
 
 function FamilySetup({ accountDeletion, api, initialInvitationCode, onInvitationCodeConsumed, onReload, onSignOut, verified }: {
@@ -374,13 +477,8 @@ function FamilySetup({ accountDeletion, api, initialInvitationCode, onInvitation
           <Text style={styles.cardTitle}>{preview.familyDisplayName}</Text>
           <Text style={styles.body}>Invited by {preview.inviterDisplayName} as {preview.invitedRole}.</Text>
           <LabButton disabled={busy} label="Accept invitation" onPress={() => void run(async () => {
-            const grant = await api.acceptInvitation(preview.invitationId, runtimeWriteContext(verified, preview.version));
-            if (grant.grantedBy !== verified.actor.identityId) {
-              await api.createConversation({
-                familyCircleId: grant.familyCircleId,
-                participantIdentityIds: [verified.actor.identityId, grant.grantedBy]
-              }, runtimeWriteContext(verified));
-            }
+            const result = await api.acceptInvitation(preview.invitationId, runtimeWriteContext(verified, preview.version));
+            assertAcceptedInvitation(result, verified.actor.identityId, verified.region);
             onReload();
           })} />
           <LabButton disabled={busy} label="Decline invitation" onPress={() => void run(async () => {

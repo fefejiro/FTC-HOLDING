@@ -153,6 +153,47 @@ describe("PeacePadStagingRuntime gates", () => {
     expect(screen.queryByText("ready")).toBeNull();
   });
 
+  it("requires explicit selection when more than one verified family is available", async () => {
+    const familyB = "99999999-9999-4999-8999-999999999999";
+    const grantB = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    (useSupabaseSession as jest.Mock).mockReturnValue(authValue());
+    const listConversations = jest.fn(async (familyCircleId: string) => familyCircleId === familyB ? [{
+      id: CONVERSATION,
+      familyCircleId: familyB,
+      participantIdentityIds: [IDENTITY, OTHER_IDENTITY],
+      status: "active"
+    }] : []);
+    (createStagingCoordinationClient as jest.Mock).mockReturnValue({
+      getMessageCheckPreference: jest.fn(async () => ({
+        aiAssistanceEnabled: false, conversationId: CONVERSATION, enabled: false,
+        id: "88888888-8888-4888-8888-888888888888", identityId: IDENTITY,
+        provenance: { createdAt: "2026-08-09T12:00:00.000Z", createdBy: { identityId: IDENTITY, sessionId: SESSION }, source: "app" },
+        region: "ca", schemaVersion: "2.0", version: 0
+      })),
+      listCalendarLayers: jest.fn(async () => []), listConversations,
+      listMessages: jest.fn(async () => []), listScheduleEvents: jest.fn(async () => [])
+    });
+    const multiple = {
+      ...valid,
+      memberships: [
+        valid.memberships[0],
+        { ...valid.memberships[0], familyCircleId: familyB, participantGrantId: grantB, familyName: "Second Fictional Family" }
+      ]
+    };
+
+    render(
+      <PeacePadStagingRuntime environment={environment} fetcher={sessionResponse(multiple)} supabase={supabase}>
+        <Text testID="selected-family-ready">ready</Text>
+      </PeacePadStagingRuntime>
+    );
+    await waitFor(() => expect(screen.getByText("Choose a family")).toBeTruthy());
+    expect(listConversations).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByRole("button", { name: "Second Fictional Family - parent" }));
+    await waitFor(() => expect(listConversations).toHaveBeenCalledWith(familyB));
+    expect(await screen.findByTestId("selected-family-ready")).toBeTruthy();
+    expect(listConversations).not.toHaveBeenCalledWith(FAMILY);
+  });
+
   it("prefills a staging deep-link code but still requires explicit review", async () => {
     jest.spyOn(Linking, "getInitialURL").mockResolvedValueOnce("peacepadnextlab://invite/ab12c3");
     (useSupabaseSession as jest.Mock).mockReturnValue(authValue());
@@ -268,7 +309,7 @@ describe("PeacePadStagingRuntime gates", () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
-  it("resolves and explicitly accepts an invitation before creating a conversation", async () => {
+  it("resolves and explicitly accepts an invitation with its atomic conversation", async () => {
     (useSupabaseSession as jest.Mock).mockReturnValue(authValue());
     const fetcher = jest.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => ({ ...valid, memberships: [] }) })
@@ -284,11 +325,22 @@ describe("PeacePadStagingRuntime gates", () => {
       permissions: ["message.write", "calendar.write"],
       expiresAt: "2026-08-12T12:00:00.000Z"
     }));
-    const acceptInvitation = jest.fn(async () => ({ familyCircleId: FAMILY, grantedBy: inviterId }));
-    const createConversation = jest.fn(async () => ({ id: CONVERSATION }));
+    const acceptedAt = "2026-08-09T12:00:00.000Z";
+    const acceptInvitation = jest.fn(async () => ({
+      grant: {
+        id: "88888888-8888-4888-8888-888888888888", familyCircleId: FAMILY, identityId: IDENTITY,
+        role: "parent", permissions: ["message.write", "calendar.write"], grantedAt: acceptedAt,
+        revokedAt: null, grantedBy: inviterId, schemaVersion: "2.0", version: 1, region: "ca",
+        provenance: { createdAt: acceptedAt, createdBy: { identityId: IDENTITY, sessionId: SESSION }, source: "app" }
+      },
+      conversation: {
+        id: CONVERSATION, familyCircleId: FAMILY, participantIdentityIds: [IDENTITY, inviterId], status: "active",
+        schemaVersion: "2.0", version: 1, region: "ca",
+        provenance: { createdAt: acceptedAt, createdBy: { identityId: IDENTITY, sessionId: SESSION }, source: "app" }
+      }
+    }));
     (createStagingCoordinationClient as jest.Mock).mockReturnValue({
       acceptInvitation,
-      createConversation,
       getMessageCheckPreference: jest.fn(async () => ({
         aiAssistanceEnabled: false,
         conversationId: CONVERSATION,
@@ -321,10 +373,6 @@ describe("PeacePadStagingRuntime gates", () => {
     fireEvent.press(screen.getByRole("button", { name: "Accept invitation" }));
     await waitFor(() => expect(acceptInvitation).toHaveBeenCalledTimes(1));
     expect(acceptInvitation).toHaveBeenCalledWith(invitationId, expect.objectContaining({ expectedVersion: 3 }));
-    expect(createConversation).toHaveBeenCalledWith({
-      familyCircleId: FAMILY,
-      participantIdentityIds: [IDENTITY, inviterId]
-    }, expect.objectContaining({ actor: { identityId: IDENTITY, sessionId: SESSION }, region: "ca" }));
     expect(await screen.findByTestId("accepted-runtime", {}, { timeout: 5_000 })).toBeTruthy();
     expect(fetcher).toHaveBeenCalledTimes(2);
   });

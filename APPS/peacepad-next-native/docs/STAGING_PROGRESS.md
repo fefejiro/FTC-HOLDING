@@ -43,7 +43,7 @@ historical #172 baseline plus explicitly labelled successor evidence.
 | Versioned account deletion and local session invalidation | HOSTED VERIFIED / DEPLOYMENT BLOCKED BY PROJECT ROLE |
 | Decoupled Auth identity and durable cleanup outbox | HOSTED VERIFIED / DEPLOYMENT BLOCKED BY PROJECT ROLE |
 | Deleted-account invitation and regional metadata minimization | HOSTED VERIFIED / DEPLOYMENT BLOCKED BY PROJECT ROLE |
-| Connected-member invitation routing | HOSTED VERIFIED for route/prefill; multi-family acceptance BLOCKED pending active-family selection |
+| Connected-member invitation routing | LOCAL VERIFIED for exact active-family selection and atomic accepted-family conversation bootstrap; hosted recheck and managed deployment pending |
 | Hosted CI | PeacePad-scoped PASS on PR #177 at `4bd5649c1`: native run `31340381110`, infrastructure run `31340381106`. Overall PR remains unstable because unrelated Garden run `31340381137` cannot load `@ftc/config/dist/index.js` |
 
 This is not a production release. The native client remains a staging/lab

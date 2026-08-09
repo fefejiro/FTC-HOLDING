@@ -58,7 +58,15 @@ begin
   if preview_result ->> 'invitationId' <> invitation_id::text then
     raise exception 'Invitation preview did not resolve the expected invitation.';
   end if;
-  perform public.peacepad_v2_accept_invitation(parent_b, 'ca', invitation_id, 1, 'accept-example-invite', 2);
+  invitation_result := public.peacepad_v2_accept_invitation(parent_b, 'ca', invitation_id, 1, 'accept-example-invite', 2);
+  conversation_id := (invitation_result -> 'conversation' ->> 'id')::uuid;
+  if (invitation_result -> 'grant' ->> 'familyId')::uuid <> created_family_id
+    or (invitation_result -> 'conversation' ->> 'familyCircleId')::uuid <> created_family_id then
+    raise exception 'Invitation acceptance did not return its atomic family conversation.';
+  end if;
+  if public.peacepad_v2_accept_invitation(parent_b, 'ca', invitation_id, 1, 'accept-example-invite', 2) <> invitation_result then
+    raise exception 'Invitation acceptance idempotent replay changed its result.';
+  end if;
 
   if not exists (
     select 1 from peacepad_v2.participant_grant
@@ -80,11 +88,9 @@ begin
     if sqlerrm not like '%REGION_MISMATCH%' then raise; end if;
   end;
 
-  conversation_result := public.peacepad_v2_create_conversation(
-    parent_a, 'ca', created_family_id, array[parent_a, parent_b],
-    'create-example-conversation', 2
-  );
-  conversation_id := (conversation_result ->> 'id')::uuid;
+  if (select count(*) from peacepad_v2.conversation where family_id = created_family_id and participant_identity_ids = array[parent_a, parent_b]) <> 1 then
+    raise exception 'Invitation acceptance created duplicate direct conversations.';
+  end if;
   if jsonb_array_length(public.peacepad_v2_list_conversations(parent_b, 'ca', created_family_id)) <> 1 then
     raise exception 'Accepted participant could not list the shared conversation.';
   end if;
