@@ -12,10 +12,16 @@ declare
   message_result jsonb;
   correction_result jsonb;
   search_result jsonb;
+  layer_result jsonb;
+  shared_layer_result jsonb;
+  event_result jsonb;
+  updated_event_result jsonb;
   created_family_id uuid;
   invitation_id uuid;
   conversation_id uuid;
   message_id uuid;
+  layer_id uuid;
+  event_id uuid;
   invitation_hash bytea := decode(repeat('ab', 32), 'hex');
 begin
   insert into auth.users (id) values (parent_a), (parent_b) on conflict do nothing;
@@ -89,6 +95,71 @@ begin
   ) <> message_result then
     raise exception 'Message idempotent replay changed its result.';
   end if;
+
+  layer_result := public.peacepad_v2_create_calendar_layer(
+    parent_a, 'ca', created_family_id, 'Parenting Time', 'parenting-time',
+    'calendar', 'teal', '{"scope":"private"}'::jsonb,
+    'create-private-calendar-layer', 2
+  );
+  layer_id := (layer_result ->> 'id')::uuid;
+  if jsonb_array_length(public.peacepad_v2_list_calendar_layers(parent_b, 'ca', created_family_id)) <> 0 then
+    raise exception 'Private calendar layer was exposed to another participant.';
+  end if;
+  if public.peacepad_v2_create_calendar_layer(
+    parent_a, 'ca', created_family_id, 'Parenting Time', 'parenting-time',
+    'calendar', 'teal', '{"scope":"private"}'::jsonb,
+    'create-private-calendar-layer', 2
+  ) <> layer_result then raise exception 'Calendar layer idempotent replay changed its result.'; end if;
+
+  shared_layer_result := public.peacepad_v2_update_calendar_layer(
+    parent_a, 'ca', layer_id, 'Parenting Time', 'parenting-time', 'calendar', 'teal',
+    '{"scope":"family"}'::jsonb, 1, 'share-calendar-layer', 2
+  );
+  if (shared_layer_result ->> 'version')::integer <> 2
+    or jsonb_array_length(public.peacepad_v2_list_calendar_layers(parent_b, 'ca', created_family_id)) <> 1 then
+    raise exception 'Explicit calendar sharing did not become visible to the family.';
+  end if;
+  begin
+    perform public.peacepad_v2_update_calendar_layer(
+      parent_a, 'ca', layer_id, 'Stale update', 'parenting-time', 'calendar', 'teal',
+      '{"scope":"family"}'::jsonb, 1, 'stale-calendar-layer-update', 2
+    );
+    raise exception 'Stale calendar layer update unexpectedly succeeded.';
+  exception when serialization_failure then null;
+  end;
+
+  event_result := public.peacepad_v2_create_schedule_event(
+    parent_a, 'ca', created_family_id, layer_id, '{}'::uuid[], 'parenting-time',
+    'Weekend parenting time', 'Fictional staging event.',
+    '2026-09-05T14:00:00Z'::timestamptz, '2026-09-06T22:00:00Z'::timestamptz,
+    'planned', '{"frequency":"weekly","interval":1,"weekdays":["SA"],"until":null,"count":4}'::jsonb,
+    null, 'create-shared-schedule-event', 2
+  );
+  event_id := (event_result ->> 'id')::uuid;
+  if jsonb_array_length(public.peacepad_v2_list_schedule_events(parent_b, 'ca', created_family_id)) <> 1 then
+    raise exception 'Shared schedule event was not visible to the accepted participant.';
+  end if;
+  updated_event_result := public.peacepad_v2_update_schedule_event(
+    parent_a, 'ca', event_id, layer_id, '{}'::uuid[], 'parenting-time',
+    'Weekend parenting time', 'Updated fictional staging event.',
+    '2026-09-05T15:00:00Z'::timestamptz, '2026-09-06T22:00:00Z'::timestamptz,
+    'accepted', null, '{"scope":"private"}'::jsonb,
+    1, 'restrict-schedule-event', 2
+  );
+  if (updated_event_result ->> 'version')::integer <> 2
+    or jsonb_array_length(public.peacepad_v2_list_schedule_events(parent_b, 'ca', created_family_id)) <> 0 then
+    raise exception 'Event privacy override did not restrict visibility.';
+  end if;
+  perform public.peacepad_v2_delete_schedule_event(parent_a, 'ca', event_id, 2, 'delete-schedule-event', 2);
+  perform public.peacepad_v2_delete_calendar_layer(parent_a, 'ca', layer_id, 2, 'delete-calendar-layer', 2);
+  if jsonb_array_length(public.peacepad_v2_list_calendar_layers(parent_a, 'ca', created_family_id)) <> 0 then
+    raise exception 'Deleted calendar layer remained visible.';
+  end if;
+  begin
+    perform public.peacepad_v2_list_calendar_layers(parent_a, 'us', created_family_id);
+    raise exception 'Cross-region calendar access unexpectedly succeeded.';
+  exception when insufficient_privilege then null;
+  end;
 
   deletion_result := public.peacepad_v2_delete_account(parent_b, 'ca', 1, 'delete-parent-b-account', 2);
   if deletion_result ->> 'status' <> 'deleted' then

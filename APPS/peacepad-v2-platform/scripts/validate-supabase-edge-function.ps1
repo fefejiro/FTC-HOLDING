@@ -9,9 +9,11 @@ $authorizationMigrationPath = Join-Path $platformRoot 'supabase/migrations/20260
 $transactionMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090001_v2_authorization_transactions.sql'
 $invitationMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090002_v2_invitation_resolution.sql'
 $accountDeletionMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090003_v2_account_deletion.sql'
+$messagingMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090004_v2_persistent_messaging.sql'
+$calendarMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090005_v2_persistent_calendar.sql'
 $configPath = Join-Path $platformRoot 'supabase/config.toml'
 
-foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $configPath)) {
+foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $configPath)) {
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
     throw "Required Supabase staging file is missing: $path"
   }
@@ -23,6 +25,8 @@ $authorizationMigration = Get-Content -LiteralPath $authorizationMigrationPath -
 $transactionMigration = Get-Content -LiteralPath $transactionMigrationPath -Raw
 $invitationMigration = Get-Content -LiteralPath $invitationMigrationPath -Raw
 $accountDeletionMigration = Get-Content -LiteralPath $accountDeletionMigrationPath -Raw
+$messagingMigration = Get-Content -LiteralPath $messagingMigrationPath -Raw
+$calendarMigration = Get-Content -LiteralPath $calendarMigrationPath -Raw
 $config = Get-Content -LiteralPath $configPath -Raw
 
 $requiredFunctionPatterns = @(
@@ -42,6 +46,12 @@ $requiredFunctionPatterns = @(
   'peacepad_v2_revoke_invitation',
   '/api/v2/account',
   'peacepad_v2_delete_account',
+  '/api/v2/conversations',
+  'peacepad_v2_send_message',
+  '/api/v2/calendar-layers',
+  '/api/v2/schedule-events',
+  'peacepad_v2_create_calendar_layer',
+  'peacepad_v2_create_schedule_event',
   'auth.admin.signOut',
   'idempotency-key',
   'if-match',
@@ -156,6 +166,60 @@ foreach ($pattern in @(
 )) {
   if ($accountDeletionMigration -notmatch $pattern) {
     throw "Account deletion migration is missing required boundary: $pattern"
+  }
+}
+foreach ($rpc in @(
+  'peacepad_v2_create_conversation',
+  'peacepad_v2_send_message',
+  'peacepad_v2_record_message_event',
+  'peacepad_v2_correct_message',
+  'peacepad_v2_search_messages'
+)) {
+  if ($messagingMigration -notmatch "create or replace function public\.$rpc") {
+    throw "Messaging migration is missing RPC: $rpc"
+  }
+  if ($messagingMigration -notmatch "revoke all on function public\.$rpc") {
+    throw "Messaging RPC is not revoked from mobile roles: $rpc"
+  }
+}
+if ($messagingMigration -notmatch 'message_event_append_only') {
+  throw 'Message events must be append-only.'
+}
+foreach ($table in @('calendar_layer', 'schedule_event')) {
+  if ($calendarMigration -notmatch "create table if not exists peacepad_v2\.$table") {
+    throw "Calendar migration is missing table: $table"
+  }
+  if ($calendarMigration -notmatch "alter table peacepad_v2\.$table enable row level security") {
+    throw "Calendar migration is missing fail-closed RLS: $table"
+  }
+}
+foreach ($rpc in @(
+  'peacepad_v2_list_calendar_layers',
+  'peacepad_v2_create_calendar_layer',
+  'peacepad_v2_update_calendar_layer',
+  'peacepad_v2_delete_calendar_layer',
+  'peacepad_v2_list_schedule_events',
+  'peacepad_v2_create_schedule_event',
+  'peacepad_v2_update_schedule_event',
+  'peacepad_v2_delete_schedule_event'
+)) {
+  if ($calendarMigration -notmatch "create or replace function public\.$rpc") {
+    throw "Calendar migration is missing RPC: $rpc"
+  }
+  if ($calendarMigration -notmatch "revoke all on function public\.$rpc") {
+    throw "Calendar RPC is not revoked from mobile roles: $rpc"
+  }
+}
+foreach ($pattern in @(
+  'visibility_valid',
+  'visibility_allows',
+  'event_visibility_valid',
+  'CONCURRENCY_CONFLICT',
+  "'calendar_layer.created'",
+  "'schedule_event.created'"
+)) {
+  if ($calendarMigration -notmatch $pattern) {
+    throw "Calendar migration is missing required boundary: $pattern"
   }
 }
 if (

@@ -13,6 +13,7 @@ type RuntimeConfig = Readonly<{
 
 type ErrorCode =
   | "AUTH_REQUIRED"
+  | "CALENDAR_ACCESS_DENIED"
   | "CONFIGURATION_ERROR"
   | "CONVERSATION_ACCESS_DENIED"
   | "DATABASE_NOT_READY"
@@ -169,6 +170,7 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     IDENTITY_NOT_BOUND: "IDENTITY_NOT_BOUND",
     FAMILY_ACCESS_DENIED: "FAMILY_ACCESS_DENIED",
     CONVERSATION_ACCESS_DENIED: "CONVERSATION_ACCESS_DENIED",
+    CALENDAR_ACCESS_DENIED: "CALENDAR_ACCESS_DENIED",
     MESSAGE_ACCESS_DENIED: "MESSAGE_ACCESS_DENIED",
     INVITATION_EXPIRED: "INVITATION_EXPIRED",
     INVITATION_INVALID: "INVITATION_INVALID",
@@ -183,11 +185,12 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     "INVITATION_HASH_INVALID", "INVITATION_PERMISSIONS_INVALID", "INVITATION_ROLE_INVALID",
     "CONVERSATION_PARTICIPANTS_INVALID", "MESSAGE_BODY_INVALID", "MESSAGE_CORRECTION_UNCHANGED",
     "MESSAGE_EVENT_INVALID", "MESSAGE_SEARCH_INVALID", "POLICY_VERSION_INVALID", "REGION_INVALID",
+    "CALENDAR_LAYER_INVALID", "CALENDAR_LAYER_NOT_EMPTY", "SCHEDULE_EVENT_INVALID",
   ]);
   const safeCode = directCodes[message ?? ""] ?? (invalidRequestCodes.has(message ?? "") ? "INVALID_REQUEST" : "DATABASE_NOT_READY");
   const status = safeCode === "DATABASE_NOT_READY" ? 503
     : ["REGION_MISMATCH", "CONCURRENCY_CONFLICT"].includes(safeCode) ? 409
-    : ["INVITATION_SELF_ACCEPT_DENIED", "FAMILY_ACCESS_DENIED", "CONVERSATION_ACCESS_DENIED", "MESSAGE_ACCESS_DENIED"].includes(safeCode) ? 403
+    : ["INVITATION_SELF_ACCEPT_DENIED", "FAMILY_ACCESS_DENIED", "CONVERSATION_ACCESS_DENIED", "MESSAGE_ACCESS_DENIED", "CALENDAR_ACCESS_DENIED"].includes(safeCode) ? 403
     : 400;
   return failure(request, status, safeCode as ErrorCode, safeCode === "DATABASE_NOT_READY" ? "The regional staging database is not ready." : "The request could not be completed.", requestId, config);
 };
@@ -363,6 +366,22 @@ const handler = async (request: Request): Promise<Response> => {
     return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data ?? [], requestId, config);
   }
 
+  if (request.method === "GET" && ["/api/v2/calendar-layers", "/api/v2/schedule-events"].includes(path)) {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
+    const familyId = new URL(request.url).searchParams.get("familyCircleId")?.trim() ?? "";
+    if (!isUuid(familyId)) return failure(request, 400, "INVALID_REQUEST", "A valid family is required.", requestId, config);
+    const rpcName = path === "/api/v2/calendar-layers"
+      ? "peacepad_v2_list_calendar_layers"
+      : "peacepad_v2_list_schedule_events";
+    const { data, error } = await authenticated.admin.rpc(rpcName, {
+      p_identity_id: authenticated.user.id,
+      p_region: config.region,
+      p_family_id: familyId,
+    });
+    return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data ?? [], requestId, config);
+  }
+
   const isInvitationTransition = /^\/api\/v2\/invitations\/[^/]+\/(accept|decline)$/.test(path);
   const isInvitationRevocation = /^\/api\/v2\/invitations\/[^/]+$/.test(path);
   const isAccountDeletion = path === "/api/v2/account";
@@ -370,14 +389,19 @@ const handler = async (request: Request): Promise<Response> => {
   const isMessageSend = /^\/api\/v2\/conversations\/[^/]+\/messages$/.test(path);
   const isMessageLifecycle = /^\/api\/v2\/conversations\/[^/]+\/messages\/[^/]+\/events$/.test(path);
   const isMessageCorrection = /^\/api\/v2\/conversations\/[^/]+\/messages\/[^/]+\/corrections$/.test(path);
+  const isCalendarLayerCreation = path === "/api/v2/calendar-layers";
+  const calendarLayerMatch = path.match(/^\/api\/v2\/calendar-layers\/([^/]+)$/);
+  const isScheduleEventCreation = path === "/api/v2/schedule-events";
+  const scheduleEventMatch = path.match(/^\/api\/v2\/schedule-events\/([^/]+)$/);
   if (
     (request.method === "POST" && ([
       "/api/v2/session/bootstrap",
       "/api/v2/consents",
       "/api/v2/families",
       "/api/v2/invitations",
-    ].includes(path) || isInvitationTransition || isConversationCreation || isMessageSend || isMessageLifecycle || isMessageCorrection)) ||
-    (request.method === "DELETE" && (isInvitationRevocation || isAccountDeletion))
+    ].includes(path) || isInvitationTransition || isConversationCreation || isMessageSend || isMessageLifecycle || isMessageCorrection || isCalendarLayerCreation || isScheduleEventCreation)) ||
+    (request.method === "PATCH" && (calendarLayerMatch || scheduleEventMatch)) ||
+    (request.method === "DELETE" && (isInvitationRevocation || isAccountDeletion || calendarLayerMatch || scheduleEventMatch))
   ) {
     const authenticated = await authenticate(request, config);
     if (!authenticated) {
@@ -469,6 +493,81 @@ const handler = async (request: Request): Promise<Response> => {
         p_schema_version: context.schemaVersion,
       });
       return error ? rpcFailure(request, requestId, config, error.message) : json(request, 201, data, requestId, config);
+    }
+
+    if (isCalendarLayerCreation || calendarLayerMatch) {
+      const isCreate = request.method === "POST";
+      const familyId = typeof body.familyCircleId === "string" ? body.familyCircleId : "";
+      const layerId = calendarLayerMatch ? decodeURIComponent(calendarLayerMatch[1]) : "";
+      const name = typeof body.name === "string" ? body.name.trim() : "";
+      const kind = typeof body.kind === "string" ? body.kind : "";
+      const icon = typeof body.icon === "string" ? body.icon : "";
+      const colorToken = typeof body.colorToken === "string" ? body.colorToken : "";
+      const visibility = body.visibility && typeof body.visibility === "object" && !Array.isArray(body.visibility) ? body.visibility : null;
+      if ((isCreate && !isUuid(familyId)) || (!isCreate && !isUuid(layerId)) || (request.method !== "DELETE" && (!name || !visibility))) {
+        return failure(request, 400, "INVALID_REQUEST", "Calendar layer details are invalid.", requestId, config);
+      }
+      const expectedVersionHeader = (request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? "";
+      const expectedVersion = Number(expectedVersionHeader);
+      if (!isCreate && (!Number.isInteger(expectedVersion) || expectedVersion < 1)) {
+        return failure(request, 400, "INVALID_REQUEST", "A valid expected version is required.", requestId, config);
+      }
+      const rpcName = isCreate ? "peacepad_v2_create_calendar_layer"
+        : request.method === "PATCH" ? "peacepad_v2_update_calendar_layer"
+        : "peacepad_v2_delete_calendar_layer";
+      const rpcArguments: Record<string, unknown> = {
+        p_identity_id: authenticated.user.id,
+        p_region: config.region,
+        p_idempotency_key: context.idempotencyKey,
+        p_schema_version: context.schemaVersion,
+        ...(isCreate ? { p_family_id: familyId } : { p_layer_id: layerId, p_expected_version: expectedVersion }),
+        ...(request.method !== "DELETE" ? {
+          p_name: name, p_kind: kind, p_icon: icon, p_color_token: colorToken, p_visibility: visibility,
+        } : {}),
+      };
+      const { data, error } = await authenticated.admin.rpc(rpcName, rpcArguments);
+      return error ? rpcFailure(request, requestId, config, error.message)
+        : json(request, isCreate ? 201 : 200, data, requestId, config);
+    }
+
+    if (isScheduleEventCreation || scheduleEventMatch) {
+      const isCreate = request.method === "POST";
+      const familyId = typeof body.familyCircleId === "string" ? body.familyCircleId : "";
+      const eventId = scheduleEventMatch ? decodeURIComponent(scheduleEventMatch[1]) : "";
+      const layerId = typeof body.calendarLayerId === "string" ? body.calendarLayerId : "";
+      const childProfileIds = Array.isArray(body.childProfileIds) && body.childProfileIds.every((value) => typeof value === "string") ? body.childProfileIds : [];
+      const eventType = typeof body.eventType === "string" ? body.eventType : "";
+      const title = typeof body.title === "string" ? body.title.trim() : "";
+      const description = typeof body.description === "string" ? body.description.trim() : null;
+      const startsAt = typeof body.startsAt === "string" ? body.startsAt : "";
+      const endsAt = typeof body.endsAt === "string" ? body.endsAt : "";
+      const status = typeof body.status === "string" ? body.status : "";
+      const recurrence = body.recurrence === null || (body.recurrence && typeof body.recurrence === "object" && !Array.isArray(body.recurrence)) ? body.recurrence : null;
+      const visibilityOverride = body.visibilityOverride === null || (body.visibilityOverride && typeof body.visibilityOverride === "object" && !Array.isArray(body.visibilityOverride)) ? body.visibilityOverride : null;
+      if ((isCreate && !isUuid(familyId)) || (!isCreate && !isUuid(eventId)) || (request.method !== "DELETE" && (
+        !isUuid(layerId) || childProfileIds.some((value) => !isUuid(value)) || !title || !startsAt || !endsAt
+      ))) return failure(request, 400, "INVALID_REQUEST", "Schedule event details are invalid.", requestId, config);
+      const expectedVersionHeader = (request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? "";
+      const expectedVersion = Number(expectedVersionHeader);
+      if (!isCreate && (!Number.isInteger(expectedVersion) || expectedVersion < 1)) {
+        return failure(request, 400, "INVALID_REQUEST", "A valid expected version is required.", requestId, config);
+      }
+      const rpcName = isCreate ? "peacepad_v2_create_schedule_event"
+        : request.method === "PATCH" ? "peacepad_v2_update_schedule_event"
+        : "peacepad_v2_delete_schedule_event";
+      const rpcArguments: Record<string, unknown> = {
+        p_identity_id: authenticated.user.id, p_region: config.region,
+        p_idempotency_key: context.idempotencyKey, p_schema_version: context.schemaVersion,
+        ...(isCreate ? { p_family_id: familyId } : { p_event_id: eventId, p_expected_version: expectedVersion }),
+        ...(request.method !== "DELETE" ? {
+          p_calendar_layer_id: layerId, p_child_profile_ids: childProfileIds, p_event_type: eventType,
+          p_title: title, p_description: description, p_starts_at: startsAt, p_ends_at: endsAt,
+          p_status: status, p_recurrence: recurrence, p_visibility_override: visibilityOverride,
+        } : {}),
+      };
+      const { data, error } = await authenticated.admin.rpc(rpcName, rpcArguments);
+      return error ? rpcFailure(request, requestId, config, error.message)
+        : json(request, isCreate ? 201 : 200, data, requestId, config);
     }
 
     const sendMatch = path.match(/^\/api\/v2\/conversations\/([^/]+)\/messages$/);
