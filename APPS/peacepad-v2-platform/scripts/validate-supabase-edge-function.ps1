@@ -164,7 +164,7 @@ if ($authCleanupMigration -match '(?i)(email|message_body|access_token|refresh_t
 }
 foreach ($pattern in @(
   'create or replace function public\.peacepad_v2_delete_account',
-  'code_hash = digest',
+  'code_hash = uuid_send\(gen_random_uuid\(\)\) \|\| uuid_send\(gen_random_uuid\(\)\)',
   'delete from peacepad_v2\.invitation_attempt',
   'delete from peacepad_v2\.region_binding',
   "family_name = 'Deleted family'",

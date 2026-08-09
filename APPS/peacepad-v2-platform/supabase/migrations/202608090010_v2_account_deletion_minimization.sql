@@ -49,7 +49,7 @@ begin
   update peacepad_v2.family_invitation
   set status = case when status = 'pending' then 'revoked' else status end,
       revoked_at = case when status = 'pending' then deletion_time else revoked_at end,
-      code_hash = digest(invitation_id::text || ':' || gen_random_uuid()::text, 'sha256'),
+      code_hash = uuid_send(gen_random_uuid()) || uuid_send(gen_random_uuid()),
       failed_attempts = 0,
       last_attempt_at = null,
       version = version + 1
