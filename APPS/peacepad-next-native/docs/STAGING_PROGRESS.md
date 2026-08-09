@@ -7,6 +7,11 @@ Branch: `agent/peacepad-native-staging-clean`
 Draft PR: [#172](https://github.com/fefejiro/FTC-HOLDING/pull/172)  
 Latest staging branch commit: `eb329c27`
 
+Current successor: `feat/peacepad-v2-supabase-free-staging`, draft PR
+[#177](https://github.com/fefejiro/FTC-HOLDING/pull/177). The authoritative
+current state is maintained in [STATUS.md](STATUS.md); the rows below retain the
+historical #172 baseline plus explicitly labelled successor evidence.
+
 | Gate | Status |
 | --- | --- |
 | Staging environment rejects non-staging runtime | LOCAL VERIFIED |
@@ -25,7 +30,7 @@ Latest staging branch commit: `eb329c27`
 | Two-account HTTP session handshake | LOCAL VERIFIED |
 | Staging coordination client guard | LOCAL VERIFIED |
 | Explicit family/permission authorization guard | LOCAL VERIFIED |
-| PostgreSQL migration and restart persistence | NOT STARTED |
+| PostgreSQL migration and restart persistence | HISTORICAL NOT STARTED - later POSTGRES VERIFIED; see STATUS.md |
 | Superseded Railway staging configuration | NOT STARTED |
 | AWS Canada/U.S. staging configuration | DEFERRED - funding unavailable |
 | Supabase Canada/U.S. free staging boundary | LOCAL VERIFIED |
@@ -33,12 +38,13 @@ Latest staging branch commit: `eb329c27`
 | Supabase U.S. regional project and boundary schema | DEPLOYED STAGING VERIFIED |
 | Supabase regional API adapters | HOSTED VERIFIED / DEPLOYMENT BLOCKED BY PROJECT ROLE |
 | Supabase atomic identity/consent/family/invitation transactions | HOSTED VERIFIED / DEPLOYMENT BLOCKED BY PROJECT ROLE |
-| Supabase persisted messaging, calendar, and Message Check transactions | HOSTED VERIFIED / DEPLOYMENT BLOCKED BY PROJECT ROLE |
+| Supabase persisted messaging, calendar, and Message Check transactions | HOSTED VERIFIED / DEPLOYMENT BLOCKED BY DEPLOYMENT IDENTITY |
 | Authenticated Supabase native runtime and family onboarding | HOSTED VERIFIED / DEPLOYMENT BLOCKED BY PROJECT ROLE |
 | Versioned account deletion and local session invalidation | HOSTED VERIFIED / DEPLOYMENT BLOCKED BY PROJECT ROLE |
 | Decoupled Auth identity and durable cleanup outbox | HOSTED VERIFIED / DEPLOYMENT BLOCKED BY PROJECT ROLE |
 | Deleted-account invitation and regional metadata minimization | HOSTED VERIFIED / DEPLOYMENT BLOCKED BY PROJECT ROLE |
-| Hosted CI | PASS - PR #177, infrastructure run `31336096567` on `c88130981` |
+| Connected-member invitation routing | HOSTED VERIFIED for route/prefill; multi-family acceptance BLOCKED pending active-family selection |
+| Hosted CI | PeacePad-scoped PASS on PR #177 at `47d8aa742`: native run `31339066699`, infrastructure run `31339066702`. Overall PR remains unstable because unrelated Garden run `31339066712` cannot load `@ftc/config/dist/index.js` |
 
 This is not a production release. The native client remains a staging/lab
 build with `ca.peacepad.nextnative.lab` and production writes disabled.

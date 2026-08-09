@@ -4,8 +4,8 @@
 
 - Snapshot date: 2026-08-09
 - Branch: `feat/peacepad-v2-supabase-free-staging`
-- Verified source baseline: commit containing this document
-- Gate evidence applies to the commit containing this status document
+- Verified implementation baseline: `7b15f34b8`
+- Ledger evidence applies only to the exact commit listed in each row
 - App version: `0.0.1`
 - Staging/lab bundle: `ca.peacepad.nextnative.lab`
 - Future production bundle: `ca.peacepad.family`
@@ -18,7 +18,7 @@ is historical and cannot independently pass a release gate.
 
 ## Release verdict
 
-**BLOCKED - Gate 0, the fictional database contract, authenticated native runtime, and family onboarding are HOSTED VERIFIED; regional API deployment remains blocked by project role.**
+**BLOCKED - Gate 0, the fictional database contract, authenticated native runtime, and family onboarding are HOSTED VERIFIED; regional API deployment remains blocked because the current deployment identity cannot access either approved project.**
 
 Native V2 is implemented partly as a synthetic/staging prototype. It is not
 ready for production identity, real family information, TestFlight, or App
@@ -29,7 +29,10 @@ credential-free plans passed locally with a mock AWS provider on PR #174. This
 is not AWS or residency proof. A local PostgreSQL 18.3 custom-format backup and
 restore drill now passes with fictional data, verified migration checksums,
 and cleanup of both temporary databases. Both hosted workflows pass on PR #176
-for the prerequisite commit. No cloud deployment or managed restoration occurred.
+for the prerequisite commit. On current draft PR #177, the PeacePad native and
+infrastructure workflows pass at `47d8aa742`; the overall PR remains unstable
+only because the unrelated Garden workflow cannot load
+`@ftc/config/dist/index.js`. No cloud deployment or managed restoration occurred.
 
 ## Evidence vocabulary
 
@@ -56,8 +59,8 @@ mandatory gate passes.
 | Gate | Weight | Implementation | Evidence | Current blocker | Next proof |
 | --- | ---: | ---: | --- | --- | --- |
 | Gate 0: reproducible foundation | 10% | 100% | HOSTED VERIFIED | None for this gate | Retain hosted logs and keep the workflow green |
-| Gate 1: Canada/U.S. platform | 15% | 80% | HOSTED VERIFIED / DEPLOYMENT BLOCKED | Both regional boundary schemas are deployed. Hosted CI typechecks the Edge Function, applies every migration twice, and executes the PostgreSQL transaction proof through persisted calendars and Message Check. The current CLI identity still cannot update Function secrets or deploy. Managed restoration and residency assurance remain absent | Grant the CLI identity Owner/Administrator project access, apply pending migrations through `202608090006`, deploy both adapters, and run live contract checks |
-| Gate 2: identity and coordination | 20% | 78% | HOSTED VERIFIED / DEPLOYMENT BLOCKED | Supabase session restore, regional membership discovery, authenticated coordination hydration, family creation/join, invitation preview/acceptance/decline/revoke, strict staging invitation-link intake for new and connected members, first-conversation bootstrap, messaging history, calendar layers/events, Message Check, versioned deletion, durable Auth cleanup, and deleted-account metadata minimization have hosted automated proof. Managed persistence and two-account device proof are absent | Deploy the current regional adapter, prove deletion, Auth cleanup, and the fictional two-account coordination journey against each managed project |
+| Gate 1: Canada/U.S. platform | 15% | 80% | HOSTED VERIFIED / DEPLOYMENT BLOCKED | The initial regional boundary schemas are deployed. Migrations `202608090001` through `202608090010` and the Edge adapter are not managed-project verified. Hosted CI typechecks the Edge Function, applies every migration twice, and executes the PostgreSQL transaction proof through persisted calendars and Message Check. The current CLI identity cannot see either approved project. Managed restoration and residency assurance remain absent | Grant a dedicated deployment identity access, configure the two protected regional GitHub environments, apply migrations through `202608090010` one region at a time, deploy both adapters, and run live contract checks |
+| Gate 2: identity and coordination | 20% | 78% | HOSTED VERIFIED / DEPLOYMENT BLOCKED | Supabase session restore, regional membership discovery, authenticated coordination hydration, family creation/join, invitation preview/acceptance/decline/revoke, strict invitation-link parsing and authenticated prefill, first-conversation bootstrap, messaging history, calendar layers/events, Message Check, versioned deletion, durable Auth cleanup, and deleted-account metadata minimization have hosted automated proof. Connected multi-family acceptance is deliberately blocked until active-family switching exists. Managed persistence and two-account device proof are absent | Deploy the current regional adapter, prove deletion, Auth cleanup, and the fictional two-account coordination journey against each managed project |
 | Gate 3: records, evidence, exports | 15% | 5% | IMPLEMENTED | Metadata-only attachment intent; bytes and persistence disabled | Encrypted regional object storage, hashing, provenance, timeline, and independently verified export |
 | Gate 4: calls, offline, parity | 15% | 2% | NOT STARTED | No calling service or durable offline database | Regional audio/video call and offline conflict/recovery device suites |
 | Gate 5: trust, accessibility, localization | 10% | 5% | IMPLEMENTED | Baseline only; no independent audit or translations | Security/privacy/accessibility clearance and EN/FR/ES matrix |
@@ -72,7 +75,7 @@ the earlier unverified 53% planning estimate.
 | --- | ---: | --- | --- |
 | Home and task navigation | 70% | SIMULATOR VERIFIED | Welcome and consent screens are screenshot-backed on iPhone 17 / iOS 26.5; task shell and real-device proof remain pending |
 | Identity, session, consent, deletion | 77% | HOSTED VERIFIED | Supabase SDK session ownership, secure chunked device storage, restore/refresh/sign-out, JWT-derived runtime bootstrap, versioned identity binding, active-membership discovery, append-only consent, audited deletion, strict deletion-receipt validation, duplicate-submit prevention, immediate local authorization removal, a content-free leased Auth-cleanup outbox, destroyed invitation secrets, removed attempt metadata, and regional-binding cleanup are implemented. Managed execution, final shared-record retention policy, and device proof remain absent |
-| Secure invitations | 85% | HOSTED VERIFIED | Hashed creation, rate-limited preview, explicit accept/decline/revoke, single-use version checks, family creation/join UI, strict staging-only deep-link parsing, cold/live-link race protection, cross-account code clearing, and one-time authenticated routing for already-connected members pass hosted native and executable PostgreSQL proof. Managed deployment and two-device proof remain absent |
+| Secure invitations | 82% | HOSTED VERIFIED / CONNECTED MULTI-FAMILY BLOCKED | Hashed creation, rate-limited preview, explicit accept/decline/revoke, single-use version checks, recent code-proof enforcement, family creation/join UI, strict staging-only deep-link parsing, cold/live-link race protection, cross-account code clearing, and authenticated route/prefill pass automated proof. Connected users cannot accept a second-family invitation until active-family switching exists. Managed deployment and two-device proof remain absent |
 | Messaging and Message Check | 80% | HOSTED VERIFIED | Regional conversations, immutable messages/corrections, delivery/view receipts, idempotency, search, persisted per-identity/per-conversation Message Check preferences, default-off behavior, explicit opt-in/out, rule-based preview authorization, original-draft preservation, AI-consent separation, authorization, and audit pass executable PostgreSQL proof. Managed deployment and two-device delivery remain unverified |
 | Calendar and parenting plans | 75% | HOSTED VERIFIED | Persisted private-by-default layers, explicit family sharing, recurrence, event visibility restriction, optimistic concurrency, idempotency, soft deletion, audit, and cross-region denial pass PostgreSQL 16 proof; deployed and device proof remain absent |
 | Expenses and reimbursements | 0% | NOT STARTED | A calendar-layer label is not an expense ledger |
@@ -123,6 +126,7 @@ the earlier unverified 53% planning estimate.
 | Explicit invitation lifecycle controls | `6aadbff92` | GitHub Actions native and PostgreSQL 16/Deno, PR #177 | 2026-08-09 | HOSTED VERIFIED / DEPLOYMENT BLOCKED | Runs `31336979617` and `31336979609`: create, preview, accept, decline, and revoke invitation controls passed native and infrastructure gates. The concurrent Garden Portal workflow failure is an unrelated monorepo workflow-scoping defect and no Garden code was changed |
 | Secure staging invitation links | `5b1d338d8` | Windows local and GitHub Actions native/PostgreSQL 16/Deno, PR #177 | 2026-08-09 | HOSTED VERIFIED / DEPLOYMENT BLOCKED | Runs `31338156309` and `31338156303`: canonical `peacepadnextlab://invite/<code>` parsing, explicit review, live-over-cold URL ordering, listener cleanup, cross-account code clearing, 200 passing native tests with 1 skipped, guardrails, secret scan, Expo config/Doctor, iOS export, Edge validation/typecheck, repeatable migrations, and transaction proof passed. Existing-member invitation presentation and managed-project deployment remain unverified |
 | Connected-member invitation routing | `99b0cd8af` | Windows local and GitHub Actions native/PostgreSQL 16/Deno, PR #177 | 2026-08-09 | HOSTED VERIFIED / DEPLOYMENT BLOCKED | Runs `31338952256` and `31338952270`: an authenticated member receiving a staging invitation is routed exactly once to the prefilled invitation screen, still must select Review invitation, and cannot accept implicitly. TypeScript, 29 suites with 201 passing tests and 1 skipped, 78.64% branch coverage, guardrails, secret scan, Expo Doctor 18/18, public config, iOS export, Edge validation/typecheck, repeatable migrations, and transaction proof passed. Managed deployment remains blocked |
+| Invitation code-proof and connected-family safety | `7b15f34b8` | Windows local, fictional adapters and static regional boundary | 2026-08-09 | LOCAL VERIFIED / DEPLOYMENT BLOCKED | TypeScript, guardrails, 29 suites with 203 passing tests and 1 skipped, 78.71% branch coverage, 83-file secret scan, Supabase regional configuration validation, Edge boundary validation, and workflow YAML parsing passed. Acceptance now requires a recent code-resolution attempt; connected multi-family acceptance fails closed; a failed decline remains reviewable. Managed database proof for this commit is pending hosted CI |
 | Canadian Supabase fictional staging | this commit | Supabase Free, `ca-central-1` | 2026-08-07 | DEPLOYED STAGING VERIFIED (SCHEMA ONLY) | Healthy project; PostgreSQL 17.6; boundary schema applied; append-only triggers present; direct `anon`/`authenticated` table privileges absent; fictional write rolled back. API adapter, restoration, device, and production proof remain absent |
 | U.S. Supabase fictional staging | this commit | Supabase Free, `us-east-2` | 2026-08-07 | DEPLOYED STAGING VERIFIED (SCHEMA ONLY) | Healthy company-owned project; PostgreSQL 17.6; boundary schema applied; append-only triggers present; direct `anon`/`authenticated` table privileges absent; fictional write rolled back. API adapter, restoration, device, and production proof remain absent |
 | Focused staging smokes | earlier PR #172 commits | Windows local, fictional adapters | Historical | HISTORICAL EVIDENCE | `STAGING_RUNTIME_SMOKE_PASS`, `STAGING_RESTART_SMOKE_PASS`, `TWO_ACCOUNT_HTTP_SMOKE_PASS`, `SYNTHETIC_COORDINATION_JOURNEY_PASS`, `STAGING_AUTHORIZATION_SMOKE_PASS` |
