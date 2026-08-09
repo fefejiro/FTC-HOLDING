@@ -215,12 +215,12 @@ begin
   if cardinality(coalesce(p_permissions, '{}')) > 8 then raise exception using errcode = '22023', message = 'INVITATION_PERMISSIONS_INVALID'; end if;
   if p_expires_at <= now() or p_expires_at > now() + interval '168 hours' then raise exception using errcode = '22023', message = 'INVITATION_EXPIRY_INVALID'; end if;
 
-  select grant.region into grant_region
-  from peacepad_v2.participant_grant grant
-  where grant.family_id = p_family_id
-    and grant.identity_id = p_identity_id
-    and grant.revoked_at is null
-    and 'invitation.manage' = any(grant.permissions);
+  select participant.region into grant_region
+  from peacepad_v2.participant_grant participant
+  where participant.family_id = p_family_id
+    and participant.identity_id = p_identity_id
+    and participant.revoked_at is null
+    and 'invitation.manage' = any(participant.permissions);
   if grant_region is null then raise exception using errcode = '42501', message = 'FAMILY_ACCESS_DENIED'; end if;
   if grant_region <> p_region then raise exception using errcode = '42501', message = 'REGION_MISMATCH'; end if;
 

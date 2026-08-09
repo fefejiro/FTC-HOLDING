@@ -78,7 +78,7 @@ jobs:
           PGPASSWORD: peacepad_test
         run: |
           set -euo pipefail
-          psql -h 127.0.0.1 -U postgres -d peacepad_v2_test <<'SQL'
+          psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d peacepad_v2_test <<'SQL'
           create role anon;
           create role authenticated;
           create role service_role;
@@ -87,10 +87,10 @@ jobs:
           SQL
           for pass in 1 2; do
             for migration in APPS/peacepad-v2-platform/supabase/migrations/*.sql; do
-              psql -h 127.0.0.1 -U postgres -d peacepad_v2_test -f "$migration"
+              psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d peacepad_v2_test -f "$migration"
             done
           done
-          psql -h 127.0.0.1 -U postgres -d peacepad_v2_test \
+          psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d peacepad_v2_test \
             -f APPS/peacepad-v2-platform/scripts/verify-supabase-transactions.sql
 
       - name: Confirm workflow cannot deploy

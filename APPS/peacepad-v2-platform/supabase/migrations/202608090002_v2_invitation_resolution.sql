@@ -219,12 +219,12 @@ begin
   if not found then raise exception using errcode = '22023', message = 'INVITATION_INVALID'; end if;
   if invitation.region <> p_region then raise exception using errcode = '42501', message = 'REGION_MISMATCH'; end if;
   if invitation.created_by <> p_identity_id and not exists (
-    select 1 from peacepad_v2.participant_grant grant
-    where grant.family_id = invitation.family_id
-      and grant.identity_id = p_identity_id
-      and grant.region = p_region
-      and grant.revoked_at is null
-      and 'invitation.manage' = any(grant.permissions)
+    select 1 from peacepad_v2.participant_grant participant
+    where participant.family_id = invitation.family_id
+      and participant.identity_id = p_identity_id
+      and participant.region = p_region
+      and participant.revoked_at is null
+      and 'invitation.manage' = any(participant.permissions)
   ) then raise exception using errcode = '42501', message = 'FAMILY_ACCESS_DENIED'; end if;
   if invitation.status <> 'pending' then raise exception using errcode = '22023', message = 'INVITATION_USED'; end if;
   if invitation.version <> p_expected_version then raise exception using errcode = '40001', message = 'CONCURRENCY_CONFLICT'; end if;
