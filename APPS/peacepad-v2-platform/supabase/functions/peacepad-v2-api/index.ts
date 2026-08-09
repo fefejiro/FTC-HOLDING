@@ -17,6 +17,7 @@ type ErrorCode =
   | "DATABASE_NOT_READY"
   | "FAMILY_ACCESS_DENIED"
   | "INVALID_REQUEST"
+  | "IDENTITY_DELETED"
   | "IDENTITY_NOT_BOUND"
   | "IDEMPOTENCY_REQUIRED"
   | "INVITATION_EXPIRED"
@@ -32,7 +33,8 @@ type ErrorCode =
   | "REGION_MISMATCH"
   | "SCHEMA_MISMATCH"
   | "CONCURRENCY_CONFLICT"
-  | "RUNTIME_REGION_MISMATCH";
+  | "RUNTIME_REGION_MISMATCH"
+  | "SESSION_REVOCATION_FAILED";
 
 const env = (name: string): string => Deno.env.get(name)?.trim() ?? "";
 
@@ -154,6 +156,7 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
   const directCodes: Partial<Record<string, ErrorCode>> = {
     REGION_MISMATCH: "REGION_MISMATCH",
     SCHEMA_MISMATCH: "SCHEMA_MISMATCH",
+    IDENTITY_DELETED: "IDENTITY_DELETED",
     IDENTITY_NOT_BOUND: "IDENTITY_NOT_BOUND",
     FAMILY_ACCESS_DENIED: "FAMILY_ACCESS_DENIED",
     INVITATION_EXPIRED: "INVITATION_EXPIRED",
@@ -306,6 +309,7 @@ const handler = async (request: Request): Promise<Response> => {
 
   const isInvitationTransition = /^\/api\/v2\/invitations\/[^/]+\/(accept|decline)$/.test(path);
   const isInvitationRevocation = /^\/api\/v2\/invitations\/[^/]+$/.test(path);
+  const isAccountDeletion = path === "/api/v2/account";
   if (
     (request.method === "POST" && ([
       "/api/v2/session/bootstrap",
@@ -313,7 +317,7 @@ const handler = async (request: Request): Promise<Response> => {
       "/api/v2/families",
       "/api/v2/invitations",
     ].includes(path) || isInvitationTransition)) ||
-    (request.method === "DELETE" && isInvitationRevocation)
+    (request.method === "DELETE" && (isInvitationRevocation || isAccountDeletion))
   ) {
     const authenticated = await authenticate(request, config);
     if (!authenticated) {
@@ -334,6 +338,30 @@ const handler = async (request: Request): Promise<Response> => {
         p_schema_version: context.schemaVersion,
       });
       return error ? rpcFailure(request, requestId, config, error.message) : json(request, 201, data, requestId, config);
+    }
+
+    if (isAccountDeletion) {
+      const expectedVersionHeader = (request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? "";
+      const expectedVersion = Number(expectedVersionHeader);
+      if (!Number.isInteger(expectedVersion) || expectedVersion < 1) {
+        return failure(request, 400, "INVALID_REQUEST", "A valid expected version is required.", requestId, config);
+      }
+      const { data, error } = await authenticated.admin.rpc("peacepad_v2_delete_account", {
+        p_identity_id: authenticated.user.id,
+        p_region: config.region,
+        p_expected_version: expectedVersion,
+        p_idempotency_key: context.idempotencyKey,
+        p_schema_version: context.schemaVersion,
+      });
+      if (error) return rpcFailure(request, requestId, config, error.message);
+      const token = bearerToken(request);
+      const { error: signOutError } = token
+        ? await authenticated.admin.auth.admin.signOut(token, "global")
+        : { error: new Error("Missing authenticated token.") };
+      if (signOutError) {
+        return failure(request, 503, "SESSION_REVOCATION_FAILED", "The account is deleted, but session cleanup must be retried.", requestId, config);
+      }
+      return json(request, 200, { ...(data as Record<string, unknown>), refreshSessionsRevoked: true }, requestId, config);
     }
 
     if (path === "/api/v2/consents") {

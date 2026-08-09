@@ -8,9 +8,10 @@ $migrationPath = Join-Path $platformRoot 'supabase/migrations/202608070002_v2_ed
 $authorizationMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608070003_v2_identity_family_invitation.sql'
 $transactionMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090001_v2_authorization_transactions.sql'
 $invitationMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090002_v2_invitation_resolution.sql'
+$accountDeletionMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090003_v2_account_deletion.sql'
 $configPath = Join-Path $platformRoot 'supabase/config.toml'
 
-foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $configPath)) {
+foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $configPath)) {
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
     throw "Required Supabase staging file is missing: $path"
   }
@@ -21,6 +22,7 @@ $migration = Get-Content -LiteralPath $migrationPath -Raw
 $authorizationMigration = Get-Content -LiteralPath $authorizationMigrationPath -Raw
 $transactionMigration = Get-Content -LiteralPath $transactionMigrationPath -Raw
 $invitationMigration = Get-Content -LiteralPath $invitationMigrationPath -Raw
+$accountDeletionMigration = Get-Content -LiteralPath $accountDeletionMigrationPath -Raw
 $config = Get-Content -LiteralPath $configPath -Raw
 
 $requiredFunctionPatterns = @(
@@ -38,6 +40,9 @@ $requiredFunctionPatterns = @(
   '(accept|decline)',
   'peacepad_v2_decline_invitation',
   'peacepad_v2_revoke_invitation',
+  '/api/v2/account',
+  'peacepad_v2_delete_account',
+  'auth.admin.signOut',
   'idempotency-key',
   'if-match',
   'x-peacepad-schema-version',
@@ -140,6 +145,18 @@ if ($invitationMigration -notmatch "attempted_at > now\(\) - interval '30 minute
 }
 if ($invitationMigration -notmatch "message = 'FAMILY_ACCESS_DENIED'") {
   throw 'Invitation revocation must enforce family management authorization.'
+}
+foreach ($pattern in @(
+  'create or replace function public\.peacepad_v2_delete_account',
+  'identity\.deleted_at is null',
+  'account\.deleted',
+  "status = 'revoked'",
+  'revoked_at',
+  'CONCURRENCY_CONFLICT'
+)) {
+  if ($accountDeletionMigration -notmatch $pattern) {
+    throw "Account deletion migration is missing required boundary: $pattern"
+  }
 }
 if (
   $config -notmatch '\[functions\.peacepad-v2-api\]' -or

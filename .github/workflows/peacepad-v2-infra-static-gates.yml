@@ -25,6 +25,19 @@ jobs:
     name: Format, validate, and mock-plan
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: peacepad_test
+          POSTGRES_DB: peacepad_v2_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     steps:
       - name: Checkout repository
@@ -34,6 +47,11 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.15.8
+
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
 
       - name: Assert no AWS credentials are present
         shell: bash
@@ -46,6 +64,31 @@ jobs:
       - name: Run static infrastructure gates
         shell: pwsh
         run: ./APPS/peacepad-v2-platform/scripts/validate-infra.ps1
+
+      - name: Type-check Supabase Edge Function
+        shell: bash
+        run: deno check APPS/peacepad-v2-platform/supabase/functions/peacepad-v2-api/index.ts
+
+      - name: Apply and verify Supabase transactions
+        shell: bash
+        env:
+          PGPASSWORD: peacepad_test
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -U postgres -d peacepad_v2_test <<'SQL'
+          create role anon;
+          create role authenticated;
+          create role service_role;
+          create schema auth;
+          create table auth.users (id uuid primary key);
+          SQL
+          for pass in 1 2; do
+            for migration in APPS/peacepad-v2-platform/supabase/migrations/*.sql; do
+              psql -h 127.0.0.1 -U postgres -d peacepad_v2_test -f "$migration"
+            done
+          done
+          psql -h 127.0.0.1 -U postgres -d peacepad_v2_test \
+            -f APPS/peacepad-v2-platform/scripts/verify-supabase-transactions.sql
 
       - name: Confirm workflow cannot deploy
         shell: bash
