@@ -4,7 +4,7 @@
 
 - Snapshot date: 2026-08-09
 - Branch: `feat/peacepad-v2-supabase-free-staging`
-- Verified source baseline: `eb329c278e5bb6f43cfa723f55449ebcc6172220`
+- Verified source baseline: `fcbb7ce8cd75a157ff7afc596abaffbbff361c29`
 - Gate evidence applies to the commit containing this status document
 - App version: `0.0.1`
 - Staging/lab bundle: `ca.peacepad.nextnative.lab`
@@ -18,7 +18,7 @@ is historical and cannot independently pass a release gate.
 
 ## Release verdict
 
-**BLOCKED — Gates 0 and the current fictional database contract are HOSTED VERIFIED through persisted Message Check; regional API deployment remains blocked by project role.**
+**BLOCKED — Gate 0, the fictional database contract, authenticated native runtime, and family onboarding are HOSTED VERIFIED; regional API deployment remains blocked by project role.**
 
 Native V2 is implemented partly as a synthetic/staging prototype. It is not
 ready for production identity, real family information, TestFlight, or App
@@ -57,13 +57,13 @@ mandatory gate passes.
 | --- | ---: | ---: | --- | --- | --- |
 | Gate 0: reproducible foundation | 10% | 100% | HOSTED VERIFIED | None for this gate | Retain hosted logs and keep the workflow green |
 | Gate 1: Canada/U.S. platform | 15% | 80% | HOSTED VERIFIED / DEPLOYMENT BLOCKED | Both regional boundary schemas are deployed. Hosted CI typechecks the Edge Function, applies every migration twice, and executes the PostgreSQL transaction proof through persisted calendars and Message Check. The current CLI identity still cannot update Function secrets or deploy. Managed restoration and residency assurance remain absent | Grant the CLI identity Owner/Administrator project access, apply pending migrations through `202608090006`, deploy both adapters, and run live contract checks |
-| Gate 2: identity and coordination | 20% | 55% | HOSTED VERIFIED / DEPLOYMENT BLOCKED | Identity, consent, invitation lifecycle, deletion, messaging history, calendar layers/events, per-conversation Message Check preferences, explicit opt-in/out, rule-based preview authorization, AI separation, idempotency, concurrency, audit, and cross-region denial pass hosted PostgreSQL proof. Remote persistence and two-account device proof are absent | Deploy the current regional adapter, then complete the fictional two-account invitation, messaging, Message Check, and calendar journey |
+| Gate 2: identity and coordination | 20% | 68% | HOSTED VERIFIED / DEPLOYMENT BLOCKED | Supabase session restore, regional membership discovery, authenticated coordination hydration, family creation/join, invitation preview/acceptance, first-conversation bootstrap, deletion, messaging history, calendar layers/events, and Message Check now have hosted automated proof. Managed persistence and two-account device proof are absent | Deploy the current regional adapter, then complete the fictional two-account invitation, messaging, Message Check, and calendar journey |
 | Gate 3: records, evidence, exports | 15% | 5% | IMPLEMENTED | Metadata-only attachment intent; bytes and persistence disabled | Encrypted regional object storage, hashing, provenance, timeline, and independently verified export |
 | Gate 4: calls, offline, parity | 15% | 2% | NOT STARTED | No calling service or durable offline database | Regional audio/video call and offline conflict/recovery device suites |
 | Gate 5: trust, accessibility, localization | 10% | 5% | IMPLEMENTED | Baseline only; no independent audit or translations | Security/privacy/accessibility clearance and EN/FR/ES matrix |
 | Gate 6: migration and App Store | 15% | 0% | NOT STARTED | Gates 0–5 are incomplete | Migration/rollback rehearsal, TestFlight soak, sign-offs, and App Review submission |
 
-Weighted implementation estimate: **about 35% production-ready**. This replaces
+Weighted implementation estimate: **about 38% production-ready**. This replaces
 the earlier unverified 53% planning estimate.
 
 ## Feature dashboard
@@ -71,8 +71,8 @@ the earlier unverified 53% planning estimate.
 | Feature | Implementation | Evidence | Notes |
 | --- | ---: | --- | --- |
 | Home and task navigation | 70% | SIMULATOR VERIFIED | Welcome and consent screens are screenshot-backed on iPhone 17 / iOS 26.5; task shell and real-device proof remain pending |
-| Identity, session, consent, deletion | 44% | HOSTED VERIFIED | JWT-derived bootstrap, append-only consent, audited deletion, immediate authorization revocation, and refresh-session cleanup are implemented; deployed execution and device proof remain absent |
-| Secure invitations | 70% | HOSTED VERIFIED | Hashed creation, rate-limited preview, accept/decline/revoke, single-use version checks, authorization, and audit pass executable PostgreSQL proof; deployed proof is absent |
+| Identity, session, consent, deletion | 62% | HOSTED VERIFIED | Supabase SDK session ownership, secure chunked device storage, restore/refresh/sign-out, JWT-derived runtime bootstrap, active-membership discovery, append-only consent, audited deletion, and immediate authorization revocation are implemented; deployed execution and device proof remain absent |
+| Secure invitations | 78% | HOSTED VERIFIED | Hashed creation, rate-limited preview, explicit accept/decline/revoke, single-use version checks, family creation/join UI, authorization, and audit pass hosted native and executable PostgreSQL proof; deployed proof is absent |
 | Messaging and Message Check | 80% | HOSTED VERIFIED | Regional conversations, immutable messages/corrections, delivery/view receipts, idempotency, search, persisted per-identity/per-conversation Message Check preferences, default-off behavior, explicit opt-in/out, rule-based preview authorization, original-draft preservation, AI-consent separation, authorization, and audit pass executable PostgreSQL proof. Managed deployment and two-device delivery remain unverified |
 | Calendar and parenting plans | 75% | HOSTED VERIFIED | Persisted private-by-default layers, explicit family sharing, recurrence, event visibility restriction, optimistic concurrency, idempotency, soft deletion, audit, and cross-region denial pass PostgreSQL 16 proof; deployed and device proof remain absent |
 | Expenses and reimbursements | 0% | NOT STARTED | A calendar-layer label is not an expense ledger |
@@ -115,6 +115,7 @@ the earlier unverified 53% planning estimate.
 | Supabase hosted transaction contract | `7123ca4e7` | GitHub Actions PostgreSQL 16 and Deno, PR #177 | 2026-08-09 | HOSTED VERIFIED | Run `31327985728`: Edge Function typecheck; migrations applied twice; fictional family invitation acceptance, conversation, send/deliver/view/correct/search, idempotent replay, account deletion, and revoked-access assertions passed; workflow proved it cannot deploy |
 | Supabase persisted calendar contract | `a6a1f8d28` | GitHub Actions PostgreSQL 16 and Deno, PR #177 | 2026-08-09 | HOSTED VERIFIED / DEPLOYMENT BLOCKED | Runs `31329165230` and `31329165250`: every migration applied twice; private layer isolation, explicit family sharing, stale-write rejection, recurrent event creation, privacy override, deletion, cross-region denial, Edge Function typecheck, native tests, Expo checks, and iOS export passed; workflow has no deployment capability |
 | Supabase persisted Message Check contract | `6c90a7cde` | GitHub Actions PostgreSQL 16 and Deno, PR #177 | 2026-08-09 | HOSTED VERIFIED / DEPLOYMENT BLOCKED | Runs `31330073246` and `31330073217`: every migration applied twice; Message Check default-off, explicit opt-in/out, participant isolation, account-deletion cleanup, operation-scoped idempotency, stale-write rejection, per-conversation preview authorization, third-party AI denial, Edge Function typecheck, native tests, Expo checks, and iOS export passed; workflow has no deployment capability |
+| Authenticated native runtime and family onboarding | `fcbb7ce8c` | GitHub Actions native, Deno, and PostgreSQL 16, PR #177 | 2026-08-09 | HOSTED VERIFIED / DEPLOYMENT BLOCKED | Runs `31333087206` and `31333087208`: exact-project Supabase configuration, secure session composition, verified membership/conversation discovery, authenticated hydration, family creation/join, invitation acceptance, first-conversation creation, 183 passing tests, 77.34% branch coverage, Expo checks, iOS export, migrations applied twice, and transaction proof passed; workflows cannot deploy |
 | Canadian Supabase fictional staging | this commit | Supabase Free, `ca-central-1` | 2026-08-07 | DEPLOYED STAGING VERIFIED (SCHEMA ONLY) | Healthy project; PostgreSQL 17.6; boundary schema applied; append-only triggers present; direct `anon`/`authenticated` table privileges absent; fictional write rolled back. API adapter, restoration, device, and production proof remain absent |
 | U.S. Supabase fictional staging | this commit | Supabase Free, `us-east-2` | 2026-08-07 | DEPLOYED STAGING VERIFIED (SCHEMA ONLY) | Healthy company-owned project; PostgreSQL 17.6; boundary schema applied; append-only triggers present; direct `anon`/`authenticated` table privileges absent; fictional write rolled back. API adapter, restoration, device, and production proof remain absent |
 | Focused staging smokes | earlier PR #172 commits | Windows local, fictional adapters | Historical | HISTORICAL EVIDENCE | `STAGING_RUNTIME_SMOKE_PASS`, `STAGING_RESTART_SMOKE_PASS`, `TWO_ACCOUNT_HTTP_SMOKE_PASS`, `SYNTHETIC_COORDINATION_JOURNEY_PASS`, `STAGING_AUTHORIZATION_SMOKE_PASS` |
