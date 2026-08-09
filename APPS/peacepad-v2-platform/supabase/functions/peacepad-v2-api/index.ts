@@ -14,6 +14,7 @@ type RuntimeConfig = Readonly<{
 type ErrorCode =
   | "AUTH_REQUIRED"
   | "CONFIGURATION_ERROR"
+  | "CONVERSATION_ACCESS_DENIED"
   | "DATABASE_NOT_READY"
   | "FAMILY_ACCESS_DENIED"
   | "INVALID_REQUEST"
@@ -27,6 +28,7 @@ type ErrorCode =
   | "INVITATION_USED"
   | "INVITATION_SELF_ACCEPT_DENIED"
   | "METHOD_NOT_ALLOWED"
+  | "MESSAGE_ACCESS_DENIED"
   | "NOT_FOUND"
   | "ORIGIN_NOT_ALLOWED"
   | "PROJECT_MISMATCH"
@@ -125,6 +127,9 @@ const bearerToken = (request: Request): string | null => {
   return authorization.startsWith("Bearer ") ? authorization.slice(7).trim() : null;
 };
 
+const isUuid = (value: string): boolean =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
 type WriteHeadersResult =
   | { ok: true; idempotencyKey: string; schemaVersion: 2 }
   | { ok: false; error: Response };
@@ -163,6 +168,8 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     IDENTITY_DELETED: "IDENTITY_DELETED",
     IDENTITY_NOT_BOUND: "IDENTITY_NOT_BOUND",
     FAMILY_ACCESS_DENIED: "FAMILY_ACCESS_DENIED",
+    CONVERSATION_ACCESS_DENIED: "CONVERSATION_ACCESS_DENIED",
+    MESSAGE_ACCESS_DENIED: "MESSAGE_ACCESS_DENIED",
     INVITATION_EXPIRED: "INVITATION_EXPIRED",
     INVITATION_INVALID: "INVITATION_INVALID",
     INVITATION_REVOKED: "INVITATION_REVOKED",
@@ -174,12 +181,13 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     "CONSENT_TYPE_INVALID", "DISPLAY_NAME_INVALID", "EXPECTED_VERSION_INVALID",
     "FAMILY_NAME_INVALID", "IDEMPOTENCY_KEY_INVALID", "INVITATION_EXPIRY_INVALID",
     "INVITATION_HASH_INVALID", "INVITATION_PERMISSIONS_INVALID", "INVITATION_ROLE_INVALID",
-    "POLICY_VERSION_INVALID", "REGION_INVALID",
+    "CONVERSATION_PARTICIPANTS_INVALID", "MESSAGE_BODY_INVALID", "MESSAGE_CORRECTION_UNCHANGED",
+    "MESSAGE_EVENT_INVALID", "MESSAGE_SEARCH_INVALID", "POLICY_VERSION_INVALID", "REGION_INVALID",
   ]);
   const safeCode = directCodes[message ?? ""] ?? (invalidRequestCodes.has(message ?? "") ? "INVALID_REQUEST" : "DATABASE_NOT_READY");
   const status = safeCode === "DATABASE_NOT_READY" ? 503
     : ["REGION_MISMATCH", "CONCURRENCY_CONFLICT"].includes(safeCode) ? 409
-    : safeCode === "INVITATION_SELF_ACCEPT_DENIED" || safeCode === "FAMILY_ACCESS_DENIED" ? 403
+    : ["INVITATION_SELF_ACCEPT_DENIED", "FAMILY_ACCESS_DENIED", "CONVERSATION_ACCESS_DENIED", "MESSAGE_ACCESS_DENIED"].includes(safeCode) ? 403
     : 400;
   return failure(request, status, safeCode as ErrorCode, safeCode === "DATABASE_NOT_READY" ? "The regional staging database is not ready." : "The request could not be completed.", requestId, config);
 };
@@ -311,16 +319,64 @@ const handler = async (request: Request): Promise<Response> => {
     return json(request, 200, result, requestId, config);
   }
 
+  const conversationMessagesMatch = path.match(/^\/api\/v2\/conversations\/([^/]+)\/messages$/);
+  const conversationSearchMatch = path.match(/^\/api\/v2\/conversations\/([^/]+)\/messages\/search$/);
+  if (
+    (request.method === "GET" && (path === "/api/v2/conversations" || conversationMessagesMatch)) ||
+    (request.method === "POST" && conversationSearchMatch)
+  ) {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
+    if (request.method === "GET" && path === "/api/v2/conversations") {
+      const familyId = new URL(request.url).searchParams.get("familyCircleId")?.trim() ?? "";
+      if (!isUuid(familyId)) return failure(request, 400, "INVALID_REQUEST", "A valid family is required.", requestId, config);
+      const { data, error } = await authenticated.admin.rpc("peacepad_v2_list_conversations", {
+        p_identity_id: authenticated.user.id,
+        p_region: config.region,
+        p_family_id: familyId,
+      });
+      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data ?? [], requestId, config);
+    }
+    const conversationId = decodeURIComponent((conversationMessagesMatch ?? conversationSearchMatch)![1]);
+    if (!isUuid(conversationId)) return failure(request, 400, "INVALID_REQUEST", "A valid conversation is required.", requestId, config);
+    if (request.method === "GET") {
+      const { data, error } = await authenticated.admin.rpc("peacepad_v2_list_messages", {
+        p_identity_id: authenticated.user.id,
+        p_region: config.region,
+        p_conversation_id: conversationId,
+      });
+      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data ?? [], requestId, config);
+    }
+    const body = await readJsonObject(request);
+    const query = typeof body?.query === "string" ? body.query.trim() : "";
+    const limit = typeof body?.limit === "number" ? Math.trunc(body.limit) : 20;
+    if (query.length < 2 || query.length > 100 || limit < 1 || limit > 50) {
+      return failure(request, 400, "INVALID_REQUEST", "Message search details are invalid.", requestId, config);
+    }
+    const { data, error } = await authenticated.admin.rpc("peacepad_v2_search_messages", {
+      p_identity_id: authenticated.user.id,
+      p_region: config.region,
+      p_conversation_id: conversationId,
+      p_query: query,
+      p_limit: limit,
+    });
+    return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data ?? [], requestId, config);
+  }
+
   const isInvitationTransition = /^\/api\/v2\/invitations\/[^/]+\/(accept|decline)$/.test(path);
   const isInvitationRevocation = /^\/api\/v2\/invitations\/[^/]+$/.test(path);
   const isAccountDeletion = path === "/api/v2/account";
+  const isConversationCreation = path === "/api/v2/conversations";
+  const isMessageSend = /^\/api\/v2\/conversations\/[^/]+\/messages$/.test(path);
+  const isMessageLifecycle = /^\/api\/v2\/conversations\/[^/]+\/messages\/[^/]+\/events$/.test(path);
+  const isMessageCorrection = /^\/api\/v2\/conversations\/[^/]+\/messages\/[^/]+\/corrections$/.test(path);
   if (
     (request.method === "POST" && ([
       "/api/v2/session/bootstrap",
       "/api/v2/consents",
       "/api/v2/families",
       "/api/v2/invitations",
-    ].includes(path) || isInvitationTransition)) ||
+    ].includes(path) || isInvitationTransition || isConversationCreation || isMessageSend || isMessageLifecycle || isMessageCorrection)) ||
     (request.method === "DELETE" && (isInvitationRevocation || isAccountDeletion))
   ) {
     const authenticated = await authenticate(request, config);
@@ -394,6 +450,61 @@ const handler = async (request: Request): Promise<Response> => {
         p_idempotency_key: context.idempotencyKey,
         p_schema_version: context.schemaVersion,
       });
+      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 201, data, requestId, config);
+    }
+
+    if (isConversationCreation) {
+      const familyId = typeof body.familyCircleId === "string" ? body.familyCircleId : "";
+      const participantIds = Array.isArray(body.participantIdentityIds) && body.participantIdentityIds.every((value) => typeof value === "string")
+        ? [...new Set(body.participantIdentityIds as string[])] : [];
+      if (!isUuid(familyId) || participantIds.length < 2 || participantIds.length > 8 || participantIds.some((value) => !isUuid(value))) {
+        return failure(request, 400, "INVALID_REQUEST", "Conversation participants are invalid.", requestId, config);
+      }
+      const { data, error } = await authenticated.admin.rpc("peacepad_v2_create_conversation", {
+        p_identity_id: authenticated.user.id,
+        p_region: config.region,
+        p_family_id: familyId,
+        p_participant_identity_ids: participantIds,
+        p_idempotency_key: context.idempotencyKey,
+        p_schema_version: context.schemaVersion,
+      });
+      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 201, data, requestId, config);
+    }
+
+    const sendMatch = path.match(/^\/api\/v2\/conversations\/([^/]+)\/messages$/);
+    const lifecycleMatch = path.match(/^\/api\/v2\/conversations\/([^/]+)\/messages\/([^/]+)\/events$/);
+    const correctionMatch = path.match(/^\/api\/v2\/conversations\/([^/]+)\/messages\/([^/]+)\/corrections$/);
+    if (sendMatch || lifecycleMatch || correctionMatch) {
+      const conversationId = decodeURIComponent((sendMatch ?? lifecycleMatch ?? correctionMatch)![1]);
+      const originalMessageId = lifecycleMatch || correctionMatch
+        ? decodeURIComponent((lifecycleMatch ?? correctionMatch)![2]) : "";
+      const familyId = typeof body.familyCircleId === "string" ? body.familyCircleId : "";
+      if (!isUuid(conversationId) || !isUuid(familyId) || (originalMessageId && !isUuid(originalMessageId))) {
+        return failure(request, 400, "INVALID_REQUEST", "Message identifiers are invalid.", requestId, config);
+      }
+      const bodyText = typeof body.body === "string" ? body.body.trim() : "";
+      const eventType = typeof body.eventType === "string" ? body.eventType : "";
+      const rpcName = sendMatch ? "peacepad_v2_send_message"
+        : lifecycleMatch ? "peacepad_v2_record_message_event"
+        : "peacepad_v2_correct_message";
+      if ((sendMatch || correctionMatch) && (!bodyText || bodyText.length > 4000)) {
+        return failure(request, 400, "INVALID_REQUEST", "Message content is invalid.", requestId, config);
+      }
+      if (lifecycleMatch && !["delivered", "viewed"].includes(eventType)) {
+        return failure(request, 400, "INVALID_REQUEST", "Message event is invalid.", requestId, config);
+      }
+      const rpcArguments: Record<string, unknown> = {
+        p_identity_id: authenticated.user.id,
+        p_region: config.region,
+        p_conversation_id: conversationId,
+        p_family_id: familyId,
+        p_idempotency_key: context.idempotencyKey,
+        p_schema_version: context.schemaVersion,
+        ...(sendMatch ? { p_body: bodyText } : {}),
+        ...(lifecycleMatch ? { p_original_message_event_id: originalMessageId, p_event_type: eventType } : {}),
+        ...(correctionMatch ? { p_original_message_event_id: originalMessageId, p_body: bodyText } : {}),
+      };
+      const { data, error } = await authenticated.admin.rpc(rpcName, rpcArguments);
       return error ? rpcFailure(request, requestId, config, error.message) : json(request, 201, data, requestId, config);
     }
 

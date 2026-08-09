@@ -8,8 +8,14 @@ declare
   invitation_result jsonb;
   preview_result jsonb;
   deletion_result jsonb;
+  conversation_result jsonb;
+  message_result jsonb;
+  correction_result jsonb;
+  search_result jsonb;
   created_family_id uuid;
   invitation_id uuid;
+  conversation_id uuid;
+  message_id uuid;
   invitation_hash bytea := decode(repeat('ab', 32), 'hex');
 begin
   insert into auth.users (id) values (parent_a), (parent_b) on conflict do nothing;
@@ -38,6 +44,52 @@ begin
     raise exception 'Invitation acceptance did not create an active participant grant.';
   end if;
 
+  conversation_result := public.peacepad_v2_create_conversation(
+    parent_a, 'ca', created_family_id, array[parent_a, parent_b],
+    'create-example-conversation', 2
+  );
+  conversation_id := (conversation_result ->> 'id')::uuid;
+  if jsonb_array_length(public.peacepad_v2_list_conversations(parent_b, 'ca', created_family_id)) <> 1 then
+    raise exception 'Accepted participant could not list the shared conversation.';
+  end if;
+
+  message_result := public.peacepad_v2_send_message(
+    parent_a, 'ca', conversation_id, created_family_id, 'Pickup at five.',
+    'send-example-message', 2
+  );
+  message_id := (message_result ->> 'id')::uuid;
+  perform public.peacepad_v2_record_message_event(
+    parent_b, 'ca', conversation_id, created_family_id, message_id, 'delivered',
+    'deliver-example-message', 2
+  );
+  perform public.peacepad_v2_record_message_event(
+    parent_b, 'ca', conversation_id, created_family_id, message_id, 'viewed',
+    'view-example-message', 2
+  );
+  correction_result := public.peacepad_v2_correct_message(
+    parent_a, 'ca', conversation_id, created_family_id, message_id, 'Pickup at six.',
+    'correct-example-message', 2
+  );
+  if correction_result ->> 'originalMessageEventId' <> message_id::text then
+    raise exception 'Message correction did not link to its immutable original.';
+  end if;
+  if (select body from peacepad_v2.message_event where message_event_id = message_id) <> 'Pickup at five.' then
+    raise exception 'Original message content was overwritten.';
+  end if;
+  search_result := public.peacepad_v2_search_messages(parent_b, 'ca', conversation_id, 'six', 20);
+  if jsonb_array_length(search_result) <> 1 or search_result -> 0 ->> 'body' <> 'Pickup at six.' then
+    raise exception 'Message search did not return the effective corrected content.';
+  end if;
+  if jsonb_array_length(public.peacepad_v2_list_messages(parent_b, 'ca', conversation_id)) <> 4 then
+    raise exception 'Message event history is incomplete.';
+  end if;
+  if public.peacepad_v2_send_message(
+    parent_a, 'ca', conversation_id, created_family_id, 'Pickup at five.',
+    'send-example-message', 2
+  ) <> message_result then
+    raise exception 'Message idempotent replay changed its result.';
+  end if;
+
   deletion_result := public.peacepad_v2_delete_account(parent_b, 'ca', 1, 'delete-parent-b-account', 2);
   if deletion_result ->> 'status' <> 'deleted' then
     raise exception 'Account deletion did not return deleted status.';
@@ -57,6 +109,12 @@ begin
   ) then
     raise exception 'Account deletion audit event is missing.';
   end if;
+  begin
+    perform public.peacepad_v2_list_messages(parent_b, 'ca', conversation_id);
+    raise exception 'Deleted identity retained conversation access.';
+  exception
+    when insufficient_privilege then null;
+  end;
   if public.peacepad_v2_delete_account(parent_b, 'ca', 1, 'delete-parent-b-account', 2) <> deletion_result then
     raise exception 'Account deletion idempotent replay changed its result.';
   end if;
