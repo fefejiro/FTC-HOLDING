@@ -64,6 +64,7 @@ describe("HttpPeacePadCoordinationApi", () => {
       visibilityOverride: null
     };
 
+    await api.createFamily("Fictional Family", context);
     await api.createInvitation({ familyCircleId: "family-current", invitedRole: "parent", permissions: ["messages"], expiresInHours: 24 }, context);
     await api.acceptInvitation("invitation-1", context);
     await api.declineInvitation("invitation-2", context);
@@ -96,6 +97,7 @@ describe("HttpPeacePadCoordinationApi", () => {
 
     const urls = fetcher.mock.calls.map(([url]) => url);
     expect(urls).toEqual(expect.arrayContaining([
+      "https://staging-api.peacepad.test/api/v2/families",
       "https://staging-api.peacepad.test/api/v2/invitations",
       "https://staging-api.peacepad.test/api/v2/invitations/invitation-1/accept",
       "https://staging-api.peacepad.test/api/v2/calendar-layers?familyCircleId=family-current",

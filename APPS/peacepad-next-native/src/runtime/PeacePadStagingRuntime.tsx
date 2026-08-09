@@ -7,6 +7,7 @@ import { CoordinationStateProvider } from "../coordination/CoordinationState";
 import { LabButton } from "../components/LabButton";
 import type { PeacePadEnvironmentConfig, PeacePadSupabaseConfig } from "../config/environment";
 import { useSupabaseSession } from "../session/SupabaseSessionProvider";
+import { createWriteContext, type InvitationPreview } from "../domain/v2";
 import { colors, spacing, typography } from "../theme";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -29,8 +30,8 @@ type VerifiedSessionContext = Readonly<{
 
 type RuntimeState =
   | { status: "loading" }
-  | { status: "membership-empty" }
-  | { status: "conversation-empty" }
+  | { status: "membership-empty"; api: PeacePadCoordinationApi; verified: VerifiedSessionContext }
+  | { status: "conversation-empty"; api: PeacePadCoordinationApi; membership: Membership; verified: VerifiedSessionContext }
   | { status: "ready"; api: PeacePadCoordinationApi; runtime: CoordinationRuntime }
   | { status: "error"; message: string };
 
@@ -105,6 +106,7 @@ export function PeacePadStagingRuntime({
   const [password, setPassword] = useState("");
   const [signInBusy, setSignInBusy] = useState(false);
   const [runtimeState, setRuntimeState] = useState<RuntimeState>({ status: "loading" });
+  const [reloadVersion, setReloadVersion] = useState(0);
   const generation = useRef(0);
 
   useEffect(() => {
@@ -118,17 +120,17 @@ export function PeacePadStagingRuntime({
       if (!token) throw new Error("The staging session expired.");
       const verified = await fetchVerifiedSession(supabase, auth.session!.user.id, token, fetcher);
       if (currentGeneration !== generation.current) return;
+      const api = createStagingCoordinationClient(environment, auth.getAccessToken, fetcher);
       const membership = verified.memberships[0];
       if (!membership) {
-        setRuntimeState({ status: "membership-empty" });
+        setRuntimeState({ status: "membership-empty", api, verified });
         return;
       }
-      const api = createStagingCoordinationClient(environment, auth.getAccessToken, fetcher);
       const conversations = await api.listConversations(membership.familyCircleId);
       if (currentGeneration !== generation.current) return;
       const conversation = conversations.find((item) => item.status === "active");
       if (!conversation) {
-        setRuntimeState({ status: "conversation-empty" });
+        setRuntimeState({ status: "conversation-empty", api, membership, verified });
         return;
       }
       setRuntimeState({
@@ -147,7 +149,7 @@ export function PeacePadStagingRuntime({
       if (currentGeneration !== generation.current) return;
       setRuntimeState({ status: "error", message: error instanceof Error ? error.message : "PeacePad staging is unavailable." });
     });
-  }, [auth.getAccessToken, auth.session, auth.status, environment, fetcher, supabase]);
+  }, [auth.getAccessToken, auth.session, auth.status, environment, fetcher, reloadVersion, supabase]);
 
   if (auth.status === "loading") return <GateMessage busy title="Restoring your session" body="Checking this device securely." />;
   if (auth.status === "error") return <GateMessage title="Session unavailable" body={auth.error ?? "PeacePad could not restore this session."} />;
@@ -168,10 +170,114 @@ export function PeacePadStagingRuntime({
     );
   }
   if (runtimeState.status === "loading") return <GateMessage busy title="Opening PeacePad" body="Loading your authorized family space." />;
-  if (runtimeState.status === "membership-empty") return <GateMessage onSignOut={auth.signOut} title="Create or join a family" body="This account has no active family membership yet." />;
-  if (runtimeState.status === "conversation-empty") return <GateMessage onSignOut={auth.signOut} title="Start a conversation" body="Your family space is ready. Create a conversation before opening Messages." />;
+  if (runtimeState.status === "membership-empty") return <FamilySetup api={runtimeState.api} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={auth.signOut} verified={runtimeState.verified} />;
+  if (runtimeState.status === "conversation-empty") return <ConversationSetup api={runtimeState.api} membership={runtimeState.membership} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={auth.signOut} verified={runtimeState.verified} />;
   if (runtimeState.status === "error") return <GateMessage title="PeacePad is unavailable" body={runtimeState.message} />;
   return <CoordinationStateProvider api={runtimeState.api} runtime={runtimeState.runtime}>{children}</CoordinationStateProvider>;
+}
+
+function runtimeWriteContext(verified: VerifiedSessionContext, expectedVersion: number | null = null) {
+  return createWriteContext({
+    actor: { identityId: verified.actor.identityId, sessionId: verified.actor.sessionId },
+    expectedVersion,
+    idempotencyKey: `device-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+    region: verified.region
+  });
+}
+
+function FamilySetup({ api, onReload, onSignOut, verified }: {
+  api: PeacePadCoordinationApi;
+  onReload: () => void;
+  onSignOut: () => Promise<void>;
+  verified: VerifiedSessionContext;
+}) {
+  const [familyName, setFamilyName] = useState("");
+  const [invitationCode, setInvitationCode] = useState("");
+  const [preview, setPreview] = useState<InvitationPreview>();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  const run = async (operation: () => Promise<void>) => {
+    setBusy(true);
+    setError(undefined);
+    try { await operation(); } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "PeacePad could not complete that request.");
+    } finally { setBusy(false); }
+  };
+  return (
+    <View style={styles.page}>
+      <Brand />
+      <Text style={styles.title}>Create or join a family</Text>
+      <Text style={styles.body}>Use fictional staging information only. A connection is created only after an invitation is accepted.</Text>
+      <Text style={styles.sectionTitle}>Create a family space</Text>
+      <TextInput accessibilityLabel="Family name" maxLength={120} onChangeText={setFamilyName} placeholder="Family name" style={styles.input} value={familyName} />
+      <LabButton disabled={busy || !familyName.trim()} label="Create family" onPress={() => void run(async () => {
+        await api.createFamily(familyName, runtimeWriteContext(verified));
+        onReload();
+      })} />
+      <Text style={styles.sectionTitle}>Enter an invitation code</Text>
+      <TextInput accessibilityLabel="Invitation code" autoCapitalize="characters" maxLength={6} onChangeText={(value) => {
+        setInvitationCode(value.replace(/[^a-z0-9]/gi, "").toUpperCase());
+        setPreview(undefined);
+      }} placeholder="6-character code" style={styles.input} value={invitationCode} />
+      {preview ? (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>{preview.familyDisplayName}</Text>
+          <Text style={styles.body}>Invited by {preview.inviterDisplayName} as {preview.invitedRole}.</Text>
+          <LabButton disabled={busy} label="Accept invitation" onPress={() => void run(async () => {
+            const grant = await api.acceptInvitation(preview.invitationId, runtimeWriteContext(verified, preview.version));
+            if (grant.grantedBy !== verified.actor.identityId) {
+              await api.createConversation({
+                familyCircleId: grant.familyCircleId,
+                participantIdentityIds: [verified.actor.identityId, grant.grantedBy]
+              }, runtimeWriteContext(verified));
+            }
+            onReload();
+          })} />
+        </View>
+      ) : <LabButton disabled={busy || invitationCode.length !== 6} label="Review invitation" onPress={() => void run(async () => setPreview(await api.resolveInvitation(invitationCode)))} variant="secondary" />}
+      {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
+      <LabButton disabled={busy} label="Sign out" onPress={() => void onSignOut()} variant="secondary" />
+    </View>
+  );
+}
+
+function ConversationSetup({ api, membership, onReload, onSignOut, verified }: {
+  api: PeacePadCoordinationApi;
+  membership: Membership;
+  onReload: () => void;
+  onSignOut: () => Promise<void>;
+  verified: VerifiedSessionContext;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [code, setCode] = useState<string>();
+  const [error, setError] = useState<string>();
+  const createInvitation = async () => {
+    setBusy(true);
+    setError(undefined);
+    try {
+      const created = await api.createInvitation({
+        expiresInHours: 72,
+        familyCircleId: membership.familyCircleId,
+        invitedRole: "parent",
+        permissions: ["message.write", "calendar.write"]
+      }, runtimeWriteContext(verified));
+      setCode(created.code);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "PeacePad could not create an invitation.");
+    } finally { setBusy(false); }
+  };
+  return (
+    <View style={styles.page}>
+      <Brand />
+      <Text style={styles.title}>Invite your co-parent</Text>
+      <Text style={styles.body}>{membership.familyName} is ready. Share a single-use code, then check again after it is accepted.</Text>
+      {code ? <View style={styles.codeCard}><Text accessibilityLabel="Invitation code" selectable style={styles.code}>{code}</Text><Text style={styles.body}>Expires in 72 hours. Do not use real family information in staging.</Text></View> : null}
+      <LabButton disabled={busy} label={code ? "Create a new code" : "Create invitation code"} onPress={() => void createInvitation()} />
+      <LabButton disabled={busy} label="Check connection" onPress={onReload} variant="secondary" />
+      {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
+      <LabButton disabled={busy} label="Sign out" onPress={() => void onSignOut()} variant="secondary" />
+    </View>
+  );
 }
 
 function Brand() {
@@ -188,7 +294,12 @@ const styles = StyleSheet.create({
   logo: { height: 52, width: 52 },
   brandName: { color: colors.text, fontSize: 24, fontWeight: "800" },
   title: { color: colors.text, fontSize: 32, fontWeight: "700" },
+  sectionTitle: { color: colors.text, fontSize: 18, fontWeight: "700", marginTop: spacing.sm },
   body: { color: colors.muted, fontSize: 16, lineHeight: 24 },
   input: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 14, borderWidth: 1, color: colors.text, fontSize: 16, padding: spacing.md },
-  error: { color: colors.dangerText, fontSize: 14 }
+  error: { color: colors.dangerText, fontSize: 14 },
+  card: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 16, borderWidth: 1, gap: spacing.sm, padding: spacing.md },
+  cardTitle: { color: colors.text, fontSize: 18, fontWeight: "700" },
+  codeCard: { alignItems: "center", backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 16, borderWidth: 1, gap: spacing.sm, padding: spacing.lg },
+  code: { color: colors.brand, fontSize: 34, fontWeight: "800", letterSpacing: 8 }
 });

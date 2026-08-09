@@ -126,8 +126,101 @@ describe("PeacePadStagingRuntime gates", () => {
     expect(screen.queryByText("ready")).toBeNull();
 
     view.rerender(<PeacePadStagingRuntime environment={environment} fetcher={sessionResponse()} supabase={supabase}>ready</PeacePadStagingRuntime>);
-    await waitFor(() => expect(screen.getByText("Start a conversation")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Invite your co-parent")).toBeTruthy());
     expect(screen.queryByText("ready")).toBeNull();
+  });
+
+  it("creates a persisted family for a verified account without a membership", async () => {
+    (useSupabaseSession as jest.Mock).mockReturnValue(authValue());
+    const createFamily = jest.fn(async () => ({
+      familyId: FAMILY,
+      participantGrantId: GRANT,
+      familyName: "Fictional Family",
+      region: "ca"
+    }));
+    (createStagingCoordinationClient as jest.Mock).mockReturnValue({ createFamily });
+
+    render(
+      <PeacePadStagingRuntime environment={environment} fetcher={sessionResponse({ ...valid, memberships: [] })} supabase={supabase}>
+        ready
+      </PeacePadStagingRuntime>
+    );
+    await waitFor(() => expect(screen.getByText("Create or join a family")).toBeTruthy());
+    fireEvent.changeText(screen.getByLabelText("Family name"), "  Fictional Family  ");
+    fireEvent.press(screen.getByRole("button", { name: "Create family" }));
+
+    await waitFor(() => expect(createFamily).toHaveBeenCalledTimes(1));
+    expect(createFamily).toHaveBeenCalledWith("  Fictional Family  ", expect.objectContaining({
+      actor: { identityId: IDENTITY, sessionId: SESSION },
+      expectedVersion: null,
+      region: "ca",
+      schemaVersion: "2.0"
+    }));
+  });
+
+  it("resolves and explicitly accepts an invitation before creating a conversation", async () => {
+    (useSupabaseSession as jest.Mock).mockReturnValue(authValue());
+    const invitationId = "66666666-6666-4666-8666-666666666666";
+    const inviterId = "77777777-7777-4777-8777-777777777777";
+    const resolveInvitation = jest.fn(async () => ({
+      invitationId,
+      version: 3,
+      inviterDisplayName: "Fictional Parent A",
+      familyDisplayName: "Fictional Family",
+      invitedRole: "parent",
+      permissions: ["message.write", "calendar.write"],
+      expiresAt: "2026-08-12T12:00:00.000Z"
+    }));
+    const acceptInvitation = jest.fn(async () => ({ familyCircleId: FAMILY, grantedBy: inviterId }));
+    const createConversation = jest.fn(async () => ({ id: CONVERSATION }));
+    (createStagingCoordinationClient as jest.Mock).mockReturnValue({
+      acceptInvitation,
+      createConversation,
+      resolveInvitation
+    });
+
+    render(
+      <PeacePadStagingRuntime environment={environment} fetcher={sessionResponse({ ...valid, memberships: [] })} supabase={supabase}>
+        ready
+      </PeacePadStagingRuntime>
+    );
+    await waitFor(() => expect(screen.getByText("Create or join a family")).toBeTruthy());
+    fireEvent.changeText(screen.getByLabelText("Invitation code"), "ab-12c3");
+    fireEvent.press(screen.getByRole("button", { name: "Review invitation" }));
+    await waitFor(() => expect(resolveInvitation).toHaveBeenCalledWith("AB12C3"));
+    expect(screen.getByText("Fictional Family")).toBeTruthy();
+
+    fireEvent.press(screen.getByRole("button", { name: "Accept invitation" }));
+    await waitFor(() => expect(acceptInvitation).toHaveBeenCalledTimes(1));
+    expect(acceptInvitation).toHaveBeenCalledWith(invitationId, expect.objectContaining({ expectedVersion: 3 }));
+    expect(createConversation).toHaveBeenCalledWith({
+      familyCircleId: FAMILY,
+      participantIdentityIds: [IDENTITY, inviterId]
+    }, expect.objectContaining({ actor: { identityId: IDENTITY, sessionId: SESSION }, region: "ca" }));
+  });
+
+  it("creates a scoped single-use invitation for a family without a conversation", async () => {
+    (useSupabaseSession as jest.Mock).mockReturnValue(authValue());
+    const createInvitation = jest.fn(async () => ({ code: "PP2CA1" }));
+    (createStagingCoordinationClient as jest.Mock).mockReturnValue({
+      createInvitation,
+      listConversations: jest.fn(async () => [])
+    });
+
+    render(
+      <PeacePadStagingRuntime environment={environment} fetcher={sessionResponse()} supabase={supabase}>
+        ready
+      </PeacePadStagingRuntime>
+    );
+    await waitFor(() => expect(screen.getByText("Invite your co-parent")).toBeTruthy());
+    fireEvent.press(screen.getByRole("button", { name: "Create invitation code" }));
+    await waitFor(() => expect(screen.getByText("PP2CA1")).toBeTruthy());
+    expect(createInvitation).toHaveBeenCalledWith({
+      expiresInHours: 72,
+      familyCircleId: FAMILY,
+      invitedRole: "parent",
+      permissions: ["message.write", "calendar.write"]
+    }, expect.objectContaining({ actor: { identityId: IDENTITY, sessionId: SESSION }, region: "ca" }));
   });
 
   it("injects the verified runtime only after an authorized conversation is discovered", async () => {

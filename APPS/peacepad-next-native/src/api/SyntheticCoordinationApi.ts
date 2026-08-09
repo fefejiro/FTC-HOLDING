@@ -8,6 +8,7 @@ import {
   type CreateConversationInput,
   type CreateInvitationInput,
   type CreatedInvitation,
+  type CreatedFamily,
   type CreateScheduleEventInput,
   type RecordMessageLifecycleInput,
   type MessageSearchResult,
@@ -201,6 +202,16 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
   async declineInvitation(invitationId: EntityId, context: WriteContext): Promise<void> {
     this.assertInvitationVersion(invitationId, context.expectedVersion);
     this.transitionInvitation(invitationId, "used");
+  }
+
+  async createFamily(familyName: string, _context: WriteContext): Promise<CreatedFamily> {
+    if (!familyName.trim()) throw new PeacePadApiError("Enter a family name.", "http", 400);
+    return {
+      familyId: "family-current",
+      participantGrantId: "grant-current",
+      familyName: familyName.trim(),
+      region: "ca"
+    };
   }
 
   async revokeInvitation(invitationId: EntityId, context: WriteContext): Promise<void> {

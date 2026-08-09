@@ -48,6 +48,13 @@ export type CreatedInvitation = Readonly<{
   deepLink: string;
 }>;
 
+export type CreatedFamily = Readonly<{
+  familyId: EntityId;
+  participantGrantId: EntityId;
+  familyName: string;
+  region: "ca" | "us";
+}>;
+
 export type CreateCalendarLayerInput = Readonly<{
   familyCircleId: EntityId;
   ownerIdentityId: EntityId;
@@ -117,6 +124,7 @@ export type CreateAttachmentUploadIntentInput = Readonly<{
 }>;
 
 export interface PeacePadCoordinationApi {
+  createFamily(familyName: string, context: WriteContext): Promise<CreatedFamily>;
   createAttachmentUploadIntent(input: CreateAttachmentUploadIntentInput, context: WriteContext): Promise<AttachmentUploadIntent>;
   createInvitation(input: CreateInvitationInput, context: WriteContext): Promise<CreatedInvitation>;
   resolveInvitation(code: string): Promise<InvitationPreview>;
@@ -176,6 +184,10 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
     private readonly fetcher: FetchLike = fetch,
     private readonly accessToken: AccessTokenProvider = async () => undefined
   ) {}
+
+  createFamily(familyName: string, context: WriteContext) {
+    return this.write<CreatedFamily>("/api/v2/families", "POST", { familyName: familyName.trim() }, context);
+  }
 
   createInvitation(input: CreateInvitationInput, context: WriteContext) {
     return this.write<CreatedInvitation>("/api/v2/invitations", "POST", input, context);
