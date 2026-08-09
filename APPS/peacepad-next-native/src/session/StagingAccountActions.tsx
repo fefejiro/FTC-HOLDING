@@ -1,6 +1,7 @@
 import React, { createContext, useContext, type ReactNode } from "react";
 
 export type StagingAccountActionsValue = Readonly<{
+  signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
   deleting: boolean;
   error?: string;

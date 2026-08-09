@@ -10,6 +10,7 @@ import { useSupabaseSession } from "../session/SupabaseSessionProvider";
 import { StagingAccountActionsProvider } from "../session/StagingAccountActions";
 import { createWriteContext, type AcceptedInvitation, type InvitationPreview } from "../domain/v2";
 import { colors, spacing, typography } from "../theme";
+import { secureMessageOutboxStore } from "../messaging/secureMessageOutbox";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export function invitationCodeFromStagingUrl(url?: string | null): string | undefined {
@@ -180,6 +181,10 @@ export function PeacePadStagingRuntime({
     reject: (cause: Error) => void;
   } | undefined>(undefined);
   const lastReadyIdentity = useRef<string | undefined>(undefined);
+  const signOutSafely = useCallback(async () => {
+    await secureMessageOutboxStore.clear().catch(() => undefined);
+    await auth.signOut();
+  }, [auth.signOut]);
 
   useEffect(() => {
     let mounted = true;
@@ -240,6 +245,7 @@ export function PeacePadStagingRuntime({
         idempotencyKey: `account-delete-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
         region
       }));
+      await secureMessageOutboxStore.clear().catch(() => undefined);
       await auth.signOut();
     } catch (cause) {
       setDeleteError(cause instanceof Error ? cause.message : "PeacePad could not delete this staging account.");
@@ -343,11 +349,12 @@ export function PeacePadStagingRuntime({
     );
   }
   if (runtimeState.status === "loading") return <GateMessage busy title="Opening PeacePad" body="Loading your authorized family space." />;
-  if (runtimeState.status === "membership-empty") return <FamilySetup accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} initialInvitationCode={incomingInvitationCode} onInvitationCodeConsumed={() => setIncomingInvitationCode(undefined)} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={auth.signOut} verified={runtimeState.verified} />;
-  if (runtimeState.status === "membership-selection") return <FamilySelection accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} memberships={runtimeState.memberships} onSelect={(familyCircleId) => setSelectedFamilyCircleId(familyCircleId)} onSignOut={auth.signOut} />;
-  if (runtimeState.status === "conversation-empty") return <ConversationSetup accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} membership={runtimeState.membership} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={auth.signOut} verified={runtimeState.verified} />;
+  if (runtimeState.status === "membership-empty") return <FamilySetup accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} initialInvitationCode={incomingInvitationCode} onInvitationCodeConsumed={() => setIncomingInvitationCode(undefined)} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={signOutSafely} verified={runtimeState.verified} />;
+  if (runtimeState.status === "membership-selection") return <FamilySelection accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} memberships={runtimeState.memberships} onSelect={(familyCircleId) => setSelectedFamilyCircleId(familyCircleId)} onSignOut={signOutSafely} />;
+  if (runtimeState.status === "conversation-empty") return <ConversationSetup accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} membership={runtimeState.membership} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={signOutSafely} verified={runtimeState.verified} />;
   if (runtimeState.status === "error") return <GateMessage title="PeacePad is unavailable" body={runtimeState.message} />;
   const accountActions = {
+    signOut: signOutSafely,
     deleting: deleteBusy,
     error: deleteError,
     deleteAccount: () => deleteVerifiedAccount(runtimeState.api, {

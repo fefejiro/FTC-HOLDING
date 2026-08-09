@@ -12,9 +12,21 @@ export const MAX_OUTBOX_ATTEMPTS = 5;
 export type QueuedMessage = Readonly<{
   id: string;
   input: SendMessageInput;
+  originalBody: string;
   context: WriteContext;
   queuedAt: string;
+  nextAttemptAt: string;
   attempts: number;
+  status: "waiting" | "needs-action";
+  lastErrorKind?: "authentication" | "conflict" | "rejected" | "exhausted";
+}>;
+
+export type MessageOutboxScope = Readonly<{
+  actorIdentityId: string;
+  sessionId: string;
+  familyCircleId: string;
+  conversationId: string;
+  region: "ca" | "us";
 }>;
 
 export interface MessageOutboxStore {
@@ -22,6 +34,7 @@ export interface MessageOutboxStore {
   enqueue(value: QueuedMessage): Promise<void>;
   replace(value: QueuedMessage): Promise<void>;
   remove(id: string): Promise<void>;
+  clear(): Promise<void>;
 }
 
 function validId(value: unknown): value is string {
@@ -37,6 +50,9 @@ function validQueuedMessage(value: unknown): value is QueuedMessage {
     && typeof item.input?.body === "string"
     && item.input.body.trim().length > 0
     && item.input.body.length <= MAX_OUTBOX_BODY_LENGTH
+    && typeof item.originalBody === "string"
+    && item.originalBody.trim().length > 0
+    && item.originalBody.length <= MAX_OUTBOX_BODY_LENGTH
     && typeof item.context?.idempotencyKey === "string"
     && item.context.idempotencyKey.trim().length > 0
     && item.context.schemaVersion === "2.0"
@@ -45,9 +61,13 @@ function validQueuedMessage(value: unknown): value is QueuedMessage {
     && typeof item.context.actor?.sessionId === "string"
     && typeof item.queuedAt === "string"
     && Number.isFinite(Date.parse(item.queuedAt))
+    && typeof item.nextAttemptAt === "string"
+    && Number.isFinite(Date.parse(item.nextAttemptAt))
     && Number.isInteger(item.attempts)
     && (item.attempts ?? -1) >= 0
-    && (item.attempts ?? MAX_OUTBOX_ATTEMPTS + 1) <= MAX_OUTBOX_ATTEMPTS;
+    && (item.attempts ?? MAX_OUTBOX_ATTEMPTS + 1) <= MAX_OUTBOX_ATTEMPTS
+    && (item.status === "waiting" || item.status === "needs-action")
+    && (item.lastErrorKind === undefined || ["authentication", "conflict", "rejected", "exhausted"].includes(item.lastErrorKind));
 }
 
 async function readIndex(): Promise<string[]> {
@@ -120,6 +140,11 @@ export const secureMessageOutboxStore: MessageOutboxStore = {
     const ids = await readIndex();
     await SecureStore.deleteItemAsync(`${ENTRY_PREFIX}${id}`);
     await writeIndex(ids.filter((value) => value !== id));
+  },
+  async clear() {
+    const ids = await readIndex();
+    await Promise.all(ids.map((id) => SecureStore.deleteItemAsync(`${ENTRY_PREFIX}${id}`)));
+    await SecureStore.deleteItemAsync(INDEX_KEY);
   }
 };
 
@@ -127,16 +152,41 @@ export function isTransientMessageError(error: unknown) {
   return error instanceof PeacePadApiError && (error.kind === "network" || error.kind === "timeout");
 }
 
+export function isQueuedMessageInScope(value: QueuedMessage, scope: MessageOutboxScope) {
+  return value.context.actor.identityId === scope.actorIdentityId
+    && value.context.actor.sessionId === scope.sessionId
+    && value.context.region === scope.region
+    && value.input.familyCircleId === scope.familyCircleId
+    && value.input.conversationId === scope.conversationId;
+}
+
 function isAuthenticationPause(error: unknown) {
   return error instanceof PeacePadApiError && error.kind === "auth-required";
 }
 
-export async function retryQueuedMessages(api: PeacePadCoordinationApi, store: MessageOutboxStore) {
-  const summary = { sent: 0, retained: 0, discarded: 0 };
+export async function retryQueuedMessages(
+  api: PeacePadCoordinationApi,
+  store: MessageOutboxStore,
+  scope: MessageOutboxScope,
+  now = () => new Date()
+) {
+  const summary = { sent: 0, retained: 0, needsAction: 0 };
   for (const queued of await store.list()) {
+    if (!isQueuedMessageInScope(queued, scope)) {
+      summary.retained += 1;
+      continue;
+    }
+    if (queued.status === "needs-action") {
+      summary.needsAction += 1;
+      continue;
+    }
     if (queued.attempts >= MAX_OUTBOX_ATTEMPTS) {
-      await store.remove(queued.id);
-      summary.discarded += 1;
+      await store.replace({ ...queued, status: "needs-action", lastErrorKind: "exhausted" });
+      summary.needsAction += 1;
+      continue;
+    }
+    if (Date.parse(queued.nextAttemptAt) > now().getTime()) {
+      summary.retained += 1;
       continue;
     }
     try {
@@ -145,15 +195,28 @@ export async function retryQueuedMessages(api: PeacePadCoordinationApi, store: M
       summary.sent += 1;
     } catch (error) {
       if (isAuthenticationPause(error)) {
-        summary.retained += 1;
+        await store.replace({ ...queued, status: "needs-action", lastErrorKind: "authentication" });
+        summary.needsAction += 1;
         continue;
       }
       if (!isTransientMessageError(error)) {
-        await store.remove(queued.id);
-        summary.discarded += 1;
+        const lastErrorKind = error instanceof PeacePadApiError && error.status === 409 ? "conflict" : "rejected";
+        await store.replace({ ...queued, status: "needs-action", lastErrorKind });
+        summary.needsAction += 1;
         continue;
       }
-      await store.replace({ ...queued, attempts: queued.attempts + 1 });
+      const attempts = queued.attempts + 1;
+      if (attempts >= MAX_OUTBOX_ATTEMPTS) {
+        await store.replace({ ...queued, attempts, status: "needs-action", lastErrorKind: "exhausted" });
+        summary.needsAction += 1;
+        continue;
+      }
+      const retryDelaySeconds = Math.min(15 * (2 ** attempts), 300);
+      await store.replace({
+        ...queued,
+        attempts,
+        nextAttemptAt: new Date(now().getTime() + retryDelaySeconds * 1000).toISOString()
+      });
       summary.retained += 1;
     }
   }

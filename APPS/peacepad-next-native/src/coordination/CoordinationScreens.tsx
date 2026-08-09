@@ -5,7 +5,6 @@ import { LabButton } from "../components/LabButton";
 import { colors, spacing, typography, usesLargeTextLayout } from "../theme";
 import { useRecordsState } from "../records/RecordsState";
 import type { AttachmentMediaType } from "../domain/v2";
-import { useOptionalSupabaseSession } from "../session/SupabaseSessionProvider";
 import { useOptionalStagingAccountActions } from "../session/StagingAccountActions";
 import { useCoordinationState, type CalendarView } from "./CoordinationState";
 
@@ -604,7 +603,7 @@ export function MessagesScreen() {
               <LabButton disabled={correctionBusy} label="Cancel correction" onPress={cancelCorrection} variant="secondary" />
             </View>
           ) : null}
-          <Text style={styles.caption}>{message.corrected ? "Corrected · " : ""}{message.status === "waiting" ? "Waiting to send" : message.status}</Text>
+          <Text style={styles.caption}>{message.corrected ? "Corrected · " : ""}{message.status === "waiting" ? "Waiting to send" : message.status === "needs-action" ? "Needs attention" : message.status}</Text>
         </View>
       ))}
 
@@ -703,7 +702,6 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
 }
 
 export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
-  const stagingSession = useOptionalSupabaseSession();
   const accountActions = useOptionalStagingAccountActions();
   const [confirmDelete, setConfirmDelete] = useState(false);
   return (
@@ -721,7 +719,7 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
         <Text style={styles.actionTitle}>Help & Support</Text>
         <Text style={styles.caption}>Get help using PeacePad.</Text>
       </View>
-      {stagingSession ? <Pressable accessibilityRole="button" onPress={() => void stagingSession.signOut()} style={styles.actionCard}>
+      {accountActions ? <Pressable accessibilityRole="button" onPress={() => void accountActions.signOut()} style={styles.actionCard}>
         <Text style={styles.actionTitle}>Sign out</Text>
         <Text style={styles.caption}>Remove this fictional staging session from this device.</Text>
       </Pressable> : null}

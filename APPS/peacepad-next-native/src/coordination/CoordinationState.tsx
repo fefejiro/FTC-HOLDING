@@ -11,6 +11,8 @@ import { defaultCalendarLayers, SyntheticCoordinationApi } from "../api/Syntheti
 import {
   MAX_OUTBOX_BODY_LENGTH,
   isTransientMessageError,
+  isQueuedMessageInScope,
+  retryQueuedMessages,
   secureMessageOutboxStore,
   type MessageOutboxStore
 } from "../messaging/secureMessageOutbox";
@@ -42,7 +44,7 @@ export type SentMessage = Readonly<{
   originalBody: string;
   sentBody: string;
   sentAt: string;
-  status: "waiting" | "sent" | "delivered" | "viewed";
+  status: "waiting" | "needs-action" | "sent" | "delivered" | "viewed";
   corrected: boolean;
   canCorrect: boolean;
 }>;
@@ -232,6 +234,7 @@ export function CoordinationStateProvider({
   const [correctionBusy, setCorrectionBusy] = useState(false);
   const [correctionError, setCorrectionError] = useState<string>();
   const hydrationGeneration = useRef(0);
+  const retriedRuntimeScopes = useRef(new Set<string>());
 
   useEffect(() => {
     const generation = ++hydrationGeneration.current;
@@ -260,17 +263,40 @@ export function CoordinationStateProvider({
     }
 
     setMessageCheckHydrated(false);
-    void Promise.all([
+    const outboxScope = {
+      actorIdentityId: activeRuntime.actorIdentityId,
+      sessionId: activeRuntime.sessionId,
+      familyCircleId: activeRuntime.familyCircleId,
+      conversationId: activeRuntime.conversationId,
+      region: activeRuntime.region
+    } as const;
+    const retryScopeKey = [outboxScope.actorIdentityId, outboxScope.sessionId, outboxScope.region, outboxScope.familyCircleId, outboxScope.conversationId].join(":");
+    const retry = retriedRuntimeScopes.current.has(retryScopeKey)
+      ? Promise.resolve()
+      : (retriedRuntimeScopes.current.add(retryScopeKey), retryQueuedMessages(resolvedApi, outbox, outboxScope).then(() => undefined));
+    void retry.then(() => Promise.all([
       resolvedApi.listCalendarLayers(activeRuntime.familyCircleId),
       resolvedApi.listScheduleEvents(activeRuntime.familyCircleId),
       resolvedApi.listMessages(activeRuntime.conversationId),
-      resolvedApi.getMessageCheckPreference(activeRuntime.conversationId)
-    ]).then(([nextLayers, nextEvents, nextMessages, preference]) => {
+      resolvedApi.getMessageCheckPreference(activeRuntime.conversationId),
+      outbox.list()
+    ])).then(([nextLayers, nextEvents, nextMessages, preference, queuedMessages]) => {
         if (hydrationGeneration.current !== generation) return;
         setLayers(nextLayers);
         setVisibleLayerIds(nextLayers.map((layer) => layer.id));
         setEvents(nextEvents);
-        setSentMessages(visibleMessages(nextMessages, activeRuntime.actorIdentityId));
+        const waitingMessages: SentMessage[] = queuedMessages
+          .filter((queued) => isQueuedMessageInScope(queued, outboxScope))
+          .map((queued) => ({
+            id: queued.id,
+            originalBody: queued.originalBody,
+            sentBody: queued.input.body,
+            sentAt: queued.queuedAt,
+            status: queued.status,
+            corrected: false,
+            canCorrect: false
+          }));
+        setSentMessages([...visibleMessages(nextMessages, activeRuntime.actorIdentityId), ...waitingMessages]);
         setMessageCheckPreference(preference);
         setMessageCheckEnabledState(preference.enabled);
         setMessageCheckHydrated(true);
@@ -282,7 +308,7 @@ export function CoordinationStateProvider({
         setMessageCheckHydrated(false);
         setCoordinationHydrated(false);
       });
-  }, [activeRuntime?.conversationId, activeRuntime?.familyCircleId, activeRuntime?.actorIdentityId, demoMode, resolvedApi]);
+  }, [activeRuntime?.conversationId, activeRuntime?.familyCircleId, activeRuntime?.actorIdentityId, activeRuntime?.region, activeRuntime?.sessionId, demoMode, outbox, resolvedApi]);
 
   const value = useMemo<CoordinationStateValue>(() => ({
     coordinationHydrated,
@@ -511,9 +537,12 @@ export function CoordinationStateProvider({
             await outbox.enqueue({
               id: queueId,
               input: { familyCircleId: activeRuntime.familyCircleId, conversationId: activeRuntime.conversationId, body: sentBody },
+              originalBody,
               context,
               queuedAt,
-              attempts: 0
+              nextAttemptAt: queuedAt,
+              attempts: 0,
+              status: "waiting"
             });
             setSentMessages((current) => [...current, { id: queueId, originalBody, sentBody, sentAt: queuedAt, status: "waiting", corrected: false, canCorrect: false }]);
             setMessageDraftState("");

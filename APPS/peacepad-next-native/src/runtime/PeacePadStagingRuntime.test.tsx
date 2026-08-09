@@ -5,6 +5,7 @@ import { createStagingCoordinationClient } from "../staging/StagingCoordinationC
 import { useSupabaseSession } from "../session/SupabaseSessionProvider";
 import { invitationCodeFromStagingUrl, PeacePadStagingRuntime, validateVerifiedSessionContext } from "./PeacePadStagingRuntime";
 import { useOptionalStagingAccountActions } from "../session/StagingAccountActions";
+import { secureMessageOutboxStore } from "../messaging/secureMessageOutbox";
 
 jest.mock("../session/SupabaseSessionProvider", () => ({ useSupabaseSession: jest.fn() }));
 jest.mock("../staging/StagingCoordinationClient", () => ({ createStagingCoordinationClient: jest.fn() }));
@@ -538,6 +539,7 @@ describe("PeacePadStagingRuntime gates", () => {
 
   it("allows an authenticated account with no family to delete after explicit confirmation", async () => {
     const auth = authValue();
+    const clearOutbox = jest.spyOn(secureMessageOutboxStore, "clear").mockResolvedValue(undefined);
     (useSupabaseSession as jest.Mock).mockReturnValue(auth);
     const deleteAccount = jest.fn(async () => ({
       identityId: IDENTITY,
@@ -556,7 +558,59 @@ describe("PeacePadStagingRuntime gates", () => {
     expect(deleteAccount).not.toHaveBeenCalled();
     fireEvent.press(screen.getByRole("button", { name: "Delete account permanently" }));
     await waitFor(() => expect(deleteAccount).toHaveBeenCalledWith(expect.objectContaining({ expectedVersion: 3 })));
+    expect(clearOutbox).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(auth.signOut).toHaveBeenCalledTimes(1));
+  });
+
+  it("clears queued message content before signing out", async () => {
+    const auth = authValue();
+    const clearOutbox = jest.spyOn(secureMessageOutboxStore, "clear").mockResolvedValue(undefined);
+    (useSupabaseSession as jest.Mock).mockReturnValue(auth);
+    (createStagingCoordinationClient as jest.Mock).mockReturnValue({});
+    render(<PeacePadStagingRuntime environment={environment} fetcher={sessionResponse({ ...valid, memberships: [] })} supabase={supabase}>ready</PeacePadStagingRuntime>);
+    await waitFor(() => expect(screen.getByText("Create or join a family")).toBeTruthy());
+
+    fireEvent.press(screen.getByRole("button", { name: "Sign out" }));
+
+    await waitFor(() => expect(auth.signOut).toHaveBeenCalledTimes(1));
+    expect(clearOutbox).toHaveBeenCalledTimes(1);
+    expect(clearOutbox.mock.invocationCallOrder[0]).toBeLessThan(auth.signOut.mock.invocationCallOrder[0]);
+  });
+
+  it("routes ready-state sign out through queued-message cleanup", async () => {
+    const auth = authValue();
+    const clearOutbox = jest.spyOn(secureMessageOutboxStore, "clear").mockResolvedValue(undefined);
+    (useSupabaseSession as jest.Mock).mockReturnValue(auth);
+    (createStagingCoordinationClient as jest.Mock).mockReturnValue({
+      listConversations: jest.fn(async () => [{ id: CONVERSATION, status: "active" }]),
+      listCalendarLayers: jest.fn(async () => []),
+      listScheduleEvents: jest.fn(async () => []),
+      listMessages: jest.fn(async () => []),
+      getMessageCheckPreference: jest.fn(async () => ({
+        aiAssistanceEnabled: false,
+        conversationId: CONVERSATION,
+        enabled: false,
+        id: "66666666-6666-4666-8666-666666666666",
+        identityId: IDENTITY,
+        provenance: { createdAt: "2026-08-09T12:00:00.000Z", createdBy: { identityId: IDENTITY, sessionId: SESSION }, source: "app" },
+        region: "ca",
+        schemaVersion: "2.0",
+        version: 0
+      }))
+    });
+
+    function ReadySignOutProbe() {
+      const actions = useOptionalStagingAccountActions();
+      return <Text accessibilityRole="button" onPress={() => void actions?.signOut()}>sign out ready</Text>;
+    }
+
+    render(<PeacePadStagingRuntime environment={environment} fetcher={sessionResponse()} supabase={supabase}><ReadySignOutProbe /></PeacePadStagingRuntime>);
+    await waitFor(() => expect(screen.getByText("sign out ready")).toBeTruthy());
+    fireEvent.press(screen.getByText("sign out ready"));
+
+    await waitFor(() => expect(auth.signOut).toHaveBeenCalledTimes(1));
+    expect(clearOutbox).toHaveBeenCalledTimes(1);
+    expect(clearOutbox.mock.invocationCallOrder[0]).toBeLessThan(auth.signOut.mock.invocationCallOrder[0]);
   });
 
   it("does not sign out when the verified deletion request fails", async () => {

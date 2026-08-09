@@ -127,7 +127,7 @@ describe("persisted Message Check runtime", () => {
         <Probe />
       </CoordinationStateProvider>
     );
-    expect(get).toHaveBeenCalledWith(CONVERSATION_B);
+    await waitFor(() => expect(get).toHaveBeenCalledWith(CONVERSATION_B));
     await act(async () => pendingB.resolve(preference(CONVERSATION_B, false, 0)));
     await waitFor(() => expect(screen.getByTestId("hydrated")).toHaveTextContent("true"));
     expect(screen.getByTestId("enabled")).toHaveTextContent("false");
