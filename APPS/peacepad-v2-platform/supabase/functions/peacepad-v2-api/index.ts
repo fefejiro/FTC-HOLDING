@@ -9,6 +9,7 @@ type RuntimeConfig = Readonly<{
   projectRef: string;
   functionRegion: string;
   allowedOrigins: readonly string[];
+  maintenanceSecret: string;
 }>;
 
 type ErrorCode =
@@ -33,6 +34,7 @@ type ErrorCode =
   | "METHOD_NOT_ALLOWED"
   | "MESSAGE_ACCESS_DENIED"
   | "MESSAGE_CHECK_DISABLED"
+  | "MAINTENANCE_AUTH_REQUIRED"
   | "NOT_FOUND"
   | "ORIGIN_NOT_ALLOWED"
   | "PROJECT_MISMATCH"
@@ -56,6 +58,7 @@ const readConfig = (): RuntimeConfig => {
       .split(",")
       .map((value) => value.trim())
       .filter(Boolean),
+    maintenanceSecret: env("PEACEPAD_MAINTENANCE_SECRET"),
   };
   if (
     !config.supabaseUrl ||
@@ -129,6 +132,24 @@ const originAllowed = (request: Request, config: RuntimeConfig): boolean => {
 const bearerToken = (request: Request): string | null => {
   const authorization = request.headers.get("authorization") ?? "";
   return authorization.startsWith("Bearer ") ? authorization.slice(7).trim() : null;
+};
+
+const constantTimeEqual = (left: string, right: string): boolean => {
+  const encoder = new TextEncoder();
+  const leftBytes = encoder.encode(left);
+  const rightBytes = encoder.encode(right);
+  let difference = leftBytes.length ^ rightBytes.length;
+  const length = Math.max(leftBytes.length, rightBytes.length);
+  for (let index = 0; index < length; index += 1) {
+    difference |= (leftBytes[index] ?? 0) ^ (rightBytes[index] ?? 0);
+  }
+  return difference === 0;
+};
+
+const authUserMissing = (error: unknown): boolean => {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as { code?: unknown };
+  return candidate.code === "user_not_found";
 };
 
 const isUuid = (value: string): boolean =>
@@ -288,6 +309,52 @@ const handler = async (request: Request): Promise<Response> => {
     return error || data !== true
       ? failure(request, 503, "DATABASE_NOT_READY", "The regional staging database is not ready.", requestId, config)
       : json(request, 200, { status: "ready", environment: "fictional-staging", region: config.region }, requestId, config);
+  }
+
+  if (request.method === "POST" && path === "/internal/v2/auth-cleanup/run") {
+    const suppliedSecret = request.headers.get("x-peacepad-maintenance-secret")?.trim() ?? "";
+    if (
+      config.maintenanceSecret.length < 32 ||
+      suppliedSecret.length < 32 ||
+      !constantTimeEqual(suppliedSecret, config.maintenanceSecret)
+    ) {
+      return failure(request, 401, "MAINTENANCE_AUTH_REQUIRED", "Maintenance authorization is required.", requestId, config);
+    }
+    const { data: claimed, error: claimError } = await admin.rpc("peacepad_v2_claim_auth_cleanup", {
+      p_region: config.region,
+      p_limit: 10,
+      p_lease_seconds: 120,
+    });
+    if (claimError) {
+      return failure(request, 503, "DATABASE_NOT_READY", "The regional cleanup queue is unavailable.", requestId, config);
+    }
+    let completed = 0;
+    let rescheduled = 0;
+    let failedToFinalize = 0;
+    for (const job of Array.isArray(claimed) ? claimed : []) {
+      if (!job || !isUuid(job.identity_id) || !isUuid(job.lease_token) || job.region !== config.region) {
+        failedToFinalize += 1;
+        continue;
+      }
+      const deletion = await admin.auth.admin.deleteUser(job.identity_id, false);
+      const succeeded = !deletion.error || authUserMissing(deletion.error);
+      const { error: finishError } = await admin.rpc("peacepad_v2_finish_auth_cleanup", {
+        p_identity_id: job.identity_id,
+        p_lease_token: job.lease_token,
+        p_succeeded: succeeded,
+        p_failure_code: succeeded ? null : "AUTH_DELETE_FAILED",
+      });
+      if (finishError) failedToFinalize += 1;
+      else if (succeeded) completed += 1;
+      else rescheduled += 1;
+    }
+    return json(request, 200, {
+      claimed: Array.isArray(claimed) ? claimed.length : 0,
+      completed,
+      rescheduled,
+      failedToFinalize,
+      region: config.region,
+    }, requestId, config);
   }
 
   if (path === "/api/v2/session" && request.method !== "GET") {
@@ -514,19 +581,24 @@ const handler = async (request: Request): Promise<Response> => {
       });
       if (error) return rpcFailure(request, requestId, config, error.message);
       const deletion = await authenticated.admin.auth.admin.deleteUser(authenticated.user.id, false);
-      let refreshSessionsRevoked = !deletion.error;
-      if (deletion.error) {
+      const authIdentityDeleted = !deletion.error || authUserMissing(deletion.error);
+      let refreshSessionsRevoked = authIdentityDeleted;
+      if (!authIdentityDeleted) {
         const token = bearerToken(request);
         const signOut = token
           ? await authenticated.admin.auth.admin.signOut(token, "global")
           : { error: new Error("Missing authenticated token.") };
         refreshSessionsRevoked = !signOut.error;
       }
+      const cleanupAcknowledgement = authIdentityDeleted
+        ? await authenticated.admin.rpc("peacepad_v2_ack_auth_cleanup", { p_identity_id: authenticated.user.id })
+        : { error: null };
+      const authCleanupPending = !authIdentityDeleted || Boolean(cleanupAcknowledgement.error);
       return json(request, 200, {
         ...(data as Record<string, unknown>),
-        authIdentityDeleted: !deletion.error,
+        authIdentityDeleted,
         refreshSessionsRevoked,
-        authCleanupPending: Boolean(deletion.error),
+        authCleanupPending,
       }, requestId, config);
     }
 

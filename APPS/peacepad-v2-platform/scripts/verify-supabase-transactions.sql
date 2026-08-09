@@ -24,6 +24,9 @@ declare
   message_id uuid;
   layer_id uuid;
   event_id uuid;
+  cleanup_claim record;
+  cleanup_result jsonb;
+  first_cleanup_lease uuid;
   invitation_hash bytea := decode(repeat('ab', 32), 'hex');
 begin
   insert into auth.users (id) values (parent_a), (parent_b) on conflict do nothing;
@@ -34,6 +37,7 @@ begin
     raise exception 'Verified session binding did not expose the active identity version.';
   end if;
   perform public.peacepad_v2_record_consent(parent_a, 'ca', 'terms', true, '2026-08', 'consent-parent-a-terms', 2);
+  perform public.peacepad_v2_record_consent(parent_b, 'ca', 'terms', true, '2026-08', 'consent-parent-b-terms', 2);
 
   family_result := public.peacepad_v2_create_family(parent_a, 'ca', 'Example Family', 'create-example-family', 2);
   created_family_id := (family_result ->> 'familyId')::uuid;
@@ -271,6 +275,79 @@ begin
   end;
   if public.peacepad_v2_delete_account(parent_b, 'ca', 1, 'delete-parent-b-account', 2) <> deletion_result then
     raise exception 'Account deletion idempotent replay changed its result.';
+  end if;
+  if (select count(*) from peacepad_v2.auth_cleanup_outbox where identity_id = parent_b) <> 1 then
+    raise exception 'Account deletion did not create exactly one durable Auth cleanup request.';
+  end if;
+  begin
+    perform public.peacepad_v2_claim_auth_cleanup('eu', 1, 120);
+    raise exception 'Unsupported cleanup region unexpectedly succeeded.';
+  exception when invalid_parameter_value then null;
+  end;
+  select * into cleanup_claim from public.peacepad_v2_claim_auth_cleanup('ca', 1, 120);
+  if cleanup_claim.identity_id <> parent_b or cleanup_claim.lease_token is null then
+    raise exception 'Auth cleanup request was not leased safely.';
+  end if;
+  first_cleanup_lease := cleanup_claim.lease_token;
+  if exists (select 1 from public.peacepad_v2_claim_auth_cleanup('ca', 1, 120)) then
+    raise exception 'A leased Auth cleanup request was claimed twice.';
+  end if;
+  begin
+    perform public.peacepad_v2_finish_auth_cleanup(
+      parent_b, gen_random_uuid(), true, null
+    );
+    raise exception 'Auth cleanup accepted the wrong lease token.';
+  exception when serialization_failure then null;
+  end;
+  update peacepad_v2.auth_cleanup_outbox
+  set lease_expires_at = now() - interval '1 second'
+  where identity_id = parent_b;
+  select * into cleanup_claim from public.peacepad_v2_claim_auth_cleanup('ca', 1, 120);
+  if cleanup_claim.lease_token = first_cleanup_lease then
+    raise exception 'Expired Auth cleanup lease was not replaced.';
+  end if;
+  cleanup_result := public.peacepad_v2_finish_auth_cleanup(
+    parent_b, cleanup_claim.lease_token, false, 'AUTH_DELETE_FAILED'
+  );
+  if cleanup_result ->> 'status' <> 'pending' or not exists (
+    select 1 from peacepad_v2.auth_cleanup_outbox
+    where identity_id = parent_b and lease_token is null and next_attempt_at > now()
+  ) then
+    raise exception 'Failed Auth cleanup did not schedule a safe retry.';
+  end if;
+  update peacepad_v2.auth_cleanup_outbox
+  set next_attempt_at = now() - interval '1 second'
+  where identity_id = parent_b;
+  select * into cleanup_claim from public.peacepad_v2_claim_auth_cleanup('ca', 1, 120);
+  cleanup_result := public.peacepad_v2_finish_auth_cleanup(
+    parent_b, cleanup_claim.lease_token, true, null
+  );
+  if cleanup_result ->> 'status' <> 'completed' or exists (
+    select 1 from peacepad_v2.auth_cleanup_outbox where identity_id = parent_b
+  ) then
+    raise exception 'Successful Auth cleanup retained operational retry metadata.';
+  end if;
+  if not exists (
+    select 1 from peacepad_v2.identity
+    where identity_id = parent_b and auth_principal_deleted_at is not null
+  ) then
+    raise exception 'Successful Auth cleanup did not retain its completion tombstone.';
+  end if;
+  insert into peacepad_v2.auth_cleanup_outbox(identity_id, region)
+  select identity.identity_id, identity.region
+  from peacepad_v2.identity identity
+  where identity.deleted_at is not null and identity.auth_principal_deleted_at is null
+  on conflict (identity_id) do nothing;
+  if exists (select 1 from peacepad_v2.auth_cleanup_outbox where identity_id = parent_b) then
+    raise exception 'Migration replay resurrected a completed Auth cleanup request.';
+  end if;
+  delete from auth.users where id = parent_b;
+  if not exists (
+    select 1 from peacepad_v2.identity where identity_id = parent_b and deleted_at is not null
+  ) or not exists (
+    select 1 from peacepad_v2.consent_record where identity_id = parent_b
+  ) then
+    raise exception 'Auth principal deletion removed required anonymized application provenance.';
   end if;
 end;
 $$;

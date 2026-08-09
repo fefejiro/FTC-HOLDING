@@ -14,9 +14,11 @@ $calendarMigrationPath = Join-Path $platformRoot 'supabase/migrations/2026080900
 $messageCheckMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090006_v2_message_check.sql'
 $sessionMembershipMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090007_v2_session_memberships.sql'
 $sessionIdentityVersionMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090008_v2_session_identity_version.sql'
+$authCleanupMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090009_v2_auth_cleanup_outbox.sql'
+$authCleanupRunnerPath = Join-Path $platformRoot 'scripts/run-auth-cleanup.ps1'
 $configPath = Join-Path $platformRoot 'supabase/config.toml'
 
-foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $configPath)) {
+foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $authCleanupRunnerPath, $configPath)) {
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
     throw "Required Supabase staging file is missing: $path"
   }
@@ -33,6 +35,8 @@ $calendarMigration = Get-Content -LiteralPath $calendarMigrationPath -Raw
 $messageCheckMigration = Get-Content -LiteralPath $messageCheckMigrationPath -Raw
 $sessionMembershipMigration = Get-Content -LiteralPath $sessionMembershipMigrationPath -Raw
 $sessionIdentityVersionMigration = Get-Content -LiteralPath $sessionIdentityVersionMigrationPath -Raw
+$authCleanupMigration = Get-Content -LiteralPath $authCleanupMigrationPath -Raw
+$authCleanupRunner = Get-Content -LiteralPath $authCleanupRunnerPath -Raw
 $config = Get-Content -LiteralPath $configPath -Raw
 
 $requiredFunctionPatterns = @(
@@ -65,6 +69,12 @@ $requiredFunctionPatterns = @(
   'peacepad_v2_authorize_message_preview',
   'auth.admin.signOut',
   'auth.admin.deleteUser',
+  '/internal/v2/auth-cleanup/run',
+  'PEACEPAD_MAINTENANCE_SECRET',
+  'constantTimeEqual',
+  'failedToFinalize',
+  'peacepad_v2_claim_auth_cleanup',
+  'peacepad_v2_finish_auth_cleanup',
   'idempotency-key',
   'if-match',
   'x-peacepad-schema-version',
@@ -127,6 +137,35 @@ foreach ($pattern in @(
 )) {
   if ($sessionIdentityVersionMigration -notmatch $pattern) {
     throw "Session identity-version migration is missing required boundary: $pattern"
+  }
+}
+foreach ($pattern in @(
+  'drop constraint if exists identity_identity_id_fkey',
+  'auth_principal_deleted_at',
+  'create table if not exists peacepad_v2\.auth_cleanup_outbox',
+  'alter table peacepad_v2\.auth_cleanup_outbox enable row level security',
+  'revoke all on table peacepad_v2\.auth_cleanup_outbox from public, anon, authenticated',
+  'identity_auth_cleanup_queue',
+  'for update skip locked',
+  'lease_token',
+  'lease_expires_at',
+  'peacepad_v2_claim_auth_cleanup',
+  'peacepad_v2_finish_auth_cleanup',
+  'peacepad_v2_ack_auth_cleanup'
+)) {
+  if ($authCleanupMigration -notmatch $pattern) {
+    throw "Auth cleanup migration is missing required boundary: $pattern"
+  }
+}
+if ($authCleanupMigration -match '(?i)(email|message_body|access_token|refresh_token|provider_error)') {
+  throw 'Auth cleanup outbox must not retain identity content, tokens, or provider error text.'
+}
+if ($function -match 'candidate\.status\s*===\s*404') {
+  throw 'A generic HTTP 404 must not be treated as proof that an Auth principal is absent.'
+}
+foreach ($pattern in @('MAINTENANCE_SECRET', 'internal/v2/auth-cleanup/run', 'TimeoutSec 30')) {
+  if ($authCleanupRunner -notmatch $pattern) {
+    throw "Auth cleanup operator is missing required boundary: $pattern"
   }
 }
 if ($function -notmatch 'version: binding\.identity_version') {

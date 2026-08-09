@@ -42,6 +42,27 @@ The function deliberately disables gateway JWT enforcement so `/health` and
 `/readyz` can be checked without a user session; `/api/v2/session` validates the
 Bearer token itself with Supabase Auth.
 
+Before deployment, create a distinct high-entropy maintenance secret for each
+regional project and set it through the operator's secret store as
+`PEACEPAD_MAINTENANCE_SECRET`. Never place it in Expo configuration, source,
+shell history, screenshots, or logs. The secret protects only the bounded
+server-to-server Auth cleanup runner; it is not a user session credential.
+
+After a fictional account-deletion test, process any retryable Auth cleanup
+requests with environment-backed function URLs and secrets:
+
+```powershell
+$env:PEACEPAD_V2_CA_FUNCTION_URL = 'https://<ca-project>.supabase.co/functions/v1/peacepad-v2-api'
+$env:PEACEPAD_V2_US_FUNCTION_URL = 'https://<us-project>.supabase.co/functions/v1/peacepad-v2-api'
+# Set PEACEPAD_V2_CA_MAINTENANCE_SECRET and PEACEPAD_V2_US_MAINTENANCE_SECRET
+# through the operator secret store, then run:
+./scripts/run-auth-cleanup.ps1 -Region all
+```
+
+The outbox stores only the Auth UUID and regional retry metadata. Successful
+rows are deleted immediately. It never stores email addresses, family data,
+tokens, or provider error text.
+
 ## Live acceptance
 
 Invoke Canada with `x-region: ca-central-1` and
@@ -56,6 +77,11 @@ Required evidence:
 4. A wrong `x-peacepad-region` returns `409`.
 5. A valid fictional user returns only its JWT-derived identity and immutable
    regional binding.
+6. Account deletion immediately removes application authorization, deletes the
+   Auth principal or queues a leased retry, and old JWTs cannot restore a
+   session.
+7. The maintenance runner clears the retry outbox without exposing identity
+   IDs or provider details in its response.
 
 ## Current access blocker (2026-08-09)
 
