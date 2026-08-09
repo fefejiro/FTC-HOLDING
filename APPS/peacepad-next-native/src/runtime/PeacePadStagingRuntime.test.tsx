@@ -1,15 +1,16 @@
 import React from "react";
-import { Text } from "react-native";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { Linking, Text } from "react-native";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { createStagingCoordinationClient } from "../staging/StagingCoordinationClient";
 import { useSupabaseSession } from "../session/SupabaseSessionProvider";
-import { PeacePadStagingRuntime, validateVerifiedSessionContext } from "./PeacePadStagingRuntime";
+import { invitationCodeFromStagingUrl, PeacePadStagingRuntime, validateVerifiedSessionContext } from "./PeacePadStagingRuntime";
 import { useOptionalStagingAccountActions } from "../session/StagingAccountActions";
 
 jest.mock("../session/SupabaseSessionProvider", () => ({ useSupabaseSession: jest.fn() }));
 jest.mock("../staging/StagingCoordinationClient", () => ({ createStagingCoordinationClient: jest.fn() }));
 
 const IDENTITY = "11111111-1111-4111-8111-111111111111";
+const OTHER_IDENTITY = "66666666-6666-4666-8666-666666666666";
 const SESSION = "22222222-2222-4222-8222-222222222222";
 const FAMILY = "33333333-3333-4333-8333-333333333333";
 const GRANT = "44444444-4444-4444-8444-444444444444";
@@ -62,6 +63,21 @@ const valid = {
 };
 
 describe("validateVerifiedSessionContext", () => {
+  it("accepts only the isolated staging invitation scheme", () => {
+    expect(invitationCodeFromStagingUrl("peacepadnextlab://invite/ab12c3")).toBe("AB12C3");
+    expect(invitationCodeFromStagingUrl("peacepadnextlab://invite/AB12C3/")).toBe("AB12C3");
+    expect(invitationCodeFromStagingUrl("peacepad://invite/AB12C3")).toBeUndefined();
+    expect(invitationCodeFromStagingUrl("https://example.test/invite/AB12C3")).toBeUndefined();
+    expect(invitationCodeFromStagingUrl("peacepadnextlab://invite/TOO-LONG")).toBeUndefined();
+    expect(invitationCodeFromStagingUrl("peacepadnextlab://invite/ABC123/extra")).toBeUndefined();
+    expect(invitationCodeFromStagingUrl("peacepadnextlab://invite/ABC123?next=1")).toBeUndefined();
+    expect(invitationCodeFromStagingUrl("peacepadnextlab://invite/ABC123#fragment")).toBeUndefined();
+    expect(invitationCodeFromStagingUrl("peacepadnextlab://invite/ABC123\n")).toBeUndefined();
+    expect(invitationCodeFromStagingUrl("peacepadnextlab://user:pass@invite/ABC123")).toBeUndefined();
+    expect(invitationCodeFromStagingUrl("peacepadnextlab://invite:1234/ABC123")).toBeUndefined();
+    expect(invitationCodeFromStagingUrl("peacepadnextlab://invite/ABC12%33")).toBeUndefined();
+  });
+
   it("accepts a server-verified regional actor and active membership", () => {
     expect(validateVerifiedSessionContext(valid, IDENTITY, "ca")).toEqual(valid);
   });
@@ -99,6 +115,10 @@ describe("PeacePadStagingRuntime gates", () => {
     jest.clearAllMocks();
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it("renders restore, error, and signed-out gates without synthetic coordination", () => {
     (useSupabaseSession as jest.Mock).mockReturnValue(authValue({ status: "loading", session: undefined }));
     const view = render(<PeacePadStagingRuntime environment={environment} supabase={supabase}>ready</PeacePadStagingRuntime>);
@@ -131,6 +151,85 @@ describe("PeacePadStagingRuntime gates", () => {
     view.rerender(<PeacePadStagingRuntime environment={environment} fetcher={sessionResponse()} supabase={supabase}>ready</PeacePadStagingRuntime>);
     await waitFor(() => expect(screen.getByText("Invite your co-parent")).toBeTruthy());
     expect(screen.queryByText("ready")).toBeNull();
+  });
+
+  it("prefills a staging deep-link code but still requires explicit review", async () => {
+    jest.spyOn(Linking, "getInitialURL").mockResolvedValueOnce("peacepadnextlab://invite/ab12c3");
+    (useSupabaseSession as jest.Mock).mockReturnValue(authValue());
+    (createStagingCoordinationClient as jest.Mock).mockReturnValue({ listConversations: jest.fn(async () => []) });
+
+    render(
+      <PeacePadStagingRuntime environment={environment} fetcher={sessionResponse({ ...valid, memberships: [] })} supabase={supabase}>
+        ready
+      </PeacePadStagingRuntime>
+    );
+    await waitFor(() => expect(screen.getByLabelText("Invitation code").props.value).toBe("AB12C3"));
+    expect(screen.getByRole("button", { name: "Review invitation" })).toBeTruthy();
+  });
+
+  it("keeps the newest live invitation when cold-start link resolution finishes later", async () => {
+    let resolveInitial!: (value: string | null) => void;
+    const initialUrl = new Promise<string | null>((resolve) => { resolveInitial = resolve; });
+    let receiveUrl!: (event: { url: string }) => void;
+    const remove = jest.fn();
+    jest.spyOn(Linking, "getInitialURL").mockReturnValueOnce(initialUrl);
+    jest.spyOn(Linking, "addEventListener").mockImplementation((_, listener) => {
+      receiveUrl = listener as (event: { url: string }) => void;
+      return { remove } as never;
+    });
+    (useSupabaseSession as jest.Mock).mockReturnValue(authValue());
+    (createStagingCoordinationClient as jest.Mock).mockReturnValue({ listConversations: jest.fn(async () => []) });
+
+    const view = render(
+      <PeacePadStagingRuntime environment={environment} fetcher={sessionResponse({ ...valid, memberships: [] })} supabase={supabase}>
+        ready
+      </PeacePadStagingRuntime>
+    );
+    await waitFor(() => expect(screen.getByText("Create or join a family")).toBeTruthy());
+    act(() => receiveUrl({ url: "peacepadnextlab://invite/LIVE22" }));
+    await waitFor(() => expect(screen.getByLabelText("Invitation code").props.value).toBe("LIVE22"));
+    await act(async () => resolveInitial("peacepadnextlab://invite/COLD11"));
+    expect(screen.getByLabelText("Invitation code").props.value).toBe("LIVE22");
+    view.unmount();
+    expect(remove).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears a pending invitation before a different account signs in", async () => {
+    jest.spyOn(Linking, "getInitialURL").mockResolvedValueOnce("peacepadnextlab://invite/OLD111");
+    let currentAuth = authValue();
+    (useSupabaseSession as jest.Mock).mockImplementation(() => currentAuth);
+    (createStagingCoordinationClient as jest.Mock).mockReturnValue({ listConversations: jest.fn(async () => []) });
+    const otherSession = {
+      ...valid,
+      actor: { ...valid.actor, identityId: OTHER_IDENTITY },
+      memberships: []
+    };
+    const responses = [{ ...valid, memberships: [] }, otherSession];
+    const fetcher = jest.fn(async () => ({ ok: true, json: async () => responses.shift() }));
+
+    const view = render(
+      <PeacePadStagingRuntime environment={environment} fetcher={fetcher as unknown as typeof fetch} supabase={supabase}>
+        ready
+      </PeacePadStagingRuntime>
+    );
+    await waitFor(() => expect(screen.getByLabelText("Invitation code").props.value).toBe("OLD111"));
+
+    currentAuth = authValue({ status: "signed-out", session: undefined });
+    view.rerender(
+      <PeacePadStagingRuntime environment={environment} fetcher={fetcher as unknown as typeof fetch} supabase={supabase}>
+        ready
+      </PeacePadStagingRuntime>
+    );
+    await waitFor(() => expect(screen.getByText("Sign in to staging")).toBeTruthy());
+
+    currentAuth = authValue({ session: { user: { id: OTHER_IDENTITY } } });
+    view.rerender(
+      <PeacePadStagingRuntime environment={environment} fetcher={fetcher as unknown as typeof fetch} supabase={supabase}>
+        ready
+      </PeacePadStagingRuntime>
+    );
+    await waitFor(() => expect(screen.getByText("Create or join a family")).toBeTruthy());
+    expect(screen.getByLabelText("Invitation code").props.value).toBe("");
   });
 
   it("creates a persisted family for a verified account without a membership", async () => {
@@ -268,7 +367,7 @@ describe("PeacePadStagingRuntime gates", () => {
     const invitationId = "99999999-9999-4999-8999-999999999999";
     const createInvitation = jest.fn(async () => ({
       code: "PP2CA1",
-      deepLink: "peacepad://invite/PP2CA1",
+      deepLink: "peacepadnextlab://invite/PP2CA1",
       invitation: {
         acceptedParticipantGrantId: null,
         expiresAt: "2026-08-12T12:00:00.000Z",

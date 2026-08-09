@@ -87,6 +87,7 @@ $requiredFunctionPatterns = @(
   'peacepad_v2_create_invitation',
   'peacepad_v2_resolve_invitation',
   'peacepad_v2_accept_invitation',
+  'peacepadnextlab://invite/',
   'crypto.subtle.digest',
   'crypto.randomUUID()',
   'fictional-staging'
@@ -105,6 +106,9 @@ if ($function -match 'requestBody\.(identity|identityId|userId)') {
 }
 if ($function -match 'ca\.peacepad\.family') {
   throw 'Production bundle identity is forbidden in the staging Edge Function.'
+}
+if ($function.Contains('peacepad://invite/')) {
+  throw 'The staging Edge Function must not emit an unregistered production invitation scheme.'
 }
 
 foreach ($rpc in @('peacepad_v2_ready', 'peacepad_v2_get_region_binding')) {

@@ -872,7 +872,7 @@ const handler = async (request: Request): Promise<Response> => {
         },
       },
       code,
-      deepLink: `peacepad://invite/${code}`,
+      deepLink: `peacepadnextlab://invite/${code}`,
     }, requestId, config);
   }
 

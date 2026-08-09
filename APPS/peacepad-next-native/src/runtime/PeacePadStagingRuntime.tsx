@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Image, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, Linking, StyleSheet, Text, TextInput, View } from "react-native";
 import type { CreatedInvitation, PeacePadCoordinationApi } from "../api/CoordinationApi";
 import { createStagingCoordinationClient } from "../staging/StagingCoordinationClient";
 import type { CoordinationRuntime } from "../coordination/CoordinationState";
@@ -12,6 +12,26 @@ import { createWriteContext, type InvitationPreview } from "../domain/v2";
 import { colors, spacing, typography } from "../theme";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+export function invitationCodeFromStagingUrl(url?: string | null): string | undefined {
+  if (!url || url.trim() !== url) return undefined;
+  try {
+    const parsed = new URL(url);
+    const code = parsed.pathname.match(/^\/([a-z0-9]{6})\/?$/i)?.[1];
+    if (
+      parsed.protocol !== "peacepadnextlab:"
+      || parsed.hostname !== "invite"
+      || parsed.port
+      || parsed.username
+      || parsed.password
+      || parsed.search
+      || parsed.hash
+      || !code
+    ) return undefined;
+    return code.toUpperCase();
+  } catch {
+    return undefined;
+  }
+}
 
 type Membership = Readonly<{
   familyCircleId: string;
@@ -113,8 +133,45 @@ export function PeacePadStagingRuntime({
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string>();
   const [reloadVersion, setReloadVersion] = useState(0);
+  const [incomingInvitationCode, setIncomingInvitationCode] = useState<string>();
   const generation = useRef(0);
   const deleteInFlight = useRef(false);
+  const lastReadyIdentity = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    let mounted = true;
+    let liveUrlReceived = false;
+    const receive = (url?: string | null) => {
+      const code = invitationCodeFromStagingUrl(url);
+      if (mounted && code) setIncomingInvitationCode(code);
+    };
+    const subscription = Linking.addEventListener("url", ({ url }) => {
+      liveUrlReceived = true;
+      receive(url);
+    });
+    void Linking.getInitialURL().then((url) => {
+      if (!liveUrlReceived) receive(url);
+    }).catch(() => undefined);
+    return () => {
+      mounted = false;
+      subscription.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    const identityId = auth.status === "ready" ? auth.session?.user.id : undefined;
+    if (identityId) {
+      if (lastReadyIdentity.current && lastReadyIdentity.current !== identityId) {
+        setIncomingInvitationCode(undefined);
+      }
+      lastReadyIdentity.current = identityId;
+      return;
+    }
+    if (auth.status === "signed-out" && lastReadyIdentity.current) {
+      setIncomingInvitationCode(undefined);
+      lastReadyIdentity.current = undefined;
+    }
+  }, [auth.session?.user.id, auth.status]);
 
   const deleteVerifiedAccount = async (
     api: PeacePadCoordinationApi,
@@ -204,7 +261,7 @@ export function PeacePadStagingRuntime({
     );
   }
   if (runtimeState.status === "loading") return <GateMessage busy title="Opening PeacePad" body="Loading your authorized family space." />;
-  if (runtimeState.status === "membership-empty") return <FamilySetup accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={auth.signOut} verified={runtimeState.verified} />;
+  if (runtimeState.status === "membership-empty") return <FamilySetup accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} initialInvitationCode={incomingInvitationCode} onInvitationCodeConsumed={() => setIncomingInvitationCode(undefined)} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={auth.signOut} verified={runtimeState.verified} />;
   if (runtimeState.status === "conversation-empty") return <ConversationSetup accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} membership={runtimeState.membership} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={auth.signOut} verified={runtimeState.verified} />;
   if (runtimeState.status === "error") return <GateMessage title="PeacePad is unavailable" body={runtimeState.message} />;
   const accountActions = {
@@ -233,18 +290,26 @@ function runtimeWriteContext(verified: VerifiedSessionContext, expectedVersion: 
   });
 }
 
-function FamilySetup({ accountDeletion, api, onReload, onSignOut, verified }: {
+function FamilySetup({ accountDeletion, api, initialInvitationCode, onInvitationCodeConsumed, onReload, onSignOut, verified }: {
   accountDeletion: { deleteAccount: () => Promise<void>; deleting: boolean; error?: string };
   api: PeacePadCoordinationApi;
+  initialInvitationCode?: string;
+  onInvitationCodeConsumed: () => void;
   onReload: () => void;
   onSignOut: () => Promise<void>;
   verified: VerifiedSessionContext;
 }) {
   const [familyName, setFamilyName] = useState("");
-  const [invitationCode, setInvitationCode] = useState("");
+  const [invitationCode, setInvitationCode] = useState(initialInvitationCode ?? "");
   const [preview, setPreview] = useState<InvitationPreview>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  useEffect(() => {
+    if (initialInvitationCode) {
+      setInvitationCode(initialInvitationCode);
+      setPreview(undefined);
+    }
+  }, [initialInvitationCode]);
   const run = async (operation: () => Promise<void>) => {
     setBusy(true);
     setError(undefined);
@@ -288,7 +353,10 @@ function FamilySetup({ accountDeletion, api, onReload, onSignOut, verified }: {
             setInvitationCode("");
           })} variant="secondary" />
         </View>
-      ) : <LabButton disabled={busy || invitationCode.length !== 6} label="Review invitation" onPress={() => void run(async () => setPreview(await api.resolveInvitation(invitationCode)))} variant="secondary" />}
+      ) : <LabButton disabled={busy || invitationCode.length !== 6} label="Review invitation" onPress={() => void run(async () => {
+        setPreview(await api.resolveInvitation(invitationCode));
+        onInvitationCodeConsumed();
+      })} variant="secondary" />}
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
       <LabButton disabled={busy} label="Sign out" onPress={() => void onSignOut()} variant="secondary" />
       <AccountDeletionControls value={accountDeletion} />
