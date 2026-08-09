@@ -17,9 +17,10 @@ $sessionIdentityVersionMigrationPath = Join-Path $platformRoot 'supabase/migrati
 $authCleanupMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090009_v2_auth_cleanup_outbox.sql'
 $deletionMinimizationMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090010_v2_account_deletion_minimization.sql'
 $authCleanupRunnerPath = Join-Path $platformRoot 'scripts/run-auth-cleanup.ps1'
+$deployRunnerPath = Join-Path $platformRoot 'scripts/deploy-supabase-free-staging.ps1'
 $configPath = Join-Path $platformRoot 'supabase/config.toml'
 
-foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $authCleanupRunnerPath, $configPath)) {
+foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
     throw "Required Supabase staging file is missing: $path"
   }
@@ -39,6 +40,7 @@ $sessionIdentityVersionMigration = Get-Content -LiteralPath $sessionIdentityVers
 $authCleanupMigration = Get-Content -LiteralPath $authCleanupMigrationPath -Raw
 $deletionMinimizationMigration = Get-Content -LiteralPath $deletionMinimizationMigrationPath -Raw
 $authCleanupRunner = Get-Content -LiteralPath $authCleanupRunnerPath -Raw
+$deployRunner = Get-Content -LiteralPath $deployRunnerPath -Raw
 $config = Get-Content -LiteralPath $configPath -Raw
 
 $requiredFunctionPatterns = @(
@@ -183,6 +185,21 @@ if ($function -match 'candidate\.status\s*===\s*404') {
 foreach ($pattern in @('MAINTENANCE_SECRET', 'internal/v2/auth-cleanup/run', 'TimeoutSec 30')) {
   if ($authCleanupRunner -notmatch $pattern) {
     throw "Auth cleanup operator is missing required boundary: $pattern"
+  }
+}
+foreach ($pattern in @(
+  'ftdqnhlesqrkstnqgfxr',
+  'kgechdqdtryktfahyqez',
+  "FunctionRegion = 'ca-central-1'",
+  "FunctionRegion = 'us-east-1'",
+  "DatabaseRegion = 'us-east-2'",
+  "'projects', 'list', '--output', 'json'",
+  'cannot see the approved',
+  "GetEnvironmentVariable\('PEACEPAD_MAINTENANCE_SECRET'\)",
+  'PEACEPAD_MAINTENANCE_SECRET=\$maintenanceSecret'
+)) {
+  if ($deployRunner -notmatch $pattern) {
+    throw "Supabase deployment runner is missing a fail-closed boundary: $pattern"
   }
 }
 if ($function -notmatch 'version: binding\.identity_version') {
