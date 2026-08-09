@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Image, Linking, StyleSheet, Text, TextInput, View } from "react-native";
 import type { CreatedInvitation, PeacePadCoordinationApi } from "../api/CoordinationApi";
 import { createStagingCoordinationClient } from "../staging/StagingCoordinationClient";
@@ -55,6 +55,40 @@ type RuntimeState =
   | { status: "conversation-empty"; api: PeacePadCoordinationApi; membership: Membership; verified: VerifiedSessionContext }
   | { status: "ready"; api: PeacePadCoordinationApi; runtime: CoordinationRuntime }
   | { status: "error"; message: string };
+
+type PendingStagingInvitation = Readonly<{
+  code?: string;
+  claim: () => string | undefined;
+}>;
+
+const PendingStagingInvitationContext = createContext<PendingStagingInvitation>({ claim: () => undefined });
+
+export function PendingStagingInvitationProvider({
+  children,
+  code,
+  onConsumed
+}: {
+  children: React.ReactNode;
+  code?: string;
+  onConsumed: () => void;
+}) {
+  const claimedCode = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!code) claimedCode.current = undefined;
+  }, [code]);
+  const claim = useCallback(() => {
+    if (!code || claimedCode.current === code) return undefined;
+    claimedCode.current = code;
+    onConsumed();
+    return code;
+  }, [code, onConsumed]);
+  const value = useMemo(() => ({ code, claim }), [claim, code]);
+  return <PendingStagingInvitationContext.Provider value={value}>{children}</PendingStagingInvitationContext.Provider>;
+}
+
+export function usePendingStagingInvitation() {
+  return useContext(PendingStagingInvitationContext);
+}
 
 function isMembership(value: unknown): value is Membership {
   if (!value || typeof value !== "object") return false;
@@ -275,9 +309,11 @@ export function PeacePadStagingRuntime({
     }, runtimeState.runtime.region)
   };
   return (
-    <StagingAccountActionsProvider value={accountActions}>
-      <CoordinationStateProvider api={runtimeState.api} runtime={runtimeState.runtime}>{children}</CoordinationStateProvider>
-    </StagingAccountActionsProvider>
+    <PendingStagingInvitationProvider code={incomingInvitationCode} onConsumed={() => setIncomingInvitationCode(undefined)}>
+      <StagingAccountActionsProvider value={accountActions}>
+        <CoordinationStateProvider api={runtimeState.api} runtime={runtimeState.runtime}>{children}</CoordinationStateProvider>
+      </StagingAccountActionsProvider>
+    </PendingStagingInvitationProvider>
   );
 }
 

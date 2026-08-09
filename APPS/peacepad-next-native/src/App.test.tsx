@@ -5,6 +5,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react-nativ
 import { PeacePadCoordinationApp, peacePadLinking, resolveStartScreen } from "./App";
 import { SyntheticCoordinationApi } from "./api/SyntheticCoordinationApi";
 import { CoordinationStateProvider, resolveCalendarStartView } from "./coordination/CoordinationState";
+import { PendingStagingInvitationProvider } from "./runtime/PeacePadStagingRuntime";
 
 function createTestApi() {
   return new SyntheticCoordinationApi([{
@@ -72,6 +73,21 @@ describe("PeacePad coordination shell", () => {
   it("routes a deep link to invitation review without accepting it", () => {
     const state = getStateFromPath("invite/CALM26", peacePadLinking.config);
     expect(state?.routes[0]).toMatchObject({ name: "invite", params: { code: "CALM26" } });
+  });
+
+  it("opens an authenticated incoming invitation for explicit review", async () => {
+    const consume = jest.fn();
+    render(
+      <PendingStagingInvitationProvider code="CALM26" onConsumed={consume}>
+        <CoordinationStateProvider api={createTestApi()}>
+          <PeacePadCoordinationApp startScreen="home" />
+        </CoordinationStateProvider>
+      </PendingStagingInvitationProvider>
+    );
+    expect(await screen.findByDisplayValue("CALM26")).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: "Review invitation" })).toBeOnTheScreen();
+    expect(screen.queryByText("Jordan invited you")).not.toBeOnTheScreen();
+    expect(consume).toHaveBeenCalledTimes(1);
   });
 
   it("exposes one selected task tab and routes Home actions", () => {

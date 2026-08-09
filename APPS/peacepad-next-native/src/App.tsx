@@ -1,4 +1,4 @@
-import React, { Component, useMemo, type ErrorInfo, type ReactNode } from "react";
+import React, { Component, useEffect, useMemo, type ErrorInfo, type ReactNode } from "react";
 import { NavigationContainer, useNavigation, type LinkingOptions } from "@react-navigation/native";
 import { createNativeStackNavigator, type NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
@@ -17,7 +17,7 @@ import { CoordinationStateProvider } from "./coordination/CoordinationState";
 import { environmentConfig, resolveSupabaseStagingConfig } from "./config/environment";
 import { FoundationScreen } from "./foundation/FoundationScreen";
 import { RecordsStateProvider } from "./records/RecordsState";
-import { PeacePadStagingRuntime } from "./runtime/PeacePadStagingRuntime";
+import { PeacePadStagingRuntime, usePendingStagingInvitation } from "./runtime/PeacePadStagingRuntime";
 import { createPeacePadSupabaseClient, SupabaseSessionProvider } from "./session/SupabaseSessionProvider";
 import { colors, spacing } from "./theme";
 
@@ -91,6 +91,17 @@ export default function App() {
   );
 }
 
+function PendingInvitationNavigation() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const invitation = usePendingStagingInvitation();
+  useEffect(() => {
+    const code = invitation.claim();
+    if (!code) return;
+    navigation.navigate("invite", { code });
+  }, [invitation.claim, invitation.code, navigation]);
+  return null;
+}
+
 function PeacePadStagingApp() {
   const staging = useMemo(() => resolveSupabaseStagingConfig(), []);
   const client = useMemo(() => createPeacePadSupabaseClient(staging), [staging]);
@@ -111,6 +122,7 @@ function CoordinationRoute({ activeScreen, invitationCode, recordsConnected }: {
   const primary: PrimaryTaskScreen = activeScreen === "invite" || activeScreen === "foundation" ? "home" : activeScreen;
   return (
     <SafeAreaView style={styles.safe}>
+      <PendingInvitationNavigation />
       <View style={styles.shell}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {activeScreen === "foundation" ? <FoundationScreen onOpenLab={() => setScreen("home")} /> : null}
