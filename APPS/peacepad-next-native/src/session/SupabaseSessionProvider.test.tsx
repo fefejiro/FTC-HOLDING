@@ -19,6 +19,11 @@ function SignOutProbe() {
   );
 }
 
+function RealtimeProbe() {
+  const session = useSupabaseSession();
+  return <Text testID="realtime">{session.realtimeClient ? "available" : "unavailable"}</Text>;
+}
+
 function fakeClient(initialSession: any = null) {
   let currentSession = initialSession;
   let listener: ((event: string, session: any) => void) | undefined;
@@ -115,6 +120,20 @@ describe("SupabaseSessionProvider", () => {
     const view = render(<SupabaseSessionProvider client={fake.client}><Probe /></SupabaseSessionProvider>);
     view.unmount();
     expect(fake.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it("exposes Realtime only when the authenticated SDK client supports the full private-channel boundary", async () => {
+    const authOnly = fakeClient();
+    const first = render(<SupabaseSessionProvider client={authOnly.client}><RealtimeProbe /></SupabaseSessionProvider>);
+    await waitFor(() => expect(screen.getByTestId("realtime")).toHaveTextContent("unavailable"));
+    first.unmount();
+
+    const full = fakeClient();
+    const channel = jest.fn();
+    const removeChannel = jest.fn();
+    const setAuth = jest.fn();
+    render(<SupabaseSessionProvider client={{ ...full.client, channel, removeChannel, realtime: { setAuth } } as any}><RealtimeProbe /></SupabaseSessionProvider>);
+    await waitFor(() => expect(screen.getByTestId("realtime")).toHaveTextContent("available"));
   });
 });
 

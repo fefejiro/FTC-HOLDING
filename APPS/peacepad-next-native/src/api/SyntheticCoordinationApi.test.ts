@@ -258,7 +258,7 @@ describe("SyntheticCoordinationApi safety behavior", () => {
     expect(active).toMatchObject({ status: "active", version: 2 });
     await expect(api.sendAudioCallSignal(active.id, {
       kind: "offer",
-      payload: { type: "offer", sdp: "v=0\r\n" }
+      payload: { sdp: "v=0\r\n" }
     }, { ...context, expectedVersion: active.version })).resolves.toMatchObject({ delivered: true, callVersion: 2 });
     await expect(api.sendAudioCallSignal(active.id, {
       kind: "ice",

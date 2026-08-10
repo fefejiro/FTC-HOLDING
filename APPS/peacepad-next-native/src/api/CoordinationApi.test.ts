@@ -387,7 +387,7 @@ describe("HttpPeacePadCoordinationApi", () => {
     await api.endAudioCall("call/current", context);
     await api.sendAudioCallSignal("call/current", {
       kind: "offer",
-      payload: { type: "offer", sdp: "v=0\r\n" }
+      payload: { sdp: "v=0\r\n" }
     }, context);
 
     expect(fetcher.mock.calls.map(([url]) => url)).toEqual([

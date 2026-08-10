@@ -4,6 +4,7 @@ import { AppState } from "react-native";
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 import type { PeacePadSupabaseConfig } from "../config/environment";
 import { useOptionalLocalization, type MessageKey } from "../localization/LocalizationProvider";
+import type { PeacePadRealtimeClient, PeacePadRealtimeChannel } from "../calls/PrivateCallSignalSubscription";
 
 const STORAGE_PREFIX = "peacepad.v2.supabase.";
 const STORAGE_CHUNK_SIZE = 1_800;
@@ -51,12 +52,14 @@ export const secureSupabaseStorage = {
 };
 
 export type SupabaseAuthClient = Pick<SupabaseClient, "auth">;
+export type SupabaseRuntimeClient = SupabaseAuthClient & Partial<Pick<SupabaseClient, "channel" | "removeChannel" | "realtime">>;
 export type SupabaseSessionStatus = "loading" | "signed-out" | "ready" | "error";
 
 type SupabaseSessionValue = Readonly<{
   status: SupabaseSessionStatus;
   session?: Session;
   error?: string;
+  realtimeClient?: PeacePadRealtimeClient;
   getAccessToken: () => Promise<string | undefined>;
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -86,7 +89,7 @@ export function SupabaseSessionProvider({
   client
 }: {
   children: ReactNode;
-  client: SupabaseAuthClient;
+  client: SupabaseRuntimeClient;
 }) {
   const { t } = useOptionalLocalization();
   const [status, setStatus] = useState<SupabaseSessionStatus>("loading");
@@ -94,6 +97,18 @@ export function SupabaseSessionProvider({
   const [error, setError] = useState<string>();
   const mounted = useRef(true);
   const authGeneration = useRef(0);
+  const realtimeClient = useMemo<PeacePadRealtimeClient | undefined>(() => {
+    if (
+      typeof client.channel !== "function"
+      || typeof client.removeChannel !== "function"
+      || typeof client.realtime?.setAuth !== "function"
+    ) return undefined;
+    return {
+      setAuth: (accessToken) => client.realtime!.setAuth(accessToken),
+      channel: (topic, options) => client.channel!(topic, options) as unknown as PeacePadRealtimeChannel,
+      removeChannel: (channel) => client.removeChannel!(channel as never),
+    };
+  }, [client]);
 
   useEffect(() => {
     mounted.current = true;
@@ -159,6 +174,7 @@ export function SupabaseSessionProvider({
     status,
     session,
     error,
+    realtimeClient,
     getAccessToken,
     signInWithPassword: async (email, password) => {
       setError(undefined);
@@ -186,7 +202,7 @@ export function SupabaseSessionProvider({
         // Local authorization was already removed before the network operation.
       }
     }
-  }), [client, error, getAccessToken, session, status, t]);
+  }), [client, error, getAccessToken, realtimeClient, session, status, t]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

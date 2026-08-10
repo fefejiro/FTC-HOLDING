@@ -92,8 +92,8 @@ export type AudioCallSession = Readonly<{
 }>;
 
 export type AudioCallSignal = Readonly<
-  | { kind: "offer"; payload: Readonly<{ type: "offer"; sdp: string }> }
-  | { kind: "answer"; payload: Readonly<{ type: "answer"; sdp: string }> }
+  | { kind: "offer"; payload: Readonly<{ sdp: string }> }
+  | { kind: "answer"; payload: Readonly<{ sdp: string }> }
   | { kind: "ice"; payload: Readonly<{ candidate: string; sdpMid: string | null; sdpMLineIndex: number | null }> }
 >;
 

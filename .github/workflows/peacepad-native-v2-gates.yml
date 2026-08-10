@@ -78,6 +78,7 @@ jobs:
         working-directory: ${{ runner.temp }}/peacepad-next-native
         run: |
           npm run --silent expo:config > "$RUNNER_TEMP/peacepad-expo-config.json"
+          npm run verify:audio-config
           npm run export:ios -- --output-dir "$RUNNER_TEMP/peacepad-ios-export"
 
       - name: Upload verification artifacts

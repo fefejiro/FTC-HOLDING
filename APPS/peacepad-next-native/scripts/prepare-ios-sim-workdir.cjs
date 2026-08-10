@@ -11,6 +11,7 @@ const copyEntries = [
   "index.ts",
   "metro.config.js",
   "package.json",
+  "plugins",
   "tsconfig.json",
   "README.md",
   "src",

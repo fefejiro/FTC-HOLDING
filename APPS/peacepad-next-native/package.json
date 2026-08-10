@@ -9,6 +9,7 @@
     "android": "expo run:android",
     "web": "expo start --web",
     "expo:config": "expo config --type public --json",
+    "verify:audio-config": "node scripts/verify-native-audio-config.cjs",
     "export:ios": "expo export --platform ios",
     "guardrails": "node scripts/check-lab-guardrails.cjs",
     "secret-scan": "node scripts/check-secrets.cjs",
@@ -27,6 +28,7 @@
     "@react-navigation/native-stack": "7.18.5",
     "@supabase/supabase-js": "^2.105.3",
     "expo": "~54.0.33",
+    "expo-dev-client": "6.0.21",
     "expo-secure-store": "~15.0.8",
     "expo-status-bar": "~3.0.9",
     "qrcode-generator": "^2.0.4",
@@ -34,8 +36,9 @@
     "react-native": "0.81.5",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
+    "react-native-svg": "15.12.1",
     "react-native-url-polyfill": "^4.0.0",
-    "react-native-svg": "15.12.1"
+    "react-native-webrtc": "124.0.6"
   },
   "devDependencies": {
     "@testing-library/react-native": "^13.3.3",
@@ -75,5 +78,16 @@
     "transformIgnorePatterns": [
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|expo-modules-core|@expo(nent)?/.*|@expo-google-fonts/.*|@react-navigation/.*|react-native-safe-area-context|react-native-screens)/)"
     ]
+  },
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "enabled": true,
+        "exclude": [
+          "react-native-webrtc"
+        ],
+        "listUnknownPackages": true
+      }
+    }
   }
 }

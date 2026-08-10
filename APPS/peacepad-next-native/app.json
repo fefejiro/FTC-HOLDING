@@ -9,7 +9,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "ca.peacepad.nextnative.lab"
+      "bundleIdentifier": "ca.peacepad.nextnative.lab",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "PeacePad uses the microphone only while you are in a foreground audio call."
+      }
     },
     "android": {
       "package": "ca.peacepad.nextnative.lab"
@@ -21,7 +24,9 @@
       "submittedBundleId": "ca.peacepad.family"
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-dev-client",
+      "./plugins/withPeacePadAudioWebRTC"
     ]
   }
 }
