@@ -7,6 +7,7 @@ import { initPush } from './push';
 import { startIncidentMonitor, startWazeMonitor } from './monitor';
 import { canAccessAdminSurface } from './adminAccess';
 import { ensureDispatchIncidentWorkflowColumns } from './db';
+import { randomUUID } from 'crypto';
 
 const app = express();
 const httpServer = createServer(app);
@@ -42,18 +43,60 @@ const corsOptions: CorsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Request-Id'],
+  exposedHeaders: ['X-Request-Id'],
 };
 
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 app.set('trust proxy', 1);
+
+const requestIdPattern = /^[A-Za-z0-9._:-]{1,128}$/;
+
+app.use((req, res, next) => {
+  const suppliedRequestId = req.header('x-request-id');
+  const requestId = suppliedRequestId && requestIdPattern.test(suppliedRequestId)
+    ? suppliedRequestId
+    : randomUUID();
+
+  res.setHeader('X-Request-Id', requestId);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+
+  res.locals.requestId = requestId;
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Health checks
-app.get('/health', (_req, res) => res.status(200).json({ status: 'ok' }));
-app.get('/api/health', (_req, res) => res.status(200).json({ status: 'ok' }));
+const healthPayload = () => ({
+  status: 'ok',
+  service: 'dispatch',
+  version: process.env.RAILWAY_GIT_COMMIT_SHA || process.env.COMMIT_SHA || 'local',
+  time: new Date().toISOString(),
+});
+
+app.get('/health', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.status(200).json(healthPayload());
+});
+app.get('/api/health', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.status(200).json(healthPayload());
+});
+app.get('/readyz', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.status(200).json(healthPayload());
+});
 app.get('/__health', (_req, res) => res.status(200).send('OK'));
 
 export function log(message: string, source = 'express') {
@@ -81,7 +124,7 @@ app.use((req, res, next) => {
   res.on('finish', () => {
     const duration = Date.now() - start;
     if (path.startsWith('/api')) {
-      let line = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      let line = `${req.method} ${path} ${res.statusCode} in ${duration}ms requestId=${res.locals.requestId}`;
       if (capturedJson) line += ` :: ${JSON.stringify(capturedJson)}`;
       log(line);
     }
@@ -99,14 +142,28 @@ app.use((req, res, next) => {
   await registerRoutes(httpServer, app);
 
   app.use('/api', (_req, res) => {
-    res.status(404).json({ error: 'API route not found' });
+    res.status(404).json({
+      success: false,
+      error: { code: 'API_NOT_FOUND', message: 'API route not found' },
+      requestId: res.locals.requestId,
+    });
   });
 
   app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
-    const status = (err as any)?.status || (err as any)?.statusCode || 500;
-    const message = (err as any)?.message || 'Internal Server Error';
-    console.error(err);
-    res.status(status).json({ error: message });
+    const candidateStatus = Number((err as any)?.status || (err as any)?.statusCode || 500);
+    const status = Number.isInteger(candidateStatus) && candidateStatus >= 400 && candidateStatus <= 599
+      ? candidateStatus
+      : 500;
+    const isServerError = status >= 500;
+    const message = isServerError && process.env.NODE_ENV === 'production'
+      ? 'Internal Server Error'
+      : (err as any)?.message || 'Internal Server Error';
+    console.error(`[Error] requestId=${res.locals.requestId}`, err);
+    res.status(status).json({
+      success: false,
+      error: { code: isServerError ? 'INTERNAL_SERVER_ERROR' : 'REQUEST_FAILED', message },
+      requestId: res.locals.requestId,
+    });
   });
 
   app.use((req, res, next) => {

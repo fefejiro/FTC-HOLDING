@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "principles": [
+    "No new paid platform is required for the baseline",
+    "Cloudflare handles static and short-lived edge workloads",
+    "Railway is reserved for persistent Node and WebSocket workloads",
+    "Product data remains isolated even when operational patterns are shared",
+    "Every public service exposes liveness, readiness, deployment identity, and request tracing"
+  ],
+  "services": [
+    {
+      "id": "ftc-site",
+      "path": "APPS/ftc-site",
+      "runtime": "cloudflare-pages",
+      "kind": "web",
+      "data": ["supabase"],
+      "public": true
+    },
+    {
+      "id": "una-labs-site",
+      "path": "APPS/una-labs-site",
+      "runtime": "cloudflare-pages",
+      "kind": "web",
+      "data": ["supabase"],
+      "public": true
+    },
+    {
+      "id": "garden-cleaners",
+      "path": "APPS/gardencleaners-site",
+      "runtime": "cloudflare-pages",
+      "kind": "web",
+      "data": ["supabase"],
+      "public": true
+    },
+    {
+      "id": "anion",
+      "path": "APPS/anion",
+      "runtime": "cloudflare-worker",
+      "kind": "web-api",
+      "data": ["supabase"],
+      "public": true,
+      "healthPath": "/api/health"
+    },
+    {
+      "id": "peacepad",
+      "path": "APPS/peacepad",
+      "runtime": "cloudflare-pages+railway",
+      "kind": "web-mobile-api",
+      "data": ["postgres"],
+      "public": true,
+      "healthPath": "/api/health"
+    },
+    {
+      "id": "saywetin",
+      "path": "APPS/saywetin",
+      "runtime": "cloudflare-pages+railway",
+      "kind": "web-api",
+      "data": ["postgres"],
+      "public": true,
+      "healthPath": "/health"
+    },
+    {
+      "id": "dispatch",
+      "path": "APPS/dispatch",
+      "runtime": "railway",
+      "kind": "web-mobile-api",
+      "data": ["postgres"],
+      "public": true,
+      "healthPath": "/health",
+      "readinessPath": "/readyz"
+    },
+    {
+      "id": "job-reply-agent",
+      "path": "APPS/job-reply-agent",
+      "runtime": "railway+scheduler",
+      "kind": "private-automation",
+      "data": ["local-state", "provider-apis"],
+      "public": false
+    }
+  ]
+}

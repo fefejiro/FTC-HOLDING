@@ -1,0 +1,39 @@
+name: Architecture baseline
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'APPS/dispatch/**'
+      - 'DOCS/FTC_ARCHITECTURE_BASELINE.md'
+      - 'ops/architecture/**'
+      - 'scripts/audit-architecture.mjs'
+      - 'package.json'
+      - '.github/workflows/architecture-baseline.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'APPS/dispatch/**'
+      - 'DOCS/FTC_ARCHITECTURE_BASELINE.md'
+      - 'ops/architecture/**'
+      - 'scripts/audit-architecture.mjs'
+      - 'package.json'
+      - '.github/workflows/architecture-baseline.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run audit:architecture
+      - run: npm --workspace=@ftc/dispatch run check
+      - run: npm --workspace=@ftc/dispatch run build
