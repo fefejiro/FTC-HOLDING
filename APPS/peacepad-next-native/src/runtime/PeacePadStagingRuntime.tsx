@@ -5,6 +5,7 @@ import { RecordsStateProvider } from "../records/RecordsState";
 import { createStagingCoordinationClient } from "../staging/StagingCoordinationClient";
 import type { CoordinationRuntime } from "../coordination/CoordinationState";
 import { CoordinationStateProvider } from "../coordination/CoordinationState";
+import { AudioCallStateProvider } from "../calls/AudioCallState";
 import { LabButton } from "../components/LabButton";
 import { AccessibleHeading } from "../components/AccessibleHeading";
 import type { PeacePadEnvironmentConfig, PeacePadSupabaseConfig } from "../config/environment";
@@ -387,9 +388,11 @@ export function PeacePadStagingRuntime({
           });
           setIncomingInvitationCode(undefined);
         }} runtime={runtimeState.runtime}>
-          <RecordsStateProvider api={runtimeState.api} runtime={runtimeState.runtime}>
-            {children}
-          </RecordsStateProvider>
+          <AudioCallStateProvider api={runtimeState.api} runtime={runtimeState.runtime}>
+            <RecordsStateProvider api={runtimeState.api} runtime={runtimeState.runtime}>
+              {children}
+            </RecordsStateProvider>
+          </AudioCallStateProvider>
         </CoordinationStateProvider>
       </StagingAccountActionsProvider>
     </PendingStagingInvitationProvider>

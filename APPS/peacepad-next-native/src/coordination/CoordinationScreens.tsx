@@ -9,13 +9,14 @@ import { formatLocalizedDate } from "../localization/localizedDate";
 import { messageText } from "../localization/messageLocalization";
 import { workflowText } from "../localization/workflowLocalization";
 import { homeText } from "../localization/homeLocalization";
+import { callText } from "../localization/callLocalization";
 import { colors, spacing, typography, usesLargeTextLayout } from "../theme";
 import { useRecordsState } from "../records/RecordsState";
 import type { AttachmentMediaType } from "../domain/v2";
 import { useOptionalStagingAccountActions } from "../session/StagingAccountActions";
 import { useCoordinationState, type CalendarView } from "./CoordinationState";
 
-export type CoordinationScreen = "home" | "messages" | "calendar" | "invite" | "records" | "more";
+export type CoordinationScreen = "home" | "messages" | "calendar" | "invite" | "records" | "calls" | "more";
 type Navigate = (screen: CoordinationScreen) => void;
 
 const layerColors: Record<string, string> = {
@@ -128,7 +129,8 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
     { label: h("send"), detail: h("sendBody"), route: "messages" },
     { label: h("event"), detail: h("eventBody"), route: "calendar" },
     { label: h("invite"), detail: h("inviteBody"), route: "invite" },
-    { label: h("record"), detail: h("recordBody"), route: "records" }
+    { label: h("record"), detail: h("recordBody"), route: "records" },
+    { label: callText(locale, "title"), detail: callText(locale, "body"), route: "calls" }
   ];
 
   return (
