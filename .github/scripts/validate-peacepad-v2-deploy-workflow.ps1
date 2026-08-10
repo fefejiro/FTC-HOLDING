@@ -24,6 +24,7 @@ $required = @(
   'supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1',
   'SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}',
   'DATABASE_URL: ${{ secrets.DATABASE_URL }}',
+  '$project[0].region',
   'PEACEPAD_MAINTENANCE_SECRET: ${{ secrets.MAINTENANCE_SECRET }}',
   'PEACEPAD_IDEMPOTENCY_SECRET: ${{ secrets.IDEMPOTENCY_SECRET }}',
   "throw 'IDEMPOTENCY_SECRET is missing or too short.'",
@@ -46,7 +47,8 @@ $forbidden = @(
   'cancel-in-progress: true',
   'SELECTED_REF -notin',
   'confirm_commit_sha',
-  'actions/checkout@'
+  'actions/checkout@',
+  '$project[0].database.region'
 )
 
 foreach ($needle in $forbidden) {

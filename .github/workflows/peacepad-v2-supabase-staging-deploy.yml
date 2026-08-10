@@ -138,7 +138,7 @@ jobs:
           if ($project.Count -ne 1) {
             throw 'The deployment identity cannot see the approved regional fictional-staging project.'
           }
-          if ($project[0].database.region -ne $expected[$env:REQUESTED_REGION].databaseRegion) {
+          if ($project[0].region -ne $expected[$env:REQUESTED_REGION].databaseRegion) {
             throw 'The approved project is in an unexpected database region.'
           }
 
