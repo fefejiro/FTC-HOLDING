@@ -7,6 +7,7 @@ import { languageNames, supportedLocales, useLocalization, useOptionalLocalizati
 import { calendarText, formatCalendarDate, formatCalendarDay } from "../localization/calendarLocalization";
 import { formatLocalizedDate } from "../localization/localizedDate";
 import { messageText } from "../localization/messageLocalization";
+import { workflowText } from "../localization/workflowLocalization";
 import { colors, spacing, typography, usesLargeTextLayout } from "../theme";
 import { useRecordsState } from "../records/RecordsState";
 import type { AttachmentMediaType } from "../domain/v2";
@@ -346,6 +347,7 @@ export function InvitationScreen({ initialCode }: { initialCode?: string }) {
 export function CalendarScreen() {
   const largeText = usesLargeTextLayout(useWindowDimensions().fontScale);
   const { locale } = useOptionalLocalization();
+  const w = (key: Parameters<typeof workflowText>[1], values?: Readonly<Record<string, string>>) => workflowText(locale, key, values);
   const {
     addEvent,
     calendarView,
@@ -401,7 +403,7 @@ export function CalendarScreen() {
           return (
             <View key={layer.id} style={[styles.layerRow, largeText ? styles.layerRowLargeText : null]}>
               <Pressable
-                accessibilityLabel={`${visible ? "Hide" : "Show"} ${layer.name}`}
+                accessibilityLabel={`${w(visible ? "hide" : "show")} ${layer.name}`}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: visible }}
                 onPress={() => toggleLayerFilter(layer.id)}
@@ -410,16 +412,16 @@ export function CalendarScreen() {
                 <View style={[styles.layerDot, { backgroundColor: layerColors[layer.colorToken] }]} />
                 <View style={styles.layerCopy}>
                   <Text style={styles.actionTitle}>{layer.name}</Text>
-                  <Text style={styles.caption}>{shared ? "Shared with family" : "Private"}</Text>
+                  <Text style={styles.caption}>{w(shared ? "shared" : "private")}</Text>
                 </View>
               </Pressable>
               <Pressable
-                accessibilityLabel={`${shared ? "Make private" : "Share"} ${layer.name}`}
+                accessibilityLabel={`${w(shared ? "makePrivate" : "share")} ${layer.name}`}
                 accessibilityRole="button"
                 onPress={() => shared ? void setLayerShared(layer.id, false) : setPendingShareLayerId(layer.id)}
                 style={styles.smallButton}
               >
-                <Text style={styles.smallButtonText}>{shared ? "Private" : "Share"}</Text>
+                <Text style={styles.smallButtonText}>{w(shared ? "private" : "share")}</Text>
               </Pressable>
             </View>
           );
@@ -428,24 +430,24 @@ export function CalendarScreen() {
 
       {pendingShareLayerId ? (
         <View accessibilityRole="alert" style={styles.confirmCard}>
-          <Text style={styles.heading}>Share this calendar?</Text>
-          <Text style={styles.body}>Future events in this calendar will be visible to family participants.</Text>
-          <LabButton label="Confirm sharing" onPress={() => {
+          <Text style={styles.heading}>{w("shareCalendar")}</Text>
+          <Text style={styles.body}>{w("shareBody")}</Text>
+          <LabButton label={w("confirmShare")} onPress={() => {
             void setLayerShared(pendingShareLayerId, true);
             setPendingShareLayerId(undefined);
           }} />
-          <LabButton label="Keep private" onPress={() => setPendingShareLayerId(undefined)} variant="secondary" />
+          <LabButton label={w("keepPrivate")} onPress={() => setPendingShareLayerId(undefined)} variant="secondary" />
         </View>
       ) : null}
 
       <View style={styles.card}>
-        <Text style={styles.heading}>Add event</Text>
-        <TextInput accessibilityLabel="Event title" onChangeText={setEventTitle} placeholder="Event title" style={styles.input} value={eventTitle} />
-        <Text style={styles.fieldLabel}>Calendar</Text>
+        <Text style={styles.heading}>{w("addEvent")}</Text>
+        <TextInput accessibilityLabel={w("eventTitle")} onChangeText={setEventTitle} placeholder={w("eventTitle")} style={styles.input} value={eventTitle} />
+        <Text style={styles.fieldLabel}>{w("calendar")}</Text>
         <View style={styles.wrap}>
           {layers.map((layer) => (
             <Pressable
-              accessibilityLabel={`Use ${layer.name} calendar`}
+              accessibilityLabel={w("useCalendar", { name: layer.name })}
               accessibilityRole="button"
               accessibilityState={{ selected: selectedLayerId === layer.id }}
               key={layer.id}
@@ -456,7 +458,7 @@ export function CalendarScreen() {
             </Pressable>
           ))}
         </View>
-        <LabButton label="Save event" disabled={!eventTitle.trim()} onPress={() => {
+        <LabButton label={w("saveEvent")} disabled={!eventTitle.trim()} onPress={() => {
           void addEvent({
             layerId: selectedLayerId,
             title: eventTitle,
@@ -473,12 +475,12 @@ export function CalendarScreen() {
           <Text style={styles.caption}>{layers.find((layer) => layer.id === event.calendarLayerId)?.name}</Text>
           {pendingDeleteEventId === event.id ? (
             <View style={styles.stackTight}>
-              <Text style={styles.body}>Delete this event? Shared participants may lose access to it.</Text>
-              <LabButton label="Confirm delete" onPress={() => { void deleteEvent(event.id); setPendingDeleteEventId(undefined); }} />
-              <LabButton label="Cancel" onPress={() => setPendingDeleteEventId(undefined)} variant="secondary" />
+              <Text style={styles.body}>{w("deleteWarning")}</Text>
+              <LabButton label={w("confirmDelete")} onPress={() => { void deleteEvent(event.id); setPendingDeleteEventId(undefined); }} />
+              <LabButton label={w("cancel")} onPress={() => setPendingDeleteEventId(undefined)} variant="secondary" />
             </View>
           ) : (
-            <LabButton label="Delete event" onPress={() => setPendingDeleteEventId(event.id)} variant="secondary" />
+            <LabButton label={w("deleteEvent")} onPress={() => setPendingDeleteEventId(event.id)} variant="secondary" />
           )}
         </View>
       ))}
@@ -698,6 +700,7 @@ export function MessagesScreen() {
 
 export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
   const { locale } = useLocalization();
+  const w = (key: Parameters<typeof workflowText>[1], values?: Readonly<Record<string, string>>) => workflowText(locale, key, values);
   const { events, sentMessages } = useCoordinationState();
   const { archiveBinder, binder, binders, attachmentIntent, busy, createBinder, error: recordsError, linkTimelineSource, loading, prepareAttachment, reload, selectBinder, timelineEntries } = useRecordsState();
   const [binderName, setBinderName] = useState("");
@@ -708,74 +711,75 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
   const [error, setError] = useState<string>();
 
   const saveBinder = async () => {
-    if (binderName.trim().length < 3) { setError("Enter a Case Binder name."); return; }
-    if (childLabel.trim().length < 2) { setError("Enter a child label."); return; }
+    if (binderName.trim().length < 3) { setError(w("binderNameError")); return; }
+    if (childLabel.trim().length < 2) { setError(w("childLabelError")); return; }
     setError(undefined);
     try { await createBinder(binderName, childLabel); }
-    catch (caught) { setError(caught instanceof Error ? caught.message : "Check the Case Binder details."); }
+    catch (caught) { setError(caught instanceof Error ? caught.message : w("binderDetailsError")); }
   };
   const prepare = async () => {
     setError(undefined);
     try {
       await prepareAttachment({ originalFileName: fileName, mediaType, byteLength: Number(byteLength) });
-    } catch (caught) { setError(caught instanceof Error ? caught.message : "Check the attachment details."); }
+    } catch (caught) { setError(caught instanceof Error ? caught.message : w("attachmentDetailsError")); }
   };
   const linkSource = async (kind: "message-event" | "schedule-event", sourceId: string) => {
     setError(undefined);
     try { await linkTimelineSource(kind, sourceId); }
-    catch (caught) { setError(caught instanceof Error ? caught.message : "PeacePad could not link this source."); }
+    catch (caught) { setError(caught instanceof Error ? caught.message : w("linkError")); }
   };
   const linkedSourceIds = new Set(timelineEntries.map((entry) => entry.source.sourceId));
   const messageCandidate = sentMessages.find((message) => !message.queued && !linkedSourceIds.has(message.id));
   const eventCandidate = events.find((event) => !linkedSourceIds.has(event.id));
   return (
     <View style={styles.stack}>
-      <AccessibleHeading style={styles.title}>Records</AccessibleHeading>
-      {loading ? <View style={styles.card}><Text style={styles.heading}>Opening Records</Text><Text style={styles.body}>Loading your private Case Binders.</Text></View> : null}
+      <AccessibleHeading style={styles.title}>{w("records")}</AccessibleHeading>
+      {loading ? <View style={styles.card}><Text style={styles.heading}>{w("opening")}</Text><Text style={styles.body}>{w("loading")}</Text></View> : null}
       {!loading && binders.length > 1 ? <View style={styles.card}>
-        <Text style={styles.heading}>Your Case Binders</Text>
+        <Text style={styles.heading}>{w("binders")}</Text>
         {binders.filter((candidate) => candidate.status === "active").map((candidate) => (
           <Pressable accessibilityRole="button" key={candidate.id} onPress={() => selectBinder(candidate.id)} style={styles.actionCard}>
             <Text style={styles.actionTitle}>{candidate.name}</Text>
-            <Text style={styles.caption}>{candidate.childLabel} · Private</Text>
+            <Text style={styles.caption}>{candidate.childLabel} · {w("private")}</Text>
           </Pressable>
         ))}
       </View> : null}
       {!loading && !binder ? <View style={styles.card}>
-        <Text style={styles.heading}>Create a Case Binder</Text>
-        <Text style={styles.body}>Keep private records organized by family and child.</Text>
-        <TextInput accessibilityLabel="Binder name" onChangeText={setBinderName} placeholder="Binder name" style={styles.input} value={binderName} />
-        <TextInput accessibilityLabel="Child label" onChangeText={setChildLabel} placeholder="Child label" style={styles.input} value={childLabel} />
-        <LabButton disabled={busy} label={busy ? "Creating..." : "Create Case Binder"} onPress={() => void saveBinder()} />
+        <Text style={styles.heading}>{w("createBinder")}</Text>
+        <Text style={styles.body}>{w("binderBody")}</Text>
+        <TextInput accessibilityLabel={w("binderName")} onChangeText={setBinderName} placeholder={w("binderName")} style={styles.input} value={binderName} />
+        <TextInput accessibilityLabel={w("childLabel")} onChangeText={setChildLabel} placeholder={w("childLabel")} style={styles.input} value={childLabel} />
+        <LabButton disabled={busy} label={busy ? w("creating") : w("create")} onPress={() => void saveBinder()} />
       </View> : !loading && binder ? <View style={styles.card}>
         <Text style={styles.heading}>{binder.name}</Text>
-        <Text style={styles.caption}>{binder.childLabel} - Private</Text>
-        <Text style={styles.fieldLabel}>Private timeline</Text>
-        {timelineEntries.length === 0 ? <Text style={styles.caption}>No sources linked yet.</Text> : timelineEntries.map((entry) => (
-          <View accessibilityLabel={`${entry.source.kind === "message-event" ? "Message" : "Calendar event"} timeline entry`} key={entry.id} style={styles.successCard}>
-            <Text style={styles.heading}>{entry.source.kind === "message-event" ? "Message" : "Calendar event"}</Text>
+        <Text style={styles.caption}>{binder.childLabel} - {w("private")}</Text>
+        <Text style={styles.fieldLabel}>{w("timeline")}</Text>
+        {timelineEntries.length === 0 ? <Text style={styles.caption}>{w("noSources")}</Text> : timelineEntries.map((entry) => {
+          const kind = w(entry.source.kind === "message-event" ? "message" : "calendarEvent");
+          return <View accessibilityLabel={w("timelineEntry", { kind })} key={entry.id} style={styles.successCard}>
+            <Text style={styles.heading}>{kind}</Text>
             <Text style={styles.caption}>{formatLocalizedDate(locale, entry.occurredAt, { dateStyle: "medium", timeStyle: "short" })}</Text>
-          </View>
-        ))}
-        {messageCandidate ? <LabButton disabled={busy} label="Link latest message" onPress={() => void linkSource("message-event", messageCandidate.id)} variant="secondary" /> : null}
-        {eventCandidate ? <LabButton disabled={busy} label="Link next calendar event" onPress={() => void linkSource("schedule-event", eventCandidate.id)} variant="secondary" /> : null}
-        <Text style={styles.fieldLabel}>Prepare attachment details</Text>
-        <TextInput accessibilityLabel="Original file name" onChangeText={setFileName} placeholder="school-note.pdf" style={styles.input} value={fileName} />
-        <TextInput accessibilityLabel="Media type" onChangeText={(value) => setMediaType(value as AttachmentMediaType)} placeholder="application/pdf" style={styles.input} value={mediaType} />
-        <TextInput accessibilityLabel="File size in bytes" keyboardType="number-pad" onChangeText={setByteLength} placeholder="1200" style={styles.input} value={byteLength} />
-        <LabButton disabled={busy} label={busy ? "Preparing..." : "Prepare details"} onPress={() => void prepare()} />
-        {attachmentIntent ? <View accessibilityLabel="Attachment details prepared" style={styles.successCard}>
-          <Text style={styles.heading}>Details prepared</Text>
+          </View>;
+        })}
+        {messageCandidate ? <LabButton disabled={busy} label={w("linkMessage")} onPress={() => void linkSource("message-event", messageCandidate.id)} variant="secondary" /> : null}
+        {eventCandidate ? <LabButton disabled={busy} label={w("linkEvent")} onPress={() => void linkSource("schedule-event", eventCandidate.id)} variant="secondary" /> : null}
+        <Text style={styles.fieldLabel}>{w("attachment")}</Text>
+        <TextInput accessibilityLabel={w("fileName")} onChangeText={setFileName} placeholder="school-note.pdf" style={styles.input} value={fileName} />
+        <TextInput accessibilityLabel={w("mediaType")} onChangeText={(value) => setMediaType(value as AttachmentMediaType)} placeholder="application/pdf" style={styles.input} value={mediaType} />
+        <TextInput accessibilityLabel={w("fileSize")} keyboardType="number-pad" onChangeText={setByteLength} placeholder="1200" style={styles.input} value={byteLength} />
+        <LabButton disabled={busy} label={busy ? w("preparing") : w("prepare")} onPress={() => void prepare()} />
+        {attachmentIntent ? <View accessibilityLabel={w("prepared")} style={styles.successCard}>
+          <Text style={styles.heading}>{w("detailsPrepared")}</Text>
           <Text style={styles.body}>{attachmentIntent.originalFileName}</Text>
-          <Text style={styles.caption}>No file was uploaded.</Text>
+          <Text style={styles.caption}>{w("noUpload")}</Text>
         </View> : null}
-        <LabButton disabled={busy} label="Archive Case Binder" onPress={() => void archiveBinder().catch(() => undefined)} variant="secondary" />
+        <LabButton disabled={busy} label={w("archive")} onPress={() => void archiveBinder().catch(() => undefined)} variant="secondary" />
       </View> : null}
       {error || recordsError ? <Text accessibilityRole="alert" style={styles.error}>{error ?? recordsError}</Text> : null}
-      {recordsError && !loading ? <LabButton label="Try again" onPress={() => void reload()} variant="secondary" /> : null}
+      {recordsError && !loading ? <LabButton label={w("tryAgain")} onPress={() => void reload()} variant="secondary" /> : null}
       <Pressable accessibilityRole="button" onPress={() => setScreen("home")} style={styles.actionCard}>
-        <Text style={styles.actionTitle}>Return home</Text>
-        <Text style={styles.caption}>Choose another task.</Text>
+        <Text style={styles.actionTitle}>{w("returnHome")}</Text>
+        <Text style={styles.caption}>{w("anotherTask")}</Text>
       </Pressable>
     </View>
   );

@@ -169,6 +169,20 @@ describe("PeacePad coordination shell", () => {
     expect(screen.getByRole("button", { name: turnOn })).toBeOnTheScreen();
     expect(screen.queryByRole("button", { name: /vérifier le message|revisar mensaje/i })).not.toBeOnTheScreen();
   });
+
+  it.each([
+    ["Français", "Calendrier", "Partager Parenting Time", "Dossiers", "Créer un classeur", "Nom du classeur"],
+    ["Español", "Calendario", "Compartir Parenting Time", "Registros", "Crear un archivador", "Nombre del archivador"]
+  ])("localizes Calendar and Records actions while preserving domain layer names in %s", (language, calendarTab, shareLayer, recordsTab, createBinder, binderName) => {
+    renderApp("more");
+    fireEvent.press(screen.getByRole("radio", { name: language }));
+    fireEvent.press(screen.getByRole("tab", { name: calendarTab }));
+    expect(screen.getByRole("button", { name: shareLayer })).toBeOnTheScreen();
+    fireEvent.press(screen.getByRole("tab", { name: recordsTab }));
+    expect(screen.getByRole("header", { name: recordsTab })).toBeOnTheScreen();
+    expect(screen.getByText(createBinder)).toBeOnTheScreen();
+    expect(screen.getByLabelText(binderName)).toBeOnTheScreen();
+  });
 });
 
 describe("private records preparation", () => {
