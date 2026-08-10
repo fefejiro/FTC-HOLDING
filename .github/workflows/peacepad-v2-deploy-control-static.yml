@@ -1,0 +1,37 @@
+name: PeacePad V2 Deploy Control Static Gate
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/peacepad-v2-supabase-staging-deploy.yml
+      - .github/workflows/peacepad-v2-deploy-control-static.yml
+      - .github/scripts/validate-peacepad-v2-deploy-workflow.ps1
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/peacepad-v2-supabase-staging-deploy.yml
+      - .github/workflows/peacepad-v2-deploy-control-static.yml
+      - .github/scripts/validate-peacepad-v2-deploy-workflow.ps1
+
+permissions:
+  contents: read
+
+concurrency:
+  group: peacepad-v2-deploy-control-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate guarded staging deployment contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout control definition
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - name: Validate deployment workflow contract
+        shell: pwsh
+        run: ./.github/scripts/validate-peacepad-v2-deploy-workflow.ps1
