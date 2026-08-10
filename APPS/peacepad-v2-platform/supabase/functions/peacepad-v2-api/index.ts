@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { validateAudioCallSignal } from "./signaling.ts";
 
 type DataRegion = "ca" | "us";
 
@@ -47,7 +48,9 @@ type ErrorCode =
   | "SCHEMA_MISMATCH"
   | "CONCURRENCY_CONFLICT"
   | "RUNTIME_REGION_MISMATCH"
-  | "SESSION_REVOCATION_FAILED";
+  | "SESSION_REVOCATION_FAILED"
+  | "SIGNAL_DELIVERY_UNAVAILABLE"
+  | "SIGNAL_RATE_LIMITED";
 
 const env = (name: string): string => Deno.env.get(name)?.trim() ?? "";
 
@@ -205,6 +208,7 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     CALL_ACCESS_DENIED: "CALL_ACCESS_DENIED",
     CALL_ALREADY_ACTIVE: "CALL_ALREADY_ACTIVE",
     CALL_STATE_INVALID: "CALL_STATE_INVALID",
+    SIGNAL_RATE_LIMITED: "SIGNAL_RATE_LIMITED",
     CASE_BINDER_ACCESS_DENIED: "FAMILY_ACCESS_DENIED",
     TIMELINE_SOURCE_ACCESS_DENIED: "FAMILY_ACCESS_DENIED",
     MESSAGE_ACCESS_DENIED: "MESSAGE_ACCESS_DENIED",
@@ -229,6 +233,7 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
   ]);
   const safeCode = directCodes[message ?? ""] ?? (invalidRequestCodes.has(message ?? "") ? "INVALID_REQUEST" : "DATABASE_NOT_READY");
   const status = safeCode === "DATABASE_NOT_READY" ? 503
+    : safeCode === "SIGNAL_RATE_LIMITED" ? 429
     : ["REGION_MISMATCH", "CONCURRENCY_CONFLICT", "IDEMPOTENCY_CONFLICT", "CALL_ALREADY_ACTIVE", "CALL_STATE_INVALID"].includes(safeCode) ? 409
     : ["AI_CONSENT_REQUIRED", "INVITATION_SELF_ACCEPT_DENIED", "FAMILY_ACCESS_DENIED", "CONVERSATION_ACCESS_DENIED", "MESSAGE_ACCESS_DENIED", "MESSAGE_CHECK_DISABLED", "CALENDAR_ACCESS_DENIED", "CALL_ACCESS_DENIED"].includes(safeCode) ? 403
     : 400;
@@ -679,6 +684,87 @@ const handler = async (request: Request): Promise<Response> => {
       p_conversation_id: conversationId,
     });
     return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
+  }
+
+  const audioCallSignalMatch = path.match(/^\/api\/v2\/calls\/([^/]+)\/signals$/);
+  if (request.method === "POST" && audioCallSignalMatch) {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
+    const callId = audioCallSignalMatch[1];
+    const expectedVersionHeader = (request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? "";
+    const expectedVersion = Number(expectedVersionHeader);
+    const requestedRegion = request.headers.get("x-peacepad-region")?.trim() ?? "";
+    const schemaVersion = (request.headers.get("x-peacepad-schema-version") ?? request.headers.get("x-schema-version"))?.trim() ?? "";
+    const body = await readJsonObject(request);
+    const signal = body ? validateAudioCallSignal(body) : null;
+    if (
+      !isUuid(callId)
+      || !Number.isInteger(expectedVersion)
+      || expectedVersion < 1
+      || requestedRegion !== config.region
+      || schemaVersion !== "2.0"
+      || !signal
+    ) return failure(request, 400, "INVALID_REQUEST", "A valid bounded private call signal is required.", requestId, config);
+
+    const { data, error } = await authenticated.admin.rpc("peacepad_v2_authorize_audio_call_signal", {
+      p_identity_id: authenticated.user.id,
+      p_region: config.region,
+      p_call_id: callId,
+      p_expected_version: expectedVersion,
+      p_schema_version: 2,
+    });
+    if (error) return rpcFailure(request, requestId, config, error.message);
+    const authorization = (data ?? {}) as Record<string, unknown>;
+    const peerIdentityId = typeof authorization.peerIdentityId === "string" ? authorization.peerIdentityId : "";
+    const topic = typeof authorization.topic === "string" ? authorization.topic : "";
+    const expiresAt = typeof authorization.expiresAt === "string" ? authorization.expiresAt : "";
+    if (
+      !isUuid(peerIdentityId)
+      || topic !== `peacepad:call:${callId}:v${expectedVersion}`
+      || Number(authorization.version) !== expectedVersion
+      || authorization.region !== config.region
+      || !Number.isFinite(Date.parse(expiresAt))
+      || Date.parse(expiresAt) <= Date.now()
+    ) return failure(request, 502, "INVALID_UPSTREAM_RESPONSE", "PeacePad could not authorize private call signaling.", requestId, config);
+
+    const sentAt = new Date().toISOString();
+    let relayResponse: Response;
+    try {
+      relayResponse = await fetch(
+        `${config.supabaseUrl}/realtime/v1/api/broadcast/${encodeURIComponent(topic)}/events/${signal.kind}?private=true`,
+        {
+          method: "POST",
+          headers: {
+            apikey: config.serviceRoleKey,
+            authorization: `Bearer ${config.serviceRoleKey}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            callId,
+            fromIdentityId: authenticated.user.id,
+            toIdentityId: peerIdentityId,
+            kind: signal.kind,
+            payload: signal.payload,
+            callVersion: expectedVersion,
+            sentAt,
+            expiresAt,
+          }),
+        },
+      );
+    } catch {
+      return failure(request, 503, "SIGNAL_DELIVERY_UNAVAILABLE", "Private call signaling is temporarily unavailable.", requestId, config);
+    }
+    if (!relayResponse.ok) {
+      return failure(request, 503, "SIGNAL_DELIVERY_UNAVAILABLE", "Private call signaling is temporarily unavailable.", requestId, config);
+    }
+    return json(request, 202, {
+      delivered: true,
+      callId,
+      peerIdentityId,
+      callVersion: expectedVersion,
+      sentAt,
+      expiresAt,
+    }, requestId, config);
   }
 
   const isInvitationTransition = /^\/api\/v2\/invitations\/[^/]+\/(accept|decline)$/.test(path);

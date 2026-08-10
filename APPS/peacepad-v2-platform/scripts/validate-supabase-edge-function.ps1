@@ -22,11 +22,15 @@ $privateRecordsMigrationPath = Join-Path $platformRoot 'supabase/migrations/2026
 $privateTimelineMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608100001_v2_private_source_timeline.sql'
 $audioCallMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608100002_v2_foreground_audio_calls.sql'
 $audioCallProofPath = Join-Path $platformRoot 'scripts/verify-audio-call-lifecycle.sql'
+$audioCallSignalingMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608100003_v2_private_call_signaling.sql'
+$audioCallSignalingProofPath = Join-Path $platformRoot 'scripts/verify-audio-call-signaling.sql'
+$audioCallSignalValidatorPath = Join-Path $platformRoot 'supabase/functions/peacepad-v2-api/signaling.ts'
+$audioCallSignalTestPath = Join-Path $platformRoot 'supabase/functions/peacepad-v2-api/signaling_test.ts'
 $authCleanupRunnerPath = Join-Path $platformRoot 'scripts/run-auth-cleanup.ps1'
 $deployRunnerPath = Join-Path $platformRoot 'scripts/deploy-supabase-free-staging.ps1'
 $configPath = Join-Path $platformRoot 'supabase/config.toml'
 
-foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $idempotencyReceiptMigrationPath, $privateRecordsMigrationPath, $privateTimelineMigrationPath, $audioCallMigrationPath, $audioCallProofPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
+foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $idempotencyReceiptMigrationPath, $privateRecordsMigrationPath, $privateTimelineMigrationPath, $audioCallMigrationPath, $audioCallProofPath, $audioCallSignalingMigrationPath, $audioCallSignalingProofPath, $audioCallSignalValidatorPath, $audioCallSignalTestPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
     throw "Required Supabase staging file is missing: $path"
   }
@@ -51,6 +55,10 @@ $privateRecordsMigration = Get-Content -LiteralPath $privateRecordsMigrationPath
 $privateTimelineMigration = Get-Content -LiteralPath $privateTimelineMigrationPath -Raw
 $audioCallMigration = Get-Content -LiteralPath $audioCallMigrationPath -Raw
 $audioCallProof = Get-Content -LiteralPath $audioCallProofPath -Raw
+$audioCallSignalingMigration = Get-Content -LiteralPath $audioCallSignalingMigrationPath -Raw
+$audioCallSignalingProof = Get-Content -LiteralPath $audioCallSignalingProofPath -Raw
+$audioCallSignalValidator = Get-Content -LiteralPath $audioCallSignalValidatorPath -Raw
+$audioCallSignalTest = Get-Content -LiteralPath $audioCallSignalTestPath -Raw
 $authCleanupRunner = Get-Content -LiteralPath $authCleanupRunnerPath -Raw
 $deployRunner = Get-Content -LiteralPath $deployRunnerPath -Raw
 $config = Get-Content -LiteralPath $configPath -Raw
@@ -108,6 +116,12 @@ $requiredFunctionPatterns = @(
   'peacepad_v2_decline_audio_call',
   'peacepad_v2_end_audio_call',
   'peacepad_v2_get_current_audio_call',
+  '/api/v2/calls/',
+  '/signals',
+  'peacepad_v2_authorize_audio_call_signal',
+  '/realtime/v1/api/broadcast/',
+  'private=true',
+  'validateAudioCallSignal',
   'p_identity_id: authenticated.user.id',
   'key !== "conversationId"',
   'Object.keys(body).length !== 0',
@@ -543,6 +557,57 @@ foreach ($pattern in @(
 }
 if ($audioCallMigration -match '(?im)^\s*(session_code|join_code|sdp|ice_candidate|recording_url|transcript)\s+') {
   throw 'Audio-call persistence must not add public join, signaling, recording, or transcription columns.'
+}
+foreach ($pattern in @(
+  'create table if not exists peacepad_v2\.audio_call_signal_window',
+  'revoke all on table peacepad_v2\.audio_call_signal_window from public, anon, authenticated',
+  'peacepad_v2\.can_subscribe_audio_call_topic',
+  'peacepad_v2_authorize_audio_call_signal',
+  'for update',
+  'p_expected_version',
+  "call_row\.status <> 'active'",
+  "interval '10 seconds'",
+  'current_count > 30',
+  "interval '15 seconds'",
+  'peacepad_call_private_listen',
+  'peacepad_call_no_client_send',
+  'as restrictive',
+  'audio_call_clear_signal_window'
+)) {
+  if ($audioCallSignalingMigration -notmatch $pattern) {
+    throw "Private call-signaling migration is missing required boundary: $pattern"
+  }
+}
+if ($audioCallSignalingMigration -match '(?im)^\s*(payload|sdp|candidate|ice)\s+(json|jsonb|text|bytea)') {
+  throw 'Private call-signaling persistence must not contain SDP, ICE, or payload columns.'
+}
+foreach ($pattern in @(
+  'SIGNAL_RATE_LIMITED',
+  'CALL_STATE_INVALID',
+  'CONCURRENCY_CONFLICT',
+  'set local role authenticated',
+  'Revocation retained private subscription authorization',
+  'Signal payload or audit content entered PostgreSQL'
+)) {
+  if ($audioCallSignalingProof -notmatch $pattern) {
+    throw "Private call-signaling proof is missing assertion coverage: $pattern"
+  }
+}
+foreach ($pattern in @(
+  'AUDIO_CALL_SIGNAL_BODY_BYTES',
+  'AUDIO_CALL_SDP_BYTES',
+  'AUDIO_CALL_ICE_CANDIDATE_BYTES',
+  'exactKeys',
+  'targetIdentityId',
+  'oversized SDP',
+  'oversized ICE'
+)) {
+  if (($audioCallSignalValidator + $audioCallSignalTest) -notmatch $pattern) {
+    throw "Private call-signaling Edge validation is missing boundary: $pattern"
+  }
+}
+if ($function -match 'realtime\.send\(' -or $function -match 'broadcast_changes') {
+  throw 'Call signaling must not use database-origin Broadcast or replay.'
 }
 if (
   $config -notmatch '\[functions\.peacepad-v2-api\]' -or
