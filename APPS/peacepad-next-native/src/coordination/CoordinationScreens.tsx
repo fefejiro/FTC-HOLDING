@@ -499,6 +499,10 @@ export function MessagesScreen() {
     messageSearchError,
     messageSearchQuery,
     messageSearchResults,
+    queuedActionBusyIds,
+    queuedActionError,
+    removeQueuedMessage,
+    retryQueuedMessage,
     searchMessages,
     saveCorrection,
     sendMessage,
@@ -510,6 +514,7 @@ export function MessagesScreen() {
     startCorrection
   } = useCoordinationState();
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [removeQueuedMessageId, setRemoveQueuedMessageId] = useState<string>();
 
   return (
     <View style={styles.stack}>
@@ -603,9 +608,42 @@ export function MessagesScreen() {
               <LabButton disabled={correctionBusy} label="Cancel correction" onPress={cancelCorrection} variant="secondary" />
             </View>
           ) : null}
+          {message.queued && message.status === "needs-action" ? (
+            <View accessibilityLabel="Queued message recovery" style={styles.stack}>
+              <Text style={styles.caption}>This message is still stored on this device and has not been confirmed as sent.</Text>
+              <LabButton
+                disabled={queuedActionBusyIds.includes(message.id)}
+                label={queuedActionBusyIds.includes(message.id) ? "Trying..." : "Try again"}
+                onPress={() => void retryQueuedMessage(message.id)}
+              />
+              {removeQueuedMessageId === message.id ? (
+                <View accessibilityRole="alert" style={styles.confirmCard}>
+                  <Text style={styles.body}>Removing this copy stops this device from retrying. It does not recall a message that may already have been received.</Text>
+                  <LabButton
+                    disabled={queuedActionBusyIds.includes(message.id)}
+                    label="Remove from this device"
+                    onPress={() => {
+                      setRemoveQueuedMessageId(undefined);
+                      void removeQueuedMessage(message.id);
+                    }}
+                  />
+                  <LabButton label="Keep message" onPress={() => setRemoveQueuedMessageId(undefined)} variant="secondary" />
+                </View>
+              ) : (
+                <LabButton
+                  disabled={queuedActionBusyIds.includes(message.id)}
+                  label="Remove from this device"
+                  onPress={() => setRemoveQueuedMessageId(message.id)}
+                  variant="secondary"
+                />
+              )}
+            </View>
+          ) : null}
           <Text style={styles.caption}>{message.corrected ? "Corrected · " : ""}{message.status === "waiting" ? "Waiting to send" : message.status === "needs-action" ? "Needs attention" : message.status}</Text>
         </View>
       ))}
+
+      {queuedActionError ? <Text accessibilityRole="alert" style={styles.error}>{queuedActionError}</Text> : null}
 
       <TextInput
         accessibilityLabel="Message draft"
@@ -638,8 +676,8 @@ export function MessagesScreen() {
       {messageError ? (
         <View accessibilityRole="alert" style={styles.confirmCard}>
           <Text style={styles.error}>{messageError}</Text>
-          <LabButton label="Try again" onPress={() => void checkMessage()} />
-          <LabButton label="Send original" onPress={() => void sendMessage(false)} variant="secondary" />
+          {messageCheckEnabled && messageDraft.trim() ? <LabButton label="Check again" onPress={() => void checkMessage()} /> : null}
+          {messageDraft.trim() ? <LabButton label="Send original" onPress={() => void sendMessage(false)} variant="secondary" /> : null}
         </View>
       ) : null}
 

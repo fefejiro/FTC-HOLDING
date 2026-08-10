@@ -8,6 +8,7 @@ const ENTRY_PREFIX = "peacepad.native.message-outbox.entry.v1.";
 export const MAX_OUTBOX_ENTRIES = 5;
 export const MAX_OUTBOX_BODY_LENGTH = 800;
 export const MAX_OUTBOX_ATTEMPTS = 5;
+export type QueuedMessageErrorKind = "authentication" | "conflict" | "rejected" | "exhausted" | "network";
 
 export type QueuedMessage = Readonly<{
   id: string;
@@ -18,7 +19,7 @@ export type QueuedMessage = Readonly<{
   nextAttemptAt: string;
   attempts: number;
   status: "waiting" | "needs-action";
-  lastErrorKind?: "authentication" | "conflict" | "rejected" | "exhausted";
+  lastErrorKind?: QueuedMessageErrorKind;
 }>;
 
 export type MessageOutboxScope = Readonly<{
@@ -67,7 +68,7 @@ function validQueuedMessage(value: unknown): value is QueuedMessage {
     && (item.attempts ?? -1) >= 0
     && (item.attempts ?? MAX_OUTBOX_ATTEMPTS + 1) <= MAX_OUTBOX_ATTEMPTS
     && (item.status === "waiting" || item.status === "needs-action")
-    && (item.lastErrorKind === undefined || ["authentication", "conflict", "rejected", "exhausted"].includes(item.lastErrorKind));
+    && (item.lastErrorKind === undefined || ["authentication", "conflict", "rejected", "exhausted", "network"].includes(item.lastErrorKind));
 }
 
 async function readIndex(): Promise<string[]> {
@@ -221,4 +222,45 @@ export async function retryQueuedMessages(
     }
   }
   return summary;
+}
+
+export async function retryQueuedMessage(
+  api: PeacePadCoordinationApi,
+  store: MessageOutboxStore,
+  scope: MessageOutboxScope,
+  id: string
+): Promise<"sent" | "retained"> {
+  const queued = (await store.list()).find((item) => item.id === id);
+  if (!queued || !isQueuedMessageInScope(queued, scope) || queued.status !== "needs-action") return "retained";
+  try {
+    await api.sendMessage(queued.input, queued.context);
+    await store.remove(queued.id);
+    return "sent";
+  } catch (error) {
+    const lastErrorKind: QueuedMessageErrorKind = isAuthenticationPause(error)
+      ? "authentication"
+      : isTransientMessageError(error)
+        ? "network"
+        : error instanceof PeacePadApiError && error.status === 409
+          ? "conflict"
+          : "rejected";
+    await store.replace({
+      ...queued,
+      attempts: Math.min(MAX_OUTBOX_ATTEMPTS, queued.attempts + 1),
+      status: "needs-action",
+      lastErrorKind
+    });
+    return "retained";
+  }
+}
+
+export async function removeQueuedMessage(
+  store: MessageOutboxStore,
+  scope: MessageOutboxScope,
+  id: string
+): Promise<boolean> {
+  const queued = (await store.list()).find((item) => item.id === id);
+  if (!queued || !isQueuedMessageInScope(queued, scope) || queued.status !== "needs-action") return false;
+  await store.remove(queued.id);
+  return true;
 }

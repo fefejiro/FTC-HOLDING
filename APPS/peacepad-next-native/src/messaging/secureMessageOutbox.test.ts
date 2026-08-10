@@ -6,6 +6,8 @@ import {
   MAX_OUTBOX_ATTEMPTS,
   MAX_OUTBOX_BODY_LENGTH,
   isQueuedMessageInScope,
+  removeQueuedMessage,
+  retryQueuedMessage,
   retryQueuedMessages,
   secureMessageOutboxStore,
   type MessageOutboxStore,
@@ -204,5 +206,70 @@ describe("secure message outbox", () => {
     const api = { sendMessage: jest.fn().mockRejectedValue(new PeacePadApiError("changed", "http", 409)) } as unknown as PeacePadCoordinationApi;
     await expect(retryQueuedMessages(api, store, { ...scope, sessionId: "session-a" }, now)).resolves.toEqual({ sent: 0, retained: 0, needsAction: 1 });
     expect(store.values[0]).toMatchObject({ status: "needs-action", lastErrorKind: "conflict" });
+  });
+
+  it("manually retries only a needs-action entry with its exact stored context and idempotency key", async () => {
+    const pending = queued({ status: "needs-action", lastErrorKind: "network", attempts: 1 });
+    const store = new MemoryOutbox([pending]);
+    const api = { sendMessage: jest.fn().mockResolvedValue({ id: "message-1" }) } as unknown as PeacePadCoordinationApi;
+
+    await expect(retryQueuedMessage(api, store, { ...scope, sessionId: "session-a" }, pending.id)).resolves.toBe("sent");
+    expect(api.sendMessage).toHaveBeenCalledWith(pending.input, pending.context);
+    expect(store.values).toEqual([]);
+  });
+
+  it("does not manually retry a waiting entry", async () => {
+    const pending = queued({ status: "waiting" });
+    const store = new MemoryOutbox([pending]);
+    const api = { sendMessage: jest.fn() } as unknown as PeacePadCoordinationApi;
+
+    await expect(retryQueuedMessage(api, store, { ...scope, sessionId: "session-a" }, pending.id)).resolves.toBe("retained");
+    expect(api.sendMessage).not.toHaveBeenCalled();
+    expect(store.values).toEqual([pending]);
+  });
+
+  it("does not remove an exact-scope waiting entry", async () => {
+    const pending = queued({ status: "waiting" });
+    const store = new MemoryOutbox([pending]);
+
+    await expect(removeQueuedMessage(store, { ...scope, sessionId: "session-a" }, pending.id)).resolves.toBe(false);
+    expect(store.values).toEqual([pending]);
+  });
+
+  it.each([
+    ["identity", { actorIdentityId: "parent-b" }],
+    ["session", { sessionId: "session-b" }],
+    ["region", { region: "us" as const }],
+    ["family", { familyCircleId: "family-b" }],
+    ["conversation", { conversationId: "conversation-b" }]
+  ])("prevents manual retry and removal across a mismatched %s scope", async (_label, mismatch) => {
+    const pending = queued({ status: "needs-action", lastErrorKind: "network" });
+    const store = new MemoryOutbox([pending]);
+    const api = { sendMessage: jest.fn() } as unknown as PeacePadCoordinationApi;
+    const exactScope = { ...scope, sessionId: "session-a" };
+    const wrongScope = { ...exactScope, ...mismatch };
+
+    await expect(retryQueuedMessage(api, store, wrongScope, pending.id)).resolves.toBe("retained");
+    await expect(removeQueuedMessage(store, wrongScope, pending.id)).resolves.toBe(false);
+    expect(api.sendMessage).not.toHaveBeenCalled();
+    expect(store.values).toEqual([pending]);
+  });
+
+  it("retains a failed manual retry without exceeding the attempt limit", async () => {
+    const pending = queued({ status: "needs-action", lastErrorKind: "exhausted", attempts: MAX_OUTBOX_ATTEMPTS });
+    const store = new MemoryOutbox([pending]);
+    const api = { sendMessage: jest.fn().mockRejectedValue(new PeacePadApiError("offline", "network")) } as unknown as PeacePadCoordinationApi;
+
+    await expect(retryQueuedMessage(api, store, { ...scope, sessionId: "session-a" }, pending.id)).resolves.toBe("retained");
+    expect(store.values[0]).toMatchObject({ attempts: MAX_OUTBOX_ATTEMPTS, status: "needs-action", lastErrorKind: "network" });
+  });
+
+  it("removes only the selected exact-scope entry from this device", async () => {
+    const pending = queued({ status: "needs-action", lastErrorKind: "network" });
+    const other = queued({ id: "outbox_other123", status: "needs-action", lastErrorKind: "network" });
+    const store = new MemoryOutbox([pending, other]);
+
+    await expect(removeQueuedMessage(store, { ...scope, sessionId: "session-a" }, pending.id)).resolves.toBe(true);
+    expect(store.values).toEqual([other]);
   });
 });

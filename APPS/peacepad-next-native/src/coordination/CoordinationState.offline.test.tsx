@@ -1,10 +1,11 @@
 import React from "react";
 import { Button, Text } from "react-native";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { PeacePadCoordinationApi } from "../api/CoordinationApi";
 import { PeacePadApiError } from "../api/PeacePadApiClient";
-import { createWriteContext, type MessageCheckPreference } from "../domain/v2";
+import { createWriteContext, type MessageCheckPreference, type MessageEvent } from "../domain/v2";
 import type { MessageOutboxStore, QueuedMessage } from "../messaging/secureMessageOutbox";
+import { MessagesScreen } from "./CoordinationScreens";
 import { CoordinationStateProvider, type CoordinationRuntime, useCoordinationState } from "./CoordinationState";
 
 const ACTOR = "11111111-1111-4111-8111-111111111111";
@@ -20,6 +21,15 @@ const runtime: CoordinationRuntime = {
   familyCircleId: FAMILY,
   participantGrantId: GRANT,
   conversationId: CONVERSATION,
+  region: "ca"
+};
+const runtimeB: CoordinationRuntime = {
+  actorIdentityId: "88888888-8888-4888-8888-888888888888",
+  identityVersion: 1,
+  sessionId: "99999999-9999-4999-8999-999999999999",
+  familyCircleId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  participantGrantId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  conversationId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
   region: "ca"
 };
 
@@ -49,7 +59,7 @@ class MemoryOutbox implements MessageOutboxStore {
   async clear() { this.values = []; }
 }
 
-function queued(sessionId = SESSION): QueuedMessage {
+function queued(sessionId = SESSION, overrides: Partial<QueuedMessage> = {}): QueuedMessage {
   return {
     id: "outbox_12345678",
     input: { familyCircleId: FAMILY, conversationId: CONVERSATION, body: "Clear suggested message." },
@@ -62,9 +72,28 @@ function queued(sessionId = SESSION): QueuedMessage {
     queuedAt: "2026-08-09T12:00:00.000Z",
     nextAttemptAt: "2026-08-09T12:00:00.000Z",
     attempts: 0,
-    status: "waiting"
+    status: "waiting",
+    ...overrides
   };
 }
+
+const canonicalMessage: MessageEvent = {
+  id: "77777777-7777-4777-8777-777777777777",
+  schemaVersion: "2.0",
+  version: 1,
+  region: "ca",
+  provenance: {
+    createdAt: "2026-08-09T12:02:00.000Z",
+    createdBy: { identityId: ACTOR, sessionId: SESSION },
+    source: "app"
+  },
+  familyCircleId: FAMILY,
+  conversationId: CONVERSATION,
+  eventType: "sent",
+  originalMessageEventId: null,
+  body: "Clear suggested message.",
+  occurredAt: "2026-08-09T12:02:00.000Z"
+};
 
 function api(overrides: Partial<PeacePadCoordinationApi> = {}) {
   return {
@@ -90,10 +119,13 @@ function Probe() {
     <>
       <Text testID="hydrated">{String(state.coordinationHydrated)}</Text>
       <Text testID="messages">{state.sentMessages.map((message) => `${message.originalBody}|${message.sentBody}|${message.status}`).join(";")}</Text>
+      <Text testID="queue-error">{state.queuedActionError ?? ""}</Text>
       <Text testID="preview">{state.messagePreview?.rewordingSuggestion ?? ""}</Text>
       <Button title="draft" onPress={() => state.setMessageDraft("Angry original draft.")} />
       <Button title="check" onPress={() => void state.checkMessage()} />
       <Button title="send suggestion" onPress={() => void state.sendMessage(true)} />
+      <Button title="retry queued" onPress={() => void state.retryQueuedMessage("outbox_12345678")} />
+      <Button title="remove queued" onPress={() => void state.removeQueuedMessage("outbox_12345678")} />
     </>
   );
 }
@@ -143,5 +175,140 @@ describe("authenticated offline message recovery", () => {
       status: "waiting"
     });
     expect(screen.getByTestId("messages")).toHaveTextContent("Angry original draft.|Clear suggested message.|waiting");
+  });
+
+  it("manually retries once, reuses the stored context, and reloads the canonical server event", async () => {
+    const pending = queued(SESSION, { status: "needs-action", lastErrorKind: "network" });
+    const outbox = new MemoryOutbox([pending]);
+    const coordinationApi = api({
+      listMessages: jest.fn()
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([canonicalMessage])
+    });
+    render(<CoordinationStateProvider api={coordinationApi} outbox={outbox} runtime={runtime}><Probe /></CoordinationStateProvider>);
+    await waitFor(() => expect(screen.getByTestId("hydrated")).toHaveTextContent("true"));
+
+    fireEvent.press(screen.getByRole("button", { name: "retry queued" }));
+
+    await waitFor(() => expect(screen.getByTestId("messages")).toHaveTextContent("Clear suggested message.|Clear suggested message.|sent"));
+    expect(coordinationApi.sendMessage).toHaveBeenCalledTimes(1);
+    expect(coordinationApi.sendMessage).toHaveBeenCalledWith(pending.input, pending.context);
+    expect(outbox.values).toEqual([]);
+  });
+
+  it("uses a synchronous lock so two immediate manual retries produce one request", async () => {
+    let finish!: (value: MessageEvent) => void;
+    const send = jest.fn(() => new Promise<MessageEvent>((resolve) => { finish = resolve; }));
+    const pending = queued(SESSION, { status: "needs-action", lastErrorKind: "network" });
+    const outbox = new MemoryOutbox([pending]);
+    const coordinationApi = api({ sendMessage: send });
+    render(<CoordinationStateProvider api={coordinationApi} outbox={outbox} runtime={runtime}><Probe /></CoordinationStateProvider>);
+    await waitFor(() => expect(screen.getByTestId("hydrated")).toHaveTextContent("true"));
+
+    fireEvent.press(screen.getByRole("button", { name: "retry queued" }));
+    fireEvent.press(screen.getByRole("button", { name: "retry queued" }));
+    await waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    await act(async () => finish(canonicalMessage));
+    await waitFor(() => expect(outbox.values).toEqual([]));
+  });
+
+  it("removes only an exact-scope needs-action message", async () => {
+    const pending = queued(SESSION, { status: "needs-action", lastErrorKind: "network" });
+    const outbox = new MemoryOutbox([pending]);
+    render(<CoordinationStateProvider api={api()} outbox={outbox} runtime={runtime}><Probe /></CoordinationStateProvider>);
+    await waitFor(() => expect(screen.getByTestId("hydrated")).toHaveTextContent("true"));
+
+    fireEvent.press(screen.getByRole("button", { name: "remove queued" }));
+    await waitFor(() => expect(outbox.values).toEqual([]));
+    expect(screen.getByTestId("messages")).toHaveTextContent("");
+  });
+
+  it("requires confirmation and explains that device removal does not recall a message", async () => {
+    const pending = queued(SESSION, { status: "needs-action", lastErrorKind: "network" });
+    const outbox = new MemoryOutbox([pending]);
+    render(<CoordinationStateProvider api={api()} outbox={outbox} runtime={runtime}><MessagesScreen /></CoordinationStateProvider>);
+    await waitFor(() => expect(screen.getByText("Needs attention")).toBeTruthy());
+
+    fireEvent.press(screen.getByRole("button", { name: "Remove from this device" }));
+    expect(screen.getByText(/stops this device from retrying/i)).toBeTruthy();
+    expect(screen.getByText(/does not recall a message/i)).toBeTruthy();
+    fireEvent.press(screen.getByRole("button", { name: "Keep message" }));
+    expect(outbox.values).toEqual([pending]);
+
+    fireEvent.press(screen.getByRole("button", { name: "Remove from this device" }));
+    fireEvent.press(screen.getByRole("button", { name: "Remove from this device" }));
+    await waitFor(() => expect(outbox.values).toEqual([]));
+    expect(screen.queryByText("Needs attention")).toBeNull();
+  });
+
+  it("does not claim a successful retry remains queued when canonical refresh fails", async () => {
+    const pending = queued(SESSION, { status: "needs-action", lastErrorKind: "network" });
+    const outbox = new MemoryOutbox([pending]);
+    const coordinationApi = api({
+      listMessages: jest.fn()
+        .mockResolvedValueOnce([])
+        .mockRejectedValueOnce(new Error("refresh unavailable"))
+    });
+    render(<CoordinationStateProvider api={coordinationApi} outbox={outbox} runtime={runtime}><Probe /></CoordinationStateProvider>);
+    await waitFor(() => expect(screen.getByTestId("hydrated")).toHaveTextContent("true"));
+
+    fireEvent.press(screen.getByRole("button", { name: "retry queued" }));
+    await waitFor(() => expect(screen.getByTestId("queue-error")).toHaveTextContent("Message sent. PeacePad could not refresh this conversation yet."));
+    expect(screen.getByTestId("messages")).toHaveTextContent("");
+    expect(outbox.values).toEqual([]);
+    expect(screen.getByTestId("queue-error")).not.toHaveTextContent("remains");
+  });
+
+  it("reloads canonical messages after removing a device copy from an ambiguous timeout", async () => {
+    const pending = queued(SESSION, { status: "needs-action", lastErrorKind: "network" });
+    const outbox = new MemoryOutbox([pending]);
+    const coordinationApi = api({
+      listMessages: jest.fn()
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([canonicalMessage])
+    });
+    render(<CoordinationStateProvider api={coordinationApi} outbox={outbox} runtime={runtime}><Probe /></CoordinationStateProvider>);
+    await waitFor(() => expect(screen.getByTestId("hydrated")).toHaveTextContent("true"));
+
+    fireEvent.press(screen.getByRole("button", { name: "remove queued" }));
+    await waitFor(() => expect(screen.getByTestId("messages")).toHaveTextContent("Clear suggested message.|Clear suggested message.|sent"));
+    expect(outbox.values).toEqual([]);
+  });
+
+  it("does not claim removal failed when post-removal refresh is unavailable", async () => {
+    const pending = queued(SESSION, { status: "needs-action", lastErrorKind: "network" });
+    const outbox = new MemoryOutbox([pending]);
+    const coordinationApi = api({
+      listMessages: jest.fn()
+        .mockResolvedValueOnce([])
+        .mockRejectedValueOnce(new Error("refresh unavailable"))
+    });
+    render(<CoordinationStateProvider api={coordinationApi} outbox={outbox} runtime={runtime}><Probe /></CoordinationStateProvider>);
+    await waitFor(() => expect(screen.getByTestId("hydrated")).toHaveTextContent("true"));
+
+    fireEvent.press(screen.getByRole("button", { name: "remove queued" }));
+    await waitFor(() => expect(screen.getByTestId("queue-error")).toHaveTextContent("Removed from this device. PeacePad could not refresh this conversation yet."));
+    expect(screen.getByTestId("messages")).toHaveTextContent("");
+    expect(outbox.values).toEqual([]);
+    expect(screen.getByTestId("queue-error")).not.toHaveTextContent("could not remove");
+  });
+
+  it("does not surface an in-flight retry result after the authenticated runtime switches", async () => {
+    let finish!: (value: MessageEvent) => void;
+    const send = jest.fn(() => new Promise<MessageEvent>((resolve) => { finish = resolve; }));
+    const pending = queued(SESSION, { status: "needs-action", lastErrorKind: "network" });
+    const outbox = new MemoryOutbox([pending]);
+    const coordinationApi = api({ sendMessage: send });
+    const view = render(<CoordinationStateProvider api={coordinationApi} outbox={outbox} runtime={runtime}><Probe /></CoordinationStateProvider>);
+    await waitFor(() => expect(screen.getByTestId("hydrated")).toHaveTextContent("true"));
+    fireEvent.press(screen.getByRole("button", { name: "retry queued" }));
+    await waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+
+    view.rerender(<CoordinationStateProvider api={coordinationApi} outbox={outbox} runtime={runtimeB}><Probe /></CoordinationStateProvider>);
+    await waitFor(() => expect(screen.getByTestId("hydrated")).toHaveTextContent("true"));
+    await act(async () => finish(canonicalMessage));
+
+    await waitFor(() => expect(screen.getByTestId("messages")).toHaveTextContent(""));
+    expect(screen.getByTestId("queue-error")).toHaveTextContent("");
   });
 });

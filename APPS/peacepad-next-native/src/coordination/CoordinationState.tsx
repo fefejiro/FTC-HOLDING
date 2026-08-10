@@ -12,9 +12,14 @@ import {
   MAX_OUTBOX_BODY_LENGTH,
   isTransientMessageError,
   isQueuedMessageInScope,
+  removeQueuedMessage as removeSingleQueuedMessage,
+  retryQueuedMessage as retrySingleQueuedMessage,
   retryQueuedMessages,
   secureMessageOutboxStore,
-  type MessageOutboxStore
+  type MessageOutboxScope,
+  type MessageOutboxStore,
+  type QueuedMessage,
+  type QueuedMessageErrorKind
 } from "../messaging/secureMessageOutbox";
 import {
   createWriteContext,
@@ -47,6 +52,8 @@ export type SentMessage = Readonly<{
   status: "waiting" | "needs-action" | "sent" | "delivered" | "viewed";
   corrected: boolean;
   canCorrect: boolean;
+  queued: boolean;
+  queueErrorKind?: QueuedMessageErrorKind;
 }>;
 
 type CoordinationStateValue = {
@@ -69,6 +76,8 @@ type CoordinationStateValue = {
   messageCheckBusy: boolean;
   messageError?: string;
   sentMessages: readonly SentMessage[];
+  queuedActionBusyIds: readonly string[];
+  queuedActionError?: string;
   messageSearchQuery: string;
   messageSearchResults: readonly MessageSearchResult[];
   messageSearchBusy: boolean;
@@ -92,6 +101,8 @@ type CoordinationStateValue = {
   setMessageCheckEnabled: (enabled: boolean) => Promise<void>;
   checkMessage: () => Promise<void>;
   sendMessage: (useSuggestion: boolean) => Promise<void>;
+  retryQueuedMessage: (messageId: string) => Promise<void>;
+  removeQueuedMessage: (messageId: string) => Promise<void>;
   setMessageSearchQuery: (query: string) => void;
   searchMessages: () => Promise<void>;
   startCorrection: (messageId: string) => void;
@@ -164,6 +175,32 @@ function invitationMessage(error: unknown): string {
   return "PeacePad could not verify that invitation. Try again.";
 }
 
+function messageOutboxScope(runtime: CoordinationRuntime): MessageOutboxScope {
+  return {
+    actorIdentityId: runtime.actorIdentityId,
+    sessionId: runtime.sessionId,
+    familyCircleId: runtime.familyCircleId,
+    conversationId: runtime.conversationId,
+    region: runtime.region
+  };
+}
+
+function queuedVisibleMessages(queuedMessages: readonly QueuedMessage[], scope: MessageOutboxScope): readonly SentMessage[] {
+  return queuedMessages
+    .filter((queued) => isQueuedMessageInScope(queued, scope))
+    .map((queued) => ({
+      id: queued.id,
+      originalBody: queued.originalBody,
+      sentBody: queued.input.body,
+      sentAt: queued.queuedAt,
+      status: queued.status,
+      corrected: false,
+      canCorrect: false,
+      queued: true,
+      queueErrorKind: queued.lastErrorKind
+    }));
+}
+
 export function visibleMessages(events: readonly MessageEvent[], actorIdentityId: string): readonly SentMessage[] {
   return events.filter((event) => event.eventType === "sent" && event.body).map((message) => {
     const lifecycle = events.filter((event) => event.originalMessageEventId === message.id);
@@ -183,7 +220,8 @@ export function visibleMessages(events: readonly MessageEvent[], actorIdentityId
       sentAt: message.occurredAt,
       status,
       corrected: effective.id !== message.id,
-      canCorrect: message.provenance.createdBy.identityId === actorIdentityId
+      canCorrect: message.provenance.createdBy.identityId === actorIdentityId,
+      queued: false
     };
   });
 }
@@ -225,6 +263,8 @@ export function CoordinationStateProvider({
   const [messageCheckBusy, setMessageCheckBusy] = useState(false);
   const [messageError, setMessageError] = useState<string>();
   const [sentMessages, setSentMessages] = useState<readonly SentMessage[]>([]);
+  const [queuedActionBusyIds, setQueuedActionBusyIds] = useState<readonly string[]>([]);
+  const [queuedActionError, setQueuedActionError] = useState<string>();
   const [messageSearchQuery, setMessageSearchQueryState] = useState("");
   const [messageSearchResults, setMessageSearchResults] = useState<readonly MessageSearchResult[]>([]);
   const [messageSearchBusy, setMessageSearchBusy] = useState(false);
@@ -235,6 +275,7 @@ export function CoordinationStateProvider({
   const [correctionError, setCorrectionError] = useState<string>();
   const hydrationGeneration = useRef(0);
   const retriedRuntimeScopes = useRef(new Set<string>());
+  const queuedActionLocks = useRef(new Set<string>());
 
   useEffect(() => {
     const generation = ++hydrationGeneration.current;
@@ -251,6 +292,9 @@ export function CoordinationStateProvider({
     setMessageCheckPreference(undefined);
     setMessagePreview(undefined);
     setMessageError(undefined);
+    setQueuedActionBusyIds([]);
+    setQueuedActionError(undefined);
+    queuedActionLocks.current.clear();
 
     if (demoMode) {
       setCoordinationHydrated(true);
@@ -263,13 +307,7 @@ export function CoordinationStateProvider({
     }
 
     setMessageCheckHydrated(false);
-    const outboxScope = {
-      actorIdentityId: activeRuntime.actorIdentityId,
-      sessionId: activeRuntime.sessionId,
-      familyCircleId: activeRuntime.familyCircleId,
-      conversationId: activeRuntime.conversationId,
-      region: activeRuntime.region
-    } as const;
+    const outboxScope = messageOutboxScope(activeRuntime);
     const retryScopeKey = [outboxScope.actorIdentityId, outboxScope.sessionId, outboxScope.region, outboxScope.familyCircleId, outboxScope.conversationId].join(":");
     const retry = retriedRuntimeScopes.current.has(retryScopeKey)
       ? Promise.resolve()
@@ -285,17 +323,7 @@ export function CoordinationStateProvider({
         setLayers(nextLayers);
         setVisibleLayerIds(nextLayers.map((layer) => layer.id));
         setEvents(nextEvents);
-        const waitingMessages: SentMessage[] = queuedMessages
-          .filter((queued) => isQueuedMessageInScope(queued, outboxScope))
-          .map((queued) => ({
-            id: queued.id,
-            originalBody: queued.originalBody,
-            sentBody: queued.input.body,
-            sentAt: queued.queuedAt,
-            status: queued.status,
-            corrected: false,
-            canCorrect: false
-          }));
+        const waitingMessages = queuedVisibleMessages(queuedMessages, outboxScope);
         setSentMessages([...visibleMessages(nextMessages, activeRuntime.actorIdentityId), ...waitingMessages]);
         setMessageCheckPreference(preference);
         setMessageCheckEnabledState(preference.enabled);
@@ -330,6 +358,8 @@ export function CoordinationStateProvider({
     messageCheckBusy,
     messageError,
     sentMessages,
+    queuedActionBusyIds,
+    queuedActionError,
     messageSearchQuery,
     messageSearchResults,
     messageSearchBusy,
@@ -525,7 +555,8 @@ export function CoordinationStateProvider({
           sentAt: message.occurredAt,
           status: "sent",
           corrected: false,
-          canCorrect: true
+          canCorrect: true,
+          queued: false
         }]);
         setMessageDraftState("");
         setMessagePreview(undefined);
@@ -544,7 +575,7 @@ export function CoordinationStateProvider({
               attempts: 0,
               status: "waiting"
             });
-            setSentMessages((current) => [...current, { id: queueId, originalBody, sentBody, sentAt: queuedAt, status: "waiting", corrected: false, canCorrect: false }]);
+            setSentMessages((current) => [...current, { id: queueId, originalBody, sentBody, sentAt: queuedAt, status: "waiting", corrected: false, canCorrect: false, queued: true }]);
             setMessageDraftState("");
             setMessagePreview(undefined);
             setMessageError("Waiting for a connection. PeacePad will retry this message safely.");
@@ -556,6 +587,93 @@ export function CoordinationStateProvider({
         }
       } finally {
         setMessageCheckBusy(false);
+      }
+    },
+    retryQueuedMessage: async (messageId) => {
+      if (!activeRuntime || queuedActionLocks.current.has(messageId)) return;
+      const message = sentMessages.find((item) => item.id === messageId);
+      if (!message?.queued || message.status !== "needs-action") return;
+      const generation = hydrationGeneration.current;
+      const scope = messageOutboxScope(activeRuntime);
+      queuedActionLocks.current.add(messageId);
+      setQueuedActionBusyIds((current) => current.includes(messageId) ? current : [...current, messageId]);
+      setQueuedActionError(undefined);
+      try {
+        const result = await retrySingleQueuedMessage(resolvedApi, outbox, scope, messageId);
+        if (hydrationGeneration.current !== generation) return;
+        if (result === "sent") {
+          setSentMessages((current) => current.filter((item) => item.id !== messageId));
+        }
+        if (result === "retained") {
+          setQueuedActionError("PeacePad could not send this queued message. It remains on this device.");
+        }
+        try {
+          const [canonicalMessages, queuedMessages] = await Promise.all([
+            resolvedApi.listMessages(activeRuntime.conversationId),
+            outbox.list()
+          ]);
+          if (hydrationGeneration.current !== generation) return;
+          setSentMessages([
+            ...visibleMessages(canonicalMessages, activeRuntime.actorIdentityId),
+            ...queuedVisibleMessages(queuedMessages, scope)
+          ]);
+        } catch {
+          if (hydrationGeneration.current === generation && result === "sent") {
+            setQueuedActionError("Message sent. PeacePad could not refresh this conversation yet.");
+          }
+        }
+      } catch {
+        if (hydrationGeneration.current === generation) {
+          setQueuedActionError("PeacePad could not update this queued message. It remains on this device.");
+        }
+      } finally {
+        if (hydrationGeneration.current === generation) {
+          queuedActionLocks.current.delete(messageId);
+          setQueuedActionBusyIds((current) => current.filter((id) => id !== messageId));
+        }
+      }
+    },
+    removeQueuedMessage: async (messageId) => {
+      if (!activeRuntime || queuedActionLocks.current.has(messageId)) return;
+      const message = sentMessages.find((item) => item.id === messageId);
+      if (!message?.queued || message.status !== "needs-action") return;
+      const generation = hydrationGeneration.current;
+      const scope = messageOutboxScope(activeRuntime);
+      queuedActionLocks.current.add(messageId);
+      setQueuedActionBusyIds((current) => current.includes(messageId) ? current : [...current, messageId]);
+      setQueuedActionError(undefined);
+      try {
+        const removed = await removeSingleQueuedMessage(outbox, scope, messageId);
+        if (hydrationGeneration.current !== generation) return;
+        if (!removed) {
+          setQueuedActionError("PeacePad could not remove this queued message from this device.");
+          return;
+        }
+        setSentMessages((current) => current.filter((item) => item.id !== messageId));
+        try {
+          const [canonicalMessages, queuedMessages] = await Promise.all([
+            resolvedApi.listMessages(activeRuntime.conversationId),
+            outbox.list()
+          ]);
+          if (hydrationGeneration.current !== generation) return;
+          setSentMessages([
+            ...visibleMessages(canonicalMessages, activeRuntime.actorIdentityId),
+            ...queuedVisibleMessages(queuedMessages, scope)
+          ]);
+        } catch {
+          if (hydrationGeneration.current === generation) {
+            setQueuedActionError("Removed from this device. PeacePad could not refresh this conversation yet.");
+          }
+        }
+      } catch {
+        if (hydrationGeneration.current === generation) {
+          setQueuedActionError("PeacePad could not remove this queued message from this device.");
+        }
+      } finally {
+        if (hydrationGeneration.current === generation) {
+          queuedActionLocks.current.delete(messageId);
+          setQueuedActionBusyIds((current) => current.filter((id) => id !== messageId));
+        }
       }
     },
     setMessageSearchQuery: (query) => {
@@ -652,6 +770,8 @@ export function CoordinationStateProvider({
     messageDraft,
     messageError,
     messagePreview,
+    queuedActionBusyIds,
+    queuedActionError,
     messageSearchBusy,
     messageSearchError,
     messageSearchQuery,
