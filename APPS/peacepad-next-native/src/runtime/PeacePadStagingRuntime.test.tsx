@@ -339,14 +339,14 @@ describe("PeacePadStagingRuntime gates", () => {
       inviterDisplayName: "Fictional Parent A",
       familyDisplayName: "Fictional Family",
       invitedRole: "parent",
-      permissions: ["message.write", "calendar.write"],
+      permissions: ["messages", "calendar", "shared-records", "calls"],
       expiresAt: "2026-08-12T12:00:00.000Z"
     }));
     const acceptedAt = "2026-08-09T12:00:00.000Z";
     const acceptInvitation = jest.fn(async () => ({
       grant: {
         id: "88888888-8888-4888-8888-888888888888", familyCircleId: FAMILY, identityId: IDENTITY,
-        role: "parent", permissions: ["message.write", "calendar.write"], grantedAt: acceptedAt,
+        role: "parent", permissions: ["messages", "calendar", "shared-records", "calls"], grantedAt: acceptedAt,
         revokedAt: null, grantedBy: inviterId, schemaVersion: "2.0", version: 1, region: "ca",
         provenance: { createdAt: acceptedAt, createdBy: { identityId: IDENTITY, sessionId: SESSION }, source: "app" }
       },
@@ -403,7 +403,7 @@ describe("PeacePadStagingRuntime gates", () => {
       inviterDisplayName: "Fictional Parent A",
       familyDisplayName: "Fictional Family",
       invitedRole: "parent",
-      permissions: ["message.write", "calendar.write"],
+      permissions: ["messages", "calendar", "shared-records", "calls"],
       expiresAt: "2026-08-12T12:00:00.000Z"
     }));
     const declineInvitation = jest.fn(async () => undefined);
@@ -440,7 +440,7 @@ describe("PeacePadStagingRuntime gates", () => {
         id: invitationId,
         invitedByIdentityId: IDENTITY,
         invitedRole: "parent",
-        permissions: ["message.write", "calendar.write"],
+        permissions: ["messages", "calendar", "shared-records", "calls"],
         provenance: { createdAt: "2026-08-09T12:00:00.000Z", createdBy: { identityId: IDENTITY, sessionId: SESSION }, source: "app" },
         region: "ca",
         schemaVersion: "2.0",
@@ -467,7 +467,7 @@ describe("PeacePadStagingRuntime gates", () => {
       expiresInHours: 72,
       familyCircleId: FAMILY,
       invitedRole: "parent",
-      permissions: ["message.write", "calendar.write"]
+      permissions: ["messages", "calendar", "shared-records", "calls"]
     }, expect.objectContaining({ actor: { identityId: IDENTITY, sessionId: SESSION }, region: "ca" }));
     fireEvent.press(screen.getByRole("button", { name: "Cancel invitation" }));
     await waitFor(() => expect(revokeInvitation).toHaveBeenCalledWith(

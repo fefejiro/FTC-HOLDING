@@ -258,6 +258,9 @@ foreach ($historicalRef in @('ftdqnhlesqrkstnqgfxr', 'kgechdqdtryktfahyqez')) {
     throw "Active deployment runner still references paused historical project: $historicalRef"
   }
 }
+if ($function -notmatch 'allowedPermissions\s*=\s*new Set\(\["messages",\s*"calendar",\s*"shared-records",\s*"calls"\]\)') {
+  throw 'Family invitations must be able to grant the bounded call permission required by the deployed call lifecycle.'
+}
 foreach ($pattern in @(
   'create table if not exists peacepad_v2\.write_receipt',
   'alter table peacepad_v2\.write_receipt enable row level security',

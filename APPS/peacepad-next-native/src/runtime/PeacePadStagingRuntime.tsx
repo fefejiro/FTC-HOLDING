@@ -536,7 +536,7 @@ function ConversationSetup({ accountDeletion, api, membership, onReload, onSignO
         expiresInHours: 72,
         familyCircleId: membership.familyCircleId,
         invitedRole: "parent",
-        permissions: ["message.write", "calendar.write"]
+        permissions: ["messages", "calendar", "shared-records", "calls"]
       }, runtimeWriteContext(verified));
       setCreatedInvitation(created);
     } catch (cause) {

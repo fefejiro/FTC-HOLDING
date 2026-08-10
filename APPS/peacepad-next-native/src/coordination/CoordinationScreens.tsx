@@ -198,7 +198,7 @@ export function InvitationScreen({ initialCode }: { initialCode?: string }) {
   const permissionLabels: Readonly<Record<string, string>> = {
     messages: t("invite.permissionMessages"), calendar: t("invite.permissionCalendar"),
     "shared-records": t("invite.permissionSharedRecords"), "message.write": t("invite.permissionMessageWrite"),
-    "calendar.write": t("invite.permissionCalendarWrite")
+    "calendar.write": t("invite.permissionCalendarWrite"), calls: t("invite.permissionCalls")
   };
 
   useEffect(() => {

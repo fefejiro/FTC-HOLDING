@@ -31,7 +31,7 @@ const messages = {
     "invite.share": "Share invitation", "invite.cancelling": "Cancelling...", "invite.cancel": "Cancel invitation", "invite.shareTitle": "PeacePad invitation",
     "invite.shareReview": "Review the access before you connect.", "invite.shareCode": "Code: {code}", "invite.shareUnavailable": "Sharing is unavailable. Use the six-character code instead.",
     "invite.preview": "Invitation preview", "invite.invitedBy": "{name} invited you", "invite.role": "Role", "invite.roleParent": "Parent",
-    "invite.permissionMessages": "Messages", "invite.permissionCalendar": "Calendar", "invite.permissionSharedRecords": "Shared records",
+    "invite.permissionMessages": "Messages", "invite.permissionCalendar": "Calendar", "invite.permissionSharedRecords": "Shared records", "invite.permissionCalls": "Audio calls",
     "invite.permissionMessageWrite": "Send messages", "invite.permissionCalendarWrite": "Manage calendar events", "invite.familyBlocked": "This account is already connected to a family. Family switching is not available yet, so this invitation cannot be accepted here.",
     "invite.accepted": "Invitation accepted"
     ,"foundation.restoring": "Restoring PeacePad session", "foundation.checkingDevice": "Checking this device for a saved session...", "foundation.logo": "PeacePad conch logo",
@@ -88,7 +88,7 @@ const messages = {
     "invite.share": "Partager l’invitation", "invite.cancelling": "Annulation...", "invite.cancel": "Annuler l’invitation", "invite.shareTitle": "Invitation PeacePad",
     "invite.shareReview": "Vérifiez les accès avant de vous connecter.", "invite.shareCode": "Code : {code}", "invite.shareUnavailable": "Le partage est indisponible. Utilisez plutôt le code à six caractères.",
     "invite.preview": "Aperçu de l’invitation", "invite.invitedBy": "{name} vous a invité", "invite.role": "Rôle", "invite.roleParent": "Parent",
-    "invite.permissionMessages": "Messages", "invite.permissionCalendar": "Calendrier", "invite.permissionSharedRecords": "Dossiers partagés",
+    "invite.permissionMessages": "Messages", "invite.permissionCalendar": "Calendrier", "invite.permissionSharedRecords": "Dossiers partagés", "invite.permissionCalls": "Appels audio",
     "invite.permissionMessageWrite": "Envoyer des messages", "invite.permissionCalendarWrite": "Gérer les événements du calendrier", "invite.familyBlocked": "Ce compte est déjà lié à une famille. Le changement de famille n’est pas encore disponible; cette invitation ne peut donc pas être acceptée ici.",
     "invite.accepted": "Invitation acceptée"
     ,"foundation.restoring": "Restauration de la session PeacePad", "foundation.checkingDevice": "Recherche d’une session enregistrée sur cet appareil...", "foundation.logo": "Logo coquillage de PeacePad",
@@ -145,7 +145,7 @@ const messages = {
     "invite.share": "Compartir invitación", "invite.cancelling": "Cancelando...", "invite.cancel": "Cancelar invitación", "invite.shareTitle": "Invitación de PeacePad",
     "invite.shareReview": "Revisa el acceso antes de conectarte.", "invite.shareCode": "Código: {code}", "invite.shareUnavailable": "No se puede compartir. Usa el código de seis caracteres.",
     "invite.preview": "Vista previa de la invitación", "invite.invitedBy": "{name} te invitó", "invite.role": "Rol", "invite.roleParent": "Progenitor",
-    "invite.permissionMessages": "Mensajes", "invite.permissionCalendar": "Calendario", "invite.permissionSharedRecords": "Registros compartidos",
+    "invite.permissionMessages": "Mensajes", "invite.permissionCalendar": "Calendario", "invite.permissionSharedRecords": "Registros compartidos", "invite.permissionCalls": "Llamadas de audio",
     "invite.permissionMessageWrite": "Enviar mensajes", "invite.permissionCalendarWrite": "Gestionar eventos del calendario", "invite.familyBlocked": "Esta cuenta ya está conectada a una familia. El cambio de familia aún no está disponible, por lo que esta invitación no se puede aceptar aquí.",
     "invite.accepted": "Invitación aceptada"
     ,"foundation.restoring": "Restaurando la sesión de PeacePad", "foundation.checkingDevice": "Buscando una sesión guardada en este dispositivo...", "foundation.logo": "Logotipo de caracola de PeacePad",

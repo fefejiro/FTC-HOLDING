@@ -457,7 +457,7 @@ export function CoordinationStateProvider({
         setCreatedInvitation(await resolvedApi.createInvitation({
           familyCircleId: activeRuntime.familyCircleId,
           invitedRole: "parent",
-          permissions: ["message.write", "calendar.write"],
+          permissions: ["messages", "calendar", "shared-records", "calls"],
           expiresInHours: 72
         }, writeContext(activeRuntime)));
       } catch (error) {

@@ -1233,7 +1233,7 @@ const handler = async (request: Request): Promise<Response> => {
     const invitedRole = typeof body.invitedRole === "string" ? body.invitedRole : "";
     const permissions = Array.isArray(body.permissions) && body.permissions.every((value) => typeof value === "string") ? [...new Set(body.permissions as string[])] : [];
     const expiresInHours = typeof body.expiresInHours === "number" ? body.expiresInHours : 0;
-    const allowedPermissions = new Set(["messages", "calendar", "shared-records"]);
+    const allowedPermissions = new Set(["messages", "calendar", "shared-records", "calls"]);
     if (!familyId || !["parent", "caregiver", "professional"].includes(invitedRole) || permissions.length > 8 || permissions.some((permission) => !allowedPermissions.has(permission)) || expiresInHours < 1 || expiresInHours > 168) {
       return failure(request, 400, "INVALID_REQUEST", "Invitation details are invalid.", requestId, config);
     }
