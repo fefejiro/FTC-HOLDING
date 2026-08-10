@@ -35,7 +35,9 @@ declare
   message_check_result jsonb;
   updated_message_check_result jsonb;
   binder_result jsonb;
+  binder_replay_result jsonb;
   attachment_intent_result jsonb;
+  attachment_intent_replay_result jsonb;
   created_family_id uuid;
   invitation_id uuid;
   conversation_id uuid;
@@ -294,6 +296,23 @@ begin
     or jsonb_array_length(public.peacepad_v2_list_case_binders(parent_b, 'ca', created_family_id)) <> 1 then
     raise exception 'Private Case Binder was not persisted for its authenticated owner.';
   end if;
+  binder_replay_result := public.peacepad_v2_create_case_binder(
+    parent_b, 'ca', created_family_id, 'Parenting records', 'Child A',
+    pg_temp.write_token('create-private-binder', 'case_binder.created', created_family_id::text || ':parent-b:parenting-records'), 2
+  );
+  if binder_replay_result <> binder_result
+    or jsonb_array_length(public.peacepad_v2_list_case_binders(parent_b, 'ca', created_family_id)) <> 1 then
+    raise exception 'Exact Case Binder replay was not deterministic.';
+  end if;
+  begin
+    perform public.peacepad_v2_create_case_binder(
+      parent_b, 'ca', created_family_id, 'Changed private records', 'Child B',
+      pg_temp.write_token('create-private-binder', 'case_binder.created', created_family_id::text || ':parent-b:changed-private-records'), 2
+    );
+    raise exception 'Changed Case Binder payload reused an idempotency key unexpectedly.';
+  exception when others then
+    if sqlerrm not like '%IDEMPOTENCY_CONFLICT%' then raise; end if;
+  end;
   begin
     perform public.peacepad_v2_list_case_binders(parent_a, 'ca', created_family_id);
   exception when others then
@@ -311,6 +330,32 @@ begin
     or (attachment_intent_result ->> 'expiresAt')::timestamptz > now() + interval '15 minutes' then
     raise exception 'Attachment preparation exposed transport or an unsafe expiry.';
   end if;
+  attachment_intent_replay_result := public.peacepad_v2_prepare_attachment_intent(
+    parent_b, 'ca', created_family_id, binder_id, 'school-note.pdf', 'application/pdf', 1024,
+    pg_temp.write_token('prepare-private-attachment', 'attachment_intent.prepared', binder_id::text || ':school-note.pdf:application/pdf:1024'), 2
+  );
+  if attachment_intent_replay_result <> attachment_intent_result
+    or (select count(*) from peacepad_v2.attachment_upload_intent where case_binder_id=binder_id) <> 1 then
+    raise exception 'Exact attachment-intent replay was not deterministic.';
+  end if;
+  begin
+    perform public.peacepad_v2_prepare_attachment_intent(
+      parent_b, 'ca', created_family_id, binder_id, 'changed-note.pdf', 'application/pdf', 2048,
+      pg_temp.write_token('prepare-private-attachment', 'attachment_intent.prepared', binder_id::text || ':changed-note.pdf:application/pdf:2048'), 2
+    );
+    raise exception 'Changed attachment metadata reused an idempotency key unexpectedly.';
+  exception when others then
+    if sqlerrm not like '%IDEMPOTENCY_CONFLICT%' then raise; end if;
+  end;
+  begin
+    perform public.peacepad_v2_prepare_attachment_intent(
+      parent_b, 'ca', created_family_id, binder_id, 'cross-operation.pdf', 'application/pdf', 1024,
+      pg_temp.write_token('create-private-binder', 'attachment_intent.prepared', binder_id::text || ':cross-operation'), 2
+    );
+    raise exception 'Cross-operation private-record idempotency reuse unexpectedly succeeded.';
+  exception when others then
+    if sqlerrm not like '%IDEMPOTENCY_CONFLICT%' then raise; end if;
+  end;
   begin
     perform public.peacepad_v2_prepare_attachment_intent(
       parent_b, 'ca', created_family_id, binder_id, '../private.pdf', 'application/pdf', 1024,
@@ -326,6 +371,22 @@ begin
   if binder_result ->> 'status' <> 'archived' or (binder_result ->> 'version')::integer <> 2 then
     raise exception 'Case Binder archive did not preserve optimistic concurrency.';
   end if;
+  binder_replay_result := public.peacepad_v2_archive_case_binder(
+    parent_b, 'ca', binder_id, 1,
+    pg_temp.write_token('archive-private-binder', 'case_binder.archived', binder_id::text || ':1'), 2
+  );
+  if binder_replay_result <> binder_result then
+    raise exception 'Exact Case Binder archive replay was not deterministic.';
+  end if;
+  begin
+    perform public.peacepad_v2_archive_case_binder(
+      parent_b, 'ca', binder_id, 2,
+      pg_temp.write_token('archive-private-binder', 'case_binder.archived', binder_id::text || ':2'), 2
+    );
+    raise exception 'Changed archive version reused an idempotency key unexpectedly.';
+  exception when others then
+    if sqlerrm not like '%IDEMPOTENCY_CONFLICT%' then raise; end if;
+  end;
   begin
     perform public.peacepad_v2_prepare_attachment_intent(
       parent_b, 'ca', created_family_id, binder_id, 'after-archive.pdf', 'application/pdf', 1024,
@@ -354,7 +415,8 @@ begin
     select 1 from peacepad_v2.audit_event audit
     where audit::text ilike any (array[
       '%Pickup at five.%', '%Pickup at six.%', '%Example Family%',
-      '%Weekend parenting time%', '%Fictional staging event.%'
+      '%Weekend parenting time%', '%Fictional staging event.%',
+      '%Parenting records%', '%Child A%', '%school-note.pdf%'
     ])
   ) then
     raise exception 'Audit events retained private domain content.';
@@ -366,9 +428,14 @@ begin
   if exists (
     select 1 from peacepad_v2.write_receipt receipt
     where receipt.encrypted_response is not null
-      and position(convert_to('Pickup at five.', 'UTF8') in receipt.encrypted_response) > 0
+      and (
+        position(convert_to('Pickup at five.', 'UTF8') in receipt.encrypted_response) > 0
+        or position(convert_to('Parenting records', 'UTF8') in receipt.encrypted_response) > 0
+        or position(convert_to('Child A', 'UTF8') in receipt.encrypted_response) > 0
+        or position(convert_to('school-note.pdf', 'UTF8') in receipt.encrypted_response) > 0
+      )
   ) then
-    raise exception 'A write receipt retained a plaintext message body.';
+    raise exception 'A write receipt retained plaintext message or private-record metadata.';
   end if;
 
   update peacepad_v2.write_receipt
