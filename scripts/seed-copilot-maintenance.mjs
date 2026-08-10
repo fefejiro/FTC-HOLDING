@@ -70,37 +70,64 @@ const existing = JSON.parse(gh([
   'issue', 'list', '--repo', repo, '--state', 'open', '--search', `in:title "${title}"`, '--limit', '20', '--json', 'number,title',
 ]) || '[]').find((issue) => issue.title === title);
 
-if (existing) {
-  console.log(`Maintenance issue already open: #${existing.number} ${title}`);
-  process.exit(0);
-}
-
 for (const label of ['continuous-improvement', 'agent-ready', lane.label]) {
   gh(['label', 'create', label, '--repo', repo, '--color', label === lane.label ? '6F42C1' : '1D76DB', '--force']);
 }
 
-const issueUrl = gh([
-  'issue', 'create', '--repo', repo, '--title', title, '--body', body,
-  '--label', 'continuous-improvement', '--label', 'agent-ready', '--label', lane.label,
-]);
-const match = issueUrl.match(/\/(\d+)$/);
-if (!match) throw new Error(`Could not parse issue number from ${issueUrl}`);
+let issueNumber;
+let issueUrl;
+if (existing) {
+  issueNumber = String(existing.number);
+  issueUrl = `https://github.com/${repo}/issues/${issueNumber}`;
+  console.log(`Maintenance issue already open; retrying assignment: #${issueNumber} ${title}`);
+} else {
+  issueUrl = gh([
+    'issue', 'create', '--repo', repo, '--title', title, '--body', body,
+    '--label', 'continuous-improvement', '--label', 'agent-ready', '--label', lane.label,
+  ]);
+  const match = issueUrl.match(/\/(\d+)$/);
+  if (!match) throw new Error(`Could not parse issue number from ${issueUrl}`);
+  issueNumber = match[1];
+}
 
 const assignmentToken = process.env.COPILOT_ASSIGN_TOKEN;
 if (!assignmentToken) {
-  gh(['issue', 'edit', match[1], '--repo', repo, '--add-label', 'blocked']);
-  gh(['issue', 'comment', match[1], '--repo', repo, '--body', 'Automated Copilot assignment is blocked: GitHub App installation tokens cannot assign coding agents. Configure the repository secret `COPILOT_ASSIGN_TOKEN` with a narrowly scoped user token after confirming GitHub Copilot coding-agent access, then rerun this lane.']);
+  gh(['issue', 'edit', issueNumber, '--repo', repo, '--add-label', 'blocked']);
+  gh(['issue', 'comment', issueNumber, '--repo', repo, '--body', 'Automated Copilot assignment is blocked: GitHub App installation tokens cannot assign coding agents. Configure the repository secret `COPILOT_ASSIGN_TOKEN` with a narrowly scoped user token after confirming GitHub Copilot coding-agent access, then rerun this lane.']);
   console.log(`Created ${issueUrl}; assignment is visibly blocked until COPILOT_ASSIGN_TOKEN is configured.`);
   process.exit(0);
 }
 
 try {
-  gh(['issue', 'edit', match[1], '--repo', repo, '--add-assignee', 'copilot'], assignmentToken);
+  const response = await fetch(`https://api.github.com/repos/${repo}/issues/${issueNumber}/assignees`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/vnd.github+json',
+      Authorization: `Bearer ${assignmentToken}`,
+      'Content-Type': 'application/json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'User-Agent': 'ftc-copilot-maintenance',
+    },
+    body: JSON.stringify({
+      assignees: ['copilot-swe-agent[bot]'],
+      agent_assignment: {
+        target_repo: repo,
+        base_branch: 'main',
+        custom_instructions: `Use the FTC Portfolio Maintainer custom agent. Follow ${lane.prompt} and complete exactly one bounded ${laneName} maintenance improvement with evidence.`,
+        custom_agent: 'ftc-portfolio-maintainer',
+        model: '',
+      },
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(`GitHub agent assignment returned ${response.status}: ${(await response.text()).slice(0, 500)}`);
+  }
+  gh(['issue', 'edit', issueNumber, '--repo', repo, '--remove-label', 'blocked']);
   console.log(`Created and assigned ${issueUrl} to Copilot.`);
 } catch (error) {
-  gh(['issue', 'edit', match[1], '--repo', repo, '--add-label', 'blocked']);
-  gh(['issue', 'comment', match[1], '--repo', repo, '--body', 'Copilot assignment failed with the configured user token. Confirm that the token owner has GitHub Copilot coding-agent access and that the token can manage issues, then rerun this lane.']);
+  gh(['issue', 'edit', issueNumber, '--repo', repo, '--add-label', 'blocked']);
+  gh(['issue', 'comment', issueNumber, '--repo', repo, '--body', 'Copilot assignment failed with the configured user token. Confirm that the token owner has GitHub Copilot coding-agent access and that the token can manage issues, then rerun this lane.']);
   console.error(`Created ${issueUrl}, but Copilot assignment failed and was marked blocked.`);
-  console.error(error.stderr?.toString() || error.message);
+  console.error(error.message);
   process.exit(1);
 }
