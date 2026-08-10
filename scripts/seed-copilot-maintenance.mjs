@@ -36,8 +36,12 @@ if (!lane) {
   process.exit(1);
 }
 
-function gh(args) {
-  return execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+function gh(args, token = process.env.GH_TOKEN) {
+  return execFileSync('gh', args, {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, GH_TOKEN: token },
+  }).trim();
 }
 
 function isoWeek(date) {
@@ -82,11 +86,21 @@ const issueUrl = gh([
 const match = issueUrl.match(/\/(\d+)$/);
 if (!match) throw new Error(`Could not parse issue number from ${issueUrl}`);
 
+const assignmentToken = process.env.COPILOT_ASSIGN_TOKEN;
+if (!assignmentToken) {
+  gh(['issue', 'edit', match[1], '--repo', repo, '--add-label', 'blocked']);
+  gh(['issue', 'comment', match[1], '--repo', repo, '--body', 'Automated Copilot assignment is blocked: GitHub App installation tokens cannot assign coding agents. Configure the repository secret `COPILOT_ASSIGN_TOKEN` with a narrowly scoped user token after confirming GitHub Copilot coding-agent access, then rerun this lane.']);
+  console.log(`Created ${issueUrl}; assignment is visibly blocked until COPILOT_ASSIGN_TOKEN is configured.`);
+  process.exit(0);
+}
+
 try {
-  gh(['issue', 'edit', match[1], '--repo', repo, '--add-assignee', 'copilot']);
+  gh(['issue', 'edit', match[1], '--repo', repo, '--add-assignee', 'copilot'], assignmentToken);
   console.log(`Created and assigned ${issueUrl} to Copilot.`);
 } catch (error) {
-  console.error(`Created ${issueUrl}, but Copilot assignment failed. The nightly queue can retry.`);
+  gh(['issue', 'edit', match[1], '--repo', repo, '--add-label', 'blocked']);
+  gh(['issue', 'comment', match[1], '--repo', repo, '--body', 'Copilot assignment failed with the configured user token. Confirm that the token owner has GitHub Copilot coding-agent access and that the token can manage issues, then rerun this lane.']);
+  console.error(`Created ${issueUrl}, but Copilot assignment failed and was marked blocked.`);
   console.error(error.stderr?.toString() || error.message);
   process.exit(1);
 }
