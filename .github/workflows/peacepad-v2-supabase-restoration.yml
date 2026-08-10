@@ -124,7 +124,7 @@ jobs:
           PEACEPAD_PROJECT_REF: ${{ inputs.confirm_project_ref }}
           TARGET_COMMIT_SHA: ${{ inputs.target_commit_sha }}
           EVIDENCE_DIRECTORY: ${{ runner.temp }}/peacepad-v2-restoration-evidence
-        run: ./scripts/verify-managed-logical-restoration.sh
+        run: bash ./scripts/verify-managed-logical-restoration.sh
 
       - name: Validate non-secret restoration evidence
         shell: bash
