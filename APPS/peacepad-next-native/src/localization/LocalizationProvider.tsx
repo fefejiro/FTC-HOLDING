@@ -14,7 +14,11 @@ const messages = {
     "more.privacy.title": "Privacy and consent", "more.privacy.body": "Review your choices and how PeacePad handles information.",
     "more.support.title": "Help & Support", "more.support.body": "Get help using PeacePad.",
     "language.title": "Language", "language.body": "Choose the language used for navigation and supported screens.",
-    "language.optionHint": "Changes the app language on this device.", "language.selected": "Selected"
+    "language.optionHint": "Changes the app language on this device.", "language.selected": "Selected",
+    "account.signOut": "Sign out", "account.signOutBody": "Remove this fictional staging session from this device.",
+    "account.delete": "Delete staging account", "account.deleteBody": "Permanently remove this fictional account and its access.",
+    "account.deleteTitle": "Delete this staging account?", "account.deleteWarning": "This permanently deletes the fictional staging identity and revokes its family access. This cannot be undone.",
+    "account.deleting": "Deleting account...", "account.deletePermanently": "Delete account permanently", "account.cancel": "Cancel"
   },
   fr: {
     "navigation.primary": "Navigation principale", "navigation.home": "Accueil", "navigation.messages": "Messages",
@@ -23,7 +27,11 @@ const messages = {
     "more.privacy.title": "Confidentialité et consentement", "more.privacy.body": "Consultez vos choix et la façon dont PeacePad traite les informations.",
     "more.support.title": "Aide et soutien", "more.support.body": "Obtenez de l’aide pour utiliser PeacePad.",
     "language.title": "Langue", "language.body": "Choisissez la langue de la navigation et des écrans pris en charge.",
-    "language.optionHint": "Change la langue de l’application sur cet appareil.", "language.selected": "Sélectionnée"
+    "language.optionHint": "Change la langue de l’application sur cet appareil.", "language.selected": "Sélectionnée",
+    "account.signOut": "Se déconnecter", "account.signOutBody": "Supprimez cette session de test fictive de cet appareil.",
+    "account.delete": "Supprimer le compte de test", "account.deleteBody": "Supprimez définitivement ce compte fictif et ses accès.",
+    "account.deleteTitle": "Supprimer ce compte de test?", "account.deleteWarning": "Cette action supprime définitivement l’identité fictive de test et révoque son accès familial. Elle est irréversible.",
+    "account.deleting": "Suppression du compte...", "account.deletePermanently": "Supprimer définitivement le compte", "account.cancel": "Annuler"
   },
   es: {
     "navigation.primary": "Navegación principal", "navigation.home": "Inicio", "navigation.messages": "Mensajes",
@@ -32,7 +40,11 @@ const messages = {
     "more.privacy.title": "Privacidad y consentimiento", "more.privacy.body": "Revisa tus decisiones y cómo PeacePad maneja la información.",
     "more.support.title": "Ayuda y soporte", "more.support.body": "Obtén ayuda para usar PeacePad.",
     "language.title": "Idioma", "language.body": "Elige el idioma de la navegación y las pantallas compatibles.",
-    "language.optionHint": "Cambia el idioma de la aplicación en este dispositivo.", "language.selected": "Seleccionado"
+    "language.optionHint": "Cambia el idioma de la aplicación en este dispositivo.", "language.selected": "Seleccionado",
+    "account.signOut": "Cerrar sesión", "account.signOutBody": "Elimina de este dispositivo esta sesión ficticia de pruebas.",
+    "account.delete": "Eliminar cuenta de pruebas", "account.deleteBody": "Elimina permanentemente esta cuenta ficticia y su acceso.",
+    "account.deleteTitle": "¿Eliminar esta cuenta de pruebas?", "account.deleteWarning": "Esta acción elimina permanentemente la identidad ficticia de pruebas y revoca su acceso familiar. No se puede deshacer.",
+    "account.deleting": "Eliminando cuenta...", "account.deletePermanently": "Eliminar cuenta permanentemente", "account.cancel": "Cancelar"
   }
 } as const;
 

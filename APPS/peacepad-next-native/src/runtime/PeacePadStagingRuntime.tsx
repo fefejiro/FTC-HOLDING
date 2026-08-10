@@ -6,6 +6,7 @@ import { createStagingCoordinationClient } from "../staging/StagingCoordinationC
 import type { CoordinationRuntime } from "../coordination/CoordinationState";
 import { CoordinationStateProvider } from "../coordination/CoordinationState";
 import { LabButton } from "../components/LabButton";
+import { AccessibleHeading } from "../components/AccessibleHeading";
 import type { PeacePadEnvironmentConfig, PeacePadSupabaseConfig } from "../config/environment";
 import { useSupabaseSession } from "../session/SupabaseSessionProvider";
 import { StagingAccountActionsProvider } from "../session/StagingAccountActions";
@@ -337,7 +338,7 @@ export function PeacePadStagingRuntime({
     return (
       <View style={styles.page}>
         <Brand />
-        <Text style={styles.title}>Sign in to staging</Text>
+        <AccessibleHeading style={styles.title}>Sign in to staging</AccessibleHeading>
         <Text style={styles.body}>Use a fictional PeacePad staging account. Real family information is not permitted.</Text>
         <TextInput accessibilityLabel="Staging email" autoCapitalize="none" keyboardType="email-address" onChangeText={setEmail} placeholder="Email" style={styles.input} value={email} />
         <TextInput accessibilityLabel="Staging password" onChangeText={setPassword} placeholder="Password" secureTextEntry style={styles.input} value={password} />
@@ -425,7 +426,7 @@ function FamilySelection({ accountDeletion, memberships, onSelect, onSignOut }: 
   return (
     <View style={styles.page}>
       <Brand />
-      <Text style={styles.title}>Choose a family</Text>
+      <AccessibleHeading style={styles.title}>Choose a family</AccessibleHeading>
       <Text style={styles.body}>Select the family space you want to open.</Text>
       {memberships.map((membership) => (
         <LabButton
@@ -471,7 +472,7 @@ function FamilySetup({ accountDeletion, api, initialInvitationCode, onInvitation
   return (
     <View style={styles.page}>
       <Brand />
-      <Text style={styles.title}>Create or join a family</Text>
+      <AccessibleHeading style={styles.title}>Create or join a family</AccessibleHeading>
       <Text style={styles.body}>Use fictional staging information only. A connection is created only after an invitation is accepted.</Text>
       <Text style={styles.sectionTitle}>Create a family space</Text>
       <TextInput accessibilityLabel="Family name" maxLength={120} onChangeText={setFamilyName} placeholder="Family name" style={styles.input} value={familyName} />
@@ -539,7 +540,7 @@ function ConversationSetup({ accountDeletion, api, membership, onReload, onSignO
   return (
     <View style={styles.page}>
       <Brand />
-      <Text style={styles.title}>Invite your co-parent</Text>
+      <AccessibleHeading style={styles.title}>Invite your co-parent</AccessibleHeading>
       <Text style={styles.body}>{membership.familyName} is ready. Share a single-use code, then check again after it is accepted.</Text>
       {createdInvitation ? <View style={styles.codeCard}><Text accessibilityLabel="Invitation code" selectable style={styles.code}>{createdInvitation.code}</Text><Text style={styles.body}>Expires in 72 hours. Do not use real family information in staging.</Text></View> : null}
       {createdInvitation ? <LabButton disabled={busy} label="Revoke invitation" onPress={() => void (async () => {
@@ -583,7 +584,7 @@ function Brand() {
 }
 
 function GateMessage({ busy = false, body, onSignOut, title }: { busy?: boolean; body: string; onSignOut?: () => Promise<void>; title: string }) {
-  return <View style={styles.page}><Brand />{busy ? <ActivityIndicator color={colors.brand} /> : null}<Text style={styles.title}>{title}</Text><Text style={styles.body}>{body}</Text>{onSignOut ? <LabButton label="Sign out" onPress={() => void onSignOut()} variant="secondary" /> : null}</View>;
+  return <View style={styles.page}><Brand />{busy ? <ActivityIndicator color={colors.brand} /> : null}<AccessibleHeading style={styles.title}>{title}</AccessibleHeading><Text style={styles.body}>{body}</Text>{onSignOut ? <LabButton label="Sign out" onPress={() => void onSignOut()} variant="secondary" /> : null}</View>;
 }
 
 const styles = StyleSheet.create({

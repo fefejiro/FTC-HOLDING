@@ -9,6 +9,7 @@ import {
   TextInput,
   View
 } from "react-native";
+import { AccessibleHeading } from "../components/AccessibleHeading";
 import type {
   ConsentPreferences,
   MessagePreviewResponse
@@ -190,9 +191,9 @@ export function FoundationScreen({
 
       {phase === "welcome" ? (
         <View style={styles.card}>
-          <Text style={styles.title}>
+          <AccessibleHeading style={styles.title}>
             A calmer way through hard co-parenting moments.
-          </Text>
+          </AccessibleHeading>
           <Text style={styles.body}>
             Pause before you send, check how a message may land, and choose a
             clearer next step.

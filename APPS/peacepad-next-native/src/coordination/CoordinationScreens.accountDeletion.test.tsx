@@ -11,8 +11,8 @@ describe("staging account deletion", () => {
     jest.clearAllMocks();
   });
 
-  function withLocalization(children: React.ReactNode) {
-    return <LocalizationProvider initialLocale="en">{children}</LocalizationProvider>;
+  function withLocalization(children: React.ReactNode, locale = "en") {
+    return <LocalizationProvider initialLocale={locale}>{children}</LocalizationProvider>;
   }
 
   it("does not expose account deletion outside authenticated staging composition", () => {
@@ -55,8 +55,27 @@ describe("staging account deletion", () => {
       </StagingAccountActionsProvider>
     ));
     fireEvent.press(screen.getByRole("button", { name: "Delete staging account" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Deletion could not be completed.");
+    expect(screen.getAllByRole("alert").some((alert) => alert.props.children === "Deletion could not be completed.")).toBe(true);
     fireEvent.press(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.queryByText("Delete this staging account?")).toBeNull();
+  });
+
+  it.each([
+    ["fr", "Supprimer le compte de test", "Supprimer ce compte de test?", "Annuler"],
+    ["es", "Eliminar cuenta de pruebas", "¿Eliminar esta cuenta de pruebas?", "Cancelar"]
+  ])("localizes destructive account controls and preserves confirmation semantics in %s", (locale, openLabel, title, cancelLabel) => {
+    render(withLocalization(
+      <StagingAccountActionsProvider value={{ signOut, deleteAccount: jest.fn(), deleting: false }}>
+        <MoreScreen setScreen={jest.fn()} />
+      </StagingAccountActionsProvider>,
+      locale
+    ));
+    fireEvent.press(screen.getByRole("button", { name: openLabel }));
+    const confirmation = screen.UNSAFE_getByProps({ accessibilityViewIsModal: true });
+    expect(confirmation.props.accessibilityRole).toBe("alert");
+    expect(confirmation.props.accessibilityLiveRegion).toBe("assertive");
+    expect(confirmation.props.accessibilityViewIsModal).toBe(true);
+    expect(screen.getByRole("header", { name: title })).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: cancelLabel })).toBeOnTheScreen();
   });
 });

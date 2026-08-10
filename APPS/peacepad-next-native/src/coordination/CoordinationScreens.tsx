@@ -2,7 +2,10 @@ import React, { useEffect, useState } from "react";
 import { Image, Pressable, Share, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
 import { InvitationQr } from "../components/InvitationQr";
 import { LabButton } from "../components/LabButton";
+import { AccessibleHeading } from "../components/AccessibleHeading";
 import { languageNames, supportedLocales, useLocalization } from "../localization/LocalizationProvider";
+import { calendarText, formatCalendarDate, formatCalendarDay } from "../localization/calendarLocalization";
+import { formatLocalizedDate } from "../localization/localizedDate";
 import { colors, spacing, typography, usesLargeTextLayout } from "../theme";
 import { useRecordsState } from "../records/RecordsState";
 import type { AttachmentMediaType } from "../domain/v2";
@@ -21,16 +24,8 @@ const layerColors: Record<string, string> = {
   green: "#62B44B"
 };
 
-const august2026Weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
-const august2026Week = [
-  { day: 1, label: "Sat 1" },
-  { day: 2, label: "Sun 2" },
-  { day: 3, label: "Mon 3" },
-  { day: 4, label: "Tue 4" },
-  { day: 5, label: "Wed 5" },
-  { day: 6, label: "Thu 6" },
-  { day: 7, label: "Fri 7" }
-] as const;
+const august2026Weekdays = [2, 3, 4, 5, 6, 7, 1] as const;
+const august2026Week = [1, 2, 3, 4, 5, 6, 7] as const;
 
 function eventDay(event: ReturnType<typeof useCoordinationState>["events"][number]): number {
   return new Date(event.startsAt).getUTCDate();
@@ -39,11 +34,13 @@ function eventDay(event: ReturnType<typeof useCoordinationState>["events"][numbe
 function CalendarViewPanel({
   calendarView,
   events,
-  layers
+  layers,
+  locale
 }: {
   calendarView: CalendarView;
   events: ReturnType<typeof useCoordinationState>["events"];
   layers: ReturnType<typeof useCoordinationState>["layers"];
+  locale: ReturnType<typeof useLocalization>["locale"];
 }) {
   const layerName = (calendarLayerId: string) =>
     layers.find((layer) => layer.id === calendarLayerId)?.name ?? "Calendar";
@@ -54,16 +51,16 @@ function CalendarViewPanel({
       ...Array.from({ length: 31 }, (_, index) => ({ key: `day-${index + 1}`, day: index + 1 }))
     ];
     return (
-      <View accessibilityLabel="month calendar" style={styles.calendarCanvas}>
-        <Text style={styles.calendarMonth}>August 2026</Text>
+      <View accessibilityLabel={`${calendarText(locale, "month")} ${calendarText(locale, "title")}`.toLocaleLowerCase(locale)} style={styles.calendarCanvas}>
+        <Text style={styles.calendarMonth}>{formatCalendarDate(locale, "2026-08-01T00:00:00.000Z", { month: "long", year: "numeric" })}</Text>
         <View style={styles.monthGrid}>
-          {august2026Weekdays.map((weekday) => (
-            <Text key={weekday} style={styles.weekday}>{weekday}</Text>
+          {august2026Weekdays.map((day) => (
+            <Text key={day} style={styles.weekday}>{formatCalendarDate(locale, new Date(Date.UTC(2026, 7, day)), { weekday: "short" })}</Text>
           ))}
           {cells.map((cell) => {
             const dayEvents = cell.day ? events.filter((event) => eventDay(event) === cell.day) : [];
             return (
-              <View accessibilityLabel={cell.day ? `August ${cell.day}` : undefined} key={cell.key} style={styles.monthCell}>
+              <View accessibilityLabel={cell.day ? formatCalendarDate(locale, new Date(Date.UTC(2026, 7, cell.day)), { month: "long", day: "numeric" }) : undefined} key={cell.key} style={styles.monthCell}>
                 {cell.day ? <Text style={styles.dayNumber}>{cell.day}</Text> : null}
                 {dayEvents.slice(0, 1).map((event) => (
                   <Text key={event.id} numberOfLines={1} style={styles.monthEvent}>{event.title}</Text>
@@ -78,21 +75,21 @@ function CalendarViewPanel({
 
   if (calendarView === "week") {
     return (
-      <View accessibilityLabel="week calendar" style={styles.calendarCanvas}>
-        <Text style={styles.calendarMonth}>August 1–7</Text>
+      <View accessibilityLabel={`${calendarText(locale, "week")} ${calendarText(locale, "title")}`.toLocaleLowerCase(locale)} style={styles.calendarCanvas}>
+        <Text style={styles.calendarMonth}>{formatCalendarDate(locale, "2026-08-01T00:00:00.000Z", { month: "short", day: "numeric" })}–7</Text>
         <View style={styles.scheduleList}>
-          {august2026Week.map(({ day, label }) => {
+          {august2026Week.map((day) => {
             const dayEvents = events.filter((event) => eventDay(event) === day);
             return (
               <View key={day} style={styles.scheduleRow}>
-                <Text style={styles.scheduleDate}>{label}</Text>
+                <Text style={styles.scheduleDate}>{formatCalendarDay(locale, day)}</Text>
                 <View style={styles.scheduleContent}>
                   {dayEvents.length ? dayEvents.map((event) => (
                     <View key={event.id} style={styles.scheduleEvent}>
                       <Text style={styles.actionTitle}>{event.title}</Text>
                       <Text style={styles.caption}>{layerName(event.calendarLayerId)}</Text>
                     </View>
-                  )) : <Text style={styles.caption}>No events</Text>}
+                  )) : <Text style={styles.caption}>{calendarText(locale, "noEvents")}</Text>}
                 </View>
               </View>
             );
@@ -104,15 +101,15 @@ function CalendarViewPanel({
 
   const dayEvents = events.filter((event) => eventDay(event) === 1);
   return (
-    <View accessibilityLabel="day calendar" style={styles.calendarCanvas}>
-      <Text style={styles.calendarMonth}>Saturday, August 1</Text>
+    <View accessibilityLabel={`${calendarText(locale, "day")} ${calendarText(locale, "title")}`.toLocaleLowerCase(locale)} style={styles.calendarCanvas}>
+      <Text style={styles.calendarMonth}>{formatCalendarDate(locale, "2026-08-01T00:00:00.000Z", { weekday: "long", month: "long", day: "numeric" })}</Text>
       <View style={styles.scheduleList}>
         {dayEvents.length ? dayEvents.map((event) => (
           <View key={event.id} style={styles.scheduleEvent}>
             <Text style={styles.actionTitle}>{event.title}</Text>
             <Text style={styles.caption}>{layerName(event.calendarLayerId)}</Text>
           </View>
-        )) : <Text style={styles.calendarEmpty}>No events yet</Text>}
+        )) : <Text style={styles.calendarEmpty}>{calendarText(locale, "noEventsYet")}</Text>}
       </View>
     </View>
   );
@@ -134,7 +131,7 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
       <View style={styles.brandHero}>
         <Image accessibilityLabel="PeacePad conch logo" source={require("../foundation/peacepad-conch.png")} style={styles.logo} />
         <View style={styles.brandHeroCopy}>
-          <Text style={styles.title}>What would you like to do?</Text>
+          <AccessibleHeading style={styles.title}>What would you like to do?</AccessibleHeading>
           <Text style={styles.body}>Messages, plans, and records in one calm place.</Text>
         </View>
       </View>
@@ -218,7 +215,7 @@ export function InvitationScreen({ initialCode }: { initialCode?: string }) {
 
   return (
     <View style={styles.stack}>
-      <Text style={styles.title}>Family connection</Text>
+      <AccessibleHeading style={styles.title}>Family connection</AccessibleHeading>
       <Text style={styles.body}>Invite a co-parent or enter a code you received.</Text>
 
       <View accessibilityLabel="Invitation action" accessibilityRole="tablist" style={styles.segmented}>
@@ -341,6 +338,7 @@ export function InvitationScreen({ initialCode }: { initialCode?: string }) {
 
 export function CalendarScreen() {
   const largeText = usesLargeTextLayout(useWindowDimensions().fontScale);
+  const { locale } = useLocalization();
   const {
     addEvent,
     calendarView,
@@ -364,15 +362,15 @@ export function CalendarScreen() {
     <View style={styles.stack}>
       <View style={styles.titleRow}>
         <View>
-          <Text style={styles.title}>Calendar</Text>
-          <Text style={styles.body}>See parenting plans, requests, activities, and calls.</Text>
+          <AccessibleHeading style={styles.title}>{calendarText(locale, "title")}</AccessibleHeading>
+          <Text style={styles.body}>{calendarText(locale, "body")}</Text>
         </View>
       </View>
 
-      <View accessibilityLabel="Calendar view" accessibilityRole="tablist" style={styles.segmented}>
+      <View accessibilityLabel={calendarText(locale, "view")} accessibilityRole="tablist" style={styles.segmented}>
         {views.map((view) => (
           <Pressable
-            accessibilityLabel={`${view[0].toUpperCase() + view.slice(1)} calendar view`}
+            accessibilityLabel={`${calendarText(locale, view)} ${calendarText(locale, "title").toLocaleLowerCase(locale)} view`}
             accessibilityRole="tab"
             accessibilityState={{ selected: calendarView === view }}
             key={view}
@@ -380,16 +378,16 @@ export function CalendarScreen() {
             style={[styles.segment, calendarView === view ? styles.segmentActive : null]}
           >
             <Text style={[styles.segmentText, calendarView === view ? styles.segmentTextActive : null]}>
-              {view[0].toUpperCase() + view.slice(1)}
+              {calendarText(locale, view)}
             </Text>
           </Pressable>
         ))}
       </View>
 
-      <CalendarViewPanel calendarView={calendarView} events={visibleEvents} layers={layers} />
+      <CalendarViewPanel calendarView={calendarView} events={visibleEvents} layers={layers} locale={locale} />
 
       <View style={styles.card}>
-        <Text style={styles.heading}>Calendars</Text>
+        <Text style={styles.heading}>{calendarText(locale, "calendars")}</Text>
         {layers.map((layer) => {
           const visible = visibleLayerIds.includes(layer.id);
           const shared = layer.visibility.scope !== "private";
@@ -519,7 +517,7 @@ export function MessagesScreen() {
 
   return (
     <View style={styles.stack}>
-      <Text style={styles.title}>Messages</Text>
+      <AccessibleHeading style={styles.title}>Messages</AccessibleHeading>
       <Text style={styles.body}>Write to your co-parent. PeacePad never sends without your confirmation.</Text>
 
       <View style={styles.card}>
@@ -690,6 +688,7 @@ export function MessagesScreen() {
 }
 
 export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
+  const { locale } = useLocalization();
   const { events, sentMessages } = useCoordinationState();
   const { archiveBinder, binder, binders, attachmentIntent, busy, createBinder, error: recordsError, linkTimelineSource, loading, prepareAttachment, reload, selectBinder, timelineEntries } = useRecordsState();
   const [binderName, setBinderName] = useState("");
@@ -722,7 +721,7 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
   const eventCandidate = events.find((event) => !linkedSourceIds.has(event.id));
   return (
     <View style={styles.stack}>
-      <Text style={styles.title}>Records</Text>
+      <AccessibleHeading style={styles.title}>Records</AccessibleHeading>
       {loading ? <View style={styles.card}><Text style={styles.heading}>Opening Records</Text><Text style={styles.body}>Loading your private Case Binders.</Text></View> : null}
       {!loading && binders.length > 1 ? <View style={styles.card}>
         <Text style={styles.heading}>Your Case Binders</Text>
@@ -746,7 +745,7 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
         {timelineEntries.length === 0 ? <Text style={styles.caption}>No sources linked yet.</Text> : timelineEntries.map((entry) => (
           <View accessibilityLabel={`${entry.source.kind === "message-event" ? "Message" : "Calendar event"} timeline entry`} key={entry.id} style={styles.successCard}>
             <Text style={styles.heading}>{entry.source.kind === "message-event" ? "Message" : "Calendar event"}</Text>
-            <Text style={styles.caption}>{new Date(entry.occurredAt).toLocaleString()}</Text>
+            <Text style={styles.caption}>{formatLocalizedDate(locale, entry.occurredAt, { dateStyle: "medium", timeStyle: "short" })}</Text>
           </View>
         ))}
         {messageCandidate ? <LabButton disabled={busy} label="Link latest message" onPress={() => void linkSource("message-event", messageCandidate.id)} variant="secondary" /> : null}
@@ -779,7 +778,7 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   return (
     <View style={styles.stack}>
-      <Text accessibilityRole="header" style={styles.title}>{t("more.title")}</Text>
+      <AccessibleHeading style={styles.title}>{t("more.title")}</AccessibleHeading>
       <Pressable accessibilityRole="button" onPress={() => setScreen("invite")} style={styles.actionCard}>
         <Text style={styles.actionTitle}>{t("more.family.title")}</Text>
         <Text style={styles.caption}>{t("more.family.body")}</Text>
@@ -814,18 +813,18 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
         </View>
       </View>
       {accountActions ? <Pressable accessibilityRole="button" onPress={() => void accountActions.signOut()} style={styles.actionCard}>
-        <Text style={styles.actionTitle}>Sign out</Text>
-        <Text style={styles.caption}>Remove this fictional staging session from this device.</Text>
+        <Text style={styles.actionTitle}>{t("account.signOut")}</Text>
+        <Text style={styles.caption}>{t("account.signOutBody")}</Text>
       </Pressable> : null}
-      {accountActions ? confirmDelete ? <View style={styles.confirmCard}>
-        <Text style={styles.actionTitle}>Delete this staging account?</Text>
-        <Text style={styles.caption}>This permanently deletes the fictional staging identity and revokes its family access. This cannot be undone.</Text>
-        <LabButton disabled={accountActions.deleting} label={accountActions.deleting ? "Deleting account..." : "Delete account permanently"} onPress={() => void accountActions.deleteAccount().catch(() => undefined)} />
-        <LabButton disabled={accountActions.deleting} label="Cancel" onPress={() => setConfirmDelete(false)} variant="secondary" />
+      {accountActions ? confirmDelete ? <View accessibilityLiveRegion="assertive" accessibilityRole="alert" accessibilityViewIsModal style={styles.confirmCard}>
+        <AccessibleHeading style={styles.actionTitle}>{t("account.deleteTitle")}</AccessibleHeading>
+        <Text style={styles.caption}>{t("account.deleteWarning")}</Text>
+        <LabButton disabled={accountActions.deleting} label={accountActions.deleting ? t("account.deleting") : t("account.deletePermanently")} onPress={() => void accountActions.deleteAccount().catch(() => undefined)} />
+        <LabButton disabled={accountActions.deleting} label={t("account.cancel")} onPress={() => setConfirmDelete(false)} variant="secondary" />
         {accountActions.error ? <Text accessibilityRole="alert" style={styles.error}>{accountActions.error}</Text> : null}
       </View> : <Pressable accessibilityRole="button" onPress={() => setConfirmDelete(true)} style={styles.actionCard}>
-        <Text style={styles.actionTitle}>Delete staging account</Text>
-        <Text style={styles.caption}>Permanently remove this fictional account and its access.</Text>
+        <Text style={styles.actionTitle}>{t("account.delete")}</Text>
+        <Text style={styles.caption}>{t("account.deleteBody")}</Text>
       </Pressable> : null}
     </View>
   );
