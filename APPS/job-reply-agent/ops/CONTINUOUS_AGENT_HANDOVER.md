@@ -46,6 +46,10 @@ facts before changing them.
 - The next strict CI step exposed missing synthetic `BACKUP_DATABASE_URL` and
   `BACKUP_ENCRYPTION_KEY` fixture values. The workflow now supplies a distinct
   backup role and a 32-byte test key; require its rerun before calling CI green.
+- Gitleaks 8.28 identified one false positive in historical release evidence:
+  a Cloudflare deployment UUID immediately followed `API routes. Version:`.
+  The wording now identifies the value as a deployment UUID, preserving the
+  evidence while allowing the application-tree scan to pass locally.
 - `npm run build`: passed.
 - `npm run lint`: passed.
 - `npm run production:check`: passed in static mode with only the expected

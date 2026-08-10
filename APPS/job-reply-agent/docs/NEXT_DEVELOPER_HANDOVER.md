@@ -82,7 +82,10 @@ expanded into `node_modules` paths. After quoting them, clean install, audit,
 static checks, compile/lint, and all tests passed. The strict configuration step
 then exposed a stale CI fixture missing the required backup URL and encryption
 key; the handover update supplies synthetic values. Require the newest rerun to
-pass before marking CI green.
+pass before marking CI green. The final secret scan also identified a false
+positive where a historical Cloudflare deployment UUID followed `API routes.
+Version:`. The evidence wording now identifies it as a deployment UUID without
+removing the proof; Gitleaks 8.28 passes locally after that correction.
 
 Unrelated Garden Portal workflows also ran on the monorepo PR and failed. Keep
 their status separate from JobAgent release evidence unless a repository-level

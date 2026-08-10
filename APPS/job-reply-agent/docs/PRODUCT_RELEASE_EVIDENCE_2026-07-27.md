@@ -7,7 +7,8 @@
 - Railway diagnostic origin: `https://jobagent-web-production.up.railway.app`
 - Cloudflare Worker `una-jobagent-edge` owns the branded hostname, DNS, TLS,
   fixed-origin proxying, redirect rewriting, and no-store enforcement for
-  account/API routes. Version: `6494e25c-443a-4826-8ade-cf7d7ffb144e`.
+  account and API routes. The verified deployment UUID was
+  `6494e25c-443a-4826-8ade-cf7d7ffb144e`.
 - Web, worker, one-shot migration, daily backup, PostgreSQL, and private bucket
   are separate resources.
 - Migration deployment completed and granted table access only to
