@@ -45,7 +45,10 @@ const messages = {
     "foundation.back": "Back", "foundation.privacy": "Privacy", "foundation.terms": "Terms", "foundation.support": "Support",
     "foundation.restored": "Your private guest session was restored on this device.", "foundation.requiredConsent": "Accept the Terms and acknowledge the Privacy Policy first.",
     "foundation.guestReady": "Guest session ready. AI processing remains optional.", "foundation.sessionCleared": "This device session was cleared.",
-    "foundation.requestError": "PeacePad could not complete that request. Try again."
+    "foundation.requestError": "PeacePad could not complete that request. Try again.",
+    "foundation.composeTitle": "Check your message before sending", "foundation.composeBody": "Review your wording before deciding what to send. PeacePad does not send this message to a co-parent.",
+    "foundation.draftLabel": "Message draft", "foundation.draftPlaceholder": "Write a difficult message…", "foundation.checking": "Checking…", "foundation.checkMessage": "Check message",
+    "foundation.previewResult": "Message preview result", "foundation.suggested": "Suggested wording: {suggestion}", "foundation.retryCheck": "Retry message check", "foundation.resetSession": "Reset this device session"
     ,"runtime.signInTitle": "Sign in to staging", "runtime.signInBody": "Use a fictional PeacePad staging account. Real family information is not permitted.",
     "runtime.email": "Staging email", "runtime.emailPlaceholder": "Email", "runtime.password": "Staging password", "runtime.passwordPlaceholder": "Password",
     "runtime.signingIn": "Signing in...", "runtime.signIn": "Sign in", "runtime.chooseFamily": "Choose a family", "runtime.chooseFamilyBody": "Select the family space you want to open.",
@@ -55,7 +58,11 @@ const messages = {
     "runtime.requestError": "PeacePad could not complete that request.", "runtime.loadingFamily": "Loading your family space", "runtime.restoringFamily": "Restoring messages, calendars, and preferences securely."
     ,"runtime.restoringSession": "Restoring your session", "runtime.checkingDevice": "Checking this device securely.", "runtime.sessionUnavailable": "Session unavailable",
     "runtime.restoreError": "PeacePad could not restore this session.", "runtime.opening": "Opening PeacePad", "runtime.loadingAuthorized": "Loading your authorized family space.",
-    "runtime.unavailable": "PeacePad is unavailable", "runtime.logo": "PeacePad conch logo"
+    "runtime.unavailable": "PeacePad is unavailable", "runtime.logo": "PeacePad conch logo",
+    "runtime.invalidCredentials": "Check the fictional staging email and password.", "runtime.signInUnavailable": "PeacePad staging sign-in is unavailable. Try again.",
+    "runtime.sessionExpired": "Your staging session expired. Sign in again.", "runtime.signOutRemoteFailed": "This device was signed out, but the remote session could not be closed."
+    ,"runtime.connectionReady": "{family} is ready. Share a single-use code, then check again after it is accepted.", "runtime.inviteExpiry": "Expires in 72 hours. Do not use real family information in staging.",
+    "runtime.checkConnection": "Check connection"
   },
   fr: {
     "navigation.primary": "Navigation principale", "navigation.home": "Accueil", "navigation.messages": "Messages",
@@ -95,7 +102,10 @@ const messages = {
     "foundation.back": "Retour", "foundation.privacy": "Confidentialité", "foundation.terms": "Conditions", "foundation.support": "Soutien",
     "foundation.restored": "Votre session invité privée a été restaurée sur cet appareil.", "foundation.requiredConsent": "Acceptez les conditions et reconnaissez la politique de confidentialité d’abord.",
     "foundation.guestReady": "La session invité est prête. Le traitement par IA reste facultatif.", "foundation.sessionCleared": "La session de cet appareil a été effacée.",
-    "foundation.requestError": "PeacePad n’a pas pu effectuer cette demande. Réessayez."
+    "foundation.requestError": "PeacePad n’a pas pu effectuer cette demande. Réessayez.",
+    "foundation.composeTitle": "Vérifiez votre message avant de l’envoyer", "foundation.composeBody": "Relisez votre formulation avant de décider quoi envoyer. PeacePad n’envoie pas ce message à un coparent.",
+    "foundation.draftLabel": "Brouillon du message", "foundation.draftPlaceholder": "Écrivez un message difficile…", "foundation.checking": "Vérification…", "foundation.checkMessage": "Vérifier le message",
+    "foundation.previewResult": "Résultat de la vérification du message", "foundation.suggested": "Formulation suggérée : {suggestion}", "foundation.retryCheck": "Réessayer la vérification", "foundation.resetSession": "Réinitialiser la session de cet appareil"
     ,"runtime.signInTitle": "Connexion à l’environnement de test", "runtime.signInBody": "Utilisez un compte PeacePad de test fictif. Les véritables renseignements familiaux sont interdits.",
     "runtime.email": "Courriel de test", "runtime.emailPlaceholder": "Courriel", "runtime.password": "Mot de passe de test", "runtime.passwordPlaceholder": "Mot de passe",
     "runtime.signingIn": "Connexion...", "runtime.signIn": "Se connecter", "runtime.chooseFamily": "Choisir une famille", "runtime.chooseFamilyBody": "Sélectionnez l’espace familial à ouvrir.",
@@ -105,7 +115,11 @@ const messages = {
     "runtime.requestError": "PeacePad n’a pas pu effectuer cette demande.", "runtime.loadingFamily": "Chargement de votre espace familial", "runtime.restoringFamily": "Restauration sécurisée des messages, calendriers et préférences."
     ,"runtime.restoringSession": "Restauration de votre session", "runtime.checkingDevice": "Vérification sécurisée de cet appareil.", "runtime.sessionUnavailable": "Session indisponible",
     "runtime.restoreError": "PeacePad n’a pas pu restaurer cette session.", "runtime.opening": "Ouverture de PeacePad", "runtime.loadingAuthorized": "Chargement de votre espace familial autorisé.",
-    "runtime.unavailable": "PeacePad est indisponible", "runtime.logo": "Logo coquillage de PeacePad"
+    "runtime.unavailable": "PeacePad est indisponible", "runtime.logo": "Logo coquillage de PeacePad",
+    "runtime.invalidCredentials": "Vérifiez l’adresse courriel et le mot de passe fictifs de test.", "runtime.signInUnavailable": "La connexion de test PeacePad est indisponible. Réessayez.",
+    "runtime.sessionExpired": "Votre session de test a expiré. Reconnectez-vous.", "runtime.signOutRemoteFailed": "Cet appareil a été déconnecté, mais la session distante n’a pas pu être fermée."
+    ,"runtime.connectionReady": "L’espace {family} est prêt. Partagez un code à usage unique, puis vérifiez de nouveau après son acceptation.", "runtime.inviteExpiry": "Expire dans 72 heures. N’utilisez aucune information familiale réelle dans l’environnement de test.",
+    "runtime.checkConnection": "Vérifier la connexion"
   },
   es: {
     "navigation.primary": "Navegación principal", "navigation.home": "Inicio", "navigation.messages": "Mensajes",
@@ -145,7 +159,10 @@ const messages = {
     "foundation.back": "Volver", "foundation.privacy": "Privacidad", "foundation.terms": "Términos", "foundation.support": "Ayuda",
     "foundation.restored": "Tu sesión privada de invitado se restauró en este dispositivo.", "foundation.requiredConsent": "Acepta los Términos y reconoce la Política de privacidad primero.",
     "foundation.guestReady": "La sesión de invitado está lista. El procesamiento con IA sigue siendo opcional.", "foundation.sessionCleared": "Se borró la sesión de este dispositivo.",
-    "foundation.requestError": "PeacePad no pudo completar esa solicitud. Inténtalo de nuevo."
+    "foundation.requestError": "PeacePad no pudo completar esa solicitud. Inténtalo de nuevo.",
+    "foundation.composeTitle": "Revisa tu mensaje antes de enviarlo", "foundation.composeBody": "Revisa tus palabras antes de decidir qué enviar. PeacePad no envía este mensaje a la otra persona progenitora.",
+    "foundation.draftLabel": "Borrador del mensaje", "foundation.draftPlaceholder": "Escribe un mensaje difícil…", "foundation.checking": "Revisando…", "foundation.checkMessage": "Revisar mensaje",
+    "foundation.previewResult": "Resultado de la revisión del mensaje", "foundation.suggested": "Redacción sugerida: {suggestion}", "foundation.retryCheck": "Volver a intentar la revisión", "foundation.resetSession": "Restablecer la sesión de este dispositivo"
     ,"runtime.signInTitle": "Iniciar sesión en pruebas", "runtime.signInBody": "Usa una cuenta ficticia de pruebas de PeacePad. No se permite información familiar real.",
     "runtime.email": "Correo de pruebas", "runtime.emailPlaceholder": "Correo", "runtime.password": "Contraseña de pruebas", "runtime.passwordPlaceholder": "Contraseña",
     "runtime.signingIn": "Iniciando sesión...", "runtime.signIn": "Iniciar sesión", "runtime.chooseFamily": "Elegir una familia", "runtime.chooseFamilyBody": "Selecciona el espacio familiar que quieres abrir.",
@@ -155,7 +172,11 @@ const messages = {
     "runtime.requestError": "PeacePad no pudo completar esa solicitud.", "runtime.loadingFamily": "Cargando tu espacio familiar", "runtime.restoringFamily": "Restaurando mensajes, calendarios y preferencias de forma segura."
     ,"runtime.restoringSession": "Restaurando tu sesión", "runtime.checkingDevice": "Comprobando este dispositivo de forma segura.", "runtime.sessionUnavailable": "Sesión no disponible",
     "runtime.restoreError": "PeacePad no pudo restaurar esta sesión.", "runtime.opening": "Abriendo PeacePad", "runtime.loadingAuthorized": "Cargando tu espacio familiar autorizado.",
-    "runtime.unavailable": "PeacePad no está disponible", "runtime.logo": "Logotipo de caracola de PeacePad"
+    "runtime.unavailable": "PeacePad no está disponible", "runtime.logo": "Logotipo de caracola de PeacePad",
+    "runtime.invalidCredentials": "Comprueba el correo y la contraseña ficticios de pruebas.", "runtime.signInUnavailable": "El inicio de sesión de pruebas de PeacePad no está disponible. Inténtalo de nuevo.",
+    "runtime.sessionExpired": "Tu sesión de pruebas caducó. Vuelve a iniciar sesión.", "runtime.signOutRemoteFailed": "Se cerró la sesión en este dispositivo, pero no se pudo cerrar la sesión remota."
+    ,"runtime.connectionReady": "El espacio {family} está listo. Comparte un código de un solo uso y vuelve a comprobar después de que se acepte.", "runtime.inviteExpiry": "Caduca en 72 horas. No uses información familiar real en el entorno de pruebas.",
+    "runtime.checkConnection": "Comprobar conexión"
   }
 } as const;
 
@@ -179,6 +200,7 @@ export const secureLocaleStore: LocaleStore = {
 
 type LocalizationValue = { locale: SupportedLocale; setLocale(locale: SupportedLocale): Promise<void>; t(key: MessageKey, values?: Readonly<Record<string, string>>): string };
 const LocalizationContext = createContext<LocalizationValue | null>(null);
+const defaultLocalization: LocalizationValue = { locale: "en", setLocale: async () => undefined, t: (key, values) => translate("en", key, values) };
 
 export function LocalizationProvider({ children, initialLocale, store = secureLocaleStore }: { children: ReactNode; initialLocale?: string; store?: LocaleStore }) {
   const systemLocale = Intl.DateTimeFormat().resolvedOptions().locale;
@@ -206,5 +228,5 @@ export function useLocalization(): LocalizationValue {
 }
 
 export function useOptionalLocalization(): LocalizationValue {
-  return useContext(LocalizationContext) ?? { locale: "en", setLocale: async () => undefined, t: (key, values) => translate("en", key, values) };
+  return useContext(LocalizationContext) ?? defaultLocalization;
 }

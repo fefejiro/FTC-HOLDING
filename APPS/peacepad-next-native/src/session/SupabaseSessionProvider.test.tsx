@@ -3,6 +3,7 @@ import { act, render, screen, waitFor } from "@testing-library/react-native";
 import { Text } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { secureSupabaseStorage, SupabaseSessionProvider, useSupabaseSession } from "./SupabaseSessionProvider";
+import { LocalizationProvider } from "../localization/LocalizationProvider";
 
 function Probe() {
   const session = useSupabaseSession();
@@ -92,6 +93,20 @@ describe("SupabaseSessionProvider", () => {
     await waitFor(() => expect(screen.getByTestId("sign-out")).toHaveTextContent(
       "signed-out:none:This device was signed out, but the remote session could not be closed."
     ));
+    expect(fake.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
+  });
+
+  it.each([
+    ["fr", "Cet appareil a été déconnecté, mais la session distante n’a pas pu être fermée."],
+    ["es", "Se cerró la sesión en este dispositivo, pero no se pudo cerrar la sesión remota."]
+  ])("localizes fail-closed remote cleanup presentation in %s", async (locale, message) => {
+    const current = { access_token: "token-a", expires_at: Math.floor(Date.now() / 1000) + 3600, user: { id: "user-a" } };
+    const fake = fakeClient(current);
+    fake.auth.signOut.mockResolvedValue({ error: new Error("private cleanup detail") });
+    render(<LocalizationProvider initialLocale={locale}><SupabaseSessionProvider client={fake.client}><SignOutProbe /></SupabaseSessionProvider></LocalizationProvider>);
+    await waitFor(() => expect(screen.getByTestId("sign-out")).toHaveTextContent("ready:token-a:no-error"));
+    await act(async () => screen.getByTestId("sign-out").props.onPress());
+    await waitFor(() => expect(screen.getByTestId("sign-out")).toHaveTextContent(`signed-out:none:${message}`));
     expect(fake.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
   });
 

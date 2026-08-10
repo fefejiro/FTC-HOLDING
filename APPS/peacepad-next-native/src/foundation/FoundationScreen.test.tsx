@@ -54,6 +54,22 @@ describe("PeacePad native foundation", () => {
     expect(api.startGuest).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["fr", "Essayer PeacePad", "J’accepte les conditions d’utilisation", "Je reconnais avoir lu la politique de confidentialité", "Continuer en tant qu’invité", "Vérifiez votre message avant de l’envoyer", "Brouillon du message", "Vérifier le message", "Réinitialiser la session de cet appareil"],
+    ["es", "Probar PeacePad", "Acepto los Términos", "Reconozco la Política de privacidad", "Continuar como invitado", "Revisa tu mensaje antes de enviarlo", "Borrador del mensaje", "Revisar mensaje", "Restablecer la sesión de este dispositivo"]
+  ])("localizes the compose and recovery surface with heading semantics in %s", async (locale, tryLabel, terms, privacy, continueLabel, title, draftLabel, checkLabel, resetLabel) => {
+    const { api, sessionStore } = createHarness();
+    render(<LocalizationProvider initialLocale={locale}><FoundationScreen api={api} sessionStore={sessionStore} /></LocalizationProvider>);
+    fireEvent.press(await screen.findByText(tryLabel));
+    fireEvent.press(screen.getByLabelText(terms));
+    fireEvent.press(screen.getByLabelText(privacy));
+    fireEvent.press(screen.getByText(continueLabel));
+    expect(await screen.findByRole("header", { name: title })).toBeOnTheScreen();
+    expect(screen.getByLabelText(draftLabel)).toBeOnTheScreen();
+    expect(screen.getByText(checkLabel)).toBeOnTheScreen();
+    expect(screen.getByText(resetLabel)).toBeOnTheScreen();
+  });
+
   it("shows the real conch brand and creates no session on welcome", async () => {
     const { api, sessionStore } = createHarness();
     render(<FoundationScreen api={api} sessionStore={sessionStore} />);

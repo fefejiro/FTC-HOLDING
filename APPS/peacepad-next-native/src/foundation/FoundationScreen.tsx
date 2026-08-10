@@ -268,27 +268,24 @@ export function FoundationScreen({
 
       {phase === "compose" ? (
         <View style={styles.card}>
-          <Text style={styles.heading}>Check your message before sending</Text>
-          <Text style={styles.body}>
-            Review your wording before deciding what to send. PeacePad does not
-            send this message to a co-parent.
-          </Text>
+          <AccessibleHeading style={styles.heading}>{t("foundation.composeTitle")}</AccessibleHeading>
+          <Text style={styles.body}>{t("foundation.composeBody")}</Text>
           <TextInput
-            accessibilityLabel="Message draft"
+            accessibilityLabel={t("foundation.draftLabel")}
             multiline
             onChangeText={setDraft}
-            placeholder="Write a difficult message…"
+            placeholder={t("foundation.draftPlaceholder")}
             style={styles.input}
             value={draft}
           />
           <PrimaryButton
-            label={previewState === "loading" ? "Checking…" : "Check message"}
+            label={previewState === "loading" ? t("foundation.checking") : t("foundation.checkMessage")}
             onPress={checkMessage}
             disabled={previewState === "loading"}
           />
 
           {preview ? (
-            <View style={styles.result} accessibilityLabel="Message preview result">
+            <View style={styles.result} accessibilityLabel={t("foundation.previewResult")}>
               <Text style={styles.resultTone}>
                 {preview.emoji ? `${preview.emoji} ` : ""}
                 {preview.tone}
@@ -296,7 +293,7 @@ export function FoundationScreen({
               <Text style={styles.body}>{preview.summary}</Text>
               {preview.rewordingSuggestion ? (
                 <Text style={styles.suggestion}>
-                  Suggested wording: {preview.rewordingSuggestion}
+                  {t("foundation.suggested", { suggestion: preview.rewordingSuggestion })}
                 </Text>
               ) : null}
             </View>
@@ -305,12 +302,12 @@ export function FoundationScreen({
           {previewError ? (
             <View style={styles.errorCard} accessibilityRole="alert">
               <Text style={styles.errorText}>{previewError}</Text>
-              <SecondaryButton label="Retry message check" onPress={checkMessage} />
+              <SecondaryButton label={t("foundation.retryCheck")} onPress={checkMessage} />
             </View>
           ) : null}
 
           <SecondaryButton
-            label="Reset this device session"
+            label={t("foundation.resetSession")}
             onPress={resetDeviceSession}
           />
         </View>

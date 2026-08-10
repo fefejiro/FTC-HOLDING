@@ -3,6 +3,7 @@ import * as SecureStore from "expo-secure-store";
 import { AppState } from "react-native";
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 import type { PeacePadSupabaseConfig } from "../config/environment";
+import { useOptionalLocalization, type MessageKey } from "../localization/LocalizationProvider";
 
 const STORAGE_PREFIX = "peacepad.v2.supabase.";
 const STORAGE_CHUNK_SIZE = 1_800;
@@ -74,10 +75,10 @@ export function createPeacePadSupabaseClient(config: PeacePadSupabaseConfig): Su
   });
 }
 
-function safeAuthMessage(error: unknown): string {
+function safeAuthMessage(error: unknown, t: (key: MessageKey) => string): string {
   return error instanceof Error && /invalid login credentials/i.test(error.message)
-    ? "Check the fictional staging email and password."
-    : "PeacePad staging sign-in is unavailable. Try again.";
+    ? t("runtime.invalidCredentials")
+    : t("runtime.signInUnavailable");
 }
 
 export function SupabaseSessionProvider({
@@ -87,6 +88,7 @@ export function SupabaseSessionProvider({
   children: ReactNode;
   client: SupabaseAuthClient;
 }) {
+  const { t } = useOptionalLocalization();
   const [status, setStatus] = useState<SupabaseSessionStatus>("loading");
   const [session, setSession] = useState<Session>();
   const [error, setError] = useState<string>();
@@ -101,7 +103,7 @@ export function SupabaseSessionProvider({
       if (restoreError) {
         setSession(undefined);
         setStatus("error");
-        setError("PeacePad could not restore this staging session.");
+        setError(t("runtime.restoreError"));
         return;
       }
       setSession(data.session ?? undefined);
@@ -119,7 +121,7 @@ export function SupabaseSessionProvider({
       mounted.current = false;
       data.subscription.unsubscribe();
     };
-  }, [client]);
+  }, [client, t]);
 
   useEffect(() => {
     const updateRefresh = (state: string) => {
@@ -144,14 +146,14 @@ export function SupabaseSessionProvider({
         authGeneration.current += 1;
         setSession(undefined);
         setStatus("signed-out");
-        setError("Your staging session expired. Sign in again.");
+        setError(t("runtime.sessionExpired"));
         await client.auth.signOut({ scope: "local" }).catch(() => undefined);
         return undefined;
       }
       return refreshed.data.session.access_token;
     }
     return current.data.session.access_token;
-  }, [client]);
+  }, [client, t]);
 
   const value = useMemo<SupabaseSessionValue>(() => ({
     status,
@@ -164,7 +166,7 @@ export function SupabaseSessionProvider({
       if (result.error) {
         setSession(undefined);
         setStatus("signed-out");
-        setError(safeAuthMessage(result.error));
+        setError(safeAuthMessage(result.error, t));
         throw result.error;
       }
     },
@@ -179,12 +181,12 @@ export function SupabaseSessionProvider({
         if (remaining.error || remaining.data.session) throw new Error("Local Supabase session remained after sign-out.");
         setError(undefined);
       } catch {
-        setError("This device was signed out, but the remote session could not be closed.");
+        setError(t("runtime.signOutRemoteFailed"));
       } finally {
         // Local authorization was already removed before the network operation.
       }
     }
-  }), [client, error, getAccessToken, session, status]);
+  }), [client, error, getAccessToken, session, status, t]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

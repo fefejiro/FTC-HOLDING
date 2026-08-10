@@ -6,6 +6,7 @@ import { useSupabaseSession } from "../session/SupabaseSessionProvider";
 import { invitationCodeFromStagingUrl, PeacePadStagingRuntime, validateVerifiedSessionContext } from "./PeacePadStagingRuntime";
 import { useOptionalStagingAccountActions } from "../session/StagingAccountActions";
 import { secureMessageOutboxStore } from "../messaging/secureMessageOutbox";
+import { LocalizationProvider } from "../localization/LocalizationProvider";
 
 jest.mock("../session/SupabaseSessionProvider", () => ({ useSupabaseSession: jest.fn() }));
 jest.mock("../staging/StagingCoordinationClient", () => ({ createStagingCoordinationClient: jest.fn() }));
@@ -150,8 +151,23 @@ describe("PeacePadStagingRuntime gates", () => {
     expect(screen.queryByText("ready")).toBeNull();
 
     view.rerender(<PeacePadStagingRuntime environment={environment} fetcher={sessionResponse()} supabase={supabase}>ready</PeacePadStagingRuntime>);
-    await waitFor(() => expect(screen.getByText("Invite your co-parent")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Invite a co-parent")).toBeTruthy());
     expect(screen.queryByText("ready")).toBeNull();
+  });
+
+  it.each([
+    ["fr", "Inviter un coparent", "Vérifier la connexion"],
+    ["es", "Invitar a un copadre", "Comprobar conexión"]
+  ])("localizes the fail-closed conversation recovery state in %s", async (locale, title, recoveryAction) => {
+    (useSupabaseSession as jest.Mock).mockReturnValue(authValue());
+    (createStagingCoordinationClient as jest.Mock).mockReturnValue({ listConversations: jest.fn(async () => []) });
+    render(
+      <LocalizationProvider initialLocale={locale}>
+        <PeacePadStagingRuntime environment={environment} fetcher={sessionResponse()} supabase={supabase}>ready</PeacePadStagingRuntime>
+      </LocalizationProvider>
+    );
+    expect(await screen.findByRole("header", { name: title })).toBeTruthy();
+    expect(screen.getByRole("button", { name: recoveryAction })).toBeTruthy();
   });
 
   it("requires explicit selection when more than one verified family is available", async () => {
@@ -306,7 +322,7 @@ describe("PeacePadStagingRuntime gates", () => {
       region: "ca",
       schemaVersion: "2.0"
     }));
-    await waitFor(() => expect(screen.getByText("Invite your co-parent")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Invite a co-parent")).toBeTruthy());
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
@@ -444,8 +460,8 @@ describe("PeacePadStagingRuntime gates", () => {
         ready
       </PeacePadStagingRuntime>
     );
-    await waitFor(() => expect(screen.getByText("Invite your co-parent")).toBeTruthy());
-    fireEvent.press(screen.getByRole("button", { name: "Create invitation code" }));
+    await waitFor(() => expect(screen.getByText("Invite a co-parent")).toBeTruthy());
+    fireEvent.press(screen.getByRole("button", { name: "Create invitation" }));
     await waitFor(() => expect(screen.getByText("PP2CA1")).toBeTruthy());
     expect(createInvitation).toHaveBeenCalledWith({
       expiresInHours: 72,
@@ -453,13 +469,13 @@ describe("PeacePadStagingRuntime gates", () => {
       invitedRole: "parent",
       permissions: ["message.write", "calendar.write"]
     }, expect.objectContaining({ actor: { identityId: IDENTITY, sessionId: SESSION }, region: "ca" }));
-    fireEvent.press(screen.getByRole("button", { name: "Revoke invitation" }));
+    fireEvent.press(screen.getByRole("button", { name: "Cancel invitation" }));
     await waitFor(() => expect(revokeInvitation).toHaveBeenCalledWith(
       invitationId,
       expect.objectContaining({ expectedVersion: 1 })
     ));
     expect(screen.queryByText("PP2CA1")).toBeNull();
-    expect(screen.getByRole("button", { name: "Create invitation code" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Create invitation" })).toBeTruthy();
   });
 
   it("injects the verified runtime only after an authorized conversation is discovered", async () => {
@@ -646,7 +662,7 @@ describe("PeacePadStagingRuntime gates", () => {
       listConversations: jest.fn(async () => [])
     });
     render(<PeacePadStagingRuntime environment={environment} fetcher={sessionResponse()} supabase={supabase}>ready</PeacePadStagingRuntime>);
-    await waitFor(() => expect(screen.getByText("Invite your co-parent")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Invite a co-parent")).toBeTruthy());
     fireEvent.press(screen.getByRole("button", { name: "Delete staging account" }));
     fireEvent.press(screen.getByRole("button", { name: "Delete account permanently" }));
     await waitFor(() => expect(deleteAccount).toHaveBeenCalledTimes(1));

@@ -77,6 +77,7 @@ export function PendingStagingInvitationProvider({
   code?: string;
   onConsumed: () => void;
 }) {
+  const { t } = useOptionalLocalization();
   const claimedCode = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (!code) claimedCode.current = undefined;
@@ -523,6 +524,7 @@ function ConversationSetup({ accountDeletion, api, membership, onReload, onSignO
   onSignOut: () => Promise<void>;
   verified: VerifiedSessionContext;
 }) {
+  const { t } = useOptionalLocalization();
   const [busy, setBusy] = useState(false);
   const [createdInvitation, setCreatedInvitation] = useState<CreatedInvitation>();
   const [error, setError] = useState<string>();
@@ -538,28 +540,28 @@ function ConversationSetup({ accountDeletion, api, membership, onReload, onSignO
       }, runtimeWriteContext(verified));
       setCreatedInvitation(created);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "PeacePad could not create an invitation.");
+      setError(cause instanceof Error ? cause.message : t("runtime.requestError"));
     } finally { setBusy(false); }
   };
   return (
     <View style={styles.page}>
       <Brand />
-      <AccessibleHeading style={styles.title}>Invite your co-parent</AccessibleHeading>
-      <Text style={styles.body}>{membership.familyName} is ready. Share a single-use code, then check again after it is accepted.</Text>
-      {createdInvitation ? <View style={styles.codeCard}><Text accessibilityLabel="Invitation code" selectable style={styles.code}>{createdInvitation.code}</Text><Text style={styles.body}>Expires in 72 hours. Do not use real family information in staging.</Text></View> : null}
-      {createdInvitation ? <LabButton disabled={busy} label="Revoke invitation" onPress={() => void (async () => {
+      <AccessibleHeading style={styles.title}>{t("invite.createTitle")}</AccessibleHeading>
+      <Text style={styles.body}>{t("runtime.connectionReady", { family: membership.familyName })}</Text>
+      {createdInvitation ? <View style={styles.codeCard}><Text accessibilityLabel={t("invite.code")} selectable style={styles.code}>{createdInvitation.code}</Text><Text style={styles.body}>{t("runtime.inviteExpiry")}</Text></View> : null}
+      {createdInvitation ? <LabButton disabled={busy} label={t("invite.cancel")} onPress={() => void (async () => {
         setBusy(true);
         setError(undefined);
         try {
           await api.revokeInvitation(createdInvitation.invitation.id, runtimeWriteContext(verified, createdInvitation.invitation.version));
           setCreatedInvitation(undefined);
         } catch (cause) {
-          setError(cause instanceof Error ? cause.message : "PeacePad could not revoke the invitation.");
+          setError(cause instanceof Error ? cause.message : t("runtime.requestError"));
         } finally { setBusy(false); }
-      })()} variant="secondary" /> : <LabButton disabled={busy} label="Create invitation code" onPress={() => void createInvitation()} />}
-      <LabButton disabled={busy} label="Check connection" onPress={onReload} variant="secondary" />
+      })()} variant="secondary" /> : <LabButton disabled={busy} label={t("invite.create")} onPress={() => void createInvitation()} />}
+      <LabButton disabled={busy} label={t("runtime.checkConnection")} onPress={onReload} variant="secondary" />
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
-      <LabButton disabled={busy} label="Sign out" onPress={() => void onSignOut()} variant="secondary" />
+      <LabButton disabled={busy} label={t("account.signOut")} onPress={() => void onSignOut()} variant="secondary" />
       <AccountDeletionControls value={accountDeletion} />
     </View>
   );
@@ -568,16 +570,17 @@ function ConversationSetup({ accountDeletion, api, membership, onReload, onSignO
 function AccountDeletionControls({ value }: {
   value: { deleteAccount: () => Promise<void>; deleting: boolean; error?: string };
 }) {
+  const { t } = useOptionalLocalization();
   const [confirming, setConfirming] = useState(false);
   if (!confirming) {
-    return <LabButton label="Delete staging account" onPress={() => setConfirming(true)} variant="secondary" />;
+    return <LabButton label={t("account.delete")} onPress={() => setConfirming(true)} variant="secondary" />;
   }
   return (
-    <View style={styles.card}>
-      <Text style={styles.cardTitle}>Delete this staging account?</Text>
-      <Text style={styles.body}>This permanently deletes the fictional staging identity and revokes its family access. This cannot be undone.</Text>
-      <LabButton disabled={value.deleting} label={value.deleting ? "Deleting account..." : "Delete account permanently"} onPress={() => void value.deleteAccount().catch(() => undefined)} />
-      <LabButton disabled={value.deleting} label="Cancel" onPress={() => setConfirming(false)} variant="secondary" />
+    <View accessibilityRole="alert" accessibilityViewIsModal style={styles.card}>
+      <Text accessibilityRole="header" style={styles.cardTitle}>{t("account.deleteTitle")}</Text>
+      <Text style={styles.body}>{t("account.deleteWarning")}</Text>
+      <LabButton disabled={value.deleting} label={value.deleting ? t("account.deleting") : t("account.deletePermanently")} onPress={() => void value.deleteAccount().catch(() => undefined)} />
+      <LabButton disabled={value.deleting} label={t("account.cancel")} onPress={() => setConfirming(false)} variant="secondary" />
       {value.error ? <Text accessibilityRole="alert" style={styles.error}>{value.error}</Text> : null}
     </View>
   );
