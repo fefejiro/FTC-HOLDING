@@ -47,6 +47,7 @@ historical #172 baseline plus explicitly labelled successor evidence.
 | Scheduled same-session message recovery | LOCAL VERIFIED at `984b91318`; hosted checks pending |
 | Private Case Binder and metadata-only attachment preparation | POSTGRES VERIFIED at `95738a841`: migrations through `202608090013` applied twice and the complete fictional transaction proof passed; managed migration and file transport remain blocked/disabled |
 | Owner-private source-linked timeline | HOSTED + POSTGRES VERIFIED at `4fa7ba672`: migrations through `202608100001` applied twice; message/calendar source authorization, content minimization, idempotency, owner isolation, and deletion cleanup passed. No file bytes, arbitrary narrative, legal conclusion, or export capability was added; managed deployment remains blocked |
+| Accessible EN/FR/ES localization foundation | LOCAL VERIFIED at `47874810c`: typed locale fallback, secure preference persistence, accessible radio selection, and translated primary navigation/supported More-screen content passed 31 suites with 253 tests and 1 skipped. Full screen translation, linguistic review, and VoiceOver/Dynamic Type device proof remain incomplete |
 | Hosted CI | PeacePad-scoped PASS on PR #177 at `4fa7ba672`: native run `31364518669`, infrastructure run `31364518719`. The separate Garden workflow remains outside PeacePad scope |
 
 This is not a production release. The native client remains a staging/lab
