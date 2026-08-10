@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Image, Pressable, Share, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
 import { InvitationQr } from "../components/InvitationQr";
 import { LabButton } from "../components/LabButton";
+import { languageNames, supportedLocales, useLocalization } from "../localization/LocalizationProvider";
 import { colors, spacing, typography, usesLargeTextLayout } from "../theme";
 import { useRecordsState } from "../records/RecordsState";
 import type { AttachmentMediaType } from "../domain/v2";
@@ -774,21 +775,43 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
 
 export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
   const accountActions = useOptionalStagingAccountActions();
+  const { locale, setLocale, t } = useLocalization();
   const [confirmDelete, setConfirmDelete] = useState(false);
   return (
     <View style={styles.stack}>
-      <Text style={styles.title}>More</Text>
+      <Text accessibilityRole="header" style={styles.title}>{t("more.title")}</Text>
       <Pressable accessibilityRole="button" onPress={() => setScreen("invite")} style={styles.actionCard}>
-        <Text style={styles.actionTitle}>Family connection</Text>
-        <Text style={styles.caption}>Review or enter an invitation.</Text>
+        <Text style={styles.actionTitle}>{t("more.family.title")}</Text>
+        <Text style={styles.caption}>{t("more.family.body")}</Text>
       </Pressable>
       <View style={styles.actionCard}>
-        <Text style={styles.actionTitle}>Privacy and consent</Text>
-        <Text style={styles.caption}>Review your choices and how PeacePad handles information.</Text>
+        <Text style={styles.actionTitle}>{t("more.privacy.title")}</Text>
+        <Text style={styles.caption}>{t("more.privacy.body")}</Text>
       </View>
       <View style={styles.actionCard}>
-        <Text style={styles.actionTitle}>Help & Support</Text>
-        <Text style={styles.caption}>Get help using PeacePad.</Text>
+        <Text style={styles.actionTitle}>{t("more.support.title")}</Text>
+        <Text style={styles.caption}>{t("more.support.body")}</Text>
+      </View>
+      <View accessibilityLabel={t("language.title")} style={styles.actionCard}>
+        <Text accessibilityRole="header" style={styles.actionTitle}>{t("language.title")}</Text>
+        <Text style={styles.caption}>{t("language.body")}</Text>
+        <View accessibilityRole="radiogroup" style={styles.languageOptions}>
+          {supportedLocales.map((candidate) => {
+            const selected = candidate === locale;
+            return <Pressable
+              accessibilityHint={t("language.optionHint")}
+              accessibilityLabel={languageNames[candidate]}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: selected }}
+              key={candidate}
+              onPress={() => void setLocale(candidate)}
+              style={({ pressed }) => [styles.languageOption, selected ? styles.languageOptionSelected : null, pressed ? styles.pressed : null]}
+            >
+              <Text accessible={false} style={styles.actionTitle}>{languageNames[candidate]}</Text>
+              {selected ? <Text accessible={false} style={styles.caption}>{t("language.selected")}</Text> : null}
+            </Pressable>;
+          })}
+        </View>
       </View>
       {accountActions ? <Pressable accessibilityRole="button" onPress={() => void accountActions.signOut()} style={styles.actionCard}>
         <Text style={styles.actionTitle}>Sign out</Text>
@@ -823,6 +846,9 @@ const styles = StyleSheet.create({
   actionCard: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 22, borderWidth: 1, gap: spacing.sm, justifyContent: "center", minHeight: 88, minWidth: "46%", padding: spacing.lg, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 1 },
   actionCardLargeText: { minWidth: "100%", width: "100%" },
   actionTitle: { ...typography.subheading, color: colors.text },
+  languageOptions: { gap: spacing.sm, marginTop: spacing.sm },
+  languageOption: { borderColor: colors.border, borderRadius: 14, borderWidth: 1, justifyContent: "center", minHeight: 48, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  languageOptionSelected: { backgroundColor: colors.brandSoft, borderColor: colors.brand },
   pressed: { opacity: 0.72 },
   summaryCard: { backgroundColor: colors.brand, borderRadius: 24, gap: spacing.sm, padding: spacing.lg },
   summaryRow: { alignItems: "center", borderTopColor: "rgba(255,255,255,0.16)", borderTopWidth: 1, flexDirection: "row", justifyContent: "space-between", paddingTop: spacing.sm },

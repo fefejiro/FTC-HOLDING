@@ -135,6 +135,15 @@ describe("PeacePad coordination shell", () => {
     fireEvent.press(screen.getByRole("button", { name: "Send a message" }));
     expect(screen.getByText("Message Check")).toBeOnTheScreen();
   });
+
+  it("exposes an accessible language choice and updates supported shell text", () => {
+    renderApp("more");
+    expect(screen.getByRole("radio", { name: "English" }).props.accessibilityState).toEqual({ checked: true });
+    fireEvent.press(screen.getByRole("radio", { name: "Français" }));
+    expect(screen.getByRole("radio", { name: "Français" }).props.accessibilityState).toEqual({ checked: true });
+    expect(screen.getByRole("tab", { name: "Accueil" })).toBeOnTheScreen();
+    expect(screen.getByText("Confidentialité et consentement")).toBeOnTheScreen();
+  });
 });
 
 describe("private records preparation", () => {

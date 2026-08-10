@@ -16,6 +16,7 @@ import {
 import { CoordinationStateProvider } from "./coordination/CoordinationState";
 import { environmentConfig, resolveSupabaseStagingConfig } from "./config/environment";
 import { FoundationScreen } from "./foundation/FoundationScreen";
+import { LocalizationProvider } from "./localization/LocalizationProvider";
 import { RecordsStateProvider } from "./records/RecordsState";
 import { PeacePadStagingRuntime, usePendingStagingInvitation } from "./runtime/PeacePadStagingRuntime";
 import { createPeacePadSupabaseClient, SupabaseSessionProvider } from "./session/SupabaseSessionProvider";
@@ -50,7 +51,8 @@ export function PeacePadCoordinationApp({ startScreen, wrapRecordsProvider = tru
       </Stack.Navigator>
     </NavigationContainer>
   );
-  return wrapRecordsProvider ? <RecordsStateProvider>{content}</RecordsStateProvider> : content;
+  const localized = <LocalizationProvider>{content}</LocalizationProvider>;
+  return wrapRecordsProvider ? <RecordsStateProvider>{localized}</RecordsStateProvider> : localized;
 }
 
 type BoundaryState = { failed: boolean };
