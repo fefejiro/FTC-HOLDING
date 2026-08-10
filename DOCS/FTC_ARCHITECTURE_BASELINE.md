@@ -41,7 +41,7 @@ Every public API should provide:
 
 ## Cost controls
 
-- Treat `APPS/dispatch` as the only Dispatch source of truth. The nested `APPS/saywetin/APPS/dispatch` tree is audit-only until its unique contents are reconciled; do not deploy it.
+- Treat `APPS/dispatch` as the only Dispatch source of truth. The stale nested Railway manifest under `APPS/saywetin/APPS/dispatch` was removed after verifying that the canonical tree contained the complete application and monorepo-safe start command. The architecture audit now rejects any recreated nested deployment tree.
 - Cache immutable assets for one year and use explicit short TTLs only for safe public responses.
 - Run non-urgent jobs on schedules rather than permanent processes.
 - Remove inactive preview deployments only after ownership and rollback evidence are recorded.
@@ -52,6 +52,6 @@ Every public API should provide:
 1. Baseline: service catalog, automated audit, Dispatch headers/request IDs/readiness, and CI validation.
 2. Extend the same response contract to SayWetin, then PeacePad through focused regression tests.
 3. Add product-specific cache budgets, database query evidence, and scheduled smoke checks.
-4. Reconcile duplicate deployment trees and retire only those proven unused.
+4. Retire additional duplicate deployment paths only after the same file, history, ownership, and rollback checks used for Dispatch.
 
 Production deployment remains a separate, evidence-backed action. Passing repository checks does not prove that the live services have adopted the baseline.

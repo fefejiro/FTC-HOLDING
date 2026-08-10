@@ -53,7 +53,7 @@ for (const service of catalog.services) {
 
 try {
   await access(path.join(root, 'APPS', 'saywetin', 'APPS', 'dispatch'));
-  record('warning', 'dispatch', 'duplicate nested APPS/saywetin/APPS/dispatch deployment tree exists; do not deploy it as a second source of truth');
+  record('error', 'dispatch', 'duplicate nested APPS/saywetin/APPS/dispatch deployment tree exists; APPS/dispatch is the only source of truth');
 } catch {
   // Desired state: no nested duplicate.
 }
