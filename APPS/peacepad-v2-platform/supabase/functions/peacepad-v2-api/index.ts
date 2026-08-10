@@ -100,7 +100,7 @@ const corsHeaders = (request: Request, config?: RuntimeConfig): HeadersInit => {
   const allowOrigin = origin && config?.allowedOrigins.includes(origin) ? origin : "";
   return {
     ...(allowOrigin ? { "access-control-allow-origin": allowOrigin } : {}),
-    "access-control-allow-headers": "authorization, apikey, content-type, idempotency-key, if-match, x-client-info, x-expected-version, x-idempotency-key, x-peacepad-region, x-peacepad-schema-version, x-schema-version",
+    "access-control-allow-headers": "authorization, apikey, content-type, idempotency-key, if-match, x-client-info, x-expected-version, x-idempotency-key, x-peacepad-region, x-peacepad-schema-version, x-region, x-schema-version",
     "access-control-allow-methods": "GET, POST, PATCH, PUT, DELETE, OPTIONS",
     "access-control-expose-headers": "x-request-id, x-peacepad-region, x-sb-edge-region",
     "cache-control": "no-store",

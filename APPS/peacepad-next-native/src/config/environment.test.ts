@@ -1,4 +1,4 @@
-import { resolveEnvironmentConfig, resolveSupabaseStagingConfig } from "./environment";
+import { resolveEnvironmentConfig, resolveFunctionInvocationRegion, resolveSupabaseStagingConfig } from "./environment";
 
 describe("resolveEnvironmentConfig", () => {
   it("defaults to an isolated local lab with production writes disabled", () => {
@@ -54,6 +54,15 @@ describe("resolveEnvironmentConfig", () => {
         EXPO_PUBLIC_PEACEPAD_API_BASE_URL: productionApiUrl
       })
     ).toThrow("must not target the production PeacePad API");
+  });
+});
+
+describe("resolveFunctionInvocationRegion", () => {
+  it("pins approved staging APIs to their supported Edge invocation regions", () => {
+    expect(resolveFunctionInvocationRegion("https://rohvkyuxbnqzglaromms.supabase.co/functions/v1/peacepad-v2-api")).toBe("ca-central-1");
+    expect(resolveFunctionInvocationRegion("https://spmpndalcvwmygznihec.supabase.co/functions/v1/peacepad-v2-api/")).toBe("us-east-1");
+    expect(resolveFunctionInvocationRegion("http://127.0.0.1:8787")).toBeUndefined();
+    expect(resolveFunctionInvocationRegion("https://ftdqnhlesqrkstnqgfxr.supabase.co/functions/v1/peacepad-v2-api")).toBeUndefined();
   });
 });
 

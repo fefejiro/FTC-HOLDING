@@ -18,7 +18,7 @@ import type {
   WriteContext
 } from "../domain/v2";
 import type { MessagePreviewResponse } from "./contracts";
-import type { PeacePadEnvironmentConfig } from "../config/environment";
+import { resolveFunctionInvocationRegion, type PeacePadEnvironmentConfig } from "../config/environment";
 import { PeacePadApiError } from "./PeacePadApiClient";
 
 export type InvitationFailureReason =
@@ -438,6 +438,7 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
       if (this.config.environment === "staging" && !token) {
         throw new PeacePadApiError("Sign in to the isolated staging account first.", "auth-required");
       }
+      const functionRegion = resolveFunctionInvocationRegion(this.config.apiBaseUrl);
       const response = await this.fetcher(`${this.config.apiBaseUrl}${path}`, {
         ...init,
         credentials: "include",
@@ -445,6 +446,7 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
           Accept: "application/json",
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(functionRegion ? { "X-Region": functionRegion } : {}),
           ...init.headers
         },
         signal: controller.signal

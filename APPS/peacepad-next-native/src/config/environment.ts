@@ -30,6 +30,10 @@ const STAGING_PROJECTS: Record<PeacePadStagingRegion, string> = {
   ca: "rohvkyuxbnqzglaromms",
   us: "spmpndalcvwmygznihec"
 };
+const STAGING_FUNCTION_REGIONS: Record<PeacePadStagingRegion, string> = {
+  ca: "ca-central-1",
+  us: "us-east-1"
+};
 
 function trimTrailingSlash(value: string): string {
   return value.replace(/\/+$/, "");
@@ -70,6 +74,15 @@ export function resolveEnvironmentConfig(
 }
 
 export const environmentConfig = resolveEnvironmentConfig();
+
+export function resolveFunctionInvocationRegion(apiBaseUrl: string): string | undefined {
+  const normalizedUrl = trimTrailingSlash(apiBaseUrl);
+  for (const region of Object.keys(STAGING_PROJECTS) as PeacePadStagingRegion[]) {
+    const expectedApiBaseUrl = `https://${STAGING_PROJECTS[region]}.supabase.co/functions/v1/peacepad-v2-api`;
+    if (normalizedUrl === expectedApiBaseUrl) return STAGING_FUNCTION_REGIONS[region];
+  }
+  return undefined;
+}
 
 export function resolveSupabaseStagingConfig(
   values: EnvironmentValues = process.env ?? {}

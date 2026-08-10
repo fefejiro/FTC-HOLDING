@@ -67,6 +67,7 @@ $requiredFunctionPatterns = @(
   'admin.auth.getUser(token)',
   'PEACEPAD_PROJECT_REF',
   'PEACEPAD_FUNCTION_REGION',
+  'x-region',
   'x-peacepad-region',
   'peacepad_v2_ready',
   'peacepad_v2_get_session_binding',

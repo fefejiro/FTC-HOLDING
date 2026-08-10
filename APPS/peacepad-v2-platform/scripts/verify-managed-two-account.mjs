@@ -5,6 +5,10 @@ const projects = Object.freeze({
   ca: "rohvkyuxbnqzglaromms",
   us: "spmpndalcvwmygznihec",
 });
+const functionRegions = Object.freeze({
+  ca: "ca-central-1",
+  us: "us-east-1",
+});
 
 const required = (name) => {
   const value = process.env[name]?.trim();
@@ -92,6 +96,7 @@ const api = async (account, path, { method = "GET", body, key, version, requeste
     Accept: "application/json",
     "Content-Type": "application/json",
     Authorization: `Bearer ${account.token}`,
+    "X-Region": functionRegions[region],
     "X-PeacePad-Region": requestedRegion,
     "X-PeacePad-Schema-Version": "2.0",
   };

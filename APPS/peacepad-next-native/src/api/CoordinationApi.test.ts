@@ -28,6 +28,34 @@ function response(status: number, payload: unknown): Response {
 }
 
 describe("HttpPeacePadCoordinationApi", () => {
+  it.each([
+    ["rohvkyuxbnqzglaromms", "ca-central-1"],
+    ["spmpndalcvwmygznihec", "us-east-1"]
+  ])("pins approved project %s to Edge region %s", async (projectRef, functionRegion) => {
+    const fetcher = jest.fn(async () => response(200, []));
+    const api = new HttpPeacePadCoordinationApi({
+      ...config,
+      apiBaseUrl: `https://${projectRef}.supabase.co/functions/v1/peacepad-v2-api`
+    }, fetcher, accessToken);
+
+    await api.listConversations("family-current");
+
+    expect(fetcher).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+      headers: expect.objectContaining({ "X-Region": functionRegion })
+    }));
+  });
+
+  it("does not attach a managed Edge region to a local lab API", async () => {
+    const fetcher = jest.fn(async () => response(200, []));
+    const api = new HttpPeacePadCoordinationApi({ ...config, environment: "lab", apiBaseUrl: "http://127.0.0.1:8787" }, fetcher, accessToken);
+
+    await api.listConversations("family-current");
+
+    expect(fetcher).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+      headers: expect.not.objectContaining({ "X-Region": expect.anything() })
+    }));
+  });
+
   it("routes the complete v2 coordination contract through versioned endpoints", async () => {
     const fetcher = jest.fn(async (input: string, _init?: RequestInit) => response(200,
       input.endsWith("/api/v2/account") ? {
