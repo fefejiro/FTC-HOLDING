@@ -65,20 +65,26 @@ tokens, or provider error text.
 
 ### GitHub environment deployment
 
-The manual `PeacePad V2 Supabase Staging Deploy` workflow is the preferred
-non-interactive operator path. It is `workflow_dispatch` only, deploys exactly
-one region per run, and defaults to a non-mutating dry run. Configure the
-following generic secret names independently in both protected environments,
-`peacepad-v2-staging-ca` and `peacepad-v2-staging-us`, without placing their
-values in chat, source, workflow inputs, or screenshots:
+The manual `PeacePad V2 Supabase Staging Deploy` workflow is registered on
+`main` and is the preferred non-interactive operator path. It is
+`workflow_dispatch` only, deploys exactly one region per run, and defaults to
+a non-mutating dry run. The control checkout is bound to the exact dispatch
+commit and the V2 source is materialized as a detached worktree only after its
+full reviewed SHA is verified. Both `peacepad-v2-staging-ca` and
+`peacepad-v2-staging-us` are restricted to `main` and require the `fefejiro`
+reviewer. Configure the following generic secret names independently in those
+environments without placing their values in chat, source, workflow inputs,
+or screenshots:
 
 - `SUPABASE_ACCESS_TOKEN`
 - `DATABASE_URL`
 - `MAINTENANCE_SECRET`
 
+Distinct `MAINTENANCE_SECRET` values are already configured. The remaining
+missing slots are `SUPABASE_ACCESS_TOKEN` and `DATABASE_URL` in each region.
 The access token must be able to see the approved project ref for that one
-region. Every run requires the exact project ref and checked-out commit SHA. A
-real deployment additionally requires the exact confirmation `DEPLOY
+region. Dispatch from `main` and enter the exact reviewed V2 target commit SHA.
+A real deployment additionally requires the exact confirmation `DEPLOY
 FICTIONAL STAGING`. The workflow dry-runs migrations before any apply, deploys
 only the staging Edge Function, and then verifies health, readiness,
 unauthenticated session denial, and wrong-region denial. It cannot target
@@ -104,17 +110,24 @@ Required evidence:
 7. The maintenance runner clears the retry outbox without exposing identity
    IDs or provider details in its response.
 
-## Current access blocker (2026-08-09)
+## Current verified access blocker (2026-08-09)
 
 The locally authenticated Supabase CLI token cannot currently see either
-approved regional staging project, and the repository has no Supabase
-deployment credentials. Pending migrations and the Edge Function are therefore
+approved regional staging project, and the protected environments do not yet
+have a usable Supabase access token or database URLs. Pending migrations and
+the Edge Function are therefore
 **BLOCKED BY DEPLOYMENT IDENTITY**, not reported as deployed. Hosted CI applies
 every migration twice to an isolated PostgreSQL 16 service and verifies the
 fictional invitation, messaging, correction, receipt, search, deletion, and
 access-revocation journey. That is hosted database proof, not managed-project
-execution. Resolve by granting a dedicated deployment identity access to both
-projects and storing only the five required values in the protected GitHub
-environment. Do not share passwords, database URLs, maintenance secrets, or
-service-role keys in chat.
+execution. The protected workflow and both regional environments are now
+registered. Their main-only branch policies and required reviewer are
+verified, and each environment has a distinct maintenance secret. Managed
+deployment remains blocked on four missing environment-secret slots:
+`SUPABASE_ACCESS_TOKEN` and `DATABASE_URL` for Canada and the United States.
+One access token may be shared if it can see both approved projects, so these
+may represent three distinct values. Resolve by granting a dedicated
+deployment identity access to both projects and adding those values privately.
+Do not share passwords, database URLs, maintenance secrets, or service-role
+keys in chat.
 
