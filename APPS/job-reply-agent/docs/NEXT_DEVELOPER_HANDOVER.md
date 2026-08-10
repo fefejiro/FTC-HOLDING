@@ -77,10 +77,12 @@ edits against the same files concurrently. The release auditor is read-only.
 ## Current CI And PR State
 
 PR #192 is draft and was mergeable at the last check. The immutable-image job
-passed. The first standalone-and-security run failed because unquoted Bash globs
-in the test script expanded into `node_modules` paths, leaving Vitest with no
-test files. The handover commit quotes those globs; require the rerun to pass
-before marking CI green.
+passes. The first standalone-and-security run failed because unquoted Bash globs
+expanded into `node_modules` paths. After quoting them, clean install, audit,
+static checks, compile/lint, and all tests passed. The strict configuration step
+then exposed a stale CI fixture missing the required backup URL and encryption
+key; the handover update supplies synthetic values. Require the newest rerun to
+pass before marking CI green.
 
 Unrelated Garden Portal workflows also ran on the monorepo PR and failed. Keep
 their status separate from JobAgent release evidence unless a repository-level

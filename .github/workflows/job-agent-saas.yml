@@ -80,6 +80,8 @@ jobs:
           DATABASE_URL: postgresql://jobagent_app:example@private-postgres:5432/jobagent
           MIGRATION_DATABASE_URL: postgresql://jobagent_migrator:example@private-postgres:5432/jobagent
           JOB_QUEUE_DATABASE_URL: postgresql://jobagent_queue:example@private-postgres:5432/jobagent
+          BACKUP_DATABASE_URL: postgresql://jobagent_backup:example@private-postgres:5432/jobagent
+          BACKUP_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
           OBJECT_STORAGE_DRIVER: s3
           OBJECT_STORAGE_BUCKET: jobagent-private
           OBJECT_STORAGE_REGION: ca-central-1

@@ -42,7 +42,10 @@ facts before changing them.
 - Full Vitest suite after the CLI import fix: `28` files passed, `1` skipped;
   `210` tests passed, `8` skipped, with a successful process exit.
 - The quoted-glob `npm test --workspaces=false` command passed locally; Linux CI
-  must rerun on the handover commit before that check is considered repaired.
+  then passed clean install, audit, static checks, compile/lint, and all tests.
+- The next strict CI step exposed missing synthetic `BACKUP_DATABASE_URL` and
+  `BACKUP_ENCRYPTION_KEY` fixture values. The workflow now supplies a distinct
+  backup role and a 32-byte test key; require its rerun before calling CI green.
 - `npm run build`: passed.
 - `npm run lint`: passed.
 - `npm run production:check`: passed in static mode with only the expected
