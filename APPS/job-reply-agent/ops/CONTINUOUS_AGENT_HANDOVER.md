@@ -4,8 +4,8 @@
 
 - Updated: 2026-08-10 17:27 America/New_York
 - Engineering branch: `agent/job-agent-continuous`
-- Recorded parent HEAD: `53c6e3be3 Add JobAgent mobile and Codex agent foundation`;
-  verify the current HEAD because the handover commit follows it
+- Recorded parent HEAD: `2809fddfa Clarify JobAgent release evidence`;
+  verify the current HEAD because the final handover commit follows it
 - Draft PR: `https://github.com/fefejiro/FTC-HOLDING/pull/192`
 - Autonomous worktree: `D:\FTC-HOLDING-worktrees\job-agent-continuous`
 - Autonomous branch: `agent/job-agent-continuous`
@@ -50,6 +50,9 @@ facts before changing them.
   a Cloudflare deployment UUID immediately followed `API routes. Version:`.
   The wording now identifies the value as a deployment UUID, preserving the
   evidence while allowing the application-tree scan to pass locally.
+- GitHub Actions run `31434235006` passed both JobAgent jobs: clean install,
+  dependency audit, static and strict release checks, compile/lint, all tests,
+  application-tree Gitleaks scan, immutable image build, and image contents.
 - `npm run build`: passed.
 - `npm run lint`: passed.
 - `npm run production:check`: passed in static mode with only the expected
