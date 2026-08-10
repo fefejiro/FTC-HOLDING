@@ -94,6 +94,8 @@ jobs:
           done
           psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d peacepad_v2_test \
             -f APPS/peacepad-v2-platform/scripts/verify-supabase-transactions.sql
+          psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d peacepad_v2_test \
+            -f APPS/peacepad-v2-platform/scripts/verify-audio-call-lifecycle.sql
 
       - name: Confirm workflow cannot deploy
         shell: bash

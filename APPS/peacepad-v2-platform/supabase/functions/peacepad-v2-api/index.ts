@@ -17,6 +17,9 @@ type ErrorCode =
   | "AI_CONSENT_REQUIRED"
   | "AUTH_REQUIRED"
   | "CALENDAR_ACCESS_DENIED"
+  | "CALL_ACCESS_DENIED"
+  | "CALL_ALREADY_ACTIVE"
+  | "CALL_STATE_INVALID"
   | "CONFIGURATION_ERROR"
   | "CONVERSATION_ACCESS_DENIED"
   | "DATABASE_NOT_READY"
@@ -199,6 +202,9 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     FAMILY_ACCESS_DENIED: "FAMILY_ACCESS_DENIED",
     CONVERSATION_ACCESS_DENIED: "CONVERSATION_ACCESS_DENIED",
     CALENDAR_ACCESS_DENIED: "CALENDAR_ACCESS_DENIED",
+    CALL_ACCESS_DENIED: "CALL_ACCESS_DENIED",
+    CALL_ALREADY_ACTIVE: "CALL_ALREADY_ACTIVE",
+    CALL_STATE_INVALID: "CALL_STATE_INVALID",
     CASE_BINDER_ACCESS_DENIED: "FAMILY_ACCESS_DENIED",
     TIMELINE_SOURCE_ACCESS_DENIED: "FAMILY_ACCESS_DENIED",
     MESSAGE_ACCESS_DENIED: "MESSAGE_ACCESS_DENIED",
@@ -223,8 +229,8 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
   ]);
   const safeCode = directCodes[message ?? ""] ?? (invalidRequestCodes.has(message ?? "") ? "INVALID_REQUEST" : "DATABASE_NOT_READY");
   const status = safeCode === "DATABASE_NOT_READY" ? 503
-    : ["REGION_MISMATCH", "CONCURRENCY_CONFLICT", "IDEMPOTENCY_CONFLICT"].includes(safeCode) ? 409
-    : ["AI_CONSENT_REQUIRED", "INVITATION_SELF_ACCEPT_DENIED", "FAMILY_ACCESS_DENIED", "CONVERSATION_ACCESS_DENIED", "MESSAGE_ACCESS_DENIED", "MESSAGE_CHECK_DISABLED", "CALENDAR_ACCESS_DENIED"].includes(safeCode) ? 403
+    : ["REGION_MISMATCH", "CONCURRENCY_CONFLICT", "IDEMPOTENCY_CONFLICT", "CALL_ALREADY_ACTIVE", "CALL_STATE_INVALID"].includes(safeCode) ? 409
+    : ["AI_CONSENT_REQUIRED", "INVITATION_SELF_ACCEPT_DENIED", "FAMILY_ACCESS_DENIED", "CONVERSATION_ACCESS_DENIED", "MESSAGE_ACCESS_DENIED", "MESSAGE_CHECK_DISABLED", "CALENDAR_ACCESS_DENIED", "CALL_ACCESS_DENIED"].includes(safeCode) ? 403
     : 400;
   return failure(request, status, safeCode as ErrorCode, safeCode === "DATABASE_NOT_READY" ? "The regional staging database is not ready." : "The request could not be completed.", requestId, config);
 };
@@ -293,6 +299,13 @@ const writeOperation = (method: string, path: string, body: Record<string, unkno
   if (method === "PATCH" && /^\/api\/v2\/case-binders\/[^/]+$/.test(path)) return "case_binder.archived";
   if (method === "POST" && path === "/api/v2/attachment-upload-intents") return "attachment_intent.prepared";
   if (method === "POST" && path === "/api/v2/timeline-entries") return "timeline_entry.linked";
+  if (method === "POST" && path === "/api/v2/calls") return "call.created";
+  const callTransition = path.match(/^\/api\/v2\/calls\/[^/]+\/(accept|decline|end)$/);
+  if (method === "POST" && callTransition) {
+    return callTransition[1] === "accept" ? "call.accepted"
+      : callTransition[1] === "decline" ? "call.declined"
+      : "call.ended";
+  }
   const invitationTransition = path.match(/^\/api\/v2\/invitations\/[^/]+\/(accept|decline)$/);
   if (method === "POST" && invitationTransition) {
     return invitationTransition[1] === "accept" ? "invitation.accepted" : "invitation.declined";
@@ -655,6 +668,19 @@ const handler = async (request: Request): Promise<Response> => {
     return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data ?? [], requestId, config);
   }
 
+  if (request.method === "GET" && path === "/api/v2/calls/current") {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
+    const conversationId = new URL(request.url).searchParams.get("conversationId")?.trim() ?? "";
+    if (!isUuid(conversationId)) return failure(request, 400, "INVALID_REQUEST", "A valid conversation is required.", requestId, config);
+    const { data, error } = await authenticated.admin.rpc("peacepad_v2_get_current_audio_call", {
+      p_identity_id: authenticated.user.id,
+      p_region: config.region,
+      p_conversation_id: conversationId,
+    });
+    return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
+  }
+
   const isInvitationTransition = /^\/api\/v2\/invitations\/[^/]+\/(accept|decline)$/.test(path);
   const isInvitationRevocation = /^\/api\/v2\/invitations\/[^/]+$/.test(path);
   const isAccountDeletion = path === "/api/v2/account";
@@ -671,13 +697,15 @@ const handler = async (request: Request): Promise<Response> => {
   const caseBinderMatch = path.match(/^\/api\/v2\/case-binders\/([^/]+)$/);
   const isAttachmentIntentCreation = path === "/api/v2/attachment-upload-intents";
   const isTimelineEntryCreation = path === "/api/v2/timeline-entries";
+  const isAudioCallCreation = path === "/api/v2/calls";
+  const audioCallTransition = path.match(/^\/api\/v2\/calls\/([^/]+)\/(accept|decline|end)$/);
   if (
     (request.method === "POST" && ([
       "/api/v2/session/bootstrap",
       "/api/v2/consents",
       "/api/v2/families",
       "/api/v2/invitations",
-    ].includes(path) || isInvitationTransition || isConversationCreation || isMessageSend || isMessageLifecycle || isMessageCorrection || isCalendarLayerCreation || isScheduleEventCreation || isCaseBinderCreation || isAttachmentIntentCreation || isTimelineEntryCreation)) ||
+    ].includes(path) || isInvitationTransition || isConversationCreation || isMessageSend || isMessageLifecycle || isMessageCorrection || isCalendarLayerCreation || isScheduleEventCreation || isCaseBinderCreation || isAttachmentIntentCreation || isTimelineEntryCreation || isAudioCallCreation || audioCallTransition)) ||
     (request.method === "PATCH" && (calendarLayerMatch || scheduleEventMatch || caseBinderMatch)) ||
     isMessageCheckUpdate ||
     (request.method === "DELETE" && (isInvitationRevocation || isAccountDeletion || calendarLayerMatch || scheduleEventMatch))
@@ -718,6 +746,42 @@ const handler = async (request: Request): Promise<Response> => {
         p_schema_version: context.schemaVersion,
       });
       return error ? rpcFailure(request, requestId, config, error.message) : json(request, 201, data, requestId, config);
+    }
+
+    if (isAudioCallCreation) {
+      const conversationId = typeof body.conversationId === "string" ? body.conversationId : "";
+      if (!isUuid(conversationId) || Object.keys(body).some((key) => key !== "conversationId")) {
+        return failure(request, 400, "INVALID_REQUEST", "A valid canonical conversation is required.", requestId, config);
+      }
+      const { data, error } = await authenticated.admin.rpc("peacepad_v2_create_audio_call", {
+        p_identity_id: authenticated.user.id,
+        p_region: config.region,
+        p_conversation_id: conversationId,
+        p_idempotency_key: databaseWriteToken,
+        p_schema_version: context.schemaVersion,
+      });
+      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 201, data, requestId, config);
+    }
+
+    if (audioCallTransition) {
+      const callId = decodeURIComponent(audioCallTransition[1]);
+      const expectedVersionHeader = (request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? "";
+      const expectedVersion = Number(expectedVersionHeader);
+      if (!isUuid(callId) || Object.keys(body).length !== 0 || !Number.isInteger(expectedVersion) || expectedVersion < 1) {
+        return failure(request, 400, "INVALID_REQUEST", "A valid call version is required.", requestId, config);
+      }
+      const rpcName = audioCallTransition[2] === "accept" ? "peacepad_v2_accept_audio_call"
+        : audioCallTransition[2] === "decline" ? "peacepad_v2_decline_audio_call"
+        : "peacepad_v2_end_audio_call";
+      const { data, error } = await authenticated.admin.rpc(rpcName, {
+        p_identity_id: authenticated.user.id,
+        p_region: config.region,
+        p_call_id: callId,
+        p_expected_version: expectedVersion,
+        p_idempotency_key: databaseWriteToken,
+        p_schema_version: context.schemaVersion,
+      });
+      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
     }
 
     if (isAccountDeletion) {
