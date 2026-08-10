@@ -19,13 +19,16 @@ const required = (name) => {
 const region = required("PEACEPAD_REGION");
 const projectRef = required("PEACEPAD_PROJECT_REF");
 const publishableKey = required("SUPABASE_PUBLISHABLE_KEY");
-const secretKey = required("SUPABASE_SECRET_KEY");
+const serviceRoleKey = required("SUPABASE_SERVICE_ROLE_KEY");
 
 if (!(region in projects) || projects[region] !== projectRef) {
   throw new Error("The requested project is not an approved PeacePad fictional-staging target.");
 }
-if (!publishableKey.startsWith("sb_publishable_") || !secretKey.startsWith("sb_secret_")) {
-  throw new Error("Current Supabase publishable and secret keys are required.");
+if (!publishableKey.startsWith("sb_publishable_")) {
+  throw new Error("The current Supabase publishable key is required.");
+}
+if (serviceRoleKey.split(".").length !== 3) {
+  throw new Error("The Supabase Auth Admin service-role JWT is required.");
 }
 
 const origin = `https://${projectRef}.supabase.co`;
@@ -52,8 +55,8 @@ const requestJson = async (url, init, expected, label) => {
 };
 
 const adminHeaders = {
-  apikey: secretKey,
-  Authorization: `Bearer ${secretKey}`,
+  apikey: serviceRoleKey,
+  Authorization: `Bearer ${serviceRoleKey}`,
   "Content-Type": "application/json",
 };
 
