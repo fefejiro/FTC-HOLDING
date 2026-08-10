@@ -1,5 +1,21 @@
 \set ON_ERROR_STOP on
 
+create or replace function pg_temp.write_token(
+  p_client_key text,
+  p_operation text,
+  p_request_marker text
+)
+returns text
+language sql
+immutable
+strict
+as $$
+  select 'v2:'
+    || substr(encode(extensions.digest('client:' || p_client_key, 'sha256'), 'hex'), 1, 48)
+    || ':' || p_operation || ':'
+    || substr(encode(extensions.digest('request:' || p_operation || ':' || p_request_marker, 'sha256'), 'hex'), 1, 48)
+$$;
+
 do $$
 declare
   parent_a constant uuid := '10000000-0000-0000-0000-000000000001';
@@ -27,29 +43,30 @@ declare
   cleanup_claim record;
   cleanup_result jsonb;
   first_cleanup_lease uuid;
+  expired_receipt_count integer;
   invitation_hash bytea := decode(repeat('ab', 32), 'hex');
   deletion_invitation_id uuid := '10000000-0000-0000-0000-000000000099';
   deletion_invitation_hash bytea := decode(repeat('cd', 32), 'hex');
 begin
   insert into auth.users (id) values (parent_a), (parent_b) on conflict do nothing;
 
-  perform public.peacepad_v2_bootstrap_identity(parent_a, 'ca', 'Alex Example', 'bootstrap-parent-a', 2);
-  perform public.peacepad_v2_bootstrap_identity(parent_b, 'ca', 'Jordan Example', 'bootstrap-parent-b', 2);
+  perform public.peacepad_v2_bootstrap_identity(parent_a, 'ca', 'Alex Example', pg_temp.write_token('bootstrap-parent-a', 'identity.bootstrapped', 'parent-a'), 2);
+  perform public.peacepad_v2_bootstrap_identity(parent_b, 'ca', 'Jordan Example', pg_temp.write_token('bootstrap-parent-b', 'identity.bootstrapped', 'parent-b'), 2);
   if (select identity_version from public.peacepad_v2_get_session_binding(parent_b)) <> 1 then
     raise exception 'Verified session binding did not expose the active identity version.';
   end if;
-  perform public.peacepad_v2_record_consent(parent_a, 'ca', 'terms', true, '2026-08', 'consent-parent-a-terms', 2);
-  perform public.peacepad_v2_record_consent(parent_b, 'ca', 'terms', true, '2026-08', 'consent-parent-b-terms', 2);
+  perform public.peacepad_v2_record_consent(parent_a, 'ca', 'terms', true, '2026-08', pg_temp.write_token('consent-parent-a-terms', 'consent.recorded', 'parent-a-terms-2026-08'), 2);
+  perform public.peacepad_v2_record_consent(parent_b, 'ca', 'terms', true, '2026-08', pg_temp.write_token('consent-parent-b-terms', 'consent.recorded', 'parent-b-terms-2026-08'), 2);
 
-  family_result := public.peacepad_v2_create_family(parent_a, 'ca', 'Example Family', 'create-example-family', 2);
+  family_result := public.peacepad_v2_create_family(parent_a, 'ca', 'Example Family', pg_temp.write_token('create-example-family', 'family.created', 'example-family'), 2);
   created_family_id := (family_result ->> 'familyId')::uuid;
   invitation_result := public.peacepad_v2_create_invitation(
     parent_a, 'ca', created_family_id, invitation_hash, 'parent', array['messages', 'calendar'],
-    now() + interval '24 hours', 'create-example-invite', 2
+    now() + interval '24 hours', pg_temp.write_token('create-example-invite', 'invitation.created', 'example-family-parent-message-calendar'), 2
   );
   invitation_id := (invitation_result ->> 'invitationId')::uuid;
   begin
-    perform public.peacepad_v2_accept_invitation(parent_b, 'ca', invitation_id, 1, 'accept-without-code-proof', 2);
+    perform public.peacepad_v2_accept_invitation(parent_b, 'ca', invitation_id, 1, pg_temp.write_token('accept-without-code-proof', 'invitation.accepted', invitation_id::text), 2);
     raise exception 'Invitation acceptance unexpectedly succeeded without prior code resolution.';
   exception when others then
     if sqlerrm not like '%INVITATION_INVALID%' then raise; end if;
@@ -58,13 +75,13 @@ begin
   if preview_result ->> 'invitationId' <> invitation_id::text then
     raise exception 'Invitation preview did not resolve the expected invitation.';
   end if;
-  invitation_result := public.peacepad_v2_accept_invitation(parent_b, 'ca', invitation_id, 1, 'accept-example-invite', 2);
+  invitation_result := public.peacepad_v2_accept_invitation(parent_b, 'ca', invitation_id, 1, pg_temp.write_token('accept-example-invite', 'invitation.accepted', invitation_id::text), 2);
   conversation_id := (invitation_result -> 'conversation' ->> 'id')::uuid;
   if (invitation_result -> 'grant' ->> 'familyId')::uuid <> created_family_id
     or (invitation_result -> 'conversation' ->> 'familyCircleId')::uuid <> created_family_id then
     raise exception 'Invitation acceptance did not return its atomic family conversation.';
   end if;
-  if public.peacepad_v2_accept_invitation(parent_b, 'ca', invitation_id, 1, 'accept-example-invite', 2) <> invitation_result then
+  if public.peacepad_v2_accept_invitation(parent_b, 'ca', invitation_id, 1, pg_temp.write_token('accept-example-invite', 'invitation.accepted', invitation_id::text), 2) <> invitation_result then
     raise exception 'Invitation acceptance idempotent replay changed its result.';
   end if;
 
@@ -97,20 +114,20 @@ begin
 
   message_result := public.peacepad_v2_send_message(
     parent_a, 'ca', conversation_id, created_family_id, 'Pickup at five.',
-    'send-example-message', 2
+    pg_temp.write_token('send-example-message', 'message.sent', conversation_id::text || ':pickup-five'), 2
   );
   message_id := (message_result ->> 'id')::uuid;
   perform public.peacepad_v2_record_message_event(
     parent_b, 'ca', conversation_id, created_family_id, message_id, 'delivered',
-    'deliver-example-message', 2
+    pg_temp.write_token('deliver-example-message', 'message.delivered', message_id::text), 2
   );
   perform public.peacepad_v2_record_message_event(
     parent_b, 'ca', conversation_id, created_family_id, message_id, 'viewed',
-    'view-example-message', 2
+    pg_temp.write_token('view-example-message', 'message.viewed', message_id::text), 2
   );
   correction_result := public.peacepad_v2_correct_message(
     parent_a, 'ca', conversation_id, created_family_id, message_id, 'Pickup at six.',
-    'correct-example-message', 2
+    pg_temp.write_token('correct-example-message', 'message.corrected', message_id::text || ':pickup-six'), 2
   );
   if correction_result ->> 'originalMessageEventId' <> message_id::text then
     raise exception 'Message correction did not link to its immutable original.';
@@ -127,7 +144,7 @@ begin
   end if;
   if public.peacepad_v2_send_message(
     parent_a, 'ca', conversation_id, created_family_id, 'Pickup at five.',
-    'send-example-message', 2
+    pg_temp.write_token('send-example-message', 'message.sent', conversation_id::text || ':pickup-five'), 2
   ) <> message_result then
     raise exception 'Message idempotent replay changed its result.';
   end if;
@@ -140,7 +157,7 @@ begin
     raise exception 'Message preview was authorized before explicit opt-in.';
   end if;
   updated_message_check_result := public.peacepad_v2_set_message_check(
-    parent_a, 'ca', conversation_id, true, false, 0, 'enable-message-check', 2
+    parent_a, 'ca', conversation_id, true, false, 0, pg_temp.write_token('enable-message-check', 'message_check.updated', conversation_id::text || ':true:false:0'), 2
   );
   if not (updated_message_check_result ->> 'enabled')::boolean
     or (updated_message_check_result ->> 'version')::integer <> 1
@@ -148,19 +165,19 @@ begin
     raise exception 'Message Check opt-in was not persisted or authorized.';
   end if;
   if public.peacepad_v2_set_message_check(
-    parent_a, 'ca', conversation_id, true, false, 0, 'enable-message-check', 2
+    parent_a, 'ca', conversation_id, true, false, 0, pg_temp.write_token('enable-message-check', 'message_check.updated', conversation_id::text || ':true:false:0'), 2
   ) <> updated_message_check_result then
     raise exception 'Message Check idempotent replay changed its result.';
   end if;
   begin
     perform public.peacepad_v2_set_message_check(
-      parent_a, 'ca', conversation_id, false, false, 0, 'stale-message-check-update', 2
+      parent_a, 'ca', conversation_id, false, false, 0, pg_temp.write_token('stale-message-check-update', 'message_check.updated', conversation_id::text || ':false:false:0'), 2
     );
     raise exception 'Stale Message Check update unexpectedly succeeded.';
   exception when serialization_failure then null;
   end;
   message_check_result := public.peacepad_v2_set_message_check(
-    parent_a, 'ca', conversation_id, false, false, 1, 'disable-message-check', 2
+    parent_a, 'ca', conversation_id, false, false, 1, pg_temp.write_token('disable-message-check', 'message_check.updated', conversation_id::text || ':false:false:1'), 2
   );
   if (message_check_result ->> 'enabled')::boolean
     or (message_check_result ->> 'version')::integer <> 2
@@ -169,29 +186,40 @@ begin
   end if;
   begin
     perform public.peacepad_v2_set_message_check(
-      parent_a, 'ca', conversation_id, true, true, 2, 'enable-ai-message-check', 2
+      parent_a, 'ca', conversation_id, true, true, 2, pg_temp.write_token('enable-ai-message-check', 'message_check.updated', conversation_id::text || ':true:true:2'), 2
     );
     raise exception 'Third-party AI assistance unexpectedly enabled without consent enforcement.';
   exception when insufficient_privilege then null;
   end;
   message_check_result := public.peacepad_v2_set_message_check(
-    parent_b, 'ca', conversation_id, true, false, 0, 'enable-parent-b-message-check', 2
+    parent_b, 'ca', conversation_id, true, false, 0, pg_temp.write_token('enable-parent-b-message-check', 'message_check.updated', conversation_id::text || ':true:false:0'), 2
   );
   if not (message_check_result ->> 'enabled')::boolean then
     raise exception 'Message Check preference was not isolated per conversation participant.';
   end if;
   begin
     perform public.peacepad_v2_set_message_check(
-      parent_a, 'ca', conversation_id, true, false, 2, 'send-example-message', 2
+      parent_a, 'ca', conversation_id, true, false, 2, pg_temp.write_token('send-example-message', 'message_check.updated', conversation_id::text || ':true:false:2'), 2
     );
     raise exception 'Cross-operation idempotency-key reuse unexpectedly succeeded.';
-  exception when unique_violation then null;
+  exception when others then
+    if sqlerrm not like '%IDEMPOTENCY_CONFLICT%' then raise; end if;
+  end;
+
+  begin
+    perform public.peacepad_v2_send_message(
+      parent_a, 'ca', conversation_id, created_family_id, 'Changed payload.',
+      pg_temp.write_token('send-example-message', 'message.sent', conversation_id::text || ':changed-payload'), 2
+    );
+    raise exception 'Changed message payload reused an idempotency key unexpectedly.';
+  exception when others then
+    if sqlerrm not like '%IDEMPOTENCY_CONFLICT%' then raise; end if;
   end;
 
   layer_result := public.peacepad_v2_create_calendar_layer(
     parent_a, 'ca', created_family_id, 'Parenting Time', 'parenting-time',
     'calendar', 'teal', '{"scope":"private"}'::jsonb,
-    'create-private-calendar-layer', 2
+    pg_temp.write_token('create-private-calendar-layer', 'calendar_layer.created', created_family_id::text || ':private-parenting-time'), 2
   );
   layer_id := (layer_result ->> 'id')::uuid;
   if jsonb_array_length(public.peacepad_v2_list_calendar_layers(parent_b, 'ca', created_family_id)) <> 0 then
@@ -200,12 +228,12 @@ begin
   if public.peacepad_v2_create_calendar_layer(
     parent_a, 'ca', created_family_id, 'Parenting Time', 'parenting-time',
     'calendar', 'teal', '{"scope":"private"}'::jsonb,
-    'create-private-calendar-layer', 2
+    pg_temp.write_token('create-private-calendar-layer', 'calendar_layer.created', created_family_id::text || ':private-parenting-time'), 2
   ) <> layer_result then raise exception 'Calendar layer idempotent replay changed its result.'; end if;
 
   shared_layer_result := public.peacepad_v2_update_calendar_layer(
     parent_a, 'ca', layer_id, 'Parenting Time', 'parenting-time', 'calendar', 'teal',
-    '{"scope":"family"}'::jsonb, 1, 'share-calendar-layer', 2
+    '{"scope":"family"}'::jsonb, 1, pg_temp.write_token('share-calendar-layer', 'calendar_layer.updated', layer_id::text || ':family:1'), 2
   );
   if (shared_layer_result ->> 'version')::integer <> 2
     or jsonb_array_length(public.peacepad_v2_list_calendar_layers(parent_b, 'ca', created_family_id)) <> 1 then
@@ -214,7 +242,7 @@ begin
   begin
     perform public.peacepad_v2_update_calendar_layer(
       parent_a, 'ca', layer_id, 'Stale update', 'parenting-time', 'calendar', 'teal',
-      '{"scope":"family"}'::jsonb, 1, 'stale-calendar-layer-update', 2
+      '{"scope":"family"}'::jsonb, 1, pg_temp.write_token('stale-calendar-layer-update', 'calendar_layer.updated', layer_id::text || ':stale:1'), 2
     );
     raise exception 'Stale calendar layer update unexpectedly succeeded.';
   exception when serialization_failure then null;
@@ -225,7 +253,7 @@ begin
     'Weekend parenting time', 'Fictional staging event.',
     '2026-09-05T14:00:00Z'::timestamptz, '2026-09-06T22:00:00Z'::timestamptz,
     'planned', '{"frequency":"weekly","interval":1,"weekdays":["SA"],"until":null,"count":4}'::jsonb,
-    null, 'create-shared-schedule-event', 2
+    null, pg_temp.write_token('create-shared-schedule-event', 'schedule_event.created', created_family_id::text || ':weekend-parenting'), 2
   );
   event_id := (event_result ->> 'id')::uuid;
   if jsonb_array_length(public.peacepad_v2_list_schedule_events(parent_b, 'ca', created_family_id)) <> 1 then
@@ -236,14 +264,14 @@ begin
     'Weekend parenting time', 'Updated fictional staging event.',
     '2026-09-05T15:00:00Z'::timestamptz, '2026-09-06T22:00:00Z'::timestamptz,
     'accepted', null, '{"scope":"private"}'::jsonb,
-    1, 'restrict-schedule-event', 2
+    1, pg_temp.write_token('restrict-schedule-event', 'schedule_event.updated', event_id::text || ':private:1'), 2
   );
   if (updated_event_result ->> 'version')::integer <> 2
     or jsonb_array_length(public.peacepad_v2_list_schedule_events(parent_b, 'ca', created_family_id)) <> 0 then
     raise exception 'Event privacy override did not restrict visibility.';
   end if;
-  perform public.peacepad_v2_delete_schedule_event(parent_a, 'ca', event_id, 2, 'delete-schedule-event', 2);
-  perform public.peacepad_v2_delete_calendar_layer(parent_a, 'ca', layer_id, 2, 'delete-calendar-layer', 2);
+  perform public.peacepad_v2_delete_schedule_event(parent_a, 'ca', event_id, 2, pg_temp.write_token('delete-schedule-event', 'schedule_event.deleted', event_id::text || ':2'), 2);
+  perform public.peacepad_v2_delete_calendar_layer(parent_a, 'ca', layer_id, 2, pg_temp.write_token('delete-calendar-layer', 'calendar_layer.deleted', layer_id::text || ':2'), 2);
   if jsonb_array_length(public.peacepad_v2_list_calendar_layers(parent_a, 'ca', created_family_id)) <> 0 then
     raise exception 'Deleted calendar layer remained visible.';
   end if;
@@ -251,6 +279,67 @@ begin
     perform public.peacepad_v2_list_calendar_layers(parent_a, 'us', created_family_id);
     raise exception 'Cross-region calendar access unexpectedly succeeded.';
   exception when insufficient_privilege then null;
+  end;
+
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'peacepad_v2'
+      and table_name = 'audit_event'
+      and column_name = 'result'
+  ) then
+    raise exception 'Immutable audit events still expose a response payload column.';
+  end if;
+  if exists (
+    select 1 from peacepad_v2.audit_event
+    where idempotency_key !~ '^[0-9a-f]{48}$'
+  ) then
+    raise exception 'Audit events retained a raw or malformed client idempotency key.';
+  end if;
+  if exists (
+    select 1 from peacepad_v2.audit_event audit
+    where audit::text ilike any (array[
+      '%Pickup at five.%', '%Pickup at six.%', '%Example Family%',
+      '%Weekend parenting time%', '%Fictional staging event.%'
+    ])
+  ) then
+    raise exception 'Audit events retained private domain content.';
+  end if;
+  if has_table_privilege('anon', 'peacepad_v2.write_receipt', 'select')
+     or has_table_privilege('authenticated', 'peacepad_v2.write_receipt', 'select') then
+    raise exception 'Client roles can read encrypted write receipts.';
+  end if;
+  if exists (
+    select 1 from peacepad_v2.write_receipt receipt
+    where receipt.encrypted_response is not null
+      and position(convert_to('Pickup at five.', 'UTF8') in receipt.encrypted_response) > 0
+  ) then
+    raise exception 'A write receipt retained a plaintext message body.';
+  end if;
+
+  update peacepad_v2.write_receipt
+  set response_expires_at = now() - interval '1 second'
+  where identity_id = parent_a and operation = 'message.sent';
+  expired_receipt_count := public.peacepad_v2_expire_write_receipts('ca');
+  if expired_receipt_count < 1 then
+    raise exception 'Expired replay receipt was not selected for clearing.';
+  end if;
+  if exists (
+       select 1 from peacepad_v2.write_receipt
+       where identity_id = parent_a
+         and operation = 'message.sent'
+         and encrypted_response is not null
+     ) then
+    raise exception 'Expired replay ciphertext was not cleared.';
+  end if;
+  begin
+    perform public.peacepad_v2_send_message(
+      parent_a, 'ca', conversation_id, created_family_id, 'Pickup at five.',
+      pg_temp.write_token('send-example-message', 'message.sent', conversation_id::text || ':pickup-five'), 2
+    );
+    raise exception 'Expired message receipt unexpectedly replayed.';
+  exception when others then
+    if sqlerrm not like '%IDEMPOTENCY_CONFLICT%' then raise; end if;
   end;
 
   insert into peacepad_v2.family_invitation (
@@ -266,7 +355,7 @@ begin
     gen_random_uuid(), parent_b, 'ca', deletion_invitation_hash
   );
 
-  deletion_result := public.peacepad_v2_delete_account(parent_b, 'ca', 1, 'delete-parent-b-account', 2);
+  deletion_result := public.peacepad_v2_delete_account(parent_b, 'ca', 1, pg_temp.write_token('delete-parent-b-account', 'account.deleted', 'parent-b:1'), 2);
   if deletion_result ->> 'status' <> 'deleted' then
     raise exception 'Account deletion did not return deleted status.';
   end if;
@@ -319,7 +408,7 @@ begin
   exception
     when insufficient_privilege then null;
   end;
-  if public.peacepad_v2_delete_account(parent_b, 'ca', 1, 'delete-parent-b-account', 2) <> deletion_result then
+  if public.peacepad_v2_delete_account(parent_b, 'ca', 1, pg_temp.write_token('delete-parent-b-account', 'account.deleted', 'parent-b:1'), 2) <> deletion_result then
     raise exception 'Account deletion idempotent replay changed its result.';
   end if;
   if (select count(*) from peacepad_v2.auth_cleanup_outbox where identity_id = parent_b) <> 1 then

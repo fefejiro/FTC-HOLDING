@@ -10,6 +10,7 @@ type RuntimeConfig = Readonly<{
   functionRegion: string;
   allowedOrigins: readonly string[];
   maintenanceSecret: string;
+  idempotencySecret: string;
 }>;
 
 type ErrorCode =
@@ -60,12 +61,14 @@ const readConfig = (): RuntimeConfig => {
       .map((value) => value.trim())
       .filter(Boolean),
     maintenanceSecret: env("PEACEPAD_MAINTENANCE_SECRET"),
+    idempotencySecret: env("PEACEPAD_IDEMPOTENCY_SECRET"),
   };
   if (
     !config.supabaseUrl ||
     !config.serviceRoleKey ||
     !config.projectRef ||
     !config.functionRegion ||
+    config.idempotencySecret.length < 32 ||
     !["ca", "us"].includes(config.region)
   ) {
     throw new Error("PeacePad staging function configuration is incomplete.");
@@ -222,10 +225,91 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
   return failure(request, status, safeCode as ErrorCode, safeCode === "DATABASE_NOT_READY" ? "The regional staging database is not ready." : "The request could not be completed.", requestId, config);
 };
 
-const invitationCode = (): string => {
+const hmacHex = async (secret: string, value: string): Promise<string> => {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(value));
+  return Array.from(new Uint8Array(signature), (byte) => byte.toString(16).padStart(2, "0")).join("");
+};
+
+const invitationCode = async (
+  config: RuntimeConfig,
+  identityId: string,
+  clientIdempotencyKey: string,
+): Promise<string> => {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const bytes = crypto.getRandomValues(new Uint8Array(6));
+  const digest = await hmacHex(
+    config.idempotencySecret,
+    `peacepad:v2:invitation:${config.region}:${identityId}:${clientIdempotencyKey}`,
+  );
+  const bytes = Uint8Array.from(
+    Array.from({ length: 6 }, (_, index) => Number.parseInt(digest.slice(index * 2, index * 2 + 2), 16)),
+  );
   return Array.from(bytes, (value) => alphabet[value % alphabet.length]).join("");
+};
+
+const canonicalize = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, child]) => [key, canonicalize(child)]),
+    );
+  }
+  return value;
+};
+
+const writeOperation = (method: string, path: string, body: Record<string, unknown>): string | null => {
+  if (method === "POST" && path === "/api/v2/session/bootstrap") return "identity.bootstrapped";
+  if (method === "POST" && path === "/api/v2/consents") return "consent.recorded";
+  if (method === "POST" && path === "/api/v2/families") return "family.created";
+  if (method === "POST" && path === "/api/v2/invitations") return "invitation.created";
+  if (method === "DELETE" && path === "/api/v2/account") return "account.deleted";
+  if (method === "POST" && path === "/api/v2/conversations") return "conversation.created";
+  if (method === "PUT" && /^\/api\/v2\/conversations\/[^/]+\/message-check$/.test(path)) return "message_check.updated";
+  if (method === "POST" && /^\/api\/v2\/conversations\/[^/]+\/messages$/.test(path)) return "message.sent";
+  if (method === "POST" && /^\/api\/v2\/conversations\/[^/]+\/messages\/[^/]+\/corrections$/.test(path)) return "message.corrected";
+  if (method === "POST" && /^\/api\/v2\/conversations\/[^/]+\/messages\/[^/]+\/events$/.test(path)) {
+    return typeof body.eventType === "string" ? `message.${body.eventType}` : null;
+  }
+  if (method === "POST" && path === "/api/v2/calendar-layers") return "calendar_layer.created";
+  if (method === "PATCH" && /^\/api\/v2\/calendar-layers\/[^/]+$/.test(path)) return "calendar_layer.updated";
+  if (method === "DELETE" && /^\/api\/v2\/calendar-layers\/[^/]+$/.test(path)) return "calendar_layer.deleted";
+  if (method === "POST" && path === "/api/v2/schedule-events") return "schedule_event.created";
+  if (method === "PATCH" && /^\/api\/v2\/schedule-events\/[^/]+$/.test(path)) return "schedule_event.updated";
+  if (method === "DELETE" && /^\/api\/v2\/schedule-events\/[^/]+$/.test(path)) return "schedule_event.deleted";
+  const invitationTransition = path.match(/^\/api\/v2\/invitations\/[^/]+\/(accept|decline)$/);
+  if (method === "POST" && invitationTransition) {
+    return invitationTransition[1] === "accept" ? "invitation.accepted" : "invitation.declined";
+  }
+  if (method === "DELETE" && /^\/api\/v2\/invitations\/[^/]+$/.test(path)) return "invitation.revoked";
+  return null;
+};
+
+const databaseIdempotencyToken = async (
+  config: RuntimeConfig,
+  identityId: string,
+  clientIdempotencyKey: string,
+  operation: string,
+  requestDescriptor: Record<string, unknown>,
+): Promise<string> => {
+  if (!/^[a-z0-9_.]{1,40}$/.test(operation)) throw new Error("Unsupported write operation.");
+  const clientKeyHash = await hmacHex(
+    config.idempotencySecret,
+    `peacepad:v2:key:${identityId}:${clientIdempotencyKey}`,
+  );
+  const fingerprint = await hmacHex(
+    config.idempotencySecret,
+    `peacepad:v2:request:${JSON.stringify(canonicalize(requestDescriptor))}`,
+  );
+  return `v2:${clientKeyHash.slice(0, 48)}:${operation}:${fingerprint.slice(0, 48)}`;
 };
 
 const sha256Hex = async (value: string): Promise<string> => {
@@ -320,6 +404,12 @@ const handler = async (request: Request): Promise<Response> => {
       !constantTimeEqual(suppliedSecret, config.maintenanceSecret)
     ) {
       return failure(request, 401, "MAINTENANCE_AUTH_REQUIRED", "Maintenance authorization is required.", requestId, config);
+    }
+    const { error: receiptExpiryError } = await admin.rpc("peacepad_v2_expire_write_receipts", {
+      p_region: config.region,
+    });
+    if (receiptExpiryError) {
+      return failure(request, 503, "DATABASE_NOT_READY", "The regional receipt cleanup is unavailable.", requestId, config);
     }
     const { data: claimed, error: claimError } = await admin.rpc("peacepad_v2_claim_auth_cleanup", {
       p_region: config.region,
@@ -554,6 +644,23 @@ const handler = async (request: Request): Promise<Response> => {
     if (!context.ok) return context.error;
     const body = request.method === "DELETE" ? {} : await readJsonObject(request);
     if (!body) return failure(request, 400, "INVALID_REQUEST", "A valid request body is required.", requestId, config);
+    const operation = writeOperation(request.method, path, body);
+    if (!operation) return failure(request, 400, "INVALID_REQUEST", "The write operation is not supported.", requestId, config);
+    const databaseWriteToken = await databaseIdempotencyToken(
+      config,
+      authenticated.user.id,
+      context.idempotencyKey,
+      operation,
+      {
+        identityId: authenticated.user.id,
+        region: config.region,
+        schemaVersion: "2.0",
+        expectedVersion: (request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? null,
+        method: request.method,
+        path,
+        body,
+      },
+    );
 
     if (path === "/api/v2/session/bootstrap") {
       const displayName = typeof body.displayName === "string" ? body.displayName.trim() : "";
@@ -561,7 +668,7 @@ const handler = async (request: Request): Promise<Response> => {
         p_identity_id: authenticated.user.id,
         p_region: config.region,
         p_display_name: displayName,
-        p_idempotency_key: context.idempotencyKey,
+        p_idempotency_key: databaseWriteToken,
         p_schema_version: context.schemaVersion,
       });
       return error ? rpcFailure(request, requestId, config, error.message) : json(request, 201, data, requestId, config);
@@ -577,7 +684,7 @@ const handler = async (request: Request): Promise<Response> => {
         p_identity_id: authenticated.user.id,
         p_region: config.region,
         p_expected_version: expectedVersion,
-        p_idempotency_key: context.idempotencyKey,
+        p_idempotency_key: databaseWriteToken,
         p_schema_version: context.schemaVersion,
       });
       if (error) return rpcFailure(request, requestId, config, error.message);
@@ -620,7 +727,7 @@ const handler = async (request: Request): Promise<Response> => {
         p_enabled: body.enabled,
         p_ai_assistance_enabled: false,
         p_expected_version: expectedVersion,
-        p_idempotency_key: context.idempotencyKey,
+        p_idempotency_key: databaseWriteToken,
         p_schema_version: context.schemaVersion,
       });
       return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
@@ -637,7 +744,7 @@ const handler = async (request: Request): Promise<Response> => {
         p_consent_type: consentType,
         p_granted: body.granted,
         p_policy_version: policyVersion,
-        p_idempotency_key: context.idempotencyKey,
+        p_idempotency_key: databaseWriteToken,
         p_schema_version: context.schemaVersion,
       });
       return error ? rpcFailure(request, requestId, config, error.message) : json(request, 201, data, requestId, config);
@@ -649,7 +756,7 @@ const handler = async (request: Request): Promise<Response> => {
         p_identity_id: authenticated.user.id,
         p_region: config.region,
         p_family_name: familyName,
-        p_idempotency_key: context.idempotencyKey,
+        p_idempotency_key: databaseWriteToken,
         p_schema_version: context.schemaVersion,
       });
       return error ? rpcFailure(request, requestId, config, error.message) : json(request, 201, data, requestId, config);
@@ -667,7 +774,7 @@ const handler = async (request: Request): Promise<Response> => {
         p_region: config.region,
         p_family_id: familyId,
         p_participant_identity_ids: participantIds,
-        p_idempotency_key: context.idempotencyKey,
+        p_idempotency_key: databaseWriteToken,
         p_schema_version: context.schemaVersion,
       });
       return error ? rpcFailure(request, requestId, config, error.message) : json(request, 201, data, requestId, config);
@@ -696,7 +803,7 @@ const handler = async (request: Request): Promise<Response> => {
       const rpcArguments: Record<string, unknown> = {
         p_identity_id: authenticated.user.id,
         p_region: config.region,
-        p_idempotency_key: context.idempotencyKey,
+        p_idempotency_key: databaseWriteToken,
         p_schema_version: context.schemaVersion,
         ...(isCreate ? { p_family_id: familyId } : { p_layer_id: layerId, p_expected_version: expectedVersion }),
         ...(request.method !== "DELETE" ? {
@@ -735,7 +842,7 @@ const handler = async (request: Request): Promise<Response> => {
         : "peacepad_v2_delete_schedule_event";
       const rpcArguments: Record<string, unknown> = {
         p_identity_id: authenticated.user.id, p_region: config.region,
-        p_idempotency_key: context.idempotencyKey, p_schema_version: context.schemaVersion,
+        p_idempotency_key: databaseWriteToken, p_schema_version: context.schemaVersion,
         ...(isCreate ? { p_family_id: familyId } : { p_event_id: eventId, p_expected_version: expectedVersion }),
         ...(request.method !== "DELETE" ? {
           p_calendar_layer_id: layerId, p_child_profile_ids: childProfileIds, p_event_type: eventType,
@@ -775,7 +882,7 @@ const handler = async (request: Request): Promise<Response> => {
         p_region: config.region,
         p_conversation_id: conversationId,
         p_family_id: familyId,
-        p_idempotency_key: context.idempotencyKey,
+        p_idempotency_key: databaseWriteToken,
         p_schema_version: context.schemaVersion,
         ...(sendMatch ? { p_body: bodyText } : {}),
         ...(lifecycleMatch ? { p_original_message_event_id: originalMessageId, p_event_type: eventType } : {}),
@@ -803,7 +910,7 @@ const handler = async (request: Request): Promise<Response> => {
         p_region: config.region,
         p_invitation_id: invitationId,
         p_expected_version: expectedVersion,
-        p_idempotency_key: context.idempotencyKey,
+        p_idempotency_key: databaseWriteToken,
         p_schema_version: context.schemaVersion,
       });
       if (error) return rpcFailure(request, requestId, config, error.message);
@@ -857,7 +964,7 @@ const handler = async (request: Request): Promise<Response> => {
     if (!familyId || !["parent", "caregiver", "professional"].includes(invitedRole) || permissions.length > 8 || permissions.some((permission) => !allowedPermissions.has(permission)) || expiresInHours < 1 || expiresInHours > 168) {
       return failure(request, 400, "INVALID_REQUEST", "Invitation details are invalid.", requestId, config);
     }
-    const code = invitationCode();
+    const code = await invitationCode(config, authenticated.user.id, context.idempotencyKey);
     const hash = await sha256Hex(`${config.region}:${code}`);
     const expiresAt = new Date(Date.now() + expiresInHours * 3_600_000).toISOString();
     const { data, error } = await authenticated.admin.rpc("peacepad_v2_create_invitation", {
@@ -868,7 +975,7 @@ const handler = async (request: Request): Promise<Response> => {
       p_invited_role: invitedRole,
       p_permissions: permissions,
       p_expires_at: expiresAt,
-      p_idempotency_key: context.idempotencyKey,
+      p_idempotency_key: databaseWriteToken,
       p_schema_version: context.schemaVersion,
     });
     const invitationData = (data ?? {}) as Record<string, unknown>;

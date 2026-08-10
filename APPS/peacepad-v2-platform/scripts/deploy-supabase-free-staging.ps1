@@ -60,6 +60,10 @@ if (-not $SkipDeploy) {
   if ([string]::IsNullOrWhiteSpace($maintenanceSecret) -or $maintenanceSecret.Length -lt 32) {
     throw 'PEACEPAD_MAINTENANCE_SECRET must be supplied through the process environment and contain at least 32 characters.'
   }
+  $idempotencySecret = [Environment]::GetEnvironmentVariable('PEACEPAD_IDEMPOTENCY_SECRET')
+  if ([string]::IsNullOrWhiteSpace($idempotencySecret) -or $idempotencySecret.Length -lt 32) {
+    throw 'PEACEPAD_IDEMPOTENCY_SECRET must be supplied through the process environment and contain at least 32 characters.'
+  }
 }
 
 if ($SkipDeploy) {
@@ -73,6 +77,7 @@ Invoke-Supabase @(
   "PEACEPAD_PROJECT_REF=$ProjectRef",
   "PEACEPAD_FUNCTION_REGION=$FunctionRegion",
   "PEACEPAD_MAINTENANCE_SECRET=$maintenanceSecret",
+  "PEACEPAD_IDEMPOTENCY_SECRET=$idempotencySecret",
   '--project-ref', $ProjectRef,
   '--agent', 'no'
 )

@@ -136,6 +136,7 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PEACEPAD_MAINTENANCE_SECRET: ${{ secrets.MAINTENANCE_SECRET }}
+          PEACEPAD_IDEMPOTENCY_SECRET: ${{ secrets.IDEMPOTENCY_SECRET }}
           REQUESTED_REGION: ${{ inputs.region }}
         run: |
           $ErrorActionPreference = 'Stop'
@@ -144,8 +145,12 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($env:PEACEPAD_MAINTENANCE_SECRET) -or $env:PEACEPAD_MAINTENANCE_SECRET.Length -lt 32) {
             throw 'MAINTENANCE_SECRET is missing or too short.'
           }
+          if ([string]::IsNullOrWhiteSpace($env:PEACEPAD_IDEMPOTENCY_SECRET) -or $env:PEACEPAD_IDEMPOTENCY_SECRET.Length -lt 32) {
+            throw 'IDEMPOTENCY_SECRET is missing or too short.'
+          }
           Write-Output "::add-mask::$env:DATABASE_URL"
           Write-Output "::add-mask::$env:PEACEPAD_MAINTENANCE_SECRET"
+          Write-Output "::add-mask::$env:PEACEPAD_IDEMPOTENCY_SECRET"
           supabase db push --db-url $env:DATABASE_URL --yes --agent no --workdir .
           if ($LASTEXITCODE -ne 0) { throw 'Migration apply failed.' }
 

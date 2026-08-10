@@ -17,11 +17,12 @@ $sessionIdentityVersionMigrationPath = Join-Path $platformRoot 'supabase/migrati
 $authCleanupMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090009_v2_auth_cleanup_outbox.sql'
 $deletionMinimizationMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090010_v2_account_deletion_minimization.sql'
 $atomicInvitationMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090011_v2_accept_invitation_conversation.sql'
+$idempotencyReceiptMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090012_v2_idempotency_receipts.sql'
 $authCleanupRunnerPath = Join-Path $platformRoot 'scripts/run-auth-cleanup.ps1'
 $deployRunnerPath = Join-Path $platformRoot 'scripts/deploy-supabase-free-staging.ps1'
 $configPath = Join-Path $platformRoot 'supabase/config.toml'
 
-foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
+foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $idempotencyReceiptMigrationPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
     throw "Required Supabase staging file is missing: $path"
   }
@@ -41,6 +42,7 @@ $sessionIdentityVersionMigration = Get-Content -LiteralPath $sessionIdentityVers
 $authCleanupMigration = Get-Content -LiteralPath $authCleanupMigrationPath -Raw
 $deletionMinimizationMigration = Get-Content -LiteralPath $deletionMinimizationMigrationPath -Raw
 $atomicInvitationMigration = Get-Content -LiteralPath $atomicInvitationMigrationPath -Raw
+$idempotencyReceiptMigration = Get-Content -LiteralPath $idempotencyReceiptMigrationPath -Raw
 $authCleanupRunner = Get-Content -LiteralPath $authCleanupRunnerPath -Raw
 $deployRunner = Get-Content -LiteralPath $deployRunnerPath -Raw
 $config = Get-Content -LiteralPath $configPath -Raw
@@ -77,10 +79,12 @@ $requiredFunctionPatterns = @(
   'auth.admin.deleteUser',
   '/internal/v2/auth-cleanup/run',
   'PEACEPAD_MAINTENANCE_SECRET',
+  'PEACEPAD_IDEMPOTENCY_SECRET',
   'constantTimeEqual',
   'failedToFinalize',
   'peacepad_v2_claim_auth_cleanup',
   'peacepad_v2_finish_auth_cleanup',
+  'peacepad_v2_expire_write_receipts',
   'idempotency-key',
   'if-match',
   'x-peacepad-schema-version',
@@ -91,6 +95,9 @@ $requiredFunctionPatterns = @(
   'peacepad_v2_accept_invitation',
   'peacepadnextlab://invite/',
   'crypto.subtle.digest',
+  'crypto.subtle.sign',
+  'databaseIdempotencyToken',
+  'canonicalize',
   'crypto.randomUUID()',
   'fictional-staging'
 )
@@ -202,11 +209,37 @@ foreach ($pattern in @(
   "'projects', 'list', '--output', 'json'",
   'cannot see the approved',
   "GetEnvironmentVariable\('PEACEPAD_MAINTENANCE_SECRET'\)",
-  'PEACEPAD_MAINTENANCE_SECRET=\$maintenanceSecret'
+  'PEACEPAD_MAINTENANCE_SECRET=\$maintenanceSecret',
+  "GetEnvironmentVariable\('PEACEPAD_IDEMPOTENCY_SECRET'\)",
+  'PEACEPAD_IDEMPOTENCY_SECRET=\$idempotencySecret'
 )) {
   if ($deployRunner -notmatch $pattern) {
     throw "Supabase deployment runner is missing a fail-closed boundary: $pattern"
   }
+}
+foreach ($pattern in @(
+  'create table if not exists peacepad_v2\.write_receipt',
+  'alter table peacepad_v2\.write_receipt enable row level security',
+  'revoke all on table peacepad_v2\.write_receipt from public, anon, authenticated',
+  'client_key_hash text not null',
+  'request_fingerprint text not null',
+  'encrypted_response bytea',
+  'pg_advisory_xact_lock',
+  'pgp_sym_encrypt',
+  'pgp_sym_decrypt',
+  'STAGING_AUDIT_RESET_REQUIRED',
+  'alter table peacepad_v2\.audit_event drop column if exists result',
+  'peacepad_v2_expire_write_receipts'
+)) {
+  if ($idempotencyReceiptMigration -notmatch $pattern) {
+    throw "Idempotency receipt migration is missing required boundary: $pattern"
+  }
+}
+if ($idempotencyReceiptMigration -match '(?i)(message_body|invitation_code|family_name|child_label|file_name|access_token|refresh_token)') {
+  throw 'Write receipts must not define columns for identity, family, message, invitation, or file content.'
+}
+if ($function -match 'p_idempotency_key:\s*context\.idempotencyKey') {
+  throw 'Database writes must receive the request-bound HMAC token, never the raw client idempotency key.'
 }
 if ($function -notmatch 'version: binding\.identity_version') {
   throw 'Authenticated session response must expose the active identity concurrency version.'
