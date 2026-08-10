@@ -39,6 +39,7 @@
     "ci:seed:phase-b": "node scripts/seed-phase-b-issues.mjs",
     "status:anion:sync": "node scripts/update-anion-status.mjs",
     "audit:portfolio-status": "node scripts/validate-portfolio-status.mjs",
+    "maintenance:copilot:dry": "node -e \"process.env.DRY_RUN='1';import('./scripts/seed-copilot-maintenance.mjs')\"",
     "metrics:peacepad:weekly": "node scripts/update-peacepad-weekly-metrics.mjs",
     "status:unalabs:sync": "node scripts/update-unalabs-status.mjs",
     "qa:portfolio:e2e": "node scripts/run-portfolio-e2e.mjs",

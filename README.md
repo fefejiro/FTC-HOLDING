@@ -93,10 +93,12 @@ Root files that matter:
 ## Automation & GitHub Profile
 
 **GitHub Actions Workflows:**
+- `copilot-portfolio-maintenance.yml` — Creates one deduplicated, review-gated Copilot maintenance task Monday–Thursday across security, language/accessibility, documentation, and general upkeep
 - `job-reply-agent.yml` — Runs every 15 min, weekdays 8AM–9PM EST; processes recruiter emails and sends approved drafts
 - `job-reply-report.yml` — Runs daily at 6PM EST; sends end-of-day summary report
 - Workflow schedules and quotas depend on current GitHub plan and repository policy; verify the latest run before relying on automation
 - See `APPS/job-reply-agent/README.md` and `APPS/job-reply-agent/ops/BACKLOG.md` for details
+- See `DOCS/COPILOT_PORTFOLIO_MAINTENANCE.md` for the maintenance schedule, agent routing, and safety boundary
 
 **GitHub Profile:**
 - Repository: `fefejiro/fefejiro` (public, custom README at root)
