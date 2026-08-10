@@ -144,6 +144,18 @@ describe("PeacePad coordination shell", () => {
     expect(screen.getByRole("tab", { name: "Accueil" })).toBeOnTheScreen();
     expect(screen.getByText("Confidentialité et consentement")).toBeOnTheScreen();
   });
+
+  it.each([
+    ["Français", "Lien familial", "Inviter quelqu’un", "Saisir un code"],
+    ["Español", "Conexión familiar", "Invitar a alguien", "Introducir un código"]
+  ])("localizes the core family invitation route after selecting %s", (language, familyTitle, createTab, joinTab) => {
+    renderApp("more");
+    fireEvent.press(screen.getByRole("radio", { name: language }));
+    fireEvent.press(screen.getByText(familyTitle));
+    expect(screen.getByRole("header", { name: familyTitle })).toBeOnTheScreen();
+    expect(screen.getByRole("tab", { name: createTab })).toBeOnTheScreen();
+    expect(screen.getByRole("tab", { name: joinTab })).toBeOnTheScreen();
+  });
 });
 
 describe("private records preparation", () => {

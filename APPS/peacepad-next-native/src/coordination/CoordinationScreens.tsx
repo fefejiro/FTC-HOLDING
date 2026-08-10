@@ -172,6 +172,7 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 }
 
 export function InvitationScreen({ initialCode }: { initialCode?: string }) {
+  const { t } = useLocalization();
   const {
     acceptInvitation,
     connectedInvitationAcceptanceBlocked,
@@ -189,6 +190,11 @@ export function InvitationScreen({ initialCode }: { initialCode?: string }) {
   } = useCoordinationState();
   const [mode, setMode] = useState<"create" | "join">("create");
   const [shareError, setShareError] = useState<string>();
+  const permissionLabels: Readonly<Record<string, string>> = {
+    messages: t("invite.permissionMessages"), calendar: t("invite.permissionCalendar"),
+    "shared-records": t("invite.permissionSharedRecords"), "message.write": t("invite.permissionMessageWrite"),
+    "calendar.write": t("invite.permissionCalendarWrite")
+  };
 
   useEffect(() => {
     if (!initialCode) return;
@@ -202,78 +208,78 @@ export function InvitationScreen({ initialCode }: { initialCode?: string }) {
     try {
       await Share.share({
         message: [
-          "PeacePad invitation",
-          "Review the access before you connect.",
-          `Code: ${createdInvitation.code}`,
+          t("invite.shareTitle"),
+          t("invite.shareReview"),
+          t("invite.shareCode", { code: createdInvitation.code }),
           createdInvitation.deepLink
         ].join("\n\n")
       });
     } catch {
-      setShareError("Sharing is unavailable. Use the six-character code instead.");
+      setShareError(t("invite.shareUnavailable"));
     }
   };
 
   return (
     <View style={styles.stack}>
-      <AccessibleHeading style={styles.title}>Family connection</AccessibleHeading>
-      <Text style={styles.body}>Invite a co-parent or enter a code you received.</Text>
+      <AccessibleHeading style={styles.title}>{t("invite.title")}</AccessibleHeading>
+      <Text style={styles.body}>{t("invite.body")}</Text>
 
-      <View accessibilityLabel="Invitation action" accessibilityRole="tablist" style={styles.segmented}>
+      <View accessibilityLabel={t("invite.action")} accessibilityRole="tablist" style={styles.segmented}>
         <Pressable
-          accessibilityLabel="Invite someone"
+          accessibilityLabel={t("invite.createTab")}
           accessibilityRole="tab"
           accessibilityState={{ selected: mode === "create" }}
           onPress={() => setMode("create")}
           style={[styles.segment, mode === "create" ? styles.segmentActive : null]}
         >
-          <Text style={[styles.segmentText, mode === "create" ? styles.segmentTextActive : null]}>Invite someone</Text>
+          <Text style={[styles.segmentText, mode === "create" ? styles.segmentTextActive : null]}>{t("invite.createTab")}</Text>
         </Pressable>
         <Pressable
-          accessibilityLabel="Enter a code"
+          accessibilityLabel={t("invite.joinTab")}
           accessibilityRole="tab"
           accessibilityState={{ selected: mode === "join" }}
           onPress={() => setMode("join")}
           style={[styles.segment, mode === "join" ? styles.segmentActive : null]}
         >
-          <Text style={[styles.segmentText, mode === "join" ? styles.segmentTextActive : null]}>Enter a code</Text>
+          <Text style={[styles.segmentText, mode === "join" ? styles.segmentTextActive : null]}>{t("invite.joinTab")}</Text>
         </Pressable>
       </View>
 
       {mode === "create" ? (
-        <View accessibilityLabel="Create family invitation" style={styles.card}>
-          <Text style={styles.heading}>Invite a co-parent</Text>
-          <Text style={styles.body}>They will review your name, the shared space, and access before connecting.</Text>
-          <Text style={styles.fieldLabel}>Access</Text>
-          <Text style={styles.body}>• Messages</Text>
-          <Text style={styles.body}>• Calendar</Text>
-          <Text style={styles.body}>• Shared records</Text>
+        <View accessibilityLabel={t("invite.createCard")} style={styles.card}>
+          <Text style={styles.heading}>{t("invite.createTitle")}</Text>
+          <Text style={styles.body}>{t("invite.createBody")}</Text>
+          <Text style={styles.fieldLabel}>{t("invite.access")}</Text>
+          <Text style={styles.body}>• {t("invite.messages")}</Text>
+          <Text style={styles.body}>• {t("invite.calendar")}</Text>
+          <Text style={styles.body}>• {t("invite.sharedRecords")}</Text>
 
           {!createdInvitation ? (
             <LabButton
               disabled={invitationBusy}
-              label={invitationBusy ? "Creating…" : "Create invitation"}
+              label={invitationBusy ? t("invite.creating") : t("invite.create")}
               onPress={() => void createInvitation()}
             />
           ) : (
-            <View accessibilityLabel="Invitation ready" style={styles.stackTight}>
-              <Text style={styles.fieldLabel}>Invitation code</Text>
-              <Text accessibilityLabel={`Invitation code ${createdInvitation.code}`} style={styles.invitationCode}>
+            <View accessibilityLabel={t("invite.ready")} style={styles.stackTight}>
+              <Text style={styles.fieldLabel}>{t("invite.code")}</Text>
+              <Text accessibilityLabel={t("invite.codeLabel", { code: createdInvitation.code })} style={styles.invitationCode}>
                 {createdInvitation.code}
               </Text>
               <View
-                accessibilityHint="Scanning opens the invitation review screen. It does not connect anyone automatically."
-                accessibilityLabel="Scannable invitation QR"
+                accessibilityHint={t("invite.qrHint")}
+                accessibilityLabel={t("invite.qrLabel")}
                 accessibilityRole="image"
                 style={styles.qrCard}
               >
                 <InvitationQr value={createdInvitation.deepLink} />
-                <Text style={styles.qrLabel}>Scan to review access</Text>
+                <Text style={styles.qrLabel}>{t("invite.qrAction")}</Text>
               </View>
-              <Text style={styles.caption}>Single use • expires in 72 hours</Text>
-              <LabButton label="Share invitation" onPress={() => void shareCreatedInvitation()} />
+              <Text style={styles.caption}>{t("invite.expiry")}</Text>
+              <LabButton label={t("invite.share")} onPress={() => void shareCreatedInvitation()} />
               <LabButton
                 disabled={invitationBusy}
-                label={invitationBusy ? "Cancelling…" : "Cancel invitation"}
+                label={invitationBusy ? t("invite.cancelling") : t("invite.cancel")}
                 onPress={() => void revokeCreatedInvitation()}
                 variant="secondary"
               />
@@ -282,9 +288,9 @@ export function InvitationScreen({ initialCode }: { initialCode?: string }) {
         </View>
       ) : (
         <>
-          <Text style={styles.body}>Enter the six-character code from your invitation.</Text>
+          <Text style={styles.body}>{t("invite.joinBody")}</Text>
           <TextInput
-            accessibilityLabel="Invitation code"
+            accessibilityLabel={t("invite.code")}
             autoCapitalize="characters"
             autoCorrect={false}
             maxLength={6}
@@ -295,7 +301,7 @@ export function InvitationScreen({ initialCode }: { initialCode?: string }) {
           />
           <LabButton
             disabled={invitationCode.length !== 6 || invitationBusy}
-            label={invitationBusy ? "Checking…" : "Review invitation"}
+            label={invitationBusy ? t("invite.checking") : t("invite.review")}
             onPress={() => void resolveInvitation()}
           />
         </>
@@ -305,31 +311,31 @@ export function InvitationScreen({ initialCode }: { initialCode?: string }) {
       {shareError ? <Text accessibilityRole="alert" style={styles.error}>{shareError}</Text> : null}
 
       {invitationPreview ? (
-        <View accessibilityLabel="Invitation preview" style={styles.card}>
-          <Text style={styles.heading}>{invitationPreview.inviterDisplayName} invited you</Text>
+        <View accessibilityLabel={t("invite.preview")} style={styles.card}>
+          <Text style={styles.heading}>{t("invite.invitedBy", { name: invitationPreview.inviterDisplayName })}</Text>
           <Text style={styles.body}>{invitationPreview.familyDisplayName}</Text>
-          <Text style={styles.fieldLabel}>Role</Text>
-          <Text style={styles.body}>{invitationPreview.invitedRole}</Text>
-          <Text style={styles.fieldLabel}>Access</Text>
+          <Text style={styles.fieldLabel}>{t("invite.role")}</Text>
+          <Text style={styles.body}>{invitationPreview.invitedRole === "parent" ? t("invite.roleParent") : invitationPreview.invitedRole}</Text>
+          <Text style={styles.fieldLabel}>{t("invite.access")}</Text>
           {invitationPreview.permissions.map((permission) => (
-            <Text key={permission} style={styles.body}>• {permission.replace(/-/g, " ")}</Text>
+            <Text key={permission} style={styles.body}>• {permissionLabels[permission] ?? permission.replace(/[-.]/g, " ")}</Text>
           ))}
-          <Text style={styles.caption}>Nothing is shared until you accept.</Text>
+          <Text style={styles.caption}>{t("invite.privateUntilAccepted")}</Text>
           {connectedInvitationAcceptanceBlocked ? (
             <Text accessibilityRole="alert" style={styles.caption}>
-              This account is already connected to a family. Family switching is not available yet, so this invitation cannot be accepted here.
+              {t("invite.familyBlocked")}
             </Text>
           ) : (
-            <LabButton disabled={invitationBusy} label="Accept invitation" onPress={() => void acceptInvitation()} />
+            <LabButton disabled={invitationBusy} label={t("invite.accept")} onPress={() => void acceptInvitation()} />
           )}
-          <LabButton disabled={invitationBusy} label="Decline" onPress={() => void declineInvitation()} variant="secondary" />
+          <LabButton disabled={invitationBusy} label={t("invite.decline")} onPress={() => void declineInvitation()} variant="secondary" />
         </View>
       ) : null}
 
       {invitationGrant ? (
-        <View accessibilityLabel="Invitation accepted" style={styles.successCard}>
-          <Text style={styles.heading}>You’re connected</Text>
-          <Text style={styles.body}>Your approved family access is now active.</Text>
+        <View accessibilityLabel={t("invite.accepted")} style={styles.successCard}>
+          <Text style={styles.heading}>{t("invite.connected")}</Text>
+          <Text style={styles.body}>{t("invite.connectedBody")}</Text>
         </View>
       ) : null}
     </View>
