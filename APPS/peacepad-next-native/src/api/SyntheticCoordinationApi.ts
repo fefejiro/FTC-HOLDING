@@ -2,6 +2,9 @@ import type { MessagePreviewResponse } from "./contracts";
 import { PeacePadApiError } from "./PeacePadApiClient";
 import {
   InvitationError,
+  type AudioCallSession,
+  type AudioCallSignal,
+  type AudioCallSignalReceipt,
   type CorrectMessageInput,
   type CreateAttachmentUploadIntentInput,
   type CreateCaseBinderInput,
@@ -110,6 +113,7 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
   private previewAttempts = 0;
   private binders: CaseBinder[] = [];
   private timelineEntries: PrivateTimelineEntry[] = [];
+  private audioCall: AudioCallSession | null = null;
 
   constructor(seedInvitations: readonly SeedInvitation[] = []) {
     seedInvitations.forEach((seed) => {
@@ -117,6 +121,90 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
       this.invitationsById.set(seed.preview.invitationId, seed);
       this.invitationStates.set(seed.preview.invitationId, seed.state ?? "pending");
     });
+  }
+
+  async getCurrentAudioCall(conversationId: EntityId): Promise<AudioCallSession | null> {
+    return this.audioCall?.conversationId === conversationId ? this.audioCall : null;
+  }
+
+  async createAudioCall(conversationId: EntityId, _context: WriteContext): Promise<AudioCallSession> {
+    if (this.audioCall && ["ringing", "active"].includes(this.audioCall.status)) {
+      throw new PeacePadApiError("A call is already in progress.", "http", 409);
+    }
+    const now = new Date();
+    this.audioCall = {
+      id: `call-${Date.now().toString(36)}`,
+      familyCircleId: "family-current",
+      conversationId,
+      callerIdentityId: "identity-current",
+      calleeIdentityId: "identity-coparent",
+      type: "audio",
+      status: "ringing",
+      createdAt: now.toISOString(),
+      expiresAt: new Date(now.getTime() + 60_000).toISOString(),
+      acceptedAt: null,
+      endedAt: null,
+      endedByIdentityId: null,
+      endReason: null,
+      schemaVersion: "2.0",
+      version: 1,
+      region: "ca"
+    };
+    return this.audioCall;
+  }
+
+  async acceptAudioCall(callId: EntityId, context: WriteContext): Promise<AudioCallSession> {
+    return this.transitionAudioCall(callId, context, "active", null);
+  }
+
+  async declineAudioCall(callId: EntityId, context: WriteContext): Promise<AudioCallSession> {
+    return this.transitionAudioCall(callId, context, "declined", "declined");
+  }
+
+  async endAudioCall(callId: EntityId, context: WriteContext): Promise<AudioCallSession> {
+    return this.transitionAudioCall(
+      callId,
+      context,
+      "ended",
+      this.audioCall?.status === "ringing" ? "caller_cancelled" : "participant_ended"
+    );
+  }
+
+  async sendAudioCallSignal(callId: EntityId, _signal: AudioCallSignal, context: WriteContext): Promise<AudioCallSignalReceipt> {
+    if (!this.audioCall || this.audioCall.id !== callId || this.audioCall.version !== context.expectedVersion || !["ringing", "active"].includes(this.audioCall.status)) {
+      throw new PeacePadApiError("The call changed. Refresh before continuing.", "http", 409);
+    }
+    const sentAt = new Date().toISOString();
+    return {
+      delivered: true,
+      callId,
+      peerIdentityId: this.audioCall.calleeIdentityId,
+      callVersion: this.audioCall.version,
+      sentAt,
+      expiresAt: new Date(Date.now() + 15_000).toISOString()
+    };
+  }
+
+  private transitionAudioCall(
+    callId: EntityId,
+    context: WriteContext,
+    status: AudioCallSession["status"],
+    endReason: AudioCallSession["endReason"]
+  ): AudioCallSession {
+    if (!this.audioCall || this.audioCall.id !== callId || this.audioCall.version !== context.expectedVersion) {
+      throw new PeacePadApiError("The call changed. Refresh before continuing.", "http", 409);
+    }
+    const now = new Date().toISOString();
+    this.audioCall = {
+      ...this.audioCall,
+      status,
+      acceptedAt: status === "active" ? now : this.audioCall.acceptedAt,
+      endedAt: ["declined", "ended", "expired"].includes(status) ? now : null,
+      endedByIdentityId: ["declined", "ended"].includes(status) ? actor.identityId : null,
+      endReason,
+      version: this.audioCall.version + 1
+    };
+    return this.audioCall;
   }
 
   async createInvitation(input: CreateInvitationInput, _context: WriteContext): Promise<CreatedInvitation> {

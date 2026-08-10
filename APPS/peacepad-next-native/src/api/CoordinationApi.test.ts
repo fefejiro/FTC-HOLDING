@@ -376,6 +376,48 @@ describe("HttpPeacePadCoordinationApi", () => {
     });
   });
 
+  it("routes the foreground audio lifecycle and bounded private signaling contract", async () => {
+    const fetcher = jest.fn(async (_input: string, _init?: RequestInit) => response(200, {}));
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
+
+    await api.getCurrentAudioCall("conversation/current");
+    await api.createAudioCall("conversation/current", context);
+    await api.acceptAudioCall("call/current", context);
+    await api.declineAudioCall("call/current", context);
+    await api.endAudioCall("call/current", context);
+    await api.sendAudioCallSignal("call/current", {
+      kind: "offer",
+      payload: { type: "offer", sdp: "v=0\r\n" }
+    }, context);
+
+    expect(fetcher.mock.calls.map(([url]) => url)).toEqual([
+      "https://staging-api.peacepad.test/api/v2/calls/current?conversationId=conversation%2Fcurrent",
+      "https://staging-api.peacepad.test/api/v2/calls",
+      "https://staging-api.peacepad.test/api/v2/calls/call%2Fcurrent/accept",
+      "https://staging-api.peacepad.test/api/v2/calls/call%2Fcurrent/decline",
+      "https://staging-api.peacepad.test/api/v2/calls/call%2Fcurrent/end",
+      "https://staging-api.peacepad.test/api/v2/calls/call%2Fcurrent/signals"
+    ]);
+    expect(JSON.parse((fetcher.mock.calls[1]?.[1] as RequestInit).body as string)).toEqual({ conversationId: "conversation/current" });
+    expect((fetcher.mock.calls[5]?.[1] as RequestInit).headers).toMatchObject({
+      "If-Match": "4",
+      "X-PeacePad-Region": "ca",
+      "X-PeacePad-Schema-Version": "2.0"
+    });
+    expect((fetcher.mock.calls[5]?.[1] as RequestInit).headers).not.toHaveProperty("Idempotency-Key");
+  });
+
+  it("refuses call signaling without a verified call version", async () => {
+    const fetcher = jest.fn(async () => response(202, {}));
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
+
+    await expect(api.sendAudioCallSignal("call-current", {
+      kind: "ice",
+      payload: { candidate: "candidate:1", sdpMid: null, sdpMLineIndex: null }
+    }, { ...context, expectedVersion: null })).rejects.toMatchObject({ status: 400 });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it("validates an irreversible account-deletion receipt", async () => {
     const validReceipt = {
       identityId: context.actor.identityId,

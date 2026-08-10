@@ -70,6 +70,42 @@ export type DeletedAccount = Readonly<{
   authCleanupPending: boolean;
 }>;
 
+export type AudioCallStatus = "ringing" | "active" | "declined" | "ended" | "expired";
+
+export type AudioCallSession = Readonly<{
+  id: EntityId;
+  familyCircleId: EntityId;
+  conversationId: EntityId;
+  callerIdentityId: EntityId;
+  calleeIdentityId: EntityId;
+  type: "audio";
+  status: AudioCallStatus;
+  createdAt: string;
+  expiresAt: string;
+  acceptedAt: string | null;
+  endedAt: string | null;
+  endedByIdentityId: EntityId | null;
+  endReason: "declined" | "caller_cancelled" | "participant_ended" | "ring_timeout" | "authorization_revoked" | null;
+  schemaVersion: "2.0";
+  version: number;
+  region: "ca" | "us";
+}>;
+
+export type AudioCallSignal = Readonly<
+  | { kind: "offer"; payload: Readonly<{ type: "offer"; sdp: string }> }
+  | { kind: "answer"; payload: Readonly<{ type: "answer"; sdp: string }> }
+  | { kind: "ice"; payload: Readonly<{ candidate: string; sdpMid: string | null; sdpMLineIndex: number | null }> }
+>;
+
+export type AudioCallSignalReceipt = Readonly<{
+  delivered: true;
+  callId: EntityId;
+  peerIdentityId: EntityId;
+  callVersion: number;
+  sentAt: string;
+  expiresAt: string;
+}>;
+
 export type CreateCalendarLayerInput = Readonly<{
   familyCircleId: EntityId;
   ownerIdentityId: EntityId;
@@ -187,6 +223,12 @@ export interface PeacePadCoordinationApi {
     context: WriteContext
   ): Promise<MessageCheckPreference>;
   previewMessage(conversationId: EntityId, content: string): Promise<MessagePreviewResponse>;
+  getCurrentAudioCall(conversationId: EntityId): Promise<AudioCallSession | null>;
+  createAudioCall(conversationId: EntityId, context: WriteContext): Promise<AudioCallSession>;
+  acceptAudioCall(callId: EntityId, context: WriteContext): Promise<AudioCallSession>;
+  declineAudioCall(callId: EntityId, context: WriteContext): Promise<AudioCallSession>;
+  endAudioCall(callId: EntityId, context: WriteContext): Promise<AudioCallSession>;
+  sendAudioCallSignal(callId: EntityId, signal: AudioCallSignal, context: WriteContext): Promise<AudioCallSignalReceipt>;
 }
 
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
@@ -409,6 +451,43 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
     return this.request<MessagePreviewResponse>("/api/v2/message-previews", {
       method: "POST",
       body: JSON.stringify({ conversationId, content: normalized })
+    });
+  }
+
+  getCurrentAudioCall(conversationId: EntityId) {
+    return this.request<AudioCallSession | null>(
+      `/api/v2/calls/current?conversationId=${encodeURIComponent(conversationId)}`
+    );
+  }
+
+  createAudioCall(conversationId: EntityId, context: WriteContext) {
+    return this.write<AudioCallSession>("/api/v2/calls", "POST", { conversationId }, context);
+  }
+
+  acceptAudioCall(callId: EntityId, context: WriteContext) {
+    return this.write<AudioCallSession>(`/api/v2/calls/${encodeURIComponent(callId)}/accept`, "POST", {}, context);
+  }
+
+  declineAudioCall(callId: EntityId, context: WriteContext) {
+    return this.write<AudioCallSession>(`/api/v2/calls/${encodeURIComponent(callId)}/decline`, "POST", {}, context);
+  }
+
+  endAudioCall(callId: EntityId, context: WriteContext) {
+    return this.write<AudioCallSession>(`/api/v2/calls/${encodeURIComponent(callId)}/end`, "POST", {}, context);
+  }
+
+  sendAudioCallSignal(callId: EntityId, signal: AudioCallSignal, context: WriteContext) {
+    if (context.expectedVersion === null) {
+      return Promise.reject(new PeacePadApiError("A verified call version is required.", "http", 400));
+    }
+    return this.request<AudioCallSignalReceipt>(`/api/v2/calls/${encodeURIComponent(callId)}/signals`, {
+      method: "POST",
+      body: JSON.stringify(signal),
+      headers: {
+        "If-Match": String(context.expectedVersion),
+        "X-PeacePad-Region": context.region,
+        "X-PeacePad-Schema-Version": context.schemaVersion
+      }
     });
   }
 

@@ -245,6 +245,47 @@ describe("SyntheticCoordinationApi safety behavior", () => {
     });
   });
 
+  it("models the bounded foreground audio lifecycle without pretending to provide media", async () => {
+    const api = new SyntheticCoordinationApi();
+    await expect(api.getCurrentAudioCall("conversation-primary")).resolves.toBeNull();
+
+    const ringing = await api.createAudioCall("conversation-primary", context);
+    expect(ringing).toMatchObject({ status: "ringing", type: "audio", version: 1 });
+    await expect(api.getCurrentAudioCall("conversation-primary")).resolves.toEqual(ringing);
+    await expect(api.createAudioCall("conversation-primary", context)).rejects.toMatchObject({ status: 409 });
+
+    const active = await api.acceptAudioCall(ringing.id, { ...context, expectedVersion: ringing.version });
+    expect(active).toMatchObject({ status: "active", version: 2 });
+    await expect(api.sendAudioCallSignal(active.id, {
+      kind: "offer",
+      payload: { type: "offer", sdp: "v=0\r\n" }
+    }, { ...context, expectedVersion: active.version })).resolves.toMatchObject({ delivered: true, callVersion: 2 });
+    await expect(api.sendAudioCallSignal(active.id, {
+      kind: "ice",
+      payload: { candidate: "candidate:1", sdpMid: null, sdpMLineIndex: null }
+    }, { ...context, expectedVersion: 1 })).rejects.toMatchObject({ status: 409 });
+
+    const ended = await api.endAudioCall(active.id, { ...context, expectedVersion: active.version });
+    expect(ended).toMatchObject({ status: "ended", endReason: "participant_ended", version: 3 });
+    await expect(api.acceptAudioCall(ended.id, { ...context, expectedVersion: 2 })).rejects.toMatchObject({ status: 409 });
+  });
+
+  it("models callee decline and caller cancellation as terminal states", async () => {
+    const declinedApi = new SyntheticCoordinationApi();
+    const declinedRinging = await declinedApi.createAudioCall("conversation-primary", context);
+    await expect(declinedApi.declineAudioCall(declinedRinging.id, { ...context, expectedVersion: 1 })).resolves.toMatchObject({
+      status: "declined",
+      endReason: "declined"
+    });
+
+    const cancelledApi = new SyntheticCoordinationApi();
+    const cancelledRinging = await cancelledApi.createAudioCall("conversation-primary", context);
+    await expect(cancelledApi.endAudioCall(cancelledRinging.id, { ...context, expectedVersion: 1 })).resolves.toMatchObject({
+      status: "ended",
+      endReason: "caller_cancelled"
+    });
+  });
+
   it("keeps demo timeline links metadata-only, unique, and limited to canonical source kinds", async () => {
     const api = new SyntheticCoordinationApi();
     const binder = await api.createCaseBinder({
