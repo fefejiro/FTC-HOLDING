@@ -44,7 +44,7 @@ historical #172 baseline plus explicitly labelled successor evidence.
 | Decoupled Auth identity and durable cleanup outbox | HOSTED VERIFIED / DEPLOYMENT BLOCKED BY PROJECT ROLE |
 | Deleted-account invitation and regional metadata minimization | HOSTED VERIFIED / DEPLOYMENT BLOCKED BY PROJECT ROLE |
 | Connected-member invitation routing | HOSTED VERIFIED for exact active-family selection and atomic accepted-family conversation bootstrap; managed deployment pending |
-| Hosted CI | PeacePad-scoped PASS on PR #177 at `5bd6c2c4f`: native run `31341847067`, infrastructure run `31341847077`. The separate Garden workflow remains outside PeacePad scope |
+| Hosted CI | PeacePad-scoped PASS on PR #177 at `d2a98075a`: native run `31343203497`, infrastructure run `31343203496`. The separate Garden workflow remains outside PeacePad scope |
 
 This is not a production release. The native client remains a staging/lab
 build with `ca.peacepad.nextnative.lab` and production writes disabled.
