@@ -6,6 +6,7 @@ import { createStagingCoordinationClient } from "../staging/StagingCoordinationC
 import type { CoordinationRuntime } from "../coordination/CoordinationState";
 import { CoordinationStateProvider } from "../coordination/CoordinationState";
 import { AudioCallStateProvider } from "../calls/AudioCallState";
+import type { AudioCallMediaRuntime } from "../calls/AudioCallMediaCoordinator";
 import { LabButton } from "../components/LabButton";
 import { AccessibleHeading } from "../components/AccessibleHeading";
 import type { PeacePadEnvironmentConfig, PeacePadSupabaseConfig } from "../config/environment";
@@ -168,6 +169,14 @@ export function PeacePadStagingRuntime({
 }) {
   const { t } = useOptionalLocalization();
   const auth = useSupabaseSession();
+  const audioMediaRuntime = useMemo<AudioCallMediaRuntime | undefined>(() => auth.realtimeClient ? {
+    getAccessToken: auth.getAccessToken,
+    realtimeClient: auth.realtimeClient,
+    createMedia: async (iceServers, callbacks) => {
+      const { NativeAudioMediaSession } = await import("../calls/NativeAudioMedia");
+      return NativeAudioMediaSession.create(iceServers, callbacks);
+    }
+  } : undefined, [auth.getAccessToken, auth.realtimeClient]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [signInBusy, setSignInBusy] = useState(false);
@@ -388,7 +397,7 @@ export function PeacePadStagingRuntime({
           });
           setIncomingInvitationCode(undefined);
         }} runtime={runtimeState.runtime}>
-          <AudioCallStateProvider api={runtimeState.api} runtime={runtimeState.runtime}>
+          <AudioCallStateProvider api={runtimeState.api} mediaRuntime={audioMediaRuntime} runtime={runtimeState.runtime}>
             <RecordsStateProvider api={runtimeState.api} runtime={runtimeState.runtime}>
               {children}
             </RecordsStateProvider>

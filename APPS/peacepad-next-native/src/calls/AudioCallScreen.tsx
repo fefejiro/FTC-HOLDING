@@ -14,14 +14,17 @@ export function AudioCallScreen() {
   const terminal = state.call && ["declined", "ended", "expired"].includes(state.call.status);
   const title = !state.call ? text("noCall")
     : state.call.status === "ringing" ? text(state.incoming ? "ringingIn" : "ringingOut")
-      : state.call.status === "active" ? text("active") : text("ended");
+      : state.call.status === "active" ? text(state.mediaState === "connected" ? "active" : "accepted") : text("ended");
+  const statusBody = !state.call || terminal ? text("noCallBody")
+    : state.call.status === "ringing" ? text("ringingBody")
+      : text(state.mediaState);
 
   return <View style={{ gap: spacing.lg }}>
     <AccessibleHeading style={{ ...typography.title, color: colors.text }}>{text("title")}</AccessibleHeading>
     <Text style={{ ...typography.body, color: colors.muted }}>{text("body")}</Text>
     <View accessibilityLiveRegion="polite" style={{ backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 22, borderWidth: 1, gap: spacing.md, padding: spacing.lg }}>
       <Text accessibilityRole="header" style={{ ...typography.subheading, color: colors.text }}>{title}</Text>
-      <Text style={{ ...typography.body, color: colors.muted }}>{!state.call || terminal ? text("noCallBody") : text("unavailable")}</Text>
+      <Text style={{ ...typography.body, color: colors.muted }}>{statusBody}</Text>
       {!state.call || terminal ? <LabButton disabled={state.busy || !state.hydrated} label={text("start")} onPress={() => void state.start()} /> : null}
       {state.call?.status === "ringing" && state.incoming ? <>
         <LabButton disabled={state.busy} label={text("accept")} onPress={() => void state.accept()} />

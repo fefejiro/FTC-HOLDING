@@ -3,6 +3,7 @@ import { createWriteContext } from "../domain/v2";
 import { SyntheticCoordinationApi } from "../api/SyntheticCoordinationApi";
 import type { AudioCallSession, PeacePadCoordinationApi } from "../api/CoordinationApi";
 import type { CoordinationRuntime } from "../coordination/CoordinationState";
+import { startAudioCallMedia, type AudioCallMediaRuntime, type AudioMediaConnectionState } from "./AudioCallMediaCoordinator";
 
 type AudioCallStateValue = Readonly<{
   call: AudioCallSession | null;
@@ -10,6 +11,7 @@ type AudioCallStateValue = Readonly<{
   busy: boolean;
   error?: string;
   incoming: boolean;
+  mediaState: "unavailable" | AudioMediaConnectionState;
   refresh: () => Promise<void>;
   start: () => Promise<void>;
   accept: () => Promise<void>;
@@ -38,7 +40,7 @@ function context(runtime: CoordinationRuntime, expectedVersion: number | null = 
   });
 }
 
-export function AudioCallStateProvider({ api, children, runtime }: { api?: PeacePadCoordinationApi; children: ReactNode; runtime?: CoordinationRuntime }) {
+export function AudioCallStateProvider({ api, children, mediaRuntime, runtime }: { api?: PeacePadCoordinationApi; children: ReactNode; mediaRuntime?: AudioCallMediaRuntime; runtime?: CoordinationRuntime }) {
   const resolvedApi = useMemo(() => api ?? new SyntheticCoordinationApi(), [api]);
   const activeRuntime = runtime ?? demoRuntime;
   const [call, setCall] = useState<AudioCallSession | null>(null);
@@ -46,6 +48,7 @@ export function AudioCallStateProvider({ api, children, runtime }: { api?: Peace
   const [hydrated, setHydrated] = useState(!shouldHydrate);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const [mediaState, setMediaState] = useState<"unavailable" | AudioMediaConnectionState>("unavailable");
   const inFlight = useRef(false);
 
   const run = async (operation: () => Promise<AudioCallSession | null>) => {
@@ -75,11 +78,48 @@ export function AudioCallStateProvider({ api, children, runtime }: { api?: Peace
     void refresh();
   }, [activeRuntime.conversationId, resolvedApi, shouldHydrate]);
 
+  useEffect(() => {
+    if (!shouldHydrate || call?.status !== "ringing") return;
+    const timer = setInterval(() => {
+      if (!inFlight.current) void run(() => resolvedApi.getCurrentAudioCall(activeRuntime.conversationId));
+    }, 2_500);
+    return () => clearInterval(timer);
+  }, [activeRuntime.conversationId, call?.id, call?.status, resolvedApi, shouldHydrate]);
+
+  useEffect(() => {
+    let disposed = false;
+    let close: (() => Promise<void>) | undefined;
+    if (!mediaRuntime || call?.status !== "active") {
+      setMediaState("unavailable");
+      return;
+    }
+    void startAudioCallMedia({
+      api: resolvedApi,
+      call,
+      localIdentityId: activeRuntime.actorIdentityId,
+      context: () => context(activeRuntime, call.version),
+      runtime: mediaRuntime,
+      onState: (state) => { if (!disposed) setMediaState(state); },
+    }).then((cleanup) => {
+      if (disposed) void cleanup();
+      else close = cleanup;
+    }).catch((caught) => {
+      if (!disposed) {
+        setMediaState("failed");
+        setError(caught instanceof Error ? caught.message : "PeacePad could not connect the audio call.");
+      }
+    });
+    return () => {
+      disposed = true;
+      void close?.();
+    };
+  }, [activeRuntime.actorIdentityId, activeRuntime.region, activeRuntime.sessionId, call?.id, call?.status, call?.version, mediaRuntime, resolvedApi]);
+
   const value = useMemo<AudioCallStateValue>(() => ({
-    call, hydrated, busy, error,
+    call, hydrated, busy, error, mediaState,
     incoming: Boolean(call && call.calleeIdentityId === activeRuntime.actorIdentityId),
     refresh, start, accept, decline, end
-  }), [call, hydrated, busy, error, activeRuntime.actorIdentityId]);
+  }), [call, hydrated, busy, error, mediaState, activeRuntime.actorIdentityId]);
   return <AudioCallStateContext.Provider value={value}>{children}</AudioCallStateContext.Provider>;
 }
 

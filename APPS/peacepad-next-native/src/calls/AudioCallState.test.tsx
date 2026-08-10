@@ -6,7 +6,7 @@ import { AudioCallScreen } from "./AudioCallScreen";
 import { AudioCallStateProvider } from "./AudioCallState";
 
 describe("foreground audio-call state UI", () => {
-  it("starts and cancels only a verified lifecycle call while media remains truthfully unavailable", async () => {
+  it("starts and cancels only a verified lifecycle call while demo media remains truthfully unavailable", async () => {
     const api = new SyntheticCoordinationApi();
     const create = jest.spyOn(api, "createAudioCall");
     render(
@@ -22,7 +22,7 @@ describe("foreground audio-call state UI", () => {
     fireEvent.press(screen.getByRole("button", { name: "Start audio call" }));
     await waitFor(() => expect(screen.getByText("Calling your co-parent")).toBeTruthy());
     expect(create).toHaveBeenCalledTimes(1);
-    expect(screen.getByText("Audio connection is not enabled in this build yet.")).toBeTruthy();
+    expect(screen.getByText("Waiting for the verified participant to accept.")).toBeTruthy();
     fireEvent.press(screen.getByRole("button", { name: "Cancel call" }));
     await waitFor(() => expect(screen.getByText("Call ended")).toBeTruthy());
     expect(screen.getByRole("button", { name: "Start audio call" })).toBeTruthy();
