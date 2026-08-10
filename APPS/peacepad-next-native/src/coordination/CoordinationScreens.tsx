@@ -8,6 +8,7 @@ import { calendarText, formatCalendarDate, formatCalendarDay } from "../localiza
 import { formatLocalizedDate } from "../localization/localizedDate";
 import { messageText } from "../localization/messageLocalization";
 import { workflowText } from "../localization/workflowLocalization";
+import { homeText } from "../localization/homeLocalization";
 import { colors, spacing, typography, usesLargeTextLayout } from "../theme";
 import { useRecordsState } from "../records/RecordsState";
 import type { AttachmentMediaType } from "../domain/v2";
@@ -119,22 +120,24 @@ function CalendarViewPanel({
 
 export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
   const largeText = usesLargeTextLayout(useWindowDimensions().fontScale);
+  const { locale } = useOptionalLocalization();
+  const h = (key: Parameters<typeof homeText>[1]) => homeText(locale, key);
   const { events, invitationGrant, sentMessages } = useCoordinationState();
 
   const actions: readonly { label: string; detail: string; route: CoordinationScreen }[] = [
-    { label: "Send a message", detail: "Write clearly and review before sending.", route: "messages" },
-    { label: "Add an event", detail: "Keep parenting plans and activities together.", route: "calendar" },
-    { label: "Invite co-parent", detail: "Connect only after reviewing access.", route: "invite" },
-    { label: "Add a record", detail: "Organize notes and source details.", route: "records" }
+    { label: h("send"), detail: h("sendBody"), route: "messages" },
+    { label: h("event"), detail: h("eventBody"), route: "calendar" },
+    { label: h("invite"), detail: h("inviteBody"), route: "invite" },
+    { label: h("record"), detail: h("recordBody"), route: "records" }
   ];
 
   return (
     <View style={styles.stack}>
       <View style={styles.brandHero}>
-        <Image accessibilityLabel="PeacePad conch logo" source={require("../foundation/peacepad-conch.png")} style={styles.logo} />
+        <Image accessibilityLabel={h("logo")} source={require("../foundation/peacepad-conch.png")} style={styles.logo} />
         <View style={styles.brandHeroCopy}>
-          <AccessibleHeading style={styles.title}>What would you like to do?</AccessibleHeading>
-          <Text style={styles.body}>Messages, plans, and records in one calm place.</Text>
+          <AccessibleHeading style={styles.title}>{h("title")}</AccessibleHeading>
+          <Text style={styles.body}>{h("body")}</Text>
         </View>
       </View>
 
@@ -154,11 +157,11 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
       </View>
 
       <View style={styles.summaryCard}>
-        <Text style={styles.heading}>Today</Text>
-        <SummaryRow label="Upcoming events" value={String(events.length)} />
-        <SummaryRow label="Saved records" value="0" />
-        <SummaryRow label="Messages sent this session" value={String(sentMessages.length)} />
-        <SummaryRow label="Family connection" value={invitationGrant ? "Connected" : "Not connected"} />
+        <Text accessibilityRole="header" style={styles.heading}>{h("today")}</Text>
+        <SummaryRow label={h("upcoming")} value={String(events.length)} />
+        <SummaryRow label={h("saved")} value="0" />
+        <SummaryRow label={h("sent")} value={String(sentMessages.length)} />
+        <SummaryRow label={h("family")} value={h(invitationGrant ? "connected" : "notConnected")} />
       </View>
     </View>
   );

@@ -183,6 +183,19 @@ describe("PeacePad coordination shell", () => {
     expect(screen.getByText(createBinder)).toBeOnTheScreen();
     expect(screen.getByLabelText(binderName)).toBeOnTheScreen();
   });
+
+  it.each([
+    ["Français", "Accueil", "Que souhaitez-vous faire?", "Envoyer un message", "Aujourd’hui", "Non connecté"],
+    ["Español", "Inicio", "¿Qué te gustaría hacer?", "Enviar un mensaje", "Hoy", "Sin conexión"]
+  ])("localizes Home tasks and state summaries with semantic headings in %s", (language, homeTab, title, sendAction, today, disconnected) => {
+    renderApp("more");
+    fireEvent.press(screen.getByRole("radio", { name: language }));
+    fireEvent.press(screen.getByRole("tab", { name: homeTab }));
+    expect(screen.getByRole("header", { name: title })).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: sendAction })).toBeOnTheScreen();
+    expect(screen.getByRole("header", { name: today })).toBeOnTheScreen();
+    expect(screen.getByText(disconnected)).toBeOnTheScreen();
+  });
 });
 
 describe("private records preparation", () => {

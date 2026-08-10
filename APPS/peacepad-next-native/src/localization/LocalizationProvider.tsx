@@ -53,6 +53,9 @@ const messages = {
     "runtime.createFamilyTitle": "Create a family space", "runtime.familyName": "Family name", "runtime.createFamily": "Create family", "runtime.enterInvite": "Enter an invitation code",
     "runtime.codePlaceholder": "6-character code", "runtime.invitedAs": "Invited by {name} as {role}.", "runtime.declineInvite": "Decline invitation",
     "runtime.requestError": "PeacePad could not complete that request.", "runtime.loadingFamily": "Loading your family space", "runtime.restoringFamily": "Restoring messages, calendars, and preferences securely."
+    ,"runtime.restoringSession": "Restoring your session", "runtime.checkingDevice": "Checking this device securely.", "runtime.sessionUnavailable": "Session unavailable",
+    "runtime.restoreError": "PeacePad could not restore this session.", "runtime.opening": "Opening PeacePad", "runtime.loadingAuthorized": "Loading your authorized family space.",
+    "runtime.unavailable": "PeacePad is unavailable", "runtime.logo": "PeacePad conch logo"
   },
   fr: {
     "navigation.primary": "Navigation principale", "navigation.home": "Accueil", "navigation.messages": "Messages",
@@ -100,6 +103,9 @@ const messages = {
     "runtime.createFamilyTitle": "Créer un espace familial", "runtime.familyName": "Nom de la famille", "runtime.createFamily": "Créer la famille", "runtime.enterInvite": "Saisir un code d’invitation",
     "runtime.codePlaceholder": "Code à 6 caractères", "runtime.invitedAs": "Invitation de {name} comme {role}.", "runtime.declineInvite": "Refuser l’invitation",
     "runtime.requestError": "PeacePad n’a pas pu effectuer cette demande.", "runtime.loadingFamily": "Chargement de votre espace familial", "runtime.restoringFamily": "Restauration sécurisée des messages, calendriers et préférences."
+    ,"runtime.restoringSession": "Restauration de votre session", "runtime.checkingDevice": "Vérification sécurisée de cet appareil.", "runtime.sessionUnavailable": "Session indisponible",
+    "runtime.restoreError": "PeacePad n’a pas pu restaurer cette session.", "runtime.opening": "Ouverture de PeacePad", "runtime.loadingAuthorized": "Chargement de votre espace familial autorisé.",
+    "runtime.unavailable": "PeacePad est indisponible", "runtime.logo": "Logo coquillage de PeacePad"
   },
   es: {
     "navigation.primary": "Navegación principal", "navigation.home": "Inicio", "navigation.messages": "Mensajes",
@@ -147,6 +153,9 @@ const messages = {
     "runtime.createFamilyTitle": "Crear un espacio familiar", "runtime.familyName": "Nombre de la familia", "runtime.createFamily": "Crear familia", "runtime.enterInvite": "Introducir un código de invitación",
     "runtime.codePlaceholder": "Código de 6 caracteres", "runtime.invitedAs": "Invitación de {name} como {role}.", "runtime.declineInvite": "Rechazar invitación",
     "runtime.requestError": "PeacePad no pudo completar esa solicitud.", "runtime.loadingFamily": "Cargando tu espacio familiar", "runtime.restoringFamily": "Restaurando mensajes, calendarios y preferencias de forma segura."
+    ,"runtime.restoringSession": "Restaurando tu sesión", "runtime.checkingDevice": "Comprobando este dispositivo de forma segura.", "runtime.sessionUnavailable": "Sesión no disponible",
+    "runtime.restoreError": "PeacePad no pudo restaurar esta sesión.", "runtime.opening": "Abriendo PeacePad", "runtime.loadingAuthorized": "Cargando tu espacio familiar autorizado.",
+    "runtime.unavailable": "PeacePad no está disponible", "runtime.logo": "Logotipo de caracola de PeacePad"
   }
 } as const;
 

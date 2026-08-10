@@ -334,8 +334,8 @@ export function PeacePadStagingRuntime({
     });
   }, [auth.getAccessToken, auth.session, auth.status, environment, fetcher, pendingActivation, reloadVersion, selectedFamilyCircleId, supabase]);
 
-  if (auth.status === "loading") return <GateMessage busy title="Restoring your session" body="Checking this device securely." />;
-  if (auth.status === "error") return <GateMessage title="Session unavailable" body={auth.error ?? "PeacePad could not restore this session."} />;
+  if (auth.status === "loading") return <GateMessage busy title={t("runtime.restoringSession")} body={t("runtime.checkingDevice")} />;
+  if (auth.status === "error") return <GateMessage title={t("runtime.sessionUnavailable")} body={auth.error ?? t("runtime.restoreError")} />;
   if (auth.status === "signed-out") {
     return (
       <View style={styles.page}>
@@ -352,11 +352,11 @@ export function PeacePadStagingRuntime({
       </View>
     );
   }
-  if (runtimeState.status === "loading") return <GateMessage busy title="Opening PeacePad" body="Loading your authorized family space." />;
+  if (runtimeState.status === "loading") return <GateMessage busy title={t("runtime.opening")} body={t("runtime.loadingAuthorized")} />;
   if (runtimeState.status === "membership-empty") return <FamilySetup accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} initialInvitationCode={incomingInvitationCode} onInvitationCodeConsumed={() => setIncomingInvitationCode(undefined)} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={signOutSafely} verified={runtimeState.verified} />;
   if (runtimeState.status === "membership-selection") return <FamilySelection accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} memberships={runtimeState.memberships} onSelect={(familyCircleId) => setSelectedFamilyCircleId(familyCircleId)} onSignOut={signOutSafely} />;
   if (runtimeState.status === "conversation-empty") return <ConversationSetup accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} membership={runtimeState.membership} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={signOutSafely} verified={runtimeState.verified} />;
-  if (runtimeState.status === "error") return <GateMessage title="PeacePad is unavailable" body={runtimeState.message} />;
+  if (runtimeState.status === "error") return <GateMessage title={t("runtime.unavailable")} body={runtimeState.message} />;
   const accountActions = {
     signOut: signOutSafely,
     deleting: deleteBusy,
@@ -584,11 +584,13 @@ function AccountDeletionControls({ value }: {
 }
 
 function Brand() {
-  return <View style={styles.brand}><Image accessibilityLabel="PeacePad conch logo" source={require("../foundation/peacepad-conch.png")} style={styles.logo} /><Text style={styles.brandName}>PeacePad</Text></View>;
+  const { t } = useOptionalLocalization();
+  return <View style={styles.brand}><Image accessibilityLabel={t("runtime.logo")} source={require("../foundation/peacepad-conch.png")} style={styles.logo} /><Text style={styles.brandName}>PeacePad</Text></View>;
 }
 
 function GateMessage({ busy = false, body, onSignOut, title }: { busy?: boolean; body: string; onSignOut?: () => Promise<void>; title: string }) {
-  return <View style={styles.page}><Brand />{busy ? <ActivityIndicator color={colors.brand} /> : null}<AccessibleHeading style={styles.title}>{title}</AccessibleHeading><Text style={styles.body}>{body}</Text>{onSignOut ? <LabButton label="Sign out" onPress={() => void onSignOut()} variant="secondary" /> : null}</View>;
+  const { t } = useOptionalLocalization();
+  return <View style={styles.page}><Brand />{busy ? <ActivityIndicator color={colors.brand} /> : null}<AccessibleHeading style={styles.title}>{title}</AccessibleHeading><Text accessibilityLiveRegion={busy ? "polite" : "none"} style={styles.body}>{body}</Text>{onSignOut ? <LabButton label={t("account.signOut")} onPress={() => void onSignOut()} variant="secondary" /> : null}</View>;
 }
 
 const styles = StyleSheet.create({
