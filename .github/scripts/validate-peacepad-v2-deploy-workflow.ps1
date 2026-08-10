@@ -25,6 +25,9 @@ $required = @(
   'SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}',
   'DATABASE_URL: ${{ secrets.DATABASE_URL }}',
   'PEACEPAD_MAINTENANCE_SECRET: ${{ secrets.MAINTENANCE_SECRET }}',
+  'PEACEPAD_IDEMPOTENCY_SECRET: ${{ secrets.IDEMPOTENCY_SECRET }}',
+  "throw 'IDEMPOTENCY_SECRET is missing or too short.'",
+  'Write-Output "::add-mask::$env:PEACEPAD_IDEMPOTENCY_SECRET"',
   'x-peacepad-region',
   'DRY_RUN_OR_FAILED'
 )
