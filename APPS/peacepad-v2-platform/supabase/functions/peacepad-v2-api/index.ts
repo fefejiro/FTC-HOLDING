@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { validateAudioCallSignal } from "./signaling.ts";
+import { createTurnCredential, parseTurnUrls } from "./turn.ts";
 
 type DataRegion = "ca" | "us";
 
@@ -12,6 +13,8 @@ type RuntimeConfig = Readonly<{
   allowedOrigins: readonly string[];
   maintenanceSecret: string;
   idempotencySecret: string;
+  turnUrls: readonly string[];
+  turnSharedSecret: string;
 }>;
 
 type ErrorCode =
@@ -50,7 +53,8 @@ type ErrorCode =
   | "RUNTIME_REGION_MISMATCH"
   | "SESSION_REVOCATION_FAILED"
   | "SIGNAL_DELIVERY_UNAVAILABLE"
-  | "SIGNAL_RATE_LIMITED";
+  | "SIGNAL_RATE_LIMITED"
+  | "TURN_CREDENTIALS_UNAVAILABLE";
 
 const env = (name: string): string => Deno.env.get(name)?.trim() ?? "";
 
@@ -68,6 +72,8 @@ const readConfig = (): RuntimeConfig => {
       .filter(Boolean),
     maintenanceSecret: env("PEACEPAD_MAINTENANCE_SECRET"),
     idempotencySecret: env("PEACEPAD_IDEMPOTENCY_SECRET"),
+    turnUrls: parseTurnUrls(env("PEACEPAD_TURN_URLS")),
+    turnSharedSecret: env("PEACEPAD_TURN_SHARED_SECRET"),
   };
   if (
     !config.supabaseUrl ||
@@ -684,6 +690,56 @@ const handler = async (request: Request): Promise<Response> => {
       p_conversation_id: conversationId,
     });
     return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
+  }
+
+  const audioCallTurnMatch = path.match(/^\/api\/v2\/calls\/([^/]+)\/turn-credentials$/);
+  if (request.method === "GET" && audioCallTurnMatch) {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
+    const callId = audioCallTurnMatch[1];
+    const expectedVersionHeader = (request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? "";
+    const expectedVersion = Number(expectedVersionHeader);
+    const requestedRegion = request.headers.get("x-peacepad-region")?.trim() ?? "";
+    const schemaVersion = (request.headers.get("x-peacepad-schema-version") ?? request.headers.get("x-schema-version"))?.trim() ?? "";
+    if (
+      !isUuid(callId)
+      || !Number.isInteger(expectedVersion)
+      || expectedVersion < 1
+      || requestedRegion !== config.region
+      || schemaVersion !== "2.0"
+    ) return failure(request, 400, "INVALID_REQUEST", "A valid active call version is required.", requestId, config);
+    if (config.turnUrls.length < 1 || config.turnSharedSecret.length < 32) {
+      return failure(request, 503, "TURN_CREDENTIALS_UNAVAILABLE", "Private audio relay is not configured for this region.", requestId, config);
+    }
+
+    const { data, error } = await authenticated.admin.rpc("peacepad_v2_authorize_audio_call_turn", {
+      p_identity_id: authenticated.user.id,
+      p_region: config.region,
+      p_call_id: callId,
+      p_expected_version: expectedVersion,
+      p_schema_version: 2,
+    });
+    if (error) return rpcFailure(request, requestId, config, error.message);
+    const authorization = (data ?? {}) as Record<string, unknown>;
+    if (
+      authorization.callId !== callId
+      || Number(authorization.version) !== expectedVersion
+      || authorization.region !== config.region
+    ) return failure(request, 502, "INVALID_UPSTREAM_RESPONSE", "PeacePad could not authorize private audio relay.", requestId, config);
+    const credential = await createTurnCredential(
+      { urls: config.turnUrls, sharedSecret: config.turnSharedSecret },
+      { identityId: authenticated.user.id, callId, region: config.region },
+    );
+    return json(request, 200, {
+      callId,
+      callVersion: expectedVersion,
+      expiresAt: credential.expiresAt,
+      iceServers: [{
+        urls: credential.urls,
+        username: credential.username,
+        credential: credential.credential,
+      }],
+    }, requestId, config);
   }
 
   const audioCallSignalMatch = path.match(/^\/api\/v2\/calls\/([^/]+)\/signals$/);

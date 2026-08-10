@@ -256,6 +256,8 @@ describe("SyntheticCoordinationApi safety behavior", () => {
 
     const active = await api.acceptAudioCall(ringing.id, { ...context, expectedVersion: ringing.version });
     expect(active).toMatchObject({ status: "active", version: 2 });
+    await expect(api.getAudioCallTurnCredentials(active.id, { ...context, expectedVersion: active.version }))
+      .rejects.toMatchObject({ status: 503 });
     await expect(api.sendAudioCallSignal(active.id, {
       kind: "offer",
       payload: { sdp: "v=0\r\n" }

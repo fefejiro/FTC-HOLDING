@@ -106,6 +106,17 @@ export type AudioCallSignalReceipt = Readonly<{
   expiresAt: string;
 }>;
 
+export type AudioCallTurnCredentials = Readonly<{
+  callId: EntityId;
+  callVersion: number;
+  expiresAt: string;
+  iceServers: readonly Readonly<{
+    urls: readonly string[];
+    username: string;
+    credential: string;
+  }>[];
+}>;
+
 export type CreateCalendarLayerInput = Readonly<{
   familyCircleId: EntityId;
   ownerIdentityId: EntityId;
@@ -228,6 +239,7 @@ export interface PeacePadCoordinationApi {
   acceptAudioCall(callId: EntityId, context: WriteContext): Promise<AudioCallSession>;
   declineAudioCall(callId: EntityId, context: WriteContext): Promise<AudioCallSession>;
   endAudioCall(callId: EntityId, context: WriteContext): Promise<AudioCallSession>;
+  getAudioCallTurnCredentials(callId: EntityId, context: WriteContext): Promise<AudioCallTurnCredentials>;
   sendAudioCallSignal(callId: EntityId, signal: AudioCallSignal, context: WriteContext): Promise<AudioCallSignalReceipt>;
 }
 
@@ -474,6 +486,20 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
 
   endAudioCall(callId: EntityId, context: WriteContext) {
     return this.write<AudioCallSession>(`/api/v2/calls/${encodeURIComponent(callId)}/end`, "POST", {}, context);
+  }
+
+  getAudioCallTurnCredentials(callId: EntityId, context: WriteContext) {
+    if (context.expectedVersion === null) {
+      return Promise.reject(new PeacePadApiError("A verified call version is required.", "http", 400));
+    }
+    return this.request<AudioCallTurnCredentials>(`/api/v2/calls/${encodeURIComponent(callId)}/turn-credentials`, {
+      method: "GET",
+      headers: {
+        "If-Match": String(context.expectedVersion),
+        "X-PeacePad-Region": context.region,
+        "X-PeacePad-Schema-Version": context.schemaVersion
+      }
+    });
   }
 
   sendAudioCallSignal(callId: EntityId, signal: AudioCallSignal, context: WriteContext) {

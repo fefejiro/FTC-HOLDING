@@ -26,11 +26,15 @@ $audioCallSignalingMigrationPath = Join-Path $platformRoot 'supabase/migrations/
 $audioCallSignalingProofPath = Join-Path $platformRoot 'scripts/verify-audio-call-signaling.sql'
 $audioCallSignalValidatorPath = Join-Path $platformRoot 'supabase/functions/peacepad-v2-api/signaling.ts'
 $audioCallSignalTestPath = Join-Path $platformRoot 'supabase/functions/peacepad-v2-api/signaling_test.ts'
+$audioCallTurnMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608100004_v2_short_lived_turn_authorization.sql'
+$audioCallTurnProofPath = Join-Path $platformRoot 'scripts/verify-audio-call-turn-authorization.sql'
+$audioCallTurnIssuerPath = Join-Path $platformRoot 'supabase/functions/peacepad-v2-api/turn.ts'
+$audioCallTurnTestPath = Join-Path $platformRoot 'supabase/functions/peacepad-v2-api/turn_test.ts'
 $authCleanupRunnerPath = Join-Path $platformRoot 'scripts/run-auth-cleanup.ps1'
 $deployRunnerPath = Join-Path $platformRoot 'scripts/deploy-supabase-free-staging.ps1'
 $configPath = Join-Path $platformRoot 'supabase/config.toml'
 
-foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $idempotencyReceiptMigrationPath, $privateRecordsMigrationPath, $privateTimelineMigrationPath, $audioCallMigrationPath, $audioCallProofPath, $audioCallSignalingMigrationPath, $audioCallSignalingProofPath, $audioCallSignalValidatorPath, $audioCallSignalTestPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
+foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $idempotencyReceiptMigrationPath, $privateRecordsMigrationPath, $privateTimelineMigrationPath, $audioCallMigrationPath, $audioCallProofPath, $audioCallSignalingMigrationPath, $audioCallSignalingProofPath, $audioCallSignalValidatorPath, $audioCallSignalTestPath, $audioCallTurnMigrationPath, $audioCallTurnProofPath, $audioCallTurnIssuerPath, $audioCallTurnTestPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
     throw "Required Supabase staging file is missing: $path"
   }
@@ -59,6 +63,10 @@ $audioCallSignalingMigration = Get-Content -LiteralPath $audioCallSignalingMigra
 $audioCallSignalingProof = Get-Content -LiteralPath $audioCallSignalingProofPath -Raw
 $audioCallSignalValidator = Get-Content -LiteralPath $audioCallSignalValidatorPath -Raw
 $audioCallSignalTest = Get-Content -LiteralPath $audioCallSignalTestPath -Raw
+$audioCallTurnMigration = Get-Content -LiteralPath $audioCallTurnMigrationPath -Raw
+$audioCallTurnProof = Get-Content -LiteralPath $audioCallTurnProofPath -Raw
+$audioCallTurnIssuer = Get-Content -LiteralPath $audioCallTurnIssuerPath -Raw
+$audioCallTurnTest = Get-Content -LiteralPath $audioCallTurnTestPath -Raw
 $authCleanupRunner = Get-Content -LiteralPath $authCleanupRunnerPath -Raw
 $deployRunner = Get-Content -LiteralPath $deployRunnerPath -Raw
 $config = Get-Content -LiteralPath $configPath -Raw
@@ -120,6 +128,11 @@ $requiredFunctionPatterns = @(
   '/api/v2/calls/',
   '/signals',
   'peacepad_v2_authorize_audio_call_signal',
+  '/turn-credentials',
+  'peacepad_v2_authorize_audio_call_turn',
+  'PEACEPAD_TURN_URLS',
+  'PEACEPAD_TURN_SHARED_SECRET',
+  'createTurnCredential',
   '/realtime/v1/api/broadcast/',
   'private=true',
   'validateAudioCallSignal',
@@ -621,6 +634,51 @@ foreach ($pattern in @(
 }
 if ($function -match 'realtime\.send\(' -or $function -match 'broadcast_changes') {
   throw 'Call signaling must not use database-origin Broadcast or replay.'
+}
+foreach ($pattern in @(
+  'peacepad_v2_authorize_audio_call_turn',
+  'security definer',
+  'for update',
+  'p_expected_version',
+  "call_row.status <> 'active'",
+  'authorized_audio_call_conversation',
+  'revoke all on function',
+  'grant execute on function',
+  'to service_role'
+)) {
+  if ($audioCallTurnMigration -notmatch $pattern) {
+    throw "TURN authorization migration is missing required boundary: $pattern"
+  }
+}
+if ($audioCallTurnMigration -match '(?im)^\s*(turn_url|turn_secret|credential|username|password)\s+') {
+  throw 'TURN configuration or credentials must not be persisted in PostgreSQL.'
+}
+foreach ($pattern in @(
+  'CALL_ACCESS_DENIED',
+  'CALL_STATE_INVALID',
+  'CONCURRENCY_CONFLICT',
+  'Revoked peer grant',
+  'set local role authenticated',
+  'unexpectedly wrote audit content'
+)) {
+  if ($audioCallTurnProof -notmatch $pattern) {
+    throw "TURN authorization proof is missing assertion coverage: $pattern"
+  }
+}
+foreach ($pattern in @(
+  'HMAC',
+  'SHA-1',
+  'SHA-256',
+  '5 \* 60 \* 1000',
+  'config.sharedSecret.length < 32',
+  'parseTurnUrls',
+  'not deterministic',
+  'credential leaks identifiers',
+  'weak TURN secret accepted'
+)) {
+  if (($audioCallTurnIssuer + $audioCallTurnTest) -notmatch $pattern) {
+    throw "TURN credential issuer validation is missing boundary: $pattern"
+  }
 }
 if (
   $config -notmatch '\[functions\.peacepad-v2-api\]' -or

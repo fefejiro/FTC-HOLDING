@@ -185,6 +185,10 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
     };
   }
 
+  async getAudioCallTurnCredentials(_callId: EntityId, _context: WriteContext): Promise<never> {
+    throw new PeacePadApiError("Secure audio relay is unavailable in demo mode.", "http", 503);
+  }
+
   private transitionAudioCall(
     callId: EntityId,
     context: WriteContext,

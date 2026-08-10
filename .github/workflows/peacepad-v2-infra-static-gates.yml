@@ -80,6 +80,9 @@ jobs:
           deno test \
             --config APPS/peacepad-v2-platform/deno.json \
             APPS/peacepad-v2-platform/supabase/functions/peacepad-v2-api/signaling_test.ts
+          deno test \
+            --config APPS/peacepad-v2-platform/deno.json \
+            APPS/peacepad-v2-platform/supabase/functions/peacepad-v2-api/turn_test.ts
 
       - name: Apply and verify Supabase transactions
         shell: bash
@@ -116,6 +119,8 @@ jobs:
             -f APPS/peacepad-v2-platform/scripts/verify-audio-call-lifecycle.sql
           psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d peacepad_v2_test \
             -f APPS/peacepad-v2-platform/scripts/verify-audio-call-signaling.sql
+          psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d peacepad_v2_test \
+            -f APPS/peacepad-v2-platform/scripts/verify-audio-call-turn-authorization.sql
 
       - name: Confirm workflow cannot deploy
         shell: bash

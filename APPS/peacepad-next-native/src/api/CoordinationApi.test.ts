@@ -385,6 +385,7 @@ describe("HttpPeacePadCoordinationApi", () => {
     await api.acceptAudioCall("call/current", context);
     await api.declineAudioCall("call/current", context);
     await api.endAudioCall("call/current", context);
+    await api.getAudioCallTurnCredentials("call/current", context);
     await api.sendAudioCallSignal("call/current", {
       kind: "offer",
       payload: { sdp: "v=0\r\n" }
@@ -396,6 +397,7 @@ describe("HttpPeacePadCoordinationApi", () => {
       "https://staging-api.peacepad.test/api/v2/calls/call%2Fcurrent/accept",
       "https://staging-api.peacepad.test/api/v2/calls/call%2Fcurrent/decline",
       "https://staging-api.peacepad.test/api/v2/calls/call%2Fcurrent/end",
+      "https://staging-api.peacepad.test/api/v2/calls/call%2Fcurrent/turn-credentials",
       "https://staging-api.peacepad.test/api/v2/calls/call%2Fcurrent/signals"
     ]);
     expect(JSON.parse((fetcher.mock.calls[1]?.[1] as RequestInit).body as string)).toEqual({ conversationId: "conversation/current" });
@@ -404,7 +406,13 @@ describe("HttpPeacePadCoordinationApi", () => {
       "X-PeacePad-Region": "ca",
       "X-PeacePad-Schema-Version": "2.0"
     });
+    expect((fetcher.mock.calls[6]?.[1] as RequestInit).headers).toMatchObject({
+      "If-Match": "4",
+      "X-PeacePad-Region": "ca",
+      "X-PeacePad-Schema-Version": "2.0"
+    });
     expect((fetcher.mock.calls[5]?.[1] as RequestInit).headers).not.toHaveProperty("Idempotency-Key");
+    expect((fetcher.mock.calls[6]?.[1] as RequestInit).headers).not.toHaveProperty("Idempotency-Key");
   });
 
   it("refuses call signaling without a verified call version", async () => {
@@ -415,6 +423,8 @@ describe("HttpPeacePadCoordinationApi", () => {
       kind: "ice",
       payload: { candidate: "candidate:1", sdpMid: null, sdpMLineIndex: null }
     }, { ...context, expectedVersion: null })).rejects.toMatchObject({ status: 400 });
+    await expect(api.getAudioCallTurnCredentials("call-current", { ...context, expectedVersion: null }))
+      .rejects.toMatchObject({ status: 400 });
     expect(fetcher).not.toHaveBeenCalled();
   });
 
