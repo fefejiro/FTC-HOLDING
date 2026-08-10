@@ -37,5 +37,6 @@ jobs:
       - name: Create one deduplicated maintenance task and assign Copilot
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COPILOT_ASSIGN_TOKEN: ${{ secrets.COPILOT_ASSIGN_TOKEN }}
           MAINTENANCE_LANE: ${{ inputs.lane }}
         run: node scripts/seed-copilot-maintenance.mjs
