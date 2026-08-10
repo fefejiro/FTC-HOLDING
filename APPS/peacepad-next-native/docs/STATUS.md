@@ -70,7 +70,7 @@ mandatory gate passes.
 | Gate 3: records, evidence, exports | 15% | 5% | IMPLEMENTED | Metadata-only attachment intent; bytes and persistence disabled | Encrypted regional object storage, hashing, provenance, timeline, and independently verified export |
 | Gate 4: calls, offline, parity | 15% | 8% | HOSTED VERIFIED / INCOMPLETE | A same-session, identity/region/family/conversation-scoped SecureStore message outbox retains transient and needs-action intents without automatic cross-session replay. Users can explicitly retry or remove a failed local intent; retries preserve the original idempotency key, refresh canonical server messages after ambiguous timeouts, and never confuse a completed mutation with a refresh failure. It remains bounded: no SQLite durable cache, network listener, device proof, or calling service | Prove queued-message recovery on Simulator and two fictional real-device accounts before adding SQLite or calls |
 | Gate 5: trust, accessibility, localization | 10% | 5% | IMPLEMENTED | Baseline only; no independent audit or translations | Security/privacy/accessibility clearance and EN/FR/ES matrix |
-| Gate 6: migration and App Store | 15% | 0% | NOT STARTED | Gates 0-5 are incomplete | Migration/rollback rehearsal, TestFlight soak, sign-offs, and App Review submission |
+| Gate 6: migration and App Store | 15% | 0% | NOT STARTED | Gates 0-5 are incomplete. MacinCloud RDP access was unavailable on 2026-08-09, remaining at `Initializing`; this is an observed release-host availability failure, not a confirmed server outage or root-cause diagnosis. The credential exposed in operator-supplied evidence must be rotated before reuse | Re-establish and verify a macOS/Xcode release host, document a fallback that does not depend on the same VM, rotate the exposed credential, then complete migration/rollback rehearsal, TestFlight soak, sign-offs, and App Review submission |
 
 Weighted implementation estimate: **about 41% production-ready**. This replaces
 the earlier unverified 53% planning estimate.
@@ -92,7 +92,7 @@ the earlier unverified 53% planning estimate.
 | Professional portal | 0% | NOT STARTED | No production portal |
 | Accessibility | 25% | IMPLEMENTED | Labels/theme baseline exists; full WCAG/device audit is absent |
 | English/French/Spanish | 0% | NOT STARTED | English source strings are not a localization system |
-| Migration, TestFlight, and release | 0% | NOT STARTED | Production bundle remains protected |
+| Migration, TestFlight, and release | 0% | NOT STARTED / RELEASE HOST BLOCKED | Production bundle remains protected. Current MacinCloud access is unavailable and no fallback Xcode release host is verified |
 
 ## Verification ledger
 
@@ -117,6 +117,7 @@ the earlier unverified 53% planning estimate.
 | Hosted prerequisite and native gates | `b047615d` | GitHub Actions, PR #176 | 2026-08-06 | HOSTED VERIFIED | Infrastructure format/validate/mock-plan and standalone native quality workflows both completed successfully |
 | macOS native automated gates | `d938c4c5` | MacinCloud macOS 26.3.1, Node 22 | 2026-08-07 | LOCAL VERIFIED | Clean app-local install; guardrails; 75-file secret scan; TypeScript; 25 suites/144 tests; public Expo config; Expo Doctor 18/18 |
 | Foundation simulator smoke | `d938c4c5` | iPhone 17 Simulator, iOS 26.5, Maestro | 2026-08-07 | SIMULATOR VERIFIED / BLOCKED | Welcome, required consent, and AI default-off passed with current screenshots. Guest compose correctly failed closed because staging is not deployed; no session or production fallback was created |
+| macOS release-host availability | n/a | MacinCloud RDP | 2026-08-09 | BLOCKED | RDP remained at `Initializing` and presented an unknown-publisher warning. This does not establish the root cause or a server outage. No current Xcode, archive, TestFlight, or upload verification occurred. Rotate the credential exposed in operator evidence and verify both a primary release host and an independent fallback before Gate 6 |
 | Supabase free staging boundary | `ad0cd258` | Windows local, no Supabase mutation | 2026-08-07 | LOCAL VERIFIED | Two-project regional config validates; production writes and secrets are rejected; migration denies direct mobile roles and makes audit events append-only |
 | Supabase regional Edge Function boundary | `dc2f9d27` | Windows local, no cloud mutation | 2026-08-07 | LOCAL VERIFIED / DEPLOYMENT BLOCKED | JWT-derived identity, project/region checks, public health/readiness, protected session route, request IDs, safe error envelope, service-role-only RPCs, and no-content logging validated. Both regional deployment preflights pass; current Supabase CLI identity lacks project permissions |
 | Supabase identity/family authorization schema | `6e45ac45` | Windows local, no cloud mutation | 2026-08-07 | LOCAL VERIFIED / DEPLOYMENT BLOCKED | Typed identity, append-only consent history, family circles, participant grants, hashed expiring invitation state, immutable identity region, indexes, and fail-closed RLS validate locally. Migration has not been applied remotely |
