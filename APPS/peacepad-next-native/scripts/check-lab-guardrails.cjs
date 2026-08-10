@@ -5,6 +5,7 @@ const root = path.resolve(__dirname, "..");
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 
 const appJson = JSON.parse(read("app.json"));
+const easJson = JSON.parse(read("eas.json"));
 const packageJson = JSON.parse(read("package.json"));
 
 const iosBundle = appJson.expo?.ios?.bundleIdentifier;
@@ -58,6 +59,35 @@ if (packageJson.dependencies?.["@config-plugins/react-native-webrtc"]) {
 
 if (!doctorExclusions.includes("react-native-webrtc")) {
   failures.push("The pinned WebRTC New Architecture exception must remain explicit until native device proof exists.");
+}
+
+const easBuildProfiles = easJson.build || {};
+const allowedEasProfiles = ["lab-simulator", "lab-device"];
+if (Object.keys(easBuildProfiles).some((profile) => !allowedEasProfiles.includes(profile))) {
+  failures.push("EAS must remain limited to the approved lab-simulator and lab-device profiles before Gate 6.");
+}
+if (easJson.submit || easBuildProfiles.production) {
+  failures.push("EAS submit and production build profiles are prohibited before Gate 6 approval.");
+}
+for (const profile of allowedEasProfiles) {
+  const config = easBuildProfiles[profile];
+  if (!config || config.distribution !== "internal") {
+    failures.push(`EAS ${profile} must use internal distribution.`);
+    continue;
+  }
+  if (
+    config.env?.EXPO_PUBLIC_PEACEPAD_ENV !== "lab"
+    || config.env?.EXPO_PUBLIC_PEACEPAD_API_BASE_URL !== "http://127.0.0.1:8787"
+    || config.env?.EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS !== "false"
+  ) {
+    failures.push(`EAS ${profile} must remain pinned to the non-diagnostic local lab boundary.`);
+  }
+}
+if (easBuildProfiles["lab-simulator"]?.ios?.simulator !== true) {
+  failures.push("EAS lab-simulator must remain an iOS Simulator build.");
+}
+if (easBuildProfiles["lab-device"]?.ios?.simulator === true) {
+  failures.push("EAS lab-device must remain a physical-device internal build.");
 }
 
 const sourceFiles = [];

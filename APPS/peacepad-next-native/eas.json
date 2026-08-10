@@ -1,0 +1,28 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "local",
+    "requireCommit": true
+  },
+  "build": {
+    "lab-simulator": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_PEACEPAD_ENV": "lab",
+        "EXPO_PUBLIC_PEACEPAD_API_BASE_URL": "http://127.0.0.1:8787",
+        "EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS": "false"
+      },
+      "ios": {
+        "simulator": true
+      }
+    },
+    "lab-device": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_PEACEPAD_ENV": "lab",
+        "EXPO_PUBLIC_PEACEPAD_API_BASE_URL": "http://127.0.0.1:8787",
+        "EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS": "false"
+      }
+    }
+  }
+}
