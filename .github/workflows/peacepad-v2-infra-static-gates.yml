@@ -67,6 +67,10 @@ jobs:
         shell: pwsh
         run: ./APPS/peacepad-v2-platform/scripts/validate-infra.ps1
 
+      - name: Parse managed restoration verifier
+        shell: bash
+        run: bash -n APPS/peacepad-v2-platform/scripts/verify-managed-logical-restoration.sh
+
       - name: Type-check Supabase Edge Function
         shell: bash
         run: |

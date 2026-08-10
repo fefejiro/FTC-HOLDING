@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-  [string]$ConfigPath = (Join-Path $PSScriptRoot "..\config\supabase-free-staging.example.json")
+  [string]$ConfigPath = (Join-Path $PSScriptRoot "..\config\supabase-free-staging.example.json"),
+  [string]$ManagedRestoreScriptPath = (Join-Path $PSScriptRoot "verify-managed-logical-restoration.sh")
 )
 
 $ErrorActionPreference = "Stop"
@@ -30,6 +31,27 @@ foreach ($region in @($ca, $us)) {
 $raw = Get-Content -LiteralPath $resolved -Raw
 if ($raw -match '(?i)(service_role|service-role|secret[_-]?key|postgres(?:ql)?://|password\s*[=:])') {
   throw "Supabase configuration contains a forbidden secret or database connection string."
+}
+
+$restoreScript = Get-Content -LiteralPath (Resolve-Path -LiteralPath $ManagedRestoreScriptPath).Path -Raw
+$requiredRestorePatterns = @(
+  'rohvkyuxbnqzglaromms',
+  'spmpndalcvwmygznihec',
+  'begin read only',
+  'pg_dump.+--data-only.+--schema=peacepad_v2',
+  'pg_restore.+--data-only.+--disable-triggers.+--single-transaction.+--exit-on-error',
+  'source_fingerprint.+restored_fingerprint',
+  'rm -f -- "\$dump_path"',
+  'dumpRetained: false',
+  'productionContacted: false'
+)
+foreach ($pattern in $requiredRestorePatterns) {
+  if ($restoreScript -notmatch $pattern) {
+    throw "Managed logical restoration is missing required safety contract: $pattern"
+  }
+}
+if ($restoreScript -match 'pg_restore[^\r\n]+--dbname="\$DATABASE_URL"') {
+  throw "Managed restoration must never restore into the managed source database."
 }
 
 Write-Output "SUPABASE_FREE_STAGING_CONFIG_PASS"

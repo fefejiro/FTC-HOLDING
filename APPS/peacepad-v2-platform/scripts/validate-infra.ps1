@@ -13,6 +13,7 @@ $environments = @(
 )
 $secretScan = Join-Path $PSScriptRoot "check-secrets.ps1"
 $prerequisiteCheck = Join-Path $PSScriptRoot "validate-prerequisites.ps1"
+$supabaseConfigCheck = Join-Path $PSScriptRoot "validate-supabase-free-staging.ps1"
 $supabaseCheck = Join-Path $PSScriptRoot "validate-supabase-edge-function.ps1"
 
 function Invoke-Terraform {
@@ -32,6 +33,10 @@ if (-not $?) {
 & $prerequisiteCheck
 if (-not $?) {
   throw "Staging prerequisite validation failed."
+}
+& $supabaseConfigCheck
+if (-not $?) {
+  throw "Supabase staging and managed restoration validation failed."
 }
 & $supabaseCheck
 if (-not $?) {
