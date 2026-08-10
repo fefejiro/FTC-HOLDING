@@ -156,6 +156,19 @@ describe("PeacePad coordination shell", () => {
     expect(screen.getByRole("tab", { name: createTab })).toBeOnTheScreen();
     expect(screen.getByRole("tab", { name: joinTab })).toBeOnTheScreen();
   });
+
+  it.each([
+    ["Français", "Messages", "Écrivez à votre coparent. PeacePad n’envoie jamais sans votre confirmation.", "Vérification du message", "Activer"],
+    ["Español", "Mensajes", "Escribe a tu copadre. PeacePad nunca envía nada sin tu confirmación.", "Revisión del mensaje", "Activar"]
+  ])("localizes the default-off Message Check surface after selecting %s", (language, messagesTab, body, checkTitle, turnOn) => {
+    renderApp("more");
+    fireEvent.press(screen.getByRole("radio", { name: language }));
+    fireEvent.press(screen.getByRole("tab", { name: messagesTab }));
+    expect(screen.getByText(body)).toBeOnTheScreen();
+    expect(screen.getByText(checkTitle)).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: turnOn })).toBeOnTheScreen();
+    expect(screen.queryByRole("button", { name: /vérifier le message|revisar mensaje/i })).not.toBeOnTheScreen();
+  });
 });
 
 describe("private records preparation", () => {

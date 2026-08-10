@@ -3,9 +3,10 @@ import { Image, Pressable, Share, StyleSheet, Text, TextInput, useWindowDimensio
 import { InvitationQr } from "../components/InvitationQr";
 import { LabButton } from "../components/LabButton";
 import { AccessibleHeading } from "../components/AccessibleHeading";
-import { languageNames, supportedLocales, useLocalization } from "../localization/LocalizationProvider";
+import { languageNames, supportedLocales, useLocalization, useOptionalLocalization } from "../localization/LocalizationProvider";
 import { calendarText, formatCalendarDate, formatCalendarDay } from "../localization/calendarLocalization";
 import { formatLocalizedDate } from "../localization/localizedDate";
+import { messageText } from "../localization/messageLocalization";
 import { colors, spacing, typography, usesLargeTextLayout } from "../theme";
 import { useRecordsState } from "../records/RecordsState";
 import type { AttachmentMediaType } from "../domain/v2";
@@ -344,7 +345,7 @@ export function InvitationScreen({ initialCode }: { initialCode?: string }) {
 
 export function CalendarScreen() {
   const largeText = usesLargeTextLayout(useWindowDimensions().fontScale);
-  const { locale } = useLocalization();
+  const { locale } = useOptionalLocalization();
   const {
     addEvent,
     calendarView,
@@ -487,6 +488,8 @@ export function CalendarScreen() {
 
 export function MessagesScreen() {
   const largeText = usesLargeTextLayout(useWindowDimensions().fontScale);
+  const { locale } = useOptionalLocalization();
+  const m = (key: Parameters<typeof messageText>[1]) => messageText(locale, key);
   const {
     cancelCorrection,
     checkMessage,
@@ -523,16 +526,16 @@ export function MessagesScreen() {
 
   return (
     <View style={styles.stack}>
-      <AccessibleHeading style={styles.title}>Messages</AccessibleHeading>
-      <Text style={styles.body}>Write to your co-parent. PeacePad never sends without your confirmation.</Text>
+      <AccessibleHeading style={styles.title}>{m("title")}</AccessibleHeading>
+      <Text style={styles.body}>{m("body")}</Text>
 
       <View style={styles.card}>
-        <Text style={styles.heading}>Find a message</Text>
+        <Text style={styles.heading}>{m("find")}</Text>
         <TextInput
-          accessibilityLabel="Search messages"
+          accessibilityLabel={m("searchLabel")}
           autoCapitalize="none"
           onChangeText={setMessageSearchQuery}
-          placeholder="Search this conversation"
+          placeholder={m("searchPlaceholder")}
           returnKeyType="search"
           onSubmitEditing={() => void searchMessages()}
           style={styles.input}
@@ -540,154 +543,154 @@ export function MessagesScreen() {
         />
         <LabButton
           disabled={messageSearchQuery.trim().length < 2 || messageSearchBusy}
-          label={messageSearchBusy ? "Searching..." : "Search"}
+          label={messageSearchBusy ? m("searching") : m("search")}
           onPress={() => void searchMessages()}
           variant="secondary"
         />
         {messageSearchError ? <Text accessibilityRole="alert" style={styles.error}>{messageSearchError}</Text> : null}
         {messageSearchResults.map((result) => (
-          <View accessibilityLabel="Message search result" key={result.originalMessageEventId} style={styles.searchResult}>
+          <View accessibilityLabel={m("searchResult")} key={result.originalMessageEventId} style={styles.searchResult}>
             <Text style={styles.body}>{result.body}</Text>
-            {result.corrected ? <Text style={styles.caption}>Corrected</Text> : null}
+            {result.corrected ? <Text style={styles.caption}>{m("corrected")}</Text> : null}
           </View>
         ))}
       </View>
 
       {!messageCheckEnabled ? (
         <View style={styles.assistCard}>
-          <Text style={styles.heading}>Message Check</Text>
-          <Text style={styles.body}>Get suggestions for clarity and tone before you send. You choose what changes.</Text>
+          <Text style={styles.heading}>{m("check")}</Text>
+          <Text style={styles.body}>{m("checkBody")}</Text>
           <LabButton
             disabled={!messageCheckHydrated || messageCheckBusy}
-            label={!messageCheckHydrated ? "Message Check unavailable" : messageCheckBusy ? "Updating..." : "Turn on"}
+            label={!messageCheckHydrated ? m("unavailable") : messageCheckBusy ? m("updating") : m("turnOn")}
             onPress={() => void setMessageCheckEnabled(true)}
           />
-          <LabButton label="Not now" onPress={() => setShowHowItWorks(false)} variant="secondary" />
+          <LabButton label={m("notNow")} onPress={() => setShowHowItWorks(false)} variant="secondary" />
           <Pressable
-            accessibilityLabel="How Message Check works"
+            accessibilityLabel={m("howLabel")}
             accessibilityRole="button"
             accessibilityState={{ expanded: showHowItWorks }}
             onPress={() => setShowHowItWorks((current) => !current)}
             style={styles.linkButton}
           >
-            <Text style={styles.link}>How it works</Text>
+            <Text style={styles.link}>{m("how")}</Text>
           </Pressable>
           {showHowItWorks ? (
-            <Text style={styles.caption}>The first version uses rule-based checks. Optional AI assistance remains separate and off.</Text>
+            <Text style={styles.caption}>{m("howBody")}</Text>
           ) : null}
         </View>
       ) : (
         <View style={[styles.enabledRow, largeText ? styles.enabledRowLargeText : null]}>
-          <Text style={styles.successText}>Message Check on</Text>
+          <Text style={styles.successText}>{m("checkOn")}</Text>
           <Pressable
-            accessibilityLabel="Turn off Message Check"
+            accessibilityLabel={m("turnOffLabel")}
             accessibilityRole="button"
             accessibilityState={{ disabled: !messageCheckHydrated || messageCheckBusy }}
             disabled={!messageCheckHydrated || messageCheckBusy}
             onPress={() => void setMessageCheckEnabled(false)}
             style={styles.linkButton}
           >
-            <Text style={styles.link}>Turn off</Text>
+            <Text style={styles.link}>{m("turnOff")}</Text>
           </Pressable>
         </View>
       )}
 
       {sentMessages.map((message) => (
-        <View accessibilityLabel="Sent message" key={message.id} style={styles.sentBubble}>
+        <View accessibilityLabel={m("sent")} key={message.id} style={styles.sentBubble}>
           <Text style={styles.body}>{message.sentBody}</Text>
           {message.canCorrect && message.status !== "waiting" && correctingMessageId !== message.id ? (
-            <LabButton label="Correct message" onPress={() => startCorrection(message.id)} variant="secondary" />
+            <LabButton label={m("correct")} onPress={() => startCorrection(message.id)} variant="secondary" />
           ) : null}
           {correctingMessageId === message.id ? (
-            <View accessibilityLabel="Message correction editor" style={styles.stack}>
-              <Text style={styles.caption}>The original remains in the record.</Text>
+            <View accessibilityLabel={m("correctionEditor")} style={styles.stack}>
+              <Text style={styles.caption}>{m("originalRemains")}</Text>
               <TextInput
-                accessibilityLabel="Correction wording"
+                accessibilityLabel={m("correctionWording")}
                 multiline
                 onChangeText={setCorrectionDraft}
                 style={[styles.input, styles.messageInput]}
                 value={correctionDraft}
               />
               {correctionError ? <Text accessibilityRole="alert" style={styles.error}>{correctionError}</Text> : null}
-              <LabButton disabled={correctionBusy} label={correctionBusy ? "Saving..." : "Save correction"} onPress={() => void saveCorrection()} />
-              <LabButton disabled={correctionBusy} label="Cancel correction" onPress={cancelCorrection} variant="secondary" />
+              <LabButton disabled={correctionBusy} label={correctionBusy ? m("saving") : m("saveCorrection")} onPress={() => void saveCorrection()} />
+              <LabButton disabled={correctionBusy} label={m("cancelCorrection")} onPress={cancelCorrection} variant="secondary" />
             </View>
           ) : null}
           {message.queued && message.status === "needs-action" ? (
-            <View accessibilityLabel="Queued message recovery" style={styles.stack}>
-              <Text style={styles.caption}>This message is still stored on this device and has not been confirmed as sent.</Text>
+            <View accessibilityLabel={m("recovery")} style={styles.stack}>
+              <Text style={styles.caption}>{m("recoveryBody")}</Text>
               <LabButton
                 disabled={queuedActionBusyIds.includes(message.id)}
-                label={queuedActionBusyIds.includes(message.id) ? "Trying..." : "Try again"}
+                label={queuedActionBusyIds.includes(message.id) ? m("trying") : m("tryAgain")}
                 onPress={() => void retryQueuedMessage(message.id)}
               />
               {removeQueuedMessageId === message.id ? (
-                <View accessibilityRole="alert" style={styles.confirmCard}>
-                  <Text style={styles.body}>Removing this copy stops this device from retrying. It does not recall a message that may already have been received.</Text>
+                <View accessibilityLiveRegion="assertive" accessibilityRole="alert" style={styles.confirmCard}>
+                  <Text style={styles.body}>{m("removeWarning")}</Text>
                   <LabButton
                     disabled={queuedActionBusyIds.includes(message.id)}
-                    label="Remove from this device"
+                    label={m("remove")}
                     onPress={() => {
                       setRemoveQueuedMessageId(undefined);
                       void removeQueuedMessage(message.id);
                     }}
                   />
-                  <LabButton label="Keep message" onPress={() => setRemoveQueuedMessageId(undefined)} variant="secondary" />
+                  <LabButton label={m("keep")} onPress={() => setRemoveQueuedMessageId(undefined)} variant="secondary" />
                 </View>
               ) : (
                 <LabButton
                   disabled={queuedActionBusyIds.includes(message.id)}
-                  label="Remove from this device"
+                  label={m("remove")}
                   onPress={() => setRemoveQueuedMessageId(message.id)}
                   variant="secondary"
                 />
               )}
             </View>
           ) : null}
-          <Text style={styles.caption}>{message.corrected ? "Corrected · " : ""}{message.status === "waiting" ? "Waiting to send" : message.status === "needs-action" ? "Needs attention" : message.status}</Text>
+          <Text style={styles.caption}>{message.corrected ? `${m("corrected")} · ` : ""}{message.status === "waiting" ? m("waiting") : message.status === "needs-action" ? m("attention") : message.status}</Text>
         </View>
       ))}
 
       {queuedActionError ? <Text accessibilityRole="alert" style={styles.error}>{queuedActionError}</Text> : null}
 
       <TextInput
-        accessibilityLabel="Message draft"
+        accessibilityLabel={m("draft")}
         multiline
         onChangeText={setMessageDraft}
-        placeholder="Write a message"
+        placeholder={m("draftPlaceholder")}
         style={[styles.input, styles.messageInput]}
         value={messageDraft}
       />
 
       {messageCheckEnabled ? (
-        <LabButton disabled={!messageDraft.trim() || messageCheckBusy} label={messageCheckBusy ? "Checking…" : "Check message"} onPress={() => void checkMessage()} />
+        <LabButton disabled={!messageDraft.trim() || messageCheckBusy} label={messageCheckBusy ? m("checking") : m("checkMessage")} onPress={() => void checkMessage()} />
       ) : null}
 
       {messagePreview ? (
-        <View accessibilityLabel="Message Check result" style={styles.assistCard}>
+        <View accessibilityLabel={m("result")} style={styles.assistCard}>
           <Text style={styles.heading}>{messagePreview.tone}</Text>
           <Text style={styles.body}>{messagePreview.summary}</Text>
           {messagePreview.rewordingSuggestion ? (
             <>
-              <Text style={styles.fieldLabel}>Suggested wording</Text>
+              <Text style={styles.fieldLabel}>{m("suggested")}</Text>
               <Text style={styles.body}>{messagePreview.rewordingSuggestion}</Text>
-              <LabButton label="Send suggested message" onPress={() => void sendMessage(true)} />
+              <LabButton label={m("sendSuggested")} onPress={() => void sendMessage(true)} />
             </>
           ) : null}
-          <LabButton label="Send original" onPress={() => void sendMessage(false)} variant="secondary" />
+          <LabButton label={m("sendOriginal")} onPress={() => void sendMessage(false)} variant="secondary" />
         </View>
       ) : null}
 
       {messageError ? (
         <View accessibilityRole="alert" style={styles.confirmCard}>
           <Text style={styles.error}>{messageError}</Text>
-          {messageCheckEnabled && messageDraft.trim() ? <LabButton label="Check again" onPress={() => void checkMessage()} /> : null}
-          {messageDraft.trim() ? <LabButton label="Send original" onPress={() => void sendMessage(false)} variant="secondary" /> : null}
+          {messageCheckEnabled && messageDraft.trim() ? <LabButton label={m("checkAgain")} onPress={() => void checkMessage()} /> : null}
+          {messageDraft.trim() ? <LabButton label={m("sendOriginal")} onPress={() => void sendMessage(false)} variant="secondary" /> : null}
         </View>
       ) : null}
 
       {!messageCheckEnabled && messageDraft.trim() ? (
-        <LabButton label="Send message" onPress={() => void sendMessage(false)} />
+        <LabButton label={m("send")} onPress={() => void sendMessage(false)} />
       ) : null}
     </View>
   );
