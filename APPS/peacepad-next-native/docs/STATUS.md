@@ -4,7 +4,7 @@
 
 - Snapshot date: 2026-08-10
 - Branch: `feat/peacepad-v2-supabase-free-staging`
-- Verified implementation baseline: `172723a57`
+- Verified implementation baseline: `1dc3bf937`
 - Ledger evidence applies only to the exact commit listed in each row
 - App version: `0.0.1`
 - Staging/lab bundle: `ca.peacepad.nextnative.lab`
@@ -18,7 +18,7 @@ is historical and cannot independently pass a release gate.
 
 ## Release verdict
 
-**BLOCKED - Gate 0 is HOSTED VERIFIED and both replacement regional fictional-staging projects are DEPLOYED STAGING VERIFIED for all 19 migrations, the regional Edge API, public boundaries, and a managed fictional two-account identity/invitation/message/call/deletion contract. Restoration, complete feature/device journeys, trust reviews, TestFlight, and App Store release remain incomplete.**
+**BLOCKED - Gate 0 is HOSTED VERIFIED and both replacement regional fictional-staging projects are DEPLOYED STAGING VERIFIED for all 19 migrations, the regional Edge API, public boundaries, a managed fictional two-account feature contract, and read-only application-schema logical restoration. Provider-level Auth/platform snapshot or PITR recovery, complete feature/device journeys, trust reviews, TestFlight, and App Store release remain incomplete.**
 
 Native V2 is implemented partly as a synthetic/staging prototype. It is not
 ready for production identity, real family information, TestFlight, or App
@@ -43,8 +43,15 @@ now passes independently in both regions for authentication, identity
 bootstrap, wrong-region denial, request-bound replay/conflict, invitation
 acceptance, message delivery/view, foreground call lifecycle, post-end signal
 denial, account deletion, and old-token denial. Temporary fictional Auth
-accounts were removed. Restoration and the remaining feature/device journeys
-remain pending. The
+accounts were removed. Read-only managed-source logical restoration of the
+`peacepad_v2` application schema now passes independently for Canada and the
+U.S. at exact feature commit `1dc3bf937`, using protected main control
+`86961431f`. Runs `31430532674` and `31430697958` restored all 19 migrations
+and every application table into isolated ephemeral PostgreSQL 17 targets,
+matched deterministic source/restore fingerprints, destroyed the dumps, and
+never contacted production. This is not Supabase Auth recovery, provider
+snapshot/PITR proof, residency certification, or production disaster recovery.
+The remaining feature/device journeys remain pending. The
 persisted one-to-one foreground audio-call lifecycle is POSTGRES and HOSTED
 VERIFIED at `2a8aac813`: exact JWT identity, region, active family grants, and
 the locked canonical two-person conversation authorize create, accept,
@@ -66,8 +73,8 @@ regional deployment workflow at merge commit `2feaf1f3d`; its hosted static
 gate passed in run `31347432290`. Both staging environments are restricted to
 `main` and require the `fefejiro` reviewer. Distinct maintenance secrets are
 configured. Both regional `IDEMPOTENCY_SECRET` slots were securely configured
-at `2026-08-10T18:45:45Z`; no secret value was read or recorded. No cloud
-managed restoration occurred. The replacement projects
+at `2026-08-10T18:45:45Z`; no secret value was read or recorded. No provider
+snapshot/PITR or Supabase Auth restoration occurred. The replacement projects
 `rohvkyuxbnqzglaromms` (Canada, `ca-central-1`) and
 `spmpndalcvwmygznihec` (U.S., `us-east-2`) are active and healthy under the
 company organization. All four protected environment secret slots exist in
@@ -79,9 +86,11 @@ Canada; run `31428209000` did the same in the U.S. The native client and managed
 verifier now explicitly invoke Edge in `ca-central-1` for Canada and `us-east-1`
 for the U.S., while the U.S. database remains in `us-east-2`. The complete
 bounded managed journey passed in each region with only fictional temporary
-accounts and content; cleanup removed both accounts after each run. This does
-not prove restoration, residency assurance, complete Calendar/Records/offline
-journeys, Realtime media, or real-device behavior. The earlier project refs
+accounts and content; cleanup removed both accounts after each run. The later
+managed-source logical drill proves application-schema recovery only; it does
+not prove provider snapshot/PITR, Supabase Auth recovery, residency assurance,
+complete Calendar/Records/offline journeys, Realtime media, or real-device
+behavior. The earlier project refs
 remain paused/recoverable historical evidence, not active runtime targets.
 
 ## Evidence vocabulary
@@ -93,6 +102,9 @@ remain paused/recoverable historical evidence, not active runtime targets.
   a mock provider; no cloud account or live service was contacted.
 - **POSTGRES VERIFIED:** proof against an isolated real PostgreSQL instance.
 - **DEPLOYED STAGING VERIFIED:** proof against the deployed regional staging rail.
+- **MANAGED LOGICAL RESTORATION VERIFIED:** read-only managed application-schema
+  source data restored into a separate ephemeral PostgreSQL target with exact
+  migration, table, row-count, and deterministic content-fingerprint proof.
 - **SIMULATOR VERIFIED:** current screenshot-backed iOS Simulator proof.
 - **DEVICE VERIFIED:** current real-device proof.
 - **TESTFLIGHT VERIFIED:** current installed TestFlight build proof.
@@ -109,14 +121,14 @@ mandatory gate passes.
 | Gate | Weight | Implementation | Evidence | Current blocker | Next proof |
 | --- | ---: | ---: | --- | --- | --- |
 | Gate 0: reproducible foundation | 10% | 100% | HOSTED VERIFIED | None for this gate | Retain hosted logs and keep the workflow green |
-| Gate 1: Canada/U.S. platform | 15% | 90% | DEPLOYED STAGING VERIFIED / RESTORATION PENDING | Active mappings target replacement projects `rohvkyuxbnqzglaromms` in `ca-central-1` and `spmpndalcvwmygznihec` in database region `us-east-2`; old refs fail closed. Native/API calls explicitly pin supported Edge regions `ca-central-1` and `us-east-1`. Exact-head dry-runs and deployments passed, followed by independent managed wrong-region and deletion checks. Managed backup restoration and residency assurance remain absent | Perform and verify managed backup restoration independently in both regions, then retain live contract evidence while device work proceeds |
+| Gate 1: Canada/U.S. platform | 15% | 95% | DEPLOYED STAGING + MANAGED LOGICAL RESTORATION VERIFIED / PROVIDER RECOVERY PENDING | Active mappings target replacement projects `rohvkyuxbnqzglaromms` in `ca-central-1` and `spmpndalcvwmygznihec` in database region `us-east-2`; old refs fail closed. Native/API calls explicitly pin supported Edge regions `ca-central-1` and `us-east-1`. Exact-head deployments and managed journeys passed. Protected read-only drills independently restored all 19 migrations and every `peacepad_v2` application table from each managed source into ephemeral PostgreSQL 17 with matching fingerprints and destroyed dumps. Supabase Auth/platform snapshot or PITR recovery and formal residency assurance remain absent | Document and prove the provider-level Auth/platform backup or PITR recovery path available to the selected plan, then retain the regional application recovery evidence while device work proceeds |
 | Gate 2: identity and coordination | 20% | 90% | DEPLOYED STAGING VERIFIED / MANAGED API JOURNEY VERIFIED | Both managed projects independently pass identity bootstrap, replay/conflict, invitation acceptance with canonical conversation creation, message delivery/view, default-off Message Check and explicit opt-in/preview, shared Calendar visibility, deletion, and old-token denial with temporary fictional accounts. Full cleanup maintenance, Simulator, and real-device journeys remain incomplete | Repeat the critical identity, invitation, messaging, Calendar, and Message Check path on Simulator and two real devices |
 | Gate 3: records, evidence, exports | 15% | 38% | MANAGED PRIVATE-RECORD CONTRACT VERIFIED / FILE PIPELINE ABSENT | Both regions independently pass owner-private Case Binder isolation, disabled metadata-only attachment preparation, content-minimized message timeline linking, and owner-deletion cleanup. Object storage, malware scanning, file bytes, evidence integrity, export, Simulator, and device proof remain absent | Separately design and approve encrypted object storage, malware-scanned upload, integrity receipts, and verifiable export |
 | Gate 4: calls, offline, parity | 15% | 30% | DEPLOYED + MANAGED LIFECYCLE VERIFIED / INCOMPLETE | The bounded outbox remains same-session and exact-scope. Two authenticated fictional accounts independently proved call create/accept/end and post-end signal denial in both managed regions. Local/hosted proofs additionally cover concurrency, expiry, bounded signal schema/rate/TTL, cleanup, direct-role denial, and content-free audit. Media, TURN, native call UI, Simulator, and device proof remain absent | Coordinate native WebRTC and region-resident TURN for the smallest foreground audio UI/media slice, then prove it on Simulator and two devices |
 | Gate 5: trust, accessibility, localization | 10% | 70% | LOCAL VERIFIED / DEVICE AND REVIEW BLOCKED | Semantic navigation, shared screen-heading roles, persisted locale selection, and EN/FR/ES code-level coverage now span welcome/consent/authentication, family invitations, messaging/offline recovery, Calendar sharing/events, Records binders/metadata/timeline/archive, Home task actions/summaries, Foundation compose, and account/session recovery. Canonical backend identifiers, user-authored content, source kinds, errors returned by the server, drafts, idempotency, and fail-closed behavior remain unchanged. The mechanical UI-literal inventory found no additional release-critical catalogue gap. VoiceOver, Switch Control, Reduce Motion, maximum Dynamic Type device, independent WCAG/privacy/security, and professional linguistic review are absent | Run VoiceOver, Switch Control, Reduce Motion, and maximum Dynamic Type proof on Simulator/device, then obtain independent trust and professional EN/FR/ES review |
 | Gate 6: migration and App Store | 15% | 0% | NOT STARTED / RELEASE HOST BLOCKED | Gates 0-5 are incomplete. MacinCloud RDP remained at `Initializing` on 2026-08-09; a second observed attempt on 2026-08-10 ended after the remote session was lost. This establishes current release-host unavailability from the operator path, not a confirmed root cause or server outage. The credential exposed in operator-supplied evidence must be rotated before reuse | Re-establish and verify a macOS/Xcode release host, document a fallback that does not depend on the same VM, rotate the exposed credential, then complete migration/rollback rehearsal, TestFlight soak, sign-offs, and App Review submission |
 
-Weighted implementation estimate: **about 51% production-ready**. This replaces
+Weighted implementation estimate: **about 52% production-ready**. This replaces
 the earlier unverified 53% planning estimate.
 
 ## Feature dashboard
@@ -190,6 +202,7 @@ the earlier unverified 53% planning estimate.
 | Authenticated private call-signaling relay | `cb92671b8` | Windows local PostgreSQL 18.3 plus descendant GitHub Actions PostgreSQL 16/Deno/native; fictional-only | 2026-08-10 | HOSTED + POSTGRES VERIFIED / DEPLOYMENT BLOCKED | All 19 migrations applied twice on disposable PostgreSQL; complete transaction, lifecycle, and focused signaling proofs passed. Static Edge validation, Deno check, all 3 signaling tests, YAML parsing, the 837-file platform secret scan, and diff checks passed. The code commit is included unchanged in descendant hosted head `d9e7dac47`; [infrastructure run `31421433051`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31421433051) and [native run `31421433108`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31421433108) passed. Each relay rechecks JWT-derived sender, exact region, live participant state and call version; derives the peer; applies strict offer/answer/ICE byte, rate, and TTL bounds; and persists neither SDP/ICE nor a content-bearing audit. Existing subscriptions retain cached provider authorization, so forced disconnect is not claimed; versioned topics plus relay denial prevent any later server-relayed signal after revocation. No managed Realtime deployment, media, TURN, native call UI, Simulator, or device proof exists. |
 | Initial replacement regional staging deployment | `1ff6f64c7`; hardened main control `9975e4778` | Supabase Free plus protected GitHub environments; fictional staging only | 2026-08-10 | HISTORICAL DEPLOYED STAGING VERIFIED | Active native and platform mappings targeted Canada `rohvkyuxbnqzglaromms` (`ca-central-1`) and U.S. `spmpndalcvwmygznihec` (`us-east-2`); old refs failed closed. Exact-SHA protected dry-runs `31424479269` and `31424590161` passed. Canada deploy `31424695462` and U.S. deploy `31424817202` each applied all 19 migrations, deployed `peacepad-v2-api`, and passed public health/readiness verification. Later managed proof is recorded in the next row. |
 | Managed dual-region two-account contract | `df6ed38de` regional pin; `2c1c4a308` Auth boundary; `172723a57` expanded proof | Supabase Free CA/U.S.; temporary fictional accounts only | 2026-08-10 | DEPLOYED STAGING VERIFIED / MANAGED FEATURE API JOURNEY VERIFIED | Native and verifier requests pin Canada Edge `ca-central-1` and U.S. Edge `us-east-1`; U.S. database remains `us-east-2`. Hosted native/infrastructure runs `31427335593`/`31427335775`, `31427956926`/`31427956997`, and `31428931102`/`31428931142` passed. Protected dry-runs and deployments remain `31427516196`, `31427518536`, `31428115334`, `31427636319`, and `31428209000`. Each region independently passed Auth, bootstrap, wrong-region denial, replay/conflict, invitation acceptance, message delivery/view, Message Check, shared Calendar visibility, private Records isolation/minimization/deletion cleanup, call lifecycle, post-end signal denial, deletion, and old-token denial. Test accounts were removed and no credentials, IDs, message bodies, filenames, or private timeline content were logged. This is not restoration, file transport, media, Simulator, device, TestFlight, or production proof. |
+| Managed dual-region application-schema logical restoration | `1dc3bf937`; protected main control `86961431f` | Supabase Free CA/U.S. read-only sources; isolated ephemeral PostgreSQL 17 targets; fictional-only | 2026-08-10 | MANAGED LOGICAL RESTORATION VERIFIED / PROVIDER RECOVERY PENDING | Protected runs `31430532674` (Canada) and `31430697958` (U.S.) each validated the exact project and feature SHA, confirmed all 19 managed migrations, dumped only the `peacepad_v2` application schema in a read-only source transaction, rebuilt an ephemeral target, restored every application table, and matched deterministic source/restore fingerprints. Canada restored 20 tables / 143 rows in 22 seconds; U.S. restored 20 tables / 82 rows in 19 seconds. Both dumps were destroyed and only non-secret JSON evidence was retained. This does not restore Supabase Auth identities, provider configuration, storage objects, or Realtime state and is not snapshot/PITR, residency, production, or real-family recovery proof. The first control run `31430347988` failed before database access because the Windows-authored script lacked an executable bit; PR #191 corrected invocation to explicit Bash before the successful runs. |
 | Accessible localization foundation | `47874810c` | Windows local; automated React Native render only | 2026-08-10 | LOCAL VERIFIED / DEVICE PROOF ABSENT | TypeScript passed; all 31 Jest suites passed with 253 tests and 1 skipped; coverage passed at 82.75% statements and 75.47% branches; lab guardrails passed; the 86-file secret scan passed. EN/FR/ES locale resolution, secure preference persistence, immediate supported-shell switching, translated accessibility labels, selected tab/radio state, 48-point language targets, dark-mode palette structure, and WCAG AA contrast contracts are automated. This is not full translation, professional linguistic review, VoiceOver, maximum Dynamic Type, Switch Control, or device proof. |
 | Expanded accessible localization foundations | `0800c0d72` | Windows local; automated React Native render only | 2026-08-10 | LOCAL VERIFIED / DEVICE PROOF ABSENT | `npm run typecheck`; `npm run test:coverage` (34 suites, 263 passed, 1 skipped; 82.83% statements and 75.52% branches); `npm run guardrails`; `npm run secret-scan` (92 files); and `git diff --check` passed. Shared native heading semantics cover onboarding, staging runtime, and primary screens. Calendar navigation/dates and Records timeline dates use EN/FR/ES-aware UTC formatting. Staging sign-out and destructive account deletion controls are translated, and the confirmation exposes automated assertive modal-alert and header semantics. This is not complete translation, professional linguistic review, VoiceOver, maximum Dynamic Type, Switch Control, Simulator, or device proof. |
 | Localized family invitation journey | `e8b169853` | Windows local; automated React Native render only | 2026-08-10 | LOCAL VERIFIED / DEVICE PROOF ABSENT | `npm run typecheck`; `npm run test:coverage` (34 suites, 265 passed, 1 skipped; 82.90% statements and 75.46% branches); `npm run guardrails`; `npm run secret-scan` (92 files); and `git diff --check` passed. EN/FR/ES copy covers invitation creation, access explanation, code and QR guidance, localized sharing, cancellation, review, known role/permission display labels, connected-family safety, explicit accept/decline, and success. Backend role and permission identifiers remain unchanged, with unknown identifiers displayed safely rather than translated as contracts. This is automated localization/accessibility evidence only, not linguistic, VoiceOver, Dynamic Type, Simulator, or device proof. |
@@ -204,7 +217,7 @@ the earlier unverified 53% planning estimate.
 | U.S. Supabase fictional staging | `5f1ca58d` | Supabase Free, `us-east-2` | 2026-08-07 | DEPLOYED STAGING VERIFIED (SCHEMA ONLY) | Healthy company-owned project; PostgreSQL 17.6; boundary schema applied; append-only triggers present; direct `anon`/`authenticated` table privileges absent; fictional write rolled back. API adapter, restoration, device, and production proof remain absent |
 | Focused staging smokes | earlier PR #172 commits | Windows local, fictional adapters | Historical | HISTORICAL EVIDENCE | `STAGING_RUNTIME_SMOKE_PASS`, `STAGING_RESTART_SMOKE_PASS`, `TWO_ACCOUNT_HTTP_SMOKE_PASS`, `SYNTHETIC_COORDINATION_JOURNEY_PASS`, `STAGING_AUTHORIZATION_SMOKE_PASS` |
 | Current-branch Terraform execution | `b047615d` | Windows local after laptop restart | 2026-08-06 | BLOCKED | Terraform binary hung even on `terraform -version`; orphaned process was stopped. PR #174 hosted Terraform proof remains valid only for its earlier commit |
-| Managed restoration, file/media journeys, simulator, device, TestFlight, production | n/a | n/a | n/a | NOT STARTED / MANAGED API JOURNEY ONLY | The expanded two-account managed API journey above passed in both regions. Restoration, actual file transport, offline recovery, native media, Simulator, real-device, TestFlight, and production proof have not run |
+| Provider restoration, file/media journeys, simulator, device, TestFlight, production | n/a | n/a | n/a | APPLICATION LOGICAL RESTORATION ONLY / REMAINING PROOF NOT STARTED | The expanded two-account managed API journey and application-schema logical restoration above passed in both regions. Supabase Auth/platform snapshot or PITR recovery, actual file transport, offline recovery, native media, Simulator, real-device, TestFlight, and production proof have not run |
 
 ## Mandatory release gates
 
