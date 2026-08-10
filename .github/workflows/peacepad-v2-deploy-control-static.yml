@@ -27,10 +27,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Checkout control definition
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          persist-credentials: false
+      - name: Fetch proposed control definition
+        shell: bash
+        env:
+          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git -c protocol.version=2 fetch --no-tags --depth=1 origin "$TARGET_SHA"
+          test "$(git rev-parse FETCH_HEAD)" = "$TARGET_SHA"
+          git checkout --detach FETCH_HEAD
 
       - name: Validate deployment workflow contract
         shell: pwsh

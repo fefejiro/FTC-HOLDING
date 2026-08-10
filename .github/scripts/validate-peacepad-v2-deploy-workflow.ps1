@@ -14,11 +14,10 @@ $required = @(
   "us = 'kgechdqdtryktfahyqez'",
   'TARGET_COMMIT_SHA',
   "SELECTED_REF -cne 'main'",
-  'git ls-remote origin refs/heads/feat/peacepad-v2-supabase-free-staging',
-  'actions/checkout@11d5960a326750d5838078e36cf38b85af677262',
-  'ref: ${{ inputs.target_commit_sha }}',
-  'path: peacepad-v2-target',
-  'persist-credentials: false',
+  'git -c protocol.version=2 fetch --no-tags --depth=1 origin main',
+  'git -c protocol.version=2 fetch --no-tags --depth=1 origin refs/heads/feat/peacepad-v2-supabase-free-staging',
+  'git rev-parse FETCH_HEAD',
+  'git worktree add --detach peacepad-v2-target',
   'DEPLOY FICTIONAL STAGING',
   'supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1',
   'SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}',
@@ -41,7 +40,8 @@ $forbidden = @(
   'environment: production',
   'cancel-in-progress: true',
   'SELECTED_REF -notin',
-  'confirm_commit_sha'
+  'confirm_commit_sha',
+  'actions/checkout@'
 )
 
 foreach ($needle in $forbidden) {
@@ -58,10 +58,6 @@ if ($jobPrefix -match '(?m)^\s{4}env:') {
 if ([regex]::Matches($content, '(?m)^\s{10}- ca\r?$').Count -ne 1 -or
     [regex]::Matches($content, '(?m)^\s{10}- us\r?$').Count -ne 1) {
   throw 'The region selector must expose exactly Canada and United States.'
-}
-
-if ([regex]::Matches($content, 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262').Count -ne 2) {
-  throw 'The control and target checkouts must both use the approved immutable checkout action.'
 }
 
 Write-Output 'PEACEPAD_V2_DEPLOY_WORKFLOW_CONTRACT_PASS'

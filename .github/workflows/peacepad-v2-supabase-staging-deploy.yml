@@ -46,8 +46,14 @@ jobs:
     environment: peacepad-v2-staging-${{ inputs.region }}
 
     steps:
-      - name: Checkout selected revision
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Fetch trusted deployment control
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git -c protocol.version=2 fetch --no-tags --depth=1 origin main
+          git checkout --detach FETCH_HEAD
 
       - name: Validate deployment control contract
         shell: pwsh
@@ -83,21 +89,18 @@ jobs:
             throw 'Deployment requires the exact confirmation DEPLOY FICTIONAL STAGING.'
           }
 
-          $remoteLine = git ls-remote origin refs/heads/feat/peacepad-v2-supabase-free-staging
-          if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($remoteLine)) {
-            throw 'The reviewed PeacePad V2 staging branch could not be resolved.'
+          git -c protocol.version=2 fetch --no-tags --depth=1 origin refs/heads/feat/peacepad-v2-supabase-free-staging
+          if ($LASTEXITCODE -ne 0) {
+            throw 'The reviewed PeacePad V2 staging branch could not be fetched.'
           }
-          $reviewedHead = ($remoteLine -split '\s+')[0]
+          $reviewedHead = (git rev-parse FETCH_HEAD).Trim()
           if ($env:TARGET_COMMIT_SHA -cne $reviewedHead) {
             throw 'The target commit is not the current reviewed PeacePad V2 staging branch head.'
           }
-
-      - name: Checkout exact reviewed V2 target
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          ref: ${{ inputs.target_commit_sha }}
-          path: peacepad-v2-target
-          persist-credentials: false
+          git worktree add --detach peacepad-v2-target $reviewedHead
+          if ($LASTEXITCODE -ne 0) {
+            throw 'The exact reviewed PeacePad V2 target could not be materialized.'
+          }
 
       - name: Validate Edge Function and regional configuration
         shell: pwsh
