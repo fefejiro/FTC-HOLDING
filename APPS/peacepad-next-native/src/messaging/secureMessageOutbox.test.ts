@@ -5,6 +5,7 @@ import { createWriteContext } from "../domain/v2";
 import {
   MAX_OUTBOX_ATTEMPTS,
   MAX_OUTBOX_BODY_LENGTH,
+  earliestQueuedMessageRetryAt,
   isQueuedMessageInScope,
   removeQueuedMessage,
   retryQueuedMessage,
@@ -150,6 +151,51 @@ describe("secure message outbox", () => {
     const api = { sendMessage: jest.fn().mockRejectedValue(new PeacePadApiError("sign in", "auth-required", 401)) } as unknown as PeacePadCoordinationApi;
     await expect(retryQueuedMessages(api, store, { ...scope, sessionId: "session-a" }, now)).resolves.toEqual({ sent: 0, retained: 0, needsAction: 1 });
     expect(store.values).toEqual([expect.objectContaining({ status: "needs-action", lastErrorKind: "authentication" })]);
+  });
+
+  it("selects the earliest waiting retry in the exact authenticated scope", () => {
+    const scoped = { ...scope, sessionId: context.actor.sessionId };
+    expect(earliestQueuedMessageRetryAt([
+      queued({ id: "outbox_later", nextAttemptAt: "2026-08-05T12:05:00.000Z" }),
+      queued({ id: "outbox_action", status: "needs-action", nextAttemptAt: "2026-08-05T11:00:00.000Z" }),
+      queued({ id: "outbox_other_session", context: createWriteContext({
+        actor: { identityId: "parent-a", sessionId: "other-session" },
+        idempotencyKey: "other-session-intent",
+        region: "ca"
+      }), nextAttemptAt: "2026-08-05T10:00:00.000Z" }),
+      queued({ id: "outbox_earlier", nextAttemptAt: "2026-08-05T12:02:00.000Z" })
+    ], scoped)).toBe(Date.parse("2026-08-05T12:02:00.000Z"));
+  });
+
+  it("does not schedule needs-action or out-of-scope entries", () => {
+    const scoped = { ...scope, sessionId: context.actor.sessionId };
+    expect(earliestQueuedMessageRetryAt([
+      queued({ status: "needs-action" }),
+      queued({ input: { familyCircleId: "another-family", conversationId: "conversation", body: "Pickup at 5." } })
+    ], scoped)).toBeUndefined();
+  });
+
+  it("stops a retry batch before sending the next entry when ownership is cancelled", async () => {
+    const scoped = { ...scope, sessionId: context.actor.sessionId };
+    const store = new MemoryOutbox([
+      queued({ id: "outbox_first" }),
+      queued({ id: "outbox_second", context: createWriteContext({
+        actor: { identityId: "parent-a", sessionId: context.actor.sessionId },
+        idempotencyKey: "message-intent-second",
+        region: "ca"
+      }) })
+    ]);
+    let owned = true;
+    const sendMessage = jest.fn(async () => {
+      owned = false;
+      return { id: "sent" };
+    });
+    const api = { sendMessage } as unknown as PeacePadCoordinationApi;
+
+    await retryQueuedMessages(api, store, scoped, now, () => owned);
+
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(store.values.map((item) => item.id)).toEqual(["outbox_second"]);
   });
 
   it("retains another identity's queued body without displaying or sending it", async () => {

@@ -131,6 +131,81 @@ function Probe() {
 }
 
 describe("authenticated offline message recovery", () => {
+  it("stops the initial retry batch after the provider unmounts", async () => {
+    let resolveFirst: ((message: MessageEvent) => void) | undefined;
+    const firstSend = new Promise<MessageEvent>((resolve) => { resolveFirst = resolve; });
+    const outbox = new MemoryOutbox([
+      queued(SESSION, { id: "outbox_first" }),
+      queued(SESSION, {
+        id: "outbox_second",
+        context: createWriteContext({
+          actor: { identityId: ACTOR, sessionId: SESSION },
+          idempotencyKey: "offline-proof-second",
+          region: "ca"
+        })
+      })
+    ]);
+    const sendMessage = jest.fn()
+      .mockImplementationOnce(async () => firstSend)
+      .mockResolvedValue(canonicalMessage);
+    const coordinationApi = api({ sendMessage });
+    const view = render(<CoordinationStateProvider api={coordinationApi} outbox={outbox} runtime={runtime}><Probe /></CoordinationStateProvider>);
+
+    await waitFor(() => expect(sendMessage).toHaveBeenCalledTimes(1));
+    view.unmount();
+    await act(async () => { resolveFirst?.(canonicalMessage); });
+    await new Promise((resolve) => setTimeout(resolve, 25));
+
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(outbox.values.map((item) => item.id)).toEqual(["outbox_second"]);
+  });
+
+  it("automatically retries a message queued after hydration without remounting", async () => {
+    const outbox = new MemoryOutbox();
+    const sendMessage = jest.fn()
+      .mockRejectedValueOnce(new PeacePadApiError("offline", "network"))
+      .mockResolvedValueOnce(canonicalMessage);
+    const coordinationApi = api({
+      sendMessage,
+      listMessages: jest.fn(async () => sendMessage.mock.calls.length >= 2 ? [canonicalMessage] : [])
+    });
+    render(<CoordinationStateProvider api={coordinationApi} outbox={outbox} runtime={runtime}><Probe /></CoordinationStateProvider>);
+
+    await waitFor(() => expect(screen.getByTestId("hydrated")).toHaveTextContent("true"));
+    fireEvent.press(screen.getByRole("button", { name: "draft" }));
+    fireEvent.press(screen.getByRole("button", { name: "check" }));
+    await waitFor(() => expect(screen.getByTestId("preview")).toHaveTextContent("Clear suggested message."));
+    fireEvent.press(screen.getByRole("button", { name: "send suggestion" }));
+
+    await waitFor(() => expect(sendMessage).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(outbox.values).toEqual([]));
+    expect(sendMessage.mock.calls[1][1]).toEqual(sendMessage.mock.calls[0][1]);
+    await waitFor(() => expect(screen.getByTestId("messages")).toHaveTextContent("Clear suggested message.|Clear suggested message.|sent"));
+  });
+
+  it("does not tight-loop when secure storage fails after a scheduled send", async () => {
+    class FailingRemoveOutbox extends MemoryOutbox {
+      async remove() { throw new Error("secure storage unavailable"); }
+    }
+    const outbox = new FailingRemoveOutbox();
+    const sendMessage = jest.fn()
+      .mockRejectedValueOnce(new PeacePadApiError("offline", "network"))
+      .mockResolvedValue(canonicalMessage);
+    const coordinationApi = api({ sendMessage });
+    render(<CoordinationStateProvider api={coordinationApi} outbox={outbox} runtime={runtime}><Probe /></CoordinationStateProvider>);
+
+    await waitFor(() => expect(screen.getByTestId("hydrated")).toHaveTextContent("true"));
+    fireEvent.press(screen.getByRole("button", { name: "draft" }));
+    fireEvent.press(screen.getByRole("button", { name: "check" }));
+    await waitFor(() => expect(screen.getByTestId("preview")).toHaveTextContent("Clear suggested message."));
+    fireEvent.press(screen.getByRole("button", { name: "send suggestion" }));
+
+    await waitFor(() => expect(sendMessage).toHaveBeenCalledTimes(2));
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(sendMessage).toHaveBeenCalledTimes(2);
+    expect(outbox.values).toHaveLength(1);
+  });
+
   it("retries an exact-session intent once and removes it after success", async () => {
     const outbox = new MemoryOutbox([queued()]);
     const coordinationApi = api();

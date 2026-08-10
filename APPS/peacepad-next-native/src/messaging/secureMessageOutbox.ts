@@ -161,6 +161,20 @@ export function isQueuedMessageInScope(value: QueuedMessage, scope: MessageOutbo
     && value.input.conversationId === scope.conversationId;
 }
 
+export function earliestQueuedMessageRetryAt(
+  values: readonly QueuedMessage[],
+  scope: MessageOutboxScope
+): number | undefined {
+  let earliest: number | undefined;
+  for (const queued of values) {
+    if (queued.status !== "waiting" || !isQueuedMessageInScope(queued, scope)) continue;
+    const retryAt = Date.parse(queued.nextAttemptAt);
+    if (!Number.isFinite(retryAt)) continue;
+    earliest = earliest === undefined ? retryAt : Math.min(earliest, retryAt);
+  }
+  return earliest;
+}
+
 function isAuthenticationPause(error: unknown) {
   return error instanceof PeacePadApiError && error.kind === "auth-required";
 }
@@ -169,10 +183,12 @@ export async function retryQueuedMessages(
   api: PeacePadCoordinationApi,
   store: MessageOutboxStore,
   scope: MessageOutboxScope,
-  now = () => new Date()
+  now = () => new Date(),
+  shouldContinue = () => true
 ) {
   const summary = { sent: 0, retained: 0, needsAction: 0 };
   for (const queued of await store.list()) {
+    if (!shouldContinue()) break;
     if (!isQueuedMessageInScope(queued, scope)) {
       summary.retained += 1;
       continue;
@@ -190,6 +206,7 @@ export async function retryQueuedMessages(
       summary.retained += 1;
       continue;
     }
+    if (!shouldContinue()) break;
     try {
       await api.sendMessage(queued.input, queued.context);
       await store.remove(queued.id);

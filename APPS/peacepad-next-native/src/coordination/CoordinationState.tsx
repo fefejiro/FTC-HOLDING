@@ -10,6 +10,7 @@ import {
 import { defaultCalendarLayers, SyntheticCoordinationApi } from "../api/SyntheticCoordinationApi";
 import {
   MAX_OUTBOX_BODY_LENGTH,
+  earliestQueuedMessageRetryAt,
   isTransientMessageError,
   isQueuedMessageInScope,
   removeQueuedMessage as removeSingleQueuedMessage,
@@ -265,6 +266,7 @@ export function CoordinationStateProvider({
   const [sentMessages, setSentMessages] = useState<readonly SentMessage[]>([]);
   const [queuedActionBusyIds, setQueuedActionBusyIds] = useState<readonly string[]>([]);
   const [queuedActionError, setQueuedActionError] = useState<string>();
+  const [outboxScheduleVersion, setOutboxScheduleVersion] = useState(0);
   const [messageSearchQuery, setMessageSearchQueryState] = useState("");
   const [messageSearchResults, setMessageSearchResults] = useState<readonly MessageSearchResult[]>([]);
   const [messageSearchBusy, setMessageSearchBusy] = useState(false);
@@ -276,9 +278,11 @@ export function CoordinationStateProvider({
   const hydrationGeneration = useRef(0);
   const retriedRuntimeScopes = useRef(new Set<string>());
   const queuedActionLocks = useRef(new Set<string>());
+  const scheduledRetryScopeLocks = useRef(new Set<string>());
 
   useEffect(() => {
     const generation = ++hydrationGeneration.current;
+    let cancelled = false;
     setCoordinationHydrated(false);
     setLayers(demoMode ? defaultCalendarLayers : []);
     setVisibleLayerIds(demoMode ? defaultCalendarLayers.map((layer) => layer.id) : []);
@@ -311,7 +315,13 @@ export function CoordinationStateProvider({
     const retryScopeKey = [outboxScope.actorIdentityId, outboxScope.sessionId, outboxScope.region, outboxScope.familyCircleId, outboxScope.conversationId].join(":");
     const retry = retriedRuntimeScopes.current.has(retryScopeKey)
       ? Promise.resolve()
-      : (retriedRuntimeScopes.current.add(retryScopeKey), retryQueuedMessages(resolvedApi, outbox, outboxScope).then(() => undefined));
+      : (retriedRuntimeScopes.current.add(retryScopeKey), retryQueuedMessages(
+        resolvedApi,
+        outbox,
+        outboxScope,
+        () => new Date(),
+        () => !cancelled && hydrationGeneration.current === generation
+      ).then(() => undefined));
     void retry.then(() => Promise.all([
       resolvedApi.listCalendarLayers(activeRuntime.familyCircleId),
       resolvedApi.listScheduleEvents(activeRuntime.familyCircleId),
@@ -319,7 +329,7 @@ export function CoordinationStateProvider({
       resolvedApi.getMessageCheckPreference(activeRuntime.conversationId),
       outbox.list()
     ])).then(([nextLayers, nextEvents, nextMessages, preference, queuedMessages]) => {
-        if (hydrationGeneration.current !== generation) return;
+        if (cancelled || hydrationGeneration.current !== generation) return;
         setLayers(nextLayers);
         setVisibleLayerIds(nextLayers.map((layer) => layer.id));
         setEvents(nextEvents);
@@ -331,12 +341,81 @@ export function CoordinationStateProvider({
         setCoordinationHydrated(true);
       })
       .catch((error) => {
-        if (hydrationGeneration.current !== generation) return;
+        if (cancelled || hydrationGeneration.current !== generation) return;
         setMessageError(error instanceof Error ? error.message : "PeacePad coordination is unavailable.");
         setMessageCheckHydrated(false);
         setCoordinationHydrated(false);
       });
+    return () => {
+      cancelled = true;
+    };
   }, [activeRuntime?.conversationId, activeRuntime?.familyCircleId, activeRuntime?.actorIdentityId, activeRuntime?.region, activeRuntime?.sessionId, demoMode, outbox, resolvedApi]);
+
+  useEffect(() => {
+    if (demoMode || !activeRuntime || !coordinationHydrated) return;
+    const generation = hydrationGeneration.current;
+    const scope = messageOutboxScope(activeRuntime);
+    const scopeKey = [scope.actorIdentityId, scope.sessionId, scope.region, scope.familyCircleId, scope.conversationId].join(":");
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const arm = async () => {
+      const queuedMessages = await outbox.list();
+      if (cancelled || hydrationGeneration.current !== generation) return;
+      const retryAt = earliestQueuedMessageRetryAt(queuedMessages, scope);
+      if (retryAt === undefined) return;
+      const delay = Math.max(0, Math.min(retryAt - Date.now(), 2_147_483_647));
+      const runRetry = () => {
+        if (cancelled || hydrationGeneration.current !== generation) return;
+        if (scheduledRetryScopeLocks.current.has(scopeKey)) {
+          timer = setTimeout(runRetry, 100);
+          return;
+        }
+        scheduledRetryScopeLocks.current.add(scopeKey);
+        let retryCompleted = false;
+        void retryQueuedMessages(
+          resolvedApi,
+          outbox,
+          scope,
+          () => new Date(),
+          () => !cancelled && hydrationGeneration.current === generation
+        )
+          .then(async () => {
+            retryCompleted = true;
+            if (cancelled || hydrationGeneration.current !== generation) return;
+            const [canonicalMessages, remainingQueued] = await Promise.all([
+              resolvedApi.listMessages(activeRuntime.conversationId),
+              outbox.list()
+            ]);
+            if (cancelled || hydrationGeneration.current !== generation) return;
+            setSentMessages([
+              ...visibleMessages(canonicalMessages, activeRuntime.actorIdentityId),
+              ...queuedVisibleMessages(remainingQueued, scope)
+            ]);
+          })
+          .catch((error) => {
+            if (cancelled || hydrationGeneration.current !== generation) return;
+            setMessageError(error instanceof Error ? error.message : "PeacePad could not retry queued messages.");
+          })
+          .finally(() => {
+            scheduledRetryScopeLocks.current.delete(scopeKey);
+            if (retryCompleted && !cancelled && hydrationGeneration.current === generation) {
+              setOutboxScheduleVersion((current) => current + 1);
+            }
+          });
+      };
+      timer = setTimeout(runRetry, delay);
+    };
+
+    void arm().catch((error) => {
+      if (cancelled || hydrationGeneration.current !== generation) return;
+      setMessageError(error instanceof Error ? error.message : "PeacePad could not read queued messages.");
+    });
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) clearTimeout(timer);
+    };
+  }, [activeRuntime?.actorIdentityId, activeRuntime?.conversationId, activeRuntime?.familyCircleId, activeRuntime?.region, activeRuntime?.sessionId, coordinationHydrated, demoMode, outbox, outboxScheduleVersion, resolvedApi]);
 
   const value = useMemo<CoordinationStateValue>(() => ({
     coordinationHydrated,
@@ -579,6 +658,7 @@ export function CoordinationStateProvider({
             setMessageDraftState("");
             setMessagePreview(undefined);
             setMessageError("Waiting for a connection. PeacePad will retry this message safely.");
+            setOutboxScheduleVersion((current) => current + 1);
           } catch (queueError) {
             setMessageError(queueError instanceof Error ? queueError.message : "PeacePad could not queue that message.");
           }
