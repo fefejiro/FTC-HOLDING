@@ -12,7 +12,9 @@ import type {
   MessageCheckPreference,
   MessageEvent,
   ParticipantGrant,
+  PrivateTimelineEntry,
   ScheduleEvent,
+  TimelineSourceKind,
   WriteContext
 } from "../domain/v2";
 import type { MessagePreviewResponse } from "./contracts";
@@ -142,6 +144,13 @@ export type CreateCaseBinderInput = Readonly<{
   childLabel: string;
 }>;
 
+export type LinkTimelineSourceInput = Readonly<{
+  familyCircleId: EntityId;
+  caseBinderId: EntityId;
+  sourceKind: TimelineSourceKind;
+  sourceId: EntityId;
+}>;
+
 export interface PeacePadCoordinationApi {
   deleteAccount(context: WriteContext): Promise<DeletedAccount>;
   createFamily(familyName: string, context: WriteContext): Promise<CreatedFamily>;
@@ -149,6 +158,8 @@ export interface PeacePadCoordinationApi {
   createCaseBinder(input: CreateCaseBinderInput, context: WriteContext): Promise<CaseBinder>;
   archiveCaseBinder(binderId: EntityId, context: WriteContext): Promise<CaseBinder>;
   createAttachmentUploadIntent(input: CreateAttachmentUploadIntentInput, context: WriteContext): Promise<AttachmentUploadIntent>;
+  listPrivateTimeline(binderId: EntityId, before?: string, limit?: number): Promise<readonly PrivateTimelineEntry[]>;
+  linkTimelineSource(input: LinkTimelineSourceInput, context: WriteContext): Promise<PrivateTimelineEntry>;
   createInvitation(input: CreateInvitationInput, context: WriteContext): Promise<CreatedInvitation>;
   resolveInvitation(code: string): Promise<InvitationPreview>;
   acceptInvitation(invitationId: EntityId, context: WriteContext): Promise<AcceptedInvitation>;
@@ -312,6 +323,16 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
 
   createAttachmentUploadIntent(input: CreateAttachmentUploadIntentInput, context: WriteContext) {
     return this.write<AttachmentUploadIntent>("/api/v2/attachment-upload-intents", "POST", input, context);
+  }
+
+  listPrivateTimeline(binderId: EntityId, before?: string, limit = 50) {
+    const query = new URLSearchParams({ caseBinderId: binderId, limit: String(limit) });
+    if (before) query.set("before", before);
+    return this.request<readonly PrivateTimelineEntry[]>(`/api/v2/timeline-entries?${query.toString()}`);
+  }
+
+  linkTimelineSource(input: LinkTimelineSourceInput, context: WriteContext) {
+    return this.write<PrivateTimelineEntry>("/api/v2/timeline-entries", "POST", input, context);
   }
 
   listConversations(familyCircleId: EntityId) {

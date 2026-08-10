@@ -689,7 +689,8 @@ export function MessagesScreen() {
 }
 
 export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
-  const { archiveBinder, binder, binders, attachmentIntent, busy, createBinder, error: recordsError, loading, prepareAttachment, reload, selectBinder } = useRecordsState();
+  const { events, sentMessages } = useCoordinationState();
+  const { archiveBinder, binder, binders, attachmentIntent, busy, createBinder, error: recordsError, linkTimelineSource, loading, prepareAttachment, reload, selectBinder, timelineEntries } = useRecordsState();
   const [binderName, setBinderName] = useState("");
   const [childLabel, setChildLabel] = useState("");
   const [fileName, setFileName] = useState("");
@@ -710,6 +711,14 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
       await prepareAttachment({ originalFileName: fileName, mediaType, byteLength: Number(byteLength) });
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Check the attachment details."); }
   };
+  const linkSource = async (kind: "message-event" | "schedule-event", sourceId: string) => {
+    setError(undefined);
+    try { await linkTimelineSource(kind, sourceId); }
+    catch (caught) { setError(caught instanceof Error ? caught.message : "PeacePad could not link this source."); }
+  };
+  const linkedSourceIds = new Set(timelineEntries.map((entry) => entry.source.sourceId));
+  const messageCandidate = sentMessages.find((message) => !message.queued && !linkedSourceIds.has(message.id));
+  const eventCandidate = events.find((event) => !linkedSourceIds.has(event.id));
   return (
     <View style={styles.stack}>
       <Text style={styles.title}>Records</Text>
@@ -731,7 +740,16 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
         <LabButton disabled={busy} label={busy ? "Creating..." : "Create Case Binder"} onPress={() => void saveBinder()} />
       </View> : !loading && binder ? <View style={styles.card}>
         <Text style={styles.heading}>{binder.name}</Text>
-        <Text style={styles.caption}>{binder.childLabel} · Private</Text>
+        <Text style={styles.caption}>{binder.childLabel} - Private</Text>
+        <Text style={styles.fieldLabel}>Private timeline</Text>
+        {timelineEntries.length === 0 ? <Text style={styles.caption}>No sources linked yet.</Text> : timelineEntries.map((entry) => (
+          <View accessibilityLabel={`${entry.source.kind === "message-event" ? "Message" : "Calendar event"} timeline entry`} key={entry.id} style={styles.successCard}>
+            <Text style={styles.heading}>{entry.source.kind === "message-event" ? "Message" : "Calendar event"}</Text>
+            <Text style={styles.caption}>{new Date(entry.occurredAt).toLocaleString()}</Text>
+          </View>
+        ))}
+        {messageCandidate ? <LabButton disabled={busy} label="Link latest message" onPress={() => void linkSource("message-event", messageCandidate.id)} variant="secondary" /> : null}
+        {eventCandidate ? <LabButton disabled={busy} label="Link next calendar event" onPress={() => void linkSource("schedule-event", eventCandidate.id)} variant="secondary" /> : null}
         <Text style={styles.fieldLabel}>Prepare attachment details</Text>
         <TextInput accessibilityLabel="Original file name" onChangeText={setFileName} placeholder="school-note.pdf" style={styles.input} value={fileName} />
         <TextInput accessibilityLabel="Media type" onChangeText={(value) => setMediaType(value as AttachmentMediaType)} placeholder="application/pdf" style={styles.input} value={mediaType} />

@@ -2,7 +2,7 @@ import React from "react";
 import { act, renderHook, waitFor } from "@testing-library/react-native";
 import type { PeacePadCoordinationApi } from "../api/CoordinationApi";
 import type { CoordinationRuntime } from "../coordination/CoordinationState";
-import { PEACEPAD_V2_SCHEMA_VERSION, type AttachmentUploadIntent, type CaseBinder } from "../domain/v2";
+import { PEACEPAD_V2_SCHEMA_VERSION, type AttachmentUploadIntent, type CaseBinder, type PrivateTimelineEntry } from "../domain/v2";
 import { RecordsStateProvider, useRecordsState } from "./RecordsState";
 
 const runtime: CoordinationRuntime = {
@@ -59,6 +59,31 @@ function attachmentIntent(): AttachmentUploadIntent {
   };
 }
 
+function timelineEntry(overrides: Partial<PrivateTimelineEntry> = {}): PrivateTimelineEntry {
+  return {
+    id: "99999999-9999-4999-8999-999999999999",
+    schemaVersion: PEACEPAD_V2_SCHEMA_VERSION,
+    version: 1,
+    region: runtime.region,
+    familyCircleId: runtime.familyCircleId,
+    ownerIdentityId: runtime.actorIdentityId,
+    caseBinderId: binder().id,
+    source: {
+      kind: "message-event",
+      sourceId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      eventType: "sent",
+      sourceVersion: null
+    },
+    occurredAt: "2026-08-10T12:00:00.000Z",
+    provenance: {
+      createdAt: "2026-08-10T12:01:00.000Z",
+      createdBy: { identityId: runtime.actorIdentityId, sessionId: runtime.sessionId },
+      source: "app"
+    },
+    ...overrides
+  };
+}
+
 describe("RecordsState", () => {
   it("validates binder fields and keeps prepared metadata in the explicit demo session", async () => {
     const wrapper = ({ children }: { children: React.ReactNode }) => <RecordsStateProvider>{children}</RecordsStateProvider>;
@@ -74,6 +99,8 @@ describe("RecordsState", () => {
     const listed = binder();
     const api = {
       listCaseBinders: jest.fn(async () => [listed]),
+      listPrivateTimeline: jest.fn(async () => [timelineEntry()]),
+      linkTimelineSource: jest.fn(async () => timelineEntry()),
       createCaseBinder: jest.fn(async () => binder({ id: "88888888-8888-4888-8888-888888888888", name: "Health records" })),
       createAttachmentUploadIntent: jest.fn(async () => attachmentIntent()),
       archiveCaseBinder: jest.fn(async () => binder({ status: "archived", version: 2 }))
@@ -82,6 +109,12 @@ describe("RecordsState", () => {
     const { result } = renderHook(() => useRecordsState(), { wrapper });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.binder?.id).toBe(listed.id);
+    await waitFor(() => expect(result.current.timelineEntries).toHaveLength(1));
+    await act(async () => { await result.current.linkTimelineSource("message-event", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"); });
+    expect(api.linkTimelineSource).toHaveBeenCalledWith(
+      expect.objectContaining({ familyCircleId: runtime.familyCircleId, caseBinderId: listed.id, sourceKind: "message-event" }),
+      expect.objectContaining({ region: runtime.region, actor: expect.objectContaining({ identityId: runtime.actorIdentityId }) })
+    );
     await act(async () => { await result.current.createBinder("Health records", "Child A"); });
     expect(api.createCaseBinder).toHaveBeenCalledWith(
       { familyCircleId: runtime.familyCircleId, name: "Health records", childLabel: "Child A" },
@@ -91,7 +124,8 @@ describe("RecordsState", () => {
 
   it("fails closed when a persisted response belongs to another owner", async () => {
     const api = {
-      listCaseBinders: jest.fn(async () => [binder({ ownerIdentityId: "99999999-9999-4999-8999-999999999999" })])
+      listCaseBinders: jest.fn(async () => [binder({ ownerIdentityId: "99999999-9999-4999-8999-999999999999" })]),
+      listPrivateTimeline: jest.fn(async () => [])
     } as unknown as PeacePadCoordinationApi;
     const wrapper = ({ children }: { children: React.ReactNode }) => <RecordsStateProvider api={api} runtime={runtime}>{children}</RecordsStateProvider>;
     const { result } = renderHook(() => useRecordsState(), { wrapper });

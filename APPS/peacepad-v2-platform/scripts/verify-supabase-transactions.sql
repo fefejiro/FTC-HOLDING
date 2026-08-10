@@ -38,6 +38,11 @@ declare
   binder_replay_result jsonb;
   attachment_intent_result jsonb;
   attachment_intent_replay_result jsonb;
+  timeline_result jsonb;
+  timeline_replay_result jsonb;
+  timeline_layer_result jsonb;
+  timeline_event_result jsonb;
+  timeline_schedule_result jsonb;
   created_family_id uuid;
   invitation_id uuid;
   conversation_id uuid;
@@ -45,6 +50,8 @@ declare
   layer_id uuid;
   event_id uuid;
   binder_id uuid;
+  timeline_layer_id uuid;
+  timeline_event_id uuid;
   cleanup_claim record;
   cleanup_result jsonb;
   first_cleanup_lease uuid;
@@ -364,6 +371,91 @@ begin
     raise exception 'Attachment preparation accepted path traversal metadata.';
   exception when invalid_parameter_value then null;
   end;
+
+  timeline_result := public.peacepad_v2_link_timeline_source(
+    parent_b, 'ca', created_family_id, binder_id, 'message-event', message_id,
+    pg_temp.write_token('link-private-message-timeline', 'timeline_entry.linked', binder_id::text || ':message-event:' || message_id::text), 2
+  );
+  if timeline_result -> 'source' ->> 'kind' <> 'message-event'
+    or timeline_result -> 'source' ->> 'sourceId' <> message_id::text
+    or jsonb_array_length(public.peacepad_v2_list_private_timeline(parent_b, 'ca', binder_id)) <> 1 then
+    raise exception 'Owner-private message timeline link was not persisted.';
+  end if;
+  timeline_replay_result := public.peacepad_v2_link_timeline_source(
+    parent_b, 'ca', created_family_id, binder_id, 'message-event', message_id,
+    pg_temp.write_token('link-private-message-timeline', 'timeline_entry.linked', binder_id::text || ':message-event:' || message_id::text), 2
+  );
+  if timeline_replay_result <> timeline_result
+    or (select count(*) from peacepad_v2.private_timeline_entry where case_binder_id=binder_id) <> 1 then
+    raise exception 'Exact timeline replay was not deterministic.';
+  end if;
+  begin
+    perform public.peacepad_v2_link_timeline_source(
+      parent_b, 'ca', created_family_id, binder_id, 'message-event', (correction_result ->> 'id')::uuid,
+      pg_temp.write_token('link-private-message-timeline', 'timeline_entry.linked', binder_id::text || ':message-event:' || (correction_result ->> 'id')), 2
+    );
+    raise exception 'Changed timeline source reused an idempotency key unexpectedly.';
+  exception when others then
+    if sqlerrm not like '%IDEMPOTENCY_CONFLICT%' then raise; end if;
+  end;
+  begin
+    perform public.peacepad_v2_link_timeline_source(
+      parent_b, 'ca', created_family_id, binder_id, 'message-event', message_id,
+      pg_temp.write_token('duplicate-private-message-timeline', 'timeline_entry.linked', binder_id::text || ':message-event:' || message_id::text), 2
+    );
+    raise exception 'The same source was linked twice to one Binder.';
+  exception when others then
+    if sqlerrm not like '%TIMELINE_SOURCE_ALREADY_LINKED%' then raise; end if;
+  end;
+  begin
+    perform public.peacepad_v2_list_private_timeline(parent_a, 'ca', binder_id);
+    raise exception 'Another participant could access an owner-private timeline.';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    perform public.peacepad_v2_list_private_timeline(parent_b, 'us', binder_id);
+    raise exception 'Cross-region private timeline access unexpectedly succeeded.';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    perform public.peacepad_v2_link_timeline_source(
+      parent_b, 'ca', created_family_id, binder_id, 'schedule-event', event_id,
+      pg_temp.write_token('reject-deleted-schedule-timeline', 'timeline_entry.linked', binder_id::text || ':deleted-schedule:' || event_id::text), 2
+    );
+    raise exception 'A deleted schedule event was linked to the private timeline.';
+  exception when invalid_parameter_value then null;
+  end;
+
+  timeline_layer_result := public.peacepad_v2_create_calendar_layer(
+    parent_b, 'ca', created_family_id, 'Private appointments', 'events-activities',
+    'calendar', 'violet', '{"scope":"private"}'::jsonb,
+    pg_temp.write_token('create-private-timeline-layer', 'calendar_layer.created', created_family_id::text || ':parent-b-private-appointments'), 2
+  );
+  timeline_layer_id := (timeline_layer_result ->> 'id')::uuid;
+  timeline_event_result := public.peacepad_v2_create_schedule_event(
+    parent_b, 'ca', created_family_id, timeline_layer_id, '{}'::uuid[], 'appointment',
+    'Private appointment', 'Private staging description.',
+    '2026-09-10T15:00:00Z'::timestamptz, '2026-09-10T16:00:00Z'::timestamptz,
+    'planned', null, null,
+    pg_temp.write_token('create-private-timeline-event', 'schedule_event.created', timeline_layer_id::text || ':private-appointment'), 2
+  );
+  timeline_event_id := (timeline_event_result ->> 'id')::uuid;
+  timeline_schedule_result := public.peacepad_v2_link_timeline_source(
+    parent_b, 'ca', created_family_id, binder_id, 'schedule-event', timeline_event_id,
+    pg_temp.write_token('link-private-schedule-timeline', 'timeline_entry.linked', binder_id::text || ':schedule-event:' || timeline_event_id::text), 2
+  );
+  if timeline_schedule_result -> 'source' ->> 'kind' <> 'schedule-event'
+    or (timeline_schedule_result -> 'source' ->> 'sourceVersion')::integer <> 1
+    or jsonb_array_length(public.peacepad_v2_list_private_timeline(parent_b, 'ca', binder_id)) <> 2 then
+    raise exception 'Owner-visible schedule source was not linked to the private timeline.';
+  end if;
+  if public.peacepad_v2_list_private_timeline(parent_b, 'ca', binder_id)::text ilike any (array[
+    '%Pickup at five.%', '%Private appointment%', '%Private staging description.%',
+    '%Parenting records%', '%Child A%', '%school-note.pdf%'
+  ]) then
+    raise exception 'Private timeline response copied source or Binder content.';
+  end if;
+
   binder_result := public.peacepad_v2_archive_case_binder(
     parent_b, 'ca', binder_id, 1,
     pg_temp.write_token('archive-private-binder', 'case_binder.archived', binder_id::text || ':1'), 2
@@ -371,6 +463,14 @@ begin
   if binder_result ->> 'status' <> 'archived' or (binder_result ->> 'version')::integer <> 2 then
     raise exception 'Case Binder archive did not preserve optimistic concurrency.';
   end if;
+  begin
+    perform public.peacepad_v2_link_timeline_source(
+      parent_b, 'ca', created_family_id, binder_id, 'message-event', (correction_result ->> 'id')::uuid,
+      pg_temp.write_token('reject-archived-timeline-link', 'timeline_entry.linked', binder_id::text || ':archived-correction'), 2
+    );
+    raise exception 'An archived Case Binder accepted a new timeline source.';
+  exception when invalid_parameter_value then null;
+  end;
   binder_replay_result := public.peacepad_v2_archive_case_binder(
     parent_b, 'ca', binder_id, 1,
     pg_temp.write_token('archive-private-binder', 'case_binder.archived', binder_id::text || ':1'), 2
@@ -502,7 +602,8 @@ begin
     raise exception 'Deleted identity retained a Message Check preference.';
   end if;
   if exists (select 1 from peacepad_v2.case_binder where owner_identity_id = parent_b)
-    or exists (select 1 from peacepad_v2.attachment_upload_intent where owner_identity_id = parent_b) then
+    or exists (select 1 from peacepad_v2.attachment_upload_intent where owner_identity_id = parent_b)
+    or exists (select 1 from peacepad_v2.private_timeline_entry where owner_identity_id = parent_b) then
     raise exception 'Deleted identity retained owner-private Binder metadata.';
   end if;
   if exists (

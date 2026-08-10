@@ -244,4 +244,79 @@ describe("SyntheticCoordinationApi safety behavior", () => {
       originalMessage: "Please confirm pickup at five."
     });
   });
+
+  it("keeps demo timeline links metadata-only, unique, and limited to canonical source kinds", async () => {
+    const api = new SyntheticCoordinationApi();
+    const binder = await api.createCaseBinder({
+      familyCircleId: "family-current",
+      name: "Fictional records",
+      childLabel: "Child A"
+    }, context);
+    const sent = await api.sendMessage({
+      familyCircleId: "family-current",
+      conversationId: "conversation-primary",
+      body: "Private source text must not be copied."
+    }, context);
+    const messageEntry = await api.linkTimelineSource({
+      familyCircleId: "family-current",
+      caseBinderId: binder.id,
+      sourceKind: "message-event",
+      sourceId: sent.id
+    }, context);
+    expect(messageEntry).toMatchObject({
+      source: { kind: "message-event", sourceId: sent.id, eventType: "sent", sourceVersion: null }
+    });
+    expect(JSON.stringify(messageEntry)).not.toContain("Private source text");
+    await expect(api.linkTimelineSource({
+      familyCircleId: "family-current",
+      caseBinderId: binder.id,
+      sourceKind: "message-event",
+      sourceId: sent.id
+    }, context)).rejects.toMatchObject({ status: 409 });
+
+    const delivered = await api.recordMessageLifecycle({
+      familyCircleId: "family-current",
+      conversationId: "conversation-primary",
+      originalMessageEventId: sent.id,
+      eventType: "delivered"
+    }, context);
+    await expect(api.linkTimelineSource({
+      familyCircleId: "family-current",
+      caseBinderId: binder.id,
+      sourceKind: "message-event",
+      sourceId: delivered.id
+    }, context)).rejects.toMatchObject({ status: 404 });
+
+    const layer = await api.createCalendarLayer({
+      familyCircleId: "family-current",
+      ownerIdentityId: "identity-current",
+      name: "Private appointments",
+      kind: "events-activities",
+      icon: "calendar",
+      colorToken: "violet",
+      visibility: { scope: "private" }
+    }, context);
+    const event = await api.createScheduleEvent({
+      familyCircleId: "family-current",
+      calendarLayerId: layer.id,
+      childProfileIds: [],
+      eventType: "appointment",
+      title: "Private appointment",
+      description: null,
+      startsAt: "2026-09-10T15:00:00.000Z",
+      endsAt: "2026-09-10T16:00:00.000Z",
+      status: "planned",
+      recurrence: null,
+      visibilityOverride: null
+    }, context);
+    await expect(api.linkTimelineSource({
+      familyCircleId: "family-current",
+      caseBinderId: binder.id,
+      sourceKind: "schedule-event",
+      sourceId: event.id
+    }, context)).resolves.toMatchObject({
+      source: { kind: "schedule-event", sourceId: event.id, eventType: "appointment", sourceVersion: 1 }
+    });
+    await expect(api.listPrivateTimeline(binder.id)).resolves.toHaveLength(2);
+  });
 });

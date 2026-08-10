@@ -1,12 +1,14 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { CreateAttachmentUploadIntentInput, PeacePadCoordinationApi } from "../api/CoordinationApi";
+import type { CreateAttachmentUploadIntentInput, LinkTimelineSourceInput, PeacePadCoordinationApi } from "../api/CoordinationApi";
 import type { CoordinationRuntime } from "../coordination/CoordinationState";
 import {
   PEACEPAD_V2_SCHEMA_VERSION,
   createWriteContext,
   type AttachmentMediaType,
   type AttachmentUploadIntent,
-  type CaseBinder
+  type CaseBinder,
+  type PrivateTimelineEntry,
+  type TimelineSourceKind
 } from "../domain/v2";
 import { MetadataAttachmentService } from "./MetadataAttachmentService";
 
@@ -18,6 +20,7 @@ type RecordsContextValue = {
   binders: readonly CaseBinder[];
   binder?: CaseBinder;
   attachmentIntent?: AttachmentUploadIntent;
+  timelineEntries: readonly PrivateTimelineEntry[];
   loading: boolean;
   busy: boolean;
   error?: string;
@@ -25,6 +28,7 @@ type RecordsContextValue = {
   createBinder: (name: string, childLabel: string) => Promise<CaseBinder>;
   archiveBinder: () => Promise<CaseBinder>;
   prepareAttachment: (input: AttachmentInput) => Promise<AttachmentUploadIntent>;
+  linkTimelineSource: (sourceKind: TimelineSourceKind, sourceId: string) => Promise<PrivateTimelineEntry>;
   reload: () => Promise<void>;
 };
 
@@ -85,16 +89,44 @@ function assertAttachmentIntent(value: AttachmentUploadIntent, runtime: Coordina
   return value;
 }
 
+function assertTimelineEntry(value: PrivateTimelineEntry, runtime: CoordinationRuntime, binderId: string): PrivateTimelineEntry {
+  const messageEventTypes = new Set(["sent", "correction"]);
+  const scheduleEventTypes = new Set(["parenting-time", "appointment", "holiday", "change-request"]);
+  const sourceIsValid = value?.source?.kind === "message-event"
+    ? messageEventTypes.has(value.source.eventType) && value.source.sourceVersion === null
+    : value?.source?.kind === "schedule-event"
+      && scheduleEventTypes.has(value.source.eventType)
+      && Number.isInteger(value.source.sourceVersion)
+      && Number(value.source.sourceVersion) > 0;
+  if (
+    !value
+    || value.schemaVersion !== PEACEPAD_V2_SCHEMA_VERSION
+    || value.region !== runtime.region
+    || value.familyCircleId !== runtime.familyCircleId
+    || value.ownerIdentityId !== runtime.actorIdentityId
+    || value.caseBinderId !== binderId
+    || !value.id
+    || !value.source?.sourceId
+    || !sourceIsValid
+    || Number.isNaN(Date.parse(value.occurredAt))
+    || !Number.isInteger(value.version)
+    || value.version < 1
+  ) throw new Error("PeacePad could not verify the private timeline response.");
+  return value;
+}
+
 export function RecordsStateProvider({ api, children, runtime }: RecordsProviderProps) {
   const persisted = Boolean(api && runtime);
   if (Boolean(api) !== Boolean(runtime)) throw new Error("Records require both a verified API and runtime.");
   const [binders, setBinders] = useState<readonly CaseBinder[]>([]);
   const [selectedBinderId, setSelectedBinderId] = useState<string>();
   const [attachmentIntent, setAttachmentIntent] = useState<AttachmentUploadIntent>();
+  const [timelineEntries, setTimelineEntries] = useState<readonly PrivateTimelineEntry[]>([]);
   const [loading, setLoading] = useState(persisted);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const generation = useRef(0);
+  const timelineGeneration = useRef(0);
   const demoService = useRef(new MetadataAttachmentService(demoActor));
 
   const binder = binders.find((candidate) => candidate.id === selectedBinderId)
@@ -127,15 +159,31 @@ export function RecordsStateProvider({ api, children, runtime }: RecordsProvider
     setBinders([]);
     setSelectedBinderId(undefined);
     setAttachmentIntent(undefined);
+    setTimelineEntries([]);
     setError(undefined);
     if (api && runtime) void reload();
-    return () => { generation.current += 1; };
+    return () => { generation.current += 1; timelineGeneration.current += 1; };
   }, [api, reload, runtime?.actorIdentityId, runtime?.familyCircleId, runtime?.region, runtime?.sessionId]);
+
+  useEffect(() => {
+    const currentGeneration = ++timelineGeneration.current;
+    setTimelineEntries([]);
+    if (!api || !runtime || !binder || binder.status !== "active") return;
+    void api.listPrivateTimeline(binder.id).then((listed) => {
+      if (timelineGeneration.current !== currentGeneration) return;
+      setTimelineEntries(listed.map((candidate) => assertTimelineEntry(candidate, runtime, binder.id)));
+    }).catch((caught) => {
+      if (timelineGeneration.current !== currentGeneration) return;
+      setError(caught instanceof Error ? caught.message : "PeacePad could not load the private timeline.");
+    });
+    return () => { timelineGeneration.current += 1; };
+  }, [api, binder?.id, binder?.status, runtime?.actorIdentityId, runtime?.familyCircleId, runtime?.region, runtime?.sessionId]);
 
   const value = useMemo<RecordsContextValue>(() => ({
     binders,
     binder,
     attachmentIntent,
+    timelineEntries,
     loading,
     busy,
     error,
@@ -143,6 +191,7 @@ export function RecordsStateProvider({ api, children, runtime }: RecordsProvider
       if (!binders.some((candidate) => candidate.id === binderId && candidate.status === "active")) return;
       setSelectedBinderId(binderId);
       setAttachmentIntent(undefined);
+      setTimelineEntries([]);
     },
     async createBinder(name, childLabel) {
       const cleanName = name.trim();
@@ -178,6 +227,7 @@ export function RecordsStateProvider({ api, children, runtime }: RecordsProvider
         setBinders((current) => [...current.filter((candidate) => candidate.id !== created.id), created]);
         setSelectedBinderId(created.id);
         setAttachmentIntent(undefined);
+        setTimelineEntries([]);
         return created;
       } catch (caught) {
         const message = caught instanceof Error ? caught.message : "PeacePad could not create the Case Binder.";
@@ -206,6 +256,7 @@ export function RecordsStateProvider({ api, children, runtime }: RecordsProvider
         setBinders((current) => current.map((candidate) => candidate.id === archived.id ? archived : candidate));
         setSelectedBinderId(undefined);
         setAttachmentIntent(undefined);
+        setTimelineEntries([]);
         return archived;
       } catch (caught) {
         const message = caught instanceof Error ? caught.message : "PeacePad could not archive the Case Binder.";
@@ -250,8 +301,34 @@ export function RecordsStateProvider({ api, children, runtime }: RecordsProvider
         setBusy(false);
       }
     },
+    async linkTimelineSource(sourceKind, sourceId) {
+      if (!api || !runtime) throw new Error("Private timeline linking is available after staging sign-in.");
+      if (!binder || binder.status !== "active") throw new Error("Create or select an active Case Binder first.");
+      setBusy(true);
+      setError(undefined);
+      try {
+        const request: LinkTimelineSourceInput = {
+          familyCircleId: runtime.familyCircleId,
+          caseBinderId: binder.id,
+          sourceKind,
+          sourceId
+        };
+        const linked = assertTimelineEntry(await api.linkTimelineSource(
+          request,
+          writeContext(runtime, "timeline-source-link")
+        ), runtime, binder.id);
+        setTimelineEntries((current) => [linked, ...current.filter((candidate) => candidate.id !== linked.id)]);
+        return linked;
+      } catch (caught) {
+        const message = caught instanceof Error ? caught.message : "PeacePad could not link this source.";
+        setError(message);
+        throw caught;
+      } finally {
+        setBusy(false);
+      }
+    },
     reload
-  }), [api, attachmentIntent, binder, binders, busy, error, loading, reload, runtime]);
+  }), [api, attachmentIntent, binder, binders, busy, error, loading, reload, runtime, timelineEntries]);
 
   return <RecordsContext.Provider value={value}>{children}</RecordsContext.Provider>;
 }

@@ -19,11 +19,12 @@ $deletionMinimizationMigrationPath = Join-Path $platformRoot 'supabase/migration
 $atomicInvitationMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090011_v2_accept_invitation_conversation.sql'
 $idempotencyReceiptMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090012_v2_idempotency_receipts.sql'
 $privateRecordsMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090013_v2_private_case_binders.sql'
+$privateTimelineMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608100001_v2_private_source_timeline.sql'
 $authCleanupRunnerPath = Join-Path $platformRoot 'scripts/run-auth-cleanup.ps1'
 $deployRunnerPath = Join-Path $platformRoot 'scripts/deploy-supabase-free-staging.ps1'
 $configPath = Join-Path $platformRoot 'supabase/config.toml'
 
-foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $idempotencyReceiptMigrationPath, $privateRecordsMigrationPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
+foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $idempotencyReceiptMigrationPath, $privateRecordsMigrationPath, $privateTimelineMigrationPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
     throw "Required Supabase staging file is missing: $path"
   }
@@ -45,6 +46,7 @@ $deletionMinimizationMigration = Get-Content -LiteralPath $deletionMinimizationM
 $atomicInvitationMigration = Get-Content -LiteralPath $atomicInvitationMigrationPath -Raw
 $idempotencyReceiptMigration = Get-Content -LiteralPath $idempotencyReceiptMigrationPath -Raw
 $privateRecordsMigration = Get-Content -LiteralPath $privateRecordsMigrationPath -Raw
+$privateTimelineMigration = Get-Content -LiteralPath $privateTimelineMigrationPath -Raw
 $authCleanupRunner = Get-Content -LiteralPath $authCleanupRunnerPath -Raw
 $deployRunner = Get-Content -LiteralPath $deployRunnerPath -Raw
 $config = Get-Content -LiteralPath $configPath -Raw
@@ -444,6 +446,39 @@ foreach ($route in @('/api/v2/case-binders', '/api/v2/attachment-upload-intents'
   if ($function -notmatch [regex]::Escape($route)) {
     throw "Edge Function is missing Private Records route: $route"
   }
+}
+if ($privateTimelineMigration -notmatch 'create table if not exists peacepad_v2\.private_timeline_entry') {
+  throw 'Private timeline migration is missing its owner-private table.'
+}
+if ($privateTimelineMigration -notmatch 'alter table peacepad_v2\.private_timeline_entry enable row level security') {
+  throw 'Private timeline migration is missing fail-closed RLS.'
+}
+foreach ($rpc in @('peacepad_v2_list_private_timeline', 'peacepad_v2_link_timeline_source')) {
+  if ($privateTimelineMigration -notmatch "create or replace function public\.$rpc") {
+    throw "Private timeline migration is missing RPC: $rpc"
+  }
+  if ($privateTimelineMigration -notmatch "revoke all on function public\.$rpc") {
+    throw "Private timeline RPC is not revoked from mobile roles: $rpc"
+  }
+}
+foreach ($pattern in @(
+  "source_kind in \('message-event',\s*'schedule-event'\)",
+  "source_event_type in \('sent',\s*'correction',\s*'parenting-time',\s*'appointment',\s*'holiday',\s*'change-request'\)",
+  'peacepad_v2\.authorized_conversation',
+  'peacepad_v2\.visibility_allows',
+  "'timeline_entry.linked'"
+)) {
+  if ($privateTimelineMigration -notmatch $pattern) {
+    throw "Private timeline migration is missing required boundary: $pattern"
+  }
+}
+foreach ($prohibited in @('upload_url', 'source_artifact', 'export_package', 'description text', 'title text')) {
+  if ($privateTimelineMigration -match $prohibited) {
+    throw "Private timeline migration contains prohibited capability or content: $prohibited"
+  }
+}
+if ($function -notmatch [regex]::Escape('/api/v2/timeline-entries')) {
+  throw 'Edge Function is missing the private timeline route.'
 }
 if (
   $config -notmatch '\[functions\.peacepad-v2-api\]' -or

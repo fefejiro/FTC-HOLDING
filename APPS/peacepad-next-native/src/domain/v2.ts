@@ -203,6 +203,24 @@ export type CaseBinder = VersionedEntity &
     status: "active" | "archived";
   }>;
 
+export type TimelineSourceKind = "message-event" | "schedule-event";
+
+export type TimelineSourceReference = Readonly<{
+  kind: TimelineSourceKind;
+  sourceId: EntityId;
+  eventType: "sent" | "correction" | "parenting-time" | "appointment" | "holiday" | "change-request";
+  sourceVersion: number | null;
+}>;
+
+export type PrivateTimelineEntry = VersionedEntity &
+  Readonly<{
+    familyCircleId: EntityId;
+    ownerIdentityId: EntityId;
+    caseBinderId: EntityId;
+    source: TimelineSourceReference;
+    occurredAt: IsoUtcTimestamp;
+  }>;
+
 export type AttachmentMediaType =
   | "image/jpeg"
   | "image/png"

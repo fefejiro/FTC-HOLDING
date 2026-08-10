@@ -84,6 +84,13 @@ describe("HttpPeacePadCoordinationApi", () => {
       childLabel: "Child A"
     }, context);
     await api.archiveCaseBinder("binder-current", context);
+    await api.listPrivateTimeline("binder-current", "2026-08-10T12:00:00.000Z", 25);
+    await api.linkTimelineSource({
+      familyCircleId: "family-current",
+      caseBinderId: "binder-current",
+      sourceKind: "message-event",
+      sourceId: "message-1"
+    }, context);
     await api.createInvitation({ familyCircleId: "family-current", invitedRole: "parent", permissions: ["messages"], expiresInHours: 24 }, context);
     await api.acceptInvitation("invitation-1", context);
     await api.declineInvitation("invitation-2", context);
@@ -121,6 +128,8 @@ describe("HttpPeacePadCoordinationApi", () => {
       "https://staging-api.peacepad.test/api/v2/case-binders?familyCircleId=family-current",
       "https://staging-api.peacepad.test/api/v2/case-binders",
       "https://staging-api.peacepad.test/api/v2/case-binders/binder-current",
+      "https://staging-api.peacepad.test/api/v2/timeline-entries?caseBinderId=binder-current&limit=25&before=2026-08-10T12%3A00%3A00.000Z",
+      "https://staging-api.peacepad.test/api/v2/timeline-entries",
       "https://staging-api.peacepad.test/api/v2/invitations",
       "https://staging-api.peacepad.test/api/v2/invitations/invitation-1/accept",
       "https://staging-api.peacepad.test/api/v2/calendar-layers?familyCircleId=family-current",
@@ -308,6 +317,35 @@ describe("HttpPeacePadCoordinationApi", () => {
     expect(intentBody).not.toHaveProperty("bytes");
     expect(intentBody).not.toHaveProperty("base64");
     expect(intentBody).not.toHaveProperty("file");
+  });
+
+  it("uses content-free private timeline routes and write headers", async () => {
+    const fetcher = jest.fn(async (_input: string, _init?: RequestInit) => response(200, {}));
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
+
+    await api.listPrivateTimeline("binder/current", "2026-08-10T12:00:00.000Z", 40);
+    await api.linkTimelineSource({
+      familyCircleId: "family-current",
+      caseBinderId: "binder-current",
+      sourceKind: "schedule-event",
+      sourceId: "event-current"
+    }, context);
+
+    expect(fetcher.mock.calls[0]?.[0]).toBe(
+      "https://staging-api.peacepad.test/api/v2/timeline-entries?caseBinderId=binder%2Fcurrent&limit=40&before=2026-08-10T12%3A00%3A00.000Z"
+    );
+    expect(fetcher.mock.calls[1]?.[0]).toBe("https://staging-api.peacepad.test/api/v2/timeline-entries");
+    expect(JSON.parse((fetcher.mock.calls[1]?.[1] as RequestInit).body as string)).toEqual({
+      familyCircleId: "family-current",
+      caseBinderId: "binder-current",
+      sourceKind: "schedule-event",
+      sourceId: "event-current"
+    });
+    expect((fetcher.mock.calls[1]?.[1] as RequestInit).headers).toMatchObject({
+      "Idempotency-Key": context.idempotencyKey,
+      "If-Match": String(context.expectedVersion),
+      "X-PeacePad-Region": context.region
+    });
   });
 
   it("validates an irreversible account-deletion receipt", async () => {

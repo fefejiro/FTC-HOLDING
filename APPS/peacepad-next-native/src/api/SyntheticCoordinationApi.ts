@@ -13,6 +13,7 @@ import {
   type CreateScheduleEventInput,
   type RecordMessageLifecycleInput,
   type MessageSearchResult,
+  type LinkTimelineSourceInput,
   type SendMessageInput,
   type PeacePadCoordinationApi
 } from "./CoordinationApi";
@@ -30,6 +31,7 @@ import {
   type MessageCheckPreference,
   type MessageEvent,
   type ParticipantGrant,
+  type PrivateTimelineEntry,
   type RecordProvenance,
   type ScheduleEvent,
   type VersionedEntity,
@@ -107,6 +109,7 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
   private messageCheckPreferences = new Map<string, MessageCheckPreference>();
   private previewAttempts = 0;
   private binders: CaseBinder[] = [];
+  private timelineEntries: PrivateTimelineEntry[] = [];
 
   constructor(seedInvitations: readonly SeedInvitation[] = []) {
     seedInvitations.forEach((seed) => {
@@ -213,6 +216,44 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
   async declineInvitation(invitationId: EntityId, context: WriteContext): Promise<void> {
     this.assertInvitationVersion(invitationId, context.expectedVersion);
     this.transitionInvitation(invitationId, "used");
+  }
+
+  async listPrivateTimeline(binderId: EntityId): Promise<readonly PrivateTimelineEntry[]> {
+    return this.timelineEntries.filter((entry) => entry.caseBinderId === binderId);
+  }
+
+  async linkTimelineSource(input: LinkTimelineSourceInput, _context: WriteContext): Promise<PrivateTimelineEntry> {
+    this.assertCurrentFamily(input.familyCircleId);
+    const binder = this.binders.find((candidate) => candidate.id === input.caseBinderId && candidate.status === "active");
+    if (!binder) throw new PeacePadApiError("Case Binder not found.", "http", 404);
+    const message = input.sourceKind === "message-event"
+      ? this.messages.find((candidate) => candidate.id === input.sourceId && ["sent", "correction"].includes(candidate.eventType))
+      : undefined;
+    const event = input.sourceKind === "schedule-event" ? this.events.find((candidate) => candidate.id === input.sourceId) : undefined;
+    if (!message && !event) throw new PeacePadApiError("Timeline source not found.", "http", 404);
+    if (this.timelineEntries.some((candidate) => candidate.caseBinderId === input.caseBinderId && candidate.source.sourceId === input.sourceId)) {
+      throw new PeacePadApiError("This source is already linked.", "http", 409);
+    }
+    const entry: PrivateTimelineEntry = {
+      ...versioned(`timeline-${Date.now().toString(36)}`),
+      familyCircleId: input.familyCircleId,
+      ownerIdentityId: "identity-current",
+      caseBinderId: input.caseBinderId,
+      source: message ? {
+        kind: "message-event",
+        sourceId: message.id,
+        eventType: message.eventType === "correction" ? "correction" : "sent",
+        sourceVersion: null
+      } : {
+        kind: "schedule-event",
+        sourceId: event!.id,
+        eventType: event!.eventType,
+        sourceVersion: event!.version
+      },
+      occurredAt: message?.occurredAt ?? event!.startsAt
+    };
+    this.timelineEntries = [...this.timelineEntries, entry];
+    return entry;
   }
 
   async listCaseBinders(familyCircleId: EntityId): Promise<readonly CaseBinder[]> {

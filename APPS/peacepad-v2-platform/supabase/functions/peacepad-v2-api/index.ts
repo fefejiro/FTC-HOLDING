@@ -200,6 +200,7 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     CONVERSATION_ACCESS_DENIED: "CONVERSATION_ACCESS_DENIED",
     CALENDAR_ACCESS_DENIED: "CALENDAR_ACCESS_DENIED",
     CASE_BINDER_ACCESS_DENIED: "FAMILY_ACCESS_DENIED",
+    TIMELINE_SOURCE_ACCESS_DENIED: "FAMILY_ACCESS_DENIED",
     MESSAGE_ACCESS_DENIED: "MESSAGE_ACCESS_DENIED",
     AI_CONSENT_REQUIRED: "AI_CONSENT_REQUIRED",
     INVITATION_EXPIRED: "INVITATION_EXPIRED",
@@ -218,6 +219,7 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     "MESSAGE_EVENT_INVALID", "MESSAGE_SEARCH_INVALID", "POLICY_VERSION_INVALID", "REGION_INVALID",
     "CALENDAR_LAYER_INVALID", "CALENDAR_LAYER_NOT_EMPTY", "SCHEDULE_EVENT_INVALID", "MESSAGE_CHECK_INVALID",
     "CASE_BINDER_INVALID", "ATTACHMENT_INTENT_INVALID", "CASE_BINDER_ARCHIVED",
+    "TIMELINE_REQUEST_INVALID", "TIMELINE_SOURCE_INVALID", "TIMELINE_SOURCE_ALREADY_LINKED",
   ]);
   const safeCode = directCodes[message ?? ""] ?? (invalidRequestCodes.has(message ?? "") ? "INVALID_REQUEST" : "DATABASE_NOT_READY");
   const status = safeCode === "DATABASE_NOT_READY" ? 503
@@ -290,6 +292,7 @@ const writeOperation = (method: string, path: string, body: Record<string, unkno
   if (method === "POST" && path === "/api/v2/case-binders") return "case_binder.created";
   if (method === "PATCH" && /^\/api\/v2\/case-binders\/[^/]+$/.test(path)) return "case_binder.archived";
   if (method === "POST" && path === "/api/v2/attachment-upload-intents") return "attachment_intent.prepared";
+  if (method === "POST" && path === "/api/v2/timeline-entries") return "timeline_entry.linked";
   const invitationTransition = path.match(/^\/api\/v2\/invitations\/[^/]+\/(accept|decline)$/);
   if (method === "POST" && invitationTransition) {
     return invitationTransition[1] === "accept" ? "invitation.accepted" : "invitation.declined";
@@ -631,6 +634,27 @@ const handler = async (request: Request): Promise<Response> => {
     return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data ?? [], requestId, config);
   }
 
+  if (request.method === "GET" && path === "/api/v2/timeline-entries") {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
+    const query = new URL(request.url).searchParams;
+    const binderId = query.get("caseBinderId")?.trim() ?? "";
+    const before = query.get("before")?.trim() || null;
+    const limit = Number(query.get("limit")?.trim() ?? "50");
+    if (!isUuid(binderId) || (before !== null && Number.isNaN(Date.parse(before)))
+      || !Number.isInteger(limit) || limit < 1 || limit > 100) {
+      return failure(request, 400, "INVALID_REQUEST", "Timeline request details are invalid.", requestId, config);
+    }
+    const { data, error } = await authenticated.admin.rpc("peacepad_v2_list_private_timeline", {
+      p_identity_id: authenticated.user.id,
+      p_region: config.region,
+      p_case_binder_id: binderId,
+      p_before: before,
+      p_limit: limit,
+    });
+    return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data ?? [], requestId, config);
+  }
+
   const isInvitationTransition = /^\/api\/v2\/invitations\/[^/]+\/(accept|decline)$/.test(path);
   const isInvitationRevocation = /^\/api\/v2\/invitations\/[^/]+$/.test(path);
   const isAccountDeletion = path === "/api/v2/account";
@@ -646,13 +670,14 @@ const handler = async (request: Request): Promise<Response> => {
   const isCaseBinderCreation = path === "/api/v2/case-binders";
   const caseBinderMatch = path.match(/^\/api\/v2\/case-binders\/([^/]+)$/);
   const isAttachmentIntentCreation = path === "/api/v2/attachment-upload-intents";
+  const isTimelineEntryCreation = path === "/api/v2/timeline-entries";
   if (
     (request.method === "POST" && ([
       "/api/v2/session/bootstrap",
       "/api/v2/consents",
       "/api/v2/families",
       "/api/v2/invitations",
-    ].includes(path) || isInvitationTransition || isConversationCreation || isMessageSend || isMessageLifecycle || isMessageCorrection || isCalendarLayerCreation || isScheduleEventCreation || isCaseBinderCreation || isAttachmentIntentCreation)) ||
+    ].includes(path) || isInvitationTransition || isConversationCreation || isMessageSend || isMessageLifecycle || isMessageCorrection || isCalendarLayerCreation || isScheduleEventCreation || isCaseBinderCreation || isAttachmentIntentCreation || isTimelineEntryCreation)) ||
     (request.method === "PATCH" && (calendarLayerMatch || scheduleEventMatch || caseBinderMatch)) ||
     isMessageCheckUpdate ||
     (request.method === "DELETE" && (isInvitationRevocation || isAccountDeletion || calendarLayerMatch || scheduleEventMatch))
@@ -926,6 +951,29 @@ const handler = async (request: Request): Promise<Response> => {
         p_case_binder_id: binderId, p_original_file_name: originalFileName,
         p_media_type: mediaType, p_byte_length: byteLength,
         p_idempotency_key: databaseWriteToken, p_schema_version: context.schemaVersion,
+      });
+      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 201, data, requestId, config);
+    }
+
+    if (isTimelineEntryCreation) {
+      const familyId = typeof body.familyCircleId === "string" ? body.familyCircleId : "";
+      const binderId = typeof body.caseBinderId === "string" ? body.caseBinderId : "";
+      const sourceKind = typeof body.sourceKind === "string" ? body.sourceKind : "";
+      const sourceId = typeof body.sourceId === "string" ? body.sourceId : "";
+      if (!isUuid(familyId) || !isUuid(binderId) || !isUuid(sourceId)
+        || !["message-event", "schedule-event"].includes(sourceKind)
+        || Object.keys(body).some((key) => !["familyCircleId", "caseBinderId", "sourceKind", "sourceId"].includes(key))) {
+        return failure(request, 400, "INVALID_REQUEST", "Timeline source details are invalid.", requestId, config);
+      }
+      const { data, error } = await authenticated.admin.rpc("peacepad_v2_link_timeline_source", {
+        p_identity_id: authenticated.user.id,
+        p_region: config.region,
+        p_family_id: familyId,
+        p_case_binder_id: binderId,
+        p_source_kind: sourceKind,
+        p_source_id: sourceId,
+        p_idempotency_key: databaseWriteToken,
+        p_schema_version: context.schemaVersion,
       });
       return error ? rpcFailure(request, requestId, config, error.message) : json(request, 201, data, requestId, config);
     }
