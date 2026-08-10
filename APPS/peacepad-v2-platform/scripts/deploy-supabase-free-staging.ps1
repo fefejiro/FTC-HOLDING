@@ -53,7 +53,7 @@ if (-not $SkipDeploy) {
   if ($visibleProject.Count -ne 1) {
     throw "The authenticated Supabase CLI identity cannot see the approved $Region project. No mutation was attempted."
   }
-  if ($visibleProject[0].database.region -ne $expected.DatabaseRegion) {
+  if ($visibleProject[0].region -ne $expected.DatabaseRegion) {
     throw "The approved project is visible in an unexpected database region. No mutation was attempted."
   }
   $maintenanceSecret = [Environment]::GetEnvironmentVariable('PEACEPAD_MAINTENANCE_SECRET')

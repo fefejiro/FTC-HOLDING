@@ -239,6 +239,7 @@ foreach ($pattern in @(
   "FunctionRegion = 'us-east-1'",
   "DatabaseRegion = 'us-east-2'",
   "'projects', 'list', '--output', 'json'",
+  '\$visibleProject\[0\]\.region',
   'cannot see the approved',
   "GetEnvironmentVariable\('PEACEPAD_MAINTENANCE_SECRET'\)",
   'PEACEPAD_MAINTENANCE_SECRET=\$maintenanceSecret',
@@ -248,6 +249,9 @@ foreach ($pattern in @(
   if ($deployRunner -notmatch $pattern) {
     throw "Supabase deployment runner is missing a fail-closed boundary: $pattern"
   }
+}
+if ($deployRunner -match '\$visibleProject\[0\]\.database\.region') {
+  throw 'Supabase deployment runner still reads the obsolete nested CLI project region field.'
 }
 foreach ($historicalRef in @('ftdqnhlesqrkstnqgfxr', 'kgechdqdtryktfahyqez')) {
   if ($deployRunner -match $historicalRef) {
