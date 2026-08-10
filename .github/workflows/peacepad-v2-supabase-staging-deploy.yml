@@ -79,7 +79,7 @@ jobs:
           SELECTED_REF: ${{ github.ref_name }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $projects = @{ ca = 'ftdqnhlesqrkstnqgfxr'; us = 'kgechdqdtryktfahyqez' }
+          $projects = @{ ca = 'rohvkyuxbnqzglaromms'; us = 'spmpndalcvwmygznihec' }
           if ($env:SELECTED_REF -cne 'main') {
             throw 'The registered deployment control must be dispatched from main.'
           }
@@ -122,8 +122,8 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $expected = @{
-            ca = @{ ref = 'ftdqnhlesqrkstnqgfxr'; databaseRegion = 'ca-central-1' }
-            us = @{ ref = 'kgechdqdtryktfahyqez'; databaseRegion = 'us-east-2' }
+            ca = @{ ref = 'rohvkyuxbnqzglaromms'; databaseRegion = 'ca-central-1' }
+            us = @{ ref = 'spmpndalcvwmygznihec'; databaseRegion = 'us-east-2' }
           }
           if ([string]::IsNullOrWhiteSpace($env:SUPABASE_ACCESS_TOKEN)) {
             throw 'SUPABASE_ACCESS_TOKEN is not configured in the protected regional environment.'
@@ -166,7 +166,7 @@ jobs:
           REQUESTED_REGION: ${{ inputs.region }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $projects = @{ ca = 'ftdqnhlesqrkstnqgfxr'; us = 'kgechdqdtryktfahyqez' }
+          $projects = @{ ca = 'rohvkyuxbnqzglaromms'; us = 'spmpndalcvwmygznihec' }
           $functionRegions = @{ ca = 'ca-central-1'; us = 'us-east-1' }
           if ([string]::IsNullOrWhiteSpace($env:PEACEPAD_MAINTENANCE_SECRET) -or $env:PEACEPAD_MAINTENANCE_SECRET.Length -lt 32) {
             throw 'MAINTENANCE_SECRET is missing or too short.'
@@ -188,7 +188,7 @@ jobs:
           REQUESTED_REGION: ${{ inputs.region }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $projects = @{ ca = 'ftdqnhlesqrkstnqgfxr'; us = 'kgechdqdtryktfahyqez' }
+          $projects = @{ ca = 'rohvkyuxbnqzglaromms'; us = 'spmpndalcvwmygznihec' }
           $functionRegions = @{ ca = 'ca-central-1'; us = 'us-east-1' }
           $wrongRegions = @{ ca = 'us'; us = 'ca' }
           $baseUrl = "https://$($projects[$env:REQUESTED_REGION]).supabase.co/functions/v1/peacepad-v2-api"
@@ -221,7 +221,7 @@ jobs:
           JOB_STATUS: ${{ job.status }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $projects = @{ ca = 'ftdqnhlesqrkstnqgfxr'; us = 'kgechdqdtryktfahyqez' }
+          $projects = @{ ca = 'rohvkyuxbnqzglaromms'; us = 'spmpndalcvwmygznihec' }
           $migrationRoot = 'peacepad-v2-target/APPS/peacepad-v2-platform/supabase/migrations'
           $edgeFunctionPath = 'peacepad-v2-target/APPS/peacepad-v2-platform/supabase/functions/peacepad-v2-api/index.ts'
           $migrationFiles = if (Test-Path -LiteralPath $migrationRoot) { @(Get-ChildItem "$migrationRoot/*.sql" | Sort-Object Name) } else { @() }
