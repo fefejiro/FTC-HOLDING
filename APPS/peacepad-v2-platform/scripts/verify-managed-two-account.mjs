@@ -134,6 +134,9 @@ const evidence = {
   changedReplayDenied: false,
   invitationAccepted: false,
   messageDelivered: false,
+  messageCheck: false,
+  sharedCalendar: false,
+  privateRecords: false,
   callLifecycle: false,
   postEndSignalDenied: false,
   accountDeletion: false,
@@ -223,6 +226,94 @@ try {
   }, "message-viewed");
   evidence.messageDelivered = true;
 
+  const defaultMessageCheck = await api(accounts[1], `/api/v2/conversations/${encodeURIComponent(conversationId)}/message-check`);
+  if (defaultMessageCheck.payload?.enabled !== false || defaultMessageCheck.payload?.aiAssistanceEnabled !== false
+    || defaultMessageCheck.payload?.version !== 0) {
+    throw new Error("Default-off Message Check receipt was invalid.");
+  }
+  const enabledMessageCheck = await api(accounts[1], `/api/v2/conversations/${encodeURIComponent(conversationId)}/message-check`, {
+    method: "PUT",
+    body: { enabled: true, aiAssistanceEnabled: false },
+    key: "message-check-enable",
+    version: 0,
+    expected: [200],
+  });
+  if (enabledMessageCheck.payload?.enabled !== true || enabledMessageCheck.payload?.aiAssistanceEnabled !== false) {
+    throw new Error("Message Check opt-in receipt was invalid.");
+  }
+  const messagePreview = await api(accounts[1], "/api/v2/message-previews", {
+    method: "POST",
+    body: { conversationId, content: "Please confirm the fictional pickup time." },
+    expected: [200],
+  });
+  if (messagePreview.payload?.originalMessage !== "Please confirm the fictional pickup time." || typeof messagePreview.payload?.tone !== "string") {
+    throw new Error("Authorized Message Check preview receipt was invalid.");
+  }
+  evidence.messageCheck = true;
+
+  const layer = await write(accounts[0], "/api/v2/calendar-layers", {
+    familyCircleId: familyId,
+    name: `Fictional shared schedule ${runId}`,
+    kind: "events-activities",
+    icon: "calendar",
+    colorToken: "violet",
+    visibility: { scope: "family" },
+  }, "calendar-layer-create");
+  const layerId = layer.payload?.id;
+  if (typeof layerId !== "string" || !Number.isInteger(layer.payload?.version)) throw new Error("Calendar layer receipt was invalid.");
+  const event = await write(accounts[0], "/api/v2/schedule-events", {
+    familyCircleId: familyId,
+    calendarLayerId: layerId,
+    childProfileIds: [],
+    eventType: "appointment",
+    title: `Fictional managed appointment ${runId}`,
+    description: null,
+    startsAt: "2026-09-01T15:00:00.000Z",
+    endsAt: "2026-09-01T16:00:00.000Z",
+    status: "planned",
+    recurrence: null,
+    visibilityOverride: null,
+  }, "calendar-event-create");
+  const eventId = event.payload?.id;
+  const visibleEvents = await api(accounts[1], `/api/v2/schedule-events?familyCircleId=${encodeURIComponent(familyId)}`);
+  if (typeof eventId !== "string" || !Array.isArray(visibleEvents.payload) || !visibleEvents.payload.some((item) => item.id === eventId)) {
+    throw new Error("Shared Calendar visibility receipt was invalid.");
+  }
+  evidence.sharedCalendar = true;
+
+  const binder = await write(accounts[0], "/api/v2/case-binders", {
+    familyCircleId: familyId,
+    name: `Fictional private records ${runId}`,
+    childLabel: "Child F",
+  }, "case-binder-create");
+  const binderId = binder.payload?.id;
+  if (typeof binderId !== "string" || !Number.isInteger(binder.payload?.version)) throw new Error("Private Case Binder receipt was invalid.");
+  const otherBinders = await api(accounts[1], `/api/v2/case-binders?familyCircleId=${encodeURIComponent(familyId)}`);
+  if (!Array.isArray(otherBinders.payload) || otherBinders.payload.some((item) => item.id === binderId)) {
+    throw new Error("Private Case Binder was visible to the other family participant.");
+  }
+  const attachment = await write(accounts[0], "/api/v2/attachment-upload-intents", {
+    familyCircleId: familyId,
+    target: { kind: "private-binder", binderId },
+    originalFileName: "fictional-note.txt",
+    mediaType: "text/plain",
+    byteLength: 128,
+  }, "attachment-intent-create");
+  if (attachment.payload?.uploadTransport !== "disabled" || attachment.payload?.uploadUrl !== null) {
+    throw new Error("Metadata-only attachment boundary receipt was invalid.");
+  }
+  const timelineEntry = await write(accounts[0], "/api/v2/timeline-entries", {
+    familyCircleId: familyId,
+    caseBinderId: binderId,
+    sourceKind: "message-event",
+    sourceId: messageId,
+  }, "timeline-entry-create");
+  const serializedTimelineEntry = JSON.stringify(timelineEntry.payload);
+  if (timelineEntry.payload?.source?.sourceId !== messageId || serializedTimelineEntry.includes(`Fictional managed message ${runId}`)) {
+    throw new Error("Metadata-only private timeline receipt was invalid.");
+  }
+  evidence.privateRecords = true;
+
   const createdCall = await write(accounts[0], "/api/v2/calls", { conversationId }, "call-create");
   const callId = createdCall.payload?.id;
   const callVersion = createdCall.payload?.version;
@@ -242,16 +333,25 @@ try {
   if (!deniedSignal.payload?.error?.code) throw new Error("Post-end signaling denial receipt was invalid.");
   evidence.postEndSignalDenied = true;
 
-  for (const account of [...accounts].reverse()) {
-    const deletion = await api(account, "/api/v2/account", {
-      method: "DELETE",
-      key: `delete-${account === accounts[0] ? "a" : "b"}`,
-      version: account.version,
-      expected: [200],
-    });
-    if (deletion.payload?.status !== "deleted" || deletion.payload?.identityId !== account.id) throw new Error("Account deletion receipt was invalid.");
-    account.deleted = true;
+  const ownerDeletion = await api(accounts[0], "/api/v2/account", {
+    method: "DELETE", key: "delete-a", version: accounts[0].version, expected: [200],
+  });
+  if (ownerDeletion.payload?.status !== "deleted" || ownerDeletion.payload?.identityId !== accounts[0].id) {
+    throw new Error("Owner account deletion receipt was invalid.");
   }
+  accounts[0].deleted = true;
+
+  const removedOwnerBinders = await api(accounts[1], `/api/v2/case-binders?familyCircleId=${encodeURIComponent(familyId)}`);
+  if (!Array.isArray(removedOwnerBinders.payload) || removedOwnerBinders.payload.some((item) => item.id === binderId)) {
+    throw new Error("Deleted-owner private records cleanup receipt was invalid.");
+  }
+  const participantDeletion = await api(accounts[1], "/api/v2/account", {
+    method: "DELETE", key: "delete-b", version: accounts[1].version, expected: [200],
+  });
+  if (participantDeletion.payload?.status !== "deleted" || participantDeletion.payload?.identityId !== accounts[1].id) {
+    throw new Error("Participant account deletion receipt was invalid.");
+  }
+  accounts[1].deleted = true;
   evidence.accountDeletion = true;
 
   for (const account of accounts) {
