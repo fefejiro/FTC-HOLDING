@@ -1,0 +1,41 @@
+name: Copilot Portfolio Maintenance
+
+on:
+  schedule:
+    # One bounded lane per weekday at 05:20 UTC. GitHub schedules use UTC.
+    - cron: '20 5 * * 1-4'
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: Maintenance lane
+        required: true
+        default: security
+        type: choice
+        options:
+          - security
+          - language
+          - documentation
+          - general
+
+concurrency:
+  group: copilot-portfolio-maintenance
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  seed-and-assign:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Create one deduplicated maintenance task and assign Copilot
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MAINTENANCE_LANE: ${{ inputs.lane }}
+        run: node scripts/seed-copilot-maintenance.mjs
