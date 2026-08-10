@@ -36,15 +36,16 @@ historical #172 baseline plus explicitly labelled successor evidence.
 | Supabase Canada/U.S. free staging boundary | LOCAL VERIFIED |
 | Supabase Canadian regional project and boundary schema | DEPLOYED STAGING VERIFIED |
 | Supabase U.S. regional project and boundary schema | DEPLOYED STAGING VERIFIED |
-| Supabase regional API adapters | HOSTED VERIFIED / DEPLOYMENT BLOCKED BY PROJECT ROLE |
-| Supabase atomic identity/consent/family/invitation transactions | HOSTED VERIFIED / DEPLOYMENT BLOCKED BY PROJECT ROLE |
-| Supabase persisted messaging, calendar, and Message Check transactions | HOSTED VERIFIED / DEPLOYMENT BLOCKED BY DEPLOYMENT IDENTITY |
-| Authenticated Supabase native runtime and family onboarding | HOSTED VERIFIED / DEPLOYMENT BLOCKED BY PROJECT ROLE |
-| Versioned account deletion and local session invalidation | HOSTED VERIFIED / DEPLOYMENT BLOCKED BY PROJECT ROLE |
-| Decoupled Auth identity and durable cleanup outbox | HOSTED VERIFIED / DEPLOYMENT BLOCKED BY PROJECT ROLE |
-| Deleted-account invitation and regional metadata minimization | HOSTED VERIFIED / DEPLOYMENT BLOCKED BY PROJECT ROLE |
+| Supabase regional API adapters | HOSTED VERIFIED / DEPLOYMENT CREDENTIALS BLOCKED |
+| Supabase atomic identity/consent/family/invitation transactions | HOSTED VERIFIED / DEPLOYMENT CREDENTIALS BLOCKED |
+| Supabase persisted messaging, calendar, and Message Check transactions | HOSTED VERIFIED / DEPLOYMENT CREDENTIALS BLOCKED |
+| Authenticated Supabase native runtime and family onboarding | HOSTED VERIFIED / DEPLOYMENT CREDENTIALS BLOCKED |
+| Versioned account deletion and local session invalidation | HOSTED VERIFIED / DEPLOYMENT CREDENTIALS BLOCKED |
+| Decoupled Auth identity and durable cleanup outbox | HOSTED VERIFIED / DEPLOYMENT CREDENTIALS BLOCKED |
+| Deleted-account invitation and regional metadata minimization | HOSTED VERIFIED / DEPLOYMENT CREDENTIALS BLOCKED |
 | Connected-member invitation routing | HOSTED VERIFIED for exact active-family selection and atomic accepted-family conversation bootstrap; managed deployment pending |
-| Hosted CI | PeacePad-scoped PASS on PR #177 at `d2a98075a`: native run `31343203497`, infrastructure run `31343203496`. The separate Garden workflow remains outside PeacePad scope |
+| Scheduled same-session message recovery | LOCAL VERIFIED at `984b91318`; hosted checks pending |
+| Hosted CI | PeacePad-scoped PASS on PR #177 at `461f626d2`: native run `31348281497`, infrastructure run `31348281515`. The separate Garden run `31348281500` remains outside PeacePad scope |
 
 This is not a production release. The native client remains a staging/lab
 build with `ca.peacepad.nextnative.lab` and production writes disabled.
