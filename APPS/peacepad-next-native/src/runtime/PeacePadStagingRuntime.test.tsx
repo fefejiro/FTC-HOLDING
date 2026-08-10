@@ -19,7 +19,7 @@ const GRANT = "44444444-4444-4444-8444-444444444444";
 const CONVERSATION = "55555555-5555-4555-8555-555555555555";
 
 const environment = {
-  apiBaseUrl: "https://ftdqnhlesqrkstnqgfxr.supabase.co/functions/v1/peacepad-v2-api",
+  apiBaseUrl: "https://rohvkyuxbnqzglaromms.supabase.co/functions/v1/peacepad-v2-api",
   diagnosticsEnabled: false,
   environment: "staging" as const,
   productionApiWritesEnabled: false as const,
@@ -27,8 +27,8 @@ const environment = {
 };
 const supabase = {
   apiBaseUrl: environment.apiBaseUrl,
-  projectRef: "ftdqnhlesqrkstnqgfxr",
-  projectUrl: "https://ftdqnhlesqrkstnqgfxr.supabase.co",
+  projectRef: "rohvkyuxbnqzglaromms",
+  projectUrl: "https://rohvkyuxbnqzglaromms.supabase.co",
   publishableKey: "sb_publishable_test",
   region: "ca" as const
 };

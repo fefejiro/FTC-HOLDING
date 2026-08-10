@@ -4,8 +4,8 @@
 
 | Data plane | Project | Database region | Edge invocation region |
 | --- | --- | --- | --- |
-| Canada | `peacepad-v2-staging-ca` (`ftdqnhlesqrkstnqgfxr`) | `ca-central-1` | `ca-central-1` |
-| United States | `peacepad-v2-staging-us` (`kgechdqdtryktfahyqez`) | `us-east-2` | `us-east-1` |
+| Canada | `peacepad-v2-staging-ca` (`rohvkyuxbnqzglaromms`) | `ca-central-1` | `ca-central-1` |
+| United States | `peacepad-v2-staging-us` (`spmpndalcvwmygznihec`) | `us-east-2` | `us-east-1` |
 
 The U.S. execution location is the nearest supported Edge Function invocation
 region. It is not a data-residency certification. Both projects contain only
@@ -16,9 +16,28 @@ fictional staging identities and records.
 ```powershell
 ./scripts/validate-supabase-free-staging.ps1
 ./scripts/validate-supabase-edge-function.ps1
-./scripts/deploy-supabase-free-staging.ps1 -Region ca -ProjectRef ftdqnhlesqrkstnqgfxr -FunctionRegion ca-central-1 -SkipDeploy
-./scripts/deploy-supabase-free-staging.ps1 -Region us -ProjectRef kgechdqdtryktfahyqez -FunctionRegion us-east-1 -SkipDeploy
+./scripts/deploy-supabase-free-staging.ps1 -Region ca -ProjectRef rohvkyuxbnqzglaromms -FunctionRegion ca-central-1 -SkipDeploy
+./scripts/deploy-supabase-free-staging.ps1 -Region us -ProjectRef spmpndalcvwmygznihec -FunctionRegion us-east-1 -SkipDeploy
 ```
+
+## 2026-08-10 project rebind and rollback record
+
+| Region | Active approved project | Historical project | Historical state |
+| --- | --- | --- | --- |
+| Canada | `rohvkyuxbnqzglaromms` | `ftdqnhlesqrkstnqgfxr` | Paused, recoverable; historical evidence only |
+| United States | `spmpndalcvwmygznihec` | `kgechdqdtryktfahyqez` | Paused, recoverable; historical evidence only |
+
+This rebind changes repository targeting only. It does not migrate data, apply
+a migration, deploy an Edge Function, prove managed persistence, or promote
+either project to production. Historical verification artifacts retain their
+original project refs and remain evidence only for those earlier projects.
+
+Rollback is an explicit operator decision, never automatic failover: pause all
+staging writes, confirm the intended historical project has been recovered in
+its recorded region, re-verify its schema and fictional-only data boundary,
+restore all active mappings in one reviewed change, and run the protected
+regional dry-run before any deployment. Never copy Canadian data to the U.S.
+project or U.S. data to the Canadian project as part of rollback.
 
 ## Database migration
 
@@ -87,11 +106,11 @@ or screenshots:
 - `MAINTENANCE_SECRET`
 - `IDEMPOTENCY_SECRET`
 
-Distinct `MAINTENANCE_SECRET` values are already configured. The remaining
-required slots are `SUPABASE_ACCESS_TOKEN`, `DATABASE_URL`, and a distinct
-`IDEMPOTENCY_SECRET` in each region. The access token must be able to see the
-approved project ref for that one region. Dispatch from `main` and enter the
-exact reviewed V2 target commit SHA.
+All four required secret slots exist independently in each protected regional
+environment. Their values are not repository evidence and must not be printed
+or copied into logs. The access token used by a run must be able to see the
+active approved project ref for that one region. Dispatch from `main` and enter
+the exact reviewed V2 target commit SHA.
 A real deployment additionally requires the exact confirmation `DEPLOY
 FICTIONAL STAGING`. The workflow dry-runs migrations before any apply, deploys
 only the staging Edge Function, and then verifies health, readiness,
@@ -137,26 +156,24 @@ empty schema. Capture the project ref, region, reviewed commit, migration
 hashes, and post-reset contract result. This procedure must refuse production
 identifiers and must never be used against V1 or real family data.
 
-## Last verified access blocker (2026-08-09)
+## Current managed-execution boundary (2026-08-10)
 
-The previously authenticated Supabase CLI token could not see either approved
-regional staging project. The current workstation could not re-check that
-operator identity on 2026-08-10 because the Supabase CLI is unavailable. The
-protected environments do not yet have a usable Supabase access token,
-database URLs, or request-bound idempotency secrets. Pending migrations and
-the Edge Function are therefore
-**BLOCKED BY DEPLOYMENT IDENTITY**, not reported as deployed. Hosted CI applies
+The replacement regional projects are reported `ACTIVE_HEALTHY` under the
+company Supabase organization, and all four protected environment secret slots
+exist for each region. No protected dry-run or deployment has yet executed
+against either replacement project. Pending migrations and the Edge Function
+are therefore **NOT DEPLOYED**, and managed-project persistence is not claimed.
+Hosted CI applies
 every migration twice to an isolated PostgreSQL 16 service and verifies the
 fictional invitation, messaging, correction, receipt, search, deletion, and
 access-revocation journey. That is hosted database proof, not managed-project
 execution. The protected workflow and both regional environments are now
 registered. Their main-only branch policies and required reviewer are
-verified, and each environment has a distinct maintenance secret. Managed
-deployment remains blocked on the regional `SUPABASE_ACCESS_TOKEN`,
-`DATABASE_URL`, and new `IDEMPOTENCY_SECRET` slots for Canada and the United
-States. One access token may be shared if it can see both approved projects;
-the database URLs and idempotency secrets remain regional. Resolve by granting a dedicated
-deployment identity access to both projects and adding those values privately.
+verified. The next authorized action is a one-region-at-a-time protected dry
+run using the exact reviewed commit and active project ref; deployment still
+requires separate explicit confirmation. One access token may be shared if it
+can see both active approved projects; database URLs, maintenance secrets, and
+idempotency secrets remain regional.
 Do not share passwords, database URLs, maintenance secrets, or service-role
 keys in chat.
 

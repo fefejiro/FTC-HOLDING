@@ -3,8 +3,8 @@ import type { PeacePadEnvironmentConfig } from "../config/environment";
 import type { AccessTokenProvider } from "../api/CoordinationApi";
 
 const APPROVED_SUPABASE_API_HOSTS = new Set([
-  "ftdqnhlesqrkstnqgfxr.supabase.co",
-  "kgechdqdtryktfahyqez.supabase.co"
+  "rohvkyuxbnqzglaromms.supabase.co",
+  "spmpndalcvwmygznihec.supabase.co"
 ]);
 
 /** Creates the existing v2 coordination client with a fictional staging token. */

@@ -27,8 +27,8 @@ declare const process: {
 const DEFAULT_LAB_API_URL = "http://127.0.0.1:8787";
 const PRODUCTION_API_HOST = /^https:\/\/api\.peacepad\.ca(?:\/|$)/i;
 const STAGING_PROJECTS: Record<PeacePadStagingRegion, string> = {
-  ca: "ftdqnhlesqrkstnqgfxr",
-  us: "kgechdqdtryktfahyqez"
+  ca: "rohvkyuxbnqzglaromms",
+  us: "spmpndalcvwmygznihec"
 };
 
 function trimTrailingSlash(value: string): string {

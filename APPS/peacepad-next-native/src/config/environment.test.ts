@@ -61,15 +61,15 @@ describe("resolveSupabaseStagingConfig", () => {
   const ca = {
     EXPO_PUBLIC_PEACEPAD_ENV: "staging",
     EXPO_PUBLIC_PEACEPAD_REGION: "ca",
-    EXPO_PUBLIC_PEACEPAD_SUPABASE_URL: "https://ftdqnhlesqrkstnqgfxr.supabase.co",
-    EXPO_PUBLIC_PEACEPAD_API_BASE_URL: "https://ftdqnhlesqrkstnqgfxr.supabase.co/functions/v1/peacepad-v2-api",
+    EXPO_PUBLIC_PEACEPAD_SUPABASE_URL: "https://rohvkyuxbnqzglaromms.supabase.co",
+    EXPO_PUBLIC_PEACEPAD_API_BASE_URL: "https://rohvkyuxbnqzglaromms.supabase.co/functions/v1/peacepad-v2-api",
     EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_fictional"
   };
 
   it("accepts only the exact Canadian project for a Canadian build", () => {
     expect(resolveSupabaseStagingConfig(ca)).toMatchObject({
       region: "ca",
-      projectRef: "ftdqnhlesqrkstnqgfxr"
+      projectRef: "rohvkyuxbnqzglaromms"
     });
   });
 
@@ -77,9 +77,9 @@ describe("resolveSupabaseStagingConfig", () => {
     expect(resolveSupabaseStagingConfig({
       ...ca,
       EXPO_PUBLIC_PEACEPAD_REGION: "us",
-      EXPO_PUBLIC_PEACEPAD_SUPABASE_URL: "https://kgechdqdtryktfahyqez.supabase.co",
-      EXPO_PUBLIC_PEACEPAD_API_BASE_URL: "https://kgechdqdtryktfahyqez.supabase.co/functions/v1/peacepad-v2-api"
-    })).toMatchObject({ region: "us", projectRef: "kgechdqdtryktfahyqez" });
+      EXPO_PUBLIC_PEACEPAD_SUPABASE_URL: "https://spmpndalcvwmygznihec.supabase.co",
+      EXPO_PUBLIC_PEACEPAD_API_BASE_URL: "https://spmpndalcvwmygznihec.supabase.co/functions/v1/peacepad-v2-api"
+    })).toMatchObject({ region: "us", projectRef: "spmpndalcvwmygznihec" });
   });
 
   it("rejects project swapping, non-staging use, and service-role material", () => {
@@ -87,5 +87,19 @@ describe("resolveSupabaseStagingConfig", () => {
     expect(() => resolveSupabaseStagingConfig({ ...ca, EXPO_PUBLIC_PEACEPAD_ENV: "lab" })).toThrow("only in staging");
     expect(() => resolveSupabaseStagingConfig({ ...ca, EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY: "service_role_secret" })).toThrow("secret and legacy JWT keys are prohibited");
     expect(() => resolveSupabaseStagingConfig({ ...ca, EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY: "ey.a.b" })).toThrow("legacy JWT keys are prohibited");
+  });
+
+  it("rejects the paused historical project refs", () => {
+    expect(() => resolveSupabaseStagingConfig({
+      ...ca,
+      EXPO_PUBLIC_PEACEPAD_SUPABASE_URL: "https://ftdqnhlesqrkstnqgfxr.supabase.co",
+      EXPO_PUBLIC_PEACEPAD_API_BASE_URL: "https://ftdqnhlesqrkstnqgfxr.supabase.co/functions/v1/peacepad-v2-api"
+    })).toThrow("exact approved Supabase project");
+    expect(() => resolveSupabaseStagingConfig({
+      ...ca,
+      EXPO_PUBLIC_PEACEPAD_REGION: "us",
+      EXPO_PUBLIC_PEACEPAD_SUPABASE_URL: "https://kgechdqdtryktfahyqez.supabase.co",
+      EXPO_PUBLIC_PEACEPAD_API_BASE_URL: "https://kgechdqdtryktfahyqez.supabase.co/functions/v1/peacepad-v2-api"
+    })).toThrow("exact approved Supabase project");
   });
 });

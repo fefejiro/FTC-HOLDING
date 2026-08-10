@@ -233,8 +233,8 @@ foreach ($pattern in @('MAINTENANCE_SECRET', 'internal/v2/auth-cleanup/run', 'Ti
   }
 }
 foreach ($pattern in @(
-  'ftdqnhlesqrkstnqgfxr',
-  'kgechdqdtryktfahyqez',
+  'rohvkyuxbnqzglaromms',
+  'spmpndalcvwmygznihec',
   "FunctionRegion = 'ca-central-1'",
   "FunctionRegion = 'us-east-1'",
   "DatabaseRegion = 'us-east-2'",
@@ -247,6 +247,11 @@ foreach ($pattern in @(
 )) {
   if ($deployRunner -notmatch $pattern) {
     throw "Supabase deployment runner is missing a fail-closed boundary: $pattern"
+  }
+}
+foreach ($historicalRef in @('ftdqnhlesqrkstnqgfxr', 'kgechdqdtryktfahyqez')) {
+  if ($deployRunner -match $historicalRef) {
+    throw "Active deployment runner still references paused historical project: $historicalRef"
   }
 }
 foreach ($pattern in @(
