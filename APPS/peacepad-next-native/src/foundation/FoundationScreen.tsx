@@ -26,6 +26,7 @@ import {
   type GuestSessionStore
 } from "../session/secureGuestSession";
 import { colors, spacing, typography } from "../theme";
+import { useOptionalLocalization } from "../localization/LocalizationProvider";
 
 type FoundationPhase = "welcome" | "account" | "consent" | "compose";
 type AsyncState = "idle" | "loading" | "ready";
@@ -44,9 +45,9 @@ const initialConsent: ConsentPreferences = {
 
 const defaultApi = new PeacePadApiClient(environmentConfig);
 
-function friendlyError(error: unknown): string {
+function friendlyError(error: unknown, fallback: string): string {
   if (error instanceof PeacePadApiError) return error.message;
-  return "PeacePad could not complete that request. Try again.";
+  return fallback;
 }
 
 export function FoundationScreen({
@@ -54,6 +55,7 @@ export function FoundationScreen({
   sessionStore = secureGuestSessionStore,
   onOpenLab
 }: Props) {
+  const { t } = useOptionalLocalization();
   const [phase, setPhase] = useState<FoundationPhase>("welcome");
   const [consent, setConsent] = useState<ConsentPreferences>(initialConsent);
   const [sessionState, setSessionState] = useState<AsyncState>("idle");
@@ -93,13 +95,13 @@ export function FoundationScreen({
         );
         if (!active) return;
         setPhase("compose");
-        setSessionMessage("Your private guest session was restored on this device.");
+        setSessionMessage(t("foundation.restored"));
         setSessionState("ready");
       })
       .catch(async (error) => {
         await sessionStore.clear().catch(() => undefined);
         if (!active) return;
-        setSessionMessage(friendlyError(error));
+        setSessionMessage(friendlyError(error, t("foundation.requestError")));
         setSessionState("idle");
         setPhase("welcome");
       });
@@ -112,15 +114,15 @@ export function FoundationScreen({
   const statusLabel = useMemo(
     () =>
       environmentConfig.environment === "staging"
-        ? "Connected securely"
+        ? t("foundation.secure")
         : "PeacePad",
-    []
+    [t]
   );
 
   async function startGuestSession() {
     if (!requiredConsentAccepted) {
       setSessionMessage(
-        "Accept the Terms and acknowledge the Privacy Policy first."
+        t("foundation.requiredConsent")
       );
       return;
     }
@@ -135,10 +137,10 @@ export function FoundationScreen({
       await sessionStore.save(createStoredGuestSession(response, consent));
       setPhase("compose");
       setSessionState("ready");
-      setSessionMessage("Guest session ready. AI processing remains optional.");
+      setSessionMessage(t("foundation.guestReady"));
     } catch (error) {
       setSessionState("idle");
-      setSessionMessage(friendlyError(error));
+      setSessionMessage(friendlyError(error, t("foundation.requestError")));
     }
   }
 
@@ -152,7 +154,7 @@ export function FoundationScreen({
       setPreviewState("ready");
     } catch (error) {
       setPreviewState("idle");
-      setPreviewError(friendlyError(error));
+      setPreviewError(friendlyError(error, t("foundation.requestError")));
     }
   }
 
@@ -161,16 +163,16 @@ export function FoundationScreen({
     setConsent(initialConsent);
     setPreview(null);
     setPreviewError(null);
-    setSessionMessage("This device session was cleared.");
+    setSessionMessage(t("foundation.sessionCleared"));
     setSessionState("idle");
     setPhase("welcome");
   }
 
   if (sessionState === "loading" && phase === "welcome") {
     return (
-      <View style={styles.centered} accessibilityLabel="Restoring PeacePad session">
+      <View style={styles.centered} accessibilityLabel={t("foundation.restoring")}>
         <ActivityIndicator color={colors.brand} />
-        <Text style={styles.muted}>Checking this device for a saved session…</Text>
+        <Text style={styles.muted}>{t("foundation.checkingDevice")}</Text>
       </View>
     );
   }
@@ -179,7 +181,7 @@ export function FoundationScreen({
     <View style={styles.page}>
       <View style={styles.brandRow}>
         <Image
-          accessibilityLabel="PeacePad conch logo"
+          accessibilityLabel={t("foundation.logo")}
           source={require("./peacepad-conch.png")}
           style={styles.conchMark}
         />
@@ -192,19 +194,18 @@ export function FoundationScreen({
       {phase === "welcome" ? (
         <View style={styles.card}>
           <AccessibleHeading style={styles.title}>
-            A calmer way through hard co-parenting moments.
+            {t("foundation.welcomeTitle")}
           </AccessibleHeading>
           <Text style={styles.body}>
-            Pause before you send, check how a message may land, and choose a
-            clearer next step.
+            {t("foundation.welcomeBody")}
           </Text>
-          <PrimaryButton label="Try PeacePad" onPress={() => setPhase("consent")} />
+          <PrimaryButton label={t("foundation.try")} onPress={() => setPhase("consent")} />
           <SecondaryButton
-            label="Existing account"
+            label={t("foundation.existing")}
             onPress={() => setPhase("account")}
           />
           <SecondaryButton
-            label="Continue to PeacePad"
+            label={t("foundation.continue")}
             onPress={onOpenLab ?? (() => undefined)}
           />
           <LegalLinks />
@@ -213,24 +214,19 @@ export function FoundationScreen({
 
       {phase === "account" ? (
         <View style={styles.card}>
-          <Text style={styles.heading}>Existing account</Text>
-          <Text style={styles.body}>
-            Account sign-in is not available yet.
-          </Text>
-          <SecondaryButton label="Back to welcome" onPress={() => setPhase("welcome")} />
+          <Text style={styles.heading}>{t("foundation.existing")}</Text>
+          <Text style={styles.body}>{t("foundation.accountUnavailable")}</Text>
+          <SecondaryButton label={t("foundation.backWelcome")} onPress={() => setPhase("welcome")} />
           <LegalLinks />
         </View>
       ) : null}
 
       {phase === "consent" ? (
         <View style={styles.card}>
-          <Text style={styles.heading}>Your choices come first</Text>
-          <Text style={styles.body}>
-            Opening this screen creates no account or guest session. Required
-            consent is stored only after the server creates your guest session.
-          </Text>
+          <Text style={styles.heading}>{t("foundation.consentTitle")}</Text>
+          <Text style={styles.body}>{t("foundation.consentBody")}</Text>
           <ConsentToggle
-            label="I agree to the Terms"
+            label={t("foundation.termsConsent")}
             checked={consent.termsAccepted}
             onPress={() =>
               setConsent((current) => ({
@@ -240,7 +236,7 @@ export function FoundationScreen({
             }
           />
           <ConsentToggle
-            label="I acknowledge the Privacy Policy"
+            label={t("foundation.privacyConsent")}
             checked={consent.privacyAcknowledged}
             onPress={() =>
               setConsent((current) => ({
@@ -250,8 +246,8 @@ export function FoundationScreen({
             }
           />
           <ConsentToggle
-            label="Optional AI-assisted rewrites"
-            description="Off by default. Rule-based tone preview works without it."
+            label={t("foundation.aiConsent")}
+            description={t("foundation.aiConsentBody")}
             checked={consent.aiMessageConsent}
             onPress={() =>
               setConsent((current) => ({
@@ -261,11 +257,11 @@ export function FoundationScreen({
             }
           />
           <PrimaryButton
-            label={sessionState === "loading" ? "Starting…" : "Continue as guest"}
+            label={sessionState === "loading" ? t("foundation.starting") : t("foundation.continueGuest")}
             onPress={startGuestSession}
             disabled={!requiredConsentAccepted || sessionState === "loading"}
           />
-          <SecondaryButton label="Back" onPress={() => setPhase("welcome")} />
+          <SecondaryButton label={t("foundation.back")} onPress={() => setPhase("welcome")} />
           <LegalLinks />
         </View>
       ) : null}
@@ -404,16 +400,17 @@ function SecondaryButton({ label, onPress }: { label: string; onPress: () => voi
 }
 
 function LegalLinks() {
+  const { t } = useOptionalLocalization();
   return (
     <View style={styles.legalRow}>
       <Text style={styles.link} onPress={() => Linking.openURL("https://peacepad.ca/privacy")}>
-        Privacy
+        {t("foundation.privacy")}
       </Text>
       <Text style={styles.link} onPress={() => Linking.openURL("https://peacepad.ca/terms")}>
-        Terms
+        {t("foundation.terms")}
       </Text>
       <Text style={styles.link} onPress={() => Linking.openURL("https://peacepad.ca/support")}>
-        Support
+        {t("foundation.support")}
       </Text>
     </View>
   );

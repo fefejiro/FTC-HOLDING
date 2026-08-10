@@ -34,6 +34,25 @@ const messages = {
     "invite.permissionMessages": "Messages", "invite.permissionCalendar": "Calendar", "invite.permissionSharedRecords": "Shared records",
     "invite.permissionMessageWrite": "Send messages", "invite.permissionCalendarWrite": "Manage calendar events", "invite.familyBlocked": "This account is already connected to a family. Family switching is not available yet, so this invitation cannot be accepted here.",
     "invite.accepted": "Invitation accepted"
+    ,"foundation.restoring": "Restoring PeacePad session", "foundation.checkingDevice": "Checking this device for a saved session...", "foundation.logo": "PeacePad conch logo",
+    "foundation.secure": "Connected securely", "foundation.welcomeTitle": "A calmer way through hard co-parenting moments.",
+    "foundation.welcomeBody": "Pause before you send, check how a message may land, and choose a clearer next step.", "foundation.try": "Try PeacePad",
+    "foundation.existing": "Existing account", "foundation.continue": "Continue to PeacePad", "foundation.accountUnavailable": "Account sign-in is not available yet.",
+    "foundation.backWelcome": "Back to welcome", "foundation.consentTitle": "Your choices come first",
+    "foundation.consentBody": "Opening this screen creates no account or guest session. Required consent is stored only after the server creates your guest session.",
+    "foundation.termsConsent": "I agree to the Terms", "foundation.privacyConsent": "I acknowledge the Privacy Policy", "foundation.aiConsent": "Optional AI-assisted rewrites",
+    "foundation.aiConsentBody": "Off by default. Rule-based tone preview works without it.", "foundation.starting": "Starting...", "foundation.continueGuest": "Continue as guest",
+    "foundation.back": "Back", "foundation.privacy": "Privacy", "foundation.terms": "Terms", "foundation.support": "Support",
+    "foundation.restored": "Your private guest session was restored on this device.", "foundation.requiredConsent": "Accept the Terms and acknowledge the Privacy Policy first.",
+    "foundation.guestReady": "Guest session ready. AI processing remains optional.", "foundation.sessionCleared": "This device session was cleared.",
+    "foundation.requestError": "PeacePad could not complete that request. Try again."
+    ,"runtime.signInTitle": "Sign in to staging", "runtime.signInBody": "Use a fictional PeacePad staging account. Real family information is not permitted.",
+    "runtime.email": "Staging email", "runtime.emailPlaceholder": "Email", "runtime.password": "Staging password", "runtime.passwordPlaceholder": "Password",
+    "runtime.signingIn": "Signing in...", "runtime.signIn": "Sign in", "runtime.chooseFamily": "Choose a family", "runtime.chooseFamilyBody": "Select the family space you want to open.",
+    "runtime.familyOption": "{family} - {role}", "runtime.createJoin": "Create or join a family", "runtime.createJoinBody": "Use fictional staging information only. A connection is created only after an invitation is accepted.",
+    "runtime.createFamilyTitle": "Create a family space", "runtime.familyName": "Family name", "runtime.createFamily": "Create family", "runtime.enterInvite": "Enter an invitation code",
+    "runtime.codePlaceholder": "6-character code", "runtime.invitedAs": "Invited by {name} as {role}.", "runtime.declineInvite": "Decline invitation",
+    "runtime.requestError": "PeacePad could not complete that request.", "runtime.loadingFamily": "Loading your family space", "runtime.restoringFamily": "Restoring messages, calendars, and preferences securely."
   },
   fr: {
     "navigation.primary": "Navigation principale", "navigation.home": "Accueil", "navigation.messages": "Messages",
@@ -62,6 +81,25 @@ const messages = {
     "invite.permissionMessages": "Messages", "invite.permissionCalendar": "Calendrier", "invite.permissionSharedRecords": "Dossiers partagés",
     "invite.permissionMessageWrite": "Envoyer des messages", "invite.permissionCalendarWrite": "Gérer les événements du calendrier", "invite.familyBlocked": "Ce compte est déjà lié à une famille. Le changement de famille n’est pas encore disponible; cette invitation ne peut donc pas être acceptée ici.",
     "invite.accepted": "Invitation acceptée"
+    ,"foundation.restoring": "Restauration de la session PeacePad", "foundation.checkingDevice": "Recherche d’une session enregistrée sur cet appareil...", "foundation.logo": "Logo coquillage de PeacePad",
+    "foundation.secure": "Connexion sécurisée", "foundation.welcomeTitle": "Une façon plus calme de traverser les moments difficiles de coparentalité.",
+    "foundation.welcomeBody": "Faites une pause avant d’envoyer, vérifiez comment le message pourrait être reçu et choisissez une prochaine étape plus claire.", "foundation.try": "Essayer PeacePad",
+    "foundation.existing": "Compte existant", "foundation.continue": "Continuer vers PeacePad", "foundation.accountUnavailable": "La connexion au compte n’est pas encore disponible.",
+    "foundation.backWelcome": "Retour à l’accueil", "foundation.consentTitle": "Vos choix passent en premier",
+    "foundation.consentBody": "L’ouverture de cet écran ne crée aucun compte ni aucune session invité. Le consentement requis est enregistré uniquement après la création de votre session invité par le serveur.",
+    "foundation.termsConsent": "J’accepte les conditions d’utilisation", "foundation.privacyConsent": "Je reconnais avoir lu la politique de confidentialité", "foundation.aiConsent": "Réécritures facultatives assistées par IA",
+    "foundation.aiConsentBody": "Désactivées par défaut. L’aperçu du ton fondé sur des règles fonctionne sans elles.", "foundation.starting": "Démarrage...", "foundation.continueGuest": "Continuer en tant qu’invité",
+    "foundation.back": "Retour", "foundation.privacy": "Confidentialité", "foundation.terms": "Conditions", "foundation.support": "Soutien",
+    "foundation.restored": "Votre session invité privée a été restaurée sur cet appareil.", "foundation.requiredConsent": "Acceptez les conditions et reconnaissez la politique de confidentialité d’abord.",
+    "foundation.guestReady": "La session invité est prête. Le traitement par IA reste facultatif.", "foundation.sessionCleared": "La session de cet appareil a été effacée.",
+    "foundation.requestError": "PeacePad n’a pas pu effectuer cette demande. Réessayez."
+    ,"runtime.signInTitle": "Connexion à l’environnement de test", "runtime.signInBody": "Utilisez un compte PeacePad de test fictif. Les véritables renseignements familiaux sont interdits.",
+    "runtime.email": "Courriel de test", "runtime.emailPlaceholder": "Courriel", "runtime.password": "Mot de passe de test", "runtime.passwordPlaceholder": "Mot de passe",
+    "runtime.signingIn": "Connexion...", "runtime.signIn": "Se connecter", "runtime.chooseFamily": "Choisir une famille", "runtime.chooseFamilyBody": "Sélectionnez l’espace familial à ouvrir.",
+    "runtime.familyOption": "{family} - {role}", "runtime.createJoin": "Créer ou rejoindre une famille", "runtime.createJoinBody": "Utilisez uniquement des renseignements fictifs de test. Une connexion est créée seulement après l’acceptation d’une invitation.",
+    "runtime.createFamilyTitle": "Créer un espace familial", "runtime.familyName": "Nom de la famille", "runtime.createFamily": "Créer la famille", "runtime.enterInvite": "Saisir un code d’invitation",
+    "runtime.codePlaceholder": "Code à 6 caractères", "runtime.invitedAs": "Invitation de {name} comme {role}.", "runtime.declineInvite": "Refuser l’invitation",
+    "runtime.requestError": "PeacePad n’a pas pu effectuer cette demande.", "runtime.loadingFamily": "Chargement de votre espace familial", "runtime.restoringFamily": "Restauration sécurisée des messages, calendriers et préférences."
   },
   es: {
     "navigation.primary": "Navegación principal", "navigation.home": "Inicio", "navigation.messages": "Mensajes",
@@ -90,6 +128,25 @@ const messages = {
     "invite.permissionMessages": "Mensajes", "invite.permissionCalendar": "Calendario", "invite.permissionSharedRecords": "Registros compartidos",
     "invite.permissionMessageWrite": "Enviar mensajes", "invite.permissionCalendarWrite": "Gestionar eventos del calendario", "invite.familyBlocked": "Esta cuenta ya está conectada a una familia. El cambio de familia aún no está disponible, por lo que esta invitación no se puede aceptar aquí.",
     "invite.accepted": "Invitación aceptada"
+    ,"foundation.restoring": "Restaurando la sesión de PeacePad", "foundation.checkingDevice": "Buscando una sesión guardada en este dispositivo...", "foundation.logo": "Logotipo de caracola de PeacePad",
+    "foundation.secure": "Conexión segura", "foundation.welcomeTitle": "Una forma más tranquila de afrontar momentos difíciles de crianza compartida.",
+    "foundation.welcomeBody": "Haz una pausa antes de enviar, comprueba cómo podría recibirse el mensaje y elige un siguiente paso más claro.", "foundation.try": "Probar PeacePad",
+    "foundation.existing": "Cuenta existente", "foundation.continue": "Continuar a PeacePad", "foundation.accountUnavailable": "El inicio de sesión de la cuenta aún no está disponible.",
+    "foundation.backWelcome": "Volver a la bienvenida", "foundation.consentTitle": "Tus decisiones son lo primero",
+    "foundation.consentBody": "Abrir esta pantalla no crea ninguna cuenta ni sesión de invitado. El consentimiento obligatorio solo se guarda después de que el servidor cree tu sesión de invitado.",
+    "foundation.termsConsent": "Acepto los Términos", "foundation.privacyConsent": "Reconozco la Política de privacidad", "foundation.aiConsent": "Reescrituras opcionales asistidas por IA",
+    "foundation.aiConsentBody": "Desactivadas de forma predeterminada. La vista previa del tono basada en reglas funciona sin ellas.", "foundation.starting": "Iniciando...", "foundation.continueGuest": "Continuar como invitado",
+    "foundation.back": "Volver", "foundation.privacy": "Privacidad", "foundation.terms": "Términos", "foundation.support": "Ayuda",
+    "foundation.restored": "Tu sesión privada de invitado se restauró en este dispositivo.", "foundation.requiredConsent": "Acepta los Términos y reconoce la Política de privacidad primero.",
+    "foundation.guestReady": "La sesión de invitado está lista. El procesamiento con IA sigue siendo opcional.", "foundation.sessionCleared": "Se borró la sesión de este dispositivo.",
+    "foundation.requestError": "PeacePad no pudo completar esa solicitud. Inténtalo de nuevo."
+    ,"runtime.signInTitle": "Iniciar sesión en pruebas", "runtime.signInBody": "Usa una cuenta ficticia de pruebas de PeacePad. No se permite información familiar real.",
+    "runtime.email": "Correo de pruebas", "runtime.emailPlaceholder": "Correo", "runtime.password": "Contraseña de pruebas", "runtime.passwordPlaceholder": "Contraseña",
+    "runtime.signingIn": "Iniciando sesión...", "runtime.signIn": "Iniciar sesión", "runtime.chooseFamily": "Elegir una familia", "runtime.chooseFamilyBody": "Selecciona el espacio familiar que quieres abrir.",
+    "runtime.familyOption": "{family} - {role}", "runtime.createJoin": "Crear o unirse a una familia", "runtime.createJoinBody": "Usa únicamente información ficticia de pruebas. Solo se crea una conexión después de aceptar una invitación.",
+    "runtime.createFamilyTitle": "Crear un espacio familiar", "runtime.familyName": "Nombre de la familia", "runtime.createFamily": "Crear familia", "runtime.enterInvite": "Introducir un código de invitación",
+    "runtime.codePlaceholder": "Código de 6 caracteres", "runtime.invitedAs": "Invitación de {name} como {role}.", "runtime.declineInvite": "Rechazar invitación",
+    "runtime.requestError": "PeacePad no pudo completar esa solicitud.", "runtime.loadingFamily": "Cargando tu espacio familiar", "runtime.restoringFamily": "Restaurando mensajes, calendarios y preferencias de forma segura."
   }
 } as const;
 
@@ -137,4 +194,8 @@ export function useLocalization(): LocalizationValue {
   const value = useContext(LocalizationContext);
   if (!value) throw new Error("useLocalization must be used within LocalizationProvider");
   return value;
+}
+
+export function useOptionalLocalization(): LocalizationValue {
+  return useContext(LocalizationContext) ?? { locale: "en", setLocale: async () => undefined, t: (key, values) => translate("en", key, values) };
 }

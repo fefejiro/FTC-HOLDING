@@ -10,6 +10,7 @@ import type {
   StoredGuestSession
 } from "../session/secureGuestSession";
 import { FoundationScreen } from "./FoundationScreen";
+import { LocalizationProvider } from "../localization/LocalizationProvider";
 
 const sessionResponse: GuestSessionResponse = {
   guestSessionId: "guest-session-1",
@@ -41,6 +42,18 @@ function createHarness(stored: StoredGuestSession | null = null) {
 }
 
 describe("PeacePad native foundation", () => {
+  it.each([
+    ["fr", "Essayer PeacePad", "Vos choix passent en premier", "Réécritures facultatives assistées par IA"],
+    ["es", "Probar PeacePad", "Tus decisiones son lo primero", "Reescrituras opcionales asistidas por IA"]
+  ])("localizes consent while preserving default-off AI semantics in %s", async (locale, tryLabel, consentTitle, aiLabel) => {
+    const { api, sessionStore } = createHarness();
+    render(<LocalizationProvider initialLocale={locale}><FoundationScreen api={api} sessionStore={sessionStore} /></LocalizationProvider>);
+    fireEvent.press(await screen.findByText(tryLabel));
+    expect(screen.getByText(consentTitle)).toBeOnTheScreen();
+    expect(screen.getByLabelText(aiLabel)).not.toBeChecked();
+    expect(api.startGuest).not.toHaveBeenCalled();
+  });
+
   it("shows the real conch brand and creates no session on welcome", async () => {
     const { api, sessionStore } = createHarness();
     render(<FoundationScreen api={api} sessionStore={sessionStore} />);

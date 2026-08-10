@@ -13,6 +13,7 @@ import { StagingAccountActionsProvider } from "../session/StagingAccountActions"
 import { createWriteContext, type AcceptedInvitation, type InvitationPreview } from "../domain/v2";
 import { colors, spacing, typography } from "../theme";
 import { secureMessageOutboxStore } from "../messaging/secureMessageOutbox";
+import { useOptionalLocalization } from "../localization/LocalizationProvider";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export function invitationCodeFromStagingUrl(url?: string | null): string | undefined {
@@ -163,6 +164,7 @@ export function PeacePadStagingRuntime({
   supabase: PeacePadSupabaseConfig;
   fetcher?: typeof fetch;
 }) {
+  const { t } = useOptionalLocalization();
   const auth = useSupabaseSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -338,11 +340,11 @@ export function PeacePadStagingRuntime({
     return (
       <View style={styles.page}>
         <Brand />
-        <AccessibleHeading style={styles.title}>Sign in to staging</AccessibleHeading>
-        <Text style={styles.body}>Use a fictional PeacePad staging account. Real family information is not permitted.</Text>
-        <TextInput accessibilityLabel="Staging email" autoCapitalize="none" keyboardType="email-address" onChangeText={setEmail} placeholder="Email" style={styles.input} value={email} />
-        <TextInput accessibilityLabel="Staging password" onChangeText={setPassword} placeholder="Password" secureTextEntry style={styles.input} value={password} />
-        <LabButton disabled={signInBusy || !email.trim() || !password} label={signInBusy ? "Signing in..." : "Sign in"} onPress={() => {
+        <AccessibleHeading style={styles.title}>{t("runtime.signInTitle")}</AccessibleHeading>
+        <Text style={styles.body}>{t("runtime.signInBody")}</Text>
+        <TextInput accessibilityLabel={t("runtime.email")} autoCapitalize="none" keyboardType="email-address" onChangeText={setEmail} placeholder={t("runtime.emailPlaceholder")} style={styles.input} value={email} />
+        <TextInput accessibilityLabel={t("runtime.password")} onChangeText={setPassword} placeholder={t("runtime.passwordPlaceholder")} secureTextEntry style={styles.input} value={password} />
+        <LabButton disabled={signInBusy || !email.trim() || !password} label={signInBusy ? t("runtime.signingIn") : t("runtime.signIn")} onPress={() => {
           setSignInBusy(true);
           void auth.signInWithPassword(email, password).catch(() => undefined).finally(() => setSignInBusy(false));
         }} />
@@ -423,20 +425,21 @@ function FamilySelection({ accountDeletion, memberships, onSelect, onSignOut }: 
   onSelect: (familyCircleId: string) => void;
   onSignOut: () => Promise<void>;
 }) {
+  const { t } = useOptionalLocalization();
   return (
     <View style={styles.page}>
       <Brand />
-      <AccessibleHeading style={styles.title}>Choose a family</AccessibleHeading>
-      <Text style={styles.body}>Select the family space you want to open.</Text>
+      <AccessibleHeading style={styles.title}>{t("runtime.chooseFamily")}</AccessibleHeading>
+      <Text style={styles.body}>{t("runtime.chooseFamilyBody")}</Text>
       {memberships.map((membership) => (
         <LabButton
           key={membership.familyCircleId}
-          label={`${membership.familyName} - ${membership.role}`}
+          label={t("runtime.familyOption", { family: membership.familyName, role: membership.role })}
           onPress={() => onSelect(membership.familyCircleId)}
           variant="secondary"
         />
       ))}
-      <LabButton label="Sign out" onPress={() => void onSignOut()} variant="secondary" />
+      <LabButton label={t("account.signOut")} onPress={() => void onSignOut()} variant="secondary" />
       <AccountDeletionControls value={accountDeletion} />
     </View>
   );
@@ -451,6 +454,7 @@ function FamilySetup({ accountDeletion, api, initialInvitationCode, onInvitation
   onSignOut: () => Promise<void>;
   verified: VerifiedSessionContext;
 }) {
+  const { t } = useOptionalLocalization();
   const [familyName, setFamilyName] = useState("");
   const [invitationCode, setInvitationCode] = useState(initialInvitationCode ?? "");
   const [preview, setPreview] = useState<InvitationPreview>();
@@ -466,46 +470,46 @@ function FamilySetup({ accountDeletion, api, initialInvitationCode, onInvitation
     setBusy(true);
     setError(undefined);
     try { await operation(); } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "PeacePad could not complete that request.");
+      setError(cause instanceof Error ? cause.message : t("runtime.requestError"));
     } finally { setBusy(false); }
   };
   return (
     <View style={styles.page}>
       <Brand />
-      <AccessibleHeading style={styles.title}>Create or join a family</AccessibleHeading>
-      <Text style={styles.body}>Use fictional staging information only. A connection is created only after an invitation is accepted.</Text>
-      <Text style={styles.sectionTitle}>Create a family space</Text>
-      <TextInput accessibilityLabel="Family name" maxLength={120} onChangeText={setFamilyName} placeholder="Family name" style={styles.input} value={familyName} />
-      <LabButton disabled={busy || !familyName.trim()} label="Create family" onPress={() => void run(async () => {
+      <AccessibleHeading style={styles.title}>{t("runtime.createJoin")}</AccessibleHeading>
+      <Text style={styles.body}>{t("runtime.createJoinBody")}</Text>
+      <Text style={styles.sectionTitle}>{t("runtime.createFamilyTitle")}</Text>
+      <TextInput accessibilityLabel={t("runtime.familyName")} maxLength={120} onChangeText={setFamilyName} placeholder={t("runtime.familyName")} style={styles.input} value={familyName} />
+      <LabButton disabled={busy || !familyName.trim()} label={t("runtime.createFamily")} onPress={() => void run(async () => {
         await api.createFamily(familyName, runtimeWriteContext(verified));
         onReload();
       })} />
-      <Text style={styles.sectionTitle}>Enter an invitation code</Text>
-      <TextInput accessibilityLabel="Invitation code" autoCapitalize="characters" maxLength={6} onChangeText={(value) => {
+      <Text style={styles.sectionTitle}>{t("runtime.enterInvite")}</Text>
+      <TextInput accessibilityLabel={t("invite.code")} autoCapitalize="characters" maxLength={6} onChangeText={(value) => {
         setInvitationCode(value.replace(/[^a-z0-9]/gi, "").toUpperCase());
         setPreview(undefined);
-      }} placeholder="6-character code" style={styles.input} value={invitationCode} />
+      }} placeholder={t("runtime.codePlaceholder")} style={styles.input} value={invitationCode} />
       {preview ? (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{preview.familyDisplayName}</Text>
-          <Text style={styles.body}>Invited by {preview.inviterDisplayName} as {preview.invitedRole}.</Text>
-          <LabButton disabled={busy} label="Accept invitation" onPress={() => void run(async () => {
+          <Text style={styles.body}>{t("runtime.invitedAs", { name: preview.inviterDisplayName, role: preview.invitedRole })}</Text>
+          <LabButton disabled={busy} label={t("invite.accept")} onPress={() => void run(async () => {
             const result = await api.acceptInvitation(preview.invitationId, runtimeWriteContext(verified, preview.version));
             assertAcceptedInvitation(result, verified.actor.identityId, verified.region);
             onReload();
           })} />
-          <LabButton disabled={busy} label="Decline invitation" onPress={() => void run(async () => {
+          <LabButton disabled={busy} label={t("runtime.declineInvite")} onPress={() => void run(async () => {
             await api.declineInvitation(preview.invitationId, runtimeWriteContext(verified, preview.version));
             setPreview(undefined);
             setInvitationCode("");
           })} variant="secondary" />
         </View>
-      ) : <LabButton disabled={busy || invitationCode.length !== 6} label="Review invitation" onPress={() => void run(async () => {
+      ) : <LabButton disabled={busy || invitationCode.length !== 6} label={t("invite.review")} onPress={() => void run(async () => {
         setPreview(await api.resolveInvitation(invitationCode));
         onInvitationCodeConsumed();
       })} variant="secondary" />}
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
-      <LabButton disabled={busy} label="Sign out" onPress={() => void onSignOut()} variant="secondary" />
+      <LabButton disabled={busy} label={t("account.signOut")} onPress={() => void onSignOut()} variant="secondary" />
       <AccountDeletionControls value={accountDeletion} />
     </View>
   );

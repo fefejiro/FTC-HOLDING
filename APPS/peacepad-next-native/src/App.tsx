@@ -38,7 +38,7 @@ export function resolveStartScreen(value?: string): AppScreen {
   return value && supported.has(value as AppScreen) ? value as AppScreen : "foundation";
 }
 
-export function PeacePadCoordinationApp({ startScreen, wrapRecordsProvider = true }: { startScreen?: string; wrapRecordsProvider?: boolean }) {
+export function PeacePadCoordinationApp({ startScreen, wrapLocalization = true, wrapRecordsProvider = true }: { startScreen?: string; wrapLocalization?: boolean; wrapRecordsProvider?: boolean }) {
   const content = (
     <NavigationContainer linking={startScreen ? undefined : peacePadLinking}>
       <StatusBar barStyle="dark-content" />
@@ -51,7 +51,7 @@ export function PeacePadCoordinationApp({ startScreen, wrapRecordsProvider = tru
       </Stack.Navigator>
     </NavigationContainer>
   );
-  const localized = <LocalizationProvider>{content}</LocalizationProvider>;
+  const localized = wrapLocalization ? <LocalizationProvider>{content}</LocalizationProvider> : content;
   return wrapRecordsProvider ? <RecordsStateProvider>{localized}</RecordsStateProvider> : localized;
 }
 
@@ -108,13 +108,15 @@ function PeacePadStagingApp() {
   const staging = useMemo(() => resolveSupabaseStagingConfig(), []);
   const client = useMemo(() => createPeacePadSupabaseClient(staging), [staging]);
   return (
-    <SafeAreaProvider>
-      <SupabaseSessionProvider client={client}>
-        <PeacePadStagingRuntime environment={environmentConfig} supabase={staging}>
-          <PeacePadCoordinationApp startScreen="home" wrapRecordsProvider={false} />
-        </PeacePadStagingRuntime>
-      </SupabaseSessionProvider>
-    </SafeAreaProvider>
+    <LocalizationProvider>
+      <SafeAreaProvider>
+        <SupabaseSessionProvider client={client}>
+          <PeacePadStagingRuntime environment={environmentConfig} supabase={staging}>
+            <PeacePadCoordinationApp startScreen="home" wrapLocalization={false} wrapRecordsProvider={false} />
+          </PeacePadStagingRuntime>
+        </SupabaseSessionProvider>
+      </SafeAreaProvider>
+    </LocalizationProvider>
   );
 }
 

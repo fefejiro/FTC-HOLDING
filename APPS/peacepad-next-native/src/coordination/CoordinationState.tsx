@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { useOptionalLocalization } from "../localization/LocalizationProvider";
 import type { MessagePreviewResponse } from "../api/contracts";
 import {
   InvitationError,
@@ -242,6 +243,7 @@ export function CoordinationStateProvider({
   outbox?: MessageOutboxStore;
   runtime?: CoordinationRuntime | null;
 }) {
+  const { t } = useOptionalLocalization();
   const resolvedApi = useMemo(() => api ?? createDefaultApi(), [api]);
   const demoMode = !api || api instanceof SyntheticCoordinationApi;
   const activeRuntime = demoMode ? DEMO_RUNTIME : (isValidCoordinationRuntime(runtime) ? runtime : undefined);
@@ -864,7 +866,7 @@ export function CoordinationStateProvider({
   ]);
 
   if (!demoMode && !coordinationHydrated) {
-    return <View style={hydrationStyles.page}><ActivityIndicator color={colors.brand} /><Text style={hydrationStyles.title}>Loading your family space</Text><Text style={hydrationStyles.body}>{messageError ?? "Restoring messages, calendars, and preferences securely."}</Text></View>;
+    return <View style={hydrationStyles.page}><ActivityIndicator color={colors.brand} /><Text accessibilityRole="header" style={hydrationStyles.title}>{t("runtime.loadingFamily")}</Text><Text style={hydrationStyles.body}>{messageError ?? t("runtime.restoringFamily")}</Text></View>;
   }
   return <CoordinationStateContext.Provider value={value}>{children}</CoordinationStateContext.Provider>;
 }
