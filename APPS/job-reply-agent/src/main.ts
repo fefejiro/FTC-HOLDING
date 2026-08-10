@@ -1,4 +1,6 @@
 import { format } from "date-fns";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { loadConfig } from "./config.js";
 import { getDb, resetDb, resolveDbPath } from "./db.js";
 import { sendEmail } from "./email_sender.js";
@@ -824,7 +826,10 @@ async function run(): Promise<void> {
   await runCommand(parsed);
 }
 
-run().catch((error) => {
-  logger.error({ err: error }, "Fatal error in main.");
-  process.exit(1);
-});
+const invokedPath = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : "";
+if (import.meta.url === invokedPath) {
+  run().catch((error) => {
+    logger.error({ err: error }, "Fatal error in main.");
+    process.exit(1);
+  });
+}

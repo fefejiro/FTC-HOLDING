@@ -2,11 +2,11 @@
 
 ## Last Verified State
 
-- Updated: 2026-08-06 17:21 America/New_York
-- Release branch: `feat/job-agent-product-foundation`
-- Recorded parent HEAD: `b90ff6b1 Fix JobAgent workspace agent discovery`;
-  verify the current HEAD with git because the handover update commit follows it
-- Autonomous worktree: `C:\FTC HOLDING\_worktrees\job-agent-continuous`
+- Updated: 2026-08-10 17:20 America/New_York
+- Engineering branch: `agent/job-agent-continuous`
+- Recorded parent HEAD: `41c2367a6 Merge branch 'feat/job-agent-product-foundation' into agent/job-agent-continuous`;
+  verify the current HEAD because the mobile increment commit follows it
+- Autonomous worktree: `D:\FTC-HOLDING-worktrees\job-agent-continuous`
 - Autonomous branch: `agent/job-agent-continuous`
 - Windows task: `JobReplyAgent-Product-Continuous`
 - Task policy: every 6 hours, no overlap, 45-minute limit, maximum two model
@@ -19,25 +19,39 @@ facts before changing them.
 
 ## Completed In The Latest Increment
 
-- Added the visible `JobAgent Continuous Operator` workspace agent.
-- Added a bounded Windows scheduled Codex runner and registration script.
-- Added an isolated autonomous worktree and explicit safe engineering backlog.
-- Completed and reviewed the first autonomous increment for connector and
-  scheduler release-gate status surfaces.
-- Preserved the connected account identifier in the authenticated user's view
-  while excluding credentials, private evidence references, raw blocking text,
-  and candidate message content.
-- Added this durable handover and the reusable `jobagent-continue` prompt.
+- Added four project-scoped Codex agents under `C:\FTC HOLDING\.codex\agents`:
+  product builder, mobile publisher, connector operator, and read-only trust
+  release auditor. Codex must reload the FTC workspace before discovery updates.
+- Added Capacitor 8 Android and iOS projects for the existing responsive hosted
+  product, using application ID `cloud.unalabs.jobagent`.
+- Added exact-origin native navigation, system-browser OAuth handoff, app resume
+  refresh, Android App Links, and iOS Associated Domains.
+- Kept OAuth secrets, browser cookies, and job-board automation outside the
+  mobile binary.
+- Fixed `src/main.ts` so parser imports no longer execute the operational CLI.
+- Added focused mobile security/configuration tests and a mobile release runbook.
 
 ## Verification Evidence
 
-- PowerShell parser: passed for continuous runner and registrar.
-- Focused scheduler/release-gate tests: `8/8` passed after review.
-- Full Vitest suite: `27` files passed, `1` skipped; `205` tests passed,
-  `8` skipped.
+- Final focused CLI/mobile/PWA Vitest suite: `3` files and `13` tests passed.
+- Full Vitest suite after the CLI import fix: `28` files passed, `1` skipped;
+  `210` tests passed, `8` skipped, with a successful process exit.
 - `npm run build`: passed.
 - `npm run lint`: passed.
-- `npm run production:check`: passed in static mode.
+- `npm run production:check`: passed in static mode with only the expected
+  deployment-environment warning.
+- Application-local `npm audit --workspaces=false --omit=dev --audit-level=high`:
+  passed with `0` vulnerabilities. The unscoped monorepo audit is a different
+  root lockfile and must not be used as this application's release result.
+- Credential-pattern scan of the new native/configuration surface: no matches.
+- `npm run mobile:sync`: passed for Android and iOS with Capacitor 8.5.
+- `npm run mobile:doctor`: Android passed; the combined command returned
+  nonzero only because Xcode is not installed on this Windows host.
+- Android API 36 debug build: passed, producing a 4,367,917-byte APK with SHA-256
+  `549163DE15F12E47CE48E4F94E122C32BB6552BFBD5C76F0970988FB805A31D3`.
+- Android `apksigner` verification: passed with one v2 debug signer.
+- iOS source generation/sync: passed; no Xcode, simulator, device, archive, or
+  TestFlight test was available on Windows.
 - Strict deployment-environment release checks were not run in this increment.
 - No recruiter email, job application, browser action, deployment, DNS change,
   secret change, billing action, or production mutation occurred.
@@ -52,16 +66,21 @@ facts before changing them.
   candidate actions remain separate explicitly authorized workflows.
 - Public beta expansion still depends on external and pilot gates documented in
   `PRODUCT_ARCHITECTURE.md`.
+- App/Universal Link association files are not yet deployed and device-verified.
+- Native signing, final icons, screenshots, privacy declarations, Play internal
+  testing, TestFlight, and store reviews remain open.
+- The C drive filled during the first Android dependency download. Repeat Gradle
+  builds should set `GRADLE_USER_HOME`, `TEMP`, and `TMP` to a D-drive directory.
 
 ## Next Highest-Impact Work
 
 1. Add responsive Playwright coverage for match explanations, ATS gap reports,
    application timelines, interview preparation, and approvals on mobile and
    desktop.
-2. Audit queue idempotency, lease recovery, and dead-letter operator visibility;
-   implement only the smallest missing test-backed increment.
-3. Reconcile architecture, runbook, and public-beta status against current code,
-   deployment evidence, and external/manual gates.
+2. Publish exact-domain Android/Apple association files, then prove OAuth return
+   on an Android device and an iOS device without exposing tokens in URLs/logs.
+3. Replace placeholder native artwork and complete signed internal-test builds.
+4. Audit queue idempotency, lease recovery, and dead-letter operator visibility.
 
 ## Resume Command
 

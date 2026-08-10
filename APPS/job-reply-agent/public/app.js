@@ -794,7 +794,16 @@
           body: JSON.stringify({ provider })
         });
         if (result.authorizationUrl) {
-          location.assign(result.authorizationUrl);
+          if (window.JobAgentNative?.isNative) {
+            await window.JobAgentNative.openExternal(result.authorizationUrl);
+            setResult(
+              "#inbound-result",
+              "Continue securely in your browser, then return to JobAgent.",
+              "good"
+            );
+          } else {
+            location.assign(result.authorizationUrl);
+          }
           return;
         }
         setResult(
@@ -1143,6 +1152,10 @@
   });
   window.addEventListener("online", () => setStatus(state.user ? "Protected" : "Signed out", state.user ? "good" : "neutral"));
   window.addEventListener("offline", () => setStatus("Offline", "warning"));
+  window.addEventListener("jobagent:native-resume", () => {
+    if (!state.user) return;
+    loadDashboard().catch((error) => showNotice("#account-banner", error.message, "danger"));
+  });
 
   async function handleEntryLink() {
     const params = new URLSearchParams(location.search);

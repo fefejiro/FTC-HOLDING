@@ -9,6 +9,7 @@ describe("public beta PWA", () => {
     const html = fs.readFileSync(path.join(publicRoot, "index.html"), "utf8");
     const manifest = JSON.parse(fs.readFileSync(path.join(publicRoot, "manifest.webmanifest"), "utf8"));
     const worker = fs.readFileSync(path.join(publicRoot, "sw.js"), "utf8");
+    expect(html).toContain('<script src="/native-bridge.js" defer></script>');
     expect(html).toContain('<script src="/app.js" defer></script>');
     expect(html).not.toMatch(/<script(?![^>]+src=)[^>]*>/i);
     expect(manifest.display).toBe("standalone");

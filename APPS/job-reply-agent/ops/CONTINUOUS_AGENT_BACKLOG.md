@@ -6,6 +6,13 @@ record evidence below the item, and commit its own changes.
 
 ## Safe Autonomous Queue
 
+- [x] Establish one shared-product iOS and Android foundation with exact-origin
+  app links and system-browser OAuth return handling.
+  - Evidence (2026-08-10): Capacitor 8 generated both native projects; focused
+    mobile/PWA tests, full tests, build, lint, and sync passed. Android doctor
+    passed, Android API 36 `assembleDebug` passed, and `apksigner` verified one
+    v2 signer. The combined doctor reports missing Xcode on Windows; iOS source
+    synchronized, while Xcode/device/store verification remains manual.
 - [x] Add focused release-gate coverage proving scheduler and connector status
   surfaces distinguish `blocked_auth`, `manual_only`, `pilot_only`, and
   `certified_live` without exposing credentials or candidate message content.

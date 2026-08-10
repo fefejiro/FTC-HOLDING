@@ -15,9 +15,10 @@ the phone. Use one cloud platform with several clients:
 - Android client
 - Operator/admin console
 
-The web application is the first production client. Native apps follow the
-same versioned API after onboarding, consent, approvals, notifications, and
-proof workflows are stable.
+The web application is the first production client. The initial native source
+foundation now wraps that same hosted product and versioned API; store release
+still follows device validation of onboarding, consent, approvals, OAuth return,
+account controls, and proof workflows.
 
 ## Current Reality
 
@@ -28,6 +29,9 @@ JobAgent now has two deliberately separate execution boundaries:
 - The hosted beta foundation owns invite-only accounts, PostgreSQL tenancy,
   private object storage, approvals, proof history, queues, and trusted-runner
   task exchange.
+- The Capacitor mobile shell owns only the candidate-facing iOS and Android
+  surfaces. It uses system-browser OAuth and exact-origin app links; it does not
+  own job-board sessions or automation credentials.
 
 The hosted foundation is deployed to an Una Labs Railway project with separate
 web, worker, migration, PostgreSQL, and private-bucket resources. Its temporary
@@ -40,8 +44,24 @@ This is not yet:
 
 - Open for broader public invitations
 - A certified autonomous job-board submission engine
-- A native iOS or Android app
+- A device-tested or distributed native iOS or Android app
 - Ready for App Store or Play Store distribution
+
+## Native Foundation Status - 2026-08-10
+
+- Capacitor 8 iOS and Android source projects use the shared application ID
+  `cloud.unalabs.jobagent` and hosted origin `https://jobagent.unalabs.cloud`.
+- OAuth authorization opens in the system browser, and return-link handling is
+  restricted to the exact JobAgent HTTPS origin.
+- Android App Links and iOS Associated Domains are declared in source. Their
+  production association files still require deployment and device proof.
+- Focused mobile/PWA tests, the full test suite, TypeScript build, lint,
+  Capacitor sync, Android doctor, and a signed Android debug APK build pass
+  locally. The combined doctor correctly remains nonzero on Windows because
+  Xcode is unavailable.
+- iOS source generation and synchronization pass on Windows. Simulator, device,
+  signing, TestFlight, and App Store evidence require a supported macOS/Xcode host.
+- Generated development icons remain placeholders and are not release assets.
 
 ## Verified Pilot Status - 2026-07-27
 
@@ -215,10 +235,12 @@ reliable fallback.
 
 ### Phase 2: native clients
 
-Build iOS and Android clients against the same API. A shared cross-platform
-client is appropriate for the first native release. Native-only capabilities
-should be limited to secure credential storage, push notifications, file
-upload, camera/document capture, deep links, and biometric re-authentication.
+The first Capacitor iOS and Android source clients now use the same hosted
+product and API. Native-only capabilities should remain limited to secure
+credential storage, push notifications, file upload, camera/document capture,
+deep links, and biometric re-authentication when a validated workflow requires
+them. Only system-browser OAuth and deep-link return are enabled in the first
+foundation.
 
 Do not embed Gmail credentials, job-board cookies, resume generation, or
 autonomous browser workers in the mobile binary.
@@ -274,4 +296,6 @@ Before public onboarding:
 3. Cut local schedules over one channel at a time after shadow comparison.
 4. Run Chukwuma as an isolated first-friend pilot for 14 reliable days.
 5. Open broader invitations only after privacy and Google verification.
-6. Build iOS and Android clients after the API and web pilot are stable.
+6. Complete iOS and Android device validation, signing, store assets, privacy
+   declarations, internal testing, and store review for the implemented native
+   source foundation.

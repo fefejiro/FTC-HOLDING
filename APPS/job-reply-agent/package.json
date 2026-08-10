@@ -23,6 +23,12 @@
     "runner:start": "node dist/product_runner_client.js",
     "product:storage:migrate": "tsx src/product_storage_migrate.ts",
     "product:storage:cleanup": "tsx src/product_storage_cleanup.ts",
+    "mobile:sync": "cap sync",
+    "mobile:sync:android": "cap sync android",
+    "mobile:sync:ios": "cap sync ios",
+    "mobile:doctor": "cap doctor",
+    "mobile:open:android": "cap open android",
+    "mobile:open:ios": "cap open ios",
     "production:check": "node scripts/product-release-check.mjs",
     "production:check:strict": "node scripts/product-release-check.mjs --strict",
     "report": "tsx src/main.ts report:daily",
@@ -101,6 +107,11 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1096.0",
     "@aws-sdk/s3-request-presigner": "^3.1096.0",
+    "@capacitor/android": "8.5.0",
+    "@capacitor/app": "8.1.1",
+    "@capacitor/browser": "8.0.4",
+    "@capacitor/core": "8.5.0",
+    "@capacitor/ios": "8.5.0",
     "better-sqlite3": "^13.0.1",
     "date-fns": "^4.1.0",
     "dotenv": "^16.5.0",
@@ -121,6 +132,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.5.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20.19.41",
     "@types/nodemailer": "^6.4.16",
