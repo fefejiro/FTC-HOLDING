@@ -34,12 +34,15 @@ declare
   updated_event_result jsonb;
   message_check_result jsonb;
   updated_message_check_result jsonb;
+  binder_result jsonb;
+  attachment_intent_result jsonb;
   created_family_id uuid;
   invitation_id uuid;
   conversation_id uuid;
   message_id uuid;
   layer_id uuid;
   event_id uuid;
+  binder_id uuid;
   cleanup_claim record;
   cleanup_result jsonb;
   first_cleanup_lease uuid;
@@ -281,6 +284,57 @@ begin
   exception when insufficient_privilege then null;
   end;
 
+  binder_result := public.peacepad_v2_create_case_binder(
+    parent_b, 'ca', created_family_id, 'Parenting records', 'Child A',
+    pg_temp.write_token('create-private-binder', 'case_binder.created', created_family_id::text || ':parent-b:parenting-records'), 2
+  );
+  binder_id := (binder_result ->> 'id')::uuid;
+  if binder_result ->> 'ownerIdentityId' <> parent_b::text
+    or binder_result ->> 'familyCircleId' <> created_family_id::text
+    or jsonb_array_length(public.peacepad_v2_list_case_binders(parent_b, 'ca', created_family_id)) <> 1 then
+    raise exception 'Private Case Binder was not persisted for its authenticated owner.';
+  end if;
+  begin
+    perform public.peacepad_v2_list_case_binders(parent_a, 'ca', created_family_id);
+  exception when others then
+    raise exception 'A family participant could not access their own empty private Binder list.';
+  end;
+  if jsonb_array_length(public.peacepad_v2_list_case_binders(parent_a, 'ca', created_family_id)) <> 0 then
+    raise exception 'Another participant could see an owner-private Case Binder.';
+  end if;
+  attachment_intent_result := public.peacepad_v2_prepare_attachment_intent(
+    parent_b, 'ca', created_family_id, binder_id, 'school-note.pdf', 'application/pdf', 1024,
+    pg_temp.write_token('prepare-private-attachment', 'attachment_intent.prepared', binder_id::text || ':school-note.pdf:application/pdf:1024'), 2
+  );
+  if attachment_intent_result ->> 'uploadTransport' <> 'disabled'
+    or attachment_intent_result -> 'uploadUrl' <> 'null'::jsonb
+    or (attachment_intent_result ->> 'expiresAt')::timestamptz > now() + interval '15 minutes' then
+    raise exception 'Attachment preparation exposed transport or an unsafe expiry.';
+  end if;
+  begin
+    perform public.peacepad_v2_prepare_attachment_intent(
+      parent_b, 'ca', created_family_id, binder_id, '../private.pdf', 'application/pdf', 1024,
+      pg_temp.write_token('reject-private-traversal', 'attachment_intent.prepared', binder_id::text || ':traversal'), 2
+    );
+    raise exception 'Attachment preparation accepted path traversal metadata.';
+  exception when invalid_parameter_value then null;
+  end;
+  binder_result := public.peacepad_v2_archive_case_binder(
+    parent_b, 'ca', binder_id, 1,
+    pg_temp.write_token('archive-private-binder', 'case_binder.archived', binder_id::text || ':1'), 2
+  );
+  if binder_result ->> 'status' <> 'archived' or (binder_result ->> 'version')::integer <> 2 then
+    raise exception 'Case Binder archive did not preserve optimistic concurrency.';
+  end if;
+  begin
+    perform public.peacepad_v2_prepare_attachment_intent(
+      parent_b, 'ca', created_family_id, binder_id, 'after-archive.pdf', 'application/pdf', 1024,
+      pg_temp.write_token('reject-archived-binder', 'attachment_intent.prepared', binder_id::text || ':archived'), 2
+    );
+    raise exception 'Archived Case Binder accepted new attachment metadata.';
+  exception when invalid_parameter_value then null;
+  end;
+
   if exists (
     select 1
     from information_schema.columns
@@ -379,6 +433,10 @@ begin
     where identity_id = parent_b
   ) then
     raise exception 'Deleted identity retained a Message Check preference.';
+  end if;
+  if exists (select 1 from peacepad_v2.case_binder where owner_identity_id = parent_b)
+    or exists (select 1 from peacepad_v2.attachment_upload_intent where owner_identity_id = parent_b) then
+    raise exception 'Deleted identity retained owner-private Binder metadata.';
   end if;
   if exists (
     select 1 from peacepad_v2.invitation_attempt where identity_id = parent_b

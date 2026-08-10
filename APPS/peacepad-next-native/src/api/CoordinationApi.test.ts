@@ -77,6 +77,13 @@ describe("HttpPeacePadCoordinationApi", () => {
 
     await api.createFamily("Fictional Family", context);
     await api.deleteAccount(context);
+    await api.listCaseBinders("family-current");
+    await api.createCaseBinder({
+      familyCircleId: "family-current",
+      name: "Parenting records",
+      childLabel: "Child A"
+    }, context);
+    await api.archiveCaseBinder("binder-current", context);
     await api.createInvitation({ familyCircleId: "family-current", invitedRole: "parent", permissions: ["messages"], expiresInHours: 24 }, context);
     await api.acceptInvitation("invitation-1", context);
     await api.declineInvitation("invitation-2", context);
@@ -111,6 +118,9 @@ describe("HttpPeacePadCoordinationApi", () => {
     expect(urls).toEqual(expect.arrayContaining([
       "https://staging-api.peacepad.test/api/v2/families",
       "https://staging-api.peacepad.test/api/v2/account",
+      "https://staging-api.peacepad.test/api/v2/case-binders?familyCircleId=family-current",
+      "https://staging-api.peacepad.test/api/v2/case-binders",
+      "https://staging-api.peacepad.test/api/v2/case-binders/binder-current",
       "https://staging-api.peacepad.test/api/v2/invitations",
       "https://staging-api.peacepad.test/api/v2/invitations/invitation-1/accept",
       "https://staging-api.peacepad.test/api/v2/calendar-layers?familyCircleId=family-current",
@@ -259,6 +269,45 @@ describe("HttpPeacePadCoordinationApi", () => {
       status: 401,
       message: "Your staging session expired. Sign in again."
     });
+  });
+
+  it("keeps private-record metadata in request bodies and sends no file bytes", async () => {
+    const fetcher = jest.fn(async (_input: string, _init?: RequestInit) => response(200, {}));
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
+
+    await api.createCaseBinder({
+      familyCircleId: "family/current",
+      name: "Parenting records",
+      childLabel: "Child A"
+    }, context);
+    await api.archiveCaseBinder("binder/current", context);
+    await api.createAttachmentUploadIntent({
+      familyCircleId: "family-current",
+      target: { kind: "private-binder", binderId: "binder-current" },
+      originalFileName: "school-note.pdf",
+      mediaType: "application/pdf",
+      byteLength: 1024
+    }, context);
+
+    expect(fetcher.mock.calls[0]?.[0]).toBe("https://staging-api.peacepad.test/api/v2/case-binders");
+    expect(JSON.parse((fetcher.mock.calls[0]?.[1] as RequestInit).body as string)).toEqual({
+      familyCircleId: "family/current",
+      name: "Parenting records",
+      childLabel: "Child A"
+    });
+    expect(fetcher.mock.calls[1]?.[0]).toBe("https://staging-api.peacepad.test/api/v2/case-binders/binder%2Fcurrent");
+    expect(JSON.parse((fetcher.mock.calls[1]?.[1] as RequestInit).body as string)).toEqual({ status: "archived" });
+    const intentBody = JSON.parse((fetcher.mock.calls[2]?.[1] as RequestInit).body as string);
+    expect(intentBody).toEqual({
+      familyCircleId: "family-current",
+      target: { kind: "private-binder", binderId: "binder-current" },
+      originalFileName: "school-note.pdf",
+      mediaType: "application/pdf",
+      byteLength: 1024
+    });
+    expect(intentBody).not.toHaveProperty("bytes");
+    expect(intentBody).not.toHaveProperty("base64");
+    expect(intentBody).not.toHaveProperty("file");
   });
 
   it("validates an irreversible account-deletion receipt", async () => {

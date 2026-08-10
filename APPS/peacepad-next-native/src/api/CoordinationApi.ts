@@ -2,6 +2,7 @@ import type {
   AcceptedInvitation,
   AttachmentTarget,
   AttachmentUploadIntent,
+  CaseBinder,
   CalendarLayer,
   Conversation,
   EntityId,
@@ -135,9 +136,18 @@ export type CreateAttachmentUploadIntentInput = Readonly<{
   byteLength: number;
 }>;
 
+export type CreateCaseBinderInput = Readonly<{
+  familyCircleId: EntityId;
+  name: string;
+  childLabel: string;
+}>;
+
 export interface PeacePadCoordinationApi {
   deleteAccount(context: WriteContext): Promise<DeletedAccount>;
   createFamily(familyName: string, context: WriteContext): Promise<CreatedFamily>;
+  listCaseBinders(familyCircleId: EntityId): Promise<readonly CaseBinder[]>;
+  createCaseBinder(input: CreateCaseBinderInput, context: WriteContext): Promise<CaseBinder>;
+  archiveCaseBinder(binderId: EntityId, context: WriteContext): Promise<CaseBinder>;
   createAttachmentUploadIntent(input: CreateAttachmentUploadIntentInput, context: WriteContext): Promise<AttachmentUploadIntent>;
   createInvitation(input: CreateInvitationInput, context: WriteContext): Promise<CreatedInvitation>;
   resolveInvitation(code: string): Promise<InvitationPreview>;
@@ -200,6 +210,18 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
 
   createFamily(familyName: string, context: WriteContext) {
     return this.write<CreatedFamily>("/api/v2/families", "POST", { familyName: familyName.trim() }, context);
+  }
+
+  listCaseBinders(familyCircleId: EntityId) {
+    return this.request<readonly CaseBinder[]>(`/api/v2/case-binders?familyCircleId=${encodeURIComponent(familyCircleId)}`);
+  }
+
+  createCaseBinder(input: CreateCaseBinderInput, context: WriteContext) {
+    return this.write<CaseBinder>("/api/v2/case-binders", "POST", input, context);
+  }
+
+  archiveCaseBinder(binderId: EntityId, context: WriteContext) {
+    return this.write<CaseBinder>(`/api/v2/case-binders/${encodeURIComponent(binderId)}`, "PATCH", { status: "archived" }, context);
   }
 
   async deleteAccount(context: WriteContext) {

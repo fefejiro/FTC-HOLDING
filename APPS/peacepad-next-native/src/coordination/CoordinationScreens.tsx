@@ -689,7 +689,7 @@ export function MessagesScreen() {
 }
 
 export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
-  const { binder, attachmentIntent, createBinder, prepareAttachment } = useRecordsState();
+  const { archiveBinder, binder, binders, attachmentIntent, busy, createBinder, error: recordsError, loading, prepareAttachment, reload, selectBinder } = useRecordsState();
   const [binderName, setBinderName] = useState("");
   const [childLabel, setChildLabel] = useState("");
   const [fileName, setFileName] = useState("");
@@ -697,40 +697,55 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
   const [byteLength, setByteLength] = useState("");
   const [error, setError] = useState<string>();
 
-  const saveBinder = () => {
-    try { createBinder(binderName, childLabel); setError(undefined); }
+  const saveBinder = async () => {
+    if (binderName.trim().length < 3) { setError("Enter a Case Binder name."); return; }
+    if (childLabel.trim().length < 2) { setError("Enter a child label."); return; }
+    setError(undefined);
+    try { await createBinder(binderName, childLabel); }
     catch (caught) { setError(caught instanceof Error ? caught.message : "Check the Case Binder details."); }
   };
-  const prepare = () => {
+  const prepare = async () => {
+    setError(undefined);
     try {
-      prepareAttachment({ originalFileName: fileName, mediaType, byteLength: Number(byteLength) });
-      setError(undefined);
+      await prepareAttachment({ originalFileName: fileName, mediaType, byteLength: Number(byteLength) });
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Check the attachment details."); }
   };
   return (
     <View style={styles.stack}>
       <Text style={styles.title}>Records</Text>
-      {!binder ? <View style={styles.card}>
+      {loading ? <View style={styles.card}><Text style={styles.heading}>Opening Records</Text><Text style={styles.body}>Loading your private Case Binders.</Text></View> : null}
+      {!loading && binders.length > 1 ? <View style={styles.card}>
+        <Text style={styles.heading}>Your Case Binders</Text>
+        {binders.filter((candidate) => candidate.status === "active").map((candidate) => (
+          <Pressable accessibilityRole="button" key={candidate.id} onPress={() => selectBinder(candidate.id)} style={styles.actionCard}>
+            <Text style={styles.actionTitle}>{candidate.name}</Text>
+            <Text style={styles.caption}>{candidate.childLabel} · Private</Text>
+          </Pressable>
+        ))}
+      </View> : null}
+      {!loading && !binder ? <View style={styles.card}>
         <Text style={styles.heading}>Create a Case Binder</Text>
         <Text style={styles.body}>Keep private records organized by family and child.</Text>
         <TextInput accessibilityLabel="Binder name" onChangeText={setBinderName} placeholder="Binder name" style={styles.input} value={binderName} />
         <TextInput accessibilityLabel="Child label" onChangeText={setChildLabel} placeholder="Child label" style={styles.input} value={childLabel} />
-        <LabButton label="Create Case Binder" onPress={saveBinder} />
-      </View> : <View style={styles.card}>
+        <LabButton disabled={busy} label={busy ? "Creating..." : "Create Case Binder"} onPress={() => void saveBinder()} />
+      </View> : !loading && binder ? <View style={styles.card}>
         <Text style={styles.heading}>{binder.name}</Text>
         <Text style={styles.caption}>{binder.childLabel} · Private</Text>
         <Text style={styles.fieldLabel}>Prepare attachment details</Text>
         <TextInput accessibilityLabel="Original file name" onChangeText={setFileName} placeholder="school-note.pdf" style={styles.input} value={fileName} />
         <TextInput accessibilityLabel="Media type" onChangeText={(value) => setMediaType(value as AttachmentMediaType)} placeholder="application/pdf" style={styles.input} value={mediaType} />
         <TextInput accessibilityLabel="File size in bytes" keyboardType="number-pad" onChangeText={setByteLength} placeholder="1200" style={styles.input} value={byteLength} />
-        <LabButton label="Prepare details" onPress={prepare} />
+        <LabButton disabled={busy} label={busy ? "Preparing..." : "Prepare details"} onPress={() => void prepare()} />
         {attachmentIntent ? <View accessibilityLabel="Attachment details prepared" style={styles.successCard}>
           <Text style={styles.heading}>Details prepared</Text>
           <Text style={styles.body}>{attachmentIntent.originalFileName}</Text>
           <Text style={styles.caption}>No file was uploaded.</Text>
         </View> : null}
-      </View>}
-      {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
+        <LabButton disabled={busy} label="Archive Case Binder" onPress={() => void archiveBinder().catch(() => undefined)} variant="secondary" />
+      </View> : null}
+      {error || recordsError ? <Text accessibilityRole="alert" style={styles.error}>{error ?? recordsError}</Text> : null}
+      {recordsError && !loading ? <LabButton label="Try again" onPress={() => void reload()} variant="secondary" /> : null}
       <Pressable accessibilityRole="button" onPress={() => setScreen("home")} style={styles.actionCard}>
         <Text style={styles.actionTitle}>Return home</Text>
         <Text style={styles.caption}>Choose another task.</Text>

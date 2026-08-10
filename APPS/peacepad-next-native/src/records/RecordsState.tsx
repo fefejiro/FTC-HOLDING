@@ -1,54 +1,258 @@
-import React, { createContext, useContext, useMemo, useRef, useState, type ReactNode } from "react";
-import { PEACEPAD_V2_SCHEMA_VERSION, type AttachmentMediaType, type AttachmentUploadIntent, type CaseBinder } from "../domain/v2";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import type { CreateAttachmentUploadIntentInput, PeacePadCoordinationApi } from "../api/CoordinationApi";
+import type { CoordinationRuntime } from "../coordination/CoordinationState";
+import {
+  PEACEPAD_V2_SCHEMA_VERSION,
+  createWriteContext,
+  type AttachmentMediaType,
+  type AttachmentUploadIntent,
+  type CaseBinder
+} from "../domain/v2";
 import { MetadataAttachmentService } from "./MetadataAttachmentService";
 
-const actor = { identityId: "fictional-identity", familyCircleId: "fictional-family", sessionId: "device-session" };
+const demoActor = { identityId: "fictional-identity", familyCircleId: "fictional-family", sessionId: "device-session" };
+
+type AttachmentInput = Readonly<{ originalFileName: string; mediaType: AttachmentMediaType; byteLength: number }>;
 
 type RecordsContextValue = {
+  binders: readonly CaseBinder[];
   binder?: CaseBinder;
   attachmentIntent?: AttachmentUploadIntent;
-  createBinder: (name: string, childLabel: string) => CaseBinder;
-  prepareAttachment: (input: { originalFileName: string; mediaType: AttachmentMediaType; byteLength: number }) => AttachmentUploadIntent;
+  loading: boolean;
+  busy: boolean;
+  error?: string;
+  selectBinder: (binderId: string) => void;
+  createBinder: (name: string, childLabel: string) => Promise<CaseBinder>;
+  archiveBinder: () => Promise<CaseBinder>;
+  prepareAttachment: (input: AttachmentInput) => Promise<AttachmentUploadIntent>;
+  reload: () => Promise<void>;
 };
 
 const RecordsContext = createContext<RecordsContextValue | undefined>(undefined);
 
-export function RecordsStateProvider({ children }: { children: ReactNode }) {
-  const [binder, setBinder] = useState<CaseBinder>();
+type RecordsProviderProps = Readonly<{
+  children: ReactNode;
+  api?: PeacePadCoordinationApi;
+  runtime?: CoordinationRuntime;
+}>;
+
+function idempotencyKey(operation: string): string {
+  return `${operation}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+function writeContext(runtime: CoordinationRuntime, operation: string, expectedVersion: number | null = null) {
+  return createWriteContext({
+    actor: {
+      identityId: runtime.actorIdentityId,
+      participantGrantId: runtime.participantGrantId,
+      sessionId: runtime.sessionId
+    },
+    expectedVersion,
+    idempotencyKey: idempotencyKey(operation),
+    region: runtime.region
+  });
+}
+
+function assertBinder(value: CaseBinder, runtime: CoordinationRuntime): CaseBinder {
+  if (
+    !value
+    || value.schemaVersion !== PEACEPAD_V2_SCHEMA_VERSION
+    || value.region !== runtime.region
+    || value.familyCircleId !== runtime.familyCircleId
+    || value.ownerIdentityId !== runtime.actorIdentityId
+    || !value.id
+    || !Number.isInteger(value.version)
+    || value.version < 1
+  ) throw new Error("PeacePad could not verify the Case Binder response.");
+  return value;
+}
+
+function assertAttachmentIntent(value: AttachmentUploadIntent, runtime: CoordinationRuntime, binderId: string): AttachmentUploadIntent {
+  if (
+    !value
+    || value.schemaVersion !== PEACEPAD_V2_SCHEMA_VERSION
+    || value.region !== runtime.region
+    || value.familyCircleId !== runtime.familyCircleId
+    || value.ownerIdentityId !== runtime.actorIdentityId
+    || value.target.kind !== "private-binder"
+    || value.target.binderId !== binderId
+    || value.status !== "metadata-prepared"
+    || value.uploadTransport !== "disabled"
+    || value.uploadUrl !== null
+    || !value.id
+    || Number.isNaN(Date.parse(value.expiresAt))
+  ) throw new Error("PeacePad could not verify the attachment preparation response.");
+  return value;
+}
+
+export function RecordsStateProvider({ api, children, runtime }: RecordsProviderProps) {
+  const persisted = Boolean(api && runtime);
+  if (Boolean(api) !== Boolean(runtime)) throw new Error("Records require both a verified API and runtime.");
+  const [binders, setBinders] = useState<readonly CaseBinder[]>([]);
+  const [selectedBinderId, setSelectedBinderId] = useState<string>();
   const [attachmentIntent, setAttachmentIntent] = useState<AttachmentUploadIntent>();
-  const service = useRef(new MetadataAttachmentService(actor));
+  const [loading, setLoading] = useState(persisted);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  const generation = useRef(0);
+  const demoService = useRef(new MetadataAttachmentService(demoActor));
+
+  const binder = binders.find((candidate) => candidate.id === selectedBinderId)
+    ?? binders.find((candidate) => candidate.status === "active");
+
+  const reload = useCallback(async () => {
+    if (!api || !runtime) return;
+    const currentGeneration = ++generation.current;
+    setLoading(true);
+    setError(undefined);
+    try {
+      const listed = await api.listCaseBinders(runtime.familyCircleId);
+      const verified = listed.map((candidate) => assertBinder(candidate, runtime));
+      if (generation.current !== currentGeneration) return;
+      setBinders(verified);
+      setSelectedBinderId((current) => verified.some((candidate) => candidate.id === current)
+        ? current
+        : verified.find((candidate) => candidate.status === "active")?.id);
+    } catch (caught) {
+      if (generation.current !== currentGeneration) return;
+      setBinders([]);
+      setSelectedBinderId(undefined);
+      setError(caught instanceof Error ? caught.message : "PeacePad could not load Records.");
+    } finally {
+      if (generation.current === currentGeneration) setLoading(false);
+    }
+  }, [api, runtime?.actorIdentityId, runtime?.familyCircleId, runtime?.region, runtime?.sessionId]);
+
+  useEffect(() => {
+    setBinders([]);
+    setSelectedBinderId(undefined);
+    setAttachmentIntent(undefined);
+    setError(undefined);
+    if (api && runtime) void reload();
+    return () => { generation.current += 1; };
+  }, [api, reload, runtime?.actorIdentityId, runtime?.familyCircleId, runtime?.region, runtime?.sessionId]);
+
   const value = useMemo<RecordsContextValue>(() => ({
+    binders,
     binder,
     attachmentIntent,
-    createBinder(name, childLabel) {
+    loading,
+    busy,
+    error,
+    selectBinder(binderId) {
+      if (!binders.some((candidate) => candidate.id === binderId && candidate.status === "active")) return;
+      setSelectedBinderId(binderId);
+      setAttachmentIntent(undefined);
+    },
+    async createBinder(name, childLabel) {
       const cleanName = name.trim();
       const cleanChildLabel = childLabel.trim();
       if (cleanName.length < 3) throw new Error("Enter a Case Binder name.");
       if (cleanChildLabel.length < 2) throw new Error("Enter a child label.");
-      const createdAt = new Date().toISOString();
-      const created: CaseBinder = {
-        id: "binder-current", schemaVersion: PEACEPAD_V2_SCHEMA_VERSION, version: 1, region: "ca",
-        familyCircleId: actor.familyCircleId, ownerIdentityId: actor.identityId,
-        name: cleanName, childLabel: cleanChildLabel, status: "active",
-        provenance: { createdAt, createdBy: actor, source: "app" }
-      };
-      service.current.registerBinder(created);
-      setBinder(created);
-      setAttachmentIntent(undefined);
-      return created;
+      setBusy(true);
+      setError(undefined);
+      try {
+        let created: CaseBinder;
+        if (api && runtime) {
+          created = assertBinder(await api.createCaseBinder({
+            familyCircleId: runtime.familyCircleId,
+            name: cleanName,
+            childLabel: cleanChildLabel
+          }, writeContext(runtime, "case-binder-create")), runtime);
+        } else {
+          const createdAt = new Date().toISOString();
+          created = {
+            id: `binder-${Date.now().toString(36)}`,
+            schemaVersion: PEACEPAD_V2_SCHEMA_VERSION,
+            version: 1,
+            region: "ca",
+            familyCircleId: demoActor.familyCircleId,
+            ownerIdentityId: demoActor.identityId,
+            name: cleanName,
+            childLabel: cleanChildLabel,
+            status: "active",
+            provenance: { createdAt, createdBy: demoActor, source: "app" }
+          };
+          demoService.current.registerBinder(created);
+        }
+        setBinders((current) => [...current.filter((candidate) => candidate.id !== created.id), created]);
+        setSelectedBinderId(created.id);
+        setAttachmentIntent(undefined);
+        return created;
+      } catch (caught) {
+        const message = caught instanceof Error ? caught.message : "PeacePad could not create the Case Binder.";
+        setError(message);
+        throw caught;
+      } finally {
+        setBusy(false);
+      }
     },
-    prepareAttachment(input) {
-      if (!binder) throw new Error("Create a Case Binder first.");
-      const prepared = service.current.prepare({
-        familyCircleId: actor.familyCircleId, ownerIdentityId: actor.identityId,
-        target: { kind: "private-binder", binderId: binder.id },
-        originalFileName: input.originalFileName, mediaType: input.mediaType, byteLength: input.byteLength,
-        idempotencyKey: `intent-${binder.id}-${input.originalFileName}-${input.byteLength}`.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 96)
-      });
-      setAttachmentIntent(prepared);
-      return prepared;
-    }
-  }), [attachmentIntent, binder]);
+    async archiveBinder() {
+      if (!binder) throw new Error("Select a Case Binder first.");
+      if (!api || !runtime) {
+        const archived = { ...binder, status: "archived" as const, version: binder.version + 1 };
+        setBinders((current) => current.map((candidate) => candidate.id === binder.id ? archived : candidate));
+        setSelectedBinderId(undefined);
+        return archived;
+      }
+      setBusy(true);
+      setError(undefined);
+      try {
+        const archived = assertBinder(await api.archiveCaseBinder(
+          binder.id,
+          writeContext(runtime, "case-binder-archive", binder.version)
+        ), runtime);
+        if (archived.status !== "archived") throw new Error("PeacePad could not verify the archived Case Binder.");
+        setBinders((current) => current.map((candidate) => candidate.id === archived.id ? archived : candidate));
+        setSelectedBinderId(undefined);
+        setAttachmentIntent(undefined);
+        return archived;
+      } catch (caught) {
+        const message = caught instanceof Error ? caught.message : "PeacePad could not archive the Case Binder.";
+        setError(message);
+        throw caught;
+      } finally {
+        setBusy(false);
+      }
+    },
+    async prepareAttachment(input) {
+      if (!binder || binder.status !== "active") throw new Error("Create or select an active Case Binder first.");
+      setBusy(true);
+      setError(undefined);
+      try {
+        let prepared: AttachmentUploadIntent;
+        const request: CreateAttachmentUploadIntentInput = {
+          familyCircleId: api && runtime ? runtime.familyCircleId : demoActor.familyCircleId,
+          target: { kind: "private-binder", binderId: binder.id },
+          originalFileName: input.originalFileName,
+          mediaType: input.mediaType,
+          byteLength: input.byteLength
+        };
+        if (api && runtime) {
+          prepared = assertAttachmentIntent(await api.createAttachmentUploadIntent(
+            request,
+            writeContext(runtime, "attachment-intent-prepare")
+          ), runtime, binder.id);
+        } else {
+          prepared = demoService.current.prepare({
+            ...request,
+            ownerIdentityId: demoActor.identityId,
+            idempotencyKey: idempotencyKey("attachment-intent")
+          });
+        }
+        setAttachmentIntent(prepared);
+        return prepared;
+      } catch (caught) {
+        const message = caught instanceof Error ? caught.message : "PeacePad could not prepare the attachment details.";
+        setError(message);
+        throw caught;
+      } finally {
+        setBusy(false);
+      }
+    },
+    reload
+  }), [api, attachmentIntent, binder, binders, busy, error, loading, reload, runtime]);
+
   return <RecordsContext.Provider value={value}>{children}</RecordsContext.Provider>;
 }
 

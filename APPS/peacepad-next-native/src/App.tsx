@@ -37,20 +37,20 @@ export function resolveStartScreen(value?: string): AppScreen {
   return value && supported.has(value as AppScreen) ? value as AppScreen : "foundation";
 }
 
-export function PeacePadCoordinationApp({ recordsConnected = true, startScreen }: { recordsConnected?: boolean; startScreen?: string }) {
+export function PeacePadCoordinationApp({ startScreen, wrapRecordsProvider = true }: { startScreen?: string; wrapRecordsProvider?: boolean }) {
   const content = (
     <NavigationContainer linking={startScreen ? undefined : peacePadLinking}>
       <StatusBar barStyle="dark-content" />
       <Stack.Navigator initialRouteName={resolveStartScreen(startScreen ?? process.env?.EXPO_PUBLIC_PEACEPAD_LAB_START_SCREEN)} screenOptions={{ headerShown: false }}>
         {(["foundation", "home", "messages", "calendar", "invite", "records", "more"] as const).map((name) => (
           <Stack.Screen key={name} name={name}>
-            {({ route }) => <CoordinationRoute activeScreen={name} invitationCode={route.params?.code} recordsConnected={recordsConnected} />}
+            {({ route }) => <CoordinationRoute activeScreen={name} invitationCode={route.params?.code} />}
           </Stack.Screen>
         ))}
       </Stack.Navigator>
     </NavigationContainer>
   );
-  return recordsConnected ? <RecordsStateProvider>{content}</RecordsStateProvider> : content;
+  return wrapRecordsProvider ? <RecordsStateProvider>{content}</RecordsStateProvider> : content;
 }
 
 type BoundaryState = { failed: boolean };
@@ -109,14 +109,14 @@ function PeacePadStagingApp() {
     <SafeAreaProvider>
       <SupabaseSessionProvider client={client}>
         <PeacePadStagingRuntime environment={environmentConfig} supabase={staging}>
-          <PeacePadCoordinationApp recordsConnected={false} startScreen="home" />
+          <PeacePadCoordinationApp startScreen="home" wrapRecordsProvider={false} />
         </PeacePadStagingRuntime>
       </SupabaseSessionProvider>
     </SafeAreaProvider>
   );
 }
 
-function CoordinationRoute({ activeScreen, invitationCode, recordsConnected }: { activeScreen: AppScreen; invitationCode?: string; recordsConnected: boolean }) {
+function CoordinationRoute({ activeScreen, invitationCode }: { activeScreen: AppScreen; invitationCode?: string }) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const setScreen = (screen: CoordinationScreen) => navigation.navigate(screen);
   const primary: PrimaryTaskScreen = activeScreen === "invite" || activeScreen === "foundation" ? "home" : activeScreen;
@@ -130,10 +130,7 @@ function CoordinationRoute({ activeScreen, invitationCode, recordsConnected }: {
           {activeScreen === "messages" ? <MessagesScreen /> : null}
           {activeScreen === "calendar" ? <CalendarScreen /> : null}
           {activeScreen === "invite" ? <InvitationScreen initialCode={invitationCode} /> : null}
-          {activeScreen === "records" ? recordsConnected
-            ? <RecordsHomeScreen setScreen={setScreen} />
-            : <View style={styles.unavailable}><Text style={styles.unavailableTitle}>Records are not connected yet</Text><Text style={styles.unavailableBody}>Your signed-in family space is protected. Records will open only after they use the same verified regional account.</Text></View>
-            : null}
+          {activeScreen === "records" ? <RecordsHomeScreen setScreen={setScreen} /> : null}
           {activeScreen === "more" ? <MoreScreen setScreen={setScreen} /> : null}
         </ScrollView>
         {activeScreen !== "foundation" ? <TaskNavigation active={primary} onSelect={setScreen} /> : null}

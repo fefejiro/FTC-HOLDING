@@ -18,11 +18,12 @@ $authCleanupMigrationPath = Join-Path $platformRoot 'supabase/migrations/2026080
 $deletionMinimizationMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090010_v2_account_deletion_minimization.sql'
 $atomicInvitationMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090011_v2_accept_invitation_conversation.sql'
 $idempotencyReceiptMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090012_v2_idempotency_receipts.sql'
+$privateRecordsMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090013_v2_private_case_binders.sql'
 $authCleanupRunnerPath = Join-Path $platformRoot 'scripts/run-auth-cleanup.ps1'
 $deployRunnerPath = Join-Path $platformRoot 'scripts/deploy-supabase-free-staging.ps1'
 $configPath = Join-Path $platformRoot 'supabase/config.toml'
 
-foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $idempotencyReceiptMigrationPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
+foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $idempotencyReceiptMigrationPath, $privateRecordsMigrationPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
     throw "Required Supabase staging file is missing: $path"
   }
@@ -43,6 +44,7 @@ $authCleanupMigration = Get-Content -LiteralPath $authCleanupMigrationPath -Raw
 $deletionMinimizationMigration = Get-Content -LiteralPath $deletionMinimizationMigrationPath -Raw
 $atomicInvitationMigration = Get-Content -LiteralPath $atomicInvitationMigrationPath -Raw
 $idempotencyReceiptMigration = Get-Content -LiteralPath $idempotencyReceiptMigrationPath -Raw
+$privateRecordsMigration = Get-Content -LiteralPath $privateRecordsMigrationPath -Raw
 $authCleanupRunner = Get-Content -LiteralPath $authCleanupRunnerPath -Raw
 $deployRunner = Get-Content -LiteralPath $deployRunnerPath -Raw
 $config = Get-Content -LiteralPath $configPath -Raw
@@ -402,6 +404,45 @@ foreach ($pattern in @(
 )) {
   if ($calendarMigration -notmatch $pattern) {
     throw "Calendar migration is missing required boundary: $pattern"
+  }
+}
+foreach ($table in @('case_binder', 'attachment_upload_intent')) {
+  if ($privateRecordsMigration -notmatch "create table if not exists peacepad_v2\.$table") {
+    throw "Private Records migration is missing table: $table"
+  }
+  if ($privateRecordsMigration -notmatch "alter table peacepad_v2\.$table enable row level security") {
+    throw "Private Records migration is missing fail-closed RLS: $table"
+  }
+}
+foreach ($rpc in @(
+  'peacepad_v2_list_case_binders',
+  'peacepad_v2_create_case_binder',
+  'peacepad_v2_archive_case_binder',
+  'peacepad_v2_prepare_attachment_intent'
+)) {
+  if ($privateRecordsMigration -notmatch "create or replace function public\.$rpc") {
+    throw "Private Records migration is missing RPC: $rpc"
+  }
+  if ($privateRecordsMigration -notmatch "revoke all on function public\.$rpc") {
+    throw "Private Records RPC is not revoked from mobile roles: $rpc"
+  }
+}
+foreach ($pattern in @(
+  "upload_transport text not null default 'disabled'",
+  'upload_url text check \(upload_url is null\)',
+  "status text not null default 'metadata-prepared'",
+  "now\(\)\+interval '15 minutes'",
+  'peacepad_v2_delete_private_records',
+  "'case_binder.created'",
+  "'attachment_intent.prepared'"
+)) {
+  if ($privateRecordsMigration -notmatch $pattern) {
+    throw "Private Records migration is missing required boundary: $pattern"
+  }
+}
+foreach ($route in @('/api/v2/case-binders', '/api/v2/attachment-upload-intents')) {
+  if ($function -notmatch [regex]::Escape($route)) {
+    throw "Edge Function is missing Private Records route: $route"
   }
 }
 if (

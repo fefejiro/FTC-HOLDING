@@ -4,6 +4,7 @@ import {
   InvitationError,
   type CorrectMessageInput,
   type CreateAttachmentUploadIntentInput,
+  type CreateCaseBinderInput,
   type CreateCalendarLayerInput,
   type CreateConversationInput,
   type CreateInvitationInput,
@@ -19,6 +20,7 @@ import {
   PEACEPAD_V2_SCHEMA_VERSION,
   type AcceptedInvitation,
   type AttachmentUploadIntent,
+  type CaseBinder,
   type ActorReference,
   type CalendarLayer,
   type Conversation,
@@ -104,6 +106,7 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
   private messages: MessageEvent[] = [];
   private messageCheckPreferences = new Map<string, MessageCheckPreference>();
   private previewAttempts = 0;
+  private binders: CaseBinder[] = [];
 
   constructor(seedInvitations: readonly SeedInvitation[] = []) {
     seedInvitations.forEach((seed) => {
@@ -210,6 +213,33 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
   async declineInvitation(invitationId: EntityId, context: WriteContext): Promise<void> {
     this.assertInvitationVersion(invitationId, context.expectedVersion);
     this.transitionInvitation(invitationId, "used");
+  }
+
+  async listCaseBinders(familyCircleId: EntityId): Promise<readonly CaseBinder[]> {
+    this.assertCurrentFamily(familyCircleId);
+    return this.binders.filter((binder) => binder.familyCircleId === familyCircleId);
+  }
+
+  async createCaseBinder(input: CreateCaseBinderInput, _context: WriteContext): Promise<CaseBinder> {
+    this.assertCurrentFamily(input.familyCircleId);
+    const binder: CaseBinder = {
+      ...versioned(`binder-${Date.now().toString(36)}`),
+      familyCircleId: input.familyCircleId,
+      ownerIdentityId: actor.identityId,
+      name: input.name.trim(),
+      childLabel: input.childLabel.trim(),
+      status: "active"
+    };
+    this.binders = [...this.binders, binder];
+    return binder;
+  }
+
+  async archiveCaseBinder(binderId: EntityId, _context: WriteContext): Promise<CaseBinder> {
+    const current = this.binders.find((binder) => binder.id === binderId);
+    if (!current) throw new PeacePadApiError("Case Binder not found.", "http", 404);
+    const archived = { ...current, status: "archived" as const, version: current.version + 1 };
+    this.binders = this.binders.map((binder) => binder.id === binderId ? archived : binder);
+    return archived;
   }
 
   async deleteAccount(context: WriteContext) {

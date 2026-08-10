@@ -199,6 +199,7 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     FAMILY_ACCESS_DENIED: "FAMILY_ACCESS_DENIED",
     CONVERSATION_ACCESS_DENIED: "CONVERSATION_ACCESS_DENIED",
     CALENDAR_ACCESS_DENIED: "CALENDAR_ACCESS_DENIED",
+    CASE_BINDER_ACCESS_DENIED: "FAMILY_ACCESS_DENIED",
     MESSAGE_ACCESS_DENIED: "MESSAGE_ACCESS_DENIED",
     AI_CONSENT_REQUIRED: "AI_CONSENT_REQUIRED",
     INVITATION_EXPIRED: "INVITATION_EXPIRED",
@@ -216,6 +217,7 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     "CONVERSATION_PARTICIPANTS_INVALID", "MESSAGE_BODY_INVALID", "MESSAGE_CORRECTION_UNCHANGED",
     "MESSAGE_EVENT_INVALID", "MESSAGE_SEARCH_INVALID", "POLICY_VERSION_INVALID", "REGION_INVALID",
     "CALENDAR_LAYER_INVALID", "CALENDAR_LAYER_NOT_EMPTY", "SCHEDULE_EVENT_INVALID", "MESSAGE_CHECK_INVALID",
+    "CASE_BINDER_INVALID", "ATTACHMENT_INTENT_INVALID", "CASE_BINDER_ARCHIVED",
   ]);
   const safeCode = directCodes[message ?? ""] ?? (invalidRequestCodes.has(message ?? "") ? "INVALID_REQUEST" : "DATABASE_NOT_READY");
   const status = safeCode === "DATABASE_NOT_READY" ? 503
@@ -285,6 +287,9 @@ const writeOperation = (method: string, path: string, body: Record<string, unkno
   if (method === "POST" && path === "/api/v2/schedule-events") return "schedule_event.created";
   if (method === "PATCH" && /^\/api\/v2\/schedule-events\/[^/]+$/.test(path)) return "schedule_event.updated";
   if (method === "DELETE" && /^\/api\/v2\/schedule-events\/[^/]+$/.test(path)) return "schedule_event.deleted";
+  if (method === "POST" && path === "/api/v2/case-binders") return "case_binder.created";
+  if (method === "PATCH" && /^\/api\/v2\/case-binders\/[^/]+$/.test(path)) return "case_binder.archived";
+  if (method === "POST" && path === "/api/v2/attachment-upload-intents") return "attachment_intent.prepared";
   const invitationTransition = path.match(/^\/api\/v2\/invitations\/[^/]+\/(accept|decline)$/);
   if (method === "POST" && invitationTransition) {
     return invitationTransition[1] === "accept" ? "invitation.accepted" : "invitation.declined";
@@ -613,6 +618,19 @@ const handler = async (request: Request): Promise<Response> => {
     return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data ?? [], requestId, config);
   }
 
+  if (request.method === "GET" && path === "/api/v2/case-binders") {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
+    const familyId = new URL(request.url).searchParams.get("familyCircleId")?.trim() ?? "";
+    if (!isUuid(familyId)) return failure(request, 400, "INVALID_REQUEST", "A valid family is required.", requestId, config);
+    const { data, error } = await authenticated.admin.rpc("peacepad_v2_list_case_binders", {
+      p_identity_id: authenticated.user.id,
+      p_region: config.region,
+      p_family_id: familyId,
+    });
+    return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data ?? [], requestId, config);
+  }
+
   const isInvitationTransition = /^\/api\/v2\/invitations\/[^/]+\/(accept|decline)$/.test(path);
   const isInvitationRevocation = /^\/api\/v2\/invitations\/[^/]+$/.test(path);
   const isAccountDeletion = path === "/api/v2/account";
@@ -625,14 +643,17 @@ const handler = async (request: Request): Promise<Response> => {
   const isScheduleEventCreation = path === "/api/v2/schedule-events";
   const scheduleEventMatch = path.match(/^\/api\/v2\/schedule-events\/([^/]+)$/);
   const isMessageCheckUpdate = request.method === "PUT" && Boolean(conversationMessageCheckMatch);
+  const isCaseBinderCreation = path === "/api/v2/case-binders";
+  const caseBinderMatch = path.match(/^\/api\/v2\/case-binders\/([^/]+)$/);
+  const isAttachmentIntentCreation = path === "/api/v2/attachment-upload-intents";
   if (
     (request.method === "POST" && ([
       "/api/v2/session/bootstrap",
       "/api/v2/consents",
       "/api/v2/families",
       "/api/v2/invitations",
-    ].includes(path) || isInvitationTransition || isConversationCreation || isMessageSend || isMessageLifecycle || isMessageCorrection || isCalendarLayerCreation || isScheduleEventCreation)) ||
-    (request.method === "PATCH" && (calendarLayerMatch || scheduleEventMatch)) ||
+    ].includes(path) || isInvitationTransition || isConversationCreation || isMessageSend || isMessageLifecycle || isMessageCorrection || isCalendarLayerCreation || isScheduleEventCreation || isCaseBinderCreation || isAttachmentIntentCreation)) ||
+    (request.method === "PATCH" && (calendarLayerMatch || scheduleEventMatch || caseBinderMatch)) ||
     isMessageCheckUpdate ||
     (request.method === "DELETE" && (isInvitationRevocation || isAccountDeletion || calendarLayerMatch || scheduleEventMatch))
   ) {
@@ -853,6 +874,60 @@ const handler = async (request: Request): Promise<Response> => {
       const { data, error } = await authenticated.admin.rpc(rpcName, rpcArguments);
       return error ? rpcFailure(request, requestId, config, error.message)
         : json(request, isCreate ? 201 : 200, data, requestId, config);
+    }
+
+    if (isCaseBinderCreation || caseBinderMatch) {
+      const familyId = typeof body.familyCircleId === "string" ? body.familyCircleId : "";
+      const binderId = caseBinderMatch ? decodeURIComponent(caseBinderMatch[1]) : "";
+      const name = typeof body.name === "string" ? body.name.trim() : "";
+      const childLabel = typeof body.childLabel === "string" ? body.childLabel.trim() : "";
+      const requestedStatus = typeof body.status === "string" ? body.status : "";
+      if ((isCaseBinderCreation && (!isUuid(familyId) || name.length < 3 || childLabel.length < 2))
+        || (caseBinderMatch && (!isUuid(binderId) || requestedStatus !== "archived"))) {
+        return failure(request, 400, "INVALID_REQUEST", "Case Binder details are invalid.", requestId, config);
+      }
+      const expectedVersionHeader = (request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? "";
+      const expectedVersion = Number(expectedVersionHeader);
+      if (caseBinderMatch && (!Number.isInteger(expectedVersion) || expectedVersion < 1)) {
+        return failure(request, 400, "INVALID_REQUEST", "A valid expected version is required.", requestId, config);
+      }
+      const { data, error } = await authenticated.admin.rpc(
+        isCaseBinderCreation ? "peacepad_v2_create_case_binder" : "peacepad_v2_archive_case_binder",
+        isCaseBinderCreation ? {
+          p_identity_id: authenticated.user.id, p_region: config.region, p_family_id: familyId,
+          p_name: name, p_child_label: childLabel, p_idempotency_key: databaseWriteToken,
+          p_schema_version: context.schemaVersion,
+        } : {
+          p_identity_id: authenticated.user.id, p_region: config.region, p_case_binder_id: binderId,
+          p_expected_version: expectedVersion, p_idempotency_key: databaseWriteToken,
+          p_schema_version: context.schemaVersion,
+        },
+      );
+      return error ? rpcFailure(request, requestId, config, error.message)
+        : json(request, isCaseBinderCreation ? 201 : 200, data, requestId, config);
+    }
+
+    if (isAttachmentIntentCreation) {
+      const familyId = typeof body.familyCircleId === "string" ? body.familyCircleId : "";
+      const target = body.target && typeof body.target === "object" && !Array.isArray(body.target)
+        ? body.target as Record<string, unknown> : null;
+      const binderId = target?.kind === "private-binder" && typeof target.binderId === "string" ? target.binderId : "";
+      const originalFileName = typeof body.originalFileName === "string" ? body.originalFileName.trim() : "";
+      const mediaType = typeof body.mediaType === "string" ? body.mediaType : "";
+      const byteLength = typeof body.byteLength === "number" ? body.byteLength : 0;
+      const unexpectedBytes = "bytes" in body || "base64" in body || "data" in body || "file" in body;
+      if (!isUuid(familyId) || !isUuid(binderId) || !originalFileName || unexpectedBytes
+        || !["image/jpeg", "image/png", "application/pdf", "text/plain"].includes(mediaType)
+        || !Number.isSafeInteger(byteLength) || byteLength < 1 || byteLength > 26_214_400) {
+        return failure(request, 400, "INVALID_REQUEST", "Attachment metadata is invalid.", requestId, config);
+      }
+      const { data, error } = await authenticated.admin.rpc("peacepad_v2_prepare_attachment_intent", {
+        p_identity_id: authenticated.user.id, p_region: config.region, p_family_id: familyId,
+        p_case_binder_id: binderId, p_original_file_name: originalFileName,
+        p_media_type: mediaType, p_byte_length: byteLength,
+        p_idempotency_key: databaseWriteToken, p_schema_version: context.schemaVersion,
+      });
+      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 201, data, requestId, config);
     }
 
     const sendMatch = path.match(/^\/api\/v2\/conversations\/([^/]+)\/messages$/);

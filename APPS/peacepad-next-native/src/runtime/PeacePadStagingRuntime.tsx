@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Image, Linking, StyleSheet, Text, TextInput, View } from "react-native";
 import type { CreatedInvitation, PeacePadCoordinationApi } from "../api/CoordinationApi";
+import { RecordsStateProvider } from "../records/RecordsState";
 import { createStagingCoordinationClient } from "../staging/StagingCoordinationClient";
 import type { CoordinationRuntime } from "../coordination/CoordinationState";
 import { CoordinationStateProvider } from "../coordination/CoordinationState";
@@ -381,7 +382,11 @@ export function PeacePadStagingRuntime({
             setSelectedFamilyCircleId(result.grant.familyCircleId);
           });
           setIncomingInvitationCode(undefined);
-        }} runtime={runtimeState.runtime}>{children}</CoordinationStateProvider>
+        }} runtime={runtimeState.runtime}>
+          <RecordsStateProvider api={runtimeState.api} runtime={runtimeState.runtime}>
+            {children}
+          </RecordsStateProvider>
+        </CoordinationStateProvider>
       </StagingAccountActionsProvider>
     </PendingStagingInvitationProvider>
   );
