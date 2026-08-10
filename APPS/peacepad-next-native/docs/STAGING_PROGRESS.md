@@ -46,7 +46,8 @@ historical #172 baseline plus explicitly labelled successor evidence.
 | Connected-member invitation routing | HOSTED VERIFIED for exact active-family selection and atomic accepted-family conversation bootstrap; managed deployment pending |
 | Scheduled same-session message recovery | LOCAL VERIFIED at `984b91318`; hosted checks pending |
 | Private Case Binder and metadata-only attachment preparation | POSTGRES VERIFIED at `95738a841`: migrations through `202608090013` applied twice and the complete fictional transaction proof passed; managed migration and file transport remain blocked/disabled |
-| Hosted CI | PeacePad-scoped PASS on PR #177 at `95738a841`: native run `31360810916`, infrastructure run `31360810922`. The separate Garden run `31360811004` remains outside PeacePad scope |
+| Owner-private source-linked timeline | HOSTED + POSTGRES VERIFIED at `4fa7ba672`: migrations through `202608100001` applied twice; message/calendar source authorization, content minimization, idempotency, owner isolation, and deletion cleanup passed. No file bytes, arbitrary narrative, legal conclusion, or export capability was added; managed deployment remains blocked |
+| Hosted CI | PeacePad-scoped PASS on PR #177 at `4fa7ba672`: native run `31364518669`, infrastructure run `31364518719`. The separate Garden workflow remains outside PeacePad scope |
 
 This is not a production release. The native client remains a staging/lab
 build with `ca.peacepad.nextnative.lab` and production writes disabled.
