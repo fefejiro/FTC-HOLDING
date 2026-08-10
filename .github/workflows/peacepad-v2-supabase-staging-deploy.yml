@@ -48,11 +48,15 @@ jobs:
     steps:
       - name: Fetch trusted deployment control
         shell: bash
+        env:
+          CONTROL_COMMIT_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
+          [[ "$CONTROL_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]
           git init .
           git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
-          git -c protocol.version=2 fetch --no-tags --depth=1 origin main
+          git -c protocol.version=2 fetch --no-tags --depth=1 origin "$CONTROL_COMMIT_SHA"
+          test "$(git rev-parse FETCH_HEAD)" = "$CONTROL_COMMIT_SHA"
           git checkout --detach FETCH_HEAD
 
       - name: Validate deployment control contract
@@ -213,7 +217,9 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $projects = @{ ca = 'ftdqnhlesqrkstnqgfxr'; us = 'kgechdqdtryktfahyqez' }
-          $migrationFiles = Get-ChildItem peacepad-v2-target/APPS/peacepad-v2-platform/supabase/migrations/*.sql | Sort-Object Name
+          $migrationRoot = 'peacepad-v2-target/APPS/peacepad-v2-platform/supabase/migrations'
+          $edgeFunctionPath = 'peacepad-v2-target/APPS/peacepad-v2-platform/supabase/functions/peacepad-v2-api/index.ts'
+          $migrationFiles = if (Test-Path -LiteralPath $migrationRoot) { @(Get-ChildItem "$migrationRoot/*.sql" | Sort-Object Name) } else { @() }
           $manifest = [ordered]@{
             evidenceBoundary = if ($env:MODE -eq 'deploy' -and $env:JOB_STATUS -eq 'success') { 'DEPLOYED_STAGING_VERIFIED' } else { 'DRY_RUN_OR_FAILED' }
             region = $env:REQUESTED_REGION
@@ -223,7 +229,7 @@ jobs:
             mode = $env:MODE
             jobStatus = $env:JOB_STATUS
             migrations = @($migrationFiles | ForEach-Object { [ordered]@{ name = $_.Name; sha256 = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() } })
-            edgeFunctionSha256 = (Get-FileHash peacepad-v2-target/APPS/peacepad-v2-platform/supabase/functions/peacepad-v2-api/index.ts -Algorithm SHA256).Hash.ToLowerInvariant()
+            edgeFunctionSha256 = if (Test-Path -LiteralPath $edgeFunctionPath) { (Get-FileHash $edgeFunctionPath -Algorithm SHA256).Hash.ToLowerInvariant() } else { $null }
           }
           New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP/peacepad-v2-staging-evidence" | Out-Null
           $manifest | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 "$env:RUNNER_TEMP/peacepad-v2-staging-evidence/manifest.json"
