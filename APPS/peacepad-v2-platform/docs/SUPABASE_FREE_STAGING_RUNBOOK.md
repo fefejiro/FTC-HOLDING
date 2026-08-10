@@ -48,6 +48,12 @@ regional project and set it through the operator's secret store as
 shell history, screenshots, or logs. The secret protects only the bounded
 server-to-server Auth cleanup runner; it is not a user session credential.
 
+Create a second, independent high-entropy secret for request-bound write
+receipts and expose it to the Function as `PEACEPAD_IDEMPOTENCY_SECRET`. This
+secret derives opaque client-key hashes, canonical request fingerprints, and
+deterministic invitation retries. It must not equal the maintenance secret and
+must never be exposed to Expo, clients, chat, source, screenshots, or logs.
+
 After a fictional account-deletion test, process any retryable Auth cleanup
 requests with environment-backed function URLs and secrets:
 
@@ -79,11 +85,13 @@ or screenshots:
 - `SUPABASE_ACCESS_TOKEN`
 - `DATABASE_URL`
 - `MAINTENANCE_SECRET`
+- `IDEMPOTENCY_SECRET`
 
 Distinct `MAINTENANCE_SECRET` values are already configured. The remaining
-missing slots are `SUPABASE_ACCESS_TOKEN` and `DATABASE_URL` in each region.
-The access token must be able to see the approved project ref for that one
-region. Dispatch from `main` and enter the exact reviewed V2 target commit SHA.
+required slots are `SUPABASE_ACCESS_TOKEN`, `DATABASE_URL`, and a distinct
+`IDEMPOTENCY_SECRET` in each region. The access token must be able to see the
+approved project ref for that one region. Dispatch from `main` and enter the
+exact reviewed V2 target commit SHA.
 A real deployment additionally requires the exact confirmation `DEPLOY
 FICTIONAL STAGING`. The workflow dry-runs migrations before any apply, deploys
 only the staging Edge Function, and then verifies health, readiness,
@@ -109,12 +117,33 @@ Required evidence:
    session.
 7. The maintenance runner clears the retry outbox without exposing identity
    IDs or provider details in its response.
+8. Identical write retries replay the same semantic result, while changing the
+   operation, body, region, family, resource, schema, or expected version with
+   the same client key returns `409 IDEMPOTENCY_CONFLICT`.
+9. The append-only audit ledger contains no response JSON, message body,
+   invitation code, family name, or record metadata. Expired encrypted replay
+   receipts are cleared by the maintenance runner.
 
-## Current verified access blocker (2026-08-09)
+## Fictional staging reset required by migration 202608090012
 
-The locally authenticated Supabase CLI token cannot currently see either
-approved regional staging project, and the protected environments do not yet
-have a usable Supabase access token or database URLs. Pending migrations and
+Migration `202608090012_v2_idempotency_receipts.sql` deliberately stops with
+`STAGING_AUDIT_RESET_REQUIRED` if an existing project still contains plaintext
+response JSON in `peacepad_v2.audit_event.result`. Do not bypass the check and
+do not edit deployed migration history. Because these two projects are
+fictional-only staging, the approved operator path is to export schema proof,
+confirm the exact project ref and region, revoke fictional sessions, reset the
+`peacepad_v2` staging schema, and apply the complete migration chain from an
+empty schema. Capture the project ref, region, reviewed commit, migration
+hashes, and post-reset contract result. This procedure must refuse production
+identifiers and must never be used against V1 or real family data.
+
+## Last verified access blocker (2026-08-09)
+
+The previously authenticated Supabase CLI token could not see either approved
+regional staging project. The current workstation could not re-check that
+operator identity on 2026-08-10 because the Supabase CLI is unavailable. The
+protected environments do not yet have a usable Supabase access token,
+database URLs, or request-bound idempotency secrets. Pending migrations and
 the Edge Function are therefore
 **BLOCKED BY DEPLOYMENT IDENTITY**, not reported as deployed. Hosted CI applies
 every migration twice to an isolated PostgreSQL 16 service and verifies the
@@ -123,10 +152,10 @@ access-revocation journey. That is hosted database proof, not managed-project
 execution. The protected workflow and both regional environments are now
 registered. Their main-only branch policies and required reviewer are
 verified, and each environment has a distinct maintenance secret. Managed
-deployment remains blocked on four missing environment-secret slots:
-`SUPABASE_ACCESS_TOKEN` and `DATABASE_URL` for Canada and the United States.
-One access token may be shared if it can see both approved projects, so these
-may represent three distinct values. Resolve by granting a dedicated
+deployment remains blocked on the regional `SUPABASE_ACCESS_TOKEN`,
+`DATABASE_URL`, and new `IDEMPOTENCY_SECRET` slots for Canada and the United
+States. One access token may be shared if it can see both approved projects;
+the database URLs and idempotency secrets remain regional. Resolve by granting a dedicated
 deployment identity access to both projects and adding those values privately.
 Do not share passwords, database URLs, maintenance secrets, or service-role
 keys in chat.
