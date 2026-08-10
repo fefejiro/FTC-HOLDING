@@ -4,7 +4,7 @@
   "description": "Recruiter email intake, drafting, approval, and daily reporting agent.",
   "main": "dist/main.js",
   "scripts": {
-    "test": "vitest run --exclude .local/** --exclude node_modules/** --exclude dist/**",
+    "test": "vitest run --exclude \".local/**\" --exclude \"node_modules/**\" --exclude \"dist/**\"",
     "build": "tsc -p tsconfig.json",
     "dev": "tsx src/main.ts",
     "serve": "tsx src/server.ts",

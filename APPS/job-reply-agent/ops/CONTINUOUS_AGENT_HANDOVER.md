@@ -2,10 +2,11 @@
 
 ## Last Verified State
 
-- Updated: 2026-08-10 17:20 America/New_York
+- Updated: 2026-08-10 17:27 America/New_York
 - Engineering branch: `agent/job-agent-continuous`
-- Recorded parent HEAD: `41c2367a6 Merge branch 'feat/job-agent-product-foundation' into agent/job-agent-continuous`;
-  verify the current HEAD because the mobile increment commit follows it
+- Recorded parent HEAD: `53c6e3be3 Add JobAgent mobile and Codex agent foundation`;
+  verify the current HEAD because the handover commit follows it
+- Draft PR: `https://github.com/fefejiro/FTC-HOLDING/pull/192`
 - Autonomous worktree: `D:\FTC-HOLDING-worktrees\job-agent-continuous`
 - Autonomous branch: `agent/job-agent-continuous`
 - Windows task: `JobReplyAgent-Product-Continuous`
@@ -30,12 +31,18 @@ facts before changing them.
   mobile binary.
 - Fixed `src/main.ts` so parser imports no longer execute the operational CLI.
 - Added focused mobile security/configuration tests and a mobile release runbook.
+- Added `docs/NEXT_DEVELOPER_HANDOVER.md` with setup, ownership, verification,
+  safety boundaries, and ordered release gates.
+- Quoted Vitest exclude globs so Linux CI does not expand `node_modules/**` into
+  test-file filters.
 
 ## Verification Evidence
 
 - Final focused CLI/mobile/PWA Vitest suite: `3` files and `13` tests passed.
 - Full Vitest suite after the CLI import fix: `28` files passed, `1` skipped;
   `210` tests passed, `8` skipped, with a successful process exit.
+- The quoted-glob `npm test --workspaces=false` command passed locally; Linux CI
+  must rerun on the handover commit before that check is considered repaired.
 - `npm run build`: passed.
 - `npm run lint`: passed.
 - `npm run production:check`: passed in static mode with only the expected
@@ -60,8 +67,8 @@ facts before changing them.
 
 - The scheduled product agent runs only while the Windows computer is on and
   the configured user has an interactive session.
-- The release branch has local commits ahead of origin and is not pushed by the
-  unattended task.
+- The branch is pushed to `origin/agent/job-agent-continuous`; the unattended
+  task still does not push future commits automatically.
 - Gmail OAuth, authenticated job-board proof runs, deployment operations, and
   candidate actions remain separate explicitly authorized workflows.
 - Public beta expansion still depends on external and pilot gates documented in
@@ -91,9 +98,9 @@ For a direct scheduled-run preflight without model invocation:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File `
-  "C:\FTC HOLDING\_worktrees\job-agent-release\APPS\job-reply-agent\scripts\continuous-agent-run.ps1" `
-  -ProjectRoot "C:\FTC HOLDING\_worktrees\job-agent-release\APPS\job-reply-agent" `
-  -WorktreeRoot "C:\FTC HOLDING\_worktrees\job-agent-continuous" `
+  "D:\FTC-HOLDING-worktrees\job-agent-continuous\APPS\job-reply-agent\scripts\continuous-agent-run.ps1" `
+  -ProjectRoot "D:\FTC-HOLDING-worktrees\job-agent-continuous\APPS\job-reply-agent" `
+  -WorktreeRoot "D:\FTC-HOLDING-worktrees\job-agent-continuous" `
   -StateRoot "C:\FTC HOLDING\APPS\job-reply-agent" `
   -MaxRunsPerDay 2 -MaxMinutes 45 -DryRun
 ```
