@@ -35,6 +35,12 @@ import {
   type ScheduleEvent
 } from "../domain/v2";
 import { colors, spacing } from "../theme";
+import {
+  expoConnectivityMonitor,
+  usableConnectivity,
+  type ConnectivityMonitor,
+  type ConnectivitySnapshot
+} from "../connectivity/ConnectivityMonitor";
 
 declare const process: {
   env?: Record<string, string | undefined>;
@@ -231,6 +237,7 @@ export function visibleMessages(events: readonly MessageEvent[], actorIdentityId
 export function CoordinationStateProvider({
   api,
   children,
+  connectivity = expoConnectivityMonitor,
   initialCalendarView = resolveCalendarStartView(process.env?.EXPO_PUBLIC_PEACEPAD_LAB_START_CALENDAR_VIEW),
   onInvitationAccepted,
   outbox = secureMessageOutboxStore,
@@ -238,6 +245,7 @@ export function CoordinationStateProvider({
 }: {
   api?: PeacePadCoordinationApi;
   children: ReactNode;
+  connectivity?: ConnectivityMonitor;
   initialCalendarView?: CalendarView;
   onInvitationAccepted?: (result: AcceptedInvitation) => Promise<void>;
   outbox?: MessageOutboxStore;
@@ -269,6 +277,7 @@ export function CoordinationStateProvider({
   const [queuedActionBusyIds, setQueuedActionBusyIds] = useState<readonly string[]>([]);
   const [queuedActionError, setQueuedActionError] = useState<string>();
   const [outboxScheduleVersion, setOutboxScheduleVersion] = useState(0);
+  const [networkAvailable, setNetworkAvailable] = useState(true);
   const [messageSearchQuery, setMessageSearchQueryState] = useState("");
   const [messageSearchResults, setMessageSearchResults] = useState<readonly MessageSearchResult[]>([]);
   const [messageSearchBusy, setMessageSearchBusy] = useState(false);
@@ -281,6 +290,27 @@ export function CoordinationStateProvider({
   const retriedRuntimeScopes = useRef(new Set<string>());
   const queuedActionLocks = useRef(new Set<string>());
   const scheduledRetryScopeLocks = useRef(new Set<string>());
+  const networkAvailableRef = useRef(true);
+
+  useEffect(() => {
+    if (demoMode || !activeRuntime) return;
+    let cancelled = false;
+    const updateConnectivity = (snapshot: ConnectivitySnapshot) => {
+      if (cancelled) return;
+      const usable = usableConnectivity(snapshot);
+      if (usable === undefined || usable === networkAvailableRef.current) return;
+      const reconnected = usable && !networkAvailableRef.current;
+      networkAvailableRef.current = usable;
+      setNetworkAvailable(usable);
+      if (reconnected) setOutboxScheduleVersion((current) => current + 1);
+    };
+    void connectivity.getCurrent().then(updateConnectivity).catch(() => undefined);
+    const subscription = connectivity.subscribe(updateConnectivity);
+    return () => {
+      cancelled = true;
+      subscription.remove();
+    };
+  }, [activeRuntime?.actorIdentityId, activeRuntime?.conversationId, activeRuntime?.familyCircleId, activeRuntime?.region, activeRuntime?.sessionId, connectivity, demoMode]);
 
   useEffect(() => {
     const generation = ++hydrationGeneration.current;
@@ -317,13 +347,17 @@ export function CoordinationStateProvider({
     const retryScopeKey = [outboxScope.actorIdentityId, outboxScope.sessionId, outboxScope.region, outboxScope.familyCircleId, outboxScope.conversationId].join(":");
     const retry = retriedRuntimeScopes.current.has(retryScopeKey)
       ? Promise.resolve()
-      : (retriedRuntimeScopes.current.add(retryScopeKey), retryQueuedMessages(
-        resolvedApi,
-        outbox,
-        outboxScope,
-        () => new Date(),
-        () => !cancelled && hydrationGeneration.current === generation
-      ).then(() => undefined));
+      : connectivity.getCurrent().catch(() => undefined).then((snapshot) => {
+        if (snapshot && usableConnectivity(snapshot) === false) return;
+        retriedRuntimeScopes.current.add(retryScopeKey);
+        return retryQueuedMessages(
+          resolvedApi,
+          outbox,
+          outboxScope,
+          () => new Date(),
+          () => !cancelled && hydrationGeneration.current === generation
+        ).then(() => undefined);
+      });
     void retry.then(() => Promise.all([
       resolvedApi.listCalendarLayers(activeRuntime.familyCircleId),
       resolvedApi.listScheduleEvents(activeRuntime.familyCircleId),
@@ -351,10 +385,10 @@ export function CoordinationStateProvider({
     return () => {
       cancelled = true;
     };
-  }, [activeRuntime?.conversationId, activeRuntime?.familyCircleId, activeRuntime?.actorIdentityId, activeRuntime?.region, activeRuntime?.sessionId, demoMode, outbox, resolvedApi]);
+  }, [activeRuntime?.conversationId, activeRuntime?.familyCircleId, activeRuntime?.actorIdentityId, activeRuntime?.region, activeRuntime?.sessionId, connectivity, demoMode, outbox, resolvedApi]);
 
   useEffect(() => {
-    if (demoMode || !activeRuntime || !coordinationHydrated) return;
+    if (demoMode || !activeRuntime || !coordinationHydrated || !networkAvailable) return;
     const generation = hydrationGeneration.current;
     const scope = messageOutboxScope(activeRuntime);
     const scopeKey = [scope.actorIdentityId, scope.sessionId, scope.region, scope.familyCircleId, scope.conversationId].join(":");
@@ -417,7 +451,7 @@ export function CoordinationStateProvider({
       cancelled = true;
       if (timer !== undefined) clearTimeout(timer);
     };
-  }, [activeRuntime?.actorIdentityId, activeRuntime?.conversationId, activeRuntime?.familyCircleId, activeRuntime?.region, activeRuntime?.sessionId, coordinationHydrated, demoMode, outbox, outboxScheduleVersion, resolvedApi]);
+  }, [activeRuntime?.actorIdentityId, activeRuntime?.conversationId, activeRuntime?.familyCircleId, activeRuntime?.region, activeRuntime?.sessionId, coordinationHydrated, demoMode, networkAvailable, outbox, outboxScheduleVersion, resolvedApi]);
 
   const value = useMemo<CoordinationStateValue>(() => ({
     coordinationHydrated,

@@ -5,6 +5,7 @@ import type { PeacePadCoordinationApi } from "../api/CoordinationApi";
 import { PeacePadApiError } from "../api/PeacePadApiClient";
 import { createWriteContext, type MessageCheckPreference, type MessageEvent } from "../domain/v2";
 import type { MessageOutboxStore, QueuedMessage } from "../messaging/secureMessageOutbox";
+import type { ConnectivityMonitor, ConnectivitySnapshot } from "../connectivity/ConnectivityMonitor";
 import { MessagesScreen } from "./CoordinationScreens";
 import { CoordinationStateProvider, type CoordinationRuntime, useCoordinationState } from "./CoordinationState";
 
@@ -95,6 +96,20 @@ const canonicalMessage: MessageEvent = {
   occurredAt: "2026-08-09T12:02:00.000Z"
 };
 
+class TestConnectivityMonitor implements ConnectivityMonitor {
+  private listener?: (snapshot: ConnectivitySnapshot) => void;
+  constructor(private snapshot: ConnectivitySnapshot) {}
+  async getCurrent() { return this.snapshot; }
+  subscribe(listener: (snapshot: ConnectivitySnapshot) => void) {
+    this.listener = listener;
+    return { remove: () => { this.listener = undefined; } };
+  }
+  emit(snapshot: ConnectivitySnapshot) {
+    this.snapshot = snapshot;
+    this.listener?.(snapshot);
+  }
+}
+
 function api(overrides: Partial<PeacePadCoordinationApi> = {}) {
   return {
     listCalendarLayers: jest.fn(async () => []),
@@ -131,6 +146,31 @@ function Probe() {
 }
 
 describe("authenticated offline message recovery", () => {
+  it("does not spend a retry while offline and resumes the exact queue after reconnect", async () => {
+    const connectivity = new TestConnectivityMonitor({ isConnected: false, isInternetReachable: false });
+    const outbox = new MemoryOutbox([queued()]);
+    const sendMessage = jest.fn(async () => canonicalMessage);
+    const coordinationApi = api({
+      sendMessage,
+      listMessages: jest.fn(async () => sendMessage.mock.calls.length ? [canonicalMessage] : [])
+    });
+    render(
+      <CoordinationStateProvider api={coordinationApi} connectivity={connectivity} outbox={outbox} runtime={runtime}>
+        <Probe />
+      </CoordinationStateProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId("hydrated")).toHaveTextContent("true"));
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(outbox.values).toHaveLength(1);
+
+    act(() => connectivity.emit({ isConnected: true, isInternetReachable: true }));
+
+    await waitFor(() => expect(sendMessage).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(outbox.values).toEqual([]));
+    expect(screen.getByTestId("messages")).toHaveTextContent("Clear suggested message.|Clear suggested message.|sent");
+  });
+
   it("stops the initial retry batch after the provider unmounts", async () => {
     let resolveFirst: ((message: MessageEvent) => void) | undefined;
     const firstSend = new Promise<MessageEvent>((resolve) => { resolveFirst = resolve; });
