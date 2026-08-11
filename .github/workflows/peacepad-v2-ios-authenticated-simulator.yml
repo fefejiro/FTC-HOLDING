@@ -220,7 +220,7 @@ jobs:
             echo "actual_sha256=$actual_sha256"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Boot two isolated iOS Simulators and install PeacePad
+      - name: Boot required isolated iOS Simulators and install PeacePad
         id: simulators
         shell: bash
         env:
@@ -312,10 +312,7 @@ jobs:
               start: 50%, 80%
               end: 50%, 20%
               duration: 600
-          - extendedWaitUntil:
-              visible: "Message draft"
-              timeout: 30000
-          - tapOn: "Message draft"
+          - tapOn: "Write a message"
           - inputText: "$message_text"
           - hideKeyboard
           - swipe:
