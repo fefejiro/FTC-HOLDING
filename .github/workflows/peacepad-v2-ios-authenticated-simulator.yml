@@ -10,6 +10,14 @@ on:
         options:
           - ca
           - us
+      verification_scope:
+        description: Run the cheaper account-A mutation control before the full cross-account journey
+        required: true
+        default: mutation-control
+        type: choice
+        options:
+          - mutation-control
+          - full-cross-account
       target_sha:
         description: Exact reviewed feature-branch head to verify
         required: true
@@ -44,7 +52,7 @@ concurrency:
 
 jobs:
   authenticated-simulator:
-    name: Verify ${{ inputs.region }} authenticated fictional coordination
+    name: Verify ${{ inputs.region }} ${{ inputs.verification_scope }} fictional coordination
     runs-on: macos-15
     timeout-minutes: 45
     environment: peacepad-v2-staging-${{ inputs.region }}
@@ -73,11 +81,13 @@ jobs:
           REGION: ${{ inputs.region }}
           SELECTED_REF: ${{ github.ref_name }}
           TARGET_SHA: ${{ inputs.target_sha }}
+          VERIFICATION_SCOPE: ${{ inputs.verification_scope }}
         run: |
           set -euo pipefail
 
           test "$SELECTED_REF" = "main"
           test "$CONFIRMATION" = "RUN AUTHENTICATED FICTIONAL SIMULATOR"
+          case "$VERIFICATION_SCOPE" in mutation-control|full-cross-account) ;; *) exit 1 ;; esac
           [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$BUILD_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$(git -C target rev-parse HEAD)" = "$TARGET_SHA"
@@ -216,19 +226,25 @@ jobs:
         env:
           APP_PATH: ${{ steps.artifact.outputs.app_path }}
           REGION: ${{ inputs.region }}
+          VERIFICATION_SCOPE: ${{ inputs.verification_scope }}
         run: |
           set -euo pipefail
           runtime_id="$(xcrun simctl list runtimes --json | jq -er '[.runtimes[] | select(.platform == "iOS" and .isAvailable == true)] | last | .identifier')"
           device_type_id="$(xcrun simctl list devicetypes --json | jq -er '[.devicetypes[] | select(.name | startswith("iPhone"))] | first | .identifier')"
           device_a="$(xcrun simctl create "PeacePad V2 $REGION Fictional A" "$device_type_id" "$runtime_id")"
-          device_b="$(xcrun simctl create "PeacePad V2 $REGION Fictional B" "$device_type_id" "$runtime_id")"
-          printf '%s\n%s\n' "$device_a" "$device_b" > "$RUNNER_TEMP/peacepad-authenticated-simulator-udids"
+          devices=("$device_a")
+          device_b=""
+          if test "$VERIFICATION_SCOPE" = "full-cross-account"; then
+            device_b="$(xcrun simctl create "PeacePad V2 $REGION Fictional B" "$device_type_id" "$runtime_id")"
+            devices+=("$device_b")
+          fi
+          printf '%s\n' "${devices[@]}" > "$RUNNER_TEMP/peacepad-authenticated-simulator-udids"
           {
             echo "device_a=$device_a"
             echo "device_b=$device_b"
             echo "runtime_id=$runtime_id"
           } >> "$GITHUB_OUTPUT"
-          for device in "$device_a" "$device_b"; do
+          for device in "${devices[@]}"; do
             xcrun simctl boot "$device"
             xcrun simctl bootstatus "$device" -b
             xcrun simctl install "$device" "$APP_PATH"
@@ -243,6 +259,7 @@ jobs:
           EXPECTED_REGION_LABEL: ${{ steps.contract.outputs.expected_region_label }}
           MAESTRO_DRIVER_STARTUP_TIMEOUT: "480000"
           REGION: ${{ inputs.region }}
+          VERIFICATION_SCOPE: ${{ inputs.verification_scope }}
         run: |
           set -euo pipefail
           fixture="$RUNNER_TEMP/peacepad-authenticated-simulator-fixture.json"
@@ -291,46 +308,51 @@ jobs:
           cat >> "$flow_a" <<YAML
           - tapOn: "Messages"
           - assertVisible: "Write to your co-parent. PeacePad never sends without your confirmation."
-          - scrollUntilVisible:
-              element:
-                text: "Message draft"
-              direction: DOWN
-              visibilityPercentage: 50
+          - swipe:
+              start: 50%, 80%
+              end: 50%, 20%
+              duration: 600
+          - extendedWaitUntil:
+              visible: "Message draft"
               timeout: 30000
           - tapOn: "Message draft"
           - inputText: "$message_text"
           - hideKeyboard
-          - scrollUntilVisible:
-              element:
-                text: "Send message"
-              direction: DOWN
-              visibilityPercentage: 50
+          - swipe:
+              start: 50%, 80%
+              end: 50%, 30%
+              duration: 400
+          - extendedWaitUntil:
+              visible: "Send message"
               timeout: 30000
           - tapOn: "Send message"
           - extendedWaitUntil:
               visible: "$message_text"
               timeout: 60000
           - tapOn: "Calendar"
-          - scrollUntilVisible:
-              element:
-                text: "$calendar_layer"
-              direction: DOWN
-              visibilityPercentage: 50
+          - swipe:
+              start: 50%, 80%
+              end: 50%, 20%
+              duration: 600
+          - extendedWaitUntil:
+              visible: "$calendar_layer"
               timeout: 30000
-          - scrollUntilVisible:
-              element:
-                text: "Event title"
-              direction: DOWN
-              visibilityPercentage: 50
+          - swipe:
+              start: 50%, 80%
+              end: 50%, 20%
+              duration: 600
+          - extendedWaitUntil:
+              visible: "Event title"
               timeout: 30000
           - tapOn: "Event title"
           - inputText: "$event_title"
           - hideKeyboard
-          - scrollUntilVisible:
-              element:
-                text: "Save event"
-              direction: DOWN
-              visibilityPercentage: 50
+          - swipe:
+              start: 50%, 80%
+              end: 50%, 30%
+              duration: 400
+          - extendedWaitUntil:
+              visible: "Save event"
               timeout: 30000
           - tapOn: "Save event"
           - extendedWaitUntil:
@@ -338,31 +360,38 @@ jobs:
               timeout: 60000
           YAML
 
-          create_sign_in_flow "$flow_b" "$email_b"
-          cat >> "$flow_b" <<YAML
+          if test "$VERIFICATION_SCOPE" = "full-cross-account"; then
+            create_sign_in_flow "$flow_b" "$email_b"
+            cat >> "$flow_b" <<YAML
           - tapOn: "Messages"
-          - scrollUntilVisible:
-              element:
-                text: "$message_text"
-              direction: DOWN
-              visibilityPercentage: 50
+          - swipe:
+              start: 50%, 80%
+              end: 50%, 20%
+              duration: 600
+          - extendedWaitUntil:
+              visible: "$message_text"
               timeout: 60000
           - tapOn: "Calendar"
-          - scrollUntilVisible:
-              element:
-                text: "$event_title"
-              direction: DOWN
-              visibilityPercentage: 50
+          - swipe:
+              start: 50%, 80%
+              end: 50%, 20%
+              duration: 600
+          - extendedWaitUntil:
+              visible: "$event_title"
               timeout: 60000
           YAML
+          fi
           "$HOME/.maestro/bin/maestro" --device "$DEVICE_A" test "$flow_a"
           xcrun simctl io "$DEVICE_A" screenshot "$evidence/01-${REGION}-coordination-a.png"
-          "$HOME/.maestro/bin/maestro" --device "$DEVICE_B" test "$flow_b"
-          xcrun simctl io "$DEVICE_B" screenshot "$evidence/02-${REGION}-coordination-b.png"
+          touch "$RUNNER_TEMP/peacepad-authenticated-mutation-control-verified"
+          if test "$VERIFICATION_SCOPE" = "full-cross-account"; then
+            "$HOME/.maestro/bin/maestro" --device "$DEVICE_B" test "$flow_b"
+            xcrun simctl io "$DEVICE_B" screenshot "$evidence/02-${REGION}-coordination-b.png"
+            test -f "$evidence/02-${REGION}-coordination-b.png"
+            touch "$RUNNER_TEMP/peacepad-authenticated-journey-verified"
+          fi
           rm -f "$flow_a" "$flow_b"
           test -f "$evidence/01-${REGION}-coordination-a.png"
-          test -f "$evidence/02-${REGION}-coordination-b.png"
-          touch "$RUNNER_TEMP/peacepad-authenticated-journey-verified"
 
       - name: Capture final fictional Simulator states
         if: always() && steps.simulators.outcome == 'success'
@@ -376,7 +405,9 @@ jobs:
           evidence="$RUNNER_TEMP/peacepad-authenticated-simulator-evidence"
           mkdir -p "$evidence"
           xcrun simctl io "$DEVICE_A" screenshot "$evidence/03-${REGION}-final-state-a.png" || true
-          xcrun simctl io "$DEVICE_B" screenshot "$evidence/04-${REGION}-final-state-b.png" || true
+          if test -n "$DEVICE_B"; then
+            xcrun simctl io "$DEVICE_B" screenshot "$evidence/04-${REGION}-final-state-b.png" || true
+          fi
 
       - name: Remove temporary application identities and Auth users
         id: cleanup
@@ -438,20 +469,25 @@ jobs:
           PROJECT_REF: ${{ steps.contract.outputs.expected_project_ref }}
           REGION: ${{ inputs.region }}
           TARGET_SHA: ${{ inputs.target_sha }}
+          VERIFICATION_SCOPE: ${{ inputs.verification_scope }}
         run: |
           set -euo pipefail
           evidence="$RUNNER_TEMP/peacepad-authenticated-simulator-evidence"
           mkdir -p "$evidence"
           journey_verified=false
+          mutation_control_verified=false
           simulators_destroyed=false
           cleanup_verified=false
           test -f "$RUNNER_TEMP/peacepad-authenticated-journey-verified" && journey_verified=true
+          test -f "$RUNNER_TEMP/peacepad-authenticated-mutation-control-verified" && mutation_control_verified=true
           test -f "$RUNNER_TEMP/peacepad-authenticated-simulators-destroyed" && simulators_destroyed=true
           if test -f "$evidence/cleanup.json"; then
             test "$(jq -r '.result' "$evidence/cleanup.json")" = "FICTIONAL_SIMULATOR_FIXTURE_CLEANUP_VERIFIED" && cleanup_verified=true
           fi
           result="AUTHENTICATED_FICTIONAL_SIMULATOR_JOURNEY_NOT_VERIFIED"
-          if $journey_verified && $simulators_destroyed && $cleanup_verified; then
+          if test "$VERIFICATION_SCOPE" = "mutation-control" && $mutation_control_verified && $simulators_destroyed && $cleanup_verified; then
+            result="AUTHENTICATED_FICTIONAL_SIMULATOR_MUTATION_CONTROL_VERIFIED"
+          elif test "$VERIFICATION_SCOPE" = "full-cross-account" && $journey_verified && $simulators_destroyed && $cleanup_verified; then
             result="AUTHENTICATED_FICTIONAL_SIMULATOR_JOURNEY_VERIFIED"
           fi
           jq -n \
@@ -462,7 +498,9 @@ jobs:
             --arg projectRef "$PROJECT_REF" \
             --arg easBuildId "$EAS_BUILD_ID" \
             --arg artifactSha256 "${{ steps.artifact.outputs.actual_sha256 }}" \
+            --arg verificationScope "$VERIFICATION_SCOPE" \
             --argjson journeyVerified "$journey_verified" \
+            --argjson mutationControlVerified "$mutation_control_verified" \
             --argjson cleanupVerified "$cleanup_verified" \
             --argjson simulatorsDestroyed "$simulators_destroyed" \
             '{
@@ -473,12 +511,13 @@ jobs:
               expectedProjectRef: $projectRef,
               easBuildId: $easBuildId,
               artifactSha256: $artifactSha256,
+              verificationScope: $verificationScope,
               classification: "fictional-only",
               fixtureDomain: "example.test",
-              authenticatedNativeSessions: (if $journeyVerified then 2 else 0 end),
-              backendFamilyAndConversationPrepared: $journeyVerified,
-              nativeMessageMutationVerified: $journeyVerified,
-              nativeCalendarMutationVerified: $journeyVerified,
+              authenticatedNativeSessions: (if $journeyVerified then 2 elif $mutationControlVerified then 1 else 0 end),
+              backendFamilyAndConversationPrepared: ($journeyVerified or $mutationControlVerified),
+              nativeMessageMutationVerified: ($journeyVerified or $mutationControlVerified),
+              nativeCalendarMutationVerified: ($journeyVerified or $mutationControlVerified),
               crossAccountVisibilityVerified: $journeyVerified,
               applicationAndAuthCleanupVerified: $cleanupVerified,
               simulatorsDestroyed: $simulatorsDestroyed,
@@ -489,7 +528,11 @@ jobs:
               testFlightProof: false,
               productionProof: false
             }' > "$evidence/manifest.json"
-          test "$result" = "AUTHENTICATED_FICTIONAL_SIMULATOR_JOURNEY_VERIFIED"
+          if test "$VERIFICATION_SCOPE" = "mutation-control"; then
+            test "$result" = "AUTHENTICATED_FICTIONAL_SIMULATOR_MUTATION_CONTROL_VERIFIED"
+          else
+            test "$result" = "AUTHENTICATED_FICTIONAL_SIMULATOR_JOURNEY_VERIFIED"
+          fi
 
       - name: Upload non-secret authenticated Simulator evidence
         if: always()
