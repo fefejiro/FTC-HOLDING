@@ -230,6 +230,172 @@ jobs:
               testFlightProof: false
             }' > "$EVIDENCE_DIR/manifest.json"
 
+      - name: Run maximum Dynamic Type and dark-mode smoke
+        shell: bash
+        env:
+          DEVICE_UDID: ${{ steps.simulator.outputs.device_udid }}
+        run: |
+          set -euo pipefail
+          EVIDENCE_DIR="$RUNNER_TEMP/peacepad-simulator-evidence"
+          MAX_WELCOME_FLOW="$RUNNER_TEMP/peacepad-max-type-welcome.yaml"
+          MAX_CONSENT_FLOW="$RUNNER_TEMP/peacepad-max-type-consent.yaml"
+          MAX_ACTIONS_FLOW="$RUNNER_TEMP/peacepad-max-type-actions.yaml"
+          DARK_WELCOME_FLOW="$RUNNER_TEMP/peacepad-dark-welcome.yaml"
+          DARK_CONSENT_FLOW="$RUNNER_TEMP/peacepad-dark-consent.yaml"
+
+          xcrun simctl ui "$DEVICE_UDID" appearance light
+          xcrun simctl ui "$DEVICE_UDID" content_size \
+            accessibility-extra-extra-extra-large
+
+          cat > "$MAX_WELCOME_FLOW" <<'YAML'
+          appId: ca.peacepad.nextnative.lab
+          ---
+          - launchApp:
+              clearState: true
+          - extendedWaitUntil:
+              visible: "PeacePad"
+              timeout: 60000
+          YAML
+
+          cat > "$MAX_CONSENT_FLOW" <<'YAML'
+          appId: ca.peacepad.nextnative.lab
+          ---
+          - scrollUntilVisible:
+              element:
+                text: "Try PeacePad"
+              direction: DOWN
+              timeout: 30000
+          - tapOn: "Try PeacePad"
+          - extendedWaitUntil:
+              visible: "Your choices come first"
+              timeout: 30000
+          - scrollUntilVisible:
+              element:
+                text: "I agree to the Terms"
+              direction: DOWN
+              timeout: 30000
+          - assertVisible: "I agree to the Terms"
+          YAML
+
+          cat > "$MAX_ACTIONS_FLOW" <<'YAML'
+          appId: ca.peacepad.nextnative.lab
+          ---
+          - scrollUntilVisible:
+              element:
+                text: "Optional AI-assisted rewrites"
+              direction: DOWN
+              timeout: 30000
+          - assertVisible: "Optional AI-assisted rewrites"
+          - scrollUntilVisible:
+              element:
+                text: "Continue as guest"
+              direction: DOWN
+              timeout: 30000
+          - assertVisible: "Continue as guest"
+          - scrollUntilVisible:
+              element:
+                text: "Back"
+              direction: DOWN
+              timeout: 30000
+          - assertVisible: "Back"
+          YAML
+
+          "$HOME/.maestro/bin/maestro" \
+            --device "$DEVICE_UDID" \
+            test \
+            "$MAX_WELCOME_FLOW"
+          xcrun simctl io "$DEVICE_UDID" screenshot \
+            "$EVIDENCE_DIR/03-max-dynamic-type-welcome.png"
+
+          "$HOME/.maestro/bin/maestro" \
+            --device "$DEVICE_UDID" \
+            test \
+            "$MAX_CONSENT_FLOW"
+          xcrun simctl io "$DEVICE_UDID" screenshot \
+            "$EVIDENCE_DIR/04-max-dynamic-type-consent.png"
+
+          "$HOME/.maestro/bin/maestro" \
+            --device "$DEVICE_UDID" \
+            test \
+            "$MAX_ACTIONS_FLOW"
+          xcrun simctl io "$DEVICE_UDID" screenshot \
+            "$EVIDENCE_DIR/05-max-dynamic-type-actions.png"
+
+          xcrun simctl ui "$DEVICE_UDID" content_size large
+          xcrun simctl ui "$DEVICE_UDID" appearance dark
+
+          cat > "$DARK_WELCOME_FLOW" <<'YAML'
+          appId: ca.peacepad.nextnative.lab
+          ---
+          - launchApp:
+              clearState: true
+          - extendedWaitUntil:
+              visible: "Try PeacePad"
+              timeout: 60000
+          - assertVisible: "PeacePad"
+          - assertVisible: "Existing account"
+          YAML
+
+          cat > "$DARK_CONSENT_FLOW" <<'YAML'
+          appId: ca.peacepad.nextnative.lab
+          ---
+          - extendedWaitUntil:
+              visible: "Try PeacePad"
+              timeout: 15000
+          - tapOn: "Try PeacePad"
+          - extendedWaitUntil:
+              visible: "Your choices come first"
+              timeout: 30000
+          - assertVisible: "I agree to the Terms"
+          - assertVisible: "I acknowledge the Privacy Policy"
+          - assertVisible: "Optional AI-assisted rewrites"
+          YAML
+
+          "$HOME/.maestro/bin/maestro" \
+            --device "$DEVICE_UDID" \
+            test \
+            "$DARK_WELCOME_FLOW"
+          xcrun simctl io "$DEVICE_UDID" screenshot \
+            "$EVIDENCE_DIR/06-dark-welcome.png"
+
+          "$HOME/.maestro/bin/maestro" \
+            --device "$DEVICE_UDID" \
+            test \
+            "$DARK_CONSENT_FLOW"
+          xcrun simctl io "$DEVICE_UDID" screenshot \
+            "$EVIDENCE_DIR/07-dark-consent.png"
+
+          test -f "$EVIDENCE_DIR/03-max-dynamic-type-welcome.png"
+          test -f "$EVIDENCE_DIR/04-max-dynamic-type-consent.png"
+          test -f "$EVIDENCE_DIR/05-max-dynamic-type-actions.png"
+          test -f "$EVIDENCE_DIR/06-dark-welcome.png"
+          test -f "$EVIDENCE_DIR/07-dark-consent.png"
+
+          jq -n \
+            --arg result "SIMULATOR_ACCESSIBILITY_FOUNDATION_SMOKE_VERIFIED" \
+            --arg targetSha "${{ inputs.target_sha }}" \
+            --arg buildSourceSha "${{ inputs.build_source_sha }}" \
+            --arg easBuildId "${{ inputs.eas_build_id }}" \
+            --arg simulatorRuntime "${{ steps.simulator.outputs.runtime_id }}" \
+            '{
+              result: $result,
+              targetSha: $targetSha,
+              buildSourceSha: $buildSourceSha,
+              easBuildId: $easBuildId,
+              simulatorRuntime: $simulatorRuntime,
+              scope: [
+                "maximum Dynamic Type welcome and consent navigation",
+                "maximum Dynamic Type action reachability",
+                "dark-mode welcome and consent rendering"
+              ],
+              voiceOverProof: false,
+              switchControlProof: false,
+              reduceMotionProof: false,
+              deviceProof: false,
+              testFlightProof: false,
+              productionContacted: false
+            }' > "$EVIDENCE_DIR/accessibility-manifest.json"
+
       - name: Capture Simulator diagnostics
         if: always()
         shell: bash
