@@ -267,7 +267,6 @@ jobs:
           password="$(jq -r '.password' "$fixture")"
           email_a="$(jq -r '.accounts[0].email' "$fixture")"
           email_b="$(jq -r '.accounts[1].email' "$fixture")"
-          calendar_layer="$(jq -r '.calendarLayerName' "$fixture")"
           message_text="$(jq -r '.messageText' "$fixture")"
           event_title="$(jq -r '.eventTitle' "$fixture")"
 
@@ -302,10 +301,11 @@ jobs:
           YAML
           }
 
-          flow_a="$RUNNER_TEMP/peacepad-authenticated-a.yaml"
+          flow_a_message="$RUNNER_TEMP/peacepad-authenticated-a-message.yaml"
+          flow_a_calendar="$RUNNER_TEMP/peacepad-authenticated-a-calendar.yaml"
           flow_b="$RUNNER_TEMP/peacepad-authenticated-b.yaml"
-          create_sign_in_flow "$flow_a" "$email_a"
-          cat >> "$flow_a" <<YAML
+          create_sign_in_flow "$flow_a_message" "$email_a"
+          cat >> "$flow_a_message" <<YAML
           - tapOn: "Messages"
           - assertVisible: "Write to your co-parent. PeacePad never sends without your confirmation."
           - swipe:
@@ -328,22 +328,19 @@ jobs:
           - extendedWaitUntil:
               visible: "$message_text"
               timeout: 60000
+          YAML
+
+          cat > "$flow_a_calendar" <<YAML
+          appId: ca.peacepad.nextnative.lab
+          ---
+          - assertVisible: "$message_text"
           - tapOn: "Calendar"
           - swipe:
               start: 50%, 80%
               end: 50%, 20%
               duration: 600
-          - extendedWaitUntil:
-              visible: "$calendar_layer"
-              timeout: 30000
-          - swipe:
-              start: 50%, 80%
-              end: 50%, 20%
-              duration: 600
-          - extendedWaitUntil:
-              visible: "Event title"
-              timeout: 30000
-          - tapOn: "Event title"
+          - tapOn:
+              point: 50%, 64%
           - inputText: "$event_title"
           - tapOn:
               point: 5%, 10%
@@ -381,17 +378,22 @@ jobs:
               timeout: 60000
           YAML
           fi
-          "$HOME/.maestro/bin/maestro" --device "$DEVICE_A" test "$flow_a"
-          xcrun simctl io "$DEVICE_A" screenshot "$evidence/01-${REGION}-coordination-a.png"
-          touch "$RUNNER_TEMP/peacepad-authenticated-mutation-control-verified"
+          "$HOME/.maestro/bin/maestro" --device "$DEVICE_A" test "$flow_a_message"
+          xcrun simctl io "$DEVICE_A" screenshot "$evidence/01-${REGION}-message-a.png"
+          touch "$RUNNER_TEMP/peacepad-authenticated-message-mutation-verified"
+
+          "$HOME/.maestro/bin/maestro" --device "$DEVICE_A" test "$flow_a_calendar"
+          xcrun simctl io "$DEVICE_A" screenshot "$evidence/02-${REGION}-calendar-a.png"
+          touch "$RUNNER_TEMP/peacepad-authenticated-calendar-mutation-verified"
           if test "$VERIFICATION_SCOPE" = "full-cross-account"; then
             "$HOME/.maestro/bin/maestro" --device "$DEVICE_B" test "$flow_b"
-            xcrun simctl io "$DEVICE_B" screenshot "$evidence/02-${REGION}-coordination-b.png"
-            test -f "$evidence/02-${REGION}-coordination-b.png"
+            xcrun simctl io "$DEVICE_B" screenshot "$evidence/03-${REGION}-coordination-b.png"
+            test -f "$evidence/03-${REGION}-coordination-b.png"
             touch "$RUNNER_TEMP/peacepad-authenticated-journey-verified"
           fi
-          rm -f "$flow_a" "$flow_b"
-          test -f "$evidence/01-${REGION}-coordination-a.png"
+          rm -f "$flow_a_message" "$flow_a_calendar" "$flow_b"
+          test -f "$evidence/01-${REGION}-message-a.png"
+          test -f "$evidence/02-${REGION}-calendar-a.png"
 
       - name: Capture final fictional Simulator states
         if: always() && steps.simulators.outcome == 'success'
@@ -475,11 +477,17 @@ jobs:
           evidence="$RUNNER_TEMP/peacepad-authenticated-simulator-evidence"
           mkdir -p "$evidence"
           journey_verified=false
+          message_mutation_verified=false
+          calendar_mutation_verified=false
           mutation_control_verified=false
           simulators_destroyed=false
           cleanup_verified=false
           test -f "$RUNNER_TEMP/peacepad-authenticated-journey-verified" && journey_verified=true
-          test -f "$RUNNER_TEMP/peacepad-authenticated-mutation-control-verified" && mutation_control_verified=true
+          test -f "$RUNNER_TEMP/peacepad-authenticated-message-mutation-verified" && message_mutation_verified=true
+          test -f "$RUNNER_TEMP/peacepad-authenticated-calendar-mutation-verified" && calendar_mutation_verified=true
+          if $message_mutation_verified && $calendar_mutation_verified; then
+            mutation_control_verified=true
+          fi
           test -f "$RUNNER_TEMP/peacepad-authenticated-simulators-destroyed" && simulators_destroyed=true
           if test -f "$evidence/cleanup.json"; then
             test "$(jq -r '.result' "$evidence/cleanup.json")" = "FICTIONAL_SIMULATOR_FIXTURE_CLEANUP_VERIFIED" && cleanup_verified=true
@@ -500,6 +508,8 @@ jobs:
             --arg artifactSha256 "${{ steps.artifact.outputs.actual_sha256 }}" \
             --arg verificationScope "$VERIFICATION_SCOPE" \
             --argjson journeyVerified "$journey_verified" \
+            --argjson messageMutationVerified "$message_mutation_verified" \
+            --argjson calendarMutationVerified "$calendar_mutation_verified" \
             --argjson mutationControlVerified "$mutation_control_verified" \
             --argjson cleanupVerified "$cleanup_verified" \
             --argjson simulatorsDestroyed "$simulators_destroyed" \
@@ -514,10 +524,10 @@ jobs:
               verificationScope: $verificationScope,
               classification: "fictional-only",
               fixtureDomain: "example.test",
-              authenticatedNativeSessions: (if $journeyVerified then 2 elif $mutationControlVerified then 1 else 0 end),
-              backendFamilyAndConversationPrepared: ($journeyVerified or $mutationControlVerified),
-              nativeMessageMutationVerified: ($journeyVerified or $mutationControlVerified),
-              nativeCalendarMutationVerified: ($journeyVerified or $mutationControlVerified),
+              authenticatedNativeSessions: (if $journeyVerified then 2 elif $messageMutationVerified or $calendarMutationVerified then 1 else 0 end),
+              backendFamilyAndConversationPrepared: ($journeyVerified or $messageMutationVerified or $calendarMutationVerified),
+              nativeMessageMutationVerified: ($journeyVerified or $messageMutationVerified),
+              nativeCalendarMutationVerified: ($journeyVerified or $calendarMutationVerified),
               crossAccountVisibilityVerified: $journeyVerified,
               applicationAndAuthCleanupVerified: $cleanupVerified,
               simulatorsDestroyed: $simulatorsDestroyed,
