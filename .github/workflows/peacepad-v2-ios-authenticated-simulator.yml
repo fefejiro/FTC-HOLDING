@@ -315,7 +315,8 @@ jobs:
           - tapOn:
               point: 50%, 80%
           - inputText: "$message_text"
-          - hideKeyboard
+          - tapOn:
+              point: 5%, 10%
           - swipe:
               start: 50%, 80%
               end: 50%, 30%
@@ -344,7 +345,8 @@ jobs:
               timeout: 30000
           - tapOn: "Event title"
           - inputText: "$event_title"
-          - hideKeyboard
+          - tapOn:
+              point: 5%, 10%
           - swipe:
               start: 50%, 80%
               end: 50%, 30%
