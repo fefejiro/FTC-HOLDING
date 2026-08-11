@@ -169,7 +169,7 @@ jobs:
             echo "app_version=$APP_VERSION"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Boot isolated English iOS Simulator and install PeacePad
+      - name: Boot isolated iOS Simulator and install PeacePad
         id: simulator
         shell: bash
         env:
@@ -189,11 +189,6 @@ jobs:
           echo "runtime_id=$RUNTIME_ID" >> "$GITHUB_OUTPUT"
           echo "device_name=$DEVICE_NAME" >> "$GITHUB_OUTPUT"
 
-          xcrun simctl boot "$DEVICE_UDID"
-          xcrun simctl bootstatus "$DEVICE_UDID" -b
-          xcrun simctl spawn "$DEVICE_UDID" defaults write NSGlobalDomain AppleLanguages -array en
-          xcrun simctl spawn "$DEVICE_UDID" defaults write NSGlobalDomain AppleLocale -string en_US
-          xcrun simctl shutdown "$DEVICE_UDID"
           xcrun simctl boot "$DEVICE_UDID"
           open -a Simulator --args -CurrentDeviceUDID "$DEVICE_UDID"
           xcrun simctl bootstatus "$DEVICE_UDID" -b
@@ -244,7 +239,7 @@ jobs:
           - inputText: "$FICTIONAL_EMAIL"
           - tapOn: "Staging password"
           - inputText: "$FICTIONAL_PASSWORD"
-          - hideKeyboard
+          - pressKey: enter
           - tapOn: "Sign in"
           - extendedWaitUntil:
               visible: "Check the fictional staging email and password."
