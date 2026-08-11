@@ -11,7 +11,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "ca.peacepad.nextnative.lab",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "PeacePad uses the microphone only while you are in a foreground audio call."
+        "NSMicrophoneUsageDescription": "PeacePad uses the microphone only while you are in a foreground audio call.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {

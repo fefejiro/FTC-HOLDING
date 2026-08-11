@@ -30,6 +30,10 @@ if (extra.productionApiWritesEnabled !== false) {
   failures.push("productionApiWritesEnabled must remain false in the lab app.");
 }
 
+if (iosInfoPlist.ITSAppUsesNonExemptEncryption !== false) {
+  failures.push("The lab app must explicitly declare that it does not use non-exempt encryption.");
+}
+
 if (appJson.expo?.owner !== "official_fejiro") {
   failures.push("The lab EAS project must remain owned by the approved official_fejiro account.");
 }
