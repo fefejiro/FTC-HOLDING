@@ -235,10 +235,10 @@ jobs:
           cat > "$INVALID_AUTH_FLOW_PATH" <<YAML
           appId: ca.peacepad.nextnative.lab
           ---
-          - tapOn: "Staging email"
-          - inputText: "$FICTIONAL_EMAIL"
           - tapOn: "Staging password"
           - inputText: "$FICTIONAL_PASSWORD"
+          - tapOn: "Staging email"
+          - inputText: "$FICTIONAL_EMAIL"
           - tapOn: "Sign in"
           - extendedWaitUntil:
               visible: "Check the fictional staging email and password."
