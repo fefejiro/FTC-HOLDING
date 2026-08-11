@@ -290,8 +290,11 @@ jobs:
           create_sign_in_flow "$flow_a" "$email_a"
           cat >> "$flow_a" <<YAML
           - tapOn: "Messages"
-          - extendedWaitUntil:
-              visible: "Message draft"
+          - assertVisible: "Write to your co-parent. PeacePad never sends without your confirmation."
+          - scrollUntilVisible:
+              element:
+                text: "Write a message"
+              direction: DOWN
               timeout: 30000
           - tapOn: "Message draft"
           - inputText: "$message_text"
@@ -306,8 +309,10 @@ jobs:
               visible: "$message_text"
               timeout: 60000
           - tapOn: "Calendar"
-          - extendedWaitUntil:
-              visible: "$calendar_layer"
+          - scrollUntilVisible:
+              element:
+                text: "$calendar_layer"
+              direction: DOWN
               timeout: 30000
           - scrollUntilVisible:
               element:
@@ -331,12 +336,16 @@ jobs:
           create_sign_in_flow "$flow_b" "$email_b"
           cat >> "$flow_b" <<YAML
           - tapOn: "Messages"
-          - extendedWaitUntil:
-              visible: "$message_text"
+          - scrollUntilVisible:
+              element:
+                text: "$message_text"
+              direction: DOWN
               timeout: 60000
           - tapOn: "Calendar"
-          - extendedWaitUntil:
-              visible: "$event_title"
+          - scrollUntilVisible:
+              element:
+                text: "$event_title"
+              direction: DOWN
               timeout: 60000
           YAML
           "$HOME/.maestro/bin/maestro" --device "$DEVICE_A" test "$flow_a"
