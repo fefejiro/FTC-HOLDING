@@ -126,8 +126,17 @@ function PeacePadStagingApp() {
 function CoordinationRoute({ activeScreen, invitationCode }: { activeScreen: AppScreen; invitationCode?: string }) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const scrollRef = useRef<ScrollView>(null);
+  const pendingScrollReset = useRef(false);
   const setScreen = (screen: CoordinationScreen) => navigation.navigate(screen);
   const resetScroll = useCallback(() => {
+    pendingScrollReset.current = true;
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ animated: false, y: 0 });
+    });
+  }, []);
+  const settleScrollReset = useCallback(() => {
+    if (!pendingScrollReset.current) return;
+    pendingScrollReset.current = false;
     scrollRef.current?.scrollTo({ animated: false, y: 0 });
   }, []);
   const primary: PrimaryTaskScreen = activeScreen === "invite" || activeScreen === "foundation" || activeScreen === "calls" ? "home" : activeScreen;
@@ -135,7 +144,7 @@ function CoordinationRoute({ activeScreen, invitationCode }: { activeScreen: App
     <SafeAreaView style={styles.safe}>
       <PendingInvitationNavigation />
       <View style={styles.shell}>
-        <ScrollView ref={scrollRef} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView ref={scrollRef} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" onContentSizeChange={settleScrollReset}>
           {activeScreen === "foundation" ? <FoundationScreen onOpenLab={() => setScreen("home")} onPhaseChange={resetScroll} /> : null}
           {activeScreen === "home" ? <CoordinationHomeScreen setScreen={setScreen} /> : null}
           {activeScreen === "messages" ? <MessagesScreen /> : null}

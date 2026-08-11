@@ -106,7 +106,7 @@ describe("PeacePad native foundation", () => {
     );
 
     fireEvent.press(await screen.findByText("Try PeacePad"));
-    await waitFor(() => expect(onPhaseChange).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(onPhaseChange).toHaveBeenCalledTimes(1));
     expect(screen.getByText("Your choices come first")).toBeOnTheScreen();
   });
 

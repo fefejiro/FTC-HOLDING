@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -72,9 +72,10 @@ export function FoundationScreen({
   const requiredConsentAccepted =
     consent.termsAccepted && consent.privacyAcknowledged;
 
-  useEffect(() => {
+  const transitionTo = useCallback((nextPhase: FoundationPhase) => {
     onPhaseChange?.();
-  }, [onPhaseChange, phase]);
+    setPhase(nextPhase);
+  }, [onPhaseChange]);
 
   useEffect(() => {
     let active = true;
@@ -100,7 +101,7 @@ export function FoundationScreen({
           createStoredGuestSession(restored, stored.consent)
         );
         if (!active) return;
-        setPhase("compose");
+        transitionTo("compose");
         setSessionMessage(t("foundation.restored"));
         setSessionState("ready");
       })
@@ -109,13 +110,13 @@ export function FoundationScreen({
         if (!active) return;
         setSessionMessage(friendlyError(error, t("foundation.requestError")));
         setSessionState("idle");
-        setPhase("welcome");
+        transitionTo("welcome");
       });
 
     return () => {
       active = false;
     };
-  }, [api, sessionStore]);
+  }, [api, sessionStore, transitionTo]);
 
   const statusLabel = useMemo(
     () =>
@@ -141,7 +142,7 @@ export function FoundationScreen({
         aiMessageConsent: consent.aiMessageConsent
       });
       await sessionStore.save(createStoredGuestSession(response, consent));
-      setPhase("compose");
+      transitionTo("compose");
       setSessionState("ready");
       setSessionMessage(t("foundation.guestReady"));
     } catch (error) {
@@ -171,7 +172,7 @@ export function FoundationScreen({
     setPreviewError(null);
     setSessionMessage(t("foundation.sessionCleared"));
     setSessionState("idle");
-    setPhase("welcome");
+    transitionTo("welcome");
   }
 
   if (sessionState === "loading" && phase === "welcome") {
@@ -205,10 +206,10 @@ export function FoundationScreen({
           <Text style={styles.body}>
             {t("foundation.welcomeBody")}
           </Text>
-          <PrimaryButton label={t("foundation.try")} onPress={() => setPhase("consent")} />
+          <PrimaryButton label={t("foundation.try")} onPress={() => transitionTo("consent")} />
           <SecondaryButton
             label={t("foundation.existing")}
-            onPress={() => setPhase("account")}
+            onPress={() => transitionTo("account")}
           />
           <SecondaryButton
             label={t("foundation.continue")}
@@ -222,7 +223,7 @@ export function FoundationScreen({
         <View style={styles.card}>
           <Text style={styles.heading}>{t("foundation.existing")}</Text>
           <Text style={styles.body}>{t("foundation.accountUnavailable")}</Text>
-          <SecondaryButton label={t("foundation.backWelcome")} onPress={() => setPhase("welcome")} />
+          <SecondaryButton label={t("foundation.backWelcome")} onPress={() => transitionTo("welcome")} />
           <LegalLinks />
         </View>
       ) : null}
@@ -267,7 +268,7 @@ export function FoundationScreen({
             onPress={startGuestSession}
             disabled={!requiredConsentAccepted || sessionState === "loading"}
           />
-          <SecondaryButton label={t("foundation.back")} onPress={() => setPhase("welcome")} />
+          <SecondaryButton label={t("foundation.back")} onPress={() => transitionTo("welcome")} />
           <LegalLinks />
         </View>
       ) : null}
