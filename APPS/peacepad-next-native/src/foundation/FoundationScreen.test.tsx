@@ -94,6 +94,22 @@ describe("PeacePad native foundation", () => {
     expect(sessionStore.save).not.toHaveBeenCalled();
   });
 
+  it("requests a scroll reset when the foundation phase changes", async () => {
+    const { api, sessionStore } = createHarness();
+    const onPhaseChange = jest.fn();
+    render(
+      <FoundationScreen
+        api={api}
+        sessionStore={sessionStore}
+        onPhaseChange={onPhaseChange}
+      />
+    );
+
+    fireEvent.press(await screen.findByText("Try PeacePad"));
+    await waitFor(() => expect(onPhaseChange).toHaveBeenCalledTimes(2));
+    expect(screen.getByText("Your choices come first")).toBeOnTheScreen();
+  });
+
   it("requires explicit consent and keeps AI consent off by default", async () => {
     const { api, sessionStore } = createHarness();
     render(<FoundationScreen api={api} sessionStore={sessionStore} />);

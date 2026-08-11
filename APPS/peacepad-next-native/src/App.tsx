@@ -1,4 +1,4 @@
-import React, { Component, useEffect, useMemo, type ErrorInfo, type ReactNode } from "react";
+import React, { Component, useCallback, useEffect, useMemo, useRef, type ErrorInfo, type ReactNode } from "react";
 import { NavigationContainer, useNavigation, type LinkingOptions } from "@react-navigation/native";
 import { createNativeStackNavigator, type NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
@@ -125,14 +125,18 @@ function PeacePadStagingApp() {
 
 function CoordinationRoute({ activeScreen, invitationCode }: { activeScreen: AppScreen; invitationCode?: string }) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const scrollRef = useRef<ScrollView>(null);
   const setScreen = (screen: CoordinationScreen) => navigation.navigate(screen);
+  const resetScroll = useCallback(() => {
+    scrollRef.current?.scrollTo({ animated: false, y: 0 });
+  }, []);
   const primary: PrimaryTaskScreen = activeScreen === "invite" || activeScreen === "foundation" || activeScreen === "calls" ? "home" : activeScreen;
   return (
     <SafeAreaView style={styles.safe}>
       <PendingInvitationNavigation />
       <View style={styles.shell}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          {activeScreen === "foundation" ? <FoundationScreen onOpenLab={() => setScreen("home")} /> : null}
+        <ScrollView ref={scrollRef} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          {activeScreen === "foundation" ? <FoundationScreen onOpenLab={() => setScreen("home")} onPhaseChange={resetScroll} /> : null}
           {activeScreen === "home" ? <CoordinationHomeScreen setScreen={setScreen} /> : null}
           {activeScreen === "messages" ? <MessagesScreen /> : null}
           {activeScreen === "calendar" ? <CalendarScreen /> : null}

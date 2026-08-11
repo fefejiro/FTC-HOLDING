@@ -35,6 +35,7 @@ type Props = {
   api?: PeacePadFoundationApi;
   sessionStore?: GuestSessionStore;
   onOpenLab?: () => void;
+  onPhaseChange?: () => void;
 };
 
 const initialConsent: ConsentPreferences = {
@@ -53,7 +54,8 @@ function friendlyError(error: unknown, fallback: string): string {
 export function FoundationScreen({
   api = defaultApi,
   sessionStore = secureGuestSessionStore,
-  onOpenLab
+  onOpenLab,
+  onPhaseChange
 }: Props) {
   const { t } = useOptionalLocalization();
   const [phase, setPhase] = useState<FoundationPhase>("welcome");
@@ -69,6 +71,10 @@ export function FoundationScreen({
 
   const requiredConsentAccepted =
     consent.termsAccepted && consent.privacyAcknowledged;
+
+  useEffect(() => {
+    onPhaseChange?.();
+  }, [onPhaseChange, phase]);
 
   useEffect(() => {
     let active = true;
