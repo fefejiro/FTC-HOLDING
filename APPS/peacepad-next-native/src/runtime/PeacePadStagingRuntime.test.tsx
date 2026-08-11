@@ -135,6 +135,7 @@ describe("PeacePadStagingRuntime gates", () => {
     view.rerender(<PeacePadStagingRuntime environment={environment} supabase={supabase}>ready</PeacePadStagingRuntime>);
     expect(screen.getByText("Sign in to staging")).toBeTruthy();
     expect(screen.getByTestId("staging-region-label")).toHaveTextContent("Canada staging");
+    expect(screen.getByTestId("staging-sign-in-scroll")).toHaveProp("keyboardShouldPersistTaps", "handled");
     fireEvent.changeText(screen.getByLabelText("Staging email"), "fictional.parent@example.test");
     fireEvent.changeText(screen.getByLabelText("Staging password"), "fictional-password");
     fireEvent.press(screen.getByRole("button", { name: "Sign in" }));

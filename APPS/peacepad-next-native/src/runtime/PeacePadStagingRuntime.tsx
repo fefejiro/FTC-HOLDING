@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Image, Linking, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import type { CreatedInvitation, PeacePadCoordinationApi } from "../api/CoordinationApi";
 import { RecordsStateProvider } from "../records/RecordsState";
 import { createStagingCoordinationClient } from "../staging/StagingCoordinationClient";
@@ -364,42 +364,50 @@ export function PeacePadStagingRuntime({
   if (auth.status === "error") return <GateMessage title={t("runtime.sessionUnavailable")} body={auth.error ?? t("runtime.restoreError")} />;
   if (auth.status === "signed-out") {
     return (
-      <View style={styles.page}>
-        <Brand />
-        <AccessibleHeading style={styles.title}>{t("runtime.signInTitle")}</AccessibleHeading>
-        <Text accessibilityRole="text" testID="staging-region-label" style={styles.regionLabel}>
-          {t(supabase.region === "ca" ? "runtime.regionCanada" : "runtime.regionUnitedStates")}
-        </Text>
-        <Text style={styles.body}>{t("runtime.signInBody")}</Text>
-        <TextInput
-          accessibilityLabel={t("runtime.email")}
-          autoCapitalize="none"
-          autoComplete="username"
-          keyboardType="email-address"
-          onChangeText={setEmail}
-          onSubmitEditing={() => passwordInput.current?.focus()}
-          placeholder={t("runtime.emailPlaceholder")}
-          returnKeyType="next"
-          style={styles.input}
-          textContentType="username"
-          value={email}
-        />
-        <TextInput
-          accessibilityLabel={t("runtime.password")}
-          autoComplete="current-password"
-          onChangeText={setPassword}
-          onSubmitEditing={submitSignIn}
-          placeholder={t("runtime.passwordPlaceholder")}
-          ref={passwordInput}
-          returnKeyType="done"
-          secureTextEntry
-          style={styles.input}
-          textContentType="password"
-          value={password}
-        />
-        <LabButton disabled={signInBusy || !email.trim() || !password} label={signInBusy ? t("runtime.signingIn") : t("runtime.signIn")} onPress={submitSignIn} />
-        {auth.error ? <Text accessibilityRole="alert" style={styles.error}>{auth.error}</Text> : null}
-      </View>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.signInKeyboard}>
+        <ScrollView
+          contentContainerStyle={styles.signInContent}
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
+          testID="staging-sign-in-scroll"
+        >
+          <Brand />
+          <AccessibleHeading style={styles.title}>{t("runtime.signInTitle")}</AccessibleHeading>
+          <Text accessibilityRole="text" testID="staging-region-label" style={styles.regionLabel}>
+            {t(supabase.region === "ca" ? "runtime.regionCanada" : "runtime.regionUnitedStates")}
+          </Text>
+          <Text style={styles.body}>{t("runtime.signInBody")}</Text>
+          <TextInput
+            accessibilityLabel={t("runtime.email")}
+            autoCapitalize="none"
+            autoComplete="username"
+            keyboardType="email-address"
+            onChangeText={setEmail}
+            onSubmitEditing={() => passwordInput.current?.focus()}
+            placeholder={t("runtime.emailPlaceholder")}
+            returnKeyType="next"
+            style={styles.input}
+            textContentType="username"
+            value={email}
+          />
+          <TextInput
+            accessibilityLabel={t("runtime.password")}
+            autoComplete="current-password"
+            onChangeText={setPassword}
+            onSubmitEditing={submitSignIn}
+            placeholder={t("runtime.passwordPlaceholder")}
+            ref={passwordInput}
+            returnKeyType="done"
+            secureTextEntry
+            style={styles.input}
+            submitBehavior="submit"
+            textContentType="password"
+            value={password}
+          />
+          <LabButton disabled={signInBusy || !email.trim() || !password} label={signInBusy ? t("runtime.signingIn") : t("runtime.signIn")} onPress={submitSignIn} />
+          {auth.error ? <Text accessibilityRole="alert" style={styles.error}>{auth.error}</Text> : null}
+        </ScrollView>
+      </KeyboardAvoidingView>
     );
   }
   if (runtimeState.status === "loading") return <GateMessage busy title={t("runtime.opening")} body={t("runtime.loadingAuthorized")} />;
@@ -649,6 +657,8 @@ function GateMessage({ busy = false, body, onSignOut, title }: { busy?: boolean;
 
 const styles = StyleSheet.create({
   page: { backgroundColor: colors.background, flex: 1, justifyContent: "center", padding: spacing.xl, gap: spacing.md },
+  signInKeyboard: { backgroundColor: colors.background, flex: 1 },
+  signInContent: { flexGrow: 1, gap: spacing.md, justifyContent: "center", padding: spacing.xl },
   brand: { alignItems: "center", flexDirection: "row", gap: spacing.sm },
   logo: { height: 52, width: 52 },
   brandName: { color: colors.text, fontSize: 24, fontWeight: "800" },
