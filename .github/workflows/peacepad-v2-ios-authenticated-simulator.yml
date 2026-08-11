@@ -44,7 +44,7 @@ concurrency:
 
 jobs:
   authenticated-simulator:
-    name: Verify ${{ inputs.region }} authenticated fictional Simulator hydration
+    name: Verify ${{ inputs.region }} authenticated fictional coordination
     runs-on: macos-15
     timeout-minutes: 45
     environment: peacepad-v2-staging-${{ inputs.region }}
@@ -235,7 +235,7 @@ jobs:
             xcrun simctl get_app_container "$device" ca.peacepad.nextnative.lab app
           done
 
-      - name: Verify two authenticated native session hydrations
+      - name: Verify authenticated messaging and calendar coordination
         shell: bash
         env:
           DEVICE_A: ${{ steps.simulators.outputs.device_a }}
@@ -250,8 +250,11 @@ jobs:
           password="$(jq -r '.password' "$fixture")"
           email_a="$(jq -r '.accounts[0].email' "$fixture")"
           email_b="$(jq -r '.accounts[1].email' "$fixture")"
+          calendar_layer="$(jq -r '.calendarLayerName' "$fixture")"
+          message_text="$(jq -r '.messageText' "$fixture")"
+          event_title="$(jq -r '.eventTitle' "$fixture")"
 
-          create_flow() {
+          create_sign_in_flow() {
             local path="$1" email="$2"
             cat > "$path" <<YAML
           appId: ca.peacepad.nextnative.lab
@@ -284,15 +287,65 @@ jobs:
 
           flow_a="$RUNNER_TEMP/peacepad-authenticated-a.yaml"
           flow_b="$RUNNER_TEMP/peacepad-authenticated-b.yaml"
-          create_flow "$flow_a" "$email_a"
-          create_flow "$flow_b" "$email_b"
+          create_sign_in_flow "$flow_a" "$email_a"
+          cat >> "$flow_a" <<YAML
+          - tapOn: "Messages"
+          - extendedWaitUntil:
+              visible: "Message draft"
+              timeout: 30000
+          - tapOn: "Message draft"
+          - inputText: "$message_text"
+          - hideKeyboard
+          - scrollUntilVisible:
+              element:
+                text: "Send message"
+              direction: DOWN
+              timeout: 30000
+          - tapOn: "Send message"
+          - extendedWaitUntil:
+              visible: "$message_text"
+              timeout: 60000
+          - tapOn: "Calendar"
+          - extendedWaitUntil:
+              visible: "$calendar_layer"
+              timeout: 30000
+          - scrollUntilVisible:
+              element:
+                text: "Event title"
+              direction: DOWN
+              timeout: 30000
+          - tapOn: "Event title"
+          - inputText: "$event_title"
+          - hideKeyboard
+          - scrollUntilVisible:
+              element:
+                text: "Save event"
+              direction: DOWN
+              timeout: 30000
+          - tapOn: "Save event"
+          - extendedWaitUntil:
+              visible: "$event_title"
+              timeout: 60000
+          YAML
+
+          create_sign_in_flow "$flow_b" "$email_b"
+          cat >> "$flow_b" <<YAML
+          - tapOn: "Messages"
+          - extendedWaitUntil:
+              visible: "$message_text"
+              timeout: 60000
+          - tapOn: "Calendar"
+          - extendedWaitUntil:
+              visible: "$event_title"
+              timeout: 60000
+          YAML
           "$HOME/.maestro/bin/maestro" --device "$DEVICE_A" test "$flow_a"
-          xcrun simctl io "$DEVICE_A" screenshot "$evidence/01-${REGION}-authenticated-a.png"
+          xcrun simctl io "$DEVICE_A" screenshot "$evidence/01-${REGION}-coordination-a.png"
           "$HOME/.maestro/bin/maestro" --device "$DEVICE_B" test "$flow_b"
-          xcrun simctl io "$DEVICE_B" screenshot "$evidence/02-${REGION}-authenticated-b.png"
+          xcrun simctl io "$DEVICE_B" screenshot "$evidence/02-${REGION}-coordination-b.png"
           rm -f "$flow_a" "$flow_b"
-          test -f "$evidence/01-${REGION}-authenticated-a.png"
-          test -f "$evidence/02-${REGION}-authenticated-b.png"
+          test -f "$evidence/01-${REGION}-coordination-a.png"
+          test -f "$evidence/02-${REGION}-coordination-b.png"
           touch "$RUNNER_TEMP/peacepad-authenticated-journey-verified"
 
       - name: Capture final fictional Simulator states
@@ -408,6 +461,9 @@ jobs:
               fixtureDomain: "example.test",
               authenticatedNativeSessions: (if $journeyVerified then 2 else 0 end),
               backendFamilyAndConversationPrepared: $journeyVerified,
+              nativeMessageMutationVerified: $journeyVerified,
+              nativeCalendarMutationVerified: $journeyVerified,
+              crossAccountVisibilityVerified: $journeyVerified,
               applicationAndAuthCleanupVerified: $cleanupVerified,
               simulatorsDestroyed: $simulatorsDestroyed,
               credentialRetained: false,
