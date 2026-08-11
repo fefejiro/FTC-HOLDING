@@ -239,7 +239,7 @@ jobs:
           - inputText: "$FICTIONAL_EMAIL"
           - tapOn: "Staging password"
           - inputText: "$FICTIONAL_PASSWORD"
-          - pressKey: enter
+          - tapOn: "Sign in"
           - extendedWaitUntil:
               visible: "Check the fictional staging email and password."
               timeout: 30000
