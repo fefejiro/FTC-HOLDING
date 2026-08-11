@@ -218,6 +218,9 @@ const provision = async () => {
     region,
     password,
     familyName: `Fictional Simulator Family ${runNonce}`,
+    calendarLayerName: `Fictional Parenting Time ${runNonce}`,
+    messageText: `Fictional ${region.toUpperCase()} pickup confirmed ${runNonce}`,
+    eventTitle: `Fictional ${region.toUpperCase()} family event ${runNonce}`,
     accounts: [
       {
         email: `peacepad-sim-${region}-${runLabel}-a@example.test`,
@@ -328,6 +331,29 @@ const provision = async () => {
       throw new Error("Invitation acceptance receipt was invalid.");
     }
 
+    const calendarLayer = await write(
+      tokens[0],
+      "/api/v2/calendar-layers",
+      {
+        familyCircleId: familyId,
+        ownerIdentityId: state.accounts[0].id,
+        name: state.calendarLayerName,
+        kind: "parenting-time",
+        icon: "calendar",
+        colorToken: "teal",
+        visibility: { scope: "family" },
+      },
+      "calendar-layer-create",
+    );
+    if (
+      typeof calendarLayer.payload?.id !== "string" ||
+      calendarLayer.payload?.familyCircleId !== familyId ||
+      calendarLayer.payload?.name !== state.calendarLayerName ||
+      calendarLayer.payload?.visibility?.scope !== "family"
+    ) {
+      throw new Error("Shared calendar layer creation receipt was invalid.");
+    }
+
     writePrivateJson(fixturePath, state);
     writeEvidence({
       result: "FICTIONAL_SIMULATOR_FIXTURE_PROVISIONED",
@@ -337,6 +363,7 @@ const provision = async () => {
       fixtureDomain: "example.test",
       accountCount: 2,
       familyPrepared: true,
+      sharedCalendarLayerPrepared: true,
       credentialsPersistedOutsideRunnerTemp: false,
       productionContacted: false,
     });
