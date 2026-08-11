@@ -207,6 +207,7 @@ jobs:
         env:
           DEVICE_UDID: ${{ steps.simulator.outputs.device_udid }}
           EXPECTED_REGION_LABEL: ${{ steps.contract.outputs.expected_region_label }}
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: "240000"
           REGION: ${{ inputs.region }}
         run: |
           set -euo pipefail
