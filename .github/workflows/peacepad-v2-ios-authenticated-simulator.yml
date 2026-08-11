@@ -292,6 +292,20 @@ jobs:
           test -f "$evidence/02-${REGION}-authenticated-b.png"
           touch "$RUNNER_TEMP/peacepad-authenticated-journey-verified"
 
+      - name: Capture final fictional Simulator states
+        if: always() && steps.simulators.outcome == 'success'
+        shell: bash
+        env:
+          DEVICE_A: ${{ steps.simulators.outputs.device_a }}
+          DEVICE_B: ${{ steps.simulators.outputs.device_b }}
+          REGION: ${{ inputs.region }}
+        run: |
+          set -euo pipefail
+          evidence="$RUNNER_TEMP/peacepad-authenticated-simulator-evidence"
+          mkdir -p "$evidence"
+          xcrun simctl io "$DEVICE_A" screenshot "$evidence/03-${REGION}-final-state-a.png" || true
+          xcrun simctl io "$DEVICE_B" screenshot "$evidence/04-${REGION}-final-state-b.png" || true
+
       - name: Remove temporary application identities and Auth users
         id: cleanup
         if: always()
