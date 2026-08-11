@@ -79,14 +79,21 @@ if (!doctorExclusions.includes("react-native-webrtc")) {
 }
 
 const easBuildProfiles = easJson.build || {};
-const allowedEasProfiles = ["lab-simulator", "lab-device"];
+const labEasProfiles = ["lab-simulator", "lab-device"];
+const stagingEasProfiles = {
+  "staging-simulator-ca": { environment: "preview", simulator: true },
+  "staging-simulator-us": { environment: "development", simulator: true },
+  "staging-device-ca": { environment: "preview", simulator: false },
+  "staging-device-us": { environment: "development", simulator: false },
+};
+const allowedEasProfiles = [...labEasProfiles, ...Object.keys(stagingEasProfiles)];
 if (Object.keys(easBuildProfiles).some((profile) => !allowedEasProfiles.includes(profile))) {
-  failures.push("EAS must remain limited to the approved lab-simulator and lab-device profiles before Gate 6.");
+  failures.push("EAS must remain limited to approved lab and regional staging profiles before Gate 6.");
 }
 if (easJson.submit || easBuildProfiles.production) {
   failures.push("EAS submit and production build profiles are prohibited before Gate 6 approval.");
 }
-for (const profile of allowedEasProfiles) {
+for (const profile of labEasProfiles) {
   const config = easBuildProfiles[profile];
   if (!config || config.distribution !== "internal") {
     failures.push(`EAS ${profile} must use internal distribution.`);
@@ -98,6 +105,22 @@ for (const profile of allowedEasProfiles) {
     || config.env?.EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS !== "false"
   ) {
     failures.push(`EAS ${profile} must remain pinned to the non-diagnostic local lab boundary.`);
+  }
+}
+for (const [profile, expected] of Object.entries(stagingEasProfiles)) {
+  const config = easBuildProfiles[profile];
+  if (!config || config.distribution !== "internal") {
+    failures.push(`EAS ${profile} must use internal distribution.`);
+    continue;
+  }
+  if (config.environment !== expected.environment) {
+    failures.push(`EAS ${profile} must use its isolated regional EAS environment.`);
+  }
+  if (config.env && Object.keys(config.env).length > 0) {
+    failures.push(`EAS ${profile} must obtain public staging configuration from EAS, not committed profile values.`);
+  }
+  if ((config.ios?.simulator === true) !== expected.simulator) {
+    failures.push(`EAS ${profile} has the wrong Simulator/device boundary.`);
   }
 }
 if (easBuildProfiles["lab-simulator"]?.ios?.simulator !== true) {

@@ -23,6 +23,28 @@
         "EXPO_PUBLIC_PEACEPAD_API_BASE_URL": "http://127.0.0.1:8787",
         "EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS": "false"
       }
+    },
+    "staging-simulator-ca": {
+      "distribution": "internal",
+      "environment": "preview",
+      "ios": {
+        "simulator": true
+      }
+    },
+    "staging-simulator-us": {
+      "distribution": "internal",
+      "environment": "development",
+      "ios": {
+        "simulator": true
+      }
+    },
+    "staging-device-ca": {
+      "distribution": "internal",
+      "environment": "preview"
+    },
+    "staging-device-us": {
+      "distribution": "internal",
+      "environment": "development"
     }
   }
 }
