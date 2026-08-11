@@ -142,7 +142,7 @@ jobs:
           test "$(jq -r '.sourceReadOnly' "$evidence")" = "true"
           test "$(jq -r '.dumpRetained' "$evidence")" = "false"
           test "$(jq -r '.productionContacted' "$evidence")" = "false"
-          test "$(jq -r '.migrationCount' "$evidence")" -eq 19
+          test "$(jq -r '.migrationCount' "$evidence")" -eq 20
           test "$(jq -r '.sourceFingerprintSha256' "$evidence")" = "$(jq -r '.restoredFingerprintSha256' "$evidence")"
           test "$(find "${RUNNER_TEMP:-/tmp}" -type f -name '*.dump' | wc -l)" -eq 0
 
