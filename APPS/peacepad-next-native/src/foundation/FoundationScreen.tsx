@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  type TextProps,
   View
 } from "react-native";
 import { AccessibleHeading } from "../components/AccessibleHeading";
@@ -45,6 +46,11 @@ const initialConsent: ConsentPreferences = {
 };
 
 const defaultApi = new PeacePadApiClient(environmentConfig);
+const maximumFoundationFontScale = 2;
+
+function FoundationText(props: TextProps) {
+  return <Text {...props} maxFontSizeMultiplier={maximumFoundationFontScale} />;
+}
 
 function friendlyError(error: unknown, fallback: string): string {
   if (error instanceof PeacePadApiError) return error.message;
@@ -179,7 +185,7 @@ export function FoundationScreen({
     return (
       <View style={styles.centered} accessibilityLabel={t("foundation.restoring")}>
         <ActivityIndicator color={colors.brand} />
-        <Text style={styles.muted}>{t("foundation.checkingDevice")}</Text>
+        <FoundationText style={styles.muted}>{t("foundation.checkingDevice")}</FoundationText>
       </View>
     );
   }
@@ -193,19 +199,19 @@ export function FoundationScreen({
           style={styles.conchMark}
         />
         <View style={styles.brandCopy}>
-          <Text style={styles.eyebrow}>{statusLabel}</Text>
-          <Text style={styles.brandName}>PeacePad</Text>
+          <FoundationText style={styles.eyebrow}>{statusLabel}</FoundationText>
+          <FoundationText style={styles.brandName}>PeacePad</FoundationText>
         </View>
       </View>
 
       {phase === "welcome" ? (
         <View style={styles.card}>
-          <AccessibleHeading style={styles.title}>
+          <AccessibleHeading maxFontSizeMultiplier={maximumFoundationFontScale} style={styles.title}>
             {t("foundation.welcomeTitle")}
           </AccessibleHeading>
-          <Text style={styles.body}>
+          <FoundationText style={styles.body}>
             {t("foundation.welcomeBody")}
-          </Text>
+          </FoundationText>
           <PrimaryButton label={t("foundation.try")} onPress={() => transitionTo("consent")} />
           <SecondaryButton
             label={t("foundation.existing")}
@@ -221,8 +227,8 @@ export function FoundationScreen({
 
       {phase === "account" ? (
         <View style={styles.card}>
-          <Text style={styles.heading}>{t("foundation.existing")}</Text>
-          <Text style={styles.body}>{t("foundation.accountUnavailable")}</Text>
+          <AccessibleHeading maxFontSizeMultiplier={maximumFoundationFontScale} style={styles.heading}>{t("foundation.existing")}</AccessibleHeading>
+          <FoundationText style={styles.body}>{t("foundation.accountUnavailable")}</FoundationText>
           <SecondaryButton label={t("foundation.backWelcome")} onPress={() => transitionTo("welcome")} />
           <LegalLinks />
         </View>
@@ -230,8 +236,8 @@ export function FoundationScreen({
 
       {phase === "consent" ? (
         <View style={styles.card}>
-          <Text style={styles.heading}>{t("foundation.consentTitle")}</Text>
-          <Text style={styles.body}>{t("foundation.consentBody")}</Text>
+          <AccessibleHeading maxFontSizeMultiplier={maximumFoundationFontScale} style={styles.heading}>{t("foundation.consentTitle")}</AccessibleHeading>
+          <FoundationText style={styles.body}>{t("foundation.consentBody")}</FoundationText>
           <ConsentToggle
             label={t("foundation.termsConsent")}
             checked={consent.termsAccepted}
@@ -275,14 +281,15 @@ export function FoundationScreen({
 
       {phase === "compose" ? (
         <View style={styles.card}>
-          <AccessibleHeading style={styles.heading}>{t("foundation.composeTitle")}</AccessibleHeading>
-          <Text style={styles.body}>{t("foundation.composeBody")}</Text>
+          <AccessibleHeading maxFontSizeMultiplier={maximumFoundationFontScale} style={styles.heading}>{t("foundation.composeTitle")}</AccessibleHeading>
+          <FoundationText style={styles.body}>{t("foundation.composeBody")}</FoundationText>
           <TextInput
             accessibilityLabel={t("foundation.draftLabel")}
             multiline
             onChangeText={setDraft}
             placeholder={t("foundation.draftPlaceholder")}
             style={styles.input}
+            maxFontSizeMultiplier={maximumFoundationFontScale}
             value={draft}
           />
           <PrimaryButton
@@ -293,22 +300,22 @@ export function FoundationScreen({
 
           {preview ? (
             <View style={styles.result} accessibilityLabel={t("foundation.previewResult")}>
-              <Text style={styles.resultTone}>
+              <FoundationText style={styles.resultTone}>
                 {preview.emoji ? `${preview.emoji} ` : ""}
                 {preview.tone}
-              </Text>
-              <Text style={styles.body}>{preview.summary}</Text>
+              </FoundationText>
+              <FoundationText style={styles.body}>{preview.summary}</FoundationText>
               {preview.rewordingSuggestion ? (
-                <Text style={styles.suggestion}>
+                <FoundationText style={styles.suggestion}>
                   {t("foundation.suggested", { suggestion: preview.rewordingSuggestion })}
-                </Text>
+                </FoundationText>
               ) : null}
             </View>
           ) : null}
 
           {previewError ? (
             <View style={styles.errorCard} accessibilityRole="alert">
-              <Text style={styles.errorText}>{previewError}</Text>
+              <FoundationText style={styles.errorText}>{previewError}</FoundationText>
               <SecondaryButton label={t("foundation.retryCheck")} onPress={checkMessage} />
             </View>
           ) : null}
@@ -321,12 +328,12 @@ export function FoundationScreen({
       ) : null}
 
       {sessionMessage ? (
-        <Text
+        <FoundationText
           accessibilityRole={sessionMessage.includes("could not") ? "alert" : "text"}
           style={styles.sessionMessage}
         >
           {sessionMessage}
-        </Text>
+        </FoundationText>
       ) : null}
     </View>
   );
@@ -352,11 +359,11 @@ function ConsentToggle({
       style={({ pressed }) => [styles.choice, pressed ? styles.pressed : null]}
     >
       <View style={[styles.checkbox, checked ? styles.checkboxChecked : null]}>
-        <Text style={styles.checkmark}>{checked ? "✓" : ""}</Text>
+        <FoundationText style={styles.checkmark}>{checked ? "✓" : ""}</FoundationText>
       </View>
       <View style={styles.choiceCopy}>
-        <Text style={styles.choiceLabel}>{label}</Text>
-        {description ? <Text style={styles.choiceDescription}>{description}</Text> : null}
+        <FoundationText style={styles.choiceLabel}>{label}</FoundationText>
+        {description ? <FoundationText style={styles.choiceDescription}>{description}</FoundationText> : null}
       </View>
     </Pressable>
   );
@@ -383,7 +390,7 @@ function PrimaryButton({
         pressed ? styles.pressed : null
       ]}
     >
-      <Text style={styles.primaryButtonText}>{label}</Text>
+      <FoundationText style={styles.primaryButtonText}>{label}</FoundationText>
     </Pressable>
   );
 }
@@ -398,7 +405,7 @@ function SecondaryButton({ label, onPress }: { label: string; onPress: () => voi
         pressed ? styles.pressed : null
       ]}
     >
-      <Text style={styles.secondaryButtonText}>{label}</Text>
+      <FoundationText style={styles.secondaryButtonText}>{label}</FoundationText>
     </Pressable>
   );
 }
@@ -407,15 +414,15 @@ function LegalLinks() {
   const { t } = useOptionalLocalization();
   return (
     <View style={styles.legalRow}>
-      <Text style={styles.link} onPress={() => Linking.openURL("https://peacepad.ca/privacy")}>
+      <FoundationText style={styles.link} onPress={() => Linking.openURL("https://peacepad.ca/privacy")}>
         {t("foundation.privacy")}
-      </Text>
-      <Text style={styles.link} onPress={() => Linking.openURL("https://peacepad.ca/terms")}>
+      </FoundationText>
+      <FoundationText style={styles.link} onPress={() => Linking.openURL("https://peacepad.ca/terms")}>
         {t("foundation.terms")}
-      </Text>
-      <Text style={styles.link} onPress={() => Linking.openURL("https://peacepad.ca/support")}>
+      </FoundationText>
+      <FoundationText style={styles.link} onPress={() => Linking.openURL("https://peacepad.ca/support")}>
         {t("foundation.support")}
-      </Text>
+      </FoundationText>
     </View>
   );
 }
@@ -442,7 +449,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brandSoft
   },
   brandCopy: {
-    flex: 1
+    flex: 1,
+    minWidth: 0
   },
   brandName: {
     ...typography.heading,
@@ -522,6 +530,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 999,
     paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
     backgroundColor: colors.brand
   },
   primaryButtonText: {
@@ -534,6 +543,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 999,
     paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
     backgroundColor: colors.brandSoft
   },
   secondaryButtonText: {
@@ -601,6 +611,7 @@ const styles = StyleSheet.create({
   },
   legalRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "center",
     gap: spacing.lg,
     paddingTop: spacing.sm
@@ -608,7 +619,8 @@ const styles = StyleSheet.create({
   link: {
     ...typography.caption,
     color: colors.brand,
-    fontWeight: "800"
+    fontWeight: "800",
+    textAlign: "center"
   },
   sessionMessage: {
     ...typography.caption,

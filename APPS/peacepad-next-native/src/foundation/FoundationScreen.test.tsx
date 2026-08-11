@@ -94,6 +94,20 @@ describe("PeacePad native foundation", () => {
     expect(sessionStore.save).not.toHaveBeenCalled();
   });
 
+  it("keeps foundation text at a usable 200% maximum while preserving scaling", async () => {
+    const { api, sessionStore } = createHarness();
+    render(<FoundationScreen api={api} sessionStore={sessionStore} />);
+
+    expect((await screen.findAllByText("PeacePad")).every((node) => node.props.maxFontSizeMultiplier === 2)).toBe(true);
+    expect(screen.getByText("A calmer way through hard co-parenting moments.").props.maxFontSizeMultiplier).toBe(2);
+    expect(screen.getByText("Try PeacePad").props.maxFontSizeMultiplier).toBe(2);
+    expect(screen.getByText("Privacy").props.maxFontSizeMultiplier).toBe(2);
+
+    fireEvent.press(screen.getByText("Try PeacePad"));
+    expect(screen.getByText("Your choices come first").props.maxFontSizeMultiplier).toBe(2);
+    expect(screen.getByText("I acknowledge the Privacy Policy").props.maxFontSizeMultiplier).toBe(2);
+  });
+
   it("requests a scroll reset when the foundation phase changes", async () => {
     const { api, sessionStore } = createHarness();
     const onPhaseChange = jest.fn();
