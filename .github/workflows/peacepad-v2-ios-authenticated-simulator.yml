@@ -241,7 +241,7 @@ jobs:
           DEVICE_A: ${{ steps.simulators.outputs.device_a }}
           DEVICE_B: ${{ steps.simulators.outputs.device_b }}
           EXPECTED_REGION_LABEL: ${{ steps.contract.outputs.expected_region_label }}
-          MAESTRO_DRIVER_STARTUP_TIMEOUT: "240000"
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: "480000"
           REGION: ${{ inputs.region }}
         run: |
           set -euo pipefail
