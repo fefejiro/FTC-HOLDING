@@ -352,6 +352,9 @@ export function PeacePadStagingRuntime({
       <View style={styles.page}>
         <Brand />
         <AccessibleHeading style={styles.title}>{t("runtime.signInTitle")}</AccessibleHeading>
+        <Text accessibilityRole="text" testID="staging-region-label" style={styles.regionLabel}>
+          {t(supabase.region === "ca" ? "runtime.regionCanada" : "runtime.regionUnitedStates")}
+        </Text>
         <Text style={styles.body}>{t("runtime.signInBody")}</Text>
         <TextInput accessibilityLabel={t("runtime.email")} autoCapitalize="none" keyboardType="email-address" onChangeText={setEmail} placeholder={t("runtime.emailPlaceholder")} style={styles.input} value={email} />
         <TextInput accessibilityLabel={t("runtime.password")} onChangeText={setPassword} placeholder={t("runtime.passwordPlaceholder")} secureTextEntry style={styles.input} value={password} />
@@ -614,6 +617,7 @@ const styles = StyleSheet.create({
   logo: { height: 52, width: 52 },
   brandName: { color: colors.text, fontSize: 24, fontWeight: "800" },
   title: { color: colors.text, fontSize: 32, fontWeight: "700" },
+  regionLabel: { color: colors.brand, fontSize: 16, fontWeight: "700" },
   sectionTitle: { color: colors.text, fontSize: 18, fontWeight: "700", marginTop: spacing.sm },
   body: { color: colors.muted, fontSize: 16, lineHeight: 24 },
   input: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 14, borderWidth: 1, color: colors.text, fontSize: 16, padding: spacing.md },

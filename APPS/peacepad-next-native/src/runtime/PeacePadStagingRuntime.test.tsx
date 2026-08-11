@@ -134,10 +134,24 @@ describe("PeacePadStagingRuntime gates", () => {
     (useSupabaseSession as jest.Mock).mockReturnValue(authValue({ status: "signed-out", session: undefined, signInWithPassword }));
     view.rerender(<PeacePadStagingRuntime environment={environment} supabase={supabase}>ready</PeacePadStagingRuntime>);
     expect(screen.getByText("Sign in to staging")).toBeTruthy();
+    expect(screen.getByTestId("staging-region-label")).toHaveTextContent("Canada staging");
     fireEvent.changeText(screen.getByLabelText("Staging email"), "fictional.parent@example.test");
     fireEvent.changeText(screen.getByLabelText("Staging password"), "fictional-password");
     fireEvent.press(screen.getByRole("button", { name: "Sign in" }));
     return waitFor(() => expect(signInWithPassword).toHaveBeenCalledWith("fictional.parent@example.test", "fictional-password"));
+  });
+
+  it.each([
+    ["fr", "Environnement de test aux États-Unis"],
+    ["es", "Entorno de pruebas de Estados Unidos"]
+  ])("identifies the configured United States staging region in %s", (locale, regionLabel) => {
+    (useSupabaseSession as jest.Mock).mockReturnValue(authValue({ status: "signed-out", session: undefined }));
+    render(
+      <LocalizationProvider initialLocale={locale}>
+        <PeacePadStagingRuntime environment={environment} supabase={{ ...supabase, region: "us" }}>ready</PeacePadStagingRuntime>
+      </LocalizationProvider>
+    );
+    expect(screen.getByTestId("staging-region-label")).toHaveTextContent(regionLabel);
   });
 
   it("shows safe empty states for an account without a family or conversation", async () => {
