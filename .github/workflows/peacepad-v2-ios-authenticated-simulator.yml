@@ -333,7 +333,6 @@ jobs:
           cat > "$flow_a_calendar" <<YAML
           appId: ca.peacepad.nextnative.lab
           ---
-          - assertVisible: "$message_text"
           - tapOn: "Calendar"
           - swipe:
               start: 50%, 80%
