@@ -277,7 +277,7 @@ jobs:
           - assertVisible: "Messages"
           - assertVisible: "Calendar"
           - assertVisible: "Records"
-          - assertVisible: "Calls"
+          - assertVisible: "Audio call"
           - assertVisible: "More"
           YAML
           }
