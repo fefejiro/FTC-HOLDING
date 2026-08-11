@@ -230,7 +230,16 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           for device in "$device_a" "$device_b"; do
             xcrun simctl boot "$device"
-            xcrun simctl bootstatus "$device" -b
+          done
+          boot_pids=()
+          for device in "$device_a" "$device_b"; do
+            xcrun simctl bootstatus "$device" -b &
+            boot_pids+=("$!")
+          done
+          for pid in "${boot_pids[@]}"; do
+            wait "$pid"
+          done
+          for device in "$device_a" "$device_b"; do
             xcrun simctl install "$device" "$APP_PATH"
             xcrun simctl get_app_container "$device" ca.peacepad.nextnative.lab app
           done
@@ -295,6 +304,7 @@ jobs:
               element:
                 text: "Write a message"
               direction: DOWN
+              visibilityPercentage: 50
               timeout: 30000
           - tapOn: "Message draft"
           - inputText: "$message_text"
@@ -303,6 +313,7 @@ jobs:
               element:
                 text: "Send message"
               direction: DOWN
+              visibilityPercentage: 50
               timeout: 30000
           - tapOn: "Send message"
           - extendedWaitUntil:
@@ -313,11 +324,13 @@ jobs:
               element:
                 text: "$calendar_layer"
               direction: DOWN
+              visibilityPercentage: 50
               timeout: 30000
           - scrollUntilVisible:
               element:
                 text: "Event title"
               direction: DOWN
+              visibilityPercentage: 50
               timeout: 30000
           - tapOn: "Event title"
           - inputText: "$event_title"
@@ -326,6 +339,7 @@ jobs:
               element:
                 text: "Save event"
               direction: DOWN
+              visibilityPercentage: 50
               timeout: 30000
           - tapOn: "Save event"
           - extendedWaitUntil:
@@ -340,12 +354,14 @@ jobs:
               element:
                 text: "$message_text"
               direction: DOWN
+              visibilityPercentage: 50
               timeout: 60000
           - tapOn: "Calendar"
           - scrollUntilVisible:
               element:
                 text: "$event_title"
               direction: DOWN
+              visibilityPercentage: 50
               timeout: 60000
           YAML
           "$HOME/.maestro/bin/maestro" --device "$DEVICE_A" test "$flow_a"
