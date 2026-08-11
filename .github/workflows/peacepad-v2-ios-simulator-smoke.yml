@@ -1,0 +1,245 @@
+name: PeacePad Native V2 iOS Simulator Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact reviewed feature commit containing the app source to verify
+        required: true
+        default: "12462534e89eb2d5b7d0988213da6ec0812f6d3c"
+        type: string
+      build_source_sha:
+        description: Exact feature commit used to create the EAS Simulator build
+        required: true
+        default: "5c0084e789bfe3f66c01f876c843bc9613b65bc8"
+        type: string
+      eas_build_id:
+        description: Finished lab-only EAS iOS Simulator build ID
+        required: true
+        default: "21f97870-d921-407c-ad18-e625055bf25f"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: peacepad-v2-ios-simulator-smoke
+  cancel-in-progress: false
+
+jobs:
+  foundation-smoke:
+    name: Install and verify lab Simulator artifact
+    runs-on: macos-15
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout exact reviewed feature commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_sha }}
+          fetch-depth: 0
+
+      - name: Validate immutable lab boundaries
+        shell: bash
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+          BUILD_SOURCE_SHA: ${{ inputs.build_source_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          git cat-file -e "$BUILD_SOURCE_SHA^{commit}"
+          git diff --quiet "$BUILD_SOURCE_SHA" "$TARGET_SHA" -- \
+            APPS/peacepad-next-native \
+            ':(exclude)APPS/peacepad-next-native/docs/**'
+
+          node APPS/peacepad-next-native/scripts/check-lab-guardrails.cjs
+          node APPS/peacepad-next-native/scripts/check-secrets.cjs
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Verify and download exact EAS build
+        id: eas
+        working-directory: APPS/peacepad-next-native
+        shell: bash
+        env:
+          EAS_BUILD_ID: ${{ inputs.eas_build_id }}
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPECTED_PROJECT_ID: a4ecee72-ebae-483d-8553-035847ebb3d3
+        run: |
+          set -euo pipefail
+          test -n "$EXPO_TOKEN"
+
+          npx --yes eas-cli@21.7.1 build:view "$EAS_BUILD_ID" --json \
+            > "$RUNNER_TEMP/peacepad-eas-build.json"
+
+          jq -e \
+            --arg id "$EAS_BUILD_ID" \
+            --arg project "$EXPECTED_PROJECT_ID" \
+            '.id == $id
+              and .status == "FINISHED"
+              and .platform == "IOS"
+              and .project.id == $project
+              and .project.ownerAccount.name == "official_fejiro"
+              and .project.slug == "peacepad-next-native-lab"
+              and .distribution == "INTERNAL"
+              and .buildProfile == "lab-simulator"
+              and .isForIosSimulator == true
+              and .appVersion == "0.0.1"' \
+            "$RUNNER_TEMP/peacepad-eas-build.json" > /dev/null
+
+          npx --yes eas-cli@21.7.1 build:download \
+            --build-id "$EAS_BUILD_ID" \
+            --json > "$RUNNER_TEMP/peacepad-eas-download.json"
+
+          APP_PATH="$(jq -er '.path' "$RUNNER_TEMP/peacepad-eas-download.json")"
+          test -d "$APP_PATH"
+          test -f "$APP_PATH/Info.plist"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_PATH/Info.plist")" = \
+            "ca.peacepad.nextnative.lab"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :ITSAppUsesNonExemptEncryption' "$APP_PATH/Info.plist")" = \
+            "false"
+          test -n "$(/usr/libexec/PlistBuddy -c 'Print :NSMicrophoneUsageDescription' "$APP_PATH/Info.plist")"
+
+          echo "app_path=$APP_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Boot isolated iOS Simulator and install PeacePad
+        id: simulator
+        shell: bash
+        env:
+          APP_PATH: ${{ steps.eas.outputs.app_path }}
+        run: |
+          set -euo pipefail
+
+          RUNTIME_ID="$(xcrun simctl list runtimes --json | jq -er \
+            '[.runtimes[] | select(.platform == "iOS" and .isAvailable == true)] | last | .identifier')"
+          DEVICE_TYPE_ID="$(xcrun simctl list devicetypes --json | jq -er \
+            '[.devicetypes[] | select(.name | startswith("iPhone"))] | first | .identifier')"
+          DEVICE_NAME="PeacePad V2 Evidence"
+          DEVICE_UDID="$(xcrun simctl create "$DEVICE_NAME" "$DEVICE_TYPE_ID" "$RUNTIME_ID")"
+
+          echo "$DEVICE_UDID" > "$RUNNER_TEMP/peacepad-simulator-udid"
+          echo "device_udid=$DEVICE_UDID" >> "$GITHUB_OUTPUT"
+          echo "runtime_id=$RUNTIME_ID" >> "$GITHUB_OUTPUT"
+          echo "device_name=$DEVICE_NAME" >> "$GITHUB_OUTPUT"
+
+          xcrun simctl boot "$DEVICE_UDID"
+          open -a Simulator --args -CurrentDeviceUDID "$DEVICE_UDID"
+          xcrun simctl bootstatus "$DEVICE_UDID" -b
+          xcrun simctl install "$DEVICE_UDID" "$APP_PATH"
+          xcrun simctl get_app_container "$DEVICE_UDID" ca.peacepad.nextnative.lab app
+
+      - name: Install Maestro
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          "$HOME/.maestro/bin/maestro" --version
+
+      - name: Run screenshot-backed foundation smoke
+        shell: bash
+        env:
+          DEVICE_UDID: ${{ steps.simulator.outputs.device_udid }}
+        run: |
+          set -euo pipefail
+          EVIDENCE_DIR="$RUNNER_TEMP/peacepad-simulator-evidence"
+          FLOW_PATH="$RUNNER_TEMP/peacepad-foundation-smoke.yaml"
+          mkdir -p "$EVIDENCE_DIR"
+
+          cat > "$FLOW_PATH" <<'YAML'
+          appId: ca.peacepad.nextnative.lab
+          ---
+          - launchApp:
+              clearState: true
+          - extendedWaitUntil:
+              visible: "Try PeacePad"
+              timeout: 60000
+          - assertVisible: "PeacePad"
+          - assertVisible: "Existing account"
+          - takeScreenshot: ${OUTPUT_DIR}/01-welcome
+          - tapOn: "Try PeacePad"
+          - extendedWaitUntil:
+              visible: "Your choices come first"
+              timeout: 30000
+          - assertVisible: "I agree to the Terms"
+          - assertVisible: "I acknowledge the Privacy Policy"
+          - assertVisible: "Optional AI-assisted rewrites"
+          - takeScreenshot: ${OUTPUT_DIR}/02-consent
+          YAML
+
+          "$HOME/.maestro/bin/maestro" \
+            --device "$DEVICE_UDID" \
+            test \
+            -e OUTPUT_DIR="$EVIDENCE_DIR" \
+            "$FLOW_PATH"
+
+          test -f "$EVIDENCE_DIR/01-welcome.png"
+          test -f "$EVIDENCE_DIR/02-consent.png"
+
+          MAESTRO_VERSION="$($HOME/.maestro/bin/maestro --version | tail -n 1)"
+          jq -n \
+            --arg result "SIMULATOR_FOUNDATION_SMOKE_VERIFIED" \
+            --arg targetSha "${{ inputs.target_sha }}" \
+            --arg buildSourceSha "${{ inputs.build_source_sha }}" \
+            --arg easBuildId "${{ inputs.eas_build_id }}" \
+            --arg bundleId "ca.peacepad.nextnative.lab" \
+            --arg simulatorUdid "$DEVICE_UDID" \
+            --arg simulatorRuntime "${{ steps.simulator.outputs.runtime_id }}" \
+            --arg maestroVersion "$MAESTRO_VERSION" \
+            '{
+              result: $result,
+              targetSha: $targetSha,
+              buildSourceSha: $buildSourceSha,
+              easBuildId: $easBuildId,
+              bundleId: $bundleId,
+              simulatorUdid: $simulatorUdid,
+              simulatorRuntime: $simulatorRuntime,
+              maestroVersion: $maestroVersion,
+              scope: ["install", "cold launch", "welcome", "consent navigation"],
+              dataClassification: "no account or family data",
+              productionContacted: false,
+              deviceProof: false,
+              testFlightProof: false
+            }' > "$EVIDENCE_DIR/manifest.json"
+
+      - name: Capture Simulator diagnostics
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          EVIDENCE_DIR="$RUNNER_TEMP/peacepad-simulator-evidence"
+          mkdir -p "$EVIDENCE_DIR"
+          if test -f "$RUNNER_TEMP/peacepad-simulator-udid"; then
+            DEVICE_UDID="$(cat "$RUNNER_TEMP/peacepad-simulator-udid")"
+            xcrun simctl io "$DEVICE_UDID" screenshot \
+              "$EVIDENCE_DIR/final-state.png"
+            xcrun simctl spawn "$DEVICE_UDID" log show \
+              --last 10m \
+              --style compact \
+              --predicate 'process == "PeacePad"' \
+              > "$EVIDENCE_DIR/peacepad-system.log"
+          fi
+
+      - name: Upload non-secret Simulator evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: peacepad-v2-ios-simulator-${{ inputs.eas_build_id }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            ${{ runner.temp }}/peacepad-eas-build.json
+            ${{ runner.temp }}/peacepad-simulator-evidence
+
+      - name: Destroy isolated Simulator
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          if test -f "$RUNNER_TEMP/peacepad-simulator-udid"; then
+            DEVICE_UDID="$(cat "$RUNNER_TEMP/peacepad-simulator-udid")"
+            xcrun simctl shutdown "$DEVICE_UDID"
+            xcrun simctl delete "$DEVICE_UDID"
+          fi
