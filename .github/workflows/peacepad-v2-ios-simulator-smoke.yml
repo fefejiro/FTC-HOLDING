@@ -175,7 +175,9 @@ jobs:
           cat > "$CONSENT_FLOW_PATH" <<'YAML'
           appId: ca.peacepad.nextnative.lab
           ---
-          - launchApp
+          - extendedWaitUntil:
+              visible: "Try PeacePad"
+              timeout: 15000
           - tapOn: "Try PeacePad"
           - extendedWaitUntil:
               visible: "Your choices come first"
