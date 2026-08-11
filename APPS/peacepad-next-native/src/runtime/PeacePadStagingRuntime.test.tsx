@@ -121,6 +121,32 @@ describe("PeacePadStagingRuntime gates", () => {
     jest.restoreAllMocks();
   });
 
+  it("routes verified-session reads to the exact regional Edge runtime", async () => {
+    (useSupabaseSession as jest.Mock).mockReturnValue(authValue());
+    const fetcher = sessionResponse({ ...valid, memberships: [] });
+    (createStagingCoordinationClient as jest.Mock).mockReturnValue({});
+
+    render(
+      <PeacePadStagingRuntime environment={environment} fetcher={fetcher} supabase={supabase}>
+        ready
+      </PeacePadStagingRuntime>
+    );
+
+    await waitFor(() => expect(screen.getByText("Create or join a family")).toBeTruthy());
+    expect(fetcher).toHaveBeenCalledWith(
+      `${environment.apiBaseUrl}/api/v2/session`,
+      expect.objectContaining({
+        headers: {
+          Accept: "application/json",
+          Authorization: "Bearer fictional-access-token",
+          "X-PeacePad-Region": "ca",
+          "X-PeacePad-Schema-Version": "2.0",
+          "X-Region": "ca-central-1"
+        }
+      })
+    );
+  });
+
   it("renders restore, error, and signed-out gates without synthetic coordination", () => {
     (useSupabaseSession as jest.Mock).mockReturnValue(authValue({ status: "loading", session: undefined }));
     const view = render(<PeacePadStagingRuntime environment={environment} supabase={supabase}>ready</PeacePadStagingRuntime>);

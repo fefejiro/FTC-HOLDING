@@ -9,7 +9,7 @@ import { AudioCallStateProvider } from "../calls/AudioCallState";
 import type { AudioCallMediaRuntime } from "../calls/AudioCallMediaCoordinator";
 import { LabButton } from "../components/LabButton";
 import { AccessibleHeading } from "../components/AccessibleHeading";
-import type { PeacePadEnvironmentConfig, PeacePadSupabaseConfig } from "../config/environment";
+import { resolveFunctionInvocationRegion, type PeacePadEnvironmentConfig, type PeacePadSupabaseConfig } from "../config/environment";
 import { useSupabaseSession } from "../session/SupabaseSessionProvider";
 import { StagingAccountActionsProvider } from "../session/StagingAccountActions";
 import { createWriteContext, type AcceptedInvitation, type InvitationPreview } from "../domain/v2";
@@ -144,8 +144,15 @@ async function fetchVerifiedSession(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12_000);
   try {
+    const functionRegion = resolveFunctionInvocationRegion(config.apiBaseUrl);
     const response = await fetcher(`${config.apiBaseUrl}/api/v2/session`, {
-      headers: { Accept: "application/json", Authorization: `Bearer ${accessToken}` },
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        "X-PeacePad-Region": config.region,
+        "X-PeacePad-Schema-Version": "2.0",
+        ...(functionRegion ? { "X-Region": functionRegion } : {})
+      },
       signal: controller.signal
     });
     const payload = await response.json().catch(() => null);
