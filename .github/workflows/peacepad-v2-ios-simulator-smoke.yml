@@ -18,6 +18,16 @@ on:
         required: true
         default: "21f97870-d921-407c-ad18-e625055bf25f"
         type: string
+      artifact_url:
+        description: Exact time-limited public EAS artifact URL for the reviewed build
+        required: true
+        default: "https://expo.dev/artifacts/eas/cn_MZVzC-9-QvN9VxE_VUngnnv5V_gJEUcxmfSAWZ64.tar.gz"
+        type: string
+      artifact_sha256:
+        description: Expected SHA-256 of the reviewed Simulator archive
+        required: true
+        default: "eba69109e56a968e28c6b1edf23ad89c19f32eca3ee79734b04b56537f8d3fa5"
+        type: string
 
 permissions:
   contents: read
@@ -55,46 +65,34 @@ jobs:
           node APPS/peacepad-next-native/scripts/check-lab-guardrails.cjs
           node APPS/peacepad-next-native/scripts/check-secrets.cjs
 
-      - name: Use Node.js 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
       - name: Verify and download exact EAS build
         id: eas
-        working-directory: APPS/peacepad-next-native
         shell: bash
         env:
           EAS_BUILD_ID: ${{ inputs.eas_build_id }}
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          EXPECTED_PROJECT_ID: a4ecee72-ebae-483d-8553-035847ebb3d3
+          ARTIFACT_URL: ${{ inputs.artifact_url }}
+          EXPECTED_SHA256: ${{ inputs.artifact_sha256 }}
         run: |
           set -euo pipefail
-          test -n "$EXPO_TOKEN"
+          test -n "$EAS_BUILD_ID"
+          case "$ARTIFACT_URL" in
+            https://expo.dev/artifacts/eas/*.tar.gz) ;;
+            *) echo "Artifact URL is outside the guarded EAS origin." >&2; exit 1 ;;
+          esac
+          test "$(printf '%s' "$EXPECTED_SHA256" | tr '[:upper:]' '[:lower:]' | wc -c | tr -d ' ')" = "64"
 
-          npx --yes eas-cli@21.7.1 build:view "$EAS_BUILD_ID" --json \
-            > "$RUNNER_TEMP/peacepad-eas-build.json"
+          ARCHIVE_PATH="$RUNNER_TEMP/peacepad-eas-simulator.tar.gz"
+          EXTRACT_PATH="$RUNNER_TEMP/peacepad-eas-simulator"
+          mkdir -p "$EXTRACT_PATH"
+          curl --fail --location --retry 3 --silent --show-error \
+            "$ARTIFACT_URL" \
+            --output "$ARCHIVE_PATH"
 
-          jq -e \
-            --arg id "$EAS_BUILD_ID" \
-            --arg project "$EXPECTED_PROJECT_ID" \
-            '.id == $id
-              and .status == "FINISHED"
-              and .platform == "IOS"
-              and .project.id == $project
-              and .project.ownerAccount.name == "official_fejiro"
-              and .project.slug == "peacepad-next-native-lab"
-              and .distribution == "INTERNAL"
-              and .buildProfile == "lab-simulator"
-              and .isForIosSimulator == true
-              and .appVersion == "0.0.1"' \
-            "$RUNNER_TEMP/peacepad-eas-build.json" > /dev/null
+          ACTUAL_SHA256="$(shasum -a 256 "$ARCHIVE_PATH" | awk '{print $1}')"
+          test "$ACTUAL_SHA256" = "$(printf '%s' "$EXPECTED_SHA256" | tr '[:upper:]' '[:lower:]')"
+          tar -xzf "$ARCHIVE_PATH" -C "$EXTRACT_PATH"
 
-          npx --yes eas-cli@21.7.1 build:download \
-            --build-id "$EAS_BUILD_ID" \
-            --json > "$RUNNER_TEMP/peacepad-eas-download.json"
-
-          APP_PATH="$(jq -er '.path' "$RUNNER_TEMP/peacepad-eas-download.json")"
+          APP_PATH="$(find "$EXTRACT_PATH" -maxdepth 2 -type d -name '*.app' -print -quit)"
           test -d "$APP_PATH"
           test -f "$APP_PATH/Info.plist"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_PATH/Info.plist")" = \
@@ -102,6 +100,19 @@ jobs:
           test "$(/usr/libexec/PlistBuddy -c 'Print :ITSAppUsesNonExemptEncryption' "$APP_PATH/Info.plist")" = \
             "false"
           test -n "$(/usr/libexec/PlistBuddy -c 'Print :NSMicrophoneUsageDescription' "$APP_PATH/Info.plist")"
+
+          jq -n \
+            --arg easBuildId "$EAS_BUILD_ID" \
+            --arg artifactSha256 "$ACTUAL_SHA256" \
+            --arg bundleId "ca.peacepad.nextnative.lab" \
+            --arg appVersion "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_PATH/Info.plist")" \
+            '{
+              easBuildId: $easBuildId,
+              artifactSha256: $artifactSha256,
+              bundleId: $bundleId,
+              appVersion: $appVersion,
+              productionApiWritesEnabled: false
+            }' > "$RUNNER_TEMP/peacepad-eas-artifact.json"
 
           echo "app_path=$APP_PATH" >> "$GITHUB_OUTPUT"
 
@@ -230,7 +241,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
           path: |
-            ${{ runner.temp }}/peacepad-eas-build.json
+            ${{ runner.temp }}/peacepad-eas-artifact.json
             ${{ runner.temp }}/peacepad-simulator-evidence
 
       - name: Destroy isolated Simulator
