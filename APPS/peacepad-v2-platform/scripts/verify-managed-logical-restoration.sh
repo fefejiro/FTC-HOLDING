@@ -66,8 +66,8 @@ mapfile -t expected_migrations < <(
   find "$migration_root" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' \
     | sed -E 's/^([0-9]+)_.*/\1/' | sort
 )
-if [[ "${#expected_migrations[@]}" -ne 19 ]]; then
-  echo "Expected exactly 19 reviewed migrations." >&2
+if [[ "${#expected_migrations[@]}" -ne 20 ]]; then
+  echo "Expected exactly 20 reviewed migrations." >&2
   exit 1
 fi
 
