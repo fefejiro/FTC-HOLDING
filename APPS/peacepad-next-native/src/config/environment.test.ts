@@ -1,6 +1,40 @@
 import { resolveEnvironmentConfig, resolveFunctionInvocationRegion, resolveSupabaseStagingConfig } from "./environment";
 
 describe("resolveEnvironmentConfig", () => {
+  it("reads the statically bundled public staging variables when no override is supplied", () => {
+    const previous = {
+      environment: process.env.EXPO_PUBLIC_PEACEPAD_ENV,
+      region: process.env.EXPO_PUBLIC_PEACEPAD_REGION,
+      projectUrl: process.env.EXPO_PUBLIC_PEACEPAD_SUPABASE_URL,
+      apiBaseUrl: process.env.EXPO_PUBLIC_PEACEPAD_API_BASE_URL,
+      publishableKey: process.env.EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY,
+      diagnostics: process.env.EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS
+    };
+    try {
+      process.env.EXPO_PUBLIC_PEACEPAD_ENV = "staging";
+      process.env.EXPO_PUBLIC_PEACEPAD_REGION = "ca";
+      process.env.EXPO_PUBLIC_PEACEPAD_SUPABASE_URL = "https://rohvkyuxbnqzglaromms.supabase.co";
+      process.env.EXPO_PUBLIC_PEACEPAD_API_BASE_URL = "https://rohvkyuxbnqzglaromms.supabase.co/functions/v1/peacepad-v2-api";
+      process.env.EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_fictional";
+      process.env.EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS = "false";
+
+      expect(resolveEnvironmentConfig()).toMatchObject({ environment: "staging" });
+      expect(resolveSupabaseStagingConfig()).toMatchObject({ region: "ca", projectRef: "rohvkyuxbnqzglaromms" });
+    } finally {
+      for (const [key, value] of Object.entries({
+        EXPO_PUBLIC_PEACEPAD_ENV: previous.environment,
+        EXPO_PUBLIC_PEACEPAD_REGION: previous.region,
+        EXPO_PUBLIC_PEACEPAD_SUPABASE_URL: previous.projectUrl,
+        EXPO_PUBLIC_PEACEPAD_API_BASE_URL: previous.apiBaseUrl,
+        EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY: previous.publishableKey,
+        EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS: previous.diagnostics
+      })) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
+  });
+
   it("defaults to an isolated local lab with production writes disabled", () => {
     expect(resolveEnvironmentConfig({})).toEqual({
       environment: "lab",

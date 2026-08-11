@@ -7,6 +7,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 const appJson = JSON.parse(read("app.json"));
 const easJson = JSON.parse(read("eas.json"));
 const packageJson = JSON.parse(read("package.json"));
+const environmentSource = read("src/config/environment.ts");
 
 const iosBundle = appJson.expo?.ios?.bundleIdentifier;
 const androidPackage = appJson.expo?.android?.package;
@@ -17,6 +18,22 @@ const plugins = appJson.expo?.plugins || [];
 const doctorExclusions = packageJson.expo?.doctor?.reactNativeDirectoryCheck?.exclude || [];
 
 const failures = [];
+
+for (const key of [
+  "EXPO_PUBLIC_PEACEPAD_ENV",
+  "EXPO_PUBLIC_PEACEPAD_REGION",
+  "EXPO_PUBLIC_PEACEPAD_SUPABASE_URL",
+  "EXPO_PUBLIC_PEACEPAD_API_BASE_URL",
+  "EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY",
+  "EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS"
+]) {
+  if (!environmentSource.includes(`process.env.${key}`)) {
+    failures.push(`${key} must use Expo-compatible direct process.env dot notation.`);
+  }
+}
+if (/values:\s*EnvironmentValues\s*=\s*process\.env/.test(environmentSource)) {
+  failures.push("Runtime configuration must not default from the dynamic process.env object.");
+}
 
 if (iosBundle === "ca.peacepad.family") {
   failures.push("iOS bundleIdentifier must not equal submitted production bundle ca.peacepad.family.");

@@ -21,7 +21,7 @@ export type PeacePadSupabaseConfig = Readonly<{
 type EnvironmentValues = Record<string, string | undefined>;
 
 declare const process: {
-  env?: EnvironmentValues;
+  env: EnvironmentValues;
 };
 
 const DEFAULT_LAB_API_URL = "http://127.0.0.1:8787";
@@ -35,12 +35,25 @@ const STAGING_FUNCTION_REGIONS: Record<PeacePadStagingRegion, string> = {
   us: "us-east-1"
 };
 
+function readBundledEnvironmentValues(): EnvironmentValues {
+  // Expo replaces only direct process.env.EXPO_PUBLIC_* references in the
+  // JavaScript bundle. Do not replace this with a dynamic process.env object.
+  return {
+    EXPO_PUBLIC_PEACEPAD_ENV: process.env.EXPO_PUBLIC_PEACEPAD_ENV,
+    EXPO_PUBLIC_PEACEPAD_REGION: process.env.EXPO_PUBLIC_PEACEPAD_REGION,
+    EXPO_PUBLIC_PEACEPAD_SUPABASE_URL: process.env.EXPO_PUBLIC_PEACEPAD_SUPABASE_URL,
+    EXPO_PUBLIC_PEACEPAD_API_BASE_URL: process.env.EXPO_PUBLIC_PEACEPAD_API_BASE_URL,
+    EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS: process.env.EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS
+  };
+}
+
 function trimTrailingSlash(value: string): string {
   return value.replace(/\/+$/, "");
 }
 
 export function resolveEnvironmentConfig(
-  values: EnvironmentValues = process.env ?? {}
+  values: EnvironmentValues = readBundledEnvironmentValues()
 ): PeacePadEnvironmentConfig {
   const environment = values.EXPO_PUBLIC_PEACEPAD_ENV === "staging" ? "staging" : "lab";
   const configuredUrl = values.EXPO_PUBLIC_PEACEPAD_API_BASE_URL?.trim();
@@ -85,7 +98,7 @@ export function resolveFunctionInvocationRegion(apiBaseUrl: string): string | un
 }
 
 export function resolveSupabaseStagingConfig(
-  values: EnvironmentValues = process.env ?? {}
+  values: EnvironmentValues = readBundledEnvironmentValues()
 ): PeacePadSupabaseConfig {
   if (values.EXPO_PUBLIC_PEACEPAD_ENV !== "staging") {
     throw new Error("Supabase coordination is available only in staging.");
