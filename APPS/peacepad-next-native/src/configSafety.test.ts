@@ -6,6 +6,9 @@ describe("lab-only configuration", () => {
     expect(appConfig.expo.extra.productionApiWritesEnabled).toBe(false);
     expect(appConfig.expo.ios.bundleIdentifier).toBe("ca.peacepad.nextnative.lab");
     expect(appConfig.expo.ios.bundleIdentifier).not.toBe(appConfig.expo.extra.submittedBundleId);
+    expect(appConfig.expo.owner).toBe("official_fejiro");
+    expect(appConfig.expo.slug).toBe("peacepad-next-native-lab");
+    expect(appConfig.expo.extra.eas.projectId).toBe("a4ecee72-ebae-483d-8553-035847ebb3d3");
   });
 
   it("keeps EAS limited to lab-only internal builds until Gate 6", () => {

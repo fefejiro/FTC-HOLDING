@@ -21,12 +21,16 @@
       "environment": "lab",
       "diagnosticsEnabled": false,
       "productionApiWritesEnabled": false,
-      "submittedBundleId": "ca.peacepad.family"
+      "submittedBundleId": "ca.peacepad.family",
+      "eas": {
+        "projectId": "a4ecee72-ebae-483d-8553-035847ebb3d3"
+      }
     },
     "plugins": [
       "expo-secure-store",
       "expo-dev-client",
       "./plugins/withPeacePadAudioWebRTC"
-    ]
+    ],
+    "owner": "official_fejiro"
   }
 }

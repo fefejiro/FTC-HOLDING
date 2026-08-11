@@ -11,6 +11,7 @@ const packageJson = JSON.parse(read("package.json"));
 const iosBundle = appJson.expo?.ios?.bundleIdentifier;
 const androidPackage = appJson.expo?.android?.package;
 const extra = appJson.expo?.extra || {};
+const easProject = extra.eas || {};
 const iosInfoPlist = appJson.expo?.ios?.infoPlist || {};
 const plugins = appJson.expo?.plugins || [];
 const doctorExclusions = packageJson.expo?.doctor?.reactNativeDirectoryCheck?.exclude || [];
@@ -27,6 +28,18 @@ if (androidPackage === "ca.peacepad.family") {
 
 if (extra.productionApiWritesEnabled !== false) {
   failures.push("productionApiWritesEnabled must remain false in the lab app.");
+}
+
+if (appJson.expo?.owner !== "official_fejiro") {
+  failures.push("The lab EAS project must remain owned by the approved official_fejiro account.");
+}
+
+if (appJson.expo?.slug !== "peacepad-next-native-lab") {
+  failures.push("The EAS slug must remain isolated to peacepad-next-native-lab.");
+}
+
+if (easProject.projectId !== "a4ecee72-ebae-483d-8553-035847ebb3d3") {
+  failures.push("The lab app must remain linked to its reviewed EAS project ID.");
 }
 
 if (!packageJson.private) {
