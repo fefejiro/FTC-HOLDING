@@ -180,9 +180,24 @@ export function PeacePadStagingRuntime({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [signInBusy, setSignInBusy] = useState(false);
+  const signInInFlight = useRef(false);
+  const passwordInput = useRef<TextInput>(null);
   const [runtimeState, setRuntimeState] = useState<RuntimeState>({ status: "loading" });
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string>();
+
+  const submitSignIn = useCallback(() => {
+    const normalizedEmail = email.trim();
+    if (signInInFlight.current || !normalizedEmail || !password) return;
+    signInInFlight.current = true;
+    setSignInBusy(true);
+    void auth.signInWithPassword(normalizedEmail, password)
+      .catch(() => undefined)
+      .finally(() => {
+        signInInFlight.current = false;
+        setSignInBusy(false);
+      });
+  }, [auth, email, password]);
   const [reloadVersion, setReloadVersion] = useState(0);
   const [incomingInvitationCode, setIncomingInvitationCode] = useState<string>();
   const [selectedFamilyCircleId, setSelectedFamilyCircleId] = useState<string>();
@@ -356,12 +371,33 @@ export function PeacePadStagingRuntime({
           {t(supabase.region === "ca" ? "runtime.regionCanada" : "runtime.regionUnitedStates")}
         </Text>
         <Text style={styles.body}>{t("runtime.signInBody")}</Text>
-        <TextInput accessibilityLabel={t("runtime.email")} autoCapitalize="none" keyboardType="email-address" onChangeText={setEmail} placeholder={t("runtime.emailPlaceholder")} style={styles.input} value={email} />
-        <TextInput accessibilityLabel={t("runtime.password")} onChangeText={setPassword} placeholder={t("runtime.passwordPlaceholder")} secureTextEntry style={styles.input} value={password} />
-        <LabButton disabled={signInBusy || !email.trim() || !password} label={signInBusy ? t("runtime.signingIn") : t("runtime.signIn")} onPress={() => {
-          setSignInBusy(true);
-          void auth.signInWithPassword(email, password).catch(() => undefined).finally(() => setSignInBusy(false));
-        }} />
+        <TextInput
+          accessibilityLabel={t("runtime.email")}
+          autoCapitalize="none"
+          autoComplete="username"
+          keyboardType="email-address"
+          onChangeText={setEmail}
+          onSubmitEditing={() => passwordInput.current?.focus()}
+          placeholder={t("runtime.emailPlaceholder")}
+          returnKeyType="next"
+          style={styles.input}
+          textContentType="username"
+          value={email}
+        />
+        <TextInput
+          accessibilityLabel={t("runtime.password")}
+          autoComplete="current-password"
+          onChangeText={setPassword}
+          onSubmitEditing={submitSignIn}
+          placeholder={t("runtime.passwordPlaceholder")}
+          ref={passwordInput}
+          returnKeyType="done"
+          secureTextEntry
+          style={styles.input}
+          textContentType="password"
+          value={password}
+        />
+        <LabButton disabled={signInBusy || !email.trim() || !password} label={signInBusy ? t("runtime.signingIn") : t("runtime.signIn")} onPress={submitSignIn} />
         {auth.error ? <Text accessibilityRole="alert" style={styles.error}>{auth.error}</Text> : null}
       </View>
     );

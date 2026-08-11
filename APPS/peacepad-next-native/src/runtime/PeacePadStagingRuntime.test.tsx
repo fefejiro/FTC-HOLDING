@@ -141,6 +141,21 @@ describe("PeacePadStagingRuntime gates", () => {
     return waitFor(() => expect(signInWithPassword).toHaveBeenCalledWith("fictional.parent@example.test", "fictional-password"));
   });
 
+  it("submits staging credentials from the password keyboard exactly once", async () => {
+    const signInWithPassword = jest.fn(async () => undefined);
+    (useSupabaseSession as jest.Mock).mockReturnValue(authValue({ status: "signed-out", session: undefined, signInWithPassword }));
+    render(<PeacePadStagingRuntime environment={environment} supabase={supabase}>ready</PeacePadStagingRuntime>);
+
+    fireEvent.changeText(screen.getByLabelText("Staging email"), "  fictional.keyboard@example.test  ");
+    fireEvent.changeText(screen.getByLabelText("Staging password"), "fictional-password");
+    fireEvent(screen.getByLabelText("Staging password"), "submitEditing");
+    fireEvent(screen.getByLabelText("Staging password"), "submitEditing");
+
+    await waitFor(() => expect(signInWithPassword).toHaveBeenCalledTimes(1));
+    expect(signInWithPassword).toHaveBeenCalledWith("fictional.keyboard@example.test", "fictional-password");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Sign in" })).toBeTruthy());
+  });
+
   it.each([
     ["fr", "Environnement de test aux États-Unis"],
     ["es", "Entorno de pruebas de Estados Unidos"]
