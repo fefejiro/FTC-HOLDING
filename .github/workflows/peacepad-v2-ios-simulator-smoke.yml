@@ -156,10 +156,11 @@ jobs:
         run: |
           set -euo pipefail
           EVIDENCE_DIR="$RUNNER_TEMP/peacepad-simulator-evidence"
-          FLOW_PATH="$RUNNER_TEMP/peacepad-foundation-smoke.yaml"
+          WELCOME_FLOW_PATH="$RUNNER_TEMP/peacepad-welcome-smoke.yaml"
+          CONSENT_FLOW_PATH="$RUNNER_TEMP/peacepad-consent-smoke.yaml"
           mkdir -p "$EVIDENCE_DIR"
 
-          cat > "$FLOW_PATH" <<'YAML'
+          cat > "$WELCOME_FLOW_PATH" <<'YAML'
           appId: ca.peacepad.nextnative.lab
           ---
           - launchApp:
@@ -169,7 +170,12 @@ jobs:
               timeout: 60000
           - assertVisible: "PeacePad"
           - assertVisible: "Existing account"
-          - takeScreenshot: ${OUTPUT_DIR}/01-welcome
+          YAML
+
+          cat > "$CONSENT_FLOW_PATH" <<'YAML'
+          appId: ca.peacepad.nextnative.lab
+          ---
+          - launchApp
           - tapOn: "Try PeacePad"
           - extendedWaitUntil:
               visible: "Your choices come first"
@@ -177,14 +183,21 @@ jobs:
           - assertVisible: "I agree to the Terms"
           - assertVisible: "I acknowledge the Privacy Policy"
           - assertVisible: "Optional AI-assisted rewrites"
-          - takeScreenshot: ${OUTPUT_DIR}/02-consent
           YAML
 
           "$HOME/.maestro/bin/maestro" \
             --device "$DEVICE_UDID" \
             test \
-            -e OUTPUT_DIR="$EVIDENCE_DIR" \
-            "$FLOW_PATH"
+            "$WELCOME_FLOW_PATH"
+          xcrun simctl io "$DEVICE_UDID" screenshot \
+            "$EVIDENCE_DIR/01-welcome.png"
+
+          "$HOME/.maestro/bin/maestro" \
+            --device "$DEVICE_UDID" \
+            test \
+            "$CONSENT_FLOW_PATH"
+          xcrun simctl io "$DEVICE_UDID" screenshot \
+            "$EVIDENCE_DIR/02-consent.png"
 
           test -f "$EVIDENCE_DIR/01-welcome.png"
           test -f "$EVIDENCE_DIR/02-consent.png"
