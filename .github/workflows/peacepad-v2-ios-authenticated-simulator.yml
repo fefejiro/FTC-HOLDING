@@ -230,16 +230,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           for device in "$device_a" "$device_b"; do
             xcrun simctl boot "$device"
-          done
-          boot_pids=()
-          for device in "$device_a" "$device_b"; do
-            xcrun simctl bootstatus "$device" -b &
-            boot_pids+=("$!")
-          done
-          for pid in "${boot_pids[@]}"; do
-            wait "$pid"
-          done
-          for device in "$device_a" "$device_b"; do
+            xcrun simctl bootstatus "$device" -b
             xcrun simctl install "$device" "$APP_PATH"
             xcrun simctl get_app_container "$device" ca.peacepad.nextnative.lab app
           done
@@ -302,7 +293,7 @@ jobs:
           - assertVisible: "Write to your co-parent. PeacePad never sends without your confirmation."
           - scrollUntilVisible:
               element:
-                text: "Write a message"
+                text: "Message draft"
               direction: DOWN
               visibilityPercentage: 50
               timeout: 30000
