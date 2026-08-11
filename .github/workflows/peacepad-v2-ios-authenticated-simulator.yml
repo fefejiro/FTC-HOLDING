@@ -312,7 +312,8 @@ jobs:
               start: 50%, 80%
               end: 50%, 20%
               duration: 600
-          - tapOn: "Write a message"
+          - tapOn:
+              point: 50%, 80%
           - inputText: "$message_text"
           - hideKeyboard
           - swipe:
