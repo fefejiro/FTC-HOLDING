@@ -71,6 +71,8 @@ function verifyStaticContract() {
 
   const launcher = fs.readFileSync(path.join(root, "scripts", "start-ios-testflight-build.cjs"), "utf8");
   assert(launcher.includes("D:\\\\PeacePadRelease"), "The Windows release launcher must move temporary build work to D:.");
+  assert(launcher.includes('"archive"') && launcher.includes("EAS_SKIP_AUTO_FINGERPRINT"), "The release launcher must build from an exact D:-backed app-only Git archive.");
+  assert(launcher.includes("eas-cli@21.8.0") && launcher.includes('"--yes"'), "The release launcher must use the current non-interactive EAS CLI.");
   assert(launcher.includes("release:ios:preflight:online"), "The release launcher must run the online gate before EAS Build.");
   assert(launcher.includes('"testflight-internal"') && launcher.includes('"--no-wait"'), "The release launcher must start only the reviewed asynchronous TestFlight profile.");
   assert(!launcher.includes("--auto-submit"), "The first internal candidate must be inspected before any App Store Connect submission.");
