@@ -276,6 +276,8 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           for device in "${devices[@]}"; do
             xcrun simctl boot "$device"
+          done
+          for device in "${devices[@]}"; do
             xcrun simctl bootstatus "$device" -b
             xcrun simctl install "$device" "$APP_PATH"
             xcrun simctl get_app_container "$device" ca.peacepad.nextnative.lab app
@@ -377,6 +379,9 @@ jobs:
           cat > "$flow_a_calendar" <<YAML
           appId: ca.peacepad.nextnative.lab
           ---
+          - tapOn:
+              text: "Not Now"
+              optional: true
           - tapOn: "Calendar"
           - swipe:
               start: 50%, 80%
@@ -403,6 +408,9 @@ jobs:
           if test "$VERIFICATION_SCOPE" = "full-cross-account"; then
             create_sign_in_flow "$flow_b" "$email_b"
             cat >> "$flow_b" <<YAML
+          - tapOn:
+              text: "Not Now"
+              optional: true
           - tapOn: "Messages"
           - swipe:
               start: 50%, 80%
