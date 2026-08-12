@@ -52,6 +52,23 @@ POSTGRES rehearsal evidence only. It does not read, copy, or change production
 records, establish a Canada production project, approve cutover, enable V2
 production writes, or migrate any existing account.
 
+### Read-only legacy source inventory contract -- 2026-08-12
+
+Exact commit `e7a03d38c` adds a separate operator-run inventory for the legacy
+`peacepad` PostgreSQL schema. It requires an explicit legacy database URL and a
+new evidence file path, opens the source with both client and SQL-level
+read-only protections, and emits only source schema metadata, required-column
+gaps, aggregate table counts, a schema fingerprint, and whether an event has
+an explicit partnership scope. It emits no IDs, email addresses, message text,
+event titles, or other family content; it cannot contact a V2 target and
+refuses to overwrite evidence.
+
+Hosted Native run `31634808106` and Infrastructure run `31634808261` passed
+the exact static boundary. No legacy source credential is stored in this
+workspace and no real legacy source inventory has been run. Therefore this is
+an IMPLEMENTED/HOSTED-STATIC prerequisite, not the required read-only source
+inventory evidence, migration approval, or production-data movement.
+
 ### Canada production database baseline -- 2026-08-12
 
 The empty, isolated Canada Supabase production project
