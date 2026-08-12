@@ -22,6 +22,14 @@ the account's free iOS build allocation is exhausted until 2026-09-01. The
 attempt remained fictional staging with production writes disabled and had no
 auto-submit path. No TestFlight, App Store, or production V2 release occurred.
 
+Exact cutover-rehearsal commit `e35ec103e` passed Native run `31630730421` and
+Infrastructure rerun `31630730410`. It proves a rollback-only fictional
+legacy-to-V2 import in disposable PostgreSQL: verified Supabase Auth claims,
+reviewed consent evidence or re-consent, explicit conversation/event family
+scope, and text-only retained messages are required before mapping to V2.
+This is not a production source read, data migration, production project,
+production-write enablement, TestFlight, or App Store release.
+
 | Gate | Status |
 | --- | --- |
 | Staging environment rejects non-staging runtime | LOCAL VERIFIED |

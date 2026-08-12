@@ -34,6 +34,24 @@ fictional staging and disables production writes; it contains no auto-submit.
 No build ID, TestFlight build, public App Store update, or production data
 change exists from this attempt.
 
+### Current legacy-to-V2 cutover rehearsal -- 2026-08-12
+
+Exact commit `e35ec103e` adds an operator-only importer for an approved,
+read-only legacy snapshot and proves it on a disposable PostgreSQL target.
+The importer requires a reviewed Supabase Auth claim for every legacy user,
+timestamped consent evidence or re-consent, explicit partnership scope for
+every conversation and event, and text-only retained messages. It fails closed
+for missing claims, ambiguous scopes, media/deleted message content, malformed
+IDs, or a non-fresh target. The fictional rehearsal imported two claimed
+identities, three consent records, one family, two grants, one conversation,
+one text message, one Calendar layer, and one event; it then rolled the whole
+transaction back. Hosted Native run `31630730421` and Infrastructure rerun
+`31630730410` passed on that exact commit; the earlier Infrastructure attempt
+failed before code execution while downloading Deno. This is LOCAL + HOSTED
+POSTGRES rehearsal evidence only. It does not read, copy, or change production
+records, establish a Canada production project, approve cutover, enable V2
+production writes, or migrate any existing account.
+
 ## Real production cutover audit — 2026-08-12
 
 The existing public web and API service is reachable again. The verified
