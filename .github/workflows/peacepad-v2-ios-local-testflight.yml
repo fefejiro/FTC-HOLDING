@@ -77,7 +77,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes eas-cli@21.8.0 env:exec --environment production -- bash -lc '
+          release_command=$(cat <<'EOF'
             set -euo pipefail
             node scripts/check-ios-testflight-readiness.cjs --injected
             EAS_SKIP_AUTO_FINGERPRINT=1 npx --yes eas-cli@21.8.0 build \
@@ -87,7 +87,9 @@ jobs:
               --non-interactive \
               --freeze-credentials \
               --output "$RUNNER_TEMP/peacepad-v2-testflight-candidate.ipa"
-          '
+          EOF
+          )
+          npx --yes eas-cli@21.8.0 env:exec production "$release_command" --non-interactive
           shasum -a 256 "$RUNNER_TEMP/peacepad-v2-testflight-candidate.ipa" > "$RUNNER_TEMP/peacepad-v2-testflight-candidate.sha256"
           printf 'source_sha=%s\nsource_tree=%s\nprofile=testflight-internal\nsubmission_attempted=false\n' \
             "${{ inputs.source_sha }}" "$(cat "$RUNNER_TEMP/peacepad-native-tree")" > "$RUNNER_TEMP/peacepad-v2-testflight-candidate.manifest"
