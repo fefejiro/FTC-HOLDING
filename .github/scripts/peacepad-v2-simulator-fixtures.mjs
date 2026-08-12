@@ -20,6 +20,19 @@ const publishableKey = required("SUPABASE_PUBLISHABLE_KEY");
 const serviceRoleKey = required("SUPABASE_SERVICE_ROLE_KEY");
 const fixturePath = required("PEACEPAD_FIXTURE_PATH");
 const evidencePath = required("PEACEPAD_FIXTURE_EVIDENCE_PATH");
+const verificationScope =
+  process.env.PEACEPAD_FIXTURE_VERIFICATION_SCOPE?.trim() ||
+  "full-cross-account";
+
+if (
+  ![
+    "mutation-control",
+    "full-cross-account",
+    "invitation-message-check-cross-account",
+  ].includes(verificationScope)
+) {
+  throw new Error("The requested fictional Simulator scope is not approved.");
+}
 
 if (!(region in projects) || projects[region].ref !== projectRef) {
   throw new Error(
@@ -221,6 +234,9 @@ const provision = async () => {
     calendarLayerName: `Fictional Parenting Time ${runNonce}`,
     messageText: `Fictional ${region.toUpperCase()} pickup confirmed ${runNonce}`,
     eventTitle: `Fictional ${region.toUpperCase()} family event ${runNonce}`,
+    invitationCode: null,
+    nativeInvitationAcceptance:
+      verificationScope === "invitation-message-check-cross-account",
     accounts: [
       {
         email: `peacepad-sim-${region}-${runLabel}-a@example.test`,
@@ -306,29 +322,33 @@ const provision = async () => {
     ) {
       throw new Error("Invitation creation receipt was invalid.");
     }
-    const preview = await api(tokens[1], "/api/v2/invitations/resolve", {
-      method: "POST",
-      body: { code: invitationCode },
-    });
-    if (
-      preview.payload?.invitationId !== invitationId ||
-      !Number.isInteger(preview.payload?.version)
-    ) {
-      throw new Error("Invitation preview receipt was invalid.");
-    }
-    const accepted = await write(
-      tokens[1],
-      `/api/v2/invitations/${encodeURIComponent(invitationId)}/accept`,
-      {},
-      "invitation-accept",
-      preview.payload.version,
-      [200],
-    );
-    if (
-      accepted.payload?.grant?.familyCircleId !== familyId ||
-      typeof accepted.payload?.conversation?.id !== "string"
-    ) {
-      throw new Error("Invitation acceptance receipt was invalid.");
+    state.invitationCode = invitationCode;
+    writePrivateJson(fixturePath, state);
+    if (!state.nativeInvitationAcceptance) {
+      const preview = await api(tokens[1], "/api/v2/invitations/resolve", {
+        method: "POST",
+        body: { code: invitationCode },
+      });
+      if (
+        preview.payload?.invitationId !== invitationId ||
+        !Number.isInteger(preview.payload?.version)
+      ) {
+        throw new Error("Invitation preview receipt was invalid.");
+      }
+      const accepted = await write(
+        tokens[1],
+        `/api/v2/invitations/${encodeURIComponent(invitationId)}/accept`,
+        {},
+        "invitation-accept",
+        preview.payload.version,
+        [200],
+      );
+      if (
+        accepted.payload?.grant?.familyCircleId !== familyId ||
+        typeof accepted.payload?.conversation?.id !== "string"
+      ) {
+        throw new Error("Invitation acceptance receipt was invalid.");
+      }
     }
 
     const calendarLayer = await write(
@@ -363,6 +383,7 @@ const provision = async () => {
       fixtureDomain: "example.test",
       accountCount: 2,
       familyPrepared: true,
+      invitationAcceptancePending: state.nativeInvitationAcceptance,
       sharedCalendarLayerPrepared: true,
       credentialsPersistedOutsideRunnerTemp: false,
       productionContacted: false,

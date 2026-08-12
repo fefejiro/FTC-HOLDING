@@ -18,6 +18,7 @@ on:
         options:
           - mutation-control
           - full-cross-account
+          - invitation-message-check-cross-account
       target_sha:
         description: Exact reviewed feature-branch head to verify
         required: true
@@ -97,7 +98,7 @@ jobs:
 
           test "$SELECTED_REF" = "main"
           test "$CONFIRMATION" = "RUN AUTHENTICATED FICTIONAL SIMULATOR"
-          case "$VERIFICATION_SCOPE" in mutation-control|full-cross-account) ;; *) exit 1 ;; esac
+          case "$VERIFICATION_SCOPE" in mutation-control|full-cross-account|invitation-message-check-cross-account) ;; *) exit 1 ;; esac
           [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$BUILD_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$(git -C target rev-parse HEAD)" = "$TARGET_SHA"
@@ -205,6 +206,7 @@ jobs:
           PEACEPAD_FIXTURE_PATH: ${{ runner.temp }}/peacepad-authenticated-simulator-fixture.json
           PEACEPAD_PROJECT_REF: ${{ steps.contract.outputs.expected_project_ref }}
           PEACEPAD_REGION: ${{ inputs.region }}
+          PEACEPAD_FIXTURE_VERIFICATION_SCOPE: ${{ inputs.verification_scope }}
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY }}
         run: |
           set -euo pipefail
@@ -217,8 +219,12 @@ jobs:
           test "$(jq -r '.accounts | length' "$fixture")" -eq 2
           test "$(jq -r '.accounts[0].email | endswith("@example.test")' "$fixture")" = "true"
           test "$(jq -r '.accounts[1].email | endswith("@example.test")' "$fixture")" = "true"
-          for value in "$(jq -r '.password' "$fixture")" "$(jq -r '.accounts[0].email' "$fixture")" "$(jq -r '.accounts[1].email' "$fixture")"; do
-            echo "::add-mask::$value"
+          if test "${{ inputs.verification_scope }}" = "invitation-message-check-cross-account"; then
+            test "$(jq -r '.nativeInvitationAcceptance' "$fixture")" = "true"
+            jq -er '.invitationCode | test("^[A-Z0-9]{6}$")' "$fixture" >/dev/null
+          fi
+          for value in "$(jq -r '.password' "$fixture")" "$(jq -r '.accounts[0].email' "$fixture")" "$(jq -r '.accounts[1].email' "$fixture")" "$(jq -r '.invitationCode // empty' "$fixture")"; do
+            test -z "$value" || echo "::add-mask::$value"
           done
 
       - name: Verify and download exact regional EAS artifact
@@ -264,7 +270,7 @@ jobs:
           device_a="$(xcrun simctl create "PeacePad V2 $REGION Fictional A" "$device_type_id" "$runtime_id")"
           devices=("$device_a")
           device_b=""
-          if test "$VERIFICATION_SCOPE" = "full-cross-account"; then
+          if test "$VERIFICATION_SCOPE" != "mutation-control"; then
             device_b="$(xcrun simctl create "PeacePad V2 $REGION Fictional B" "$device_type_id" "$runtime_id")"
             devices+=("$device_b")
           fi
@@ -302,8 +308,9 @@ jobs:
           email_b="$(jq -r '.accounts[1].email' "$fixture")"
           message_text="$(jq -r '.messageText' "$fixture")"
           event_title="$(jq -r '.eventTitle' "$fixture")"
+          invitation_code="$(jq -r '.invitationCode' "$fixture")"
 
-          create_sign_in_flow() {
+          create_auth_flow() {
             local path="$1" email="$2"
             cat > "$path" <<YAML
           appId: ca.peacepad.nextnative.lab
@@ -335,6 +342,12 @@ jobs:
           - tapOn:
               text: "Not Now"
               optional: true
+          YAML
+          }
+
+          append_home_assertions() {
+            local path="$1"
+            cat >> "$path" <<YAML
           - extendedWaitUntil:
               visible: "Home"
               timeout: 90000
@@ -347,6 +360,37 @@ jobs:
           YAML
           }
 
+          create_sign_in_flow() {
+            create_auth_flow "$1" "$2"
+            append_home_assertions "$1"
+          }
+
+          flow_b_invitation="$RUNNER_TEMP/peacepad-authenticated-b-invitation.yaml"
+          if test "$VERIFICATION_SCOPE" = "invitation-message-check-cross-account"; then
+            [[ "$invitation_code" =~ ^[A-Z0-9]{6}$ ]]
+            create_auth_flow "$flow_b_invitation" "$email_b"
+            cat >> "$flow_b_invitation" <<YAML
+          - extendedWaitUntil:
+              visible: "Create or join a family"
+              timeout: 90000
+          - swipe:
+              start: 50%, 80%
+              end: 50%, 20%
+              duration: 600
+          - tapOn: "Invitation code"
+          - inputText: "$invitation_code"
+          - tapOn: "Review invitation"
+          - extendedWaitUntil:
+              visible: "Accept invitation"
+              timeout: 60000
+          - tapOn: "Accept invitation"
+          YAML
+            append_home_assertions "$flow_b_invitation"
+            "$HOME/.maestro/bin/maestro" --device "$DEVICE_B" test "$flow_b_invitation"
+            xcrun simctl io "$DEVICE_B" screenshot "$evidence/00-${REGION}-invitation-b.png"
+            touch "$RUNNER_TEMP/peacepad-authenticated-invitation-verified"
+          fi
+
           flow_a_message="$RUNNER_TEMP/peacepad-authenticated-a-message.yaml"
           flow_a_calendar="$RUNNER_TEMP/peacepad-authenticated-a-calendar.yaml"
           flow_b="$RUNNER_TEMP/peacepad-authenticated-b.yaml"
@@ -358,6 +402,23 @@ jobs:
               start: 50%, 80%
               end: 50%, 20%
               duration: 600
+          YAML
+          if test "$VERIFICATION_SCOPE" = "invitation-message-check-cross-account"; then
+            cat >> "$flow_a_message" <<YAML
+          - extendedWaitUntil:
+              visible: "Turn on"
+              timeout: 60000
+          - tapOn: "Turn on"
+          - extendedWaitUntil:
+              visible: "Message Check on"
+              timeout: 60000
+          - swipe:
+              start: 50%, 80%
+              end: 50%, 20%
+              duration: 600
+          YAML
+          fi
+          cat >> "$flow_a_message" <<YAML
           - tapOn:
               point: 50%, 80%
           - inputText: "$message_text"
@@ -405,7 +466,7 @@ jobs:
               timeout: 60000
           YAML
 
-          if test "$VERIFICATION_SCOPE" = "full-cross-account"; then
+          if test "$VERIFICATION_SCOPE" != "mutation-control"; then
             create_sign_in_flow "$flow_b" "$email_b"
             cat >> "$flow_b" <<YAML
           - tapOn:
@@ -432,17 +493,20 @@ jobs:
           "$HOME/.maestro/bin/maestro" --device "$DEVICE_A" test "$flow_a_message"
           xcrun simctl io "$DEVICE_A" screenshot "$evidence/01-${REGION}-message-a.png"
           touch "$RUNNER_TEMP/peacepad-authenticated-message-mutation-verified"
+          if test "$VERIFICATION_SCOPE" = "invitation-message-check-cross-account"; then
+            touch "$RUNNER_TEMP/peacepad-authenticated-message-check-verified"
+          fi
 
           "$HOME/.maestro/bin/maestro" --device "$DEVICE_A" test "$flow_a_calendar"
           xcrun simctl io "$DEVICE_A" screenshot "$evidence/02-${REGION}-calendar-a.png"
           touch "$RUNNER_TEMP/peacepad-authenticated-calendar-mutation-verified"
-          if test "$VERIFICATION_SCOPE" = "full-cross-account"; then
+          if test "$VERIFICATION_SCOPE" != "mutation-control"; then
             "$HOME/.maestro/bin/maestro" --device "$DEVICE_B" test "$flow_b"
             xcrun simctl io "$DEVICE_B" screenshot "$evidence/03-${REGION}-coordination-b.png"
             test -f "$evidence/03-${REGION}-coordination-b.png"
             touch "$RUNNER_TEMP/peacepad-authenticated-journey-verified"
           fi
-          rm -f "$flow_a_message" "$flow_a_calendar" "$flow_b"
+          rm -f "$flow_a_message" "$flow_a_calendar" "$flow_b" "$flow_b_invitation"
           test -f "$evidence/01-${REGION}-message-a.png"
           test -f "$evidence/02-${REGION}-calendar-a.png"
 
@@ -530,13 +594,17 @@ jobs:
           evidence="$RUNNER_TEMP/peacepad-authenticated-simulator-evidence"
           mkdir -p "$evidence"
           journey_verified=false
+          invitation_verified=false
           message_mutation_verified=false
+          message_check_verified=false
           calendar_mutation_verified=false
           mutation_control_verified=false
           simulators_destroyed=false
           cleanup_verified=false
           test -f "$RUNNER_TEMP/peacepad-authenticated-journey-verified" && journey_verified=true
+          test -f "$RUNNER_TEMP/peacepad-authenticated-invitation-verified" && invitation_verified=true
           test -f "$RUNNER_TEMP/peacepad-authenticated-message-mutation-verified" && message_mutation_verified=true
+          test -f "$RUNNER_TEMP/peacepad-authenticated-message-check-verified" && message_check_verified=true
           test -f "$RUNNER_TEMP/peacepad-authenticated-calendar-mutation-verified" && calendar_mutation_verified=true
           if $message_mutation_verified && $calendar_mutation_verified; then
             mutation_control_verified=true
@@ -550,6 +618,8 @@ jobs:
             result="AUTHENTICATED_FICTIONAL_SIMULATOR_MUTATION_CONTROL_VERIFIED"
           elif test "$VERIFICATION_SCOPE" = "full-cross-account" && $journey_verified && $simulators_destroyed && $cleanup_verified; then
             result="AUTHENTICATED_FICTIONAL_SIMULATOR_JOURNEY_VERIFIED"
+          elif test "$VERIFICATION_SCOPE" = "invitation-message-check-cross-account" && $journey_verified && $invitation_verified && $message_check_verified && $simulators_destroyed && $cleanup_verified; then
+            result="AUTHENTICATED_FICTIONAL_SIMULATOR_INVITATION_MESSAGE_CHECK_JOURNEY_VERIFIED"
           fi
           jq -n \
             --arg result "$result" \
@@ -562,7 +632,9 @@ jobs:
             --arg buildProfile "$BUILD_PROFILE" \
             --arg verificationScope "$VERIFICATION_SCOPE" \
             --argjson journeyVerified "$journey_verified" \
+            --argjson invitationVerified "$invitation_verified" \
             --argjson messageMutationVerified "$message_mutation_verified" \
+            --argjson messageCheckVerified "$message_check_verified" \
             --argjson calendarMutationVerified "$calendar_mutation_verified" \
             --argjson mutationControlVerified "$mutation_control_verified" \
             --argjson cleanupVerified "$cleanup_verified" \
@@ -582,7 +654,9 @@ jobs:
               fixtureDomain: "example.test",
               authenticatedNativeSessions: (if $journeyVerified then 2 elif $messageMutationVerified or $calendarMutationVerified then 1 else 0 end),
               backendFamilyAndConversationPrepared: ($journeyVerified or $messageMutationVerified or $calendarMutationVerified),
+              nativeInvitationAcceptanceVerified: $invitationVerified,
               nativeMessageMutationVerified: ($journeyVerified or $messageMutationVerified),
+              nativeMessageCheckOptInVerified: $messageCheckVerified,
               nativeCalendarMutationVerified: ($journeyVerified or $calendarMutationVerified),
               crossAccountVisibilityVerified: $journeyVerified,
               applicationAndAuthCleanupVerified: $cleanupVerified,
@@ -596,6 +670,8 @@ jobs:
             }' > "$evidence/manifest.json"
           if test "$VERIFICATION_SCOPE" = "mutation-control"; then
             test "$result" = "AUTHENTICATED_FICTIONAL_SIMULATOR_MUTATION_CONTROL_VERIFIED"
+          elif test "$VERIFICATION_SCOPE" = "invitation-message-check-cross-account"; then
+            test "$result" = "AUTHENTICATED_FICTIONAL_SIMULATOR_INVITATION_MESSAGE_CHECK_JOURNEY_VERIFIED"
           else
             test "$result" = "AUTHENTICATED_FICTIONAL_SIMULATOR_JOURNEY_VERIFIED"
           fi
