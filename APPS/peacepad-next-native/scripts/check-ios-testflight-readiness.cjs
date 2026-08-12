@@ -113,12 +113,16 @@ async function verifyOnlineContract() {
     if (!condition) blockers.push(message);
   };
 
+  // Device registration is irrelevant to TestFlight/App Store distribution and
+  // can hang on Windows. The signed build request remains the Apple-team gate.
+  if (process.env.PEACEPAD_CHECK_DEVICE_LIST === "true") {
   // Apple team linkage is required for every signed store build. Check it
   // first so a missing link fails before slower, non-remediating remote checks.
   const devices = runEas(["device:list"], { allowFailure: true });
   check(!/couldn['’]t find any teams/i.test(devices), "No Apple Developer team is linked to the EAS account.");
   if (blockers.length > 0) {
     throw new Error(blockers.join(" "));
+  }
   }
 
   const response = await fetch(`https://itunes.apple.com/lookup?id=${expected.appStoreId}&country=ca`);
