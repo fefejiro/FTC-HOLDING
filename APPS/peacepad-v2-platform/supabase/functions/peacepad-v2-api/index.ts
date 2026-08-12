@@ -3,6 +3,7 @@ import { validateAudioCallSignal } from "./signaling.ts";
 import { createTurnCredential, parseTurnUrls } from "./turn.ts";
 
 type DataRegion = "ca" | "us";
+type DeploymentEnvironment = "fictional-staging" | "production";
 
 type RuntimeConfig = Readonly<{
   supabaseUrl: string;
@@ -15,6 +16,8 @@ type RuntimeConfig = Readonly<{
   idempotencySecret: string;
   turnUrls: readonly string[];
   turnSharedSecret: string;
+  environment: DeploymentEnvironment;
+  productionWritesEnabled: boolean;
 }>;
 
 type ErrorCode =
@@ -47,6 +50,7 @@ type ErrorCode =
   | "NOT_FOUND"
   | "ORIGIN_NOT_ALLOWED"
   | "PROJECT_MISMATCH"
+  | "PRODUCTION_WRITES_DISABLED"
   | "REGION_MISMATCH"
   | "SCHEMA_MISMATCH"
   | "CONCURRENCY_CONFLICT"
@@ -60,6 +64,8 @@ const env = (name: string): string => Deno.env.get(name)?.trim() ?? "";
 
 const readConfig = (): RuntimeConfig => {
   const region = env("PEACEPAD_REGION");
+  const environment = env("PEACEPAD_RUNTIME_ENVIRONMENT") || "fictional-staging";
+  const productionWritesSetting = env("PEACEPAD_PRODUCTION_WRITES_ENABLED");
   const config: RuntimeConfig = {
     supabaseUrl: env("SUPABASE_URL"),
     serviceRoleKey: env("SUPABASE_SERVICE_ROLE_KEY"),
@@ -74,6 +80,10 @@ const readConfig = (): RuntimeConfig => {
     idempotencySecret: env("PEACEPAD_IDEMPOTENCY_SECRET"),
     turnUrls: parseTurnUrls(env("PEACEPAD_TURN_URLS")),
     turnSharedSecret: env("PEACEPAD_TURN_SHARED_SECRET"),
+    environment: environment as DeploymentEnvironment,
+    // Production starts fail-closed. It can only accept writes after an explicit,
+    // separately reviewed enablement change.
+    productionWritesEnabled: environment === "production" && productionWritesSetting === "true",
   };
   if (
     !config.supabaseUrl ||
@@ -81,13 +91,15 @@ const readConfig = (): RuntimeConfig => {
     !config.projectRef ||
     !config.functionRegion ||
     config.idempotencySecret.length < 32 ||
-    !["ca", "us"].includes(config.region)
+    !["ca", "us"].includes(config.region) ||
+    !["fictional-staging", "production"].includes(config.environment) ||
+    (config.environment === "production" && !["true", "false"].includes(productionWritesSetting))
   ) {
-    throw new Error("PeacePad staging function configuration is incomplete.");
+    throw new Error("PeacePad regional function configuration is incomplete.");
   }
   const hostname = new URL(config.supabaseUrl).hostname;
   if (hostname !== `${config.projectRef}.supabase.co`) {
-    throw new Error("PeacePad staging project reference does not match SUPABASE_URL.");
+    throw new Error("PeacePad project reference does not match SUPABASE_URL.");
   }
   return config;
 };
@@ -400,7 +412,7 @@ const handler = async (request: Request): Promise<Response> => {
   try {
     config = readConfig();
   } catch {
-    return failure(request, 503, "CONFIGURATION_ERROR", "The staging service is not configured.", requestId);
+    return failure(request, 503, "CONFIGURATION_ERROR", "The regional service is not configured.", requestId);
   }
 
   if (request.method === "OPTIONS") {
@@ -415,7 +427,7 @@ const handler = async (request: Request): Promise<Response> => {
 
   const path = requestPath(request);
   if (request.method === "GET" && path === "/health") {
-    return json(request, 200, { status: "ok", environment: "fictional-staging", region: config.region }, requestId, config);
+    return json(request, 200, { status: "ok", environment: config.environment, region: config.region, writesEnabled: config.productionWritesEnabled }, requestId, config);
   }
 
   const admin = createClient(config.supabaseUrl, config.serviceRoleKey, {
@@ -424,8 +436,23 @@ const handler = async (request: Request): Promise<Response> => {
   if (request.method === "GET" && path === "/readyz") {
     const { data, error } = await admin.rpc("peacepad_v2_ready");
     return error || data !== true
-      ? failure(request, 503, "DATABASE_NOT_READY", "The regional staging database is not ready.", requestId, config)
-      : json(request, 200, { status: "ready", environment: "fictional-staging", region: config.region }, requestId, config);
+      ? failure(request, 503, "DATABASE_NOT_READY", "The regional database is not ready.", requestId, config)
+      : json(request, 200, { status: "ready", environment: config.environment, region: config.region, writesEnabled: config.productionWritesEnabled }, requestId, config);
+  }
+
+  if (
+    config.environment === "production" &&
+    !config.productionWritesEnabled &&
+    ["POST", "PATCH", "PUT", "DELETE"].includes(request.method)
+  ) {
+    return failure(
+      request,
+      503,
+      "PRODUCTION_WRITES_DISABLED",
+      "Production writes are not enabled.",
+      requestId,
+      config,
+    );
   }
 
   if (request.method === "POST" && path === "/internal/v2/auth-cleanup/run") {

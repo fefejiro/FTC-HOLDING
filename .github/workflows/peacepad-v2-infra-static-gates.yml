@@ -79,6 +79,7 @@ jobs:
           deno check \
             --config APPS/peacepad-v2-platform/deno.json \
             APPS/peacepad-v2-platform/supabase/functions/peacepad-v2-api/index.ts
+          pwsh -File APPS/peacepad-v2-platform/scripts/validate-supabase-production-edge.ps1
           deno test \
             --config APPS/peacepad-v2-platform/deno.json \
             APPS/peacepad-v2-platform/supabase/functions/peacepad-v2-api/signaling_test.ts
