@@ -34,8 +34,9 @@ Exact commit `e7a03d38c` now adds a content-free, read-only legacy source
 inventory runner. It reports schema metadata, required-column gaps, aggregate
 counts, and a schema fingerprint only, cannot contact V2, and refuses to
 overwrite evidence. Native run `31634808106` and Infrastructure run
-`31634808261` passed its static boundary. No legacy source connection/report
-exists yet, so it is not production migration evidence.
+`31634808261` passed its static boundary; a disposable PostgreSQL 18 fixture
+also completed the runner and preserved its source rows. No legacy source
+connection/report exists yet, so it is not production migration evidence.
 
 An empty Canada production database baseline now exists separately at project
 `qzekqjewpugdotskrtni` (`ca-central-1`). Exact commit `d61f0cd4c` deployed its

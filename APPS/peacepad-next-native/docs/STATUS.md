@@ -64,10 +64,14 @@ event titles, or other family content; it cannot contact a V2 target and
 refuses to overwrite evidence.
 
 Hosted Native run `31634808106` and Infrastructure run `31634808261` passed
-the exact static boundary. No legacy source credential is stored in this
-workspace and no real legacy source inventory has been run. Therefore this is
-an IMPLEMENTED/HOSTED-STATIC prerequisite, not the required read-only source
-inventory evidence, migration approval, or production-data movement.
+the exact static boundary. A separate disposable PostgreSQL 18 legacy-schema
+fixture then completed the runner: it emitted the expected content-free JSON,
+left the two fixture users and one message unchanged, and created no inventory
+tables; its cluster and evidence directory were removed afterward. No legacy
+source credential is stored in this workspace and no real legacy source
+inventory has been run. Therefore this is LOCAL + HOSTED implementation proof,
+not the required real-source inventory evidence, migration approval, or
+production-data movement.
 
 ### Canada production database baseline -- 2026-08-12
 
