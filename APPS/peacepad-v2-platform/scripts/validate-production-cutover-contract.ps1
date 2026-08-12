@@ -33,6 +33,17 @@ foreach ($source in $requiredMappings.Keys) {
   Assert-Contract ($matches.Count -eq 1) "Required mapping '$source' is missing or ambiguous."
 }
 
+$requiredImportControls = @(
+  "supabase-auth-user-exists-for-every-verified-email-claim",
+  "explicit-partnership-scope-for-every-conversation-and-event",
+  "text-only-message-import-with-media-and-deleted-content-quarantined",
+  "timestamped-consent-ledger-or-user-reconsent",
+  "fresh-target-or-reviewed-reconciliation-plan"
+)
+foreach ($item in $requiredImportControls) {
+  Assert-Contract (@($manifest.requiredImportControls) -contains $item) "Required import control '$item' is missing."
+}
+
 $requiredUnmapped = @(
   "attachments-and-media",
   "children-profiles",

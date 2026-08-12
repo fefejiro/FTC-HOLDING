@@ -16,13 +16,13 @@
     {
       "source": "users",
       "target": "identity",
-      "strategy": "verified-email-claim",
+      "strategy": "verified-email-claim-after-supabase-auth",
       "required": true
     },
     {
       "source": "users consent fields",
       "target": "consent_record",
-      "strategy": "policy-versioned-confirmation",
+      "strategy": "reviewed-timestamped-ledger-or-reconsent",
       "required": true
     },
     {
@@ -34,7 +34,7 @@
     {
       "source": "conversations + conversation_members",
       "target": "conversation",
-      "strategy": "membership-preserving-import",
+      "strategy": "explicit-partnership-scope-and-membership-preserving-import",
       "required": true
     },
     {
@@ -46,7 +46,7 @@
     {
       "source": "events",
       "target": "calendar_layer + schedule_event",
-      "strategy": "family-layer-first-import",
+      "strategy": "explicit-partnership-scope-and-family-layer-first-import",
       "required": true
     }
   ],
@@ -67,6 +67,13 @@
     "two-account-claim-and-rollback-journey",
     "approved-retention-plan-for-unmapped-data",
     "product-privacy-security-qa-release-signoff"
+  ],
+  "requiredImportControls": [
+    "supabase-auth-user-exists-for-every-verified-email-claim",
+    "explicit-partnership-scope-for-every-conversation-and-event",
+    "text-only-message-import-with-media-and-deleted-content-quarantined",
+    "timestamped-consent-ledger-or-user-reconsent",
+    "fresh-target-or-reviewed-reconciliation-plan"
   ],
   "rollback": {
     "legacyReadWriteRemainsAuthoritativeUntil": "post-cutover-acceptance",
