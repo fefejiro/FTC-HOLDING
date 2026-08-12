@@ -67,7 +67,8 @@
         "PEACEPAD_IOS_RELEASE_MODE": "testflight-internal"
       },
       "ios": {
-        "simulator": false
+        "simulator": false,
+        "image": "latest"
       }
     },
     "playstore-internal": {
