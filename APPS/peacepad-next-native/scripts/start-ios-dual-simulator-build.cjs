@@ -121,6 +121,14 @@ if (sourceTreeObject !== copiedTreeObject) {
 }
 console.log(`PeacePad isolated app tree verified: ${sourceTreeObject}`);
 
+const installedDependencies = path.join(root, "node_modules");
+const isolatedDependencies = path.join(isolatedRoot, "node_modules");
+if (fs.existsSync(installedDependencies)) {
+  fs.symlinkSync(installedDependencies, isolatedDependencies, process.platform === "win32" ? "junction" : "dir");
+} else {
+  run("npm", ["ci", "--workspaces=false", "--prefer-offline"], buildEnvironment, isolatedRoot);
+}
+
 if (prepareOnly) {
   console.log("PEACEPAD_IOS_DUAL_SIMULATOR_ISOLATED_SOURCE_READY");
   console.log("No EAS build or submission was started.");
