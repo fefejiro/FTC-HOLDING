@@ -108,6 +108,7 @@ jobs:
           trap 'rm -f credentials.json "$RUNNER_TEMP/peacepad-upload.keystore"' EXIT
           release_command=$(cat <<'EOF'
             set -euo pipefail
+            export EXPO_PUBLIC_PEACEPAD_ENV=staging
             export PEACEPAD_ANDROID_RELEASE_MODE=playstore-internal
             node scripts/check-lab-guardrails.cjs
             node -e "const cfg=require(\"./app.config.js\")({config:require(\"./app.json\").expo}); if(cfg.android.package!==\"ca.peacepad.family\"||cfg.android.versionCode!==42||cfg.extra.productionApiWritesEnabled!==false) process.exit(1)"
