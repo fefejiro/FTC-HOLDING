@@ -379,7 +379,10 @@ jobs:
               duration: 600
           - tapOn: "Invitation code"
           - inputText: "$invitation_code"
-          - hideKeyboard
+          # The native invitation input is a custom field, so Maestro's generic
+          # hideKeyboard action is not reliable. Tapping this inert, visible
+          # screen heading removes focus without activating a mutation.
+          - tapOn: "Create or join a family"
           - extendedWaitUntil:
               visible: "Review invitation"
               timeout: 30000
