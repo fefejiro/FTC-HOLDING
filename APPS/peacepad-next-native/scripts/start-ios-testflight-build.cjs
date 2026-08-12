@@ -11,20 +11,32 @@ const workRoot = process.env.PEACEPAD_RELEASE_WORK_ROOT?.trim()
   || (process.platform === "win32" && fs.existsSync("D:\\")
     ? path.join(preferredWindowsRoot, "testflight-internal")
     : path.join(os.tmpdir(), "PeacePadRelease", "testflight-internal"));
+const releaseCacheRoot = process.env.PEACEPAD_EAS_CACHE_ROOT?.trim()
+  || (process.platform === "win32" && fs.existsSync("D:\\")
+    ? path.join(preferredWindowsRoot, "npm-cache-eas21")
+    : path.join(workRoot, "npm-cache"));
 
 const releaseEnvironment = {
   ...process.env,
   TEMP: path.join(workRoot, "temp"),
   TMP: path.join(workRoot, "temp"),
-  npm_config_cache: path.join(workRoot, "npm-cache")
+  npm_config_cache: releaseCacheRoot
 };
+const cachedEasCli = process.platform === "win32"
+  ? path.join(releaseEnvironment.npm_config_cache, "_npx", "03e34f479f818b15", "node_modules", "eas-cli", "bin", "run")
+  : undefined;
+if (cachedEasCli && fs.existsSync(cachedEasCli)) {
+  releaseEnvironment.PEACEPAD_EAS_CLI_PATH = cachedEasCli;
+}
 fs.mkdirSync(releaseEnvironment.TEMP, { recursive: true });
 fs.mkdirSync(releaseEnvironment.npm_config_cache, { recursive: true });
 
 function run(command, args, env = releaseEnvironment, cwd = root) {
   const windows = process.platform === "win32";
-  const executable = windows ? (process.env.ComSpec || "cmd.exe") : command;
-  const commandArgs = windows ? ["/d", "/s", "/c", [command, ...args].join(" ")] : args;
+  const needsWindowsShell = windows && (command === "npx" || command === "npm");
+  const executable = needsWindowsShell ? (process.env.ComSpec || "cmd.exe") : command;
+  const quote = (value) => /[\s"&|<>^]/.test(String(value)) ? JSON.stringify(String(value)) : String(value);
+  const commandArgs = needsWindowsShell ? ["/d", "/s", "/c", [command, ...args.map(quote)].join(" ")] : args;
   const result = spawnSync(executable, commandArgs, {
     cwd,
     encoding: "utf8",
@@ -47,7 +59,7 @@ function capture(command, args, cwd = root) {
 }
 
 console.log(`PeacePad release scratch: ${workRoot}`);
-run("npm", ["run", "release:ios:preflight:online"]);
+run(process.execPath, ["scripts/check-ios-testflight-readiness.cjs", "--online"]);
 
 if (!startRequested && !prepareOnly) {
   console.log("PEACEPAD_IOS_TESTFLIGHT_BUILD_CHECK_READY");
@@ -81,10 +93,12 @@ try {
 }
 run("git", ["init", "-q"], releaseEnvironment, isolatedRoot);
 run("git", ["config", "core.autocrlf", "false"], releaseEnvironment, isolatedRoot);
-run("git", ["config", "user.name", "PeacePad Release Control"], releaseEnvironment, isolatedRoot);
-run("git", ["config", "user.email", "release-control@users.noreply.github.com"], releaseEnvironment, isolatedRoot);
 run("git", ["add", "--all"], releaseEnvironment, isolatedRoot);
-run("git", ["commit", "-qm", `Package PeacePad Native V2 source ${sourceCommit}`], releaseEnvironment, isolatedRoot);
+run("git", [
+  "-c", "user.name=PeacePad Release Control",
+  "-c", "user.email=release-control@users.noreply.github.com",
+  "commit", "-qm", `Package PeacePad Native V2 source ${sourceCommit}`
+], releaseEnvironment, isolatedRoot);
 const copiedTreeObject = capture("git", ["rev-parse", "HEAD^{tree}"], isolatedRoot);
 if (sourceTreeObject !== copiedTreeObject) {
   console.error("PEACEPAD_IOS_TESTFLIGHT_BUILD_BLOCKED: isolated app source does not match the exact reviewed Git tree.");
@@ -106,18 +120,22 @@ if (prepareOnly) {
   process.exit(0);
 }
 
-run("npx", [
-  "--yes",
-  "eas-cli@21.8.0",
+const easBuildArgs = [
   "build",
   "--platform", "ios",
   "--profile", "testflight-internal",
   "--non-interactive",
   "--no-wait"
-], {
+];
+const easBuildEnvironment = {
   ...releaseEnvironment,
   // Windows junctions let the exact D:-backed app archive reuse the reviewed
   // dependency installation. The Git tree comparison above remains the source
   // authority, so only EAS' junction-incompatible optional fingerprint scan is skipped.
   EAS_SKIP_AUTO_FINGERPRINT: "1"
-}, isolatedRoot);
+};
+if (cachedEasCli && fs.existsSync(cachedEasCli)) {
+  run(process.execPath, [cachedEasCli, ...easBuildArgs], easBuildEnvironment, isolatedRoot);
+} else {
+  run("npx", ["--yes", "eas-cli@21.8.0", ...easBuildArgs], easBuildEnvironment, isolatedRoot);
+}

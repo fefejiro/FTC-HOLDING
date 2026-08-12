@@ -25,6 +25,10 @@ const regionalProjectRefs = {
   ca: "rohvkyuxbnqzglaromms",
   us: "spmpndalcvwmygznihec"
 };
+const configuredEasCli = process.env.PEACEPAD_EAS_CLI_PATH?.trim();
+const cachedEasCli = configuredEasCli || (process.platform === "win32"
+  ? path.join(process.env.npm_config_cache ?? "", "_npx", "03e34f479f818b15", "node_modules", "eas-cli", "bin", "run")
+  : undefined);
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -73,7 +77,10 @@ function verifyStaticContract() {
   assert(launcher.includes("D:\\\\PeacePadRelease"), "The Windows release launcher must move temporary build work to D:.");
   assert(launcher.includes('"archive"') && launcher.includes("EAS_SKIP_AUTO_FINGERPRINT"), "The release launcher must build from an exact D:-backed app-only Git archive.");
   assert(launcher.includes("eas-cli@21.8.0") && launcher.includes('"--yes"'), "The release launcher must use the current non-interactive EAS CLI.");
-  assert(launcher.includes("release:ios:preflight:online"), "The release launcher must run the online gate before EAS Build.");
+  assert(
+    launcher.includes("release:ios:preflight:online") || launcher.includes("check-ios-testflight-readiness.cjs"),
+    "The release launcher must run the online gate before EAS Build."
+  );
   assert(launcher.includes('"testflight-internal"') && launcher.includes('"--no-wait"'), "The release launcher must start only the reviewed asynchronous TestFlight profile.");
   assert(!launcher.includes("--auto-submit"), "The first internal candidate must be inspected before any App Store Connect submission.");
 }
@@ -91,6 +98,17 @@ function verifyInjectedRegionalContract() {
 }
 
 function runEas(args, { allowFailure = false } = {}) {
+  if (cachedEasCli && fs.existsSync(cachedEasCli)) {
+    const result = spawnSync(process.execPath, [cachedEasCli, ...args], {
+      cwd: root,
+      encoding: "utf8",
+      env: process.env,
+      windowsHide: true
+    });
+    const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+    if (result.status !== 0 && !allowFailure) throw new Error(`EAS ${args[0]} check failed without starting a build.`);
+    return output;
+  }
   const windows = process.platform === "win32";
   const executable = windows ? (process.env.ComSpec || "cmd.exe") : "npx";
   const commandArgs = windows
