@@ -12,16 +12,16 @@ describe("lab-only configuration", () => {
     expect(appConfig.expo.extra.eas.projectId).toBe("a4ecee72-ebae-483d-8553-035847ebb3d3");
   });
 
-  it("keeps EAS limited to lab and isolated regional staging builds until Gate 6", () => {
+  it("keeps EAS limited to lab, isolated staging, and the guarded internal TestFlight candidate", () => {
     expect(Object.keys(easConfig.build).sort()).toEqual([
       "lab-device",
       "lab-simulator",
       "staging-device-ca",
       "staging-device-us",
       "staging-simulator-ca",
-      "staging-simulator-us"
+      "staging-simulator-us",
+      "testflight-internal"
     ]);
-    expect((easConfig as { submit?: unknown }).submit).toBeUndefined();
     expect((easConfig.build as Record<string, unknown>).production).toBeUndefined();
     expect(easConfig.build["lab-simulator"].ios.simulator).toBe(true);
     for (const profile of [easConfig.build["lab-simulator"], easConfig.build["lab-device"]]) {
@@ -48,5 +48,20 @@ describe("lab-only configuration", () => {
       expect(profile.env).toBeUndefined();
       expect(profile.ios?.simulator === true).toBe(expected.simulator);
     }
+
+    const testFlight = easConfig.build["testflight-internal"];
+    expect(testFlight).toMatchObject({
+      distribution: "store",
+      environment: "production",
+      env: {
+        EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS: "false",
+        EXPO_PUBLIC_PEACEPAD_ENV: "staging",
+        PEACEPAD_IOS_RELEASE_MODE: "testflight-internal"
+      },
+      ios: { simulator: false }
+    });
+    expect(easConfig.submit).toEqual({
+      "testflight-internal": { ios: { ascAppId: "6793350735" } }
+    });
   });
 });

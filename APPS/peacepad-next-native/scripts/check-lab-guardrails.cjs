@@ -8,6 +8,7 @@ const appJson = JSON.parse(read("app.json"));
 const easJson = JSON.parse(read("eas.json"));
 const packageJson = JSON.parse(read("package.json"));
 const environmentSource = read("src/config/environment.ts");
+const dynamicAppConfigSource = read("app.config.js");
 
 const iosBundle = appJson.expo?.ios?.bundleIdentifier;
 const androidPackage = appJson.expo?.android?.package;
@@ -110,11 +111,13 @@ const stagingEasProfiles = {
   "staging-device-us": { environment: "development", simulator: false },
 };
 const allowedEasProfiles = [...labEasProfiles, ...Object.keys(stagingEasProfiles)];
+const testFlightProfileName = "testflight-internal";
+allowedEasProfiles.push(testFlightProfileName);
 if (Object.keys(easBuildProfiles).some((profile) => !allowedEasProfiles.includes(profile))) {
-  failures.push("EAS must remain limited to approved lab and regional staging profiles before Gate 6.");
+  failures.push("EAS must remain limited to approved lab, regional staging, and internal TestFlight profiles before Gate 6.");
 }
-if (easJson.submit || easBuildProfiles.production) {
-  failures.push("EAS submit and production build profiles are prohibited before Gate 6 approval.");
+if (easBuildProfiles.production) {
+  failures.push("An App Store production profile remains prohibited before internal TestFlight proof and Gate 6 approval.");
 }
 for (const profile of labEasProfiles) {
   const config = easBuildProfiles[profile];
@@ -151,6 +154,31 @@ if (easBuildProfiles["lab-simulator"]?.ios?.simulator !== true) {
 }
 if (easBuildProfiles["lab-device"]?.ios?.simulator === true) {
   failures.push("EAS lab-device must remain a physical-device internal build.");
+}
+
+const testFlightProfile = easBuildProfiles[testFlightProfileName];
+if (
+  testFlightProfile?.distribution !== "store"
+  || testFlightProfile?.environment !== "production"
+  || testFlightProfile?.env?.PEACEPAD_IOS_RELEASE_MODE !== testFlightProfileName
+  || testFlightProfile?.env?.EXPO_PUBLIC_PEACEPAD_ENV !== "staging"
+  || testFlightProfile?.env?.EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS !== "false"
+  || testFlightProfile?.ios?.simulator !== false
+) {
+  failures.push("The internal TestFlight profile must remain a signed, non-diagnostic fictional-staging candidate.");
+}
+const submitProfiles = Object.keys(easJson.submit || {});
+if (
+  submitProfiles.length !== 1
+  || submitProfiles[0] !== testFlightProfileName
+  || easJson.submit?.[testFlightProfileName]?.ios?.ascAppId !== "6793350735"
+) {
+  failures.push("EAS Submit must target only the existing PeacePad App Store record 6793350735.");
+}
+for (const expectedReleaseValue of ["ca.peacepad.family", "6793350735", "2.0.0", "testflight-internal"]) {
+  if (!dynamicAppConfigSource.includes(expectedReleaseValue)) {
+    failures.push(`Dynamic app config is missing the reviewed TestFlight value ${expectedReleaseValue}.`);
+  }
 }
 
 const sourceFiles = [];
