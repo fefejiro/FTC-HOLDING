@@ -76,6 +76,21 @@ that stale `api` record, or access to the external DNS manager that owns it.
 The current Cloudflare token cannot perform that DNS write, so there is no safe
 CLI-only bypass of the ownership boundary.
 
+### Public legacy API recovery — 2026-08-12
+
+The zone operator changed the existing `api.peacepad.ca` record to Cloudflare
+proxied. The retained `peacepad-api-origin-proxy` Worker route then began
+serving the existing hostname without a paid Railway custom-domain upgrade.
+At Cloudflare Worker version `c8ea62d5-cb1a-4359-a3d9-67d3912bdf47`, public
+`GET https://api.peacepad.ca/api/health` returned 200, authenticated-browser
+CORS preflight from `https://peacepad.ca` returned 204 with the exact allowed
+origin and credentials, and an unauthenticated `GET /api/auth/me` correctly
+returned 401. Public `/v2/health` returned 200 with
+`database.reachable: true`. The public web origin also returned 200. This
+restores the existing legacy web/Capacitor application backend only; it is not
+a Native V2 App Store release, a V2 data migration, a signed iOS build, or
+TestFlight/App Store evidence.
+
 Native V2 is implemented partly as a synthetic/staging prototype. It is not
 ready for production identity, real family information, TestFlight, or App
 Store submission. The reproducible local foundation now passes. The immediate
