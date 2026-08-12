@@ -220,9 +220,13 @@ walk(root);
 
 for (const file of sourceFiles) {
   const rel = path.relative(root, file);
+  const normalizedRel = rel.split(path.sep).join("/");
   const text = fs.readFileSync(file, "utf8");
   const isTestFixture = /\.(?:test|spec)\.[cm]?[jt]sx?$/.test(rel);
-  if (!isTestFixture && /api\.peacepad\.ca/.test(text)) {
+  // Status ledgers may accurately describe the separately-operated legacy
+  // public service. They are evidence, not mobile runtime configuration.
+  const isEvidenceLedger = new Set(["docs/STATUS.md", "docs/STAGING_PROGRESS.md"]).has(normalizedRel);
+  if (!isTestFixture && !isEvidenceLedger && /api\.peacepad\.ca/.test(text)) {
     failures.push(`${rel} references production API api.peacepad.ca.`);
   }
   const affirmativeText = text
