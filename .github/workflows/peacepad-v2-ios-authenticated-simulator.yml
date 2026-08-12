@@ -186,7 +186,7 @@ jobs:
 
           key_file="$RUNNER_TEMP/peacepad-supabase-api-keys.json"
           trap 'rm -f "$key_file"' EXIT
-          curl --fail --silent --show-error \
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 90 \
             --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
             "https://api.supabase.com/v1/projects/$PROJECT_REF/api-keys" \
             --output "$key_file"
@@ -578,7 +578,7 @@ jobs:
           evidence="$RUNNER_TEMP/peacepad-authenticated-simulator-evidence/cleanup.json"
           mkdir -p "$(dirname "$evidence")"
           if test -f "$fixture"; then
-            curl --fail --silent --show-error \
+            curl --fail --silent --show-error --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 90 \
               --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
               "https://api.supabase.com/v1/projects/${{ steps.contract.outputs.expected_project_ref }}/api-keys" \
               --output "$key_file"
