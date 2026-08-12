@@ -37,6 +37,12 @@ production runtime, legacy data, public users, TestFlight build, or App Store
 release. See [STATUS.md](STATUS.md) for its security/recovery limitations and
 the remaining production gates.
 
+The current public legacy rollback product passed operator-path endpoint,
+ownership, and self-cleaning guest deletion checks on 2026-08-12. Hosted run
+`31633263453` was blocked at Cloudflare with 403 responses from the
+GitHub-hosted runner, before application handling; it is not V2 production
+evidence and must not be counted as a hosted pass.
+
 | Gate | Status |
 | --- | --- |
 | Staging environment rejects non-staging runtime | LOCAL VERIFIED |

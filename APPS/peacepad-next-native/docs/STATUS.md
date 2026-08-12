@@ -114,6 +114,19 @@ V2 has a reviewed, reversible migration and release path. During an earlier
 provider audit, stored environment secrets were returned to the local terminal;
 treat those values as exposed and rotate them before a production release.
 
+On 2026-08-12, the operator-path public production checks passed against
+`https://peacepad.ca` and `https://api.peacepad.ca`: endpoint/ownership checks
+confirmed the intentional Cloudflare public edge plus a Railway origin request
+identifier, and the self-cleaning guest journey proved consent rejection,
+consented guest creation with optional AI off, session access, deletion, and
+post-deletion session invalidation. The temporary guest was deleted by that
+same run. Hosted production-gate run `31633263453` is non-qualifying: all
+public routes returned Cloudflare 403 from the GitHub-hosted runner before the
+application, not an application failure. The zone must explicitly permit that
+runner or a separately controlled monitoring origin before hosted public-edge
+evidence can pass. This evidence concerns the live legacy rollback product,
+not Native V2.
+
 ### No-cost API-hostname recovery attempt — 2026-08-12
 
 The authenticated Cloudflare account has Workers route-write permission but
