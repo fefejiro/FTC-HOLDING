@@ -73,6 +73,8 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EAS_NO_VCS: "1"
+          EXPO_PUBLIC_PEACEPAD_ENV: staging
+          PEACEPAD_IOS_RELEASE_MODE: testflight-internal
         working-directory: ${{ runner.temp }}/peacepad-next-native-release
         shell: bash
         run: |

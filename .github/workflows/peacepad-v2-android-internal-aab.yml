@@ -102,6 +102,7 @@ jobs:
           EXPECTED_SHA: ${{ inputs.source_sha }}
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EAS_NO_VCS: "1"
+          EXPO_PUBLIC_PEACEPAD_ENV: staging
           PEACEPAD_ANDROID_RELEASE_MODE: playstore-internal
         run: |
           set -euo pipefail
