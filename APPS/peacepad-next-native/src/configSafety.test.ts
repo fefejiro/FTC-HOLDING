@@ -12,10 +12,11 @@ describe("lab-only configuration", () => {
     expect(appConfig.expo.extra.eas.projectId).toBe("a4ecee72-ebae-483d-8553-035847ebb3d3");
   });
 
-  it("keeps EAS limited to lab, isolated staging, and the guarded internal TestFlight candidate", () => {
+  it("keeps EAS limited to lab, isolated staging, and guarded store candidates", () => {
     expect(Object.keys(easConfig.build).sort()).toEqual([
       "lab-device",
       "lab-simulator",
+      "playstore-internal",
       "staging-device-ca",
       "staging-device-us",
       "staging-simulator-ca",
@@ -74,6 +75,17 @@ describe("lab-only configuration", () => {
     });
     expect(easConfig.submit).toEqual({
       "testflight-internal": { ios: { ascAppId: "6793350735" } }
+    });
+
+    expect(easConfig.build["playstore-internal"]).toMatchObject({
+      distribution: "store",
+      environment: "production",
+      env: {
+        EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS: "false",
+        EXPO_PUBLIC_PEACEPAD_ENV: "staging",
+        PEACEPAD_ANDROID_RELEASE_MODE: "playstore-internal"
+      },
+      android: { buildType: "app-bundle", credentialsSource: "local" }
     });
   });
 });

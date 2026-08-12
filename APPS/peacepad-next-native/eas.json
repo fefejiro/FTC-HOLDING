@@ -69,6 +69,19 @@
       "ios": {
         "simulator": false
       }
+    },
+    "playstore-internal": {
+      "distribution": "store",
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS": "false",
+        "EXPO_PUBLIC_PEACEPAD_ENV": "staging",
+        "PEACEPAD_ANDROID_RELEASE_MODE": "playstore-internal"
+      },
+      "android": {
+        "buildType": "app-bundle",
+        "credentialsSource": "local"
+      }
     }
   },
   "submit": {

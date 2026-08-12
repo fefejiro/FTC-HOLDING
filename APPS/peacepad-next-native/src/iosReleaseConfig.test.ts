@@ -2,6 +2,7 @@ import appJson from "../app.json";
 
 type DynamicConfig = (input: { config: typeof appJson.expo }) => typeof appJson.expo & {
   ios: typeof appJson.expo.ios & { buildNumber?: string };
+  android: typeof appJson.expo.android & { versionCode?: number };
   extra: typeof appJson.expo.extra & { appStoreId?: string; releaseChannel?: string };
 };
 
@@ -10,11 +11,14 @@ const easJson = require("../eas.json") as { build: Record<string, unknown> };
 
 describe("PeacePad iOS release variant", () => {
   const originalMode = process.env.PEACEPAD_IOS_RELEASE_MODE;
+  const originalAndroidMode = process.env.PEACEPAD_ANDROID_RELEASE_MODE;
   const originalEnvironment = process.env.EXPO_PUBLIC_PEACEPAD_ENV;
 
   afterEach(() => {
     if (originalMode === undefined) delete process.env.PEACEPAD_IOS_RELEASE_MODE;
     else process.env.PEACEPAD_IOS_RELEASE_MODE = originalMode;
+    if (originalAndroidMode === undefined) delete process.env.PEACEPAD_ANDROID_RELEASE_MODE;
+    else process.env.PEACEPAD_ANDROID_RELEASE_MODE = originalAndroidMode;
     if (originalEnvironment === undefined) delete process.env.EXPO_PUBLIC_PEACEPAD_ENV;
     else process.env.EXPO_PUBLIC_PEACEPAD_ENV = originalEnvironment;
   });
@@ -66,6 +70,20 @@ describe("PeacePad iOS release variant", () => {
     });
   });
 
+  it("targets the existing Android package with a strictly newer V2 version code", () => {
+    process.env.PEACEPAD_ANDROID_RELEASE_MODE = "playstore-internal";
+    process.env.EXPO_PUBLIC_PEACEPAD_ENV = "staging";
+    expect(resolveConfig({ config: structuredClone(appJson.expo) })).toMatchObject({
+      version: "2.0.0",
+      android: { package: "ca.peacepad.family", versionCode: 42 },
+      extra: {
+        productionApiWritesEnabled: false,
+        releaseChannel: "playstore-internal",
+        submittedBundleId: "ca.peacepad.family"
+      }
+    });
+  });
+
   it("rejects unknown release variants and production runtime use", () => {
     process.env.PEACEPAD_IOS_RELEASE_MODE = "production";
     process.env.EXPO_PUBLIC_PEACEPAD_ENV = "staging";
@@ -73,5 +91,9 @@ describe("PeacePad iOS release variant", () => {
     process.env.PEACEPAD_IOS_RELEASE_MODE = "testflight-internal";
     process.env.EXPO_PUBLIC_PEACEPAD_ENV = "production";
     expect(() => resolveConfig({ config: structuredClone(appJson.expo) })).toThrow("must use the guarded staging runtime");
+    delete process.env.PEACEPAD_IOS_RELEASE_MODE;
+    process.env.PEACEPAD_ANDROID_RELEASE_MODE = "production";
+    process.env.EXPO_PUBLIC_PEACEPAD_ENV = "staging";
+    expect(() => resolveConfig({ config: structuredClone(appJson.expo) })).toThrow("Unsupported PeacePad Android release mode");
   });
 });

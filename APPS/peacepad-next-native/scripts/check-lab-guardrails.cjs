@@ -115,6 +115,8 @@ const dualSimulatorProfileName = "staging-simulator-dual";
 allowedEasProfiles.push(dualSimulatorProfileName);
 const testFlightProfileName = "testflight-internal";
 allowedEasProfiles.push(testFlightProfileName);
+const playStoreInternalProfileName = "playstore-internal";
+allowedEasProfiles.push(playStoreInternalProfileName);
 if (Object.keys(easBuildProfiles).some((profile) => !allowedEasProfiles.includes(profile))) {
   failures.push("EAS must remain limited to approved lab, regional staging, and internal TestFlight profiles before Gate 6.");
 }
@@ -180,6 +182,18 @@ if (
 ) {
   failures.push("The internal TestFlight profile must remain a signed, non-diagnostic fictional-staging candidate.");
 }
+const playStoreInternalProfile = easBuildProfiles[playStoreInternalProfileName];
+if (
+  playStoreInternalProfile?.distribution !== "store"
+  || playStoreInternalProfile?.environment !== "production"
+  || playStoreInternalProfile?.env?.PEACEPAD_ANDROID_RELEASE_MODE !== playStoreInternalProfileName
+  || playStoreInternalProfile?.env?.EXPO_PUBLIC_PEACEPAD_ENV !== "staging"
+  || playStoreInternalProfile?.env?.EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS !== "false"
+  || playStoreInternalProfile?.android?.buildType !== "app-bundle"
+  || playStoreInternalProfile?.android?.credentialsSource !== "local"
+) {
+  failures.push("The Android internal Play profile must remain a signed AAB backed by fictional staging.");
+}
 const submitProfiles = Object.keys(easJson.submit || {});
 if (
   submitProfiles.length !== 1
@@ -188,7 +202,7 @@ if (
 ) {
   failures.push("EAS Submit must target only the existing PeacePad App Store record 6793350735.");
 }
-for (const expectedReleaseValue of ["ca.peacepad.family", "6793350735", "2.0.0", "testflight-internal", "staging-simulator-dual"]) {
+for (const expectedReleaseValue of ["ca.peacepad.family", "6793350735", "2.0.0", "42", "testflight-internal", "staging-simulator-dual", "playstore-internal"]) {
   if (!dynamicAppConfigSource.includes(expectedReleaseValue)) {
     failures.push(`Dynamic app config is missing the reviewed TestFlight value ${expectedReleaseValue}.`);
   }
