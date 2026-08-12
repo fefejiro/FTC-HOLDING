@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "cutoverApproved": false,
+  "source": {
+    "system": "legacy-peacepad-express-postgresql",
+    "identityProvider": "legacy-replit-auth",
+    "dataRegion": "unknown-until-reviewed"
+  },
+  "target": {
+    "system": "peacepad-native-v2-supabase",
+    "identityProvider": "supabase-auth",
+    "region": "unset"
+  },
+  "identityStrategy": "claim-after-supabase-auth",
+  "mappings": [
+    {
+      "source": "users",
+      "target": "identity",
+      "strategy": "verified-email-claim",
+      "required": true
+    },
+    {
+      "source": "users consent fields",
+      "target": "consent_record",
+      "strategy": "policy-versioned-confirmation",
+      "required": true
+    },
+    {
+      "source": "partnerships",
+      "target": "family_circle + participant_grant",
+      "strategy": "two-party-atomic-grant",
+      "required": true
+    },
+    {
+      "source": "conversations + conversation_members",
+      "target": "conversation",
+      "strategy": "membership-preserving-import",
+      "required": true
+    },
+    {
+      "source": "messages",
+      "target": "message_event",
+      "strategy": "immutable-history-import",
+      "required": true
+    },
+    {
+      "source": "events",
+      "target": "calendar_layer + schedule_event",
+      "strategy": "family-layer-first-import",
+      "required": true
+    }
+  ],
+  "unmappedLegacyData": [
+    "attachments-and-media",
+    "children-profiles",
+    "tasks-and-notes",
+    "expenses-and-settlements",
+    "call-recordings-and-transcripts",
+    "ai-profiles-and-interventions",
+    "push-subscriptions"
+  ],
+  "requiredEvidence": [
+    "provider-backup-or-pitr",
+    "read-only-source-inventory",
+    "disposable-full-migration-rehearsal",
+    "row-count-and-content-fingerprint-comparison",
+    "two-account-claim-and-rollback-journey",
+    "approved-retention-plan-for-unmapped-data",
+    "product-privacy-security-qa-release-signoff"
+  ],
+  "rollback": {
+    "legacyReadWriteRemainsAuthoritativeUntil": "post-cutover-acceptance",
+    "nativeV2ProductionWritesEnabled": false,
+    "rollbackOwner": null
+  }
+}

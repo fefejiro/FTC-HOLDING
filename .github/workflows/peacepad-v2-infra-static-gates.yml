@@ -65,7 +65,9 @@ jobs:
 
       - name: Run static infrastructure gates
         shell: pwsh
-        run: ./APPS/peacepad-v2-platform/scripts/validate-infra.ps1
+        run: |
+          ./APPS/peacepad-v2-platform/scripts/validate-infra.ps1
+          ./APPS/peacepad-v2-platform/scripts/validate-production-cutover-contract.ps1
 
       - name: Parse managed restoration verifier
         shell: bash
