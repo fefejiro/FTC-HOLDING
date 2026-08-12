@@ -38,6 +38,18 @@
         "simulator": true
       }
     },
+    "staging-simulator-dual": {
+      "distribution": "internal",
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS": "false",
+        "EXPO_PUBLIC_PEACEPAD_ENV": "staging",
+        "PEACEPAD_IOS_RELEASE_MODE": "staging-simulator-dual"
+      },
+      "ios": {
+        "simulator": true
+      }
+    },
     "staging-device-ca": {
       "distribution": "internal",
       "environment": "preview"

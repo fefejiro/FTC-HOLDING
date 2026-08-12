@@ -19,6 +19,7 @@ describe("lab-only configuration", () => {
       "staging-device-ca",
       "staging-device-us",
       "staging-simulator-ca",
+      "staging-simulator-dual",
       "staging-simulator-us",
       "testflight-internal"
     ]);
@@ -48,6 +49,17 @@ describe("lab-only configuration", () => {
       expect(profile.env).toBeUndefined();
       expect(profile.ios?.simulator === true).toBe(expected.simulator);
     }
+
+    expect(easConfig.build["staging-simulator-dual"]).toMatchObject({
+      distribution: "internal",
+      environment: "production",
+      env: {
+        EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS: "false",
+        EXPO_PUBLIC_PEACEPAD_ENV: "staging",
+        PEACEPAD_IOS_RELEASE_MODE: "staging-simulator-dual"
+      },
+      ios: { simulator: true }
+    });
 
     const testFlight = easConfig.build["testflight-internal"];
     expect(testFlight).toMatchObject({

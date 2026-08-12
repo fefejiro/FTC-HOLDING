@@ -111,6 +111,8 @@ const stagingEasProfiles = {
   "staging-device-us": { environment: "development", simulator: false },
 };
 const allowedEasProfiles = [...labEasProfiles, ...Object.keys(stagingEasProfiles)];
+const dualSimulatorProfileName = "staging-simulator-dual";
+allowedEasProfiles.push(dualSimulatorProfileName);
 const testFlightProfileName = "testflight-internal";
 allowedEasProfiles.push(testFlightProfileName);
 if (Object.keys(easBuildProfiles).some((profile) => !allowedEasProfiles.includes(profile))) {
@@ -149,6 +151,17 @@ for (const [profile, expected] of Object.entries(stagingEasProfiles)) {
     failures.push(`EAS ${profile} has the wrong Simulator/device boundary.`);
   }
 }
+const dualSimulatorProfile = easBuildProfiles[dualSimulatorProfileName];
+if (
+  dualSimulatorProfile?.distribution !== "internal"
+  || dualSimulatorProfile?.environment !== "production"
+  || dualSimulatorProfile?.env?.PEACEPAD_IOS_RELEASE_MODE !== dualSimulatorProfileName
+  || dualSimulatorProfile?.env?.EXPO_PUBLIC_PEACEPAD_ENV !== "staging"
+  || dualSimulatorProfile?.env?.EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS !== "false"
+  || dualSimulatorProfile?.ios?.simulator !== true
+) {
+  failures.push("The dual-region Simulator profile must remain an internal, non-diagnostic fictional-staging build.");
+}
 if (easBuildProfiles["lab-simulator"]?.ios?.simulator !== true) {
   failures.push("EAS lab-simulator must remain an iOS Simulator build.");
 }
@@ -175,7 +188,7 @@ if (
 ) {
   failures.push("EAS Submit must target only the existing PeacePad App Store record 6793350735.");
 }
-for (const expectedReleaseValue of ["ca.peacepad.family", "6793350735", "2.0.0", "testflight-internal"]) {
+for (const expectedReleaseValue of ["ca.peacepad.family", "6793350735", "2.0.0", "testflight-internal", "staging-simulator-dual"]) {
   if (!dynamicAppConfigSource.includes(expectedReleaseValue)) {
     failures.push(`Dynamic app config is missing the reviewed TestFlight value ${expectedReleaseValue}.`);
   }

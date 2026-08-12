@@ -6,6 +6,7 @@ type DynamicConfig = (input: { config: typeof appJson.expo }) => typeof appJson.
 };
 
 const resolveConfig = require("../app.config.js") as DynamicConfig;
+const easJson = require("../eas.json") as { build: Record<string, unknown> };
 
 describe("PeacePad iOS release variant", () => {
   const originalMode = process.env.PEACEPAD_IOS_RELEASE_MODE;
@@ -39,6 +40,29 @@ describe("PeacePad iOS release variant", () => {
         releaseChannel: "testflight-internal",
         submittedBundleId: "ca.peacepad.family"
       }
+    });
+  });
+
+  it("keeps one dual-region Simulator on the isolated lab identity", () => {
+    process.env.PEACEPAD_IOS_RELEASE_MODE = "staging-simulator-dual";
+    process.env.EXPO_PUBLIC_PEACEPAD_ENV = "staging";
+    expect(resolveConfig({ config: structuredClone(appJson.expo) })).toMatchObject({
+      version: "0.0.1",
+      ios: { bundleIdentifier: "ca.peacepad.nextnative.lab" },
+      extra: {
+        productionApiWritesEnabled: false,
+        releaseChannel: "staging-simulator-dual"
+      }
+    });
+    expect(easJson.build["staging-simulator-dual"]).toMatchObject({
+      distribution: "internal",
+      environment: "production",
+      env: {
+        EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS: "false",
+        EXPO_PUBLIC_PEACEPAD_ENV: "staging",
+        PEACEPAD_IOS_RELEASE_MODE: "staging-simulator-dual"
+      },
+      ios: { simulator: true }
     });
   });
 
