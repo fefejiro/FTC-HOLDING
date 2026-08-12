@@ -40,7 +40,7 @@ function run(command, args, env = releaseEnvironment, cwd = root) {
   const result = spawnSync(executable, commandArgs, {
     cwd,
     encoding: "utf8",
-    env: releaseEnvironment,
+    env,
     stdio: "inherit",
     windowsHide: true
   });
