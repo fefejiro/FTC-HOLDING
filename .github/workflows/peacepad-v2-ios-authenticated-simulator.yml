@@ -149,7 +149,9 @@ jobs:
           if (profile?.distribution !== "internal" || profile?.environment !== process.env.EXPECTED_EAS_ENVIRONMENT || profile?.ios?.simulator !== true) {
             throw new Error(`Invalid ${process.env.REGION} staging Simulator build profile.`);
           }
-          if (eas.submit) throw new Error("Staging source must not define an EAS submit profile.");
+          if (eas.submit?.[process.env.EXPECTED_PROFILE]) {
+            throw new Error("The selected Simulator profile must not define a matching EAS submit profile.");
+          }
           NODE
 
           node target/APPS/peacepad-next-native/scripts/check-lab-guardrails.cjs
@@ -470,6 +472,7 @@ jobs:
           trap 'rm -f "$key_file" "$RUNNER_TEMP/peacepad-service-role-key"' EXIT
           fixture="$RUNNER_TEMP/peacepad-authenticated-simulator-fixture.json"
           evidence="$RUNNER_TEMP/peacepad-authenticated-simulator-evidence/cleanup.json"
+          mkdir -p "$(dirname "$evidence")"
           if test -f "$fixture"; then
             curl --fail --silent --show-error \
               --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
