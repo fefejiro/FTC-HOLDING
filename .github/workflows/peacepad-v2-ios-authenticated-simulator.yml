@@ -296,7 +296,7 @@ jobs:
           DEVICE_B: ${{ steps.simulators.outputs.device_b }}
           EXPECTED_REGION_LABEL: ${{ steps.contract.outputs.expected_region_label }}
           REQUIRES_REGION_SELECTION: ${{ steps.contract.outputs.requires_region_selection }}
-          MAESTRO_DRIVER_STARTUP_TIMEOUT: "480000"
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: "240000"
           REGION: ${{ inputs.region }}
           VERIFICATION_SCOPE: ${{ inputs.verification_scope }}
         run: |
@@ -365,6 +365,25 @@ jobs:
             append_home_assertions "$1"
           }
 
+          run_initial_invitation_flow() {
+            local flow="$1"
+            local log="$RUNNER_TEMP/peacepad-maestro-invitation-startup.log"
+            local attempt
+            for attempt in 1 2; do
+              if "$HOME/.maestro/bin/maestro" --device "$DEVICE_B" test "$flow" >"$log" 2>&1; then
+                cat "$log"
+                return 0
+              fi
+              cat "$log"
+              if test "$attempt" -eq 1 && grep -q "iOS driver not ready in time" "$log"; then
+                echo "Maestro iOS driver was not ready; retrying the untouched invitation flow once."
+                sleep 10
+                continue
+              fi
+              return 1
+            done
+          }
+
           flow_b_invitation="$RUNNER_TEMP/peacepad-authenticated-b-invitation.yaml"
           if test "$VERIFICATION_SCOPE" = "invitation-message-check-cross-account"; then
             [[ "$invitation_code" =~ ^[A-Z0-9]{6}$ ]]
@@ -393,7 +412,7 @@ jobs:
           - tapOn: "Accept invitation"
           YAML
             append_home_assertions "$flow_b_invitation"
-            "$HOME/.maestro/bin/maestro" --device "$DEVICE_B" test "$flow_b_invitation"
+            run_initial_invitation_flow "$flow_b_invitation"
             xcrun simctl io "$DEVICE_B" screenshot "$evidence/00-${REGION}-invitation-b.png"
             touch "$RUNNER_TEMP/peacepad-authenticated-invitation-verified"
           fi
