@@ -23,17 +23,17 @@ is historical and cannot independently pass a release gate.
 
 ## Real production cutover audit — 2026-08-12
 
-The public web domain is reachable, but `api.peacepad.ca` is still not serving
-PeacePad: its health route returns the Railway fallback 404. The correct
-Railway workspace is now confirmed as `Peace Pad's Projects`, project
-`lively-simplicity`, service `@ftc/peacepad`. Its Railway service domain
-`ftcpeacepad-production.up.railway.app` is running from
-`fefejiro/FTC-HOLDING`; `GET /api/health` returns 200 and the unauthenticated
-`GET /api/auth/me` contract correctly returns 401. The public hostname remains
-unbound because Railway rejected adding `api.peacepad.ca` on the current free
-plan's custom-domain limit. A DNS-only CNAME change was explicitly tested
-against the running service and returned Railway's host fallback, so DNS was
-not changed and no public outage was introduced.
+The existing public web and API service is reachable again. The verified
+Railway origin is workspace `Peace Pad's Projects`, project `lively-simplicity`,
+service `@ftc/peacepad`, running from `fefejiro/FTC-HOLDING` at
+`ftcpeacepad-production.up.railway.app`. Railway's free-plan custom-domain
+limit prevented direct binding of `api.peacepad.ca`, so the zone operator
+enabled Cloudflare proxying for the existing API record and the retained
+`peacepad-api-origin-proxy` Worker now forwards only to that verified origin.
+On 2026-08-12, public `GET https://api.peacepad.ca/api/health` and
+`GET https://api.peacepad.ca/v2/health` returned 200; unauthenticated
+`GET /api/auth/me` returned the expected 401; and `https://peacepad.ca/`
+returned 200. This restores the existing service, not V2.
 
 Native V2 is a separate Expo/Supabase application model. The current public
 Capacitor app uses the same bundle ID but a legacy Express/PostgreSQL API and
@@ -51,13 +51,11 @@ authorized pausing (not deleting) the U.S. fictional-staging project
 `spmpndalcvwmygznihec`; its data and configuration remain recoverable. During
 the legacy restore, the database hostname began resolving again and the direct
 running PeacePad service reported `database.reachable: true` from `/v2/health`.
-No production records were read, copied, changed, or deleted. The remaining
-operational blocker for restoring the existing public app is the API hostname:
-upgrade the Railway workspace or explicitly reassign its unrelated custom-domain
-allowance, then bind `api.peacepad.ca` to the verified `@ftc/peacepad` service
-and verify public health before any V2 cutover. During an earlier provider
-audit, stored environment secrets were returned to the local terminal; treat
-those values as exposed and rotate them before a production release.
+No production records were read, copied, changed, or deleted. The legacy public
+app no longer has an API-hostname outage. It remains the rollback product until
+V2 has a reviewed, reversible migration and release path. During an earlier
+provider audit, stored environment secrets were returned to the local terminal;
+treat those values as exposed and rotate them before a production release.
 
 ### No-cost API-hostname recovery attempt — 2026-08-12
 
