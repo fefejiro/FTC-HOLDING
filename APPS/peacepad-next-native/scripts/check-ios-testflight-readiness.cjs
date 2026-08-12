@@ -94,8 +94,8 @@ function runEas(args, { allowFailure = false } = {}) {
   const windows = process.platform === "win32";
   const executable = windows ? (process.env.ComSpec || "cmd.exe") : "npx";
   const commandArgs = windows
-    ? ["/d", "/s", "/c", ["npx", "eas-cli@16.19.1", ...args].join(" ")]
-    : ["eas-cli@16.19.1", ...args];
+    ? ["/d", "/s", "/c", ["npx", "--yes", "eas-cli@21.8.0", ...args].join(" ")]
+    : ["--yes", "eas-cli@21.8.0", ...args];
   const result = spawnSync(executable, commandArgs, {
     cwd: root,
     encoding: "utf8",
