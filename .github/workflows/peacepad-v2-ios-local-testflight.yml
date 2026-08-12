@@ -22,7 +22,7 @@ concurrency:
 jobs:
   build-signed-candidate:
     name: Build signed internal candidate without EAS cloud quota
-    runs-on: macos-15
+    runs-on: macos-15-intel
     timeout-minutes: 75
 
     steps:
