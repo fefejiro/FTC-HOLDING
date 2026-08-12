@@ -52,6 +52,32 @@ POSTGRES rehearsal evidence only. It does not read, copy, or change production
 records, establish a Canada production project, approve cutover, enable V2
 production writes, or migrate any existing account.
 
+### Canada production database baseline -- 2026-08-12
+
+The empty, isolated Canada Supabase production project
+`qzekqjewpugdotskrtni` is ACTIVE_HEALTHY in `ca-central-1`. Its initial
+provisioning credentials were intentionally discarded before any application
+configuration after they were exposed in an operator terminal. The fresh
+database password is held only in the operator's Windows credential vault.
+
+All 20 reviewed V2 schema migrations plus hardening migration
+`202608120001_v2_production_search_path_hardening.sql` are applied. A
+read-only Management API query verified 20 pre-existing migrations before the
+hardening migration, and the final Supabase Security Advisor result is zero
+WARN/ERROR findings. Its 20 informational `rls_enabled_no_policy` notices are
+intentional: direct `anon` and `authenticated` access is revoked and the
+schema is designed to be reached only through a server-side authorization
+adapter.
+
+This is an **empty production schema baseline**, not a public Native V2
+release. No legacy account or family data was read, copied, or changed; no
+production V2 Edge adapter is deployed; no V2 public/publishable key has been
+configured; the native app remains hard-coded to lab/staging and continues to
+disable production writes. PITR is not enabled on the current plan, so this
+database must not receive real family information until an approved recovery
+path, a real production runtime, and the reviewed reversible migration gates
+are complete.
+
 ## Real production cutover audit — 2026-08-12
 
 The existing public web and API service is reachable again. The verified

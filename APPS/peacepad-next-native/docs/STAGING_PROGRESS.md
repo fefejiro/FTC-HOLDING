@@ -30,6 +30,13 @@ scope, and text-only retained messages are required before mapping to V2.
 This is not a production source read, data migration, production project,
 production-write enablement, TestFlight, or App Store release.
 
+An empty Canada production database baseline now exists separately at project
+`qzekqjewpugdotskrtni` (`ca-central-1`). It has the 20 reviewed V2 migrations
+and a committed search-path hardening migration, but no Edge adapter, native
+production runtime, legacy data, public users, TestFlight build, or App Store
+release. See [STATUS.md](STATUS.md) for its security/recovery limitations and
+the remaining production gates.
+
 | Gate | Status |
 | --- | --- |
 | Staging environment rejects non-staging runtime | LOCAL VERIFIED |
