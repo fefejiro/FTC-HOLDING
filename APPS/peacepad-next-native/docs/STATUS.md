@@ -67,11 +67,20 @@ Hosted Native run `31634808106` and Infrastructure run `31634808261` passed
 the exact static boundary. A separate disposable PostgreSQL 18 legacy-schema
 fixture then completed the runner: it emitted the expected content-free JSON,
 left the two fixture users and one message unchanged, and created no inventory
-tables; its cluster and evidence directory were removed afterward. No legacy
-source credential is stored in this workspace and no real legacy source
-inventory has been run. Therefore this is LOCAL + HOSTED implementation proof,
-not the required real-source inventory evidence, migration approval, or
-production-data movement.
+tables; its cluster and evidence directory were removed afterward.
+
+On 2026-08-12, an authenticated Railway command supplied the legacy service's
+database connection to an equivalent one-transaction read-only inventory
+without printing the connection value. It returned only aggregate metadata:
+110 users, 54 partnerships, 54 conversations, 108 conversation memberships,
+380 messages, and 162 events; all required source columns were present and the
+source fingerprint was `a7dd689913cba7031082eb5c4708c52c`. The report contained
+no user content. Most importantly, `eventsPartnershipScopeAvailable` was
+`false`: legacy events have no explicit partnership identifier, so event import
+must remain blocked pending a separately reviewed scope mapping. No credential
+is stored in this workspace. This is real-source read-only inventory evidence,
+not migration approval, production-data movement, a recovery rehearsal, or
+permission to enable V2 writes.
 
 ### Canada production database baseline -- 2026-08-12
 
@@ -137,8 +146,9 @@ schema, so changing a runtime environment flag would strand existing accounts
 and data. A real V2 release requires: restoring or re-homing the legacy source
 of truth; a reviewed, reversible existing-account/data migration or compatible
 API bridge; a real Canada production Supabase project with backups and a
-non-staging write boundary; and Apple signing/release completion. No production
-records were copied, changed, or deleted during this audit.
+non-staging write boundary; and Apple signing/release completion. The one
+approved production-source operation so far is the content-free read-only
+inventory described above; no records were copied, changed, or deleted.
 
 The legacy Supabase source project `aaaextkrfoqomzmjjkxe` was inactive but
 still present. On 2026-08-12, the authenticated Management API accepted its
@@ -147,11 +157,13 @@ authorized pausing (not deleting) the U.S. fictional-staging project
 `spmpndalcvwmygznihec`; its data and configuration remain recoverable. During
 the legacy restore, the database hostname began resolving again and the direct
 running PeacePad service reported `database.reachable: true` from `/v2/health`.
-No production records were read, copied, changed, or deleted. The legacy public
-app no longer has an API-hostname outage. It remains the rollback product until
-V2 has a reviewed, reversible migration and release path. During an earlier
-provider audit, stored environment secrets were returned to the local terminal;
-treat those values as exposed and rotate them before a production release.
+The subsequent approved read-only inventory returned aggregates only; no
+production record content was read, copied, changed, or deleted. The legacy
+public app no longer has an API-hostname outage. It remains the rollback product
+until V2 has a reviewed, reversible migration and release path. During an
+earlier provider audit, stored environment secrets were returned to the local
+terminal; treat those values as exposed and rotate them before a production
+release.
 
 On 2026-08-12, the operator-path public production checks passed against
 `https://peacepad.ca` and `https://api.peacepad.ca`: endpoint/ownership checks

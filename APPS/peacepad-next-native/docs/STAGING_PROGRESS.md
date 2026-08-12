@@ -35,8 +35,14 @@ inventory runner. It reports schema metadata, required-column gaps, aggregate
 counts, and a schema fingerprint only, cannot contact V2, and refuses to
 overwrite evidence. Native run `31634808106` and Infrastructure run
 `31634808261` passed its static boundary; a disposable PostgreSQL 18 fixture
-also completed the runner and preserved its source rows. No legacy source
-connection/report exists yet, so it is not production migration evidence.
+also completed the runner and preserved its source rows. An authenticated
+Railway read-only source inventory subsequently returned only aggregate
+metadata: 110 users, 54 partnerships/conversations, 108 memberships, 380
+messages, and 162 events; all required columns were present, the source
+fingerprint was `a7dd689913cba7031082eb5c4708c52c`, and it exposed no user
+content. Legacy events have no `partnership_id`, so their automatic import is
+blocked pending an explicit reviewed scope mapping. This is not migration
+approval, data movement, production-write enablement, TestFlight, or release.
 
 An empty Canada production database baseline now exists separately at project
 `qzekqjewpugdotskrtni` (`ca-central-1`). Exact commit `d61f0cd4c` deployed its
