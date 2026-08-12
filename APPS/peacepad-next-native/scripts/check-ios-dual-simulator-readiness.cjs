@@ -50,6 +50,7 @@ function verifyStaticContract() {
     assert(launcher.includes('"archive"') && launcher.includes("core.autocrlf=false"), "The launcher must create an exact app-only Git archive.");
     assert(launcher.includes("HEAD:APPS/peacepad-next-native"), "The launcher must bind the isolated app tree to the reviewed monorepo commit.");
     assert(launcher.includes("fs.symlinkSync") && launcher.includes('"junction"'), "The Windows launcher must reuse installed dependencies without copying them into D:.");
+    assert(launcher.includes('EAS_SKIP_AUTO_FINGERPRINT: "1"'), "The isolated Windows build must bypass only EAS' junction-incompatible local fingerprint scan.");
     assert(launcher.includes('"staging-simulator-dual"') && launcher.includes('"--no-wait"'), "The launcher must enqueue only the reviewed asynchronous dual-region Simulator profile.");
     assert(!launcher.includes("--auto-submit"), "The dual-region Simulator launcher must never submit to Apple.");
   } finally {

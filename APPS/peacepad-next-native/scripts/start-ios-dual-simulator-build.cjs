@@ -135,10 +135,18 @@ if (prepareOnly) {
   process.exit(0);
 }
 
+const easBuildEnvironment = {
+  ...buildEnvironment,
+  // The isolated source uses a Windows junction only so app.config.js can
+  // resolve Expo plugins locally. EAS' optional fingerprint scanner rewrites
+  // that absolute target as a child of the D: source tree and fails before a
+  // build is created. The reviewed Git tree check above remains authoritative.
+  EAS_SKIP_AUTO_FINGERPRINT: "1"
+};
 run("eas", [
   "build",
   "--platform", "ios",
   "--profile", "staging-simulator-dual",
   "--non-interactive",
   "--no-wait"
-], buildEnvironment, isolatedRoot);
+], easBuildEnvironment, isolatedRoot);
