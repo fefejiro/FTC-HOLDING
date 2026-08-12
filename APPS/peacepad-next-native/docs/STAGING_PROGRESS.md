@@ -32,6 +32,12 @@ It remains fictional staging with production writes disabled. There is no
 PeacePad Play service-account secret or upload workflow, so no Play track,
 tester, public release, or production V2 action occurred.
 
+Main control `4e47dc99fe4aa16528a48e06e3530a7a5d4b3173` (PR #240) now provides a
+separate, manual Internal Testing-only upload control. It binds a reviewed
+source SHA and finished guarded EAS build, rechecks staging/no-write status,
+rejects a production track, and fails closed until a PeacePad-specific Play
+service-account secret is configured. It has not been dispatched.
+
 Exact cutover-rehearsal commit `e35ec103e` passed Native run `31630730421` and
 Infrastructure rerun `31630730410`. It proves a rollback-only fictional
 legacy-to-V2 import in disposable PostgreSQL: verified Supabase Auth claims,
