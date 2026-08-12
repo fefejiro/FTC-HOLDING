@@ -106,13 +106,15 @@ jobs:
         run: |
           set -euo pipefail
           trap 'rm -f credentials.json "$RUNNER_TEMP/peacepad-upload.keystore"' EXIT
-          npx --yes eas-cli@21.8.0 env:exec --environment production -- bash -lc '
+          release_command=$(cat <<'EOF'
             set -euo pipefail
             export PEACEPAD_ANDROID_RELEASE_MODE=playstore-internal
             node scripts/check-lab-guardrails.cjs
             node -e "const cfg=require(\"./app.config.js\")({config:require(\"./app.json\").expo}); if(cfg.android.package!==\"ca.peacepad.family\"||cfg.android.versionCode!==42||cfg.extra.productionApiWritesEnabled!==false) process.exit(1)"
             npx --yes eas-cli@21.8.0 build --platform android --profile playstore-internal --non-interactive --wait --json > "$RUNNER_TEMP/peacepad-v2-android-build.json"
-          '
+          EOF
+          )
+          npx --yes eas-cli@21.8.0 env:exec production "$release_command" --non-interactive
           node -e 'const fs=require("fs"); const b=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/peacepad-v2-android-build.json","utf8")); const first=Array.isArray(b)?b[0]:b; if(!first?.id||!first?.artifacts?.buildUrl) process.exit(1); fs.writeFileSync(process.env.RUNNER_TEMP+"/peacepad-v2-android-build.manifest", `source_sha=${process.env.EXPECTED_SHA||""}\nprofile=playstore-internal\npackage=ca.peacepad.family\nversion_code=42\nplay_submission_attempted=false\nbuild_id=${first.id}\nartifact_url=${first.artifacts.buildUrl}\n`);'
       - name: Upload AAB build evidence without Play submission
         if: always()
