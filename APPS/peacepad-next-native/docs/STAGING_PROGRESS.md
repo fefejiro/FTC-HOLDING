@@ -12,6 +12,16 @@ Current successor: `feat/peacepad-v2-supabase-free-staging`, draft PR
 current state is maintained in [STATUS.md](STATUS.md); the rows below retain the
 historical #172 baseline plus explicitly labelled successor evidence.
 
+## Current release note — 2026-08-12
+
+Apple signing is now configured for the existing PeacePad bundle
+`ca.peacepad.family`. The D:-backed TestFlight launcher verified the exact
+app-only Git tree, passed its online Apple/EAS configuration checks, and
+uploaded a 1.8 MB archive. EAS then refused to create the signed build because
+the account's free iOS build allocation is exhausted until 2026-09-01. The
+attempt remained fictional staging with production writes disabled and had no
+auto-submit path. No TestFlight, App Store, or production V2 release occurred.
+
 | Gate | Status |
 | --- | --- |
 | Staging environment rejects non-staging runtime | LOCAL VERIFIED |

@@ -19,7 +19,20 @@ is historical and cannot independently pass a release gate.
 
 ## Release verdict
 
-**BLOCKED - Gate 0 is HOSTED VERIFIED and both replacement regional fictional-staging projects are DEPLOYED STAGING VERIFIED for all 20 migrations, the regional Edge API, public boundaries, a managed fictional two-account feature contract, and read-only application-schema logical restoration. One exact EAS Simulator artifact from source `2fe8ca82b` is now screenshot-backed SIMULATOR VERIFIED against both Canada and U.S. staging: each protected journey authenticated two temporary fictional accounts, mutated native messaging and Calendar state, proved second-account visibility, removed both application/Auth accounts, and destroyed both Simulators. The D:-backed app-only pipeline uploads about 1.7 MB instead of cloning the multi-gigabyte monorepo and requires an explicit accessible pre-auth region choice from the same binary. Hosted source `8b1f3bf6b` adds a guarded internal TestFlight `2.0.0` (`2`) contract for existing bundle `ca.peacepad.family` and Apple ID `6793350735`, with production writes disabled and exact dual-region public staging variables verified in EAS production. MacinCloud is past due but is not on the active EAS/GitHub release path. No Apple Developer team is linked to the EAS account, so no signed build or submission was started. Provider-level Auth/platform snapshot or PITR recovery, invitation/Message Check/deletion/offline native journeys, TURN capacity and live media, real-device journeys, assistive-technology and trust reviews, Apple signing, TestFlight, and App Store release remain incomplete.**
+**BLOCKED - Gate 0 is HOSTED VERIFIED and both replacement regional fictional-staging projects are DEPLOYED STAGING VERIFIED for all 20 migrations, the regional Edge API, public boundaries, a managed fictional two-account feature contract, and read-only application-schema logical restoration. One exact EAS Simulator artifact from source `2fe8ca82b` is now screenshot-backed SIMULATOR VERIFIED against both Canada and U.S. staging: each protected journey authenticated two temporary fictional accounts, mutated native messaging and Calendar state, proved second-account visibility, removed both application/Auth accounts, and destroyed both Simulators. The D:-backed app-only pipeline uploads about 1.7 MB instead of cloning the multi-gigabyte monorepo and requires an explicit accessible pre-auth region choice from the same binary. The Apple team, distribution certificate, and provisioning profile are now configured for existing bundle `ca.peacepad.family`; the current internal TestFlight profile remains fictional staging with production writes disabled. On 2026-08-12, EAS accepted the exact 1.8 MB signed-build upload but refused to queue it because the account's free iOS build allocation is exhausted until 2026-09-01. No signed build, TestFlight upload, App Store submission, or production V2 cutover occurred. MacinCloud is past due but is not on the active EAS/GitHub release path. Provider-level Auth/platform snapshot or PITR recovery, a reviewed reversible existing-account migration, invitation/Message Check/deletion/offline native journeys, TURN capacity and live media, real-device journeys, assistive-technology and trust reviews, TestFlight, and App Store release remain incomplete.**
+
+### Current signed-build attempt — 2026-08-12
+
+The Apple Developer team is linked to the approved EAS project and its existing
+PeacePad App Store record. The local online preflight verified the App Store
+record, EAS owner, and all six public fictional-staging variables. The
+D:-backed launcher then verified the exact native Git tree, uploaded a 1.8 MB
+app-only archive, and passed the configured remote credential selection for
+`ca.peacepad.family`. EAS stopped before build creation with its free-plan iOS
+quota message: the allocation resets on 2026-09-01. The profile still uses
+fictional staging and disables production writes; it contains no auto-submit.
+No build ID, TestFlight build, public App Store update, or production data
+change exists from this attempt.
 
 ## Real production cutover audit — 2026-08-12
 
