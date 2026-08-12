@@ -108,7 +108,7 @@ jobs:
           set -euo pipefail
           trap 'rm -f credentials.json "$RUNNER_TEMP/peacepad-upload.keystore"' EXIT
           release_command=$(cat <<'EOF'
-            set -euo pipefail
+            set -eu
             export EXPO_PUBLIC_PEACEPAD_ENV=staging
             export PEACEPAD_ANDROID_RELEASE_MODE=playstore-internal
             node scripts/check-lab-guardrails.cjs
