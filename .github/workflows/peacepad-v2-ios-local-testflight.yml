@@ -80,7 +80,7 @@ jobs:
         run: |
           set -euo pipefail
           release_command=$(cat <<'EOF'
-            set -euo pipefail
+            set -eu
             export EXPO_PUBLIC_PEACEPAD_ENV=staging
             export PEACEPAD_IOS_RELEASE_MODE=testflight-internal
             node scripts/check-ios-testflight-readiness.cjs --injected
