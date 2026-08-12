@@ -2,9 +2,9 @@
 
 ## Snapshot
 
-- Snapshot date: 2026-08-11
+- Snapshot date: 2026-08-12
 - Branch: `feat/peacepad-v2-supabase-free-staging`
-- Verified implementation baseline: `2fe8ca82b`
+- Verified implementation baseline: `25c9a6358`
 - Ledger evidence applies only to the exact commit listed in each row
 - App version: `0.0.1`
 - Guarded internal TestFlight candidate: `2.0.0` (`2`)
@@ -354,6 +354,8 @@ and dual-region native coordination slices advanced.
 | U.S. Supabase fictional staging | `5f1ca58d` | Supabase Free, `us-east-2` | 2026-08-07 | DEPLOYED STAGING VERIFIED (SCHEMA ONLY) | Healthy company-owned project; PostgreSQL 17.6; boundary schema applied; append-only triggers present; direct `anon`/`authenticated` table privileges absent; fictional write rolled back. API adapter, restoration, device, and production proof remain absent |
 | Focused staging smokes | earlier PR #172 commits | Windows local, fictional adapters | Historical | HISTORICAL EVIDENCE | `STAGING_RUNTIME_SMOKE_PASS`, `STAGING_RESTART_SMOKE_PASS`, `TWO_ACCOUNT_HTTP_SMOKE_PASS`, `SYNTHETIC_COORDINATION_JOURNEY_PASS`, `STAGING_AUTHORIZATION_SMOKE_PASS` |
 | Current-branch Terraform execution | `b047615d` | Windows local after laptop restart | 2026-08-06 | BLOCKED | Terraform binary hung even on `terraform -version`; orphaned process was stopped. PR #174 hosted Terraform proof remains valid only for its earlier commit |
+| Fail-fast internal TestFlight signing preflight | `25c9a6358` | Windows local EAS CLI plus GitHub Actions | 2026-08-12 | HOSTED VERIFIED / APPLE TEAM BLOCKED | The static guarded profile check passed. The approved local EAS identity is `official_fejiro`; required EAS production variable names are present. The online check now asks EAS for an Apple Developer team before slower checks and deterministically stops with `No Apple Developer team is linked to the EAS account.` No signed build, submit, TestFlight, or production action was attempted. Exact-head [native run `31611086473`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31611086473) and [infrastructure run `31611087586`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31611087586) passed. |
+| Non-qualifying Canadian invitation/Message Check Simulator attempt | `6f93b3407` | Protected GitHub macOS Simulator; Canadian fictional staging only | 2026-08-12 | NOT VERIFIED / FIXTURE CLEANUP UNVERIFIED | Run [`31608414991`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31608414991) accepted the exact artifact and source, provisioned two temporary fictional `@example.test` accounts, and destroyed both Simulators. Native journey verification failed; the fixture cleanup request then received HTTP 500, so application/Auth cleanup is not claimed. No credentials or private content were retained in evidence and production was not contacted. This is not a reason to dispatch further regional Simulator work before the TestFlight signing blocker is cleared. |
 | Provider restoration, file/media journeys, simulator, device, TestFlight, production | `82cfd5365` current Simulator scope | managed staging plus hosted macOS Simulator | 2026-08-11 | APPLICATION LOGICAL RESTORATION + DUAL-REGION NATIVE COORDINATION SIMULATOR VERIFIED / REMAINING PROOF INCOMPLETE | The expanded two-account managed API journey and application-schema logical restoration passed in both regions; connectivity-aware queued-message recovery retains hosted automated proof; and exact CA/U.S. builds now pass authenticated native message/Calendar mutation plus second-account visibility with inspected screenshots and guaranteed cleanup on iOS 26.2. Supabase Auth/platform snapshot or PITR recovery, actual file transport, invitation/Message Check/deletion/offline native journeys, call media, assistive-technology and real-device audits, signing, TestFlight, and production proof have not run |
 
 ## Mandatory release gates
