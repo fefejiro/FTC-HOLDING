@@ -379,6 +379,10 @@ jobs:
               duration: 600
           - tapOn: "Invitation code"
           - inputText: "$invitation_code"
+          - hideKeyboard
+          - extendedWaitUntil:
+              visible: "Review invitation"
+              timeout: 30000
           - tapOn: "Review invitation"
           - extendedWaitUntil:
               visible: "Accept invitation"
