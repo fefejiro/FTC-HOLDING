@@ -44,6 +44,12 @@ function readBundledEnvironmentValues(): EnvironmentValues {
     EXPO_PUBLIC_PEACEPAD_SUPABASE_URL: process.env.EXPO_PUBLIC_PEACEPAD_SUPABASE_URL,
     EXPO_PUBLIC_PEACEPAD_API_BASE_URL: process.env.EXPO_PUBLIC_PEACEPAD_API_BASE_URL,
     EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_URL: process.env.EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_URL,
+    EXPO_PUBLIC_PEACEPAD_CA_API_BASE_URL: process.env.EXPO_PUBLIC_PEACEPAD_CA_API_BASE_URL,
+    EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_PEACEPAD_US_SUPABASE_URL: process.env.EXPO_PUBLIC_PEACEPAD_US_SUPABASE_URL,
+    EXPO_PUBLIC_PEACEPAD_US_API_BASE_URL: process.env.EXPO_PUBLIC_PEACEPAD_US_API_BASE_URL,
+    EXPO_PUBLIC_PEACEPAD_US_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_PEACEPAD_US_SUPABASE_PUBLISHABLE_KEY,
     EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS: process.env.EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS
   };
 }
@@ -56,7 +62,9 @@ export function resolveEnvironmentConfig(
   values: EnvironmentValues = readBundledEnvironmentValues()
 ): PeacePadEnvironmentConfig {
   const environment = values.EXPO_PUBLIC_PEACEPAD_ENV === "staging" ? "staging" : "lab";
-  const configuredUrl = values.EXPO_PUBLIC_PEACEPAD_API_BASE_URL?.trim();
+  const configuredUrl = values.EXPO_PUBLIC_PEACEPAD_API_BASE_URL?.trim()
+    || values.EXPO_PUBLIC_PEACEPAD_CA_API_BASE_URL?.trim()
+    || values.EXPO_PUBLIC_PEACEPAD_US_API_BASE_URL?.trim();
 
   if (environment === "staging" && !configuredUrl) {
     throw new Error("Staging requires EXPO_PUBLIC_PEACEPAD_API_BASE_URL.");
@@ -121,4 +129,52 @@ export function resolveSupabaseStagingConfig(
     throw new Error("Staging requires an sb_publishable_ Supabase key; secret and legacy JWT keys are prohibited.");
   }
   return { region, projectRef, projectUrl, publishableKey, apiBaseUrl };
+}
+
+const scopedStagingKeys = {
+  ca: {
+    projectUrl: "EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_URL",
+    apiBaseUrl: "EXPO_PUBLIC_PEACEPAD_CA_API_BASE_URL",
+    publishableKey: "EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_PUBLISHABLE_KEY"
+  },
+  us: {
+    projectUrl: "EXPO_PUBLIC_PEACEPAD_US_SUPABASE_URL",
+    apiBaseUrl: "EXPO_PUBLIC_PEACEPAD_US_API_BASE_URL",
+    publishableKey: "EXPO_PUBLIC_PEACEPAD_US_SUPABASE_PUBLISHABLE_KEY"
+  }
+} as const;
+
+export function resolveSupabaseStagingDirectory(
+  values: EnvironmentValues = readBundledEnvironmentValues()
+): readonly PeacePadSupabaseConfig[] {
+  if (values.EXPO_PUBLIC_PEACEPAD_ENV !== "staging") {
+    throw new Error("Supabase coordination is available only in staging.");
+  }
+  const hasScopedValues = (Object.values(scopedStagingKeys).flatMap((keys) => Object.values(keys)) as string[])
+    .some((key) => Boolean(values[key]?.trim()));
+  if (!hasScopedValues) return [resolveSupabaseStagingConfig(values)];
+  if (
+    values.EXPO_PUBLIC_PEACEPAD_REGION?.trim()
+    || values.EXPO_PUBLIC_PEACEPAD_SUPABASE_URL?.trim()
+    || values.EXPO_PUBLIC_PEACEPAD_API_BASE_URL?.trim()
+    || values.EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY?.trim()
+  ) {
+    throw new Error("Regional staging directory values must not be mixed with a single-region staging configuration.");
+  }
+  return (Object.keys(scopedStagingKeys) as PeacePadStagingRegion[]).map((region) => {
+    const keys = scopedStagingKeys[region];
+    const projectUrl = values[keys.projectUrl]?.trim();
+    const apiBaseUrl = values[keys.apiBaseUrl]?.trim();
+    const publishableKey = values[keys.publishableKey]?.trim();
+    if (!projectUrl || !apiBaseUrl || !publishableKey) {
+      throw new Error(`Staging ${region.toUpperCase()} regional configuration is incomplete.`);
+    }
+    return resolveSupabaseStagingConfig({
+      EXPO_PUBLIC_PEACEPAD_ENV: "staging",
+      EXPO_PUBLIC_PEACEPAD_REGION: region,
+      EXPO_PUBLIC_PEACEPAD_SUPABASE_URL: projectUrl,
+      EXPO_PUBLIC_PEACEPAD_API_BASE_URL: apiBaseUrl,
+      EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY: publishableKey
+    });
+  });
 }

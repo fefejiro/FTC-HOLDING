@@ -51,6 +51,9 @@ const messages = {
     "foundation.previewResult": "Message preview result", "foundation.suggested": "Suggested wording: {suggestion}", "foundation.retryCheck": "Retry message check", "foundation.resetSession": "Reset this device session"
     ,"runtime.signInTitle": "Sign in to staging", "runtime.signInBody": "Use a fictional PeacePad staging account. Real family information is not permitted.",
     "runtime.regionCanada": "Canada staging", "runtime.regionUnitedStates": "United States staging",
+    "runtime.regionSelectTitle": "Choose your data region", "runtime.regionSelectBody": "Choose where this fictional staging session is stored before signing in.",
+    "runtime.regionChoiceHint": "Selects this device's regional staging service. You can choose again after signing out and reopening PeacePad.",
+    "runtime.regionContinue": "Continue to {region}",
     "runtime.email": "Staging email", "runtime.emailPlaceholder": "Email", "runtime.password": "Staging password", "runtime.passwordPlaceholder": "Password",
     "runtime.signingIn": "Signing in...", "runtime.signIn": "Sign in", "runtime.chooseFamily": "Choose a family", "runtime.chooseFamilyBody": "Select the family space you want to open.",
     "runtime.familyOption": "{family} - {role}", "runtime.createJoin": "Create or join a family", "runtime.createJoinBody": "Use fictional staging information only. A connection is created only after an invitation is accepted.",
@@ -109,6 +112,9 @@ const messages = {
     "foundation.previewResult": "Résultat de la vérification du message", "foundation.suggested": "Formulation suggérée : {suggestion}", "foundation.retryCheck": "Réessayer la vérification", "foundation.resetSession": "Réinitialiser la session de cet appareil"
     ,"runtime.signInTitle": "Connexion à l’environnement de test", "runtime.signInBody": "Utilisez un compte PeacePad de test fictif. Les véritables renseignements familiaux sont interdits.",
     "runtime.regionCanada": "Environnement de test au Canada", "runtime.regionUnitedStates": "Environnement de test aux États-Unis",
+    "runtime.regionSelectTitle": "Choisissez votre région de données", "runtime.regionSelectBody": "Choisissez où cette session de test fictive sera stockée avant de vous connecter.",
+    "runtime.regionChoiceHint": "Sélectionne le service de test régional de cet appareil. Vous pourrez choisir de nouveau après vous être déconnecté et avoir rouvert PeacePad.",
+    "runtime.regionContinue": "Continuer vers {region}",
     "runtime.email": "Courriel de test", "runtime.emailPlaceholder": "Courriel", "runtime.password": "Mot de passe de test", "runtime.passwordPlaceholder": "Mot de passe",
     "runtime.signingIn": "Connexion...", "runtime.signIn": "Se connecter", "runtime.chooseFamily": "Choisir une famille", "runtime.chooseFamilyBody": "Sélectionnez l’espace familial à ouvrir.",
     "runtime.familyOption": "{family} - {role}", "runtime.createJoin": "Créer ou rejoindre une famille", "runtime.createJoinBody": "Utilisez uniquement des renseignements fictifs de test. Une connexion est créée seulement après l’acceptation d’une invitation.",
@@ -167,6 +173,9 @@ const messages = {
     "foundation.previewResult": "Resultado de la revisión del mensaje", "foundation.suggested": "Redacción sugerida: {suggestion}", "foundation.retryCheck": "Volver a intentar la revisión", "foundation.resetSession": "Restablecer la sesión de este dispositivo"
     ,"runtime.signInTitle": "Iniciar sesión en pruebas", "runtime.signInBody": "Usa una cuenta ficticia de pruebas de PeacePad. No se permite información familiar real.",
     "runtime.regionCanada": "Entorno de pruebas de Canadá", "runtime.regionUnitedStates": "Entorno de pruebas de Estados Unidos",
+    "runtime.regionSelectTitle": "Elige tu región de datos", "runtime.regionSelectBody": "Elige dónde se guardará esta sesión ficticia de pruebas antes de iniciar sesión.",
+    "runtime.regionChoiceHint": "Selecciona el servicio regional de pruebas de este dispositivo. Podrás elegir de nuevo después de cerrar sesión y volver a abrir PeacePad.",
+    "runtime.regionContinue": "Continuar a {region}",
     "runtime.email": "Correo de pruebas", "runtime.emailPlaceholder": "Correo", "runtime.password": "Contraseña de pruebas", "runtime.passwordPlaceholder": "Contraseña",
     "runtime.signingIn": "Iniciando sesión...", "runtime.signIn": "Iniciar sesión", "runtime.chooseFamily": "Elegir una familia", "runtime.chooseFamilyBody": "Selecciona el espacio familiar que quieres abrir.",
     "runtime.familyOption": "{family} - {role}", "runtime.createJoin": "Crear o unirse a una familia", "runtime.createJoinBody": "Usa únicamente información ficticia de pruebas. Solo se crea una conexión después de aceptar una invitación.",

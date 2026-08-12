@@ -1,4 +1,4 @@
-import React, { Component, useCallback, useEffect, useMemo, useRef, type ErrorInfo, type ReactNode } from "react";
+import React, { Component, useCallback, useEffect, useMemo, useRef, useState, type ErrorInfo, type ReactNode } from "react";
 import { NavigationContainer, useNavigation, type LinkingOptions } from "@react-navigation/native";
 import { createNativeStackNavigator, type NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
@@ -14,7 +14,8 @@ import {
   type CoordinationScreen
 } from "./coordination/CoordinationScreens";
 import { CoordinationStateProvider } from "./coordination/CoordinationState";
-import { environmentConfig, resolveSupabaseStagingConfig } from "./config/environment";
+import { environmentConfig, resolveSupabaseStagingDirectory, type PeacePadSupabaseConfig } from "./config/environment";
+import { StagingRegionGate } from "./config/StagingRegionGate";
 import { FoundationScreen } from "./foundation/FoundationScreen";
 import { LocalizationProvider } from "./localization/LocalizationProvider";
 import { RecordsStateProvider } from "./records/RecordsState";
@@ -108,18 +109,31 @@ function PendingInvitationNavigation() {
 }
 
 function PeacePadStagingApp() {
-  const staging = useMemo(() => resolveSupabaseStagingConfig(), []);
-  const client = useMemo(() => createPeacePadSupabaseClient(staging), [staging]);
+  const directory = useMemo(() => resolveSupabaseStagingDirectory(), []);
   return (
     <LocalizationProvider>
       <SafeAreaProvider>
-        <SupabaseSessionProvider client={client}>
-          <PeacePadStagingRuntime environment={environmentConfig} supabase={staging}>
-            <PeacePadCoordinationApp startScreen="home" wrapLocalization={false} wrapRecordsProvider={false} wrapAudioCallProvider={false} />
-          </PeacePadStagingRuntime>
-        </SupabaseSessionProvider>
+        <PeacePadStagingRegionRouter directory={directory} />
       </SafeAreaProvider>
     </LocalizationProvider>
+  );
+}
+
+export function PeacePadStagingRegionRouter({ directory }: { directory: readonly PeacePadSupabaseConfig[] }) {
+  const [staging, setStaging] = useState<PeacePadSupabaseConfig | undefined>(() => directory.length === 1 ? directory[0] : undefined);
+  if (!staging) return <StagingRegionGate configs={directory} onSelect={setStaging} />;
+  return <SelectedPeacePadStagingApp staging={staging} />;
+}
+
+function SelectedPeacePadStagingApp({ staging }: { staging: PeacePadSupabaseConfig }) {
+  const client = useMemo(() => createPeacePadSupabaseClient(staging), [staging]);
+  const selectedEnvironment = useMemo(() => ({ ...environmentConfig, apiBaseUrl: staging.apiBaseUrl }), [staging]);
+  return (
+    <SupabaseSessionProvider client={client}>
+      <PeacePadStagingRuntime environment={selectedEnvironment} supabase={staging}>
+        <PeacePadCoordinationApp startScreen="home" wrapLocalization={false} wrapRecordsProvider={false} wrapAudioCallProvider={false} />
+      </PeacePadStagingRuntime>
+    </SupabaseSessionProvider>
   );
 }
 
