@@ -45,6 +45,12 @@ function verifyStaticContract() {
     assert(resolved.ios?.bundleIdentifier === "ca.peacepad.nextnative.lab", "The Simulator must retain the isolated lab bundle.");
     assert(resolved.extra?.productionApiWritesEnabled === false, "The Simulator must not enable production writes.");
     assert(resolved.extra?.releaseChannel === profileName, "The resolved Simulator release channel changed unexpectedly.");
+    const launcher = fs.readFileSync(path.join(root, "scripts", "start-ios-dual-simulator-build.cjs"), "utf8");
+    assert(launcher.includes("D:\\\\PeacePadRelease\\\\dual-simulator"), "The Windows Simulator launcher must keep scratch work on D:.");
+    assert(launcher.includes('"archive"') && launcher.includes("core.autocrlf=false"), "The launcher must create an exact app-only Git archive.");
+    assert(launcher.includes("HEAD:APPS/peacepad-next-native"), "The launcher must bind the isolated app tree to the reviewed monorepo commit.");
+    assert(launcher.includes('"staging-simulator-dual"') && launcher.includes('"--no-wait"'), "The launcher must enqueue only the reviewed asynchronous dual-region Simulator profile.");
+    assert(!launcher.includes("--auto-submit"), "The dual-region Simulator launcher must never submit to Apple.");
   } finally {
     if (previousMode === undefined) delete process.env.PEACEPAD_IOS_RELEASE_MODE;
     else process.env.PEACEPAD_IOS_RELEASE_MODE = previousMode;

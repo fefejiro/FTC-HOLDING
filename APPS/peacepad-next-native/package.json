@@ -21,6 +21,7 @@
     "release:ios:simulator:preflight:online": "node scripts/check-ios-dual-simulator-readiness.cjs --online",
     "release:ios:simulator:runtime:verify": "node scripts/check-ios-dual-simulator-readiness.cjs --injected",
     "release:ios:simulator:build:check": "node scripts/start-ios-dual-simulator-build.cjs",
+    "release:ios:simulator:build:prepare": "node scripts/start-ios-dual-simulator-build.cjs --prepare-only",
     "release:ios:simulator:build:cloud": "node scripts/start-ios-dual-simulator-build.cjs --start",
     "secret-scan": "node scripts/check-secrets.cjs",
     "test": "jest --runInBand",
