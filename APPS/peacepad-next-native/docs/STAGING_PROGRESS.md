@@ -17,10 +17,16 @@ historical #172 baseline plus explicitly labelled successor evidence.
 Apple signing is now configured for the existing PeacePad bundle
 `ca.peacepad.family`. The D:-backed TestFlight launcher verified the exact
 app-only Git tree, passed its online Apple/EAS configuration checks, and
-uploaded a 1.8 MB archive. EAS then refused to create the signed build because
-the account's free iOS build allocation is exhausted until 2026-09-01. The
-attempt remained fictional staging with production writes disabled and had no
-auto-submit path. No TestFlight, App Store, or production V2 release occurred.
+uploaded a 1.8 MB archive; EAS then refused its cloud build because the free
+iOS allocation is exhausted until 2026-09-01. The quota-free standard GitHub
+macOS control instead produced a signed 25,041,566-byte IPA from exact source
+`710697817aa2666b7ef7b13ef711aa563976da54` in
+[run `31642371405`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31642371405).
+The artifact SHA-256 is
+`b863d431e9e259b9b41129ca6598082148a44186e86ccf4bbe0b34179f7bd2ec`;
+its manifest records the `testflight-internal` profile and
+`submission_attempted=false`. It remains fictional staging with production
+writes disabled. No TestFlight, App Store, or production V2 release occurred.
 
 The same existing public package now has a separate guarded Android
 store-distribution candidate. Exact source `4bde06e651d00de25c30ba48e50e9557619ccb31`
