@@ -111,6 +111,14 @@ async function verifyOnlineContract() {
     if (!condition) blockers.push(message);
   };
 
+  // Apple team linkage is required for every signed store build. Check it
+  // first so a missing link fails before slower, non-remediating remote checks.
+  const devices = runEas(["device:list"], { allowFailure: true });
+  check(!/couldn['’]t find any teams/i.test(devices), "No Apple Developer team is linked to the EAS account.");
+  if (blockers.length > 0) {
+    throw new Error(blockers.join(" "));
+  }
+
   const response = await fetch(`https://itunes.apple.com/lookup?id=${expected.appStoreId}&country=ca`);
   assert(response.ok, "Apple's public lookup endpoint was unavailable.");
   const lookup = await response.json();
@@ -125,8 +133,6 @@ async function verifyOnlineContract() {
   const configuredNames = new Set(productionEnvironment.match(/EXPO_PUBLIC_PEACEPAD_[A-Z0-9_]+/g) ?? []);
   const missing = requiredRegionalNames.filter((name) => !configuredNames.has(name));
   check(missing.length === 0, `EAS production is missing ${missing.length} required dual-region public variable name(s): ${missing.join(", ")}`);
-  const devices = runEas(["device:list"], { allowFailure: true });
-  check(!/couldn['’]t find any teams/i.test(devices), "No Apple Developer team is linked to the EAS account.");
   assert(blockers.length === 0, blockers.join(" "));
 }
 
