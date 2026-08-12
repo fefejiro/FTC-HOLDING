@@ -22,7 +22,7 @@ concurrency:
 jobs:
   build-signed-candidate:
     name: Build signed internal candidate without EAS cloud quota
-    runs-on: macos-15-intel
+    runs-on: macos-26-intel
     timeout-minutes: 75
 
     steps:
@@ -50,6 +50,11 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: APPS/peacepad-next-native/package-lock.json
+
+      - name: Record current Xcode toolchain
+        shell: bash
+        run: |
+          xcodebuild -version | tee "$RUNNER_TEMP/peacepad-v2-xcode-version.txt"
 
       - name: Build only the exact Native V2 tree
         env:
@@ -109,3 +114,4 @@ jobs:
             ${{ runner.temp }}/peacepad-v2-testflight-candidate.ipa
             ${{ runner.temp }}/peacepad-v2-testflight-candidate.sha256
             ${{ runner.temp }}/peacepad-v2-testflight-candidate.manifest
+            ${{ runner.temp }}/peacepad-v2-xcode-version.txt
