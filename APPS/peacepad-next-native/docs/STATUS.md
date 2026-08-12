@@ -21,6 +21,36 @@ is historical and cannot independently pass a release gate.
 
 **BLOCKED - Gate 0 is HOSTED VERIFIED and both replacement regional fictional-staging projects are DEPLOYED STAGING VERIFIED for all 20 migrations, the regional Edge API, public boundaries, a managed fictional two-account feature contract, and read-only application-schema logical restoration. One exact EAS Simulator artifact from source `2fe8ca82b` is now screenshot-backed SIMULATOR VERIFIED against both Canada and U.S. staging: each protected journey authenticated two temporary fictional accounts, mutated native messaging and Calendar state, proved second-account visibility, removed both application/Auth accounts, and destroyed both Simulators. The D:-backed app-only pipeline uploads about 1.7 MB instead of cloning the multi-gigabyte monorepo and requires an explicit accessible pre-auth region choice from the same binary. Hosted source `8b1f3bf6b` adds a guarded internal TestFlight `2.0.0` (`2`) contract for existing bundle `ca.peacepad.family` and Apple ID `6793350735`, with production writes disabled and exact dual-region public staging variables verified in EAS production. MacinCloud is past due but is not on the active EAS/GitHub release path. No Apple Developer team is linked to the EAS account, so no signed build or submission was started. Provider-level Auth/platform snapshot or PITR recovery, invitation/Message Check/deletion/offline native journeys, TURN capacity and live media, real-device journeys, assistive-technology and trust reviews, Apple signing, TestFlight, and App Store release remain incomplete.**
 
+## Real production cutover audit — 2026-08-12
+
+The public web domain is reachable, but the live API at `api.peacepad.ca` is
+not serving PeacePad: its health routes return the Railway fallback 404. The
+linked Railway production service has zero running replicas. Railway reports
+that its last attempted deployment failed before build because it could not
+create a code snapshot; a direct source redeploy is currently refused because
+the Railway trial has expired. Its dependent legacy PostgreSQL service also has
+no active deployment. This is an operational/billing blocker, not evidence that
+Native V2 is live or that it can safely replace the existing data backend.
+
+Native V2 is a separate Expo/Supabase application model. The current public
+Capacitor app uses the same bundle ID but a legacy Express/PostgreSQL API and
+schema, so changing a runtime environment flag would strand existing accounts
+and data. A real V2 release requires: restoring or re-homing the legacy source
+of truth; a reviewed, reversible existing-account/data migration or compatible
+API bridge; a real Canada production Supabase project with backups and a
+non-staging write boundary; and Apple signing/release completion. No production
+records were copied, changed, or deleted during this audit.
+
+The Mike Supabase organization currently has its two free active-project slots
+occupied by the Canada and U.S. staging projects. Creation of a new Canada
+production project was rejected by Supabase on that limit. The CLI offers
+deletion, not a safe pause operation, so the U.S. staging project was preserved.
+The next external action is to upgrade the organization or intentionally pause
+or remove that project in the Supabase dashboard, then provision the Canada
+production project. During the provider audit, stored environment secrets were
+returned to the local terminal; treat those values as exposed and rotate them
+before restoring the legacy production service.
+
 Native V2 is implemented partly as a synthetic/staging prototype. It is not
 ready for production identity, real family information, TestFlight, or App
 Store submission. The reproducible local foundation now passes. The immediate
