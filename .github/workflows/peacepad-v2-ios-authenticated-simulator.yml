@@ -26,6 +26,15 @@ on:
         description: Exact feature commit used for the regional EAS Simulator build
         required: true
         type: string
+      build_profile:
+        description: Exact reviewed EAS Simulator profile used for the artifact
+        required: true
+        default: staging-simulator-dual
+        type: choice
+        options:
+          - staging-simulator-dual
+          - staging-simulator-ca
+          - staging-simulator-us
       eas_build_id:
         description: Exact finished regional staging EAS iOS Simulator build ID
         required: true
@@ -76,6 +85,7 @@ jobs:
         id: contract
         shell: bash
         env:
+          BUILD_PROFILE: ${{ inputs.build_profile }}
           BUILD_SOURCE_SHA: ${{ inputs.build_source_sha }}
           CONFIRMATION: ${{ inputs.confirmation }}
           REGION: ${{ inputs.region }}
@@ -101,17 +111,34 @@ jobs:
           case "$REGION" in
             ca)
               EXPECTED_REGION_LABEL="Canada staging"
-              EXPECTED_PROFILE="staging-simulator-ca"
-              EXPECTED_EAS_ENVIRONMENT="preview"
               EXPECTED_PROJECT_REF="rohvkyuxbnqzglaromms"
               ;;
             us)
               EXPECTED_REGION_LABEL="United States staging"
-              EXPECTED_PROFILE="staging-simulator-us"
-              EXPECTED_EAS_ENVIRONMENT="development"
               EXPECTED_PROJECT_REF="spmpndalcvwmygznihec"
               ;;
             *) echo "Unsupported staging region." >&2; exit 1 ;;
+          esac
+
+          case "$BUILD_PROFILE" in
+            staging-simulator-dual)
+              EXPECTED_PROFILE="staging-simulator-dual"
+              EXPECTED_EAS_ENVIRONMENT="production"
+              REQUIRES_REGION_SELECTION="true"
+              ;;
+            staging-simulator-ca)
+              test "$REGION" = "ca"
+              EXPECTED_PROFILE="staging-simulator-ca"
+              EXPECTED_EAS_ENVIRONMENT="preview"
+              REQUIRES_REGION_SELECTION="false"
+              ;;
+            staging-simulator-us)
+              test "$REGION" = "us"
+              EXPECTED_PROFILE="staging-simulator-us"
+              EXPECTED_EAS_ENVIRONMENT="development"
+              REQUIRES_REGION_SELECTION="false"
+              ;;
+            *) echo "Unsupported Simulator build profile." >&2; exit 1 ;;
           esac
 
           REGION="$REGION" EXPECTED_PROFILE="$EXPECTED_PROFILE" EXPECTED_EAS_ENVIRONMENT="$EXPECTED_EAS_ENVIRONMENT" \
@@ -132,6 +159,7 @@ jobs:
             echo "expected_region_label=$EXPECTED_REGION_LABEL"
             echo "expected_profile=$EXPECTED_PROFILE"
             echo "expected_project_ref=$EXPECTED_PROJECT_REF"
+            echo "requires_region_selection=$REQUIRES_REGION_SELECTION"
           } >> "$GITHUB_OUTPUT"
 
       - name: Install Maestro before provisioning credentials
@@ -257,6 +285,7 @@ jobs:
           DEVICE_A: ${{ steps.simulators.outputs.device_a }}
           DEVICE_B: ${{ steps.simulators.outputs.device_b }}
           EXPECTED_REGION_LABEL: ${{ steps.contract.outputs.expected_region_label }}
+          REQUIRES_REGION_SELECTION: ${{ steps.contract.outputs.requires_region_selection }}
           MAESTRO_DRIVER_STARTUP_TIMEOUT: "480000"
           REGION: ${{ inputs.region }}
           VERIFICATION_SCOPE: ${{ inputs.verification_scope }}
@@ -277,6 +306,19 @@ jobs:
           ---
           - launchApp:
               clearState: true
+          YAML
+            if test "$REQUIRES_REGION_SELECTION" = "true"; then
+              cat >> "$path" <<YAML
+          - extendedWaitUntil:
+              visible: "Choose your data region"
+              timeout: 60000
+          - assertVisible: "Canada staging"
+          - assertVisible: "United States staging"
+          - tapOn: "$EXPECTED_REGION_LABEL"
+          - tapOn: "Continue to $EXPECTED_REGION_LABEL"
+          YAML
+            fi
+            cat >> "$path" <<YAML
           - extendedWaitUntil:
               visible: "Sign in to staging"
               timeout: 60000
@@ -466,6 +508,7 @@ jobs:
         if: always()
         shell: bash
         env:
+          BUILD_PROFILE: ${{ inputs.build_profile }}
           EAS_BUILD_ID: ${{ inputs.eas_build_id }}
           PROJECT_REF: ${{ steps.contract.outputs.expected_project_ref }}
           REGION: ${{ inputs.region }}
@@ -505,6 +548,7 @@ jobs:
             --arg projectRef "$PROJECT_REF" \
             --arg easBuildId "$EAS_BUILD_ID" \
             --arg artifactSha256 "${{ steps.artifact.outputs.actual_sha256 }}" \
+            --arg buildProfile "$BUILD_PROFILE" \
             --arg verificationScope "$VERIFICATION_SCOPE" \
             --argjson journeyVerified "$journey_verified" \
             --argjson messageMutationVerified "$message_mutation_verified" \
@@ -520,6 +564,8 @@ jobs:
               expectedProjectRef: $projectRef,
               easBuildId: $easBuildId,
               artifactSha256: $artifactSha256,
+              buildProfile: $buildProfile,
+              oneArtifactRegionSelection: ($buildProfile == "staging-simulator-dual"),
               verificationScope: $verificationScope,
               classification: "fictional-only",
               fixtureDomain: "example.test",
