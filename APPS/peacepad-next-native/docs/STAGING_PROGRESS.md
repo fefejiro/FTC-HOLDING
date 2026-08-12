@@ -31,11 +31,14 @@ This is not a production source read, data migration, production project,
 production-write enablement, TestFlight, or App Store release.
 
 An empty Canada production database baseline now exists separately at project
-`qzekqjewpugdotskrtni` (`ca-central-1`). It has the 20 reviewed V2 migrations
-and a committed search-path hardening migration, but no Edge adapter, native
-production runtime, legacy data, public users, TestFlight build, or App Store
-release. See [STATUS.md](STATUS.md) for its security/recovery limitations and
-the remaining production gates.
+`qzekqjewpugdotskrtni` (`ca-central-1`). Exact commit `d61f0cd4c` deployed its
+Canada-only Edge adapter with public health/readiness and an explicit global
+write lock: all state-changing methods return `503 PRODUCTION_WRITES_DISABLED`.
+Hosted Native run `31634029734` and Infrastructure run `31634029761` passed;
+the direct public health/readiness/write-lock contract was also observed. It
+has no native production runtime, legacy data, public users, TestFlight build,
+or App Store release. See [STATUS.md](STATUS.md) for its security/recovery
+limitations and remaining production gates.
 
 The current public legacy rollback product passed operator-path endpoint,
 ownership, and self-cleaning guest deletion checks on 2026-08-12. Hosted run

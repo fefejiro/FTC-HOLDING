@@ -10,7 +10,7 @@
 - Guarded internal TestFlight candidate: `2.0.0` (`2`)
 - Staging/lab bundle: `ca.peacepad.nextnative.lab`
 - Future production bundle: `ca.peacepad.family`
-- Runtime boundary: lab/staging only; production API writes disabled
+- Runtime boundary: native app lab/staging only; Canada production Edge writes disabled
 - Rollback product: live React Web + Capacitor PeacePad
 
 Evidence is current only when it identifies the exact commit, command or
@@ -19,7 +19,7 @@ is historical and cannot independently pass a release gate.
 
 ## Release verdict
 
-**BLOCKED - Gate 0 is HOSTED VERIFIED and both replacement regional fictional-staging projects are DEPLOYED STAGING VERIFIED for all 20 migrations, the regional Edge API, public boundaries, a managed fictional two-account feature contract, and read-only application-schema logical restoration. One exact EAS Simulator artifact from source `2fe8ca82b` is now screenshot-backed SIMULATOR VERIFIED against both Canada and U.S. staging: each protected journey authenticated two temporary fictional accounts, mutated native messaging and Calendar state, proved second-account visibility, removed both application/Auth accounts, and destroyed both Simulators. The D:-backed app-only pipeline uploads about 1.7 MB instead of cloning the multi-gigabyte monorepo and requires an explicit accessible pre-auth region choice from the same binary. The Apple team, distribution certificate, and provisioning profile are now configured for existing bundle `ca.peacepad.family`; the current internal TestFlight profile remains fictional staging with production writes disabled. On 2026-08-12, EAS accepted the exact 1.8 MB signed-build upload but refused to queue it because the account's free iOS build allocation is exhausted until 2026-09-01. No signed build, TestFlight upload, App Store submission, or production V2 cutover occurred. MacinCloud is past due but is not on the active EAS/GitHub release path. Provider-level Auth/platform snapshot or PITR recovery, a reviewed reversible existing-account migration, invitation/Message Check/deletion/offline native journeys, TURN capacity and live media, real-device journeys, assistive-technology and trust reviews, TestFlight, and App Store release remain incomplete.**
+**BLOCKED - Gate 0 is HOSTED VERIFIED and both replacement regional fictional-staging projects are DEPLOYED STAGING VERIFIED for all 20 migrations, the regional Edge API, public boundaries, a managed fictional two-account feature contract, and read-only application-schema logical restoration. Canada now also has a separately deployed production Edge adapter with an empty hardened schema, public health/readiness, and an explicit global write lock; it is not connected to the native app or legacy users. One exact EAS Simulator artifact from source `2fe8ca82b` is now screenshot-backed SIMULATOR VERIFIED against both Canada and U.S. staging: each protected journey authenticated two temporary fictional accounts, mutated native messaging and Calendar state, proved second-account visibility, removed both application/Auth accounts, and destroyed both Simulators. The D:-backed app-only pipeline uploads about 1.7 MB instead of cloning the multi-gigabyte monorepo and requires an explicit accessible pre-auth region choice from the same binary. The Apple team, distribution certificate, and provisioning profile are now configured for existing bundle `ca.peacepad.family`; the current internal TestFlight profile remains fictional staging with production writes disabled. On 2026-08-12, EAS accepted the exact 1.8 MB signed-build upload but refused to queue it because the account's free iOS build allocation is exhausted until 2026-09-01. No signed build, TestFlight upload, App Store submission, or production V2 cutover occurred. MacinCloud is past due but is not on the active EAS/GitHub release path. Provider-level Auth/platform snapshot or PITR recovery, a reviewed reversible existing-account migration, invitation/Message Check/deletion/offline native journeys, TURN capacity and live media, real-device journeys, assistive-technology and trust reviews, TestFlight, and App Store release remain incomplete.**
 
 ### Current signed-build attempt — 2026-08-12
 
@@ -70,13 +70,31 @@ schema is designed to be reached only through a server-side authorization
 adapter.
 
 This is an **empty production schema baseline**, not a public Native V2
-release. No legacy account or family data was read, copied, or changed; no
-production V2 Edge adapter is deployed; no V2 public/publishable key has been
-configured; the native app remains hard-coded to lab/staging and continues to
-disable production writes. PITR is not enabled on the current plan, so this
-database must not receive real family information until an approved recovery
-path, a real production runtime, and the reviewed reversible migration gates
-are complete.
+release. No legacy account or family data was read, copied, or changed; no V2
+public/publishable key has been configured; the native app remains hard-coded
+to lab/staging and continues to disable production writes. PITR is not enabled
+on the current plan, so this database must not receive real family information
+until an approved recovery path, a real production runtime, and the reviewed
+reversible migration gates are complete.
+
+### Canada production Edge adapter -- 2026-08-12
+
+Exact commit `d61f0cd4c` adds a separate Canada-only deployment runner for
+`qzekqjewpugdotskrtni`; it verifies that exact active `ca-central-1` project,
+sets the runtime to `production`, allows only `https://peacepad.ca` and
+`https://www.peacepad.ca` browser origins, and deploys `peacepad-v2-api`.
+The runner explicitly sets `PEACEPAD_PRODUCTION_WRITES_ENABLED=false`; the
+function rejects every `POST`, `PATCH`, `PUT`, and `DELETE` before authentication
+or a database mutation with `503 PRODUCTION_WRITES_DISABLED`.
+
+After deployment, public `GET /functions/v1/peacepad-v2-api/health` and
+`/readyz` both returned `200` with `environment: production`, `region: ca`, and
+`writesEnabled: false`; a direct `POST /api/v2/invitations` returned the expected
+write-lock response. Hosted Native run `31634029734` and Infrastructure run
+`31634029761` passed for the exact source. This is a deployed production
+**boundary**, not a user-facing launch: the schema remains empty, no native
+release points to it, there is no public key/client configuration, and no
+legacy account/data migration or production write enablement has occurred.
 
 ## Real production cutover audit — 2026-08-12
 
