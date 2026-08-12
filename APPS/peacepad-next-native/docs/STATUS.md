@@ -23,14 +23,17 @@ is historical and cannot independently pass a release gate.
 
 ## Real production cutover audit — 2026-08-12
 
-The public web domain is reachable, but the live API at `api.peacepad.ca` is
-not serving PeacePad: its health routes return the Railway fallback 404. The
-linked Railway production service has zero running replicas. Railway reports
-that its last attempted deployment failed before build because it could not
-create a code snapshot; a direct source redeploy is currently refused because
-the Railway trial has expired. Its dependent legacy PostgreSQL service also has
-no active deployment. This is an operational/billing blocker, not evidence that
-Native V2 is live or that it can safely replace the existing data backend.
+The public web domain is reachable, but `api.peacepad.ca` is still not serving
+PeacePad: its health route returns the Railway fallback 404. The correct
+Railway workspace is now confirmed as `Peace Pad's Projects`, project
+`lively-simplicity`, service `@ftc/peacepad`. Its Railway service domain
+`ftcpeacepad-production.up.railway.app` is running from
+`fefejiro/FTC-HOLDING`; `GET /api/health` returns 200 and the unauthenticated
+`GET /api/auth/me` contract correctly returns 401. The public hostname remains
+unbound because Railway rejected adding `api.peacepad.ca` on the current free
+plan's custom-domain limit. A DNS-only CNAME change was explicitly tested
+against the running service and returned Railway's host fallback, so DNS was
+not changed and no public outage was introduced.
 
 Native V2 is a separate Expo/Supabase application model. The current public
 Capacitor app uses the same bundle ID but a legacy Express/PostgreSQL API and
@@ -41,15 +44,20 @@ API bridge; a real Canada production Supabase project with backups and a
 non-staging write boundary; and Apple signing/release completion. No production
 records were copied, changed, or deleted during this audit.
 
-The Mike Supabase organization currently has its two free active-project slots
-occupied by the Canada and U.S. staging projects. Creation of a new Canada
-production project was rejected by Supabase on that limit. The CLI offers
-deletion, not a safe pause operation, so the U.S. staging project was preserved.
-The next external action is to upgrade the organization or intentionally pause
-or remove that project in the Supabase dashboard, then provision the Canada
-production project. During the provider audit, stored environment secrets were
-returned to the local terminal; treat those values as exposed and rotate them
-before restoring the legacy production service.
+The legacy Supabase source project `aaaextkrfoqomzmjjkxe` was inactive but
+still present. On 2026-08-12, the authenticated Management API accepted its
+documented restore request. To release the free active-project slot, the user
+authorized pausing (not deleting) the U.S. fictional-staging project
+`spmpndalcvwmygznihec`; its data and configuration remain recoverable. During
+the legacy restore, the database hostname began resolving again and the direct
+running PeacePad service reported `database.reachable: true` from `/v2/health`.
+No production records were read, copied, changed, or deleted. The remaining
+operational blocker for restoring the existing public app is the API hostname:
+upgrade the Railway workspace or explicitly reassign its unrelated custom-domain
+allowance, then bind `api.peacepad.ca` to the verified `@ftc/peacepad` service
+and verify public health before any V2 cutover. During an earlier provider
+audit, stored environment secrets were returned to the local terminal; treat
+those values as exposed and rotate them before a production release.
 
 Native V2 is implemented partly as a synthetic/staging prototype. It is not
 ready for production identity, real family information, TestFlight, or App
