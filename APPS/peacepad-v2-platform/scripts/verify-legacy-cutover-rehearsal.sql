@@ -60,15 +60,15 @@ insert into legacy_cutover_event values
 
 do $$
 begin
-  if (select count(*) from peacepad_v2.identity where region = 'ca') <> 2 then raise exception 'CUTOVER_REHEARSAL_IDENTITY_COUNT'; end if;
-  if (select count(*) from peacepad_v2.consent_record where region = 'ca') <> 3 then raise exception 'CUTOVER_REHEARSAL_CONSENT_COUNT'; end if;
-  if (select count(*) from peacepad_v2.family_circle where region = 'ca') <> 1 then raise exception 'CUTOVER_REHEARSAL_FAMILY_COUNT'; end if;
-  if (select count(*) from peacepad_v2.participant_grant where region = 'ca') <> 2 then raise exception 'CUTOVER_REHEARSAL_GRANT_COUNT'; end if;
-  if (select count(*) from peacepad_v2.conversation where region = 'ca') <> 1 then raise exception 'CUTOVER_REHEARSAL_CONVERSATION_COUNT'; end if;
-  if (select count(*) from peacepad_v2.message_event where region = 'ca' and body = 'Fictional rehearsal message') <> 1 then raise exception 'CUTOVER_REHEARSAL_MESSAGE_FINGERPRINT'; end if;
-  if (select count(*) from peacepad_v2.calendar_layer where region = 'ca') <> 1 then raise exception 'CUTOVER_REHEARSAL_LAYER_COUNT'; end if;
-  if (select count(*) from peacepad_v2.schedule_event where region = 'ca' and title = 'Fictional appointment') <> 1 then raise exception 'CUTOVER_REHEARSAL_EVENT_FINGERPRINT'; end if;
-  if not exists (select 1 from peacepad_v2.participant_grant where region = 'ca' and 'calls' = any(permissions)) then raise exception 'CUTOVER_REHEARSAL_AUDIO_PERMISSION'; end if;
+  if (select count(*) from peacepad_v2.identity where identity_id in ('90000000-0000-4000-8000-000000000001', '90000000-0000-4000-8000-000000000002')) <> 2 then raise exception 'CUTOVER_REHEARSAL_IDENTITY_COUNT'; end if;
+  if (select count(*) from peacepad_v2.consent_record where identity_id in ('90000000-0000-4000-8000-000000000001', '90000000-0000-4000-8000-000000000002')) <> 3 then raise exception 'CUTOVER_REHEARSAL_CONSENT_COUNT'; end if;
+  if (select count(*) from peacepad_v2.family_circle where family_id = '20000000-0000-4000-8000-000000000001') <> 1 then raise exception 'CUTOVER_REHEARSAL_FAMILY_COUNT'; end if;
+  if (select count(*) from peacepad_v2.participant_grant where family_id = '20000000-0000-4000-8000-000000000001') <> 2 then raise exception 'CUTOVER_REHEARSAL_GRANT_COUNT'; end if;
+  if (select count(*) from peacepad_v2.conversation where conversation_id = '30000000-0000-4000-8000-000000000001') <> 1 then raise exception 'CUTOVER_REHEARSAL_CONVERSATION_COUNT'; end if;
+  if (select count(*) from peacepad_v2.message_event where message_event_id = '40000000-0000-4000-8000-000000000001' and body = 'Fictional rehearsal message') <> 1 then raise exception 'CUTOVER_REHEARSAL_MESSAGE_FINGERPRINT'; end if;
+  if (select count(*) from peacepad_v2.calendar_layer where family_id = '20000000-0000-4000-8000-000000000001') <> 1 then raise exception 'CUTOVER_REHEARSAL_LAYER_COUNT'; end if;
+  if (select count(*) from peacepad_v2.schedule_event where schedule_event_id = '50000000-0000-4000-8000-000000000001' and title = 'Fictional appointment') <> 1 then raise exception 'CUTOVER_REHEARSAL_EVENT_FINGERPRINT'; end if;
+  if not exists (select 1 from peacepad_v2.participant_grant where family_id = '20000000-0000-4000-8000-000000000001' and 'calls' = any(permissions)) then raise exception 'CUTOVER_REHEARSAL_AUDIO_PERMISSION'; end if;
 end;
 $$;
 

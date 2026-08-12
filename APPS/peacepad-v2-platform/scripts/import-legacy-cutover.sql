@@ -189,7 +189,14 @@ having count(distinct member_claim.identity_id) between 2 and 8;
 
 do $$
 begin
-  if (select count(*) from legacy_cutover_conversation) <> (select count(*) from peacepad_v2.conversation where region = current_setting('peacepad_v2.cutover_region', true)) then
+  if exists (
+    select 1
+    from legacy_cutover_conversation source_row
+    left join peacepad_v2.conversation target_row
+      on target_row.conversation_id = source_row.legacy_conversation_id::uuid
+     and target_row.region = current_setting('peacepad_v2.cutover_region', true)
+    where target_row.conversation_id is null
+  ) then
     raise exception 'LEGACY_CUTOVER_CONVERSATION_CARDINALITY_INVALID';
   end if;
   if exists (
