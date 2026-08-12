@@ -41,8 +41,11 @@ metadata: 110 users, 54 partnerships/conversations, 108 memberships, 380
 messages, and 162 events; all required columns were present, the source
 fingerprint was `a7dd689913cba7031082eb5c4708c52c`, and it exposed no user
 content. Legacy events have no `partnership_id`, so their automatic import is
-blocked pending an explicit reviewed scope mapping. This is not migration
-approval, data movement, production-write enablement, TestFlight, or release.
+blocked pending an explicit reviewed scope mapping. A second aggregate-only
+check found every event has exactly one creator partnership (none have zero or
+multiple candidates), which enables a future reviewed derived-scope mapping
+but does not approve one. This is not migration approval, data movement,
+production-write enablement, TestFlight, or release.
 
 An empty Canada production database baseline now exists separately at project
 `qzekqjewpugdotskrtni` (`ca-central-1`). Exact commit `d61f0cd4c` deployed its

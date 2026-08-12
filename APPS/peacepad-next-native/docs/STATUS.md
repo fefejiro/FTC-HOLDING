@@ -77,10 +77,15 @@ without printing the connection value. It returned only aggregate metadata:
 source fingerprint was `a7dd689913cba7031082eb5c4708c52c`. The report contained
 no user content. Most importantly, `eventsPartnershipScopeAvailable` was
 `false`: legacy events have no explicit partnership identifier, so event import
-must remain blocked pending a separately reviewed scope mapping. No credential
-is stored in this workspace. This is real-source read-only inventory evidence,
-not migration approval, production-data movement, a recovery rehearsal, or
-permission to enable V2 writes.
+must remain blocked pending a separately reviewed scope mapping. A second
+content-free, read-only ambiguity summary found all 162 legacy events have a
+creator and exactly one creator partnership; none had zero or multiple
+candidate partnerships. This makes a reviewed derived-scope mapping possible,
+but does not convert it into an approved mapping or remove the importer's
+fail-closed requirement. No credential is stored in this workspace. This is
+real-source read-only inventory evidence, not migration approval,
+production-data movement, a recovery rehearsal, or permission to enable V2
+writes.
 
 ### Canada production database baseline -- 2026-08-12
 
