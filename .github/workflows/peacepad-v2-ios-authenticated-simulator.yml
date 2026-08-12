@@ -454,6 +454,12 @@ jobs:
               start: 50%, 80%
               end: 50%, 30%
               duration: 400
+          # iOS may defer the system password-save sheet until focus leaves the
+          # composer. It is not a PeacePad dialog and must be dismissed before
+          # asserting the explicit Send message action.
+          - tapOn:
+              text: "Not Now"
+              optional: true
           - extendedWaitUntil:
               visible: "Send message"
               timeout: 30000
