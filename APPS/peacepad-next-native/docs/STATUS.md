@@ -59,6 +59,23 @@ and verify public health before any V2 cutover. During an earlier provider
 audit, stored environment secrets were returned to the local terminal; treat
 those values as exposed and rotate them before a production release.
 
+### No-cost API-hostname recovery attempt — 2026-08-12
+
+The authenticated Cloudflare account has Workers route-write permission but
+only zone-read permission. A minimal `peacepad-api-origin-proxy` Worker was
+deployed at route `api.peacepad.ca/*`; it proxies only to the verified Railway
+service domain and does not contact the database directly. Public requests
+continued to return the existing Railway fallback because the current `api`
+record is DNS-only and therefore bypasses Cloudflare. A Worker custom-domain
+claim was also attempted and rejected because `api.peacepad.ca` already has an
+externally managed A/CNAME record. The Worker route is retained but dormant;
+no DNS record, Railway domain, application data, or unrelated domain was
+deleted or altered. Restoring the public hostname without paid Railway requires
+either DNS-edit permission in the actual `peacepad.ca` zone to proxy or replace
+that stale `api` record, or access to the external DNS manager that owns it.
+The current Cloudflare token cannot perform that DNS write, so there is no safe
+CLI-only bypass of the ownership boundary.
+
 Native V2 is implemented partly as a synthetic/staging prototype. It is not
 ready for production identity, real family information, TestFlight, or App
 Store submission. The reproducible local foundation now passes. The immediate
