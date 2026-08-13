@@ -9,9 +9,10 @@ health, court, financial, or safety information.
 The current `testflight-internal` profile targets the existing Apple bundle
 `ca.peacepad.family`, but intentionally uses the fictional staging runtime and
 keeps production writes disabled. It is not an App Store production release.
-Build `2.0.0` (`3`) is submitted and queued for Apple processing; it is not yet
-evidence of a TestFlight-available build. The release lead must visibly confirm
-that exact processed build in TestFlight before sharing it with testers.
+Build `2.0.0` (`3`) is Apple-processed `VALID` and assigned to the existing
+2-person `PeacePad Internal` TestFlight group. This proves internal TestFlight
+availability, not installation on physical hardware, external beta approval,
+App Store review, or public release.
 
 ## Who should test
 
@@ -42,8 +43,7 @@ public Google Play Production release.
 
 1. Open the TestFlight invitation supplied by the release lead and install the
    exact version and build named in that invitation. For the current candidate,
-   this must be **PeacePad 2.0.0 (build 3)**, and only after it is visibly
-   processed and available in TestFlight.
+   this must be **PeacePad 2.0.0 (build 3)** from the existing internal group.
 2. Open it once on Wi-Fi, then again using cellular data.
 3. Confirm the app opens without a crash, clipped controls, or hidden consent
    actions.

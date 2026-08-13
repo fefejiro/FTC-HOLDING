@@ -47,9 +47,11 @@ source `ec45198f1bdbd849121ab330cbdba0c53a95aeec` produced Version 2.0.0
 build 3 in [run `31719179006`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31719179006)
 with Xcode 26.6. The 25,118,313-byte signed IPA SHA-256 is
 `f0f2f2daccae40102dc914a4159c3234bd19d0289bff23161c6dd221cb1bdead`.
-Submission `ff512236-cab1-4407-a6df-c4e4fcf9db54` is currently `IN_QUEUE`;
-Apple processing, TestFlight installation, review, and public release remain
-unverified.
+Submission `ff512236-cab1-4407-a6df-c4e4fcf9db54` finished on 2026-08-13.
+App Store Connect processed Version 2.0.0 build 3 as `VALID` (build resource
+`4c4b3b9e-b7f5-4da9-ab80-66ad8d6e2091`) and assigned it to the existing
+2-person `PeacePad Internal` TestFlight group. No physical-device install,
+external beta review, App Store review, or public release is claimed.
 
 The existing public Android package now has a separate guarded Internal Testing
 candidate. Exact source `12f557c897bc14b1ce151c6f8f6136c44f72d691`
@@ -180,7 +182,8 @@ disabled. EAS plus protected GitHub macOS is the active compile and Simulator
 path, so the past-due MacinCloud account is an optional fallback rather than a
 release prerequisite. The guarded existing-bundle TestFlight variant is no
 longer configuration-only: build 3 was signed and accepted by App Store Connect
-as submission `ff512236-cab1-4407-a6df-c4e4fcf9db54`, currently `IN_QUEUE`.
+as submission `ff512236-cab1-4407-a6df-c4e4fcf9db54`; App Store Connect later
+processed build 3 as `VALID` and assigned it to the existing internal group.
 Processing, internal installation, tester evidence, review, and public release
 remain unverified. Follow the current handover sequence in
 [STATUS.md](STATUS.md) before changing any release state.
