@@ -80,6 +80,8 @@ jobs:
           EAS_NO_VCS: "1"
           EXPO_PUBLIC_PEACEPAD_ENV: staging
           PEACEPAD_IOS_RELEASE_MODE: testflight-internal
+          FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: "30"
+          FASTLANE_XCODEBUILD_SETTINGS_RETRIES: "6"
         working-directory: ${{ runner.temp }}/peacepad-next-native-release
         shell: bash
         run: |
