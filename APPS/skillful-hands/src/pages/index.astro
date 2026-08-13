@@ -45,7 +45,7 @@ const jsonLd = {
       <section class="hero">
         <div class="hero-slides" data-hero-slides aria-label="Workshop photographs">
           {site.heroSlides.map((slide, index) => (
-            <figure class={`hero-slide ${index === 0 ? "is-active" : ""}`} data-hero-slide aria-hidden={index === 0 ? "false" : "true"}>
+            <figure class={`hero-slide ${index === 0 ? "is-active" : ""}`} data-hero-slide aria-hidden={index === 0 ? "false" : "true"} style={`--hero-photo: url('/images/${slide.image}.webp')`}>
               <img
                 src={`/images/${slide.image}.webp`}
                 srcset={`/images/${slide.image}-640.webp 640w, /images/${slide.image}-960.webp 960w, /images/${slide.image}.webp 1440w`}
