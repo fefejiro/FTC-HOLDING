@@ -17,8 +17,9 @@ The production output is written to `dist`.
 
 ## Content
 
-Edit public copy in `src/content/site.ts`. The temporary workshop photograph is
-by Vurzie Kim and sourced from
+Edit public copy and programme-slide content in `src/content/site.ts`. Founder
+photography is supplied and approved by Skillful Hands CIC. The temporary hero
+workshop photograph is by Vurzie Kim and sourced from
 [Pexels](https://www.pexels.com/photo/a-young-woman-having-her-hair-braided-15576674/)
 under the Pexels licence. It must be replaced with founder-approved photography
 before launch.
@@ -35,7 +36,6 @@ Pages project:
 Use [CLOUDFLARE_PAGES_RUNBOOK.md](./CLOUDFLARE_PAGES_RUNBOOK.md) for future
 domain launches and certificate recovery.
 
-Approved photography, final branding assets, and final founder approval remain
-content-governance requirements. The current temporary workshop photograph and
-founder portrait placeholder are documented rather than presented as final
-approved assets.
+Final hero photography, branding assets, and founder approval remain
+content-governance requirements. Monique Hughes's founder portrait is now an
+approved supplied asset; the workshop hero remains temporary.

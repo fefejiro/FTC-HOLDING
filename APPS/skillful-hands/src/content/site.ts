@@ -11,7 +11,7 @@ export const site = {
     { label: "Founder", href: "#founder" },
     { label: "Partner with us", href: "#partners" }
   ],
-  outcomes: ["Practical hair education", "Confidence-building", "Routes towards work and enterprise"],
+  outcomes: ["Practical skills", "Real conversations", "Stronger futures"],
   programmes: [
     {
       number: "01",
@@ -43,6 +43,48 @@ export const site = {
       "She created Skillful Hands to use hair as a practical tool for confidence, connection, creativity, and opportunity."
     ]
   },
+  showcase: [
+    {
+      label: "Youth",
+      title: "Hair for Youth",
+      audience: "Ages 13 to 25",
+      description: "Hands-on hair education that builds practical skills, confidence and brighter futures.",
+      focus: ["Practical hair skills", "Real conversations", "Future readiness"],
+      tone: "orange"
+    },
+    {
+      label: "Women",
+      title: "Women's Confidence Programme",
+      audience: "Women 18+",
+      description: "Hair skills, personal development and supportive conversations shaped around each participant's goals.",
+      focus: ["Confidence and identity", "Employability", "Enterprise thinking"],
+      tone: "red"
+    },
+    {
+      label: "Adults",
+      title: "Beyond the Chair",
+      audience: "Adults 18+",
+      description: "A community programme using hair education to create connection, wellbeing and personal growth.",
+      focus: ["Connection", "Wellbeing", "Personal growth"],
+      tone: "green"
+    },
+    {
+      label: "Schools",
+      title: "Hair for Youth in Schools",
+      audience: "School-based programme",
+      description: "Practical learning with age-appropriate conversations about wellbeing, confidence and healthy choices.",
+      focus: ["Healthy choices", "Confidence", "Creative skills"],
+      tone: "purple"
+    },
+    {
+      label: "Justice",
+      title: "Justice and Prevention",
+      audience: "Young people",
+      description: "Respectful engagement that combines practical hair skills with wellbeing and future-focused support.",
+      focus: ["Trust and engagement", "Life skills", "New possibilities"],
+      tone: "blue"
+    }
+  ],
   partners: [
     { title: "Schools and colleges", text: "Practical, confidence-building enrichment for young people." },
     { title: "Councils and community groups", text: "Accessible programmes shaped around local needs and opportunity." },
