@@ -1,0 +1,9 @@
+---
+import PageLayout from "../layouts/PageLayout.astro";
+import { site } from "../content/site";
+---
+<PageLayout title="Partner with Skillful Hands CIC" description="Explore ways schools, councils, community groups, funders and corporate partners can work with Skillful Hands CIC.">
+  <section class="interior-hero"><div class="container"><p class="eyebrow">Partner with us</p><h1>Bring practical opportunity closer.</h1><p>We welcome conversations with organisations that care about skills, confidence, wellbeing and economic opportunity.</p></div></section>
+  <section class="section"><div class="container partner-page-grid">{site.partners.map((partner, index) => <article id={`partner-${index + 1}`}><span>0{index + 1}</span><h2>{partner.title}</h2><p>{partner.text}</p><a class="button" href={`/contact?interest=${encodeURIComponent(partner.title)}`}>Discuss a partnership</a></article>)}</div></section>
+  <section class="contact compact-contact"><div class="container contact-inner"><div><p class="eyebrow">Start a conversation</p><h2>Tell us what you are exploring.</h2></div><div><p>We will help you find the right starting point for a programme, partnership or community collaboration.</p><a class="button button-gold" href="/contact">Contact Skillful Hands CIC</a></div></div></section>
+</PageLayout>

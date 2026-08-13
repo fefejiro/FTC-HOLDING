@@ -1,5 +1,6 @@
 ---
 import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
 import { site } from "../content/site";
 import "../styles/global.css";
 
@@ -68,8 +69,8 @@ const jsonLd = {
           <p class="hero-line">{site.tagline}</p>
           <p class="hero-copy">{site.description}</p>
           <div class="button-row">
-            <a class="button" href="#programmes">Explore our programmes</a>
-            <a class="text-link light" href={`mailto:${site.email}`}>Start a conversation <span aria-hidden="true">&rarr;</span></a>
+            <a class="button" href="/programmes">Explore our programmes</a>
+            <a class="text-link light" href="/contact">Start a conversation <span aria-hidden="true">&rarr;</span></a>
           </div>
         </div>
         <div class="hero-controls" data-hero-controls>
@@ -78,7 +79,7 @@ const jsonLd = {
           </div>
           <button class="hero-motion" type="button" data-hero-motion aria-label="Pause automatic workshop photographs">Pause photos</button>
         </div>
-        <a class="hero-next" href="#programmes"><span>See what we offer</span><span aria-hidden="true">&darr;</span></a>
+        <a class="hero-next" href="/programmes"><span>See what we offer</span><span aria-hidden="true">&rarr;</span></a>
       </section>
 
       <section id="about" class="about-compact">
@@ -157,25 +158,18 @@ const jsonLd = {
             <div><p class="eyebrow">Partner with us</p><h2>Bring practical opportunity closer.</h2></div>
             <p>We welcome conversations with organisations that care about skills, confidence, wellbeing, and economic opportunity.</p>
           </div>
-          <div class="partner-grid">{site.partners.map((partner) => <article><h3>{partner.title}</h3><p>{partner.text}</p><a href={`mailto:${site.email}?subject=Partnership enquiry`}>Start a conversation <span aria-hidden="true">&rarr;</span></a></article>)}</div>
+          <div class="partner-grid">{site.partners.map((partner, index) => <article><h3>{partner.title}</h3><p>{partner.text}</p><a href={`/partner-with-us#partner-${index + 1}`}>Explore partnership options <span aria-hidden="true">&rarr;</span></a></article>)}</div>
         </div>
       </section>
 
       <section class="contact">
         <div class="container contact-inner">
           <div><p class="eyebrow">Let's make something meaningful</p><h2>Start with a conversation.</h2></div>
-          <div><p>Interested in a programme, partnership, or community collaboration?</p><a class="button button-gold" href={`mailto:${site.email}`}>Email Skillful Hands CIC</a></div>
+          <div><p>Interested in a programme, partnership, or community collaboration?</p><a class="button button-gold" href="/contact">Contact Skillful Hands CIC</a></div>
         </div>
       </section>
     </main>
-    <footer>
-      <div class="container footer-grid">
-        <div><a class="brand footer-brand" href="#top"><span class="brand-mark">SH</span><span>{site.name}</span></a><p>{site.tagline}</p></div>
-        <div><p class="footer-label">Contact</p><a href={`mailto:${site.email}`}>{site.email}</a></div>
-        <div><p class="footer-label">Navigate</p>{site.nav.slice(0, 3).map((item) => <a href={item.href}>{item.label}</a>)}</div>
-      </div>
-      <div class="container footer-bottom"><p>&copy; {new Date().getFullYear()} Skillful Hands CIC</p><p>Community interest. Practical opportunity.</p></div>
-    </footer>
+    <Footer />
     <script>
       const hero = document.querySelector<HTMLElement>("[data-hero-slides]");
       if (hero) {

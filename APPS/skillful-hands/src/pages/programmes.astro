@@ -1,0 +1,8 @@
+---
+import PageLayout from "../layouts/PageLayout.astro";
+import { site } from "../content/site";
+---
+<PageLayout title="Programmes | Skillful Hands CIC" description="Explore practical hair education and confidence-building programmes from Skillful Hands CIC.">
+  <section class="interior-hero"><div class="container"><p class="eyebrow">Our programmes</p><h1>One practical skill. Many possibilities.</h1><p>Each programme brings practical learning together with confidence-building, wellbeing and future-focused support.</p></div></section>
+  <section class="section"><div class="container programme-page-grid">{site.showcase.map((programme, index) => <article class={`programme-page-card tone-${programme.tone}`}><p class="programme-index">{String(index + 1).padStart(2, "0")}</p><p class="showcase-audience">{programme.audience}</p><h2>{programme.title}</h2><p>{programme.description}</p><ul>{programme.focus.map((focus) => <li>{focus}</li>)}</ul><a class="button button-light" href={`/contact?interest=${encodeURIComponent(programme.title)}`}>Ask about this programme</a></article>)}</div></section>
+</PageLayout>

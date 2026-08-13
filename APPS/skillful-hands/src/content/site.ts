@@ -6,10 +6,10 @@ export const site = {
   description:
     "Skillful Hands CIC is a UK community interest company helping young people and adults build practical hair skills, confidence and brighter futures.",
   nav: [
-    { label: "About", href: "#about" },
-    { label: "Programmes", href: "#programmes" },
-    { label: "Founder", href: "#founder" },
-    { label: "Partner with us", href: "#partners" }
+    { label: "About", href: "/about" },
+    { label: "Programmes", href: "/programmes" },
+    { label: "Founder", href: "/about#founder" },
+    { label: "Partner with us", href: "/partner-with-us" }
   ],
   outcomes: ["Practical skills", "Real conversations", "Stronger futures"],
   heroSlides: [

@@ -1,0 +1,11 @@
+---
+import { site } from "../content/site";
+---
+<footer>
+  <div class="container footer-grid">
+    <div><a class="brand footer-brand" href="/"><span class="brand-mark">SH</span><span>{site.name}</span></a><p>{site.tagline}</p></div>
+    <div><p class="footer-label">Contact</p><a href="/contact">Contact Skillful Hands CIC</a><a href={`mailto:${site.email}`}>{site.email}</a></div>
+    <div><p class="footer-label">Explore</p>{site.nav.slice(0, 3).map((item) => <a href={item.href}>{item.label}</a>)}</div>
+  </div>
+  <div class="container footer-bottom"><p>&copy; {new Date().getFullYear()} Skillful Hands CIC</p><p>Community interest. Practical opportunity.</p></div>
+</footer>

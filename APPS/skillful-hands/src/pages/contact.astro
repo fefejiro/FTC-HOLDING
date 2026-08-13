@@ -1,0 +1,12 @@
+---
+import PageLayout from "../layouts/PageLayout.astro";
+import { site } from "../content/site";
+const interest = Astro.url.searchParams.get("interest");
+const subject = interest ? `Skillful Hands CIC enquiry: ${interest}` : "Skillful Hands CIC enquiry";
+const message = interest ? `Hello Skillful Hands CIC,\n\nI would like to discuss ${interest}.\n\n` : "Hello Skillful Hands CIC,\n\nI would like to start a conversation about:\n\n";
+const emailHref = `mailto:${site.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+---
+<PageLayout title="Contact Skillful Hands CIC" description="Start a conversation with Skillful Hands CIC about programmes, partnerships or community collaboration.">
+  <section class="interior-hero"><div class="container"><p class="eyebrow">Contact Skillful Hands CIC</p><h1>Start with a conversation.</h1><p>Whether you are exploring a programme, partnership or community collaboration, we would be pleased to hear from you.</p></div></section>
+  <section class="section"><div class="container contact-page-grid"><div><p class="eyebrow">Email us</p><h2>A clear next step.</h2><p>Choose the option that best fits your enquiry. Your email app will open with a subject line ready to go.</p></div><div class="contact-actions"><a class="contact-action" href={emailHref}><span class="contact-action-kicker">{interest ? "Selected enquiry" : "General enquiry"}</span><strong>{interest ?? "Programmes, partnerships or collaboration"}</strong><span>{site.email} <span aria-hidden="true">&rarr;</span></span></a><a class="contact-action subtle" href={`mailto:${site.email}`}><span class="contact-action-kicker">Prefer a blank email?</span><strong>Write directly to Skillful Hands CIC</strong><span>{site.email} <span aria-hidden="true">&rarr;</span></a></div></div></section>
+</PageLayout>

@@ -3,7 +3,7 @@ import { site } from "../content/site";
 ---
 <header class="site-header">
   <div class="container nav-wrap">
-    <a class="brand" href="#top" aria-label="SH Skillful Hands CIC, home">
+    <a class="brand" href="/" aria-label="SH Skillful Hands CIC, home">
       <span class="brand-mark" aria-hidden="true">SH</span>
       <span>{site.name}</span>
     </a>
@@ -13,7 +13,7 @@ import { site } from "../content/site";
     </button>
     <nav id="primary-navigation" class="primary-nav" aria-label="Primary navigation">
       {site.nav.map((item) => <a href={item.href}>{item.label}</a>)}
-      <a class="button button-small" href={`mailto:${site.email}`}>Get in touch</a>
+      <a class="button button-small" href="/contact">Get in touch</a>
     </nav>
   </div>
 </header>
