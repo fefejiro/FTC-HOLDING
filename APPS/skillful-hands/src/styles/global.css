@@ -167,7 +167,7 @@ p { text-wrap: pretty; }
 .partner-grid article:first-child { border-left: 1px solid var(--line); }
 .partner-grid p { color: var(--muted); }
 .partner-grid a { display: inline-block; margin-top: 24px; font-weight: 700; text-underline-offset: 5px; }
-.interior-hero { padding: clamp(82px, 12vw, 150px) 0 clamp(68px, 9vw, 112px); color: white; background: linear-gradient(115deg, var(--plum-deep), var(--plum)); }
+.interior-hero { padding: clamp(58px, 8vw, 104px) 0 clamp(54px, 6vw, 82px); color: white; background: linear-gradient(115deg, var(--plum-deep), var(--plum)); }
 .interior-hero .eyebrow { color: #ffd47b; }
 .interior-hero h1 { max-width: 850px; margin-bottom: 18px; }
 .interior-hero > .container > p:last-child { max-width: 680px; margin-bottom: 0; color: rgba(255,255,255,.82); font-size: 1.16rem; }

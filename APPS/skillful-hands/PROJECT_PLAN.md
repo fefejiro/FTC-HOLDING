@@ -6,7 +6,7 @@
 - Domain: https://skillfulhandscic.uk
 - Repository: fefejiro/FTC-HOLDING
 - App path: APPS/skillful-hands
-- Delivery target: production-ready premium one-page website
+- Delivery target: production-ready premium static multi-page website
 - Hosting target: Cloudflare Pages
 - DNS registrar: Namecheap, with DNS to be moved or delegated to Cloudflare when ready
 
@@ -23,23 +23,18 @@ Use Astro 5, TypeScript, Tailwind CSS, and Cloudflare Pages.
 Reasoning:
 
 - The FTC-HOLDING monorepo already contains an Astro and Cloudflare Pages implementation in APPS/gardencleaners-site.
-- A content-led one-page site does not need a database or server-rendered application at launch.
+- A content-led static website does not need a database or server-rendered application at launch.
 - Astro provides strong performance, SEO, accessibility, and a simple expansion path.
 - Cloudflare Pages matches the existing FTC infrastructure.
 
 ## Information Architecture
 
-1. Sticky navigation
-2. Hero
-3. Trust and outcomes strip
-4. About Skillful Hands
-5. Programmes
-6. How the programmes create change
-7. Meet the Founder
-8. Partnership audiences
-9. Vision and future direction
-10. Contact call to action
-11. Footer
+1. Home: hero, overview, programme carousel and contact call to action
+2. About: purpose and founder
+3. Programmes: programme details and enquiry routes
+4. Partner with us: partnership audiences and enquiry routes
+5. Contact: prefilled and blank email actions
+6. Shared sticky navigation and footer
 
 ## Confirmed Content
 
@@ -66,7 +61,7 @@ She created Skillful Hands to use hair as a practical tool for confidence, conne
 ### Programmes
 
 - Hair for Youth: Hair education, confidence, creativity, and life skills for young people.
-- Rejesha Crown: Confidence, employability, and personal development programme for women. Confirm final spelling before launch.
+- Women's Confidence Programme: Confidence, employability, and personal development programme for women. The final official name remains pending founder confirmation and must not be displayed as "Rejesha Crown".
 - Beyond the Chair: Hair, wellbeing, entrepreneurship, and economic opportunity for adults.
 
 ### Contact
@@ -97,17 +92,17 @@ skillfulhandcic@gmail.com
 
 ### Suggested palette
 
-- Deep plum or deep forest for primary brand colour
-- Warm ivory for backgrounds
-- Terracotta for warmth and human energy
-- Muted gold for highlights
-- Charcoal for body text
+- Deep Brown `#2B120B` for primary text, navigation and footer
+- Warm Cream `#FFF8EE` for the main background
+- Soft Beige `#F3E5D3` for alternate surfaces
+- Burnt Orange `#D94F00` for primary actions and highlights
+- Deep Red `#A90F16`, Olive Green `#4E5D16` and Warm Gold `#D99A00` for controlled programme and wellbeing accents
 
 Final colours should meet WCAG AA contrast requirements.
 
 ### Typography
 
-Use a modern display typeface for headings and a highly legible sans-serif for body text. Prefer locally optimised or privacy-friendly font delivery.
+Use Barlow Condensed for headings, Barlow for body text and Caveat sparingly for short accents. Serve fonts locally.
 
 ### Imagery
 
@@ -188,7 +183,7 @@ Preferred production flow:
 
 ### Phase 3: Page Build
 
-- Implement all one-page sections
+- Implement the home route and focused supporting routes
 - Add responsive behaviour
 - Add subtle, reduced-motion-safe transitions
 - Add real or clearly labelled placeholder assets
@@ -215,7 +210,7 @@ Preferred production flow:
 The first release is complete when:
 
 - skillfulhandscic.uk loads over HTTPS
-- the page is polished on mobile and desktop
+- all five routes are polished on mobile and desktop
 - all navigation and contact actions work
 - all content is truthful and approved
 - the site has valid metadata, sitemap, robots, and structured data
