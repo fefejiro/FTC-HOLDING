@@ -4,10 +4,12 @@ import { randomBytes } from "node:crypto";
 const projects = Object.freeze({
   ca: "rohvkyuxbnqzglaromms",
   us: "spmpndalcvwmygznihec",
+  production: "qzekqjewpugdotskrtni",
 });
 const functionRegions = Object.freeze({
   ca: "ca-central-1",
   us: "us-east-1",
+  production: "ca-central-1",
 });
 
 const required = (name) => {
@@ -18,17 +20,26 @@ const required = (name) => {
 
 const region = required("PEACEPAD_REGION");
 const projectRef = required("PEACEPAD_PROJECT_REF");
+const target = process.env.PEACEPAD_TARGET?.trim() || "staging";
 const publishableKey = required("SUPABASE_PUBLISHABLE_KEY");
 const serviceRoleKey = required("SUPABASE_SERVICE_ROLE_KEY");
 
-if (!(region in projects) || projects[region] !== projectRef) {
-  throw new Error("The requested project is not an approved PeacePad fictional-staging target.");
+const projectKey = target === "production" ? "production" : region;
+if (!(projectKey in projects) || projects[projectKey] !== projectRef) {
+  throw new Error("The requested project is not an approved PeacePad contract target.");
+}
+if (target === "production") {
+  if (region !== "ca" || process.env.PEACEPAD_PRODUCTION_CONTRACT_AUTHORIZATION !== "I_CONFIRM_FICTIONAL_PRODUCTION_CONTRACT_AND_CLEANUP") {
+    throw new Error("The production contract requires exact Canada targeting and explicit cleanup authorization.");
+  }
+} else if (target !== "staging") {
+  throw new Error("PEACEPAD_TARGET must be staging or production.");
 }
 if (!publishableKey.startsWith("sb_publishable_")) {
   throw new Error("The current Supabase publishable key is required.");
 }
-if (serviceRoleKey.split(".").length !== 3) {
-  throw new Error("The Supabase Auth Admin service-role JWT is required.");
+if (serviceRoleKey.split(".").length !== 3 && !serviceRoleKey.startsWith("sb_secret_")) {
+  throw new Error("A Supabase Auth Admin secret or legacy service-role JWT is required.");
 }
 
 const origin = `https://${projectRef}.supabase.co`;
@@ -125,6 +136,7 @@ const deleteAuthUser = async (account) => {
 
 const evidence = {
   classification: "fictional-only",
+  target,
   projectRef,
   region,
   auth: false,
