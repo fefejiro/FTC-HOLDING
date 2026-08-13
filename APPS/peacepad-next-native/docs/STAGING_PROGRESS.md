@@ -37,6 +37,19 @@ accepted by EAS Submit as submission
 `644d93e8-224b-46f4-aa30-4c95b973dc15`, currently `IN_QUEUE`. No TestFlight
 processing, installation, App Store review, or public release is claimed.
 
+Apple subsequently reported ITMS-90683 for build 2 because the WebRTC binary
+references camera APIs without `NSCameraUsageDescription`. Source
+`660fefe9dfbb50a19e0cee7c9f9d0776dc73a874` now declares that purpose string
+while preserving microphone-only behavior and no Android camera permission.
+After the Xcode-settings timeout control merge `7db6bcf81900266393c168b21bc4c19be1e1aaad`,
+source `ec45198f1bdbd849121ab330cbdba0c53a95aeec` produced Version 2.0.0
+build 3 in [run `31719179006`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31719179006)
+with Xcode 26.6. The 25,118,313-byte signed IPA SHA-256 is
+`f0f2f2daccae40102dc914a4159c3234bd19d0289bff23161c6dd221cb1bdead`.
+Submission `ff512236-cab1-4407-a6df-c4e4fcf9db54` is currently `IN_QUEUE`;
+Apple processing, TestFlight installation, review, and public release remain
+unverified.
+
 The same existing public package now has a separate guarded Android
 store-distribution candidate. Exact source `4bde06e651d00de25c30ba48e50e9557619ccb31`
 and main control `d4b58fd80c6135eb779887bb156dd5c61130ff9f` produced EAS Android

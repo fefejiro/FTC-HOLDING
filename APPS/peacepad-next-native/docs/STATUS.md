@@ -62,6 +62,27 @@ TestFlight processing, tester installation, App Store review, and public
 release remain unverified. The profile remains fictional staging with
 production writes disabled.
 
+### ITMS-90683 camera-purpose fix and build 3 submission -- 2026-08-13
+
+Apple reported ITMS-90683 for Version 2.0.0 build 2: the WebRTC binary
+references camera APIs, but the submitted `Info.plist` had no
+`NSCameraUsageDescription`. The fix is committed at
+`660fefe9dfbb50a19e0cee7c9f9d0776dc73a874`; it declares the user-facing
+camera purpose string while retaining microphone-only runtime behavior and no
+Android camera permission. The hosted Xcode 26 control was then hardened for
+the runner's slow `xcodebuild -showBuildSettings` phase (control merge
+`7db6bcf81900266393c168b21bc4c19be1e1aaad`). Build 3 source
+`ec45198f1bdbd849121ab330cbdba0c53a95aeec` passed in
+[`31719179006`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31719179006)
+using Xcode 26.6 (17F113). The signed 25,118,313-byte IPA has SHA-256
+`f0f2f2daccae40102dc914a4159c3234bd19d0289bff23161c6dd221cb1bdead`; plist
+inspection confirmed bundle `ca.peacepad.family`, Version 2.0.0/build 3,
+both camera and microphone purpose strings, and encryption declaration. The
+exact IPA was accepted as App Store Connect submission
+[`ff512236-cab1-4407-a6df-c4e4fcf9db54`](https://expo.dev/accounts/official_fejiro/projects/peacepad-next-native-lab/submissions/ff512236-cab1-4407-a6df-c4e4fcf9db54),
+currently `IN_QUEUE`. Apple processing, TestFlight installation, review, and
+public release remain unverified.
+
 ### Current Android signed-build attempt -- 2026-08-12
 
 Exact source `4bde06e651d00de25c30ba48e50e9557619ccb31` adds the guarded
