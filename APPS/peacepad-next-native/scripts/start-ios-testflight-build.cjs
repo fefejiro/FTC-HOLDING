@@ -6,6 +6,8 @@ const { spawnSync } = require("child_process");
 const root = path.resolve(__dirname, "..");
 const startRequested = process.argv.includes("--start");
 const prepareOnly = process.argv.includes("--prepare-only");
+const productionRequested = process.argv.includes("--production");
+const buildProfile = productionRequested ? "appstore-production" : "testflight-internal";
 const preferredWindowsRoot = "D:\\PeacePadRelease";
 const workRoot = process.env.PEACEPAD_RELEASE_WORK_ROOT?.trim()
   || (process.platform === "win32" && fs.existsSync("D:\\")
@@ -59,6 +61,7 @@ function capture(command, args, cwd = root) {
 }
 
 console.log(`PeacePad release scratch: ${workRoot}`);
+console.log(`PeacePad iOS build profile: ${buildProfile}`);
 run(process.execPath, ["scripts/check-ios-testflight-readiness.cjs", "--online"]);
 
 if (!startRequested && !prepareOnly) {
@@ -123,7 +126,7 @@ if (prepareOnly) {
 const easBuildArgs = [
   "build",
   "--platform", "ios",
-  "--profile", "testflight-internal",
+  "--profile", buildProfile,
   "--non-interactive",
   "--no-wait"
 ];
