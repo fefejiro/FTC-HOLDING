@@ -116,9 +116,15 @@ jobs:
             && build.project?.slug === 'peacepad-next-native-lab'
             && typeof build.artifacts?.buildUrl === 'string';
           if (!ok) process.exit(1);
-          fs.appendFileSync(process.env.GITHUB_OUTPUT, `artifact_url=${build.artifacts.buildUrl}\n`);
           NODE
-          curl --fail --location --retry 3 --retry-all-errors --connect-timeout 30 --max-time 600 "${{ steps.fetch.outputs.artifact_url }}" -o "$RUNNER_TEMP/peacepad-v2-release.aab"
+          artifact_url="$(node - <<'NODE'
+          const fs = require('fs');
+          const build = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/peacepad-v2-android-play-build.json', 'utf8'));
+          process.stdout.write(build.artifacts.buildUrl);
+          NODE
+          )"
+          test -n "$artifact_url"
+          curl --fail --location --retry 3 --retry-all-errors --connect-timeout 30 --max-time 600 "$artifact_url" -o "$RUNNER_TEMP/peacepad-v2-release.aab"
           test -s "$RUNNER_TEMP/peacepad-v2-release.aab"
           keytool -printcert -jarfile "$RUNNER_TEMP/peacepad-v2-release.aab" > "$RUNNER_TEMP/peacepad-v2-release-certificate.txt"
 
