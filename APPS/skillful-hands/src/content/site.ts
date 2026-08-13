@@ -4,7 +4,7 @@ export const site = {
   email: "skillfulhandcic@gmail.com",
   canonical: "https://skillfulhandscic.uk/",
   description:
-    "Skillful Hands CIC empowers young people and adults through practical hair education, confidence-building, employability, wellbeing, and entrepreneurship.",
+    "Skillful Hands CIC is a UK community interest company helping young people and adults build practical hair skills, confidence and brighter futures.",
   nav: [
     { label: "About", href: "#about" },
     { label: "Programmes", href: "#programmes" },
@@ -12,6 +12,28 @@ export const site = {
     { label: "Partner with us", href: "#partners" }
   ],
   outcomes: ["Practical skills", "Real conversations", "Stronger futures"],
+  heroSlides: [
+    {
+      image: "workshop-braid-leader",
+      alt: "A participant learning to braid hair on a mannequin during a Skillful Hands CIC workshop",
+      position: "center 42%"
+    },
+    {
+      image: "workshop-braid-detail",
+      alt: "Hands carefully braiding a mannequin during practical hair training",
+      position: "center 46%"
+    },
+    {
+      image: "workshop-hands",
+      alt: "Close-up of practical braiding work during a community hair education session",
+      position: "center 48%"
+    },
+    {
+      image: "workshop-library",
+      alt: "A participant developing practical braiding skills at a learning table",
+      position: "center 54%"
+    }
+  ],
   programmes: [
     {
       number: "01",

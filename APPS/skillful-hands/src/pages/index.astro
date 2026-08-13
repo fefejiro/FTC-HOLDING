@@ -17,18 +17,23 @@ const jsonLd = {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
-    <title>Skillful Hands CIC | Creating Skills. Building Futures.</title>
+    <title>Skillful Hands CIC | Practical Skills. Brighter Futures.</title>
     <meta name="description" content={site.description} />
     <link rel="canonical" href={site.canonical} />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={`${site.name} | ${site.tagline}`} />
     <meta property="og:description" content={site.description} />
     <meta property="og:url" content={site.canonical} />
-    <meta property="og:image" content={`${site.canonical}images/og-workshop.webp`} />
+    <meta property="og:locale" content="en_GB" />
+    <meta property="og:image" content={`${site.canonical}images/workshop-braid-leader.webp`} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Hands carefully braiding hair during practical training" />
-    <meta name="theme-color" content="#40243f" />
+    <meta property="og:image:alt" content="A participant learning to braid hair during a Skillful Hands CIC workshop" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={`${site.name} | ${site.tagline}`} />
+    <meta name="twitter:description" content={site.description} />
+    <meta name="twitter:image" content={`${site.canonical}images/workshop-braid-leader.webp`} />
+    <meta name="theme-color" content="#D94F00" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="manifest" href="/site.webmanifest" />
     <script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
@@ -38,16 +43,24 @@ const jsonLd = {
     <Header />
     <main id="main-content" tabindex="-1">
       <section class="hero">
-        <img
-          src="/images/workshop.webp"
-          srcset="/images/workshop-640.webp 640w, /images/workshop-960.webp 960w, /images/workshop-1200.webp 1200w, /images/workshop.webp 1800w"
-          sizes="100vw"
-          width="1800"
-          height="2400"
-          fetchpriority="high"
-          decoding="async"
-          alt="Hands carefully braiding hair during practical training"
-        />
+        <div class="hero-slides" data-hero-slides aria-label="Workshop photographs">
+          {site.heroSlides.map((slide, index) => (
+            <figure class={`hero-slide ${index === 0 ? "is-active" : ""}`} data-hero-slide aria-hidden={index === 0 ? "false" : "true"}>
+              <img
+                src={`/images/${slide.image}.webp`}
+                srcset={`/images/${slide.image}-640.webp 640w, /images/${slide.image}-960.webp 960w, /images/${slide.image}.webp 1440w`}
+                sizes="100vw"
+                width="1440"
+                height="1920"
+                fetchpriority={index === 0 ? "high" : "auto"}
+                loading={index === 0 ? "eager" : "lazy"}
+                decoding="async"
+                alt={slide.alt}
+                style={`object-position: ${slide.position}`}
+              />
+            </figure>
+          ))}
+        </div>
         <div class="hero-overlay"></div>
         <div class="container hero-content">
           <p class="eyebrow">Community skills and personal development</p>
@@ -58,6 +71,12 @@ const jsonLd = {
             <a class="button" href="#programmes">Explore our programmes</a>
             <a class="text-link light" href={`mailto:${site.email}`}>Start a conversation <span aria-hidden="true">&rarr;</span></a>
           </div>
+        </div>
+        <div class="hero-controls" data-hero-controls>
+          <div class="hero-dots" aria-label="Workshop photographs">
+            {site.heroSlides.map((_, index) => <button type="button" aria-pressed={index === 0 ? "true" : "false"} aria-label={`Show workshop photograph ${index + 1}`} data-hero-to={index}></button>)}
+          </div>
+          <button class="hero-motion" type="button" data-hero-motion aria-label="Pause automatic workshop photographs">Pause photos</button>
         </div>
         <a class="hero-next" href="#programmes"><span>See what we offer</span><span aria-hidden="true">&darr;</span></a>
       </section>
@@ -158,6 +177,39 @@ const jsonLd = {
       <div class="container footer-bottom"><p>&copy; {new Date().getFullYear()} Skillful Hands CIC</p><p>Community interest. Practical opportunity.</p></div>
     </footer>
     <script>
+      const hero = document.querySelector<HTMLElement>("[data-hero-slides]");
+      if (hero) {
+        const heroSlides = [...hero.querySelectorAll<HTMLElement>("[data-hero-slide]")];
+        const heroDots = [...document.querySelectorAll<HTMLButtonElement>("[data-hero-to]")];
+        const heroMotion = document.querySelector<HTMLButtonElement>("[data-hero-motion]");
+        const reduceHeroMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        let heroCurrent = 0;
+        let heroTimer: number | undefined;
+        let heroPaused = reduceHeroMotion;
+        const showHero = (next: number) => {
+          heroCurrent = (next + heroSlides.length) % heroSlides.length;
+          heroSlides.forEach((slide, index) => {
+            slide.classList.toggle("is-active", index === heroCurrent);
+            slide.setAttribute("aria-hidden", String(index !== heroCurrent));
+          });
+          heroDots.forEach((dot, index) => dot.setAttribute("aria-pressed", String(index === heroCurrent)));
+        };
+        const stopHero = () => window.clearInterval(heroTimer);
+        const startHero = () => { stopHero(); if (!heroPaused) heroTimer = window.setInterval(() => showHero(heroCurrent + 1), 7000); };
+        heroDots.forEach((dot, index) => dot.addEventListener("click", () => { showHero(index); startHero(); }));
+        heroMotion?.addEventListener("click", () => {
+          heroPaused = !heroPaused;
+          heroMotion.textContent = heroPaused ? "Play photos" : "Pause photos";
+          heroMotion.setAttribute("aria-label", heroPaused ? "Play automatic workshop photographs" : "Pause automatic workshop photographs");
+          heroPaused ? stopHero() : startHero();
+        });
+        hero.addEventListener("mouseenter", stopHero);
+        hero.addEventListener("mouseleave", startHero);
+        document.addEventListener("visibilitychange", () => document.hidden ? stopHero() : startHero());
+        if (heroMotion && reduceHeroMotion) { heroMotion.textContent = "Play photos"; heroMotion.setAttribute("aria-label", "Play automatic workshop photographs"); }
+        startHero();
+      }
+
       const showcase = document.querySelector<HTMLElement>("[data-showcase]");
       if (showcase) {
         const track = showcase.querySelector<HTMLElement>(".showcase-track");
