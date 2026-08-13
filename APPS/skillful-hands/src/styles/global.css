@@ -47,7 +47,7 @@ p { text-wrap: pretty; }
 }
 #main-content:focus { outline: 0; box-shadow: none; }
 
-.site-header { position: sticky; z-index: 100; top: 0; color: white; background: rgba(41, 22, 41, .97); border-bottom: 1px solid rgba(255,255,255,.13); }
+.site-header { position: sticky; z-index: 100; top: 0; color: white; background: var(--plum-deep); border-bottom: 1px solid rgba(255,255,255,.13); }
 .nav-wrap { min-height: 76px; display: flex; align-items: center; justify-content: space-between; }
 .brand { display: inline-flex; align-items: center; gap: 12px; font-weight: 700; text-decoration: none; }
 .brand-logo { flex: 0 0 auto; }.brand-logo img { width: 168px; max-width: min(42vw, 168px); height: 64px; object-fit: contain; object-position: left center; background: transparent; border: 0; }
