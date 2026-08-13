@@ -37,7 +37,7 @@ describe("PeacePad iOS release variant", () => {
     process.env.EXPO_PUBLIC_PEACEPAD_ENV = "staging";
     expect(resolveConfig({ config: structuredClone(appJson.expo) })).toMatchObject({
       version: "2.0.0",
-      ios: { buildNumber: "2", bundleIdentifier: "ca.peacepad.family" },
+      ios: { buildNumber: "3", bundleIdentifier: "ca.peacepad.family" },
       extra: {
         appStoreId: "6793350735",
         productionApiWritesEnabled: false,

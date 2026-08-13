@@ -11,7 +11,7 @@ const expected = {
   easProjectId: "a4ecee72-ebae-483d-8553-035847ebb3d3",
   mode: "testflight-internal",
   version: "2.0.0",
-  buildNumber: "2"
+  buildNumber: "3"
 };
 const requiredRegionalNames = [
   "EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_URL",
