@@ -50,7 +50,7 @@ p { text-wrap: pretty; }
 .site-header { position: sticky; z-index: 100; top: 0; color: white; background: rgba(41, 22, 41, .97); border-bottom: 1px solid rgba(255,255,255,.13); }
 .nav-wrap { min-height: 76px; display: flex; align-items: center; justify-content: space-between; }
 .brand { display: inline-flex; align-items: center; gap: 12px; font-weight: 700; text-decoration: none; }
-.brand-logo { flex: 0 0 auto; }.brand-logo img { width: 66px; max-width: none; height: 66px; object-fit: contain; background: var(--paper); border: 1px solid rgba(255,255,255,.2); }
+.brand-logo { flex: 0 0 auto; }.brand-logo img { width: 168px; max-width: min(42vw, 168px); height: 64px; object-fit: contain; object-position: left center; background: transparent; border: 0; }
 .brand-mark { width: 40px; height: 40px; display: grid; place-items: center; color: white; background: var(--terracotta); font-family: "Barlow Condensed", sans-serif; font-weight: 800; border-radius: 50%; }
 .braid-mark { position: relative; display: flex; align-items: center; justify-content: center; gap: 0; overflow: hidden; background: var(--paper); border: 1px solid rgba(255,255,255,.35); transform: rotate(-18deg); }
 .braid-mark i { width: 10px; height: 31px; display: block; margin-left: -4px; border-radius: 50% 50% 45% 45%; border: 2px solid var(--paper); transform: skewY(-24deg); }
@@ -234,7 +234,7 @@ footer { padding: 48px 0 20px; color: white; background: var(--plum-deep); }
 @media (max-width: 820px) {
   .section { padding: 66px 0; }
   .menu-button { display: block; }
-  .brand-logo img { width: 58px; max-width: none; height: 58px; }
+  .brand-logo img { width: 142px; max-width: 48vw; height: 56px; }
   .primary-nav { position: absolute; top: 76px; left: 0; right: 0; padding: 22px 20px 28px; display: none; align-items: stretch; flex-direction: column; gap: 12px; background: var(--plum-deep); border-top: 1px solid rgba(255,255,255,.18); }
   .primary-nav.is-open { display: flex; }
   .primary-nav > a { min-height: 44px; display: flex; align-items: center; }
