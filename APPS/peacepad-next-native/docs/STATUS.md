@@ -8,7 +8,7 @@
 - Ledger evidence applies only to the exact commit listed in each row
 - Lab default app version: `0.0.1`
 - Guarded internal TestFlight candidate: `2.0.0` (`3`), submitted and `IN_QUEUE`
-- Guarded Android store candidate: last documented evidence is `2.0.0` (`42`); Android release work is concurrent and must be reconciled from its own exact evidence before this snapshot is advanced
+- Guarded Android store candidate: `2.0.0` (`42`) AAB fetch and staging validation passed, but Google Play rejected the configured service account for missing Play Console permission; no track changed
 - Staging/lab bundle: `ca.peacepad.nextnative.lab`
 - Future production bundle: `ca.peacepad.family`
 - Runtime boundary: native app lab/staging only; Canada production Edge writes disabled
@@ -105,17 +105,30 @@ PeacePad Android signing material ephemerally, and completed EAS build
 artifact. The preceding identical build `cfd6a1fe-f940-496c-8874-61722d9568e8`
 failed before Gradle ran because its remote wrapper download ended unexpectedly;
 it is non-qualifying and did not indicate an app or signing defect. No
-`PEACEPAD_PLAY_SERVICE_ACCOUNT_JSON` is configured, the workflow has no
-Google Play upload step, and no Play Console track, tester, public release, or
-production data contact occurred.
+The matching PeacePad service-account JSON is now configured as
+`PEACEPAD_PLAY_SERVICE_ACCOUNT_JSON`. The first guarded upload run
+[`31725427290`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31725427290)
+passed authorization, exact-source binding, staging/no-write validation, and
+credential parsing but exposed a workflow URL-hand-off defect before any Play
+request. PR [#246](https://github.com/fefejiro/FTC-HOLDING/pull/246) corrected
+only that fetch control. The corrected run
+[`31725790605`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31725790605)
+then fetched and validated the exact signed AAB, but Google Play returned
+`The caller does not have permission` at the Internal Testing upload step.
+No Play Console track, tester, public release, or production data contact
+occurred. The remaining Android blocker is granting that exact service account
+access to `ca.peacepad.family` in Google Play Console; signing material and the
+AAB are not the blocker.
 
 PR [#240](https://github.com/fefejiro/FTC-HOLDING/pull/240) then merged main
 control `4e47dc99fe4aa16528a48e06e3530a7a5d4b3173`. It reuses the existing
 Google Play upload action only for a manually authorized **Internal Testing**
 upload: it requires the exact reviewed SHA and finished guarded EAS build,
 rechecks the staging/no-write contract, rejects a production track, and fails
-closed without a new PeacePad-specific Play service-account secret. It was not
-dispatched and cannot establish a Play or production release claim.
+closed without a new PeacePad-specific Play service-account secret. It has now
+been dispatched only for Internal Testing and still cannot establish a Play
+track, tester, public, or production release claim until Play Console accepts
+the service account.
 
 ### Current legacy-to-V2 cutover rehearsal -- 2026-08-12
 
