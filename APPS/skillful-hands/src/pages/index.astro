@@ -86,7 +86,7 @@ const jsonLd = {
         <div class="container about-compact-grid">
           <div class="about-intro">
             <p class="eyebrow">Practical learning with purpose</p>
-            <p>We combine hair education with confidence-building, wellbeing, employability and entrepreneurship.</p>
+            <p>Hair is the engagement tool. What happens around it is much bigger.</p>
           </div>
           <div class="outcome-grid" aria-label="Our focus">
             {site.outcomes.map((item, index) => <p><span>0{index + 1}</span>{item}</p>)}
@@ -102,27 +102,25 @@ const jsonLd = {
           </div>
           <div class="showcase" data-showcase>
             <div class="showcase-tabs" role="tablist" aria-label="Programme slides">
-              {site.showcase.map((item, index) => (
+              {site.programmes.map((item, index) => (
                 <button type="button" role="tab" aria-selected={index === 0 ? "true" : "false"} aria-controls={`programme-panel-${index}`} id={`programme-tab-${index}`} data-slide-to={index}>
-                  <span>{String(index + 1).padStart(2, "0")}</span>{item.label}
+                  <span>{item.number}</span>{item.title}
                 </button>
               ))}
             </div>
             <div class="showcase-window">
               <div class="showcase-track">
-                {site.showcase.map((item, index) => (
+                {site.programmes.map((item, index) => (
                   <article class={`showcase-slide tone-${item.tone}`} id={`programme-panel-${index}`} role="tabpanel" aria-labelledby={`programme-tab-${index}`} aria-hidden={index === 0 ? "false" : "true"}>
                     <div class="showcase-copy">
                       <p class="showcase-audience">{item.audience}</p>
                       <h3>{item.title}</h3>
+                      <p class="programme-strapline">{item.strapline}</p>
                       <p>{item.description}</p>
                       <ul>{item.focus.map((focus) => <li>{focus}</li>)}</ul>
                     </div>
                     <div class="showcase-visual" aria-hidden="true">
-                      <span class="visual-word">Learn</span>
-                      <span class="visual-word">Connect</span>
-                      <span class="visual-word">Grow</span>
-                      <div class="visual-mark">SH</div>
+                      <span class="visual-word">Learn</span><span class="visual-word">Connect</span><span class="visual-word">Grow</span><div class="visual-mark">SH</div>
                     </div>
                   </article>
                 ))}
@@ -130,7 +128,7 @@ const jsonLd = {
             </div>
             <div class="showcase-controls">
               <button type="button" class="round-control" data-previous aria-label="Previous programme">&#8592;</button>
-              <p aria-live="polite"><span data-current>1</span> / {site.showcase.length}</p>
+              <p aria-live="polite"><span data-current>1</span> / {site.programmes.length}</p>
               <button type="button" class="round-control" data-next aria-label="Next programme">&#8594;</button>
               <button type="button" class="motion-control" data-motion aria-label="Pause automatic programme slides">Pause</button>
             </div>
@@ -152,6 +150,13 @@ const jsonLd = {
         </div>
       </section>
 
+      <section class="section communities">
+        <div class="container communities-grid">
+          <div><p class="eyebrow">Working with our communities</p><h2>Designed around people and place.</h2><p>Skillful Hands works with young people, women and adults, with particular attention to people who may experience disadvantage, discrimination, racial inequality or barriers to opportunity.</p></div>
+          <div class="community-panels"><article><h3>Who we support</h3><ul><li>Young people aged 13 to 25</li><li>Women rebuilding their lives</li><li>Adults seeking connection, confidence and practical skills</li><li>People experiencing social isolation or barriers to opportunity</li><li>Black and racially minoritised communities</li></ul></article><article><h3>Where we work</h3><p>Skillful Hands is based in South London, with programmes and partnerships being developed across London.</p><p class="area-list">Croydon <span>•</span> Bromley <span>•</span> Greenwich and Thamesmead <span>•</span> South London</p><p>We are also open to working with schools, community organisations, local authorities, justice services and partners in other London boroughs where there is an identified community need.</p></article></div>
+        </div>
+      </section>
+
       <section id="partners" class="section partners founder-follow">
         <div class="container">
           <div class="section-heading">
@@ -168,6 +173,7 @@ const jsonLd = {
           <div><p>Interested in a programme, partnership, or community collaboration?</p><a class="button button-gold" href="/contact">Contact Skillful Hands CIC</a></div>
         </div>
       </section>
+      <section class="follow-section"><div class="container follow-inner"><div><p class="eyebrow">Follow our journey</p><h2>Stay connected with Skillful Hands CIC.</h2></div><div class="social-actions"><a href={site.instagram} target="_blank" rel="noreferrer" aria-label="Follow Skillful Hands CIC on Instagram">Instagram <span aria-hidden="true">↗</span></a><a href={site.linkedin} target="_blank" rel="noreferrer" aria-label="Follow Skillful Hands CIC on LinkedIn">LinkedIn <span aria-hidden="true">↗</span></a></div></div></section>
     </main>
     <Footer />
     <script>
