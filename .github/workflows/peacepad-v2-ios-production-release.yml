@@ -129,6 +129,10 @@ jobs:
 
       - name: Upload exact IPA to App Store Connect
         id: submit
+        env:
+          PEACEPAD_IOS_RELEASE_MODE: appstore-production
+          EXPO_PUBLIC_PEACEPAD_ENV: production
+          EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED: "true"
         working-directory: ${{ runner.temp }}/peacepad-next-native-production
         shell: bash
         run: |
@@ -185,3 +189,12 @@ jobs:
           if-no-files-found: error
           retention-days: 30
           path: ${{ runner.temp }}/peacepad-v2-production-evidence
+
+      - name: Retain signed IPA when upload fails
+        if: failure() && steps.build.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: peacepad-v2-ios-production-ipa-${{ inputs.source_sha }}
+          if-no-files-found: error
+          retention-days: 1
+          path: ${{ runner.temp }}/peacepad-v2-production-2.0.0-4.ipa
