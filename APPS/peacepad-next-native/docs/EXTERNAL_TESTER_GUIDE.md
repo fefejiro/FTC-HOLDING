@@ -23,6 +23,21 @@ Use only dedicated test accounts and clearly fake, non-sensitive content. Do
 not reuse production passwords. Do not add children, addresses, case details,
 medical information, payment data, legal documents, or photos.
 
+## Android Internal Testing access
+
+The existing 8-person Google Play `Test List` is attached to PeacePad Internal
+Testing. A listed tester must sign in to Google Play with the invited Google
+account, open
+`https://play.google.com/apps/internaltest/4700709307955525538`, accept the
+test, and install **PeacePad 2.0.0 (version code 42)** from Google Play. Do not
+install an APK or AAB received by email or chat.
+
+After installation, record the phone model, Android version, displayed app
+version, selected staging region, first-launch result, and cleanup result. The
+Android candidate still uses fictional staging with production writes disabled;
+do not enter real family information. Internal Testing availability is not a
+public Google Play Production release.
+
 ## Install and first launch
 
 1. Open the TestFlight invitation supplied by the release lead and install the

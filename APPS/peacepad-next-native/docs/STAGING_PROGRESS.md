@@ -1,8 +1,8 @@
 # Native V2 staging progress
 
 > Historical staging progress record. The authoritative current dashboard and
-> release handover are [STATUS.md](STATUS.md). Do not update Android claims here
-> while its release work is concurrent; reconcile them from exact owner evidence.
+> release handover are [STATUS.md](STATUS.md). Android Internal Testing status
+> below is retained only as a concise handover pointer to exact owner evidence.
 
 Branch: `agent/peacepad-native-staging-clean`  
 Draft PR: [#172](https://github.com/fefejiro/FTC-HOLDING/pull/172)  
@@ -51,21 +51,16 @@ Submission `ff512236-cab1-4407-a6df-c4e4fcf9db54` is currently `IN_QUEUE`;
 Apple processing, TestFlight installation, review, and public release remain
 unverified.
 
-The same existing public package now has a separate guarded Android
-store-distribution candidate. Exact source `4bde06e651d00de25c30ba48e50e9557619ccb31`
-and main control `d4b58fd80c6135eb779887bb156dd5c61130ff9f` produced EAS Android
-build `b9069a81-4bb5-4c37-88de-b1e39bd0b756` as `2.0.0` / `42` for
-`ca.peacepad.family`; [run `31640303014`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31640303014)
-passed exact-source binding, ephemeral approved signing, and evidence upload.
-It remains fictional staging with production writes disabled. There is no
-PeacePad Play service-account secret or upload workflow, so no Play track,
-tester, public release, or production V2 action occurred.
-
-Main control `4e47dc99fe4aa16528a48e06e3530a7a5d4b3173` (PR #240) now provides a
-separate, manual Internal Testing-only upload control. It binds a reviewed
-source SHA and finished guarded EAS build, rechecks staging/no-write status,
-rejects a production track, and fails closed until a PeacePad-specific Play
-service-account secret is configured. It has not been dispatched.
+The existing public Android package now has a separate guarded Internal Testing
+candidate. Exact source `12f557c897bc14b1ce151c6f8f6136c44f72d691`
+produced EAS build `826ecda0-96c0-40e5-9570-0b64b60811e6` as Version 2.0.0 /
+version code 42 for `ca.peacepad.family`; build run `31732438486` and Play
+upload run `31736163352` passed. Android Publisher readback confirmed the
+completed `internal` release, and Play Console readback confirmed the existing
+8-person `Test List` is attached to the active track. The opt-in URL is
+`https://play.google.com/apps/internaltest/4700709307955525538`. It remains
+fictional staging with production writes disabled. This is not physical-device
+installation, public Production, real-family-data approval, or V2 cutover.
 
 Exact cutover-rehearsal commit `e35ec103e` passed Native run `31630730421` and
 Infrastructure rerun `31630730410`. It proves a rollback-only fictional

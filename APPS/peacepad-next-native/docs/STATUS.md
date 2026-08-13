@@ -4,11 +4,11 @@
 
 - Snapshot date: 2026-08-13
 - Branch: `feat/peacepad-v2-supabase-free-staging`
-- Verified implementation baseline: `4bde06e651d00de25c30ba48e50e9557619ccb31`
+- Verified implementation baseline: `12f557c897bc14b1ce151c6f8f6136c44f72d691`
 - Ledger evidence applies only to the exact commit listed in each row
 - Lab default app version: `0.0.1`
 - Guarded internal TestFlight candidate: `2.0.0` (`3`), submitted and `IN_QUEUE`
-- Guarded Android store candidate: `2.0.0` (`42`) AAB fetch and staging validation passed, but Google Play rejected the configured service account for missing Play Console permission; no track changed
+- Guarded Android store candidate: `2.0.0` (`42`) is active on Google Play Internal Testing for the existing 8-person `Test List`; public Production is unchanged
 - Staging/lab bundle: `ca.peacepad.nextnative.lab`
 - Future production bundle: `ca.peacepad.family`
 - Runtime boundary: native app lab/staging only; Canada production Edge writes disabled
@@ -20,13 +20,13 @@ is historical and cannot independently pass a release gate.
 
 ## Release verdict
 
-**BLOCKED - Gate 0 is HOSTED VERIFIED and both replacement regional fictional-staging projects are DEPLOYED STAGING VERIFIED for all 20 migrations, the regional Edge API, public boundaries, a managed fictional two-account feature contract, and read-only application-schema logical restoration. Canada also has a separately deployed, write-locked production Edge adapter with an empty hardened schema; it is not connected to the native app or legacy users. The exact simulator artifact from `2fe8ca82b` is screenshot-backed SIMULATOR VERIFIED against Canada and U.S. staging for temporary two-account messaging and Calendar coordination. The iOS `2.0.0` build 3 signed IPA from `ec45198f1bdbd849121ab330cbdba0c53a95aeec` was accepted by App Store Connect as submission `ff512236-cab1-4407-a6df-c4e4fcf9db54` and remains `IN_QUEUE`; this is submission evidence only, not Apple processing, TestFlight installation, review, or release. The guarded Android `2.0.0` (`42`) AAB is historical evidence only while concurrent Android release work proceeds; do not infer its current Play status from this document. Both store candidates retain fictional staging and disabled production writes. Provider-level Auth/platform snapshot or PITR recovery, a reviewed reversible existing-account migration, invitation/Message Check/deletion/offline native journeys, TURN capacity and live media, real-device journeys, assistive-technology and trust reviews, TestFlight, Google Play, App Store review, and production V2 cutover remain incomplete.**
+**BLOCKED - Gate 0 is HOSTED VERIFIED and both replacement regional fictional-staging projects are DEPLOYED STAGING VERIFIED for all 20 migrations, the regional Edge API, public boundaries, a managed fictional two-account feature contract, and read-only application-schema logical restoration. Canada also has a separately deployed, write-locked production Edge adapter with an empty hardened schema; it is not connected to the native app or legacy users. The exact simulator artifact from `2fe8ca82b` is screenshot-backed SIMULATOR VERIFIED against Canada and U.S. staging for temporary two-account messaging and Calendar coordination. The iOS `2.0.0` build 3 signed IPA from `ec45198f1bdbd849121ab330cbdba0c53a95aeec` was accepted by App Store Connect as submission `ff512236-cab1-4407-a6df-c4e4fcf9db54` and remains `IN_QUEUE`; this is submission evidence only, not Apple processing, TestFlight installation, review, or release. Android `2.0.0` (`42`) from exact source `12f557c897bc14b1ce151c6f8f6136c44f72d691` is now active on Google Play Internal Testing for the existing 8-person `Test List`; the track and tester-list association were independently read back, but no physical tester installation or public Production rollout is claimed. Both store candidates retain fictional staging and disabled production writes. Provider-level Auth/platform snapshot or PITR recovery, a reviewed reversible existing-account migration, invitation/Message Check/deletion/offline native journeys, TURN capacity and live media, real-device journeys, assistive-technology and trust reviews, TestFlight, public Google Play, App Store review, and production V2 cutover remain incomplete.**
 
 ## Release handover - next evidence gates
 
 1. **iOS queue resolution:** inspect App Store Connect/TestFlight for submission `ff512236-cab1-4407-a6df-c4e4fcf9db54`. Record either a processing failure with Apple's exact message or a processed build. Do not invite testers until the processed build and its `2.0.0`/`3` metadata are visibly confirmed.
 2. **Internal TestFlight proof:** after an authorized internal invite, install the processed build on physical hardware using only dedicated fictional test accounts. Capture the build number, device/iOS version, staging-region label, first-launch result, and cleanup result; then update the tester guide only if the build is actually available.
-3. **Android ownership boundary:** obtain the Android owner's exact build/upload/Play-console evidence before changing any Android status. An AAB, a queued upload, an internal track, tester installation, and public publication are separate gates.
+3. **Android tester proof:** ask only members of the existing `Test List` to join through `https://play.google.com/apps/internaltest/4700709307955525538`, install Version 2.0.0 (`42`) from Google Play, and record device/Android version, selected staging region, launch/sign-in result, and cleanup. Internal Testing is verified; physical installation and public Production remain separate gates.
 4. **Cohort and release gates:** retain fictional staging/no-production-write controls through the two-person device journey, accessibility and privacy review, migration/rollback rehearsal, and seven-day release-candidate soak. App Review approval and public-store availability remain separate final evidence gates.
 
 ### Current signed-build attempt — 2026-08-12
@@ -90,45 +90,36 @@ exact IPA was accepted as App Store Connect submission
 currently `IN_QUEUE`. Apple processing, TestFlight installation, review, and
 public release remain unverified.
 
-### Current Android signed-build attempt -- 2026-08-12
+### Current Android Internal Testing release -- 2026-08-13
 
-Exact source `4bde06e651d00de25c30ba48e50e9557619ccb31` adds the guarded
-`playstore-internal` profile: existing public package `ca.peacepad.family`,
-version `2.0.0` / version code `42`, store distribution, diagnostics disabled,
-fictional staging runtime, and production API writes disabled. Its local
-TypeScript, 46 suites / 341 passed / 1 skipped, 82.69% statement / 76.13%
-branch coverage, guardrails, 126-file secret scan, and diff checks passed.
-Exact-source Native run `31638564353` and Infrastructure run `31638564516`
-passed. Main-controlled run `31640303014` bound that SHA, used the approved
-PeacePad Android signing material ephemerally, and completed EAS build
-`b9069a81-4bb5-4c37-88de-b1e39bd0b756`; EAS returned a store-distribution AAB
-artifact. The preceding identical build `cfd6a1fe-f940-496c-8874-61722d9568e8`
-failed before Gradle ran because its remote wrapper download ended unexpectedly;
-it is non-qualifying and did not indicate an app or signing defect. No
-The matching PeacePad service-account JSON is now configured as
-`PEACEPAD_PLAY_SERVICE_ACCOUNT_JSON`. The first guarded upload run
-[`31725427290`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31725427290)
-passed authorization, exact-source binding, staging/no-write validation, and
-credential parsing but exposed a workflow URL-hand-off defect before any Play
-request. PR [#246](https://github.com/fefejiro/FTC-HOLDING/pull/246) corrected
-only that fetch control. The corrected run
-[`31725790605`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31725790605)
-then fetched and validated the exact signed AAB, but Google Play returned
-`The caller does not have permission` at the Internal Testing upload step.
-No Play Console track, tester, public release, or production data contact
-occurred. The remaining Android blocker is granting that exact service account
-access to `ca.peacepad.family` in Google Play Console; signing material and the
-AAB are not the blocker.
+Exact source `12f557c897bc14b1ce151c6f8f6136c44f72d691` retains the guarded
+`playstore-internal` profile for existing public package `ca.peacepad.family`,
+Version 2.0.0 / version code 42, fictional staging, and disabled production
+writes. It also removes legacy external-storage and overlay permissions while
+preserving microphone-only behavior. Local TypeScript, 46 suites / 341 passed /
+1 skipped, 82.69% statement / 76.16% branch coverage, guardrails, the 126-file
+secret scan, and diff checks passed.
 
-PR [#240](https://github.com/fefejiro/FTC-HOLDING/pull/240) then merged main
-control `4e47dc99fe4aa16528a48e06e3530a7a5d4b3173`. It reuses the existing
-Google Play upload action only for a manually authorized **Internal Testing**
-upload: it requires the exact reviewed SHA and finished guarded EAS build,
-rechecks the staging/no-write contract, rejects a production track, and fails
-closed without a new PeacePad-specific Play service-account secret. It has now
-been dispatched only for Internal Testing and still cannot establish a Play
-track, tester, public, or production release claim until Play Console accepts
-the service account.
+Main control `677eb02125aa6d3941c7439cdd327d9fa24b8521` produced the hardened
+signed AAB in [run `31732438486`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31732438486)
+as EAS build
+[`826ecda0-96c0-40e5-9570-0b64b60811e6`](https://expo.dev/accounts/official_fejiro/projects/peacepad-next-native-lab/builds/826ecda0-96c0-40e5-9570-0b64b60811e6).
+The 85,530,310-byte artifact has SHA-256
+`b6d6efa25a761ca86c48fc4f93e89cdda39e9994a1cb5fbfe4c067425635f6ae`,
+targets Android API 36, and contains none of the prohibited legacy-storage or
+overlay permissions. The separately authorized
+[Play upload run `31736163352`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31736163352)
+passed and Android Publisher readback returned track `internal`, release 2.0.0,
+status `completed`, and version code 42.
+
+The existing Play Console email list `Test List` (8 members) was then attached
+to Internal Testing without creating or exposing a duplicate list. An
+authenticated Play Console track readback confirmed the exact list reference
+and that the Internal track remains active. Its tester opt-in URL is
+`https://play.google.com/apps/internaltest/4700709307955525538`. This is real
+Google Play Internal Testing evidence, but it is not a physical-device install,
+open/closed test, public Production rollout, real-family-data approval, or V2
+production cutover.
 
 ### Current legacy-to-V2 cutover rehearsal -- 2026-08-12
 
@@ -649,7 +640,7 @@ and dual-region native coordination slices advanced.
 | Non-qualifying Canadian invitation/Message Check Simulator attempt | `6f93b3407` | Protected GitHub macOS Simulator; Canadian fictional staging only | 2026-08-12 | NOT VERIFIED / FIXTURE CLEANUP UNVERIFIED | Run [`31608414991`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31608414991) accepted the exact artifact and source, provisioned two temporary fictional `@example.test` accounts, and destroyed both Simulators. Native journey verification failed; the fixture cleanup request then received HTTP 500, so application/Auth cleanup is not claimed. No credentials or private content were retained in evidence and production was not contacted. This is not a reason to dispatch further regional Simulator work before the TestFlight signing blocker is cleared. |
 | Temporary Simulator fixture cleanup transport hardening | Protected main control `c561383e8` (PR [#234](https://github.com/fefejiro/FTC-HOLDING/pull/234)) | GitHub Actions control workflow; no dispatch | 2026-08-12 | IMPLEMENTED / NOT YET RERUN | The two Supabase API-key metadata fetches used only to obtain a temporary service-role key for fictional fixture provisioning or cleanup now retry up to three times on transient curl failures, with bounded connection and total timeouts. The workflow remains fail-closed if the lookup cannot succeed; it does not mark cleanup as verified without the existing identity/Auth deletion receipts. YAML formatting/parser validation and diff checks passed before merge. No Simulator, fixture, deployment, TestFlight, or production action was started by this control-only change. |
 | External Native V2 tester guide | `3967385b6` | Documentation only | 2026-08-12 | IMPLEMENTED / RELEASE NOT YET AVAILABLE | [`EXTERNAL_TESTER_GUIDE.md`](EXTERNAL_TESTER_GUIDE.md) defines the first external-TestFlight cohort, two-person invitation/messaging/Message Check/Calendar/Records/offline/deletion checks, accessibility observations, privacy-safe reporting, unsupported-call/file boundaries, and release-lead exit criteria. It explicitly prohibits real family or sensitive information because the current signed-candidate profile remains fictional staging with production writes disabled. No TestFlight or public release is claimed. |
-| Guarded Android signed store candidate | `4bde06e651d00de25c30ba48e50e9557619ccb31`; build control `d4b58fd80c6135eb779887bb156dd5c61130ff9f`; Internal Testing control `4e47dc99fe4aa16528a48e06e3530a7a5d4b3173` | EAS Build and GitHub Actions; no Google Play API or Play Console action yet | 2026-08-12 | HOSTED + EAS ANDROID AAB VERIFIED / PLAY PUBLICATION AND PRODUCTION CUTOVER BLOCKED | The `playstore-internal` profile resolves to the existing package `ca.peacepad.family`, Android `2.0.0` / `42`, local approved signing credentials, store distribution, diagnostics off, fictional staging, and production writes disabled. Local TypeScript, 46 suites / 341 passed / 1 skipped, 82.69% statements / 76.13% branches, guardrails, 126-file scan, and diff checks passed; [Native run `31638564353`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31638564353) and [Infrastructure run `31638564516`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31638564516) passed. Main-controlled [run `31640303014`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31640303014) bound the exact source, accepted the ephemeral local signing configuration, and completed EAS Android build [`b9069a81-4bb5-4c37-88de-b1e39bd0b756`](https://expo.dev/accounts/official_fejiro/projects/peacepad-next-native-lab/builds/b9069a81-4bb5-4c37-88de-b1e39bd0b756). The earlier EAS build `cfd6a1fe-f940-496c-8874-61722d9568e8` is non-qualifying: its Gradle wrapper download ended unexpectedly before Gradle executed. PR [#240](https://github.com/fefejiro/FTC-HOLDING/pull/240) adds a separately manual Internal Testing-only upload workflow that requires exact staging authorization, source/build checks, and a PeacePad-specific service-account JSON. It has not run. `PEACEPAD_PLAY_SERVICE_ACCOUNT_JSON` remains absent; no Play track, tester, public release, device, real-family data, or V2 production contact is claimed. |
+| Guarded Android Internal Testing candidate | `12f557c897bc14b1ce151c6f8f6136c44f72d691`; main control `677eb02125aa6d3941c7439cdd327d9fa24b8521` | EAS Build, GitHub Actions, Android Publisher, and authenticated Play Console readback | 2026-08-13 | GOOGLE PLAY INTERNAL TESTING VERIFIED / DEVICE AND PUBLIC PRODUCTION BLOCKED | Version 2.0.0 / `42` for existing package `ca.peacepad.family` remains fictional staging with production writes disabled. Local typecheck; 46 suites / 341 passed / 1 skipped; 82.69% statements / 76.16% branches; guardrails; 126-file scan; and diff checks passed. [Build run `31732438486`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31732438486) produced EAS AAB `826ecda0-96c0-40e5-9570-0b64b60811e6` (85,530,310 bytes; SHA-256 `b6d6efa25a761ca86c48fc4f93e89cdda39e9994a1cb5fbfe4c067425635f6ae`), target API 36, with legacy storage/overlay permissions absent. [Upload run `31736163352`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31736163352) passed; Android Publisher readback returned completed `internal` release 2.0.0 / `42`. Authenticated Play Console readback confirmed the existing 8-member `Test List` attached to the active track. Tester URL: `https://play.google.com/apps/internaltest/4700709307955525538`. No physical install, public Production rollout, real-family data, or V2 production cutover is claimed. |
 | Provider restoration, file/media journeys, simulator, device, TestFlight, production | `82cfd5365` current Simulator scope | managed staging plus hosted macOS Simulator | 2026-08-11 | APPLICATION LOGICAL RESTORATION + DUAL-REGION NATIVE COORDINATION SIMULATOR VERIFIED / REMAINING PROOF INCOMPLETE | The expanded two-account managed API journey and application-schema logical restoration passed in both regions; connectivity-aware queued-message recovery retains hosted automated proof; and exact CA/U.S. builds now pass authenticated native message/Calendar mutation plus second-account visibility with inspected screenshots and guaranteed cleanup on iOS 26.2. Supabase Auth/platform snapshot or PITR recovery, actual file transport, invitation/Message Check/deletion/offline native journeys, call media, assistive-technology and real-device audits, signing, TestFlight, and production proof have not run |
 
 ## Mandatory release gates
