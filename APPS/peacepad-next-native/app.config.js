@@ -6,6 +6,11 @@ const TESTFLIGHT_BUILD_NUMBER = "3";
 const PLAYSTORE_VERSION_CODE = 42;
 const PRODUCTION_BUNDLE_ID = "ca.peacepad.family";
 const APP_STORE_ID = "6793350735";
+const ANDROID_RELEASE_BLOCKED_PERMISSIONS = [
+  "android.permission.READ_EXTERNAL_STORAGE",
+  "android.permission.SYSTEM_ALERT_WINDOW",
+  "android.permission.WRITE_EXTERNAL_STORAGE"
+];
 
 module.exports = ({ config }) => {
   const iosReleaseMode = process.env.PEACEPAD_IOS_RELEASE_MODE?.trim();
@@ -26,6 +31,12 @@ module.exports = ({ config }) => {
       version: TESTFLIGHT_VERSION,
       android: {
         ...config.android,
+        blockedPermissions: [
+          ...new Set([
+            ...(config.android?.blockedPermissions || []),
+            ...ANDROID_RELEASE_BLOCKED_PERMISSIONS
+          ])
+        ],
         package: PRODUCTION_BUNDLE_ID,
         versionCode: PLAYSTORE_VERSION_CODE
       },
@@ -88,6 +99,7 @@ module.exports.dualSimulatorContract = {
 };
 
 module.exports.androidPlayStoreContract = {
+  blockedPermissions: ANDROID_RELEASE_BLOCKED_PERMISSIONS,
   bundleIdentifier: PRODUCTION_BUNDLE_ID,
   mode: PLAYSTORE_INTERNAL_MODE,
   version: TESTFLIGHT_VERSION,

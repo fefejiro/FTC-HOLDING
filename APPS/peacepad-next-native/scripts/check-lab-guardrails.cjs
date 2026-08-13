@@ -207,6 +207,15 @@ for (const expectedReleaseValue of ["ca.peacepad.family", "6793350735", "2.0.0",
     failures.push(`Dynamic app config is missing the reviewed TestFlight value ${expectedReleaseValue}.`);
   }
 }
+for (const blockedAndroidPermission of [
+  "android.permission.READ_EXTERNAL_STORAGE",
+  "android.permission.SYSTEM_ALERT_WINDOW",
+  "android.permission.WRITE_EXTERNAL_STORAGE"
+]) {
+  if (!dynamicAppConfigSource.includes(blockedAndroidPermission)) {
+    failures.push(`Android store config must block unnecessary permission ${blockedAndroidPermission}.`);
+  }
+}
 
 const sourceFiles = [];
 const ignoredDirectories = new Set([

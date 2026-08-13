@@ -75,7 +75,15 @@ describe("PeacePad iOS release variant", () => {
     process.env.EXPO_PUBLIC_PEACEPAD_ENV = "staging";
     expect(resolveConfig({ config: structuredClone(appJson.expo) })).toMatchObject({
       version: "2.0.0",
-      android: { package: "ca.peacepad.family", versionCode: 42 },
+      android: {
+        blockedPermissions: [
+          "android.permission.READ_EXTERNAL_STORAGE",
+          "android.permission.SYSTEM_ALERT_WINDOW",
+          "android.permission.WRITE_EXTERNAL_STORAGE"
+        ],
+        package: "ca.peacepad.family",
+        versionCode: 42
+      },
       extra: {
         productionApiWritesEnabled: false,
         releaseChannel: "playstore-internal",
