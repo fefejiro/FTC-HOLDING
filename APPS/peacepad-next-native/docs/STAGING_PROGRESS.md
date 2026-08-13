@@ -28,6 +28,15 @@ its manifest records the `testflight-internal` profile and
 `submission_attempted=false`. It remains fictional staging with production
 writes disabled. No TestFlight, App Store, or production V2 release occurred.
 
+The replacement Xcode 26 control then produced a signed IPA from exact source
+`82fad8f87b440215d681f4e6820e205ca8abfe1b` in GitHub run
+[`31647572665`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31647572665),
+using Xcode 26.6 (17F113). The 25,118,188-byte artifact has SHA-256
+`28913054e9884fe74e2b1b6bb72aaec8b0348ca2f327c39b02ec5709dcbbdeca` and was
+accepted by EAS Submit as submission
+`644d93e8-224b-46f4-aa30-4c95b973dc15`, currently `IN_QUEUE`. No TestFlight
+processing, installation, App Store review, or public release is claimed.
+
 The same existing public package now has a separate guarded Android
 store-distribution candidate. Exact source `4bde06e651d00de25c30ba48e50e9557619ccb31`
 and main control `d4b58fd80c6135eb779887bb156dd5c61130ff9f` produced EAS Android

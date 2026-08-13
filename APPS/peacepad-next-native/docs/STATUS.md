@@ -44,6 +44,24 @@ source tree `39e85e97daa41d4a77ed2f4a36560d94152551c7` and
 production writes disabled. No TestFlight upload, public App Store update, or
 production data change occurred.
 
+### Xcode 26 signed submission attempt -- 2026-08-13
+
+The replacement macOS 26 control produced a signed `testflight-internal` IPA
+from exact source `82fad8f87b440215d681f4e6820e205ca8abfe1b` using Xcode 26.6
+(build 17F113). GitHub run
+[`31647572665`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31647572665)
+passed source binding, local IPA build, and evidence upload. The downloaded IPA
+is 25,118,188 bytes with SHA-256
+`28913054e9884fe74e2b1b6bb72aaec8b0348ca2f327c39b02ec5709dcbbdeca` and
+contains bundle `ca.peacepad.family` plus its code-signature resources. The
+exact IPA was accepted by EAS Submit using the configured Apple App Store
+Connect API key; submission
+[`644d93e8-224b-46f4-aa30-4c95b973dc15`](https://expo.dev/accounts/official_fejiro/projects/peacepad-next-native-lab/submissions/644d93e8-224b-46f4-aa30-4c95b973dc15)
+is currently `IN_QUEUE`. This is an upload/processing attempt only: Apple
+TestFlight processing, tester installation, App Store review, and public
+release remain unverified. The profile remains fictional staging with
+production writes disabled.
+
 ### Current Android signed-build attempt -- 2026-08-12
 
 Exact source `4bde06e651d00de25c30ba48e50e9557619ccb31` adds the guarded
