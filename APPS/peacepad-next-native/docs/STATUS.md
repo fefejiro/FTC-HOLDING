@@ -21,6 +21,41 @@ is historical and cannot independently pass a release gate.
 
 ## Release verdict
 
+### Canada production runtime update — 2026-08-13
+
+Exact source `82b9075fb` now contains the guarded App Store production runtime
+for `ca.peacepad.family` version `2.0.0` build `4`. It accepts only the Canada
+production Supabase project `qzekqjewpugdotskrtni`, an `sb_publishable_` client
+key, explicit production-write authorization, the `peacepad:` invitation
+scheme, and production-safe EN/FR/ES account copy. Local verification passed
+46 suites with 346 tests and 1 skipped, 82.66% statement and 76.10% branch
+coverage, plus TypeScript, guardrails, secret scan, and diff checks. Exact-SHA
+Native run `31747654264` and infrastructure run `31747654290` passed.
+
+The deployed Canada production API now reports production/Canada with writes
+enabled. A bounded fictional-only managed contract passed Auth, identity
+bootstrap, wrong-region denial, idempotency, invitation, messaging, Message
+Check, shared Calendar, private Records, call lifecycle, post-end signaling
+denial, account deletion, and old-token denial. Both temporary application and
+Auth identities were removed. Legacy Supabase keys were enabled only for that
+bounded Auth Admin operation, then disabled and read back as disabled.
+
+A content-free read-only legacy inventory found 111 users, 54 partnerships,
+54 conversations, 108 conversation memberships, 380 messages, and 162 events.
+All 162 events deterministically map to one partnership, but 109 users are
+guest identities and none of the 111 users has a stored email. Therefore an
+automatic email claim cannot preserve legacy accounts; a reviewed guest bridge
+or an explicit clean-start product decision remains required before replacing
+the public V1 binary.
+
+The signed production build attempt uploaded the exact 1.8 MB app-only archive
+to EAS and validated the Apple distribution certificate and provisioning
+profile, but EAS refused to queue the build because the free account has used
+its monthly iOS build allowance. The allowance resets 2026-09-01. GitHub does
+not currently hold the Apple signing private key/profile, and MacinCloud remains
+unavailable, so no build 4 binary, App Store attachment, review submission, or
+public V2 release is claimed.
+
 **BLOCKED - Gate 0 is HOSTED VERIFIED and both replacement regional fictional-staging projects are DEPLOYED STAGING VERIFIED for all 20 migrations, the regional Edge API, public boundaries, a managed fictional two-account feature contract, and read-only application-schema logical restoration. Canada also has a deployed, write-locked production Edge adapter and all protected V2 RPC surfaces; it is not yet connected to the native app or legacy users. Its readiness endpoint reports production/Canada with writes disabled. After a provider CLI unexpectedly disclosed the production legacy API keys, those legacy keys were disabled through the authenticated Management API and read back as disabled; the newer publishable/secret key system remains active. The exact simulator artifact from `2fe8ca82b` is screenshot-backed SIMULATOR VERIFIED against Canada and U.S. staging for temporary two-account messaging and Calendar coordination. App Store Connect processed the iOS `2.0.0` build 3 signed IPA from `ec45198f1bdbd849121ab330cbdba0c53a95aeec` as `VALID`; exact build resource `4c4b3b9e-b7f5-4da9-ab80-66ad8d6e2091` is assigned to the existing 2-person internal TestFlight group. Public App Store version resource `58d1ec3b-bcdb-44b4-8a8f-7979e5ae66de` now exists as `2.0.0` in `PREPARE_FOR_SUBMISSION` with manual release control, complete en-CA text/review-contact records and inherited iPhone/iPad screenshot sets, but no build is attached. Android `2.0.0` (`42`) from exact source `12f557c897bc14b1ce151c6f8f6136c44f72d691` is active on Google Play Internal Testing for the existing 8-person `Test List`; the track and tester-list association were independently read back, but no physical tester installation or public Production rollout is claimed. Both existing store binaries retain fictional staging and disabled production writes. Provider-level Auth/platform snapshot or PITR recovery, a reviewed reversible existing-account migration, invitation/Message Check/deletion/offline native journeys, TURN capacity and live media, real-device journeys, assistive-technology and trust reviews, a production-wired signed build, physical TestFlight proof, public Google Play, App Store review, and production V2 cutover remain incomplete.**
 
 ## Release handover - next evidence gates
