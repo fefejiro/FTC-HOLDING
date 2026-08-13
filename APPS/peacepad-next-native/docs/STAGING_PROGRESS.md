@@ -72,6 +72,16 @@ scope, and text-only retained messages are required before mapping to V2.
 This is not a production source read, data migration, production project,
 production-write enablement, TestFlight, or App Store release.
 
+App Store Connect now also has a public iOS `2.0.0` version shell
+(`58d1ec3b-bcdb-44b4-8a8f-7979e5ae66de`) in `PREPARE_FOR_SUBMISSION` under
+manual release control. Its en-CA listing text, review-contact record, and
+existing iPhone/iPad screenshot sets are present, but no build is attached and
+no review or release was requested. The Canada production Supabase project is
+healthy, exposes the protected V2 RPC contract, and remains write-locked. Its
+legacy API keys were disabled after CLI disclosure; the newer key system
+remains active. This is production-boundary and listing preparation, not a V2
+production release.
+
 Exact commit `e7a03d38c` now adds a content-free, read-only legacy source
 inventory runner. It reports schema metadata, required-column gaps, aggregate
 counts, and a schema fingerprint only, cannot contact V2, and refuses to

@@ -8,6 +8,7 @@
 - Ledger evidence applies only to the exact commit listed in each row
 - Lab default app version: `0.0.1`
 - Guarded internal TestFlight candidate: `2.0.0` (`3`) is Apple-processed `VALID` and assigned to the existing 2-person `PeacePad Internal` group
+- Public App Store version: `2.0.0` is `PREPARE_FOR_SUBMISSION` under manual release control; no build is attached
 - Guarded Android store candidate: `2.0.0` (`42`) is active on Google Play Internal Testing for the existing 8-person `Test List`; public Production is unchanged
 - Staging/lab bundle: `ca.peacepad.nextnative.lab`
 - Future production bundle: `ca.peacepad.family`
@@ -20,7 +21,7 @@ is historical and cannot independently pass a release gate.
 
 ## Release verdict
 
-**BLOCKED - Gate 0 is HOSTED VERIFIED and both replacement regional fictional-staging projects are DEPLOYED STAGING VERIFIED for all 20 migrations, the regional Edge API, public boundaries, a managed fictional two-account feature contract, and read-only application-schema logical restoration. Canada also has a separately deployed, write-locked production Edge adapter with an empty hardened schema; it is not connected to the native app or legacy users. The exact simulator artifact from `2fe8ca82b` is screenshot-backed SIMULATOR VERIFIED against Canada and U.S. staging for temporary two-account messaging and Calendar coordination. App Store Connect processed the iOS `2.0.0` build 3 signed IPA from `ec45198f1bdbd849121ab330cbdba0c53a95aeec` as `VALID`; exact build resource `4c4b3b9e-b7f5-4da9-ab80-66ad8d6e2091` is assigned to the existing 2-person internal TestFlight group. No physical installation, external TestFlight review, App Store review, or public release is claimed. Android `2.0.0` (`42`) from exact source `12f557c897bc14b1ce151c6f8f6136c44f72d691` is active on Google Play Internal Testing for the existing 8-person `Test List`; the track and tester-list association were independently read back, but no physical tester installation or public Production rollout is claimed. Both store candidates retain fictional staging and disabled production writes. Provider-level Auth/platform snapshot or PITR recovery, a reviewed reversible existing-account migration, invitation/Message Check/deletion/offline native journeys, TURN capacity and live media, real-device journeys, assistive-technology and trust reviews, physical TestFlight proof, public Google Play, App Store review, and production V2 cutover remain incomplete.**
+**BLOCKED - Gate 0 is HOSTED VERIFIED and both replacement regional fictional-staging projects are DEPLOYED STAGING VERIFIED for all 20 migrations, the regional Edge API, public boundaries, a managed fictional two-account feature contract, and read-only application-schema logical restoration. Canada also has a deployed, write-locked production Edge adapter and all protected V2 RPC surfaces; it is not yet connected to the native app or legacy users. Its readiness endpoint reports production/Canada with writes disabled. After a provider CLI unexpectedly disclosed the production legacy API keys, those legacy keys were disabled through the authenticated Management API and read back as disabled; the newer publishable/secret key system remains active. The exact simulator artifact from `2fe8ca82b` is screenshot-backed SIMULATOR VERIFIED against Canada and U.S. staging for temporary two-account messaging and Calendar coordination. App Store Connect processed the iOS `2.0.0` build 3 signed IPA from `ec45198f1bdbd849121ab330cbdba0c53a95aeec` as `VALID`; exact build resource `4c4b3b9e-b7f5-4da9-ab80-66ad8d6e2091` is assigned to the existing 2-person internal TestFlight group. Public App Store version resource `58d1ec3b-bcdb-44b4-8a8f-7979e5ae66de` now exists as `2.0.0` in `PREPARE_FOR_SUBMISSION` with manual release control, complete en-CA text/review-contact records and inherited iPhone/iPad screenshot sets, but no build is attached. Android `2.0.0` (`42`) from exact source `12f557c897bc14b1ce151c6f8f6136c44f72d691` is active on Google Play Internal Testing for the existing 8-person `Test List`; the track and tester-list association were independently read back, but no physical tester installation or public Production rollout is claimed. Both existing store binaries retain fictional staging and disabled production writes. Provider-level Auth/platform snapshot or PITR recovery, a reviewed reversible existing-account migration, invitation/Message Check/deletion/offline native journeys, TURN capacity and live media, real-device journeys, assistive-technology and trust reviews, a production-wired signed build, physical TestFlight proof, public Google Play, App Store review, and production V2 cutover remain incomplete.**
 
 ## Release handover - next evidence gates
 
@@ -28,6 +29,25 @@ is historical and cannot independently pass a release gate.
 2. **External TestFlight decision:** keep the existing public-beta group unchanged until internal physical-device proof passes and the release lead explicitly approves external beta review; build 3 is not currently assigned to that external group.
 3. **Android tester proof:** ask only members of the existing `Test List` to join through `https://play.google.com/apps/internaltest/4700709307955525538`, install Version 2.0.0 (`42`) from Google Play, and record device/Android version, selected staging region, launch/sign-in result, and cleanup. Internal Testing is verified; physical installation and public Production remain separate gates.
 4. **Cohort and release gates:** retain fictional staging/no-production-write controls through the two-person device journey, accessibility and privacy review, migration/rollback rehearsal, and seven-day release-candidate soak. App Review approval and public-store availability remain separate final evidence gates.
+
+### App Store 2.0 shell and production key repair -- 2026-08-13
+
+App Store Connect version resource
+`58d1ec3b-bcdb-44b4-8a8f-7979e5ae66de` now represents PeacePad `2.0.0`
+for iOS in `PREPARE_FOR_SUBMISSION`. Its release type is `MANUAL`; the en-CA
+description, keywords, support URL, 184-character What's New text, review
+contact record, and existing 6.5-inch iPhone and 12.9-inch iPad screenshot sets
+are present. No build is attached, no review submission exists, and no release
+was requested.
+
+The Canada production project `qzekqjewpugdotskrtni` is provider-reported
+`ACTIVE_HEALTHY`. Its Edge readiness response is `200` with environment
+`production`, region `ca`, and writes disabled. Authenticated OpenAPI inspection
+through the newer secret-key system found 49 protected V2 RPC paths. A
+provider CLI inspection unexpectedly emitted the legacy privileged JWT key;
+the authenticated Management API then disabled the project's legacy `anon`
+and `service_role` keys and a second GET verified `legacyKeysEnabled=false`.
+No database row was read or changed and production writes remain disabled.
 
 ### Current signed-build attempt — 2026-08-12
 
