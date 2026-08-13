@@ -7,6 +7,7 @@ import { secureStagingRegionStore, StagingRegionGate, type StagingRegionStore } 
 
 const configs: readonly PeacePadSupabaseConfig[] = [
   {
+    environment: "staging",
     region: "ca",
     projectRef: "rohvkyuxbnqzglaromms",
     projectUrl: "https://rohvkyuxbnqzglaromms.supabase.co",
@@ -14,6 +15,7 @@ const configs: readonly PeacePadSupabaseConfig[] = [
     publishableKey: "sb_publishable_fictional_ca"
   },
   {
+    environment: "staging",
     region: "us",
     projectRef: "spmpndalcvwmygznihec",
     projectUrl: "https://spmpndalcvwmygznihec.supabase.co",

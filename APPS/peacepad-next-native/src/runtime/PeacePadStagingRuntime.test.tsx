@@ -27,6 +27,7 @@ const environment = {
 };
 const supabase = {
   apiBaseUrl: environment.apiBaseUrl,
+  environment: "staging" as const,
   projectRef: "rohvkyuxbnqzglaromms",
   projectUrl: "https://rohvkyuxbnqzglaromms.supabase.co",
   publishableKey: "sb_publishable_test",
@@ -69,6 +70,8 @@ describe("validateVerifiedSessionContext", () => {
     expect(invitationCodeFromStagingUrl("peacepadnextlab://invite/ab12c3")).toBe("AB12C3");
     expect(invitationCodeFromStagingUrl("peacepadnextlab://invite/AB12C3/")).toBe("AB12C3");
     expect(invitationCodeFromStagingUrl("peacepad://invite/AB12C3")).toBeUndefined();
+    expect(invitationCodeFromStagingUrl("peacepad://invite/AB12C3", "peacepad:")).toBe("AB12C3");
+    expect(invitationCodeFromStagingUrl("peacepadnextlab://invite/AB12C3", "peacepad:")).toBeUndefined();
     expect(invitationCodeFromStagingUrl("https://example.test/invite/AB12C3")).toBeUndefined();
     expect(invitationCodeFromStagingUrl("peacepadnextlab://invite/TOO-LONG")).toBeUndefined();
     expect(invitationCodeFromStagingUrl("peacepadnextlab://invite/ABC123/extra")).toBeUndefined();

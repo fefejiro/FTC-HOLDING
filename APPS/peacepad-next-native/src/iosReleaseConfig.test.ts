@@ -13,6 +13,7 @@ describe("PeacePad iOS release variant", () => {
   const originalMode = process.env.PEACEPAD_IOS_RELEASE_MODE;
   const originalAndroidMode = process.env.PEACEPAD_ANDROID_RELEASE_MODE;
   const originalEnvironment = process.env.EXPO_PUBLIC_PEACEPAD_ENV;
+  const originalProductionWrites = process.env.EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED;
 
   afterEach(() => {
     if (originalMode === undefined) delete process.env.PEACEPAD_IOS_RELEASE_MODE;
@@ -21,6 +22,8 @@ describe("PeacePad iOS release variant", () => {
     else process.env.PEACEPAD_ANDROID_RELEASE_MODE = originalAndroidMode;
     if (originalEnvironment === undefined) delete process.env.EXPO_PUBLIC_PEACEPAD_ENV;
     else process.env.EXPO_PUBLIC_PEACEPAD_ENV = originalEnvironment;
+    if (originalProductionWrites === undefined) delete process.env.EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED;
+    else process.env.EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED = originalProductionWrites;
   });
 
   it("leaves the default lab identity unchanged", () => {
@@ -67,6 +70,34 @@ describe("PeacePad iOS release variant", () => {
         PEACEPAD_IOS_RELEASE_MODE: "staging-simulator-dual"
       },
       ios: { simulator: true }
+    });
+  });
+
+  it("requires the explicit Canada production runtime for the App Store build", () => {
+    process.env.PEACEPAD_IOS_RELEASE_MODE = "appstore-production";
+    process.env.EXPO_PUBLIC_PEACEPAD_ENV = "production";
+    process.env.EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED = "true";
+    expect(resolveConfig({ config: structuredClone(appJson.expo) })).toMatchObject({
+      version: "2.0.0",
+      scheme: "peacepad",
+      ios: { buildNumber: "4", bundleIdentifier: "ca.peacepad.family" },
+      extra: {
+        appStoreId: "6793350735",
+        environment: "production",
+        productionApiWritesEnabled: true,
+        releaseChannel: "appstore-production",
+        submittedBundleId: "ca.peacepad.family"
+      }
+    });
+    expect(easJson.build["appstore-production"]).toMatchObject({
+      distribution: "store",
+      environment: "production",
+      env: {
+        EXPO_PUBLIC_PEACEPAD_ENV: "production",
+        EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED: "true",
+        PEACEPAD_IOS_RELEASE_MODE: "appstore-production"
+      },
+      ios: { simulator: false }
     });
   });
 

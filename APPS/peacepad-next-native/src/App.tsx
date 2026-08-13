@@ -14,7 +14,7 @@ import {
   type CoordinationScreen
 } from "./coordination/CoordinationScreens";
 import { CoordinationStateProvider } from "./coordination/CoordinationState";
-import { environmentConfig, resolveSupabaseStagingDirectory, type PeacePadSupabaseConfig } from "./config/environment";
+import { environmentConfig, resolveSupabaseRuntimeDirectory, type PeacePadSupabaseConfig } from "./config/environment";
 import { StagingRegionGate } from "./config/StagingRegionGate";
 import { FoundationScreen } from "./foundation/FoundationScreen";
 import { LocalizationProvider } from "./localization/LocalizationProvider";
@@ -74,8 +74,8 @@ export class PeacePadErrorBoundary extends Component<{ children: ReactNode }, Bo
 
   render() {
     if (this.state.failed) {
-      return environmentConfig.environment === "staging"
-        ? <View style={styles.unavailable}><Text style={styles.unavailableTitle}>PeacePad is unavailable</Text><Text style={styles.unavailableBody}>The staging configuration could not be verified.</Text></View>
+      return environmentConfig.environment !== "lab"
+        ? <View style={styles.unavailable}><Text style={styles.unavailableTitle}>PeacePad is unavailable</Text><Text style={styles.unavailableBody}>The secure service configuration could not be verified.</Text></View>
         : <FoundationScreen />;
     }
     return this.props.children;
@@ -83,7 +83,7 @@ export class PeacePadErrorBoundary extends Component<{ children: ReactNode }, Bo
 }
 
 export default function App() {
-  if (environmentConfig.environment === "staging") {
+  if (environmentConfig.environment !== "lab") {
     return <PeacePadErrorBoundary><PeacePadStagingApp /></PeacePadErrorBoundary>;
   }
   return (
@@ -109,9 +109,10 @@ function PendingInvitationNavigation() {
 }
 
 function PeacePadStagingApp() {
-  const directory = useMemo(() => resolveSupabaseStagingDirectory(), []);
+  const directory = useMemo(() => resolveSupabaseRuntimeDirectory(), []);
+  const production = directory.length === 1 && directory[0].environment === "production";
   return (
-    <LocalizationProvider>
+    <LocalizationProvider production={production}>
       <SafeAreaProvider>
         <PeacePadStagingRegionRouter directory={directory} />
       </SafeAreaProvider>

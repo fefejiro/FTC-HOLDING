@@ -8,6 +8,11 @@ function Harness() {
   return <><Text>{locale}</Text><Text>{t("navigation.home")}</Text><Pressable accessibilityRole="button" onPress={() => void setLocale("fr")}><Text>switch</Text></Pressable></>;
 }
 
+function ProductionHarness() {
+  const { t } = useLocalization();
+  return <><Text>{t("runtime.signInTitle")}</Text><Text>{t("runtime.signInBody")}</Text><Text>{t("account.delete")}</Text></>;
+}
+
 function createStore(stored: string | null = null) {
   const save = jest.fn<Promise<void>, [SupportedLocale]>(async () => undefined);
   const store: LocaleStore = { read: jest.fn(async () => stored), save };
@@ -37,5 +42,13 @@ describe("localization foundation", () => {
     const { store } = createStore("es-MX");
     render(<LocalizationProvider store={store}><Harness /></LocalizationProvider>);
     expect(await screen.findByText("Inicio")).toBeOnTheScreen();
+  });
+
+  it("uses real-account copy only inside the explicit production provider", () => {
+    const { store } = createStore();
+    render(<LocalizationProvider initialLocale="en" production store={store}><ProductionHarness /></LocalizationProvider>);
+    expect(screen.getByText("Sign in to PeacePad")).toBeOnTheScreen();
+    expect(screen.getByText("Use your PeacePad account. Your family information is stored in Canada.")).toBeOnTheScreen();
+    expect(screen.getByText("Delete account")).toBeOnTheScreen();
   });
 });

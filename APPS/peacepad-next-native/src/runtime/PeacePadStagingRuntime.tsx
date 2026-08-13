@@ -18,13 +18,13 @@ import { secureMessageOutboxStore } from "../messaging/secureMessageOutbox";
 import { useOptionalLocalization } from "../localization/LocalizationProvider";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-export function invitationCodeFromStagingUrl(url?: string | null): string | undefined {
+export function invitationCodeFromStagingUrl(url?: string | null, expectedProtocol = "peacepadnextlab:"): string | undefined {
   if (!url || url.trim() !== url) return undefined;
   try {
     const parsed = new URL(url);
     const code = parsed.pathname.match(/^\/([a-z0-9]{6})\/?$/i)?.[1];
     if (
-      parsed.protocol !== "peacepadnextlab:"
+      parsed.protocol !== expectedProtocol
       || parsed.hostname !== "invite"
       || parsed.port
       || parsed.username
@@ -227,7 +227,7 @@ export function PeacePadStagingRuntime({
     let mounted = true;
     let liveUrlReceived = false;
     const receive = (url?: string | null) => {
-      const code = invitationCodeFromStagingUrl(url);
+      const code = invitationCodeFromStagingUrl(url, supabase.environment === "production" ? "peacepad:" : "peacepadnextlab:");
       if (mounted && code) setIncomingInvitationCode(code);
     };
     const subscription = Linking.addEventListener("url", ({ url }) => {

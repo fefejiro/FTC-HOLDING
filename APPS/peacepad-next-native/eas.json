@@ -71,6 +71,20 @@
         "image": "latest"
       }
     },
+    "appstore-production": {
+      "distribution": "store",
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS": "false",
+        "EXPO_PUBLIC_PEACEPAD_ENV": "production",
+        "EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED": "true",
+        "PEACEPAD_IOS_RELEASE_MODE": "appstore-production"
+      },
+      "ios": {
+        "simulator": false,
+        "image": "latest"
+      }
+    },
     "playstore-internal": {
       "distribution": "store",
       "environment": "production",
@@ -87,6 +101,11 @@
   },
   "submit": {
     "testflight-internal": {
+      "ios": {
+        "ascAppId": "6793350735"
+      }
+    },
+    "appstore-production": {
       "ios": {
         "ascAppId": "6793350735"
       }

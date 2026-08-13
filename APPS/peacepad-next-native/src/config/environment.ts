@@ -1,16 +1,17 @@
-export type PeacePadEnvironment = "lab" | "staging";
+export type PeacePadEnvironment = "lab" | "staging" | "production";
 
 export type PeacePadEnvironmentConfig = {
   environment: PeacePadEnvironment;
   apiBaseUrl: string;
   requestTimeoutMs: number;
-  productionApiWritesEnabled: false;
+  productionApiWritesEnabled: boolean;
   diagnosticsEnabled: boolean;
 };
 
 export type PeacePadStagingRegion = "ca" | "us";
 
 export type PeacePadSupabaseConfig = Readonly<{
+  environment: "staging" | "production";
   region: PeacePadStagingRegion;
   projectRef: string;
   projectUrl: string;
@@ -34,6 +35,8 @@ const STAGING_FUNCTION_REGIONS: Record<PeacePadStagingRegion, string> = {
   ca: "ca-central-1",
   us: "us-east-1"
 };
+const PRODUCTION_PROJECT = "qzekqjewpugdotskrtni";
+const PRODUCTION_FUNCTION_REGION = "ca-central-1";
 
 function readBundledEnvironmentValues(): EnvironmentValues {
   // Expo replaces only direct process.env.EXPO_PUBLIC_* references in the
@@ -50,6 +53,10 @@ function readBundledEnvironmentValues(): EnvironmentValues {
     EXPO_PUBLIC_PEACEPAD_US_SUPABASE_URL: process.env.EXPO_PUBLIC_PEACEPAD_US_SUPABASE_URL,
     EXPO_PUBLIC_PEACEPAD_US_API_BASE_URL: process.env.EXPO_PUBLIC_PEACEPAD_US_API_BASE_URL,
     EXPO_PUBLIC_PEACEPAD_US_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_PEACEPAD_US_SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_URL: process.env.EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_URL,
+    EXPO_PUBLIC_PEACEPAD_PRODUCTION_API_BASE_URL: process.env.EXPO_PUBLIC_PEACEPAD_PRODUCTION_API_BASE_URL,
+    EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED: process.env.EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED,
     EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS: process.env.EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS
   };
 }
@@ -61,13 +68,19 @@ function trimTrailingSlash(value: string): string {
 export function resolveEnvironmentConfig(
   values: EnvironmentValues = readBundledEnvironmentValues()
 ): PeacePadEnvironmentConfig {
-  const environment = values.EXPO_PUBLIC_PEACEPAD_ENV === "staging" ? "staging" : "lab";
-  const configuredUrl = values.EXPO_PUBLIC_PEACEPAD_API_BASE_URL?.trim()
+  const environment: PeacePadEnvironment = values.EXPO_PUBLIC_PEACEPAD_ENV === "production"
+    ? "production"
+    : values.EXPO_PUBLIC_PEACEPAD_ENV === "staging" ? "staging" : "lab";
+  const configuredUrl = (environment === "production" ? values.EXPO_PUBLIC_PEACEPAD_PRODUCTION_API_BASE_URL?.trim() : undefined)
+    || values.EXPO_PUBLIC_PEACEPAD_API_BASE_URL?.trim()
     || values.EXPO_PUBLIC_PEACEPAD_CA_API_BASE_URL?.trim()
     || values.EXPO_PUBLIC_PEACEPAD_US_API_BASE_URL?.trim();
 
   if (environment === "staging" && !configuredUrl) {
     throw new Error("Staging requires EXPO_PUBLIC_PEACEPAD_API_BASE_URL.");
+  }
+  if (environment === "production" && !configuredUrl) {
+    throw new Error("Production requires EXPO_PUBLIC_PEACEPAD_PRODUCTION_API_BASE_URL.");
   }
 
   const apiBaseUrl = trimTrailingSlash(configuredUrl || DEFAULT_LAB_API_URL);
@@ -81,6 +94,19 @@ export function resolveEnvironmentConfig(
     throw new Error("The native Gate 1 client must not target the production PeacePad API.");
   }
 
+  const productionApiWritesEnabled = values.EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED === "true";
+  if (environment === "production") {
+    const expectedApiBaseUrl = `https://${PRODUCTION_PROJECT}.supabase.co/functions/v1/peacepad-v2-api`;
+    if (apiBaseUrl !== expectedApiBaseUrl) {
+      throw new Error("Production must use the exact approved Canada Supabase API.");
+    }
+    if (!productionApiWritesEnabled) {
+      throw new Error("Production requires explicit production-write authorization.");
+    }
+  } else if (productionApiWritesEnabled) {
+    throw new Error("Production writes cannot be enabled outside the production runtime.");
+  }
+
   if (diagnosticsEnabled && environment !== "lab") {
     throw new Error("PeacePad diagnostics are allowed only in the local lab environment.");
   }
@@ -89,7 +115,7 @@ export function resolveEnvironmentConfig(
     environment,
     apiBaseUrl,
     requestTimeoutMs: 12_000,
-    productionApiWritesEnabled: false,
+    productionApiWritesEnabled,
     diagnosticsEnabled
   };
 }
@@ -101,6 +127,9 @@ export function resolveFunctionInvocationRegion(apiBaseUrl: string): string | un
   for (const region of Object.keys(STAGING_PROJECTS) as PeacePadStagingRegion[]) {
     const expectedApiBaseUrl = `https://${STAGING_PROJECTS[region]}.supabase.co/functions/v1/peacepad-v2-api`;
     if (normalizedUrl === expectedApiBaseUrl) return STAGING_FUNCTION_REGIONS[region];
+  }
+  if (normalizedUrl === `https://${PRODUCTION_PROJECT}.supabase.co/functions/v1/peacepad-v2-api`) {
+    return PRODUCTION_FUNCTION_REGION;
   }
   return undefined;
 }
@@ -128,7 +157,37 @@ export function resolveSupabaseStagingConfig(
   if (!publishableKey.startsWith("sb_publishable_") || publishableKey.startsWith("sb_secret_") || publishableKey.split(".").length === 3) {
     throw new Error("Staging requires an sb_publishable_ Supabase key; secret and legacy JWT keys are prohibited.");
   }
-  return { region, projectRef, projectUrl, publishableKey, apiBaseUrl };
+  return { environment: "staging", region, projectRef, projectUrl, publishableKey, apiBaseUrl };
+}
+
+export function resolveSupabaseProductionConfig(
+  values: EnvironmentValues = readBundledEnvironmentValues()
+): PeacePadSupabaseConfig {
+  if (values.EXPO_PUBLIC_PEACEPAD_ENV !== "production") {
+    throw new Error("Production coordination requires the production runtime.");
+  }
+  const projectUrl = trimTrailingSlash(values.EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_URL?.trim() ?? "");
+  const apiBaseUrl = trimTrailingSlash(values.EXPO_PUBLIC_PEACEPAD_PRODUCTION_API_BASE_URL?.trim() ?? "");
+  const publishableKey = values.EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY?.trim() ?? "";
+  const expectedProjectUrl = `https://${PRODUCTION_PROJECT}.supabase.co`;
+  const expectedApiBaseUrl = `${expectedProjectUrl}/functions/v1/peacepad-v2-api`;
+  if (projectUrl !== expectedProjectUrl || apiBaseUrl !== expectedApiBaseUrl) {
+    throw new Error("Production must use the exact approved Canada Supabase project.");
+  }
+  if (!publishableKey.startsWith("sb_publishable_") || publishableKey.startsWith("sb_secret_") || publishableKey.split(".").length === 3) {
+    throw new Error("Production requires an sb_publishable_ Supabase key; secret and legacy JWT keys are prohibited.");
+  }
+  if (values.EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED !== "true") {
+    throw new Error("Production coordination requires explicit production-write authorization.");
+  }
+  return {
+    environment: "production",
+    region: "ca",
+    projectRef: PRODUCTION_PROJECT,
+    projectUrl,
+    publishableKey,
+    apiBaseUrl
+  };
 }
 
 const scopedStagingKeys = {
@@ -177,4 +236,12 @@ export function resolveSupabaseStagingDirectory(
       EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY: publishableKey
     });
   });
+}
+
+export function resolveSupabaseRuntimeDirectory(
+  values: EnvironmentValues = readBundledEnvironmentValues()
+): readonly PeacePadSupabaseConfig[] {
+  return values.EXPO_PUBLIC_PEACEPAD_ENV === "production"
+    ? [resolveSupabaseProductionConfig(values)]
+    : resolveSupabaseStagingDirectory(values);
 }

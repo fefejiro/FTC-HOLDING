@@ -67,6 +67,13 @@ const messages = {
     "runtime.sessionExpired": "Your staging session expired. Sign in again.", "runtime.signOutRemoteFailed": "This device was signed out, but the remote session could not be closed."
     ,"runtime.connectionReady": "{family} is ready. Share a single-use code, then check again after it is accepted.", "runtime.inviteExpiry": "Expires in 72 hours. Do not use real family information in staging.",
     "runtime.checkConnection": "Check connection"
+    ,"production.signInTitle": "Sign in to PeacePad", "production.signInBody": "Use your PeacePad account. Your family information is stored in Canada.",
+    "production.regionCanada": "Canada", "production.email": "Email", "production.password": "Password",
+    "production.createJoinBody": "Create a private family space or connect after accepting an invitation.",
+    "production.invalidCredentials": "Check your email and password.", "production.signInUnavailable": "PeacePad sign-in is unavailable. Try again.",
+    "production.sessionExpired": "Your session expired. Sign in again.", "production.inviteExpiry": "Expires in 72 hours. Share this code only with the intended family member.",
+    "production.signOutBody": "Remove this PeacePad session from this device.", "production.delete": "Delete account", "production.deleteBody": "Permanently remove your PeacePad account and access.",
+    "production.deleteTitle": "Delete this account?", "production.deleteWarning": "This permanently deletes your PeacePad identity and revokes its family access. This cannot be undone."
   },
   fr: {
     "navigation.primary": "Navigation principale", "navigation.home": "Accueil", "navigation.messages": "Messages",
@@ -128,6 +135,13 @@ const messages = {
     "runtime.sessionExpired": "Votre session de test a expiré. Reconnectez-vous.", "runtime.signOutRemoteFailed": "Cet appareil a été déconnecté, mais la session distante n’a pas pu être fermée."
     ,"runtime.connectionReady": "L’espace {family} est prêt. Partagez un code à usage unique, puis vérifiez de nouveau après son acceptation.", "runtime.inviteExpiry": "Expire dans 72 heures. N’utilisez aucune information familiale réelle dans l’environnement de test.",
     "runtime.checkConnection": "Vérifier la connexion"
+    ,"production.signInTitle": "Se connecter à PeacePad", "production.signInBody": "Utilisez votre compte PeacePad. Vos renseignements familiaux sont stockés au Canada.",
+    "production.regionCanada": "Canada", "production.email": "Courriel", "production.password": "Mot de passe",
+    "production.createJoinBody": "Créez un espace familial privé ou connectez-vous après avoir accepté une invitation.",
+    "production.invalidCredentials": "Vérifiez votre courriel et votre mot de passe.", "production.signInUnavailable": "La connexion à PeacePad est indisponible. Réessayez.",
+    "production.sessionExpired": "Votre session a expiré. Reconnectez-vous.", "production.inviteExpiry": "Expire dans 72 heures. Partagez ce code uniquement avec le membre de la famille concerné.",
+    "production.signOutBody": "Supprimer cette session PeacePad de cet appareil.", "production.delete": "Supprimer le compte", "production.deleteBody": "Supprimer définitivement votre compte PeacePad et son accès.",
+    "production.deleteTitle": "Supprimer ce compte?", "production.deleteWarning": "Cette action supprime définitivement votre identité PeacePad et révoque son accès familial. Cette action est irréversible."
   },
   es: {
     "navigation.primary": "Navegación principal", "navigation.home": "Inicio", "navigation.messages": "Mensajes",
@@ -189,10 +203,35 @@ const messages = {
     "runtime.sessionExpired": "Tu sesión de pruebas caducó. Vuelve a iniciar sesión.", "runtime.signOutRemoteFailed": "Se cerró la sesión en este dispositivo, pero no se pudo cerrar la sesión remota."
     ,"runtime.connectionReady": "El espacio {family} está listo. Comparte un código de un solo uso y vuelve a comprobar después de que se acepte.", "runtime.inviteExpiry": "Caduca en 72 horas. No uses información familiar real en el entorno de pruebas.",
     "runtime.checkConnection": "Comprobar conexión"
+    ,"production.signInTitle": "Iniciar sesión en PeacePad", "production.signInBody": "Usa tu cuenta de PeacePad. Tu información familiar se almacena en Canadá.",
+    "production.regionCanada": "Canadá", "production.email": "Correo", "production.password": "Contraseña",
+    "production.createJoinBody": "Crea un espacio familiar privado o conéctate después de aceptar una invitación.",
+    "production.invalidCredentials": "Comprueba tu correo y contraseña.", "production.signInUnavailable": "El inicio de sesión de PeacePad no está disponible. Inténtalo de nuevo.",
+    "production.sessionExpired": "Tu sesión caducó. Vuelve a iniciar sesión.", "production.inviteExpiry": "Caduca en 72 horas. Comparte este código solo con el familiar previsto.",
+    "production.signOutBody": "Eliminar esta sesión de PeacePad de este dispositivo.", "production.delete": "Eliminar cuenta", "production.deleteBody": "Eliminar permanentemente tu cuenta de PeacePad y su acceso.",
+    "production.deleteTitle": "¿Eliminar esta cuenta?", "production.deleteWarning": "Esto elimina permanentemente tu identidad de PeacePad y revoca su acceso familiar. No se puede deshacer."
   }
 } as const;
 
 export type MessageKey = keyof typeof messages.en;
+
+const productionKeyOverrides: Readonly<Partial<Record<MessageKey, MessageKey>>> = {
+  "account.signOutBody": "production.signOutBody",
+  "account.delete": "production.delete",
+  "account.deleteBody": "production.deleteBody",
+  "account.deleteTitle": "production.deleteTitle",
+  "account.deleteWarning": "production.deleteWarning",
+  "runtime.signInTitle": "production.signInTitle",
+  "runtime.signInBody": "production.signInBody",
+  "runtime.regionCanada": "production.regionCanada",
+  "runtime.email": "production.email",
+  "runtime.password": "production.password",
+  "runtime.createJoinBody": "production.createJoinBody",
+  "runtime.invalidCredentials": "production.invalidCredentials",
+  "runtime.signInUnavailable": "production.signInUnavailable",
+  "runtime.sessionExpired": "production.sessionExpired",
+  "runtime.inviteExpiry": "production.inviteExpiry"
+};
 
 export function resolveSupportedLocale(value?: string | null): SupportedLocale {
   const language = value?.trim().toLowerCase().split(/[-_]/)[0];
@@ -214,7 +253,7 @@ type LocalizationValue = { locale: SupportedLocale; setLocale(locale: SupportedL
 const LocalizationContext = createContext<LocalizationValue | null>(null);
 const defaultLocalization: LocalizationValue = { locale: "en", setLocale: async () => undefined, t: (key, values) => translate("en", key, values) };
 
-export function LocalizationProvider({ children, initialLocale, store = secureLocaleStore }: { children: ReactNode; initialLocale?: string; store?: LocaleStore }) {
+export function LocalizationProvider({ children, initialLocale, production = false, store = secureLocaleStore }: { children: ReactNode; initialLocale?: string; production?: boolean; store?: LocaleStore }) {
   const systemLocale = Intl.DateTimeFormat().resolvedOptions().locale;
   const [locale, setLocaleState] = useState<SupportedLocale>(() => resolveSupportedLocale(initialLocale ?? systemLocale));
 
@@ -229,7 +268,11 @@ export function LocalizationProvider({ children, initialLocale, store = secureLo
     setLocaleState(nextLocale);
     await store.save(nextLocale);
   }, [store]);
-  const value = useMemo<LocalizationValue>(() => ({ locale, setLocale, t: (key, values) => translate(locale, key, values) }), [locale, setLocale]);
+  const value = useMemo<LocalizationValue>(() => ({
+    locale,
+    setLocale,
+    t: (key, values) => translate(locale, production ? productionKeyOverrides[key] ?? key : key, values)
+  }), [locale, production, setLocale]);
   return <LocalizationContext.Provider value={value}>{children}</LocalizationContext.Provider>;
 }
 

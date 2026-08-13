@@ -4,7 +4,8 @@ import type { AccessTokenProvider } from "../api/CoordinationApi";
 
 const APPROVED_SUPABASE_API_HOSTS = new Set([
   "rohvkyuxbnqzglaromms.supabase.co",
-  "spmpndalcvwmygznihec.supabase.co"
+  "spmpndalcvwmygznihec.supabase.co",
+  "qzekqjewpugdotskrtni.supabase.co"
 ]);
 
 /** Creates the existing v2 coordination client with a fictional staging token. */
@@ -13,12 +14,20 @@ export const createStagingCoordinationClient = (
   tokenProvider: AccessTokenProvider,
   fetcher: typeof fetch = fetch,
 ) => {
-  if (config.environment !== "staging" || config.productionApiWritesEnabled !== false) {
-    throw new Error("Coordination client requires the non-production staging environment.");
+  const staging = config.environment === "staging" && config.productionApiWritesEnabled === false;
+  const production = config.environment === "production" && config.productionApiWritesEnabled === true;
+  if (!staging && !production) {
+    throw new Error("Coordination client requires an exact staging or explicitly authorized production environment.");
   }
   const host = new URL(config.apiBaseUrl).hostname;
+  if (production && host !== "qzekqjewpugdotskrtni.supabase.co") {
+    throw new Error("Production coordination requires the approved Canada API host.");
+  }
+  if (staging && host === "qzekqjewpugdotskrtni.supabase.co") {
+    throw new Error("Staging coordination cannot target the production API host.");
+  }
   if (host !== "localhost" && host !== "127.0.0.1" && !host.endsWith(".staging.peacepad.ca") && !APPROVED_SUPABASE_API_HOSTS.has(host)) {
-    throw new Error("Coordination client rejected a non-staging API host.");
+    throw new Error("Coordination client rejected an unapproved API host.");
   }
   return new HttpPeacePadCoordinationApi(config, fetcher, tokenProvider);
 };

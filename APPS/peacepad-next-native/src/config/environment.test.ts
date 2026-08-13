@@ -1,4 +1,4 @@
-import { resolveEnvironmentConfig, resolveFunctionInvocationRegion, resolveSupabaseStagingConfig, resolveSupabaseStagingDirectory } from "./environment";
+import { resolveEnvironmentConfig, resolveFunctionInvocationRegion, resolveSupabaseProductionConfig, resolveSupabaseRuntimeDirectory, resolveSupabaseStagingConfig, resolveSupabaseStagingDirectory } from "./environment";
 
 describe("resolveEnvironmentConfig", () => {
   it("reads the statically bundled public staging variables when no override is supplied", () => {
@@ -97,6 +97,55 @@ describe("resolveFunctionInvocationRegion", () => {
     expect(resolveFunctionInvocationRegion("https://spmpndalcvwmygznihec.supabase.co/functions/v1/peacepad-v2-api/")).toBe("us-east-1");
     expect(resolveFunctionInvocationRegion("http://127.0.0.1:8787")).toBeUndefined();
     expect(resolveFunctionInvocationRegion("https://ftdqnhlesqrkstnqgfxr.supabase.co/functions/v1/peacepad-v2-api")).toBeUndefined();
+  });
+});
+
+describe("resolveSupabaseProductionConfig", () => {
+  const production = {
+    EXPO_PUBLIC_PEACEPAD_ENV: "production",
+    EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_URL: "https://qzekqjewpugdotskrtni.supabase.co",
+    EXPO_PUBLIC_PEACEPAD_PRODUCTION_API_BASE_URL: "https://qzekqjewpugdotskrtni.supabase.co/functions/v1/peacepad-v2-api",
+    EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_fictional_production",
+    EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED: "true"
+  };
+
+  it("accepts only the exact Canada production project with explicit write authorization", () => {
+    expect(resolveEnvironmentConfig(production)).toMatchObject({
+      environment: "production",
+      productionApiWritesEnabled: true
+    });
+    expect(resolveSupabaseProductionConfig(production)).toMatchObject({
+      environment: "production",
+      region: "ca",
+      projectRef: "qzekqjewpugdotskrtni"
+    });
+    expect(resolveSupabaseRuntimeDirectory(production)).toEqual([
+      expect.objectContaining({ environment: "production", region: "ca", projectRef: "qzekqjewpugdotskrtni" })
+    ]);
+  });
+
+  it("fails closed on a swapped project, missing write authorization, and private key material", () => {
+    expect(() => resolveSupabaseProductionConfig({
+      ...production,
+      EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_URL: "https://rohvkyuxbnqzglaromms.supabase.co"
+    })).toThrow("exact approved Canada Supabase project");
+    expect(() => resolveEnvironmentConfig({
+      ...production,
+      EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED: "false"
+    })).toThrow("explicit production-write authorization");
+    expect(() => resolveSupabaseProductionConfig({
+      ...production,
+      EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY: "sb_secret_private"
+    })).toThrow("secret and legacy JWT keys are prohibited");
+    expect(() => resolveSupabaseProductionConfig({
+      ...production,
+      EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY: "ey.a.b"
+    })).toThrow("secret and legacy JWT keys are prohibited");
+    expect(() => resolveEnvironmentConfig({
+      EXPO_PUBLIC_PEACEPAD_ENV: "staging",
+      EXPO_PUBLIC_PEACEPAD_API_BASE_URL: "https://staging-api.peacepad.test",
+      EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED: "true"
+    })).toThrow("outside the production runtime");
   });
 });
 

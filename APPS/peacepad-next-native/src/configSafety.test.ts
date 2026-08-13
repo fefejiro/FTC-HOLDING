@@ -14,6 +14,7 @@ describe("lab-only configuration", () => {
 
   it("keeps EAS limited to lab, isolated staging, and guarded store candidates", () => {
     expect(Object.keys(easConfig.build).sort()).toEqual([
+      "appstore-production",
       "lab-device",
       "lab-simulator",
       "playstore-internal",
@@ -74,7 +75,20 @@ describe("lab-only configuration", () => {
       ios: { simulator: false }
     });
     expect(easConfig.submit).toEqual({
-      "testflight-internal": { ios: { ascAppId: "6793350735" } }
+      "testflight-internal": { ios: { ascAppId: "6793350735" } },
+      "appstore-production": { ios: { ascAppId: "6793350735" } }
+    });
+
+    expect(easConfig.build["appstore-production"]).toMatchObject({
+      distribution: "store",
+      environment: "production",
+      env: {
+        EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS: "false",
+        EXPO_PUBLIC_PEACEPAD_ENV: "production",
+        EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED: "true",
+        PEACEPAD_IOS_RELEASE_MODE: "appstore-production"
+      },
+      ios: { simulator: false }
     });
 
     expect(easConfig.build["playstore-internal"]).toMatchObject({

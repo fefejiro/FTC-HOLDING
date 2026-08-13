@@ -115,13 +115,12 @@ const dualSimulatorProfileName = "staging-simulator-dual";
 allowedEasProfiles.push(dualSimulatorProfileName);
 const testFlightProfileName = "testflight-internal";
 allowedEasProfiles.push(testFlightProfileName);
+const appStoreProductionProfileName = "appstore-production";
+allowedEasProfiles.push(appStoreProductionProfileName);
 const playStoreInternalProfileName = "playstore-internal";
 allowedEasProfiles.push(playStoreInternalProfileName);
 if (Object.keys(easBuildProfiles).some((profile) => !allowedEasProfiles.includes(profile))) {
   failures.push("EAS must remain limited to approved lab, regional staging, and internal TestFlight profiles before Gate 6.");
-}
-if (easBuildProfiles.production) {
-  failures.push("An App Store production profile remains prohibited before internal TestFlight proof and Gate 6 approval.");
 }
 for (const profile of labEasProfiles) {
   const config = easBuildProfiles[profile];
@@ -182,6 +181,18 @@ if (
 ) {
   failures.push("The internal TestFlight profile must remain a signed, non-diagnostic fictional-staging candidate.");
 }
+const appStoreProductionProfile = easBuildProfiles[appStoreProductionProfileName];
+if (
+  appStoreProductionProfile?.distribution !== "store"
+  || appStoreProductionProfile?.environment !== "production"
+  || appStoreProductionProfile?.env?.PEACEPAD_IOS_RELEASE_MODE !== appStoreProductionProfileName
+  || appStoreProductionProfile?.env?.EXPO_PUBLIC_PEACEPAD_ENV !== "production"
+  || appStoreProductionProfile?.env?.EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED !== "true"
+  || appStoreProductionProfile?.env?.EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS !== "false"
+  || appStoreProductionProfile?.ios?.simulator !== false
+) {
+  failures.push("The App Store production profile must remain an exact, signed, non-diagnostic Canada production build contract.");
+}
 const playStoreInternalProfile = easBuildProfiles[playStoreInternalProfileName];
 if (
   playStoreInternalProfile?.distribution !== "store"
@@ -196,13 +207,15 @@ if (
 }
 const submitProfiles = Object.keys(easJson.submit || {});
 if (
-  submitProfiles.length !== 1
-  || submitProfiles[0] !== testFlightProfileName
+  submitProfiles.length !== 2
+  || !submitProfiles.includes(testFlightProfileName)
+  || !submitProfiles.includes(appStoreProductionProfileName)
   || easJson.submit?.[testFlightProfileName]?.ios?.ascAppId !== "6793350735"
+  || easJson.submit?.[appStoreProductionProfileName]?.ios?.ascAppId !== "6793350735"
 ) {
-  failures.push("EAS Submit must target only the existing PeacePad App Store record 6793350735.");
+  failures.push("EAS Submit must target only the reviewed internal and production profiles for App Store record 6793350735.");
 }
-for (const expectedReleaseValue of ["ca.peacepad.family", "6793350735", "2.0.0", "42", "testflight-internal", "staging-simulator-dual", "playstore-internal"]) {
+for (const expectedReleaseValue of ["ca.peacepad.family", "6793350735", "2.0.0", "42", "testflight-internal", "appstore-production", "staging-simulator-dual", "playstore-internal"]) {
   if (!dynamicAppConfigSource.includes(expectedReleaseValue)) {
     failures.push(`Dynamic app config is missing the reviewed TestFlight value ${expectedReleaseValue}.`);
   }

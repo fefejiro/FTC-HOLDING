@@ -1,8 +1,10 @@
 const TESTFLIGHT_MODE = "testflight-internal";
+const APPSTORE_PRODUCTION_MODE = "appstore-production";
 const DUAL_SIMULATOR_MODE = "staging-simulator-dual";
 const PLAYSTORE_INTERNAL_MODE = "playstore-internal";
 const TESTFLIGHT_VERSION = "2.0.0";
 const TESTFLIGHT_BUILD_NUMBER = "3";
+const APPSTORE_PRODUCTION_BUILD_NUMBER = "4";
 const PLAYSTORE_VERSION_CODE = 42;
 const PRODUCTION_BUNDLE_ID = "ca.peacepad.family";
 const APP_STORE_ID = "6793350735";
@@ -61,6 +63,32 @@ module.exports = ({ config }) => {
       }
     };
   }
+  if (iosReleaseMode === APPSTORE_PRODUCTION_MODE) {
+    if (process.env.EXPO_PUBLIC_PEACEPAD_ENV !== "production") {
+      throw new Error("The App Store production candidate must use the production runtime.");
+    }
+    if (process.env.EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED !== "true") {
+      throw new Error("The App Store production candidate requires explicit production-write authorization.");
+    }
+    return {
+      ...config,
+      scheme: "peacepad",
+      version: TESTFLIGHT_VERSION,
+      ios: {
+        ...config.ios,
+        buildNumber: APPSTORE_PRODUCTION_BUILD_NUMBER,
+        bundleIdentifier: PRODUCTION_BUNDLE_ID
+      },
+      extra: {
+        ...config.extra,
+        appStoreId: APP_STORE_ID,
+        environment: "production",
+        releaseChannel: APPSTORE_PRODUCTION_MODE,
+        productionApiWritesEnabled: true,
+        submittedBundleId: PRODUCTION_BUNDLE_ID
+      }
+    };
+  }
   if (iosReleaseMode !== TESTFLIGHT_MODE) {
     throw new Error(`Unsupported PeacePad iOS release mode: ${iosReleaseMode}`);
   }
@@ -90,6 +118,14 @@ module.exports.releaseContract = {
   buildNumber: TESTFLIGHT_BUILD_NUMBER,
   bundleIdentifier: PRODUCTION_BUNDLE_ID,
   mode: TESTFLIGHT_MODE,
+  version: TESTFLIGHT_VERSION
+};
+
+module.exports.appStoreProductionContract = {
+  appStoreId: APP_STORE_ID,
+  buildNumber: APPSTORE_PRODUCTION_BUILD_NUMBER,
+  bundleIdentifier: PRODUCTION_BUNDLE_ID,
+  mode: APPSTORE_PRODUCTION_MODE,
   version: TESTFLIGHT_VERSION
 };
 
