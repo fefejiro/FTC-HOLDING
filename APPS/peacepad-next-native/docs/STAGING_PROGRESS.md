@@ -1,7 +1,8 @@
 # Native V2 staging progress
 
-> Historical staging progress record. The authoritative current dashboard is
-> [STATUS.md](STATUS.md).
+> Historical staging progress record. The authoritative current dashboard and
+> release handover are [STATUS.md](STATUS.md). Do not update Android claims here
+> while its release work is concurrent; reconcile them from exact owner evidence.
 
 Branch: `agent/peacepad-native-staging-clean`  
 Draft PR: [#172](https://github.com/fefejiro/FTC-HOLDING/pull/172)  
@@ -182,7 +183,9 @@ This is not a production release. The default native client remains a
 staging/lab build with `ca.peacepad.nextnative.lab` and production writes
 disabled. EAS plus protected GitHub macOS is the active compile and Simulator
 path, so the past-due MacinCloud account is an optional fallback rather than a
-release prerequisite. The guarded existing-bundle TestFlight variant remains
-configuration-only until the `official_fejiro` token is repaired, an Apple
-Developer team is linked, and signing, build inspection, and internal
-installation pass.
+release prerequisite. The guarded existing-bundle TestFlight variant is no
+longer configuration-only: build 3 was signed and accepted by App Store Connect
+as submission `ff512236-cab1-4407-a6df-c4e4fcf9db54`, currently `IN_QUEUE`.
+Processing, internal installation, tester evidence, review, and public release
+remain unverified. Follow the current handover sequence in
+[STATUS.md](STATUS.md) before changing any release state.

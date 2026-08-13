@@ -9,8 +9,9 @@ health, court, financial, or safety information.
 The current `testflight-internal` profile targets the existing Apple bundle
 `ca.peacepad.family`, but intentionally uses the fictional staging runtime and
 keeps production writes disabled. It is not an App Store production release.
-The release lead must mark a specific build as available before sharing it with
-testers.
+Build `2.0.0` (`3`) is submitted and queued for Apple processing; it is not yet
+evidence of a TestFlight-available build. The release lead must visibly confirm
+that exact processed build in TestFlight before sharing it with testers.
 
 ## Who should test
 
@@ -24,8 +25,10 @@ medical information, payment data, legal documents, or photos.
 
 ## Install and first launch
 
-1. Open the TestFlight invitation supplied by the release lead and install
-   **PeacePad 2.0.0 (build 2)**.
+1. Open the TestFlight invitation supplied by the release lead and install the
+   exact version and build named in that invitation. For the current candidate,
+   this must be **PeacePad 2.0.0 (build 3)**, and only after it is visibly
+   processed and available in TestFlight.
 2. Open it once on Wi-Fi, then again using cellular data.
 3. Confirm the app opens without a crash, clipped controls, or hidden consent
    actions.

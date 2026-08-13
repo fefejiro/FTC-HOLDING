@@ -2,13 +2,13 @@
 
 ## Snapshot
 
-- Snapshot date: 2026-08-12
+- Snapshot date: 2026-08-13
 - Branch: `feat/peacepad-v2-supabase-free-staging`
 - Verified implementation baseline: `4bde06e651d00de25c30ba48e50e9557619ccb31`
 - Ledger evidence applies only to the exact commit listed in each row
-- App version: `0.0.1`
-- Guarded internal TestFlight candidate: `2.0.0` (`2`)
-- Guarded Android store candidate: `2.0.0` (`42`)
+- Lab default app version: `0.0.1`
+- Guarded internal TestFlight candidate: `2.0.0` (`3`), submitted and `IN_QUEUE`
+- Guarded Android store candidate: last documented evidence is `2.0.0` (`42`); Android release work is concurrent and must be reconciled from its own exact evidence before this snapshot is advanced
 - Staging/lab bundle: `ca.peacepad.nextnative.lab`
 - Future production bundle: `ca.peacepad.family`
 - Runtime boundary: native app lab/staging only; Canada production Edge writes disabled
@@ -20,7 +20,14 @@ is historical and cannot independently pass a release gate.
 
 ## Release verdict
 
-**BLOCKED - Gate 0 is HOSTED VERIFIED and both replacement regional fictional-staging projects are DEPLOYED STAGING VERIFIED for all 20 migrations, the regional Edge API, public boundaries, a managed fictional two-account feature contract, and read-only application-schema logical restoration. Canada now also has a separately deployed production Edge adapter with an empty hardened schema, public health/readiness, and an explicit global write lock; it is not connected to the native app or legacy users. One exact EAS Simulator artifact from source `2fe8ca82b` is now screenshot-backed SIMULATOR VERIFIED against both Canada and U.S. staging: each protected journey authenticated two temporary fictional accounts, mutated native messaging and Calendar state, proved second-account visibility, removed both application/Auth accounts, and destroyed both Simulators. The D:-backed app-only pipeline uploads about 1.7 MB instead of cloning the multi-gigabyte monorepo and requires an explicit accessible pre-auth region choice from the same binary. The Apple team, distribution certificate, and provisioning profile are configured for existing bundle `ca.peacepad.family`; the current internal TestFlight profile remains fictional staging with production writes disabled. EAS refused its free-quota cloud build, but the exact same day a standard GitHub-hosted macOS runner produced and preserved a signed 25,041,566-byte IPA from source `710697817`, with no submission attempt. The guarded Android `2.0.0` (`42`) profile also produced a signed store-distribution AAB for `ca.peacepad.family`, but it retains fictional staging, disabled production writes, and no Play Console upload credential. No TestFlight upload, Google Play publication, App Store submission, or production V2 cutover occurred. MacinCloud is past due but is not on the active EAS/GitHub release path. Provider-level Auth/platform snapshot or PITR recovery, a reviewed reversible existing-account migration, invitation/Message Check/deletion/offline native journeys, TURN capacity and live media, real-device journeys, assistive-technology and trust reviews, TestFlight, Google Play, and App Store release remain incomplete.**
+**BLOCKED - Gate 0 is HOSTED VERIFIED and both replacement regional fictional-staging projects are DEPLOYED STAGING VERIFIED for all 20 migrations, the regional Edge API, public boundaries, a managed fictional two-account feature contract, and read-only application-schema logical restoration. Canada also has a separately deployed, write-locked production Edge adapter with an empty hardened schema; it is not connected to the native app or legacy users. The exact simulator artifact from `2fe8ca82b` is screenshot-backed SIMULATOR VERIFIED against Canada and U.S. staging for temporary two-account messaging and Calendar coordination. The iOS `2.0.0` build 3 signed IPA from `ec45198f1bdbd849121ab330cbdba0c53a95aeec` was accepted by App Store Connect as submission `ff512236-cab1-4407-a6df-c4e4fcf9db54` and remains `IN_QUEUE`; this is submission evidence only, not Apple processing, TestFlight installation, review, or release. The guarded Android `2.0.0` (`42`) AAB is historical evidence only while concurrent Android release work proceeds; do not infer its current Play status from this document. Both store candidates retain fictional staging and disabled production writes. Provider-level Auth/platform snapshot or PITR recovery, a reviewed reversible existing-account migration, invitation/Message Check/deletion/offline native journeys, TURN capacity and live media, real-device journeys, assistive-technology and trust reviews, TestFlight, Google Play, App Store review, and production V2 cutover remain incomplete.**
+
+## Release handover - next evidence gates
+
+1. **iOS queue resolution:** inspect App Store Connect/TestFlight for submission `ff512236-cab1-4407-a6df-c4e4fcf9db54`. Record either a processing failure with Apple's exact message or a processed build. Do not invite testers until the processed build and its `2.0.0`/`3` metadata are visibly confirmed.
+2. **Internal TestFlight proof:** after an authorized internal invite, install the processed build on physical hardware using only dedicated fictional test accounts. Capture the build number, device/iOS version, staging-region label, first-launch result, and cleanup result; then update the tester guide only if the build is actually available.
+3. **Android ownership boundary:** obtain the Android owner's exact build/upload/Play-console evidence before changing any Android status. An AAB, a queued upload, an internal track, tester installation, and public publication are separate gates.
+4. **Cohort and release gates:** retain fictional staging/no-production-write controls through the two-person device journey, accessibility and privacy review, migration/rollback rehearsal, and seven-day release-candidate soak. App Review approval and public-store availability remain separate final evidence gates.
 
 ### Current signed-build attempt — 2026-08-12
 
