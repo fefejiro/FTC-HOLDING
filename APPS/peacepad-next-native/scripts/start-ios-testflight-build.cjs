@@ -70,7 +70,9 @@ if (!startRequested && !prepareOnly) {
   process.exit(0);
 }
 
-const gitStatus = spawnSync("git", ["status", "--porcelain"], { cwd: root, encoding: "utf8", windowsHide: true });
+// The build input is an exact committed Git tree. Untracked local artifacts
+// cannot enter git archive, so they must not block the D:-backed release path.
+const gitStatus = spawnSync("git", ["status", "--porcelain", "--untracked-files=no"], { cwd: root, encoding: "utf8", windowsHide: true });
 if (gitStatus.status !== 0 || (startRequested && gitStatus.stdout.trim())) {
   console.error("PEACEPAD_IOS_TESTFLIGHT_BUILD_BLOCKED: the release checkout must be clean and committed.");
   process.exit(1);
