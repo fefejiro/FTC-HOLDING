@@ -9,11 +9,13 @@ const pkg = require("../package.json");
 
 const MICROPHONE_USAGE =
   "PeacePad uses the microphone only while you are in a foreground audio call.";
+const CAMERA_USAGE =
+  "PeacePad uses camera APIs to support optional video calling; this release uses microphone-only calls.";
 
 function withPeacePadAudioWebRTC(config) {
   config = withInfoPlist(config, (nextConfig) => {
     nextConfig.modResults.NSMicrophoneUsageDescription = MICROPHONE_USAGE;
-    delete nextConfig.modResults.NSCameraUsageDescription;
+    nextConfig.modResults.NSCameraUsageDescription = CAMERA_USAGE;
     return nextConfig;
   });
 

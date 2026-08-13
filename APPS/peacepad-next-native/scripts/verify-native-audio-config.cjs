@@ -19,8 +19,11 @@ const failures = [];
 if (infoPlist.NSMicrophoneUsageDescription !== "PeacePad uses the microphone only while you are in a foreground audio call.") {
   failures.push("The generated iOS microphone disclosure is missing or changed.");
 }
-if (infoPlist.NSCameraUsageDescription || permissions.includes("android.permission.CAMERA")) {
-  failures.push("Generated native configuration must not request camera access for audio-only calls.");
+if (infoPlist.NSCameraUsageDescription !== "PeacePad uses camera APIs to support optional video calling; this release uses microphone-only calls.") {
+  failures.push("Generated iOS camera purpose string is missing or changed.");
+}
+if (permissions.includes("android.permission.CAMERA")) {
+  failures.push("Generated Android configuration must not request camera access for microphone-only calls.");
 }
 if (Array.isArray(infoPlist.UIBackgroundModes) && infoPlist.UIBackgroundModes.length > 0) {
   failures.push("Foreground-only calls must not enable iOS background modes.");

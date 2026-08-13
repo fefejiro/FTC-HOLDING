@@ -90,8 +90,8 @@ if (!iosInfoPlist.NSMicrophoneUsageDescription) {
   failures.push("iOS microphone usage disclosure is required for foreground audio calls.");
 }
 
-if (iosInfoPlist.NSCameraUsageDescription) {
-  failures.push("Camera permission is prohibited while PeacePad calls remain audio-only.");
+if (iosInfoPlist.NSCameraUsageDescription !== "PeacePad uses camera APIs to support optional video calling; this release uses microphone-only calls.") {
+  failures.push("iOS camera purpose string is required because the WebRTC binary references camera APIs.");
 }
 
 if (packageJson.dependencies?.["@config-plugins/react-native-webrtc"]) {
