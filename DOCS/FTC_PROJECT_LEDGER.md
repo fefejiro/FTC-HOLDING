@@ -1,81 +1,46 @@
-# FTC Project Ledger
+# FTC Portfolio Evidence Ledger
 
-A human-readable, cross-project delivery ledger for FTC/Una Labs. Use this template to track project status, commits, blockers, QA, human follow-up, and next actions for every major project.
+Last refreshed: 2026-08-10
 
-Last refreshed: 2026-05-18
+This is the current public portfolio status source. It separates implementation, automated proof, public reachability, and release readiness. A public HTTP 200 is recorded as **LIVE SURFACE** only; it is not proof of authentication, persistence, payments, mobile delivery, or a complete customer journey.
 
----
+## Evidence vocabulary
 
-## Job Hunt OS / Job Reply Agent
-- **Current status:** Active (Phase 2.5/4A intake PR open)
-- **Last known commits:** 0bbdbfae on PR #124 (`feat(job-agent): normalize hunt job intake`)
-- **Blockers:**
-  - PR #124 is unstable because of external Cloudflare deployment checks, not local job-agent build/test failures
-  - Apply Assist remains intentionally gated and not started
-- **Tests/QA:** `npm run build` and `npm test` passed locally in `APPS/job-reply-agent`
-- **Human follow-up notes:** Decide whether Cloudflare external checks should block a job-agent-only PR
-- **Next action:** Merge PR #124 after reviewing Cloudflare deployment noise or rerun/bypass external checks by repo policy
-- **Estimated remaining effort:** ~0.25d for merge/CI policy cleanup, then new Apply Assist scope
+- **IMPLEMENTED:** source exists, but there is no fresh qualifying verification.
+- **LOCAL VERIFIED:** automated proof passed locally on an identified revision.
+- **HOSTED VERIFIED:** the scoped GitHub workflow passed on an identified revision.
+- **LIVE SURFACE:** the named public URL responded successfully during this audit.
+- **STAGING VERIFIED:** the stated staging boundary was exercised; this is not production proof.
+- **DEVICE / TESTFLIGHT / PRODUCTION VERIFIED:** explicit proof at that release level.
+- **DEGRADED:** part of the public product is reachable while a required dependency or journey is failing.
+- **BLOCKED:** a named gate cannot pass until its blocker is removed.
+- **UNVERIFIED:** no current qualifying evidence was found.
 
-## Garden Cleaners
-- **Current status:** GO (pending final owner/client acceptance and security signoff)
-- **Last known commits:** 2f0c8e42, 316731c7, 114dce1a, a5956d09, 00bb262e, e05855d1
-- **Blockers:**
-  - Final owner/client acceptance pending
-  - Security signoff pending (if required by handoff policy)
-- **Tests/QA:** Portfolio E2E passing (Garden checks 4/4 on latest run), credentialed QA passed, admin login/dashboard verified, sender branding verified (FTC Client Portal)
-- **Human follow-up notes:** Owner/client acceptance checkpoint and closeout confirmation
-- **Next action:** Complete acceptance walk-through, record signoff, finalize handoff packet
-- **Estimated remaining effort:** ~0.25d
+## Current portfolio
 
-## Una Labs
-- **Current status:** GO (live health checks passing)
-- **Last known commits:** (see repo)
-- **Blockers:** None currently detected in public uptime checks
-- **Tests/QA:** Portfolio E2E passing (Una Labs checks 5/5 on latest run)
-- **Human follow-up notes:** Continue scheduled monitoring and keep status artifact current
-- **Next action:** Keep automated portfolio checks on schedule and refresh dashboard artifacts
-- **Estimated remaining effort:** 0d (ops monitoring only)
+| Product | Current status | Evidence checked 2026-08-10 | Current boundary / next proof |
+| --- | --- | --- | --- |
+| Una Labs | **LIVE SURFACE** | `https://unalabs.cloud` returned 200 | Re-run authenticated intake, checkout, delivery, and admin journeys before claiming production-verified platform operation |
+| Garden Cleaners | **LIVE SURFACE / QA BLOCKED** | `https://gardencleaners.ca` returned 200; current GitHub PR runs show the credentialed lane passing and anonymous Playwright lane failing | Diagnose the scoped anonymous failure, then retain client acceptance and security evidence |
+| PeacePad Web | **LIVE SURFACE / ROLLBACK PRODUCT** | `https://peacepad.ca` returned 200; API root returned 404, which is not a valid health proof | Keep the existing web/Capacitor product isolated from Native V2 promotion; add a dedicated API health contract |
+| PeacePad Native V2 | **HOSTED + POSTGRES VERIFIED / RELEASE BLOCKED** | Draft PR #177 native and infrastructure gates pass at the current hosted baseline; regional schema-only staging exists | Approximately 45% production-ready by the Native V2 gate model. Managed regional deployment secrets, live contract checks, restoration, two-device evidence, accessibility/localization review, TestFlight, and production approval remain open |
+| SayWetin | **DEGRADED** | `https://saywetin.app` returned 200; `https://api.saywetin.app/health` returned 404 | Restore the canonical API health route, then run recognition and Android real-device proof |
+| Anion | **LIVE SURFACE / RELEASE HARDENING** | `https://anion.unalabs.cloud/api/health` returned 200 | Preserve production health evidence while completing remaining payment, classroom, operational, and handover gates |
+| CapSigma Growth Desk | **LIVE SURFACE / CONTROLLED OPERATIONS** | `https://capsigma-growth-desk.pages.dev` returned 200 | Keep real sends, imports, and client mutations approval-gated; verify each connector and proof ledger before turnkey claims |
+| OG Trades Academy | **LIVE SURFACE / INTEGRATIONS UNVERIFIED** | `https://www.ogtradesacademy.com` returned 200 | Re-verify lead webhook, confirmation delivery, and enrollment journey before declaring the funnel production-ready |
+| Dispatch | **DEMO ONLY / CANONICAL HOST BLOCKED** | Una Labs demo and status pages returned 200; `dispatch.unalabs.cloud` and `/health` returned 404 | Reconcile DNS/runtime ownership, deploy a valid health contract, and verify auth, database, and token flows |
+| ATEAM | **INTERNAL / CANONICAL HOST BLOCKED** | Una Labs status page returned 200; `ateam.unalabs.cloud` returned 404 | Restore or retire the canonical host, then prove managed runtime and private operations separately |
+| Gidi Dashers | **PUBLIC HOST UNAVAILABLE / UNVERIFIED** | `gidi-dashers.pages.dev` did not resolve | Confirm the canonical deployment and store listing before restoring public availability claims |
+| Just Checking In Game | **UNVERIFIED / NOT LOCATED** | No matching implementation, repository path, build artifact, or deployment record was found in the current `main` tree | Add or link the canonical source and record its first build/runtime proof |
+| Job Reply Agent | **ACTIVE INTERNAL AUTOMATION / RELEASE GATED** | Repository workflows and product work exist; no public SaaS readiness claim was re-verified in this audit | Count applications only with authoritative platform proof; keep authentication, immutable release, and external-provider failures explicit |
 
-## SayWetin
-- **Current status:** HOLD (API endpoints returning 404, Android/API env/device QA pending)
-- **Last known commits:** 45239cbc2960a6391c5871ad84e6e65503844423
-- **Blockers:**
-  - API endpoints returning 404
-  - Android/API env/device QA pending
-- **Tests/QA:** Lyric timing UX patch verified, full E2E pending
-- **Human follow-up notes:** Owner must resolve API/env issues
-- **Next action:** Unblock API/env, run full E2E QA
-- **Estimated remaining effort:** 1-2d (API/env unblock + E2E)
+## Audit notes
 
-## Dispatch
-- **Current status:** HOLD (DATABASE_URL/runtime env and token-flow production verification)
-- **Last known commits:** (see repo)
-- **Blockers:**
-  - DATABASE_URL/runtime env and token-flow production verification
-- **Tests/QA:** Partial QA, access issues remain
-- **Human follow-up notes:** Owner must review access audit results
-- **Next action:** Resolve env/token issues, complete QA
-- **Estimated remaining effort:** 1d (access unblock + QA)
+- Probe time: 2026-08-10, from the operator workspace, following redirects with a 20-second timeout.
+- Reachability is volatile. Re-run the portfolio checks before using this ledger for a release or sales claim.
+- Draft PR status is not merged production state. PeacePad Native V2 remains staging-only even where its scoped checks pass.
+- The May 2026 content in `FTC_MASTER.md` is retained as a historical strategy snapshot, not as operational truth.
 
-## OG Trades Academy
-- **Current status:** HOLD (canonical URL unconfirmed, webhook delivery not configured, E2E coverage added)
-- **Last known commits:** (see repo)
-- **Blockers:**
-  - `ogtradesacademy.com` live status unconfirmed — no HTTP probe run yet
-  - `OG_TRADES_LEADS_WEBHOOK_URL` not set — leads return 200 but are not delivered
-  - `OG_TRADES_CONFIRMATION_WEBHOOK_URL` not set — no user confirmation sent
-  - Community URL destination (`tinyurl.com/ogtradesacademy`) unverified
-- **Tests/QA:** E2E spec created (`tests/og-trades-public.spec.ts`); not run against live URL yet
-- **Human follow-up notes:** CTO to confirm domain is live and provide webhook URLs before GO
-- **Next action:** CTO confirms `ogtradesacademy.com` HTTP 200 + provides webhook URLs; then run `npm run smoke:prod` and enable in telemetry
-- **Estimated remaining effort:** ~0.5d after CTO unblocks domain + webhooks
+## Maintenance rule
 
-## FTC/Auth/Skills
-- **Current status:** GO (foundation skill committed)
-- **Last known commits:** 90670cd3, b03e69c4
-- **Blockers:** None
-- **Tests/QA:** Skill and helpers committed, typecheck/build passed
-- **Human follow-up notes:** None
-- **Next action:** None
-- **Estimated remaining effort:** 0d
+Every status update must include the date, exact surface or revision checked, evidence level, blocker, and next proof. Never convert a build, HTTP status, mock plan, or staging result into a broader production claim.

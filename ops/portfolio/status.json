@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "asOf": "2026-08-10",
+  "source": "DOCS/FTC_PROJECT_LEDGER.md",
+  "products": [
+    { "id": "una-labs", "status": "live_surface", "evidence": "https://unalabs.cloud returned HTTP 200", "nextProof": "Authenticated platform journeys" },
+    { "id": "garden-cleaners", "status": "qa_blocked", "evidence": "Public site HTTP 200; current anonymous Playwright check failing", "nextProof": "Green scoped public and credentialed QA" },
+    { "id": "peacepad-web", "status": "live_surface", "evidence": "https://peacepad.ca returned HTTP 200", "nextProof": "Dedicated API health and maintained rollback rehearsal" },
+    { "id": "peacepad-native-v2", "status": "release_blocked", "evidence": "Hosted and PostgreSQL staging evidence on draft PR 177", "nextProof": "Managed regional deployment, device, TestFlight, and release gates" },
+    { "id": "saywetin", "status": "degraded", "evidence": "Web HTTP 200; canonical API health HTTP 404", "nextProof": "API health plus real-device recognition journey" },
+    { "id": "anion", "status": "release_hardening", "evidence": "Production health HTTP 200", "nextProof": "Remaining payment, classroom, operations, and handover gates" },
+    { "id": "capsigma-growth-desk", "status": "controlled_operations", "evidence": "Public site HTTP 200", "nextProof": "Connector and proof-ledger verification" },
+    { "id": "og-trades-academy", "status": "integrations_unverified", "evidence": "Public site HTTP 200", "nextProof": "Lead, confirmation, and enrollment delivery" },
+    { "id": "dispatch", "status": "canonical_host_blocked", "evidence": "Demo HTTP 200; canonical root and health HTTP 404", "nextProof": "Canonical health, auth, database, and token flow" },
+    { "id": "ateam", "status": "canonical_host_blocked", "evidence": "Status page HTTP 200; canonical host HTTP 404", "nextProof": "Managed runtime and private operations" },
+    { "id": "gidi-dashers", "status": "public_host_unavailable", "evidence": "Public hostname did not resolve", "nextProof": "Canonical deployment and store listing" },
+    { "id": "just-checking-in-game", "status": "not_located", "evidence": "No matching implementation or deployment record found in current main tree", "nextProof": "Canonical source, build artifact, and first runtime proof" },
+    { "id": "job-reply-agent", "status": "internal_release_gated", "evidence": "Internal automation exists; public SaaS readiness not re-verified", "nextProof": "Authentication and immutable release gates" }
+  ]
+}

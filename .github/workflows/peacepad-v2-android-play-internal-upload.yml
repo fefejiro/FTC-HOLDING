@@ -1,0 +1,170 @@
+name: PeacePad V2 Android Internal Play Upload
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Exact reviewed Native V2 Git ref that produced the AAB
+        required: true
+        type: string
+      source_sha:
+        description: Exact full Native V2 SHA expected after checkout
+        required: true
+        type: string
+      eas_build_id:
+        description: Finished EAS Android AAB build ID from the guarded playstore-internal profile
+        required: true
+        type: string
+      release_authorization:
+        description: Enter I_CONFIRM_INTERNAL_STAGING_ONLY to upload only to Play Internal Testing
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: peacepad-v2-android-internal-play-upload
+  cancel-in-progress: false
+
+jobs:
+  upload-internal-staging-aab:
+    name: Upload reviewed staging AAB to Google Play Internal Testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Require explicit internal-staging authorization
+        env:
+          AUTHORIZATION: ${{ inputs.release_authorization }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$AUTHORIZATION" = "I_CONFIRM_INTERNAL_STAGING_ONLY"
+
+      - name: Checkout reviewed source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+
+      - name: Bind upload control to the supplied source SHA
+        env:
+          EXPECTED_SHA: ${{ inputs.source_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          git diff --check "$EXPECTED_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: APPS/peacepad-next-native/package-lock.json
+
+      - name: Package and validate only the reviewed Native V2 tree
+        env:
+          EXPECTED_SHA: ${{ inputs.source_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_root="$RUNNER_TEMP/peacepad-next-native-release"
+          mkdir -p "$release_root"
+          git archive "$EXPECTED_SHA:APPS/peacepad-next-native" | tar -x -C "$release_root"
+          npm --prefix "$release_root" ci --ignore-scripts --no-audit --no-fund --workspaces=false
+          (
+            cd "$release_root"
+            export EXPO_PUBLIC_PEACEPAD_ENV=staging
+            export PEACEPAD_ANDROID_RELEASE_MODE=playstore-internal
+            node scripts/check-lab-guardrails.cjs
+            node -e 'const cfg=require("./app.config.js")({config:require("./app.json").expo}); if(cfg.android.package!=="ca.peacepad.family"||cfg.android.versionCode!==42||cfg.extra.productionApiWritesEnabled!==false) process.exit(1);'
+          )
+
+      - name: Require a PeacePad-specific Play upload credential
+        env:
+          PLAY_SERVICE_ACCOUNT: ${{ secrets.PEACEPAD_PLAY_SERVICE_ACCOUNT_JSON }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$PLAY_SERVICE_ACCOUNT"
+          node -e 'JSON.parse(process.env.PLAY_SERVICE_ACCOUNT);'
+
+      - name: Fetch and validate the exact finished EAS AAB
+        id: fetch
+        working-directory: ${{ runner.temp }}/peacepad-next-native-release
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EAS_BUILD_ID: ${{ inputs.eas_build_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes eas-cli@21.8.0 build:view "$EAS_BUILD_ID" --json > "$RUNNER_TEMP/peacepad-v2-android-play-build.json"
+          node - <<'NODE'
+          const fs = require('fs');
+          const build = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/peacepad-v2-android-play-build.json', 'utf8'));
+          const ok = build.id === process.env.EAS_BUILD_ID
+            && build.status === 'FINISHED'
+            && build.platform === 'ANDROID'
+            && build.distribution === 'STORE'
+            && build.buildProfile === 'playstore-internal'
+            && build.appVersion === '2.0.0'
+            && String(build.appBuildVersion) === '42'
+            && build.project?.ownerAccount?.name === 'official_fejiro'
+            && build.project?.slug === 'peacepad-next-native-lab'
+            && typeof build.artifacts?.buildUrl === 'string';
+          if (!ok) process.exit(1);
+          NODE
+          artifact_url="$(node - <<'NODE'
+          const fs = require('fs');
+          const build = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/peacepad-v2-android-play-build.json', 'utf8'));
+          process.stdout.write(build.artifacts.buildUrl);
+          NODE
+          )"
+          test -n "$artifact_url"
+          curl --fail --location --retry 3 --retry-all-errors --connect-timeout 30 --max-time 600 "$artifact_url" -o "$RUNNER_TEMP/peacepad-v2-release.aab"
+          test -s "$RUNNER_TEMP/peacepad-v2-release.aab"
+          keytool -printcert -jarfile "$RUNNER_TEMP/peacepad-v2-release.aab" > "$RUNNER_TEMP/peacepad-v2-release-certificate.txt"
+
+      - name: Upload only to Google Play Internal Testing
+        id: upload
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PEACEPAD_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ca.peacepad.family
+          releaseFiles: ${{ runner.temp }}/peacepad-v2-release.aab
+          track: internal
+          status: completed
+
+      - name: Write non-secret upload evidence
+        if: always()
+        env:
+          EXPECTED_SHA: ${{ inputs.source_sha }}
+          EAS_BUILD_ID: ${{ inputs.eas_build_id }}
+          UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/peacepad-v2-android-play-upload.manifest" <<EOF
+          source_sha=$EXPECTED_SHA
+          eas_build_id=$EAS_BUILD_ID
+          package=ca.peacepad.family
+          version_code=42
+          track=internal
+          production_writes_enabled=false
+          upload_outcome=$UPLOAD_OUTCOME
+          EOF
+
+      - name: Upload non-secret release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: peacepad-v2-android-play-internal-${{ inputs.source_sha }}
+          if-no-files-found: warn
+          retention-days: 7
+          path: |
+            ${{ runner.temp }}/peacepad-v2-android-play-build.json
+            ${{ runner.temp }}/peacepad-v2-release-certificate.txt
+            ${{ runner.temp }}/peacepad-v2-android-play-upload.manifest

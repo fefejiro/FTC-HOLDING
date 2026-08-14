@@ -22,8 +22,8 @@ on:
         description: Enter the approved regional Supabase project ref
         required: true
         type: string
-      confirm_commit_sha:
-        description: Enter the exact commit SHA selected for this run
+      target_commit_sha:
+        description: Enter the exact reviewed PeacePad V2 staging branch commit SHA
         required: true
         type: string
       confirmation:
@@ -46,11 +46,25 @@ jobs:
     environment: peacepad-v2-staging-${{ inputs.region }}
 
     steps:
-      - name: Checkout selected revision
-        uses: actions/checkout@v4
+      - name: Fetch trusted deployment control
+        shell: bash
+        env:
+          CONTROL_COMMIT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          [[ "$CONTROL_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git init .
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git -c protocol.version=2 fetch --no-tags --depth=1 origin "$CONTROL_COMMIT_SHA"
+          test "$(git rev-parse FETCH_HEAD)" = "$CONTROL_COMMIT_SHA"
+          git checkout --detach FETCH_HEAD
+
+      - name: Validate deployment control contract
+        shell: pwsh
+        run: ./.github/scripts/validate-peacepad-v2-deploy-workflow.ps1
 
       - name: Install Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1
         with:
           version: 2.113.0
 
@@ -60,32 +74,44 @@ jobs:
           REQUESTED_REGION: ${{ inputs.region }}
           MODE: ${{ inputs.mode }}
           CONFIRM_PROJECT_REF: ${{ inputs.confirm_project_ref }}
-          CONFIRM_COMMIT_SHA: ${{ inputs.confirm_commit_sha }}
+          TARGET_COMMIT_SHA: ${{ inputs.target_commit_sha }}
           CONFIRMATION: ${{ inputs.confirmation }}
-          SELECTED_COMMIT_SHA: ${{ github.sha }}
           SELECTED_REF: ${{ github.ref_name }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $projects = @{ ca = 'ftdqnhlesqrkstnqgfxr'; us = 'kgechdqdtryktfahyqez' }
-          if ($env:SELECTED_REF -notin @('main', 'feat/peacepad-v2-supabase-free-staging')) {
-            throw 'This workflow can run only from main or the reviewed PeacePad V2 staging branch.'
+          $projects = @{ ca = 'rohvkyuxbnqzglaromms'; us = 'spmpndalcvwmygznihec' }
+          if ($env:SELECTED_REF -cne 'main') {
+            throw 'The registered deployment control must be dispatched from main.'
           }
           if ($env:CONFIRM_PROJECT_REF -cne $projects[$env:REQUESTED_REGION]) {
             throw 'The confirmed project ref does not match the approved regional fictional-staging project.'
           }
-          if ($env:CONFIRM_COMMIT_SHA -cne $env:SELECTED_COMMIT_SHA) {
-            throw 'The confirmed commit SHA does not match the checked-out revision.'
+          if ($env:TARGET_COMMIT_SHA -cnotmatch '^[0-9a-f]{40}$') {
+            throw 'The target commit SHA must be a full lowercase Git commit SHA.'
           }
           if ($env:MODE -eq 'deploy' -and $env:CONFIRMATION -cne 'DEPLOY FICTIONAL STAGING') {
             throw 'Deployment requires the exact confirmation DEPLOY FICTIONAL STAGING.'
+          }
+
+          git -c protocol.version=2 fetch --no-tags --depth=1 origin refs/heads/feat/peacepad-v2-supabase-free-staging
+          if ($LASTEXITCODE -ne 0) {
+            throw 'The reviewed PeacePad V2 staging branch could not be fetched.'
+          }
+          $reviewedHead = (git rev-parse FETCH_HEAD).Trim()
+          if ($env:TARGET_COMMIT_SHA -cne $reviewedHead) {
+            throw 'The target commit is not the current reviewed PeacePad V2 staging branch head.'
+          }
+          git worktree add --detach peacepad-v2-target $reviewedHead
+          if ($LASTEXITCODE -ne 0) {
+            throw 'The exact reviewed PeacePad V2 target could not be materialized.'
           }
 
       - name: Validate Edge Function and regional configuration
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          ./APPS/peacepad-v2-platform/scripts/validate-supabase-free-staging.ps1
-          ./APPS/peacepad-v2-platform/scripts/validate-supabase-edge-function.ps1
+          ./peacepad-v2-target/APPS/peacepad-v2-platform/scripts/validate-supabase-free-staging.ps1
+          ./peacepad-v2-target/APPS/peacepad-v2-platform/scripts/validate-supabase-edge-function.ps1
 
       - name: Validate credentials and project visibility
         shell: pwsh
@@ -96,8 +122,8 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $expected = @{
-            ca = @{ ref = 'ftdqnhlesqrkstnqgfxr'; databaseRegion = 'ca-central-1' }
-            us = @{ ref = 'kgechdqdtryktfahyqez'; databaseRegion = 'us-east-2' }
+            ca = @{ ref = 'rohvkyuxbnqzglaromms'; databaseRegion = 'ca-central-1' }
+            us = @{ ref = 'spmpndalcvwmygznihec'; databaseRegion = 'us-east-2' }
           }
           if ([string]::IsNullOrWhiteSpace($env:SUPABASE_ACCESS_TOKEN)) {
             throw 'SUPABASE_ACCESS_TOKEN is not configured in the protected regional environment.'
@@ -112,13 +138,13 @@ jobs:
           if ($project.Count -ne 1) {
             throw 'The deployment identity cannot see the approved regional fictional-staging project.'
           }
-          if ($project[0].database.region -ne $expected[$env:REQUESTED_REGION].databaseRegion) {
+          if ($project[0].region -ne $expected[$env:REQUESTED_REGION].databaseRegion) {
             throw 'The approved project is in an unexpected database region.'
           }
 
       - name: Dry-run regional migrations
         shell: pwsh
-        working-directory: APPS/peacepad-v2-platform
+        working-directory: peacepad-v2-target/APPS/peacepad-v2-platform
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -131,7 +157,7 @@ jobs:
       - name: Apply migrations and deploy regional Edge Function
         if: ${{ inputs.mode == 'deploy' }}
         shell: pwsh
-        working-directory: APPS/peacepad-v2-platform
+        working-directory: peacepad-v2-target/APPS/peacepad-v2-platform
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -140,7 +166,7 @@ jobs:
           REQUESTED_REGION: ${{ inputs.region }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $projects = @{ ca = 'ftdqnhlesqrkstnqgfxr'; us = 'kgechdqdtryktfahyqez' }
+          $projects = @{ ca = 'rohvkyuxbnqzglaromms'; us = 'spmpndalcvwmygznihec' }
           $functionRegions = @{ ca = 'ca-central-1'; us = 'us-east-1' }
           if ([string]::IsNullOrWhiteSpace($env:PEACEPAD_MAINTENANCE_SECRET) -or $env:PEACEPAD_MAINTENANCE_SECRET.Length -lt 32) {
             throw 'MAINTENANCE_SECRET is missing or too short.'
@@ -153,11 +179,7 @@ jobs:
           Write-Output "::add-mask::$env:PEACEPAD_IDEMPOTENCY_SECRET"
           supabase db push --db-url $env:DATABASE_URL --yes --agent no --workdir .
           if ($LASTEXITCODE -ne 0) { throw 'Migration apply failed.' }
-
-          ./scripts/deploy-supabase-free-staging.ps1 `
-            -Region $env:REQUESTED_REGION `
-            -ProjectRef $projects[$env:REQUESTED_REGION] `
-            -FunctionRegion $functionRegions[$env:REQUESTED_REGION]
+          ./scripts/deploy-supabase-free-staging.ps1 -Region $env:REQUESTED_REGION -ProjectRef $projects[$env:REQUESTED_REGION] -FunctionRegion $functionRegions[$env:REQUESTED_REGION]
 
       - name: Verify public regional boundaries
         if: ${{ inputs.mode == 'deploy' }}
@@ -166,14 +188,11 @@ jobs:
           REQUESTED_REGION: ${{ inputs.region }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $projects = @{ ca = 'ftdqnhlesqrkstnqgfxr'; us = 'kgechdqdtryktfahyqez' }
+          $projects = @{ ca = 'rohvkyuxbnqzglaromms'; us = 'spmpndalcvwmygznihec' }
           $functionRegions = @{ ca = 'ca-central-1'; us = 'us-east-1' }
           $wrongRegions = @{ ca = 'us'; us = 'ca' }
           $baseUrl = "https://$($projects[$env:REQUESTED_REGION]).supabase.co/functions/v1/peacepad-v2-api"
-          $headers = @{
-            'x-region' = $functionRegions[$env:REQUESTED_REGION]
-            'x-peacepad-region' = $env:REQUESTED_REGION
-          }
+          $headers = @{ 'x-region' = $functionRegions[$env:REQUESTED_REGION]; 'x-peacepad-region' = $env:REQUESTED_REGION }
           $health = Invoke-RestMethod -Method Get -Uri "$baseUrl/health" -Headers $headers -TimeoutSec 20
           if ($health.environment -ne 'fictional-staging') { throw 'Unexpected health environment.' }
           Invoke-RestMethod -Method Get -Uri "$baseUrl/readyz" -Headers $headers -TimeoutSec 20 | Out-Null
@@ -183,10 +202,7 @@ jobs:
           } catch {
             if ($_.Exception.Response.StatusCode.value__ -ne 401) { throw }
           }
-          $wrongHeaders = @{
-            'x-region' = $functionRegions[$env:REQUESTED_REGION]
-            'x-peacepad-region' = $wrongRegions[$env:REQUESTED_REGION]
-          }
+          $wrongHeaders = @{ 'x-region' = $functionRegions[$env:REQUESTED_REGION]; 'x-peacepad-region' = $wrongRegions[$env:REQUESTED_REGION] }
           try {
             Invoke-WebRequest -Method Get -Uri "$baseUrl/api/v2/session" -Headers $wrongHeaders -TimeoutSec 20 | Out-Null
             throw 'Wrong-region request unexpectedly succeeded.'
@@ -200,29 +216,33 @@ jobs:
         env:
           REQUESTED_REGION: ${{ inputs.region }}
           MODE: ${{ inputs.mode }}
-          SELECTED_COMMIT_SHA: ${{ github.sha }}
+          CONTROL_COMMIT_SHA: ${{ github.sha }}
+          TARGET_COMMIT_SHA: ${{ inputs.target_commit_sha }}
           JOB_STATUS: ${{ job.status }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $projects = @{ ca = 'ftdqnhlesqrkstnqgfxr'; us = 'kgechdqdtryktfahyqez' }
-          $migrationFiles = Get-ChildItem APPS/peacepad-v2-platform/supabase/migrations/*.sql | Sort-Object Name
+          $projects = @{ ca = 'rohvkyuxbnqzglaromms'; us = 'spmpndalcvwmygznihec' }
+          $migrationRoot = 'peacepad-v2-target/APPS/peacepad-v2-platform/supabase/migrations'
+          $edgeFunctionPath = 'peacepad-v2-target/APPS/peacepad-v2-platform/supabase/functions/peacepad-v2-api/index.ts'
+          $migrationFiles = if (Test-Path -LiteralPath $migrationRoot) { @(Get-ChildItem "$migrationRoot/*.sql" | Sort-Object Name) } else { @() }
           $manifest = [ordered]@{
             evidenceBoundary = if ($env:MODE -eq 'deploy' -and $env:JOB_STATUS -eq 'success') { 'DEPLOYED_STAGING_VERIFIED' } else { 'DRY_RUN_OR_FAILED' }
             region = $env:REQUESTED_REGION
             projectRef = $projects[$env:REQUESTED_REGION]
-            commitSha = $env:SELECTED_COMMIT_SHA
+            controlCommitSha = $env:CONTROL_COMMIT_SHA
+            targetCommitSha = $env:TARGET_COMMIT_SHA
             mode = $env:MODE
             jobStatus = $env:JOB_STATUS
             migrations = @($migrationFiles | ForEach-Object { [ordered]@{ name = $_.Name; sha256 = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() } })
-            edgeFunctionSha256 = (Get-FileHash APPS/peacepad-v2-platform/supabase/functions/peacepad-v2-api/index.ts -Algorithm SHA256).Hash.ToLowerInvariant()
+            edgeFunctionSha256 = if (Test-Path -LiteralPath $edgeFunctionPath) { (Get-FileHash $edgeFunctionPath -Algorithm SHA256).Hash.ToLowerInvariant() } else { $null }
           }
           New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP/peacepad-v2-staging-evidence" | Out-Null
           $manifest | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 "$env:RUNNER_TEMP/peacepad-v2-staging-evidence/manifest.json"
 
       - name: Upload non-secret evidence manifest
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: peacepad-v2-${{ inputs.region }}-staging-${{ github.sha }}
+          name: peacepad-v2-${{ inputs.region }}-staging-${{ inputs.target_commit_sha }}
           if-no-files-found: error
           path: ${{ runner.temp }}/peacepad-v2-staging-evidence/manifest.json

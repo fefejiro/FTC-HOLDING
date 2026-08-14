@@ -1,0 +1,154 @@
+name: PeacePad V2 Supabase Restoration Drill
+
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: Regional fictional-staging source
+        required: true
+        type: choice
+        options:
+          - ca
+          - us
+      confirm_project_ref:
+        description: Enter the approved regional Supabase project ref
+        required: true
+        type: string
+      target_commit_sha:
+        description: Enter the exact reviewed PeacePad V2 staging branch commit SHA
+        required: true
+        type: string
+      confirmation:
+        description: Type RESTORE FICTIONAL STAGING
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: peacepad-v2-supabase-restoration-${{ inputs.region }}
+  cancel-in-progress: false
+
+jobs:
+  logical-restoration:
+    name: Verify ${{ inputs.region }} managed logical restoration
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: peacepad-v2-staging-${{ inputs.region }}
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: peacepad_restore
+          POSTGRES_DB: peacepad_restore
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d peacepad_restore"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Fetch trusted restoration control
+        shell: bash
+        env:
+          CONTROL_COMMIT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          [[ "$CONTROL_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git init .
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git -c protocol.version=2 fetch --no-tags --depth=1 origin "$CONTROL_COMMIT_SHA"
+          test "$(git rev-parse FETCH_HEAD)" = "$CONTROL_COMMIT_SHA"
+          git checkout --detach FETCH_HEAD
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1
+        with:
+          version: 2.113.0
+
+      - name: Enforce immutable restoration target
+        shell: bash
+        env:
+          REQUESTED_REGION: ${{ inputs.region }}
+          CONFIRM_PROJECT_REF: ${{ inputs.confirm_project_ref }}
+          TARGET_COMMIT_SHA: ${{ inputs.target_commit_sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          SELECTED_REF: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          declare -A projects=(
+            [ca]="rohvkyuxbnqzglaromms"
+            [us]="spmpndalcvwmygznihec"
+          )
+          test "$SELECTED_REF" = "main"
+          test "$CONFIRMATION" = "RESTORE FICTIONAL STAGING"
+          test "$CONFIRM_PROJECT_REF" = "${projects[$REQUESTED_REGION]}"
+          [[ "$TARGET_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]
+
+          git -c protocol.version=2 fetch --no-tags --depth=1 origin refs/heads/feat/peacepad-v2-supabase-free-staging
+          reviewed_head="$(git rev-parse FETCH_HEAD)"
+          test "$TARGET_COMMIT_SHA" = "$reviewed_head"
+          git worktree add --detach peacepad-v2-target "$reviewed_head"
+
+      - name: Validate credentials and project visibility
+        shell: pwsh
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          REQUESTED_REGION: ${{ inputs.region }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $expected = @{
+            ca = @{ ref = 'rohvkyuxbnqzglaromms'; databaseRegion = 'ca-central-1' }
+            us = @{ ref = 'spmpndalcvwmygznihec'; databaseRegion = 'us-east-2' }
+          }
+          if ([string]::IsNullOrWhiteSpace($env:SUPABASE_ACCESS_TOKEN)) { throw 'SUPABASE_ACCESS_TOKEN is not configured.' }
+          if ([string]::IsNullOrWhiteSpace($env:DATABASE_URL)) { throw 'DATABASE_URL is not configured.' }
+          Write-Output "::add-mask::$env:DATABASE_URL"
+          $visible = @(supabase projects list --output json | ConvertFrom-Json)
+          if ($LASTEXITCODE -ne 0) { throw 'Supabase project visibility check failed.' }
+          $project = @($visible | Where-Object { $_.ref -eq $expected[$env:REQUESTED_REGION].ref })
+          if ($project.Count -ne 1 -or $project[0].region -ne $expected[$env:REQUESTED_REGION].databaseRegion) {
+            throw 'The approved regional project is not visible in its expected database region.'
+          }
+
+      - name: Restore managed application schema into ephemeral PostgreSQL
+        shell: bash
+        working-directory: peacepad-v2-target/APPS/peacepad-v2-platform
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PEACEPAD_REGION: ${{ inputs.region }}
+          PEACEPAD_PROJECT_REF: ${{ inputs.confirm_project_ref }}
+          TARGET_COMMIT_SHA: ${{ inputs.target_commit_sha }}
+          EVIDENCE_DIRECTORY: ${{ runner.temp }}/peacepad-v2-restoration-evidence
+        run: bash ./scripts/verify-managed-logical-restoration.sh
+
+      - name: Validate non-secret restoration evidence
+        shell: bash
+        env:
+          REQUESTED_REGION: ${{ inputs.region }}
+          TARGET_COMMIT_SHA: ${{ inputs.target_commit_sha }}
+          EVIDENCE_DIRECTORY: ${{ runner.temp }}/peacepad-v2-restoration-evidence
+        run: |
+          set -euo pipefail
+          evidence="$EVIDENCE_DIRECTORY/managed-logical-restoration-$REQUESTED_REGION.json"
+          test -f "$evidence"
+          test "$(find "$EVIDENCE_DIRECTORY" -maxdepth 1 -type f | wc -l)" -eq 1
+          test "$(jq -r '.result' "$evidence")" = "MANAGED_LOGICAL_RESTORATION_VERIFIED"
+          test "$(jq -r '.targetCommitSha' "$evidence")" = "$TARGET_COMMIT_SHA"
+          test "$(jq -r '.sourceReadOnly' "$evidence")" = "true"
+          test "$(jq -r '.dumpRetained' "$evidence")" = "false"
+          test "$(jq -r '.productionContacted' "$evidence")" = "false"
+          test "$(jq -r '.migrationCount' "$evidence")" -eq 20
+          test "$(jq -r '.sourceFingerprintSha256' "$evidence")" = "$(jq -r '.restoredFingerprintSha256' "$evidence")"
+          test "$(find "${RUNNER_TEMP:-/tmp}" -type f -name '*.dump' | wc -l)" -eq 0
+
+      - name: Upload non-secret restoration evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: peacepad-v2-${{ inputs.region }}-logical-restoration-${{ inputs.target_commit_sha }}
+          if-no-files-found: error
+          path: ${{ runner.temp }}/peacepad-v2-restoration-evidence/*.json

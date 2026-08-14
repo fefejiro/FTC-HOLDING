@@ -1,0 +1,211 @@
+name: PeacePad Native V2 iOS Internal TestFlight Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact reviewed Native V2 feature commit to package
+        required: true
+        type: string
+      existing_app_store_id:
+        description: Confirm the existing PeacePad Apple ID (6793350735)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: peacepad-v2-ios-internal-testflight-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build one guarded internal TestFlight candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      TARGET_SHA: ${{ inputs.target_sha }}
+      EXISTING_APP_STORE_ID: ${{ inputs.existing_app_store_id }}
+      APP_PATH: APPS/peacepad-next-native
+      PIPELINE_BASELINE: 8b1f3bf6bf93fec49e18f746e7cfd2f361480287
+
+    steps:
+      - name: Checkout exact reviewed Native V2 commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_sha }}
+          fetch-depth: 0
+
+      - name: Bind exact source and existing App Store record
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "target_sha must be an exact lowercase 40-character commit SHA." >&2
+            exit 1
+          }
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          git merge-base --is-ancestor "$PIPELINE_BASELINE" "$TARGET_SHA"
+          test "$EXISTING_APP_STORE_ID" = "6793350735"
+          test -n "$EXPO_TOKEN"
+
+          node "$APP_PATH/scripts/check-ios-testflight-readiness.cjs"
+          node "$APP_PATH/scripts/check-lab-guardrails.cjs"
+          node "$APP_PATH/scripts/check-secrets.cjs"
+
+      - name: Use Node.js 22 with dependency cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: APPS/peacepad-next-native/package-lock.json
+
+      - name: Create isolated release workspace
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          RELEASE_PATH="$RUNNER_TEMP/peacepad-next-native-testflight"
+          mkdir -p "$RELEASE_PATH"
+          rsync -a --delete \
+            --exclude node_modules \
+            --exclude coverage \
+            "$APP_PATH/" "$RELEASE_PATH/"
+
+          SOURCE_TREE_OBJECT="$(git rev-parse "$TARGET_SHA:$APP_PATH")"
+          git -C "$RELEASE_PATH" init -q
+          git -C "$RELEASE_PATH" config user.name "PeacePad Release Control"
+          git -C "$RELEASE_PATH" config user.email "release-control@users.noreply.github.com"
+          git -C "$RELEASE_PATH" add --all
+          git -C "$RELEASE_PATH" commit -qm "Package PeacePad Native V2 source $TARGET_SHA"
+          COPIED_TREE_OBJECT="$(git -C "$RELEASE_PATH" rev-parse 'HEAD^{tree}')"
+          test "$SOURCE_TREE_OBJECT" = "$COPIED_TREE_OBJECT"
+
+          echo "release_path=$RELEASE_PATH" >> "$GITHUB_OUTPUT"
+          echo "source_tree_object=$SOURCE_TREE_OBJECT" >> "$GITHUB_OUTPUT"
+
+      - name: Install isolated native dependencies
+        shell: bash
+        working-directory: ${{ steps.source.outputs.release_path }}
+        run: npm ci --workspaces=false
+
+      - name: Verify live Apple and EAS release prerequisites
+        shell: bash
+        working-directory: ${{ steps.source.outputs.release_path }}
+        run: |
+          set -euo pipefail
+          npm run release:ios:preflight:online
+          npx --yes eas-cli@16.19.1 env:exec production \
+            "node scripts/check-ios-testflight-readiness.cjs --injected" \
+            --non-interactive
+
+      - name: Resolve exact internal TestFlight configuration
+        shell: bash
+        working-directory: ${{ steps.source.outputs.release_path }}
+        run: |
+          set -euo pipefail
+          CONFIG_JSON="$RUNNER_TEMP/peacepad-testflight-config.json"
+          npx --yes eas-cli@16.19.1 config \
+            --platform ios \
+            --profile testflight-internal \
+            --json \
+            --non-interactive > "$CONFIG_JSON"
+
+          jq -e '
+            .appConfig.version == "2.0.0"
+            and .appConfig.ios.buildNumber == "2"
+            and .appConfig.ios.bundleIdentifier == "ca.peacepad.family"
+            and .appConfig.extra.appStoreId == "6793350735"
+            and .appConfig.extra.productionApiWritesEnabled == false
+            and .buildProfile.distribution == "store"
+            and .buildProfile.environment == "production"
+            and .buildProfile.simulator == false
+          ' "$CONFIG_JSON" >/dev/null
+          rm -f "$CONFIG_JSON"
+
+      - name: Build signed candidate on EAS without submitting
+        id: eas_build
+        continue-on-error: true
+        shell: bash
+        working-directory: ${{ steps.source.outputs.release_path }}
+        run: |
+          set -euo pipefail
+          npx --yes eas-cli@16.19.1 build \
+            --platform ios \
+            --profile testflight-internal \
+            --non-interactive \
+            --json > "$RUNNER_TEMP/peacepad-testflight-build.json"
+
+      - name: Record non-secret build evidence
+        if: always()
+        shell: bash
+        env:
+          BUILD_OUTCOME: ${{ steps.eas_build.outcome }}
+          SOURCE_TREE_OBJECT: ${{ steps.source.outputs.source_tree_object }}
+        run: |
+          set -euo pipefail
+          EVIDENCE_PATH="$RUNNER_TEMP/peacepad-testflight-evidence"
+          BUILD_JSON="$RUNNER_TEMP/peacepad-testflight-build.json"
+          mkdir -p "$EVIDENCE_PATH"
+
+          BUILD_ID=""
+          BUILD_STATUS=""
+          if test -s "$BUILD_JSON" && jq -e . "$BUILD_JSON" >/dev/null 2>&1; then
+            BUILD_ID="$(jq -r 'if type == "array" then (.[0].id // "") else (.id // "") end' "$BUILD_JSON")"
+            BUILD_STATUS="$(jq -r 'if type == "array" then (.[0].status // "") else (.status // "") end' "$BUILD_JSON")"
+          fi
+
+          RESULT="EAS_TESTFLIGHT_BUILD_NOT_VERIFIED"
+          if test "$BUILD_OUTCOME" = "success" && test -n "$BUILD_ID"; then
+            RESULT="EAS_TESTFLIGHT_BUILD_FINISHED"
+          fi
+
+          jq -n \
+            --arg result "$RESULT" \
+            --arg controlSha "$GITHUB_SHA" \
+            --arg targetSha "$TARGET_SHA" \
+            --arg sourceTreeObject "$SOURCE_TREE_OBJECT" \
+            --arg buildOutcome "$BUILD_OUTCOME" \
+            --arg easBuildId "$BUILD_ID" \
+            --arg easBuildStatus "$BUILD_STATUS" \
+            '{
+              result: $result,
+              controlSha: $controlSha,
+              targetSha: $targetSha,
+              sourceTreeObject: $sourceTreeObject,
+              appStoreId: "6793350735",
+              bundleIdentifier: "ca.peacepad.family",
+              version: "2.0.0",
+              buildNumber: "2",
+              runtime: "dual-region fictional staging",
+              productionApiWritesEnabled: false,
+              buildOutcome: $buildOutcome,
+              easBuildId: $easBuildId,
+              easBuildStatus: $easBuildStatus,
+              autoSubmitAttempted: false,
+              testFlightProof: false,
+              deviceProof: false,
+              productionProof: false
+            }' > "$EVIDENCE_PATH/manifest.json"
+
+      - name: Upload internal TestFlight build evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: peacepad-v2-ios-internal-testflight-build-${{ inputs.target_sha }}
+          if-no-files-found: error
+          retention-days: 30
+          path: ${{ runner.temp }}/peacepad-testflight-evidence
+
+      - name: Enforce successful signed build
+        if: always()
+        shell: bash
+        env:
+          BUILD_OUTCOME: ${{ steps.eas_build.outcome }}
+        run: |
+          set -euo pipefail
+          test "$BUILD_OUTCOME" = "success"

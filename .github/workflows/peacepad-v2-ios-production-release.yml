@@ -1,0 +1,200 @@
+name: PeacePad V2 iOS Production Build and Upload
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact reviewed Native V2 source SHA
+        required: true
+        type: string
+      authorization:
+        description: Type I_CONFIRM_PRODUCTION_BUILD_4_UPLOAD
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: peacepad-v2-ios-production-release
+  cancel-in-progress: false
+
+jobs:
+  build-and-upload:
+    name: Build and upload production 2.0.0 (4)
+    runs-on: macos-26-intel
+    timeout-minutes: 120
+    env:
+      APP_PATH: APPS/peacepad-next-native
+      EXPECTED_SHA: ${{ inputs.source_sha }}
+      PRODUCTION_BASELINE: b2b6e402fa0a4c4e441304010fa73fcd5263fc86
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EAS_NO_VCS: "1"
+      FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: "30"
+      FASTLANE_XCODEBUILD_SETTINGS_RETRIES: "6"
+
+    steps:
+      - name: Checkout exact reviewed source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 0
+
+      - name: Bind production source and authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test "${{ inputs.authorization }}" = "I_CONFIRM_PRODUCTION_BUILD_4_UPLOAD"
+          git merge-base --is-ancestor "$PRODUCTION_BASELINE" "$EXPECTED_SHA"
+          git diff --check "$EXPECTED_SHA"
+          test -z "$(git status --porcelain)"
+          test -n "$EXPO_TOKEN"
+          git rev-parse "$EXPECTED_SHA:$APP_PATH" > "$RUNNER_TEMP/peacepad-native-tree"
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: APPS/peacepad-next-native/package-lock.json
+
+      - name: Record Xcode toolchain
+        shell: bash
+        run: xcodebuild -version | tee "$RUNNER_TEMP/peacepad-v2-xcode-version.txt"
+
+      - name: Create exact app-only release workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_root="$RUNNER_TEMP/peacepad-next-native-production"
+          rm -rf "$release_root"
+          mkdir -p "$release_root"
+          git archive "$EXPECTED_SHA:$APP_PATH" | tar -x -C "$release_root"
+          git -C "$release_root" init -q
+          git -C "$release_root" config user.name "PeacePad Release Control"
+          git -C "$release_root" config user.email "release-control@users.noreply.github.com"
+          git -C "$release_root" add --all
+          git -C "$release_root" commit -qm "Package PeacePad Native V2 source $EXPECTED_SHA"
+          test "$(git -C "$release_root" rev-parse 'HEAD^{tree}')" = "$(cat "$RUNNER_TEMP/peacepad-native-tree")"
+          npm --prefix "$release_root" ci --ignore-scripts --no-audit --no-fund --workspaces=false
+
+      - name: Verify exact production runtime configuration
+        working-directory: ${{ runner.temp }}/peacepad-next-native-production
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/check-lab-guardrails.cjs
+          node scripts/check-secrets.cjs
+          config_path="$RUNNER_TEMP/peacepad-production-config.json"
+          npx --yes eas-cli@21.8.0 env:exec production \
+            "PEACEPAD_IOS_RELEASE_MODE=appstore-production EXPO_PUBLIC_PEACEPAD_ENV=production EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED=true npx --yes eas-cli@21.8.0 config --platform ios --profile appstore-production --json --non-interactive > '$config_path'" \
+            --non-interactive
+          jq -e '
+            .appConfig.version == "2.0.0"
+            and .appConfig.ios.buildNumber == "4"
+            and .appConfig.ios.bundleIdentifier == "ca.peacepad.family"
+            and .appConfig.extra.appStoreId == "6793350735"
+            and .appConfig.extra.environment == "production"
+            and .appConfig.extra.productionApiWritesEnabled == true
+            and .buildProfile.distribution == "store"
+            and .buildProfile.environment == "production"
+            and .buildProfile.simulator == false
+          ' "$config_path" >/dev/null
+          rm -f "$config_path"
+
+      - name: Build signed production IPA locally
+        id: build
+        working-directory: ${{ runner.temp }}/peacepad-next-native-production
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_command=$(cat <<'EOF'
+            set -eu
+            export PEACEPAD_IOS_RELEASE_MODE=appstore-production
+            export EXPO_PUBLIC_PEACEPAD_ENV=production
+            export EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED=true
+            EAS_SKIP_AUTO_FINGERPRINT=1 npx --yes eas-cli@21.8.0 build \
+              --platform ios \
+              --profile appstore-production \
+              --local \
+              --non-interactive \
+              --freeze-credentials \
+              --output "$RUNNER_TEMP/peacepad-v2-production-2.0.0-4.ipa"
+          EOF
+          )
+          npx --yes eas-cli@21.8.0 env:exec production "$release_command" --non-interactive
+          shasum -a 256 "$RUNNER_TEMP/peacepad-v2-production-2.0.0-4.ipa" > "$RUNNER_TEMP/peacepad-v2-production-2.0.0-4.sha256"
+
+      - name: Upload exact IPA to App Store Connect
+        id: submit
+        env:
+          PEACEPAD_IOS_RELEASE_MODE: appstore-production
+          EXPO_PUBLIC_PEACEPAD_ENV: production
+          EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED: "true"
+        working-directory: ${{ runner.temp }}/peacepad-next-native-production
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes eas-cli@21.8.0 submit \
+            --platform ios \
+            --profile appstore-production \
+            --path "$RUNNER_TEMP/peacepad-v2-production-2.0.0-4.ipa" \
+            --non-interactive \
+            --wait | tee "$RUNNER_TEMP/peacepad-v2-production-submit.txt"
+
+      - name: Record non-secret release evidence
+        if: always()
+        shell: bash
+        env:
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          SUBMIT_OUTCOME: ${{ steps.submit.outcome }}
+        run: |
+          set -euo pipefail
+          evidence="$RUNNER_TEMP/peacepad-v2-production-evidence"
+          mkdir -p "$evidence"
+          cp "$RUNNER_TEMP/peacepad-v2-xcode-version.txt" "$evidence/" 2>/dev/null || true
+          cp "$RUNNER_TEMP/peacepad-v2-production-2.0.0-4.sha256" "$evidence/" 2>/dev/null || true
+          cp "$RUNNER_TEMP/peacepad-v2-production-submit.txt" "$evidence/" 2>/dev/null || true
+          jq -n \
+            --arg result "$(test "$BUILD_OUTCOME" = success && test "$SUBMIT_OUTCOME" = success && echo APP_STORE_CONNECT_UPLOAD_VERIFIED || echo PRODUCTION_UPLOAD_NOT_VERIFIED)" \
+            --arg controlSha "$GITHUB_SHA" \
+            --arg targetSha "$EXPECTED_SHA" \
+            --arg sourceTree "$(cat "$RUNNER_TEMP/peacepad-native-tree")" \
+            --arg buildOutcome "$BUILD_OUTCOME" \
+            --arg submitOutcome "$SUBMIT_OUTCOME" \
+            '{
+              result: $result,
+              controlSha: $controlSha,
+              targetSha: $targetSha,
+              sourceTree: $sourceTree,
+              appStoreId: "6793350735",
+              bundleIdentifier: "ca.peacepad.family",
+              version: "2.0.0",
+              buildNumber: "4",
+              runtime: "production-ca",
+              productionApiWritesEnabled: true,
+              buildOutcome: $buildOutcome,
+              submitOutcome: $submitOutcome,
+              reviewSubmitted: false,
+              publicReleaseVerified: false
+            }' > "$evidence/manifest.json"
+
+      - name: Upload production release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: peacepad-v2-ios-production-${{ inputs.source_sha }}
+          if-no-files-found: error
+          retention-days: 30
+          path: ${{ runner.temp }}/peacepad-v2-production-evidence
+
+      - name: Retain signed IPA when upload fails
+        if: failure() && steps.build.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: peacepad-v2-ios-production-ipa-${{ inputs.source_sha }}
+          if-no-files-found: error
+          retention-days: 1
+          path: ${{ runner.temp }}/peacepad-v2-production-2.0.0-4.ipa
