@@ -161,6 +161,24 @@ export function isQueuedMessageInScope(value: QueuedMessage, scope: MessageOutbo
     && value.input.conversationId === scope.conversationId;
 }
 
+export async function removeQueuedMessagesForFamily(
+  store: MessageOutboxStore,
+  scope: Pick<MessageOutboxScope, "actorIdentityId" | "familyCircleId" | "region">
+): Promise<number> {
+  let removed = 0;
+  for (const queued of await store.list()) {
+    if (
+      queued.context.actor.identityId === scope.actorIdentityId
+      && queued.context.region === scope.region
+      && queued.input.familyCircleId === scope.familyCircleId
+    ) {
+      await store.remove(queued.id);
+      removed += 1;
+    }
+  }
+  return removed;
+}
+
 export function earliestQueuedMessageRetryAt(
   values: readonly QueuedMessage[],
   scope: MessageOutboxScope

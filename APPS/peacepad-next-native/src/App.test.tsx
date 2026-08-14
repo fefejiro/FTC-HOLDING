@@ -112,6 +112,7 @@ describe("PeacePad coordination shell", () => {
       sessionId: "10000000-0000-4000-8000-000000000002",
       familyCircleId: "10000000-0000-4000-8000-000000000003",
       participantGrantId: "10000000-0000-4000-8000-000000000004",
+      participantGrantVersion: 1,
       conversationId: "10000000-0000-4000-8000-000000000005",
       region: "ca"
     };

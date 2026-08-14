@@ -29,6 +29,7 @@ const demoRuntime: CoordinationRuntime = {
   sessionId: "session-current",
   familyCircleId: "family-current",
   participantGrantId: "grant-current",
+  participantGrantVersion: 1,
   conversationId: "conversation-primary",
   region: "ca"
 };

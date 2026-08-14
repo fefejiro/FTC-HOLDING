@@ -21,6 +21,7 @@ const runtime: CoordinationRuntime = {
   sessionId: SESSION,
   familyCircleId: FAMILY,
   participantGrantId: GRANT,
+  participantGrantVersion: 1,
   conversationId: CONVERSATION,
   region: "ca"
 };
@@ -30,6 +31,7 @@ const runtimeB: CoordinationRuntime = {
   sessionId: "99999999-9999-4999-8999-999999999999",
   familyCircleId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   participantGrantId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  participantGrantVersion: 1,
   conversationId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
   region: "ca"
 };

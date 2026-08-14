@@ -22,6 +22,7 @@ const runtime = (conversationId = CONVERSATION_A): CoordinationRuntime => ({
   conversationId,
   familyCircleId: FAMILY_A,
   participantGrantId: GRANT_A,
+  participantGrantVersion: 1,
   region: "ca",
   sessionId: SESSION_A
 });
@@ -186,6 +187,7 @@ describe("persisted Message Check runtime", () => {
       conversationId: "conversation-primary",
       familyCircleId: "family-current",
       participantGrantId: "grant-current",
+      participantGrantVersion: 1,
       region: "ca",
       sessionId: "device-session"
     });

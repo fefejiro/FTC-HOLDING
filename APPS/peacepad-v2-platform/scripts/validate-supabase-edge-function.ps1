@@ -22,6 +22,8 @@ $privateRecordsMigrationPath = Join-Path $platformRoot 'supabase/migrations/2026
 $privateAttachmentsMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608140001_v2_private_record_attachments.sql'
 $devicePushMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608140003_v2_device_push_registrations.sql'
 $devicePushProofPath = Join-Path $platformRoot 'scripts/verify-device-push-registrations.sql'
+$familyExitMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608140004_v2_family_exit.sql'
+$familyExitProofPath = Join-Path $platformRoot 'scripts/verify-family-exit.sql'
 $privateTimelineMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608100001_v2_private_source_timeline.sql'
 $audioCallMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608100002_v2_foreground_audio_calls.sql'
 $audioCallProofPath = Join-Path $platformRoot 'scripts/verify-audio-call-lifecycle.sql'
@@ -37,7 +39,7 @@ $authCleanupRunnerPath = Join-Path $platformRoot 'scripts/run-auth-cleanup.ps1'
 $deployRunnerPath = Join-Path $platformRoot 'scripts/deploy-supabase-free-staging.ps1'
 $configPath = Join-Path $platformRoot 'supabase/config.toml'
 
-foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $idempotencyReceiptMigrationPath, $privateRecordsMigrationPath, $privateAttachmentsMigrationPath, $devicePushMigrationPath, $devicePushProofPath, $privateTimelineMigrationPath, $audioCallMigrationPath, $audioCallProofPath, $audioCallSignalingMigrationPath, $audioCallSignalingProofPath, $audioCallSignalValidatorPath, $audioCallSignalTestPath, $audioCallTurnMigrationPath, $audioCallTurnProofPath, $audioCallTurnIssuerPath, $audioCallTurnTestPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
+foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $idempotencyReceiptMigrationPath, $privateRecordsMigrationPath, $privateAttachmentsMigrationPath, $devicePushMigrationPath, $devicePushProofPath, $familyExitMigrationPath, $familyExitProofPath, $privateTimelineMigrationPath, $audioCallMigrationPath, $audioCallProofPath, $audioCallSignalingMigrationPath, $audioCallSignalingProofPath, $audioCallSignalValidatorPath, $audioCallSignalTestPath, $audioCallTurnMigrationPath, $audioCallTurnProofPath, $audioCallTurnIssuerPath, $audioCallTurnTestPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
     throw "Required Supabase staging file is missing: $path"
   }
@@ -62,6 +64,8 @@ $privateRecordsMigration = Get-Content -LiteralPath $privateRecordsMigrationPath
 $privateAttachmentsMigration = Get-Content -LiteralPath $privateAttachmentsMigrationPath -Raw
 $devicePushMigration = Get-Content -LiteralPath $devicePushMigrationPath -Raw
 $devicePushProof = Get-Content -LiteralPath $devicePushProofPath -Raw
+$familyExitMigration = Get-Content -LiteralPath $familyExitMigrationPath -Raw
+$familyExitProof = Get-Content -LiteralPath $familyExitProofPath -Raw
 $privateTimelineMigration = Get-Content -LiteralPath $privateTimelineMigrationPath -Raw
 $audioCallMigration = Get-Content -LiteralPath $audioCallMigrationPath -Raw
 $audioCallProof = Get-Content -LiteralPath $audioCallProofPath -Raw
@@ -89,6 +93,8 @@ $requiredFunctionPatterns = @(
   '/api/v2/session/bootstrap',
   '/api/v2/consents',
   '/api/v2/families',
+  '/membership',
+  'peacepad_v2_leave_family',
   '/api/v2/invitations',
   '(accept|decline)',
   'peacepad_v2_decline_invitation',
@@ -538,6 +544,37 @@ foreach ($pattern in @(
 )) {
   if ($devicePushProof -notmatch $pattern) {
     throw "Device push PostgreSQL proof is missing required boundary: $pattern"
+  }
+}
+foreach ($pattern in @(
+  'create or replace function public\.peacepad_v2_leave_family',
+  'security definer',
+  'for update',
+  'FAMILY_ACCESS_DENIED',
+  'CONCURRENCY_CONFLICT',
+  "status = 'revoked'",
+  'code_hash = uuid_send\(gen_random_uuid\(\)\)',
+  'participant_grant_id = grant_row\.participant_grant_id',
+  "'family.left'",
+  'revoke all on function public\.peacepad_v2_leave_family',
+  'to service_role'
+)) {
+  if ($familyExitMigration -notmatch $pattern) {
+    throw "Family-exit migration is missing required boundary: $pattern"
+  }
+}
+foreach ($pattern in @(
+  'FAMILY_EXIT_POSTGRES_VERIFIED',
+  'Direct authenticated-role family exit was not denied',
+  'An outsider left another family',
+  'A cross-region family exit was accepted',
+  'A stale family-grant version was accepted',
+  'Family exit removed the remaining member or shared family history',
+  'A departing member retained a usable pending invitation',
+  'one content-free audit event'
+)) {
+  if ($familyExitProof -notmatch $pattern) {
+    throw "Family-exit PostgreSQL proof is missing required boundary: $pattern"
   }
 }
 foreach ($table in @('private_attachment', 'private_storage_cleanup_outbox')) {

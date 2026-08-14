@@ -121,6 +121,14 @@ export type AudioCallTurnCredentials = Readonly<{
   }>[];
 }>;
 
+export type LeftFamily = Readonly<{
+  familyCircleId: EntityId;
+  participantGrantId: EntityId;
+  status: "left";
+  leftAt: string;
+  version: number;
+}>;
+
 export type DevicePushRegistration = Readonly<{
   registrationId: EntityId;
   platform: "ios" | "android";
@@ -229,6 +237,7 @@ export interface PeacePadCoordinationApi {
   revokeDevicePush(registrationId: EntityId, context: WriteContext): Promise<RevokedDevicePushRegistration>;
   deleteAccount(context: WriteContext): Promise<DeletedAccount>;
   createFamily(familyName: string, context: WriteContext): Promise<CreatedFamily>;
+  leaveFamily(familyCircleId: EntityId, context: WriteContext): Promise<LeftFamily>;
   listCaseBinders(familyCircleId: EntityId): Promise<readonly CaseBinder[]>;
   createCaseBinder(input: CreateCaseBinderInput, context: WriteContext): Promise<CaseBinder>;
   archiveCaseBinder(binderId: EntityId, context: WriteContext): Promise<CaseBinder>;
@@ -320,6 +329,27 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
 
   createFamily(familyName: string, context: WriteContext) {
     return this.write<CreatedFamily>("/api/v2/families", "POST", { familyName: familyName.trim() }, context);
+  }
+
+  async leaveFamily(familyCircleId: EntityId, context: WriteContext) {
+    const result = await this.write<LeftFamily>(
+      `/api/v2/families/${encodeURIComponent(familyCircleId)}/membership`,
+      "DELETE",
+      undefined,
+      context
+    );
+    if (
+      !result
+      || result.familyCircleId !== familyCircleId
+      || result.status !== "left"
+      || !result.leftAt
+      || Number.isNaN(Date.parse(result.leftAt))
+      || !Number.isInteger(result.version)
+      || result.version <= (context.expectedVersion ?? 0)
+    ) {
+      throw new PeacePadApiError("PeacePad could not verify the family exit receipt.", "http", 502);
+    }
+    return result;
   }
 
   listCaseBinders(familyCircleId: EntityId) {

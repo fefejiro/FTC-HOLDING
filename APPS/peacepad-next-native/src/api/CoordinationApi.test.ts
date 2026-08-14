@@ -69,6 +69,12 @@ describe("HttpPeacePadCoordinationApi", () => {
         authCleanupPending: false,
         privateStorageDeleted: true,
         privateStorageCleanupPending: false
+      } : input.endsWith("/api/v2/families/family-current/membership") ? {
+        familyCircleId: "family-current",
+        participantGrantId: "grant-current",
+        status: "left",
+        leftAt: "2026-08-14T12:00:00.000Z",
+        version: 5
       } : {}
     ));
     const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
@@ -106,6 +112,7 @@ describe("HttpPeacePadCoordinationApi", () => {
     };
 
     await api.createFamily("Fictional Family", context);
+    await api.leaveFamily("family-current", context);
     await api.deleteAccount(context);
     await api.listCaseBinders("family-current");
     await api.createCaseBinder({
@@ -154,6 +161,7 @@ describe("HttpPeacePadCoordinationApi", () => {
     const urls = fetcher.mock.calls.map(([url]) => url);
     expect(urls).toEqual(expect.arrayContaining([
       "https://staging-api.peacepad.test/api/v2/families",
+      "https://staging-api.peacepad.test/api/v2/families/family-current/membership",
       "https://staging-api.peacepad.test/api/v2/account",
       "https://staging-api.peacepad.test/api/v2/case-binders?familyCircleId=family-current",
       "https://staging-api.peacepad.test/api/v2/case-binders",
@@ -533,6 +541,38 @@ describe("HttpPeacePadCoordinationApi", () => {
       const invalidApi = new HttpPeacePadCoordinationApi(config, jest.fn(async () => response(200, invalid)), accessToken);
       await expect(invalidApi.deleteAccount(context)).rejects.toMatchObject({
         message: "PeacePad could not verify the account deletion receipt.",
+        status: 502
+      });
+    }
+  });
+
+  it("validates a versioned family-exit receipt", async () => {
+    const validReceipt = {
+      familyCircleId: "family/current",
+      participantGrantId: "grant-current",
+      status: "left",
+      leftAt: "2026-08-14T12:00:00.000Z",
+      version: 5
+    } as const;
+    const fetcher = jest.fn(async () => response(200, validReceipt));
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
+
+    await expect(api.leaveFamily(validReceipt.familyCircleId, context)).resolves.toEqual(validReceipt);
+    expect(fetcher).toHaveBeenCalledWith(
+      "https://staging-api.peacepad.test/api/v2/families/family%2Fcurrent/membership",
+      expect.objectContaining({ method: "DELETE", body: undefined })
+    );
+
+    for (const invalid of [
+      {},
+      { ...validReceipt, familyCircleId: "another-family" },
+      { ...validReceipt, status: "active" },
+      { ...validReceipt, leftAt: "not-a-date" },
+      { ...validReceipt, version: 4 }
+    ]) {
+      const invalidApi = new HttpPeacePadCoordinationApi(config, jest.fn(async () => response(200, invalid)), accessToken);
+      await expect(invalidApi.leaveFamily(validReceipt.familyCircleId, context)).rejects.toMatchObject({
+        message: "PeacePad could not verify the family exit receipt.",
         status: 502
       });
     }

@@ -817,6 +817,7 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
   const accountActions = useOptionalStagingAccountActions();
   const { locale, setLocale, t } = useLocalization();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmLeaveFamily, setConfirmLeaveFamily] = useState(false);
   const [replayIntroduction, setReplayIntroduction] = useState(false);
   if (replayIntroduction) {
     return <PublicOnboardingSlides compact onComplete={() => setReplayIntroduction(false)} />;
@@ -886,13 +887,23 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
         <Text style={styles.actionTitle}>{t("account.signOut")}</Text>
         <Text style={styles.caption}>{t("account.signOutBody")}</Text>
       </Pressable> : null}
+      {accountActions?.leaveFamily ? confirmLeaveFamily ? <View accessibilityLiveRegion="assertive" accessibilityRole="alert" accessibilityViewIsModal style={styles.confirmCard}>
+        <AccessibleHeading style={styles.actionTitle}>{t("account.leaveFamilyTitle")}</AccessibleHeading>
+        <Text style={styles.caption}>{t("account.leaveFamilyWarning")}</Text>
+        <LabButton disabled={accountActions.leavingFamily} label={accountActions.leavingFamily ? t("account.leavingFamily") : t("account.leaveFamilyConfirm")} onPress={() => void accountActions.leaveFamily!().catch(() => undefined)} />
+        <LabButton disabled={accountActions.leavingFamily} label={t("account.cancel")} onPress={() => setConfirmLeaveFamily(false)} variant="secondary" />
+        {accountActions.leaveFamilyError ? <Text accessibilityRole="alert" style={styles.error}>{accountActions.leaveFamilyError}</Text> : null}
+      </View> : <Pressable accessibilityRole="button" onPress={() => { setConfirmDelete(false); setConfirmLeaveFamily(true); }} style={styles.actionCard}>
+        <Text style={styles.actionTitle}>{t("account.leaveFamily")}</Text>
+        <Text style={styles.caption}>{t("account.leaveFamilyBody")}</Text>
+      </Pressable> : null}
       {accountActions ? confirmDelete ? <View accessibilityLiveRegion="assertive" accessibilityRole="alert" accessibilityViewIsModal style={styles.confirmCard}>
         <AccessibleHeading style={styles.actionTitle}>{t("account.deleteTitle")}</AccessibleHeading>
         <Text style={styles.caption}>{t("account.deleteWarning")}</Text>
         <LabButton disabled={accountActions.deleting} label={accountActions.deleting ? t("account.deleting") : t("account.deletePermanently")} onPress={() => void accountActions.deleteAccount().catch(() => undefined)} />
         <LabButton disabled={accountActions.deleting} label={t("account.cancel")} onPress={() => setConfirmDelete(false)} variant="secondary" />
         {accountActions.error ? <Text accessibilityRole="alert" style={styles.error}>{accountActions.error}</Text> : null}
-      </View> : <Pressable accessibilityRole="button" onPress={() => setConfirmDelete(true)} style={styles.actionCard}>
+      </View> : <Pressable accessibilityRole="button" onPress={() => { setConfirmLeaveFamily(false); setConfirmDelete(true); }} style={styles.actionCard}>
         <Text style={styles.actionTitle}>{t("account.delete")}</Text>
         <Text style={styles.caption}>{t("account.deleteBody")}</Text>
       </Pressable> : null}

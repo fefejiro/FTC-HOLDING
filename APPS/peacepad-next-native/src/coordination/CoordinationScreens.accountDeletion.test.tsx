@@ -72,6 +72,43 @@ describe("staging account deletion", () => {
     expect(screen.queryByText("Delete this staging account?")).toBeNull();
   });
 
+  it("discloses shared-history retention and requires confirmation before leaving a family", async () => {
+    const leaveFamily = jest.fn(async () => undefined);
+    render(withLocalization(
+      <StagingAccountActionsProvider value={{ signOut, deleteAccount: jest.fn(), deleting: false, leaveFamily, leavingFamily: false }}>
+        <MoreScreen setScreen={jest.fn()} />
+      </StagingAccountActionsProvider>
+    ));
+
+    fireEvent.press(screen.getByRole("button", { name: "Leave this family" }));
+    expect(screen.getByRole("header", { name: "Leave this family?" })).toBeOnTheScreen();
+    expect(screen.getByText(/Shared coordination history will remain available/)).toBeOnTheScreen();
+    expect(leaveFamily).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("header", { name: "Leave this family?" })).toBeNull();
+
+    fireEvent.press(screen.getByRole("button", { name: "Leave this family" }));
+    fireEvent.press(screen.getByRole("button", { name: "Leave family" }));
+    await waitFor(() => expect(leaveFamily).toHaveBeenCalledTimes(1));
+  });
+
+  it.each([
+    ["fr", "Quitter cette famille", "Quitter cette famille?"],
+    ["es", "Salir de esta familia", "¿Salir de esta familia?"]
+  ])("localizes family-exit confirmation semantics in %s", (locale, openLabel, title) => {
+    render(withLocalization(
+      <StagingAccountActionsProvider value={{ signOut, deleteAccount: jest.fn(), deleting: false, leaveFamily: jest.fn(async () => undefined) }}>
+        <MoreScreen setScreen={jest.fn()} />
+      </StagingAccountActionsProvider>,
+      locale
+    ));
+    fireEvent.press(screen.getByRole("button", { name: openLabel }));
+    const confirmation = screen.UNSAFE_getByProps({ accessibilityViewIsModal: true });
+    expect(confirmation.props.accessibilityRole).toBe("alert");
+    expect(confirmation.props.accessibilityLiveRegion).toBe("assertive");
+    expect(screen.getByRole("header", { name: title })).toBeOnTheScreen();
+  });
+
   it.each([
     ["fr", "Supprimer le compte de test", "Supprimer ce compte de test?", "Annuler"],
     ["es", "Eliminar cuenta de pruebas", "¿Eliminar esta cuenta de pruebas?", "Cancelar"]

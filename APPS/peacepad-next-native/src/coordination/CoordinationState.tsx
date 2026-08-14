@@ -127,6 +127,7 @@ export type CoordinationRuntime = Readonly<{
   sessionId: EntityId;
   familyCircleId: EntityId;
   participantGrantId: EntityId;
+  participantGrantVersion: number;
   conversationId: EntityId;
   region: "ca" | "us";
 }>;
@@ -137,6 +138,7 @@ const DEMO_RUNTIME: CoordinationRuntime = {
   sessionId: "verified-device-session",
   familyCircleId: "family-current",
   participantGrantId: "grant-current",
+  participantGrantVersion: 1,
   conversationId: "conversation-primary",
   region: "ca"
 };
@@ -151,6 +153,8 @@ export function isValidCoordinationRuntime(runtime?: CoordinationRuntime | null)
     && UUID_PATTERN.test(runtime.sessionId)
     && UUID_PATTERN.test(runtime.familyCircleId)
     && UUID_PATTERN.test(runtime.participantGrantId)
+    && Number.isInteger(runtime.participantGrantVersion)
+    && runtime.participantGrantVersion >= 1
     && UUID_PATTERN.test(runtime.conversationId)
     && (runtime.region === "ca" || runtime.region === "us"));
 }

@@ -7,6 +7,7 @@ import {
   MAX_OUTBOX_BODY_LENGTH,
   earliestQueuedMessageRetryAt,
   isQueuedMessageInScope,
+  removeQueuedMessagesForFamily,
   removeQueuedMessage,
   retryQueuedMessage,
   retryQueuedMessages,
@@ -317,5 +318,33 @@ describe("secure message outbox", () => {
 
     await expect(removeQueuedMessage(store, { ...scope, sessionId: "session-a" }, pending.id)).resolves.toBe(true);
     expect(store.values).toEqual([other]);
+  });
+
+  it("removes only departing-family drafts for the exact identity and region", async () => {
+    const departing = queued();
+    const anotherConversation = queued({
+      id: "outbox_samefamily",
+      input: { ...queued().input, conversationId: "another-conversation" }
+    });
+    const anotherFamily = queued({
+      id: "outbox_otherfamily",
+      input: { ...queued().input, familyCircleId: "family-b" }
+    });
+    const anotherIdentity = queued({
+      id: "outbox_otheractor",
+      context: createWriteContext({
+        idempotencyKey: "message-intent-other",
+        region: "ca",
+        actor: { identityId: "parent-b", sessionId: "session-b" }
+      })
+    });
+    const store = new MemoryOutbox([departing, anotherConversation, anotherFamily, anotherIdentity]);
+
+    await expect(removeQueuedMessagesForFamily(store, {
+      actorIdentityId: "parent-a",
+      familyCircleId: "family",
+      region: "ca"
+    })).resolves.toBe(2);
+    expect(store.values).toEqual([anotherFamily, anotherIdentity]);
   });
 });

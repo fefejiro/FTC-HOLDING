@@ -470,6 +470,16 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
     };
   }
 
+  async leaveFamily(familyCircleId: EntityId, context: WriteContext) {
+    return {
+      familyCircleId,
+      participantGrantId: "grant-current",
+      status: "left" as const,
+      leftAt: new Date().toISOString(),
+      version: (context.expectedVersion ?? 0) + 1
+    };
+  }
+
   async revokeInvitation(invitationId: EntityId, context: WriteContext): Promise<void> {
     this.assertInvitationVersion(invitationId, context.expectedVersion);
     this.transitionInvitation(invitationId, "revoked");

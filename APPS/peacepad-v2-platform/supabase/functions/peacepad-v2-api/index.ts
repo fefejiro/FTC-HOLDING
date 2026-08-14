@@ -315,6 +315,7 @@ const writeOperation = (method: string, path: string, body: Record<string, unkno
   if (method === "POST" && path === "/api/v2/session/bootstrap") return "identity.bootstrapped";
   if (method === "POST" && path === "/api/v2/consents") return "consent.recorded";
   if (method === "POST" && path === "/api/v2/families") return "family.created";
+  if (method === "DELETE" && /^\/api\/v2\/families\/[^/]+\/membership$/.test(path)) return "family.left";
   if (method === "POST" && path === "/api/v2/invitations") return "invitation.created";
   if (method === "DELETE" && path === "/api/v2/account") return "account.deleted";
   if (method === "POST" && path === "/api/v2/devices/push") return "device.push_registered";
@@ -942,6 +943,7 @@ const handler = async (request: Request): Promise<Response> => {
   const isInvitationTransition = /^\/api\/v2\/invitations\/[^/]+\/(accept|decline)$/.test(path);
   const isInvitationRevocation = /^\/api\/v2\/invitations\/[^/]+$/.test(path);
   const isAccountDeletion = path === "/api/v2/account";
+  const familyExitMatch = path.match(/^\/api\/v2\/families\/([^/]+)\/membership$/);
   const isConversationCreation = path === "/api/v2/conversations";
   const isMessageSend = /^\/api\/v2\/conversations\/[^/]+\/messages$/.test(path);
   const isMessageLifecycle = /^\/api\/v2\/conversations\/[^/]+\/messages\/[^/]+\/events$/.test(path);
@@ -969,7 +971,7 @@ const handler = async (request: Request): Promise<Response> => {
     ].includes(path) || isInvitationTransition || isConversationCreation || isMessageSend || isMessageLifecycle || isMessageCorrection || isCalendarLayerCreation || isScheduleEventCreation || isCaseBinderCreation || isAttachmentIntentCreation || attachmentCompletionMatch || isTimelineEntryCreation || isAudioCallCreation || audioCallTransition || isDevicePushRegistration)) ||
     (request.method === "PATCH" && (calendarLayerMatch || scheduleEventMatch || caseBinderMatch)) ||
     isMessageCheckUpdate ||
-    (request.method === "DELETE" && (isInvitationRevocation || isAccountDeletion || calendarLayerMatch || scheduleEventMatch || devicePushRevocation))
+    (request.method === "DELETE" && (isInvitationRevocation || isAccountDeletion || familyExitMatch || calendarLayerMatch || scheduleEventMatch || devicePushRevocation))
   ) {
     const authenticated = await authenticate(request, config);
     if (!authenticated) {
@@ -1139,6 +1141,24 @@ const handler = async (request: Request): Promise<Response> => {
         p_schema_version: context.schemaVersion,
       });
       return error ? rpcFailure(request, requestId, config, error.message) : json(request, 201, data, requestId, config);
+    }
+
+    if (familyExitMatch) {
+      const familyId = decodeURIComponent(familyExitMatch[1]);
+      const expectedVersionHeader = (request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? "";
+      const expectedVersion = Number(expectedVersionHeader);
+      if (!isUuid(familyId) || Object.keys(body).length !== 0 || !Number.isInteger(expectedVersion) || expectedVersion < 1) {
+        return failure(request, 400, "INVALID_REQUEST", "A valid family membership version is required.", requestId, config);
+      }
+      const { data, error } = await authenticated.admin.rpc("peacepad_v2_leave_family", {
+        p_identity_id: authenticated.user.id,
+        p_region: config.region,
+        p_family_id: familyId,
+        p_expected_version: expectedVersion,
+        p_idempotency_key: databaseWriteToken,
+        p_schema_version: context.schemaVersion,
+      });
+      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
     }
 
     if (path === "/api/v2/families") {

@@ -703,6 +703,60 @@ describe("PeacePadStagingRuntime gates", () => {
     expect(auth.signOut).not.toHaveBeenCalled();
   });
 
+  it("leaves only the verified family grant with optimistic concurrency", async () => {
+    const auth = authValue();
+    (useSupabaseSession as jest.Mock).mockReturnValue(auth);
+    const leaveFamily = jest.fn(async () => ({
+      familyCircleId: FAMILY,
+      participantGrantId: GRANT,
+      status: "left",
+      leftAt: "2026-08-14T12:00:00.000Z",
+      version: 2
+    }));
+    jest.spyOn(secureMessageOutboxStore, "list").mockResolvedValue([]);
+    (createStagingCoordinationClient as jest.Mock).mockReturnValue({
+      leaveFamily,
+      listConversations: jest.fn(async () => [{ id: CONVERSATION, status: "active" }]),
+      listCalendarLayers: jest.fn(async () => []),
+      listScheduleEvents: jest.fn(async () => []),
+      listMessages: jest.fn(async () => []),
+      getMessageCheckPreference: jest.fn(async () => ({
+        aiAssistanceEnabled: false,
+        conversationId: CONVERSATION,
+        enabled: false,
+        id: "66666666-6666-4666-8666-666666666666",
+        identityId: IDENTITY,
+        provenance: { createdAt: "2026-08-09T12:00:00.000Z", createdBy: { identityId: IDENTITY, sessionId: SESSION }, source: "app" },
+        region: "ca",
+        schemaVersion: "2.0",
+        version: 0
+      }))
+    });
+
+    function LeaveFamilyProbe() {
+      const actions = useOptionalStagingAccountActions();
+      return <Text accessibilityRole="button" onPress={() => void actions?.leaveFamily?.()}>leave now</Text>;
+    }
+
+    const fetcher = sessionResponse();
+    render(<PeacePadStagingRuntime environment={environment} fetcher={fetcher} supabase={supabase}><LeaveFamilyProbe /></PeacePadStagingRuntime>);
+    await waitFor(() => expect(screen.getByText("leave now")).toBeTruthy());
+    fireEvent.press(screen.getByText("leave now"));
+    fireEvent.press(screen.getByText("leave now"));
+
+    await waitFor(() => expect(leaveFamily).toHaveBeenCalledTimes(1));
+    expect(leaveFamily).toHaveBeenCalledWith(FAMILY, expect.objectContaining({
+      actor: { identityId: IDENTITY, sessionId: SESSION },
+      expectedVersion: 1,
+      region: "ca",
+      schemaVersion: "2.0"
+    }));
+    expect(secureMessageOutboxStore.list).toHaveBeenCalled();
+    expect(auth.signOut).not.toHaveBeenCalled();
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.getByText("leave now")).toBeTruthy());
+  });
+
   it("allows an authenticated account without a conversation to delete after explicit confirmation", async () => {
     const auth = authValue();
     (useSupabaseSession as jest.Mock).mockReturnValue(auth);

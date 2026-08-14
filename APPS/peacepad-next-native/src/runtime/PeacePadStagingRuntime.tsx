@@ -14,7 +14,7 @@ import { useSupabaseSession } from "../session/SupabaseSessionProvider";
 import { StagingAccountActionsProvider } from "../session/StagingAccountActions";
 import { createWriteContext, type AcceptedInvitation, type InvitationPreview } from "../domain/v2";
 import { colors, spacing, typography } from "../theme";
-import { secureMessageOutboxStore } from "../messaging/secureMessageOutbox";
+import { removeQueuedMessagesForFamily, secureMessageOutboxStore } from "../messaging/secureMessageOutbox";
 import { useOptionalLocalization } from "../localization/LocalizationProvider";
 import { PublicOnboardingAuth } from "../auth/PublicOnboardingAuth";
 import {
@@ -199,6 +199,8 @@ export function PeacePadStagingRuntime({
   const [runtimeState, setRuntimeState] = useState<RuntimeState>({ status: "loading" });
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string>();
+  const [leaveFamilyBusy, setLeaveFamilyBusy] = useState(false);
+  const [leaveFamilyError, setLeaveFamilyError] = useState<string>();
   const [notificationStatus, setNotificationStatus] = useState<DeviceNotificationState | "busy">("not-enabled");
 
   const submitSignIn = useCallback(() => {
@@ -219,6 +221,7 @@ export function PeacePadStagingRuntime({
   const [pendingActivation, setPendingActivation] = useState<{ familyCircleId: string; conversationId: string }>();
   const generation = useRef(0);
   const deleteInFlight = useRef(false);
+  const leaveFamilyInFlight = useRef(false);
   const activationInFlight = useRef<{
     familyCircleId: string;
     conversationId: string;
@@ -233,6 +236,35 @@ export function PeacePadStagingRuntime({
     await secureMessageOutboxStore.clear().catch(() => undefined);
     await auth.signOut();
   }, [auth.signOut, runtimeState]);
+
+  const leaveVerifiedFamily = async (api: PeacePadCoordinationApi, runtime: CoordinationRuntime) => {
+    if (leaveFamilyInFlight.current) return;
+    leaveFamilyInFlight.current = true;
+    setLeaveFamilyBusy(true);
+    setLeaveFamilyError(undefined);
+    try {
+      await api.leaveFamily(runtime.familyCircleId, createWriteContext({
+        actor: { identityId: runtime.actorIdentityId, sessionId: runtime.sessionId },
+        expectedVersion: runtime.participantGrantVersion,
+        idempotencyKey: `family-leave-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+        region: runtime.region
+      }));
+      await removeQueuedMessagesForFamily(secureMessageOutboxStore, {
+        actorIdentityId: runtime.actorIdentityId,
+        familyCircleId: runtime.familyCircleId,
+        region: runtime.region
+      }).catch(() => undefined);
+      setSelectedFamilyCircleId(undefined);
+      setRuntimeState({ status: "loading" });
+      setReloadVersion((value) => value + 1);
+    } catch (cause) {
+      setLeaveFamilyError(cause instanceof Error ? cause.message : "PeacePad could not leave this family.");
+      throw cause;
+    } finally {
+      leaveFamilyInFlight.current = false;
+      setLeaveFamilyBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (runtimeState.status !== "ready") {
@@ -364,6 +396,7 @@ export function PeacePadStagingRuntime({
           sessionId: verified.actor.sessionId,
           familyCircleId: membership.familyCircleId,
           participantGrantId: membership.participantGrantId,
+          participantGrantVersion: membership.version,
           conversationId: conversation.id,
           region: verified.region
         }
@@ -457,6 +490,9 @@ export function PeacePadStagingRuntime({
       displayName: null,
       version: runtimeState.runtime.identityVersion
     }, runtimeState.runtime.region),
+    leaveFamily: () => leaveVerifiedFamily(runtimeState.api, runtimeState.runtime),
+    leavingFamily: leaveFamilyBusy,
+    leaveFamilyError,
     notificationStatus,
     enableNotifications: async () => {
       setNotificationStatus("busy");
