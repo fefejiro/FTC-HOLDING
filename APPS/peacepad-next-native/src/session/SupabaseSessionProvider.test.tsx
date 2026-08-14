@@ -32,6 +32,9 @@ function AuthActionsProbe() {
     <Text testID="sign-up" onPress={() => void session.signUpWithPassword("new@example.com", "secure-password")}>sign-up</Text>
     <Text testID="apple" onPress={() => void session.signInWithApple("apple-token", "raw-nonce", "Peace Parent")}>apple</Text>
     <Text testID="google" onPress={() => void session.signInWithGoogle("google-token")}>google</Text>
+    <Text testID="providers" onPress={() => void session.getLinkedProviders()}>providers</Text>
+    <Text testID="link-google" onPress={() => void session.linkProvider("google", { token: "google-token", accessToken: "google-access" })}>link-google</Text>
+    <Text testID="unlink-google" onPress={() => void session.unlinkProvider("google", "google-subject")}>unlink-google</Text>
     <Text testID="reset" onPress={() => void session.sendPasswordReset("parent@example.com")}>reset</Text>
     <Text testID="update-password" onPress={() => void session.updatePassword(RECOVERY_PASSWORD)}>update-password</Text>
   </>;
@@ -51,6 +54,9 @@ function fakeClient(initialSession: any = null) {
     signInWithPassword: jest.fn(async () => ({ data: { session: initialSession }, error: null })),
     signUp: jest.fn(async () => ({ data: { session: null, user: { id: "new-user" } }, error: null })),
     signInWithIdToken: jest.fn(async () => ({ data: { session: initialSession }, error: null })),
+    getUserIdentities: jest.fn(async () => ({ data: { identities: [] }, error: null })),
+    linkIdentity: jest.fn(async () => ({ data: { session: initialSession, user: initialSession?.user ?? null }, error: null })),
+    unlinkIdentity: jest.fn(async () => ({ data: {}, error: null })),
     updateUser: jest.fn(async () => ({ data: { user: { id: "new-user" } }, error: null })),
     resetPasswordForEmail: jest.fn(async () => ({ data: {}, error: null })),
     setSession: jest.fn(async () => ({ data: { session: initialSession }, error: null })),
@@ -183,6 +189,34 @@ describe("SupabaseSessionProvider", () => {
     render(<SupabaseSessionProvider client={fake.client}><AuthActionsProbe /></SupabaseSessionProvider>);
     await act(async () => screen.getByTestId("google").props.onPress());
     expect(fake.auth.signInWithIdToken).toHaveBeenCalledWith({ provider: "google", token: "google-token" });
+  });
+
+  it("links Google only to the current verified account and rechecks the resulting identity", async () => {
+    const current = { access_token: "token-a", expires_at: Math.floor(Date.now() / 1000) + 3600, user: { id: "user-a" } };
+    const fake = fakeClient(current);
+    const emailIdentity = { id: "email-id", identity_id: "user-a", user_id: "user-a", provider: "email", identity_data: { sub: "user-a" } };
+    const googleIdentity = { id: "google-id", identity_id: "google-subject", user_id: "user-a", provider: "google", identity_data: { sub: "google-subject" } };
+    (fake.auth.getUserIdentities as jest.Mock)
+      .mockResolvedValueOnce({ data: { identities: [emailIdentity] }, error: null })
+      .mockResolvedValueOnce({ data: { identities: [emailIdentity, googleIdentity] }, error: null });
+    render(<SupabaseSessionProvider client={fake.client}><AuthActionsProbe /></SupabaseSessionProvider>);
+    await waitFor(() => expect(screen.getByTestId("link-google")).toBeTruthy());
+    await act(async () => screen.getByTestId("link-google").props.onPress());
+    expect(fake.auth.linkIdentity).toHaveBeenCalledWith({ provider: "google", token: "google-token", access_token: "google-access" });
+  });
+
+  it("requires a fresh matching provider subject and preserves one remaining sign-in method when unlinking", async () => {
+    const current = { access_token: "token-a", expires_at: Math.floor(Date.now() / 1000) + 3600, user: { id: "user-a" } };
+    const fake = fakeClient(current);
+    const emailIdentity = { id: "email-id", identity_id: "user-a", user_id: "user-a", provider: "email", identity_data: { sub: "user-a" } };
+    const googleIdentity = { id: "google-id", identity_id: "google-subject", user_id: "user-a", provider: "google", identity_data: { sub: "google-subject" } };
+    (fake.auth.getUserIdentities as jest.Mock)
+      .mockResolvedValueOnce({ data: { identities: [emailIdentity, googleIdentity] }, error: null })
+      .mockResolvedValueOnce({ data: { identities: [emailIdentity] }, error: null });
+    render(<SupabaseSessionProvider client={fake.client}><AuthActionsProbe /></SupabaseSessionProvider>);
+    await waitFor(() => expect(screen.getByTestId("unlink-google")).toBeTruthy());
+    await act(async () => screen.getByTestId("unlink-google").props.onPress());
+    expect(fake.auth.unlinkIdentity).toHaveBeenCalledWith(googleIdentity);
   });
 });
 

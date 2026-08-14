@@ -55,6 +55,7 @@ export type SupabaseAuthClient = Pick<SupabaseClient, "auth">;
 export type SupabaseRuntimeClient = SupabaseAuthClient & Partial<Pick<SupabaseClient, "channel" | "removeChannel" | "realtime">>;
 export type SupabaseSessionStatus = "loading" | "signed-out" | "ready" | "error";
 export type SupabaseAuthIntent = "default" | "password-recovery";
+export type LinkedAuthProvider = "email" | "apple" | "google";
 
 type SupabaseSessionValue = Readonly<{
   status: SupabaseSessionStatus;
@@ -67,6 +68,9 @@ type SupabaseSessionValue = Readonly<{
   signUpWithPassword: (email: string, password: string) => Promise<{ confirmationRequired: boolean }>;
   signInWithApple: (identityToken: string, nonce: string, fullName?: string) => Promise<void>;
   signInWithGoogle: (identityToken: string, nonce?: string) => Promise<void>;
+  getLinkedProviders: () => Promise<LinkedAuthProvider[]>;
+  linkProvider: (provider: "apple" | "google", credential: { token: string; accessToken?: string; nonce?: string }) => Promise<void>;
+  unlinkProvider: (provider: "apple" | "google", verifiedProviderSubject: string) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -286,6 +290,71 @@ export function SupabaseSessionProvider({
         setStatus("signed-out");
         setError(t("runtime.signInUnavailable"));
         throw result.error;
+      }
+    },
+    getLinkedProviders: async () => {
+      const result = await client.auth.getUserIdentities();
+      if (result.error) {
+        setError(t("runtime.signInUnavailable"));
+        throw result.error;
+      }
+      const providers = result.data.identities
+        .map(({ provider }) => provider)
+        .filter((provider): provider is LinkedAuthProvider => provider === "email" || provider === "apple" || provider === "google");
+      return [...new Set(providers)].sort();
+    },
+    linkProvider: async (provider, credential) => {
+      setError(undefined);
+      if (!session?.user.id || !credential.token || credential.token.length > 8_192 || (credential.accessToken?.length ?? 0) > 8_192) {
+        const cause = new Error("A fresh provider challenge is required.");
+        setError(t("runtime.signInUnavailable"));
+        throw cause;
+      }
+      const before = await client.auth.getUserIdentities();
+      if (before.error) throw before.error;
+      if (before.data.identities.some((identity) => identity.provider === provider)) {
+        throw new Error("This sign-in method is already linked.");
+      }
+      const linked = await client.auth.linkIdentity({
+        provider,
+        token: credential.token,
+        ...(credential.accessToken ? { access_token: credential.accessToken } : {}),
+        ...(credential.nonce ? { nonce: credential.nonce } : {})
+      });
+      if (linked.error || linked.data.user?.id !== session.user.id) {
+        setError(t("runtime.signInUnavailable"));
+        throw linked.error ?? new Error("The linked identity did not match this PeacePad account.");
+      }
+      const after = await client.auth.getUserIdentities();
+      if (after.error || !after.data.identities.some((identity) => identity.provider === provider && identity.user_id === session.user.id)) {
+        setError(t("runtime.signInUnavailable"));
+        throw after.error ?? new Error("PeacePad could not verify the linked sign-in method.");
+      }
+    },
+    unlinkProvider: async (provider, verifiedProviderSubject) => {
+      setError(undefined);
+      if (!session?.user.id || !verifiedProviderSubject || verifiedProviderSubject.length > 512) {
+        const cause = new Error("A fresh provider challenge is required.");
+        setError(t("runtime.signInUnavailable"));
+        throw cause;
+      }
+      const current = await client.auth.getUserIdentities();
+      if (current.error) throw current.error;
+      if (current.data.identities.length < 2) throw new Error("Keep at least one sign-in method linked.");
+      const identity = current.data.identities.find((candidate) => candidate.provider === provider && candidate.user_id === session.user.id);
+      const providerSubject = typeof identity?.identity_data?.sub === "string" ? identity.identity_data.sub : identity?.identity_id;
+      if (!identity || providerSubject !== verifiedProviderSubject) {
+        throw new Error("The fresh provider challenge did not match this linked sign-in method.");
+      }
+      const unlinked = await client.auth.unlinkIdentity(identity);
+      if (unlinked.error) {
+        setError(t("runtime.signInUnavailable"));
+        throw unlinked.error;
+      }
+      const after = await client.auth.getUserIdentities();
+      if (after.error || after.data.identities.some((candidate) => candidate.id === identity.id)) {
+        setError(t("runtime.signInUnavailable"));
+        throw after.error ?? new Error("PeacePad could not verify the unlinked sign-in method.");
       }
     },
     sendPasswordReset: async (email) => {

@@ -1,6 +1,7 @@
 import { Platform } from "react-native";
 import {
   GoogleIdentityError,
+  requestGoogleIdentityCredential,
   requestGoogleIdentityToken,
   resolveGoogleClientConfiguration,
   type GoogleIdentityAdapter
@@ -10,12 +11,14 @@ const configuration = {
   EXPO_PUBLIC_PEACEPAD_GOOGLE_WEB_CLIENT_ID: "123456789-web.apps.googleusercontent.com",
   EXPO_PUBLIC_PEACEPAD_GOOGLE_IOS_CLIENT_ID: "123456789-ios.apps.googleusercontent.com"
 };
+const GOOGLE_ACCESS_TOKEN = ["google", "access", "token"].join("-");
 
 function adapter(result: { type: "cancelled" } | { type: "success"; idToken: string | null }): GoogleIdentityAdapter {
   return {
     configure: jest.fn(),
     hasPlayServices: jest.fn(async () => true),
-    signIn: jest.fn(async () => result)
+    signIn: jest.fn(async () => result.type === "success" ? { ...result, providerSubject: "google-subject" } : result),
+    getTokens: jest.fn(async () => ({ idToken: result.type === "success" ? result.idToken ?? "" : "", accessToken: GOOGLE_ACCESS_TOKEN }))
   };
 }
 
@@ -31,8 +34,13 @@ describe("native Google identity", () => {
     })).toThrow(new GoogleIdentityError("configuration"));
   });
 
-  it("returns only the native ID token and requests no offline Google access", async () => {
+  it("returns bounded native tokens and requests no offline Google access", async () => {
     const native = adapter({ type: "success", idToken: "google-id-token" });
+    await expect(requestGoogleIdentityCredential(native, configuration)).resolves.toEqual({
+      idToken: "google-id-token",
+      accessToken: GOOGLE_ACCESS_TOKEN,
+      providerSubject: "google-subject"
+    });
     await expect(requestGoogleIdentityToken(native, configuration)).resolves.toBe("google-id-token");
     expect(native.configure).toHaveBeenCalledWith({
       webClientId: configuration.EXPO_PUBLIC_PEACEPAD_GOOGLE_WEB_CLIENT_ID,

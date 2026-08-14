@@ -13,6 +13,7 @@ import { workflowText } from "../localization/workflowLocalization";
 import { homeText } from "../localization/homeLocalization";
 import { callText } from "../localization/callLocalization";
 import { PublicOnboardingSlides } from "../auth/PublicOnboardingAuth";
+import { LinkedSignInMethods } from "../auth/LinkedSignInMethods";
 import { colors, spacing, typography, usesLargeTextLayout } from "../theme";
 import { useRecordsState } from "../records/RecordsState";
 import type { AttachmentMediaType } from "../domain/v2";
@@ -839,6 +840,7 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
         <Text style={styles.actionTitle}>{t("more.introduction.title")}</Text>
         <Text style={styles.caption}>{t("more.introduction.body")}</Text>
       </Pressable>
+      <LinkedSignInMethods />
       {accountActions?.enableNotifications ? <Pressable
         accessibilityRole="button"
         accessibilityState={{ disabled: accountActions.notificationStatus === "busy" }}

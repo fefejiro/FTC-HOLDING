@@ -9,13 +9,20 @@ declare const process: {
 
 export type GoogleIdentityResult = Readonly<
   | { type: "cancelled" }
-  | { type: "success"; idToken: string | null }
+  | { type: "success"; idToken: string | null; providerSubject?: string }
 >;
 
 export type GoogleIdentityAdapter = Readonly<{
   configure: (configuration: { webClientId: string; iosClientId: string; offlineAccess: false }) => void;
   hasPlayServices: () => Promise<boolean>;
   signIn: () => Promise<GoogleIdentityResult>;
+  getTokens: () => Promise<{ idToken: string; accessToken: string }>;
+}>;
+
+export type GoogleIdentityCredential = Readonly<{
+  idToken: string;
+  accessToken: string;
+  providerSubject: string;
 }>;
 
 export type GoogleClientConfiguration = Readonly<{
@@ -57,15 +64,16 @@ export const nativeGoogleIdentityAdapter: GoogleIdentityAdapter = {
   signIn: async () => {
     const response = await GoogleSignin.signIn();
     return isSuccessResponse(response)
-      ? { type: "success", idToken: response.data.idToken }
+      ? { type: "success", idToken: response.data.idToken, providerSubject: response.data.user.id }
       : { type: "cancelled" };
-  }
+  },
+  getTokens: () => GoogleSignin.getTokens()
 };
 
-export async function requestGoogleIdentityToken(
+export async function requestGoogleIdentityCredential(
   adapter: GoogleIdentityAdapter = nativeGoogleIdentityAdapter,
   values: EnvironmentValues = readBundledGoogleValues()
-): Promise<string | undefined> {
+): Promise<GoogleIdentityCredential | undefined> {
   const configuration = resolveGoogleClientConfiguration(values);
   adapter.configure({ ...configuration, offlineAccess: false });
   if (Platform.OS === "android" && !(await adapter.hasPlayServices())) {
@@ -73,8 +81,18 @@ export async function requestGoogleIdentityToken(
   }
   const result = await adapter.signIn();
   if (result.type === "cancelled") return undefined;
-  if (!result.idToken || result.idToken.length > 8_192) {
+  const tokens = await adapter.getTokens();
+  const idToken = tokens.idToken || result.idToken;
+  if (!idToken || idToken.length > 8_192 || !tokens.accessToken || tokens.accessToken.length > 8_192
+    || !result.providerSubject || result.providerSubject.length > 512) {
     throw new GoogleIdentityError("missing-token");
   }
-  return result.idToken;
+  return { idToken, accessToken: tokens.accessToken, providerSubject: result.providerSubject };
+}
+
+export async function requestGoogleIdentityToken(
+  adapter: GoogleIdentityAdapter = nativeGoogleIdentityAdapter,
+  values: EnvironmentValues = readBundledGoogleValues()
+): Promise<string | undefined> {
+  return (await requestGoogleIdentityCredential(adapter, values))?.idToken;
 }
