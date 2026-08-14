@@ -38,6 +38,7 @@ declare
   binder_replay_result jsonb;
   attachment_intent_result jsonb;
   attachment_intent_replay_result jsonb;
+  attachment_result jsonb;
   timeline_result jsonb;
   timeline_replay_result jsonb;
   timeline_layer_result jsonb;
@@ -332,10 +333,12 @@ begin
     parent_b, 'ca', created_family_id, binder_id, 'school-note.pdf', 'application/pdf', 1024,
     pg_temp.write_token('prepare-private-attachment', 'attachment_intent.prepared', binder_id::text || ':school-note.pdf:application/pdf:1024'), 2
   );
-  if attachment_intent_result ->> 'uploadTransport' <> 'disabled'
+  if attachment_intent_result ->> 'uploadTransport' <> 'supabase-signed'
     or attachment_intent_result -> 'uploadUrl' <> 'null'::jsonb
+    or attachment_intent_result ->> 'status' <> 'awaiting-upload'
+    or attachment_intent_result ->> 'objectPath' not like 'ca/' || parent_b::text || '/' || binder_id::text || '/%.pdf'
     or (attachment_intent_result ->> 'expiresAt')::timestamptz > now() + interval '15 minutes' then
-    raise exception 'Attachment preparation exposed transport or an unsafe expiry.';
+    raise exception 'Attachment preparation did not preserve the private signed-upload boundary.';
   end if;
   attachment_intent_replay_result := public.peacepad_v2_prepare_attachment_intent(
     parent_b, 'ca', created_family_id, binder_id, 'school-note.pdf', 'application/pdf', 1024,
@@ -345,6 +348,20 @@ begin
     or (select count(*) from peacepad_v2.attachment_upload_intent where case_binder_id=binder_id) <> 1 then
     raise exception 'Exact attachment-intent replay was not deterministic.';
   end if;
+  attachment_result := public.peacepad_v2_complete_private_attachment(
+    parent_b, 'ca', (attachment_intent_result ->> 'id')::uuid, 'application/pdf', 1024,
+    pg_temp.write_token('complete-private-attachment', 'attachment.uploaded', (attachment_intent_result ->> 'id') || ':application/pdf:1024'), 2
+  );
+  if attachment_result ->> 'ownerIdentityId' <> parent_b::text
+    or attachment_result ->> 'byteLength' <> '1024'
+    or jsonb_array_length(public.peacepad_v2_list_private_attachments(parent_b, 'ca', binder_id)) <> 1 then
+    raise exception 'Private attachment completion was not persisted for its owner.';
+  end if;
+  begin
+    perform public.peacepad_v2_list_private_attachments(parent_a, 'ca', binder_id);
+    raise exception 'Another participant listed an owner-private attachment.';
+  exception when insufficient_privilege then null;
+  end;
   begin
     perform public.peacepad_v2_prepare_attachment_intent(
       parent_b, 'ca', created_family_id, binder_id, 'changed-note.pdf', 'application/pdf', 2048,
@@ -603,8 +620,15 @@ begin
   end if;
   if exists (select 1 from peacepad_v2.case_binder where owner_identity_id = parent_b)
     or exists (select 1 from peacepad_v2.attachment_upload_intent where owner_identity_id = parent_b)
+    or exists (select 1 from peacepad_v2.private_attachment where owner_identity_id = parent_b)
     or exists (select 1 from peacepad_v2.private_timeline_entry where owner_identity_id = parent_b) then
     raise exception 'Deleted identity retained owner-private Binder metadata.';
+  end if;
+  if not exists (
+    select 1 from peacepad_v2.private_storage_cleanup_outbox
+    where identity_id=parent_b and object_path=attachment_intent_result ->> 'objectPath'
+  ) then
+    raise exception 'Account deletion did not queue the private storage object for removal.';
   end if;
   if exists (
     select 1 from peacepad_v2.invitation_attempt where identity_id = parent_b

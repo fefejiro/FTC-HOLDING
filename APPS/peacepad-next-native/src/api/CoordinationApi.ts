@@ -12,6 +12,8 @@ import type {
   MessageCheckPreference,
   MessageEvent,
   ParticipantGrant,
+  PrivateAttachment,
+  PrivateAttachmentDownload,
   PrivateTimelineEntry,
   ScheduleEvent,
   TimelineSourceKind,
@@ -68,6 +70,8 @@ export type DeletedAccount = Readonly<{
   authIdentityDeleted: boolean;
   refreshSessionsRevoked: boolean;
   authCleanupPending: boolean;
+  privateStorageDeleted: boolean;
+  privateStorageCleanupPending: boolean;
 }>;
 
 export type AudioCallStatus = "ringing" | "active" | "declined" | "ended" | "expired";
@@ -205,6 +209,10 @@ export interface PeacePadCoordinationApi {
   createCaseBinder(input: CreateCaseBinderInput, context: WriteContext): Promise<CaseBinder>;
   archiveCaseBinder(binderId: EntityId, context: WriteContext): Promise<CaseBinder>;
   createAttachmentUploadIntent(input: CreateAttachmentUploadIntentInput, context: WriteContext): Promise<AttachmentUploadIntent>;
+  uploadPrivateAttachment(intent: AttachmentUploadIntent, bytes: ArrayBuffer): Promise<void>;
+  completePrivateAttachment(attachmentId: EntityId, context: WriteContext): Promise<PrivateAttachment>;
+  listPrivateAttachments(binderId: EntityId): Promise<readonly PrivateAttachment[]>;
+  getPrivateAttachmentDownload(attachmentId: EntityId): Promise<PrivateAttachmentDownload>;
   listPrivateTimeline(binderId: EntityId, before?: string, limit?: number): Promise<readonly PrivateTimelineEntry[]>;
   linkTimelineSource(input: LinkTimelineSourceInput, context: WriteContext): Promise<PrivateTimelineEntry>;
   createInvitation(input: CreateInvitationInput, context: WriteContext): Promise<CreatedInvitation>;
@@ -303,6 +311,8 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
       || typeof result.authIdentityDeleted !== "boolean"
       || typeof result.refreshSessionsRevoked !== "boolean"
       || typeof result.authCleanupPending !== "boolean"
+      || typeof result.privateStorageDeleted !== "boolean"
+      || typeof result.privateStorageCleanupPending !== "boolean"
     ) {
       throw new PeacePadApiError("PeacePad could not verify the account deletion receipt.", "http", 502);
     }
@@ -377,6 +387,54 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
 
   createAttachmentUploadIntent(input: CreateAttachmentUploadIntentInput, context: WriteContext) {
     return this.write<AttachmentUploadIntent>("/api/v2/attachment-upload-intents", "POST", input, context);
+  }
+
+  async uploadPrivateAttachment(intent: AttachmentUploadIntent, bytes: ArrayBuffer) {
+    if (
+      intent.status !== "awaiting-upload"
+      || intent.uploadTransport !== "supabase-signed"
+      || !intent.uploadUrl
+      || bytes.byteLength !== intent.byteLength
+      || Number.isNaN(Date.parse(intent.expiresAt))
+      || Date.parse(intent.expiresAt) <= Date.now()
+    ) {
+      throw new PeacePadApiError("PeacePad could not verify the private upload.", "http", 400);
+    }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.config.requestTimeoutMs);
+    try {
+      const response = await this.fetcher(intent.uploadUrl, {
+        method: "PUT",
+        body: bytes as unknown as RequestInit["body"],
+        headers: {
+          "Cache-Control": "no-store",
+          "Content-Type": intent.mediaType,
+          "x-upsert": "false"
+        },
+        signal: controller.signal
+      });
+      if (!response.ok) throw new PeacePadApiError("Private attachment upload failed. Try again.", "http", response.status);
+    } catch (error) {
+      if (error instanceof PeacePadApiError) throw error;
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new PeacePadApiError("Private attachment upload took too long. Try again.", "timeout");
+      }
+      throw new PeacePadApiError("PeacePad cannot reach private storage right now.", "network");
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  completePrivateAttachment(attachmentId: EntityId, context: WriteContext) {
+    return this.write<PrivateAttachment>(`/api/v2/attachments/${encodeURIComponent(attachmentId)}/complete`, "POST", {}, context);
+  }
+
+  listPrivateAttachments(binderId: EntityId) {
+    return this.request<readonly PrivateAttachment[]>(`/api/v2/attachments?caseBinderId=${encodeURIComponent(binderId)}`);
+  }
+
+  getPrivateAttachmentDownload(attachmentId: EntityId) {
+    return this.request<PrivateAttachmentDownload>(`/api/v2/attachments/${encodeURIComponent(attachmentId)}/download`);
   }
 
   listPrivateTimeline(binderId: EntityId, before?: string, limit = 50) {

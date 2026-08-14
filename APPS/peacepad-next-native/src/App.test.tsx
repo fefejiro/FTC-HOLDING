@@ -198,18 +198,15 @@ describe("PeacePad coordination shell", () => {
   });
 });
 
-describe("private records preparation", () => {
-  it("creates a Case Binder and prepares metadata without an upload", () => {
+describe("private records", () => {
+  it("creates a Case Binder and presents the private file picker", () => {
     renderApp("records");
     fireEvent.changeText(screen.getByLabelText("Binder name"), "School records");
     fireEvent.changeText(screen.getByLabelText("Child label"), "Child A");
     fireEvent.press(screen.getByText("Create Case Binder"));
     expect(screen.getByText("School records")).toBeOnTheScreen();
-    fireEvent.changeText(screen.getByLabelText("Original file name"), "school-note.pdf");
-    fireEvent.changeText(screen.getByLabelText("File size in bytes"), "1200");
-    fireEvent.press(screen.getByText("Prepare details"));
-    expect(screen.getByLabelText("Attachment details prepared")).toBeOnTheScreen();
-    expect(screen.getByText("No file was uploaded.")).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: "Choose a file" })).toBeOnTheScreen();
+    expect(screen.getByText("Only you can open files in this Case Binder.")).toBeOnTheScreen();
   });
 
   it("shows validation errors without creating records", () => {

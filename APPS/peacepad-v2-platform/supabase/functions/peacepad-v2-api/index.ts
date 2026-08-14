@@ -1,4 +1,4 @@
-import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { createClient } from "npm:@supabase/supabase-js@2.105.3";
 import { validateAudioCallSignal } from "./signaling.ts";
 import { createTurnCredential, parseTurnUrls } from "./turn.ts";
 
@@ -58,7 +58,11 @@ type ErrorCode =
   | "SESSION_REVOCATION_FAILED"
   | "SIGNAL_DELIVERY_UNAVAILABLE"
   | "SIGNAL_RATE_LIMITED"
+  | "STORAGE_OBJECT_INVALID"
+  | "STORAGE_UNAVAILABLE"
   | "TURN_CREDENTIALS_UNAVAILABLE";
+
+const PRIVATE_RECORDS_BUCKET = "peacepad-private-records";
 
 const env = (name: string): string => Deno.env.get(name)?.trim() ?? "";
 
@@ -228,6 +232,7 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     CALL_STATE_INVALID: "CALL_STATE_INVALID",
     SIGNAL_RATE_LIMITED: "SIGNAL_RATE_LIMITED",
     CASE_BINDER_ACCESS_DENIED: "FAMILY_ACCESS_DENIED",
+    ATTACHMENT_ACCESS_DENIED: "FAMILY_ACCESS_DENIED",
     TIMELINE_SOURCE_ACCESS_DENIED: "FAMILY_ACCESS_DENIED",
     MESSAGE_ACCESS_DENIED: "MESSAGE_ACCESS_DENIED",
     AI_CONSENT_REQUIRED: "AI_CONSENT_REQUIRED",
@@ -246,7 +251,8 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     "CONVERSATION_PARTICIPANTS_INVALID", "MESSAGE_BODY_INVALID", "MESSAGE_CORRECTION_UNCHANGED",
     "MESSAGE_EVENT_INVALID", "MESSAGE_SEARCH_INVALID", "POLICY_VERSION_INVALID", "REGION_INVALID",
     "CALENDAR_LAYER_INVALID", "CALENDAR_LAYER_NOT_EMPTY", "SCHEDULE_EVENT_INVALID", "MESSAGE_CHECK_INVALID",
-    "CASE_BINDER_INVALID", "ATTACHMENT_INTENT_INVALID", "CASE_BINDER_ARCHIVED",
+    "CASE_BINDER_INVALID", "ATTACHMENT_INTENT_INVALID", "ATTACHMENT_INTENT_EXPIRED",
+    "ATTACHMENT_OBJECT_MISMATCH", "ATTACHMENT_STATE_INVALID", "CASE_BINDER_ARCHIVED",
     "TIMELINE_REQUEST_INVALID", "TIMELINE_SOURCE_INVALID", "TIMELINE_SOURCE_ALREADY_LINKED",
   ]);
   const safeCode = directCodes[message ?? ""] ?? (invalidRequestCodes.has(message ?? "") ? "INVALID_REQUEST" : "DATABASE_NOT_READY");
@@ -321,6 +327,7 @@ const writeOperation = (method: string, path: string, body: Record<string, unkno
   if (method === "POST" && path === "/api/v2/case-binders") return "case_binder.created";
   if (method === "PATCH" && /^\/api\/v2\/case-binders\/[^/]+$/.test(path)) return "case_binder.archived";
   if (method === "POST" && path === "/api/v2/attachment-upload-intents") return "attachment_intent.prepared";
+  if (method === "POST" && /^\/api\/v2\/attachments\/[^/]+\/complete$/.test(path)) return "attachment.uploaded";
   if (method === "POST" && path === "/api/v2/timeline-entries") return "timeline_entry.linked";
   if (method === "POST" && path === "/api/v2/calls") return "call.created";
   const callTransition = path.match(/^\/api\/v2\/calls\/[^/]+\/(accept|decline|end)$/);
@@ -498,11 +505,41 @@ const handler = async (request: Request): Promise<Response> => {
       else if (succeeded) completed += 1;
       else rescheduled += 1;
     }
+    const { data: storageJobs, error: storageClaimError } = await admin.rpc(
+      "peacepad_v2_claim_private_storage_cleanup",
+      { p_region: config.region, p_limit: 25, p_lease_seconds: 120 },
+    );
+    if (storageClaimError) {
+      return failure(request, 503, "DATABASE_NOT_READY", "The private storage cleanup queue is unavailable.", requestId, config);
+    }
+    let storageCompleted = 0;
+    let storageRescheduled = 0;
+    let storageFailedToFinalize = 0;
+    for (const job of Array.isArray(storageJobs) ? storageJobs : []) {
+      if (!job || typeof job.object_path !== "string" || !isUuid(job.lease_token) || job.region !== config.region) {
+        storageFailedToFinalize += 1;
+        continue;
+      }
+      const removal = await admin.storage.from(PRIVATE_RECORDS_BUCKET).remove([job.object_path]);
+      const succeeded = !removal.error;
+      const { error: finishError } = await admin.rpc("peacepad_v2_finish_private_storage_cleanup", {
+        p_object_path: job.object_path,
+        p_lease_token: job.lease_token,
+        p_succeeded: succeeded,
+      });
+      if (finishError) storageFailedToFinalize += 1;
+      else if (succeeded) storageCompleted += 1;
+      else storageRescheduled += 1;
+    }
     return json(request, 200, {
       claimed: Array.isArray(claimed) ? claimed.length : 0,
       completed,
       rescheduled,
       failedToFinalize,
+      storageClaimed: Array.isArray(storageJobs) ? storageJobs.length : 0,
+      storageCompleted,
+      storageRescheduled,
+      storageFailedToFinalize,
       region: config.region,
     }, requestId, config);
   }
@@ -685,6 +722,50 @@ const handler = async (request: Request): Promise<Response> => {
     return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data ?? [], requestId, config);
   }
 
+  if (request.method === "GET" && path === "/api/v2/attachments") {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", "A valid session is required.", requestId, config);
+    const binderId = new URL(request.url).searchParams.get("caseBinderId")?.trim() ?? "";
+    if (!isUuid(binderId)) return failure(request, 400, "INVALID_REQUEST", "A valid Case Binder is required.", requestId, config);
+    const { data, error } = await authenticated.admin.rpc("peacepad_v2_list_private_attachments", {
+      p_identity_id: authenticated.user.id,
+      p_region: config.region,
+      p_case_binder_id: binderId,
+    });
+    return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data ?? [], requestId, config);
+  }
+
+  const attachmentDownloadMatch = path.match(/^\/api\/v2\/attachments\/([^/]+)\/download$/);
+  if (request.method === "GET" && attachmentDownloadMatch) {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", "A valid session is required.", requestId, config);
+    const attachmentId = decodeURIComponent(attachmentDownloadMatch[1]);
+    if (!isUuid(attachmentId)) return failure(request, 400, "INVALID_REQUEST", "A valid attachment is required.", requestId, config);
+    const { data, error } = await authenticated.admin.rpc("peacepad_v2_authorize_private_attachment_download", {
+      p_identity_id: authenticated.user.id,
+      p_region: config.region,
+      p_attachment_id: attachmentId,
+    });
+    if (error) return rpcFailure(request, requestId, config, error.message);
+    const authorization = data && typeof data === "object" ? data as Record<string, unknown> : {};
+    const objectPath = typeof authorization.objectPath === "string" ? authorization.objectPath : "";
+    if (!objectPath.startsWith(`${config.region}/${authenticated.user.id}/`)) {
+      return failure(request, 502, "INVALID_UPSTREAM_RESPONSE", "PeacePad could not authorize the private attachment.", requestId, config);
+    }
+    const signed = await authenticated.admin.storage.from(PRIVATE_RECORDS_BUCKET).createSignedUrl(objectPath, 60, {
+      download: typeof authorization.originalFileName === "string" ? authorization.originalFileName : true,
+    });
+    if (signed.error || !signed.data?.signedUrl) {
+      return failure(request, 503, "STORAGE_UNAVAILABLE", "The private attachment is temporarily unavailable.", requestId, config);
+    }
+    const { objectPath: _objectPath, ...attachment } = authorization;
+    return json(request, 200, {
+      attachment,
+      downloadUrl: signed.data.signedUrl,
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+    }, requestId, config);
+  }
+
   if (request.method === "GET" && path === "/api/v2/timeline-entries") {
     const authenticated = await authenticate(request, config);
     if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
@@ -865,6 +946,7 @@ const handler = async (request: Request): Promise<Response> => {
   const isCaseBinderCreation = path === "/api/v2/case-binders";
   const caseBinderMatch = path.match(/^\/api\/v2\/case-binders\/([^/]+)$/);
   const isAttachmentIntentCreation = path === "/api/v2/attachment-upload-intents";
+  const attachmentCompletionMatch = path.match(/^\/api\/v2\/attachments\/([^/]+)\/complete$/);
   const isTimelineEntryCreation = path === "/api/v2/timeline-entries";
   const isAudioCallCreation = path === "/api/v2/calls";
   const audioCallTransition = path.match(/^\/api\/v2\/calls\/([^/]+)\/(accept|decline|end)$/);
@@ -874,7 +956,7 @@ const handler = async (request: Request): Promise<Response> => {
       "/api/v2/consents",
       "/api/v2/families",
       "/api/v2/invitations",
-    ].includes(path) || isInvitationTransition || isConversationCreation || isMessageSend || isMessageLifecycle || isMessageCorrection || isCalendarLayerCreation || isScheduleEventCreation || isCaseBinderCreation || isAttachmentIntentCreation || isTimelineEntryCreation || isAudioCallCreation || audioCallTransition)) ||
+    ].includes(path) || isInvitationTransition || isConversationCreation || isMessageSend || isMessageLifecycle || isMessageCorrection || isCalendarLayerCreation || isScheduleEventCreation || isCaseBinderCreation || isAttachmentIntentCreation || attachmentCompletionMatch || isTimelineEntryCreation || isAudioCallCreation || audioCallTransition)) ||
     (request.method === "PATCH" && (calendarLayerMatch || scheduleEventMatch || caseBinderMatch)) ||
     isMessageCheckUpdate ||
     (request.method === "DELETE" && (isInvitationRevocation || isAccountDeletion || calendarLayerMatch || scheduleEventMatch))
@@ -959,6 +1041,13 @@ const handler = async (request: Request): Promise<Response> => {
       if (!Number.isInteger(expectedVersion) || expectedVersion < 1) {
         return failure(request, 400, "INVALID_REQUEST", "A valid expected version is required.", requestId, config);
       }
+      const { data: storagePathData, error: storagePathError } = await authenticated.admin.rpc(
+        "peacepad_v2_list_private_storage_paths_for_account",
+        { p_identity_id: authenticated.user.id, p_region: config.region },
+      );
+      if (storagePathError) return rpcFailure(request, requestId, config, storagePathError.message);
+      const storagePaths = Array.isArray(storagePathData)
+        ? storagePathData.filter((value): value is string => typeof value === "string") : [];
       const { data, error } = await authenticated.admin.rpc("peacepad_v2_delete_account", {
         p_identity_id: authenticated.user.id,
         p_region: config.region,
@@ -967,6 +1056,17 @@ const handler = async (request: Request): Promise<Response> => {
         p_schema_version: context.schemaVersion,
       });
       if (error) return rpcFailure(request, requestId, config, error.message);
+      const privateStorageRemoval = storagePaths.length
+        ? await authenticated.admin.storage.from(PRIVATE_RECORDS_BUCKET).remove(storagePaths)
+        : { error: null };
+      const privateStorageDeleted = !privateStorageRemoval.error;
+      const storageAcknowledgement = privateStorageDeleted && storagePaths.length
+        ? await authenticated.admin.rpc("peacepad_v2_ack_private_storage_cleanup", {
+          p_identity_id: authenticated.user.id,
+          p_object_paths: storagePaths,
+        })
+        : { error: null };
+      const privateStorageCleanupPending = !privateStorageDeleted || Boolean(storageAcknowledgement.error);
       const deletion = await authenticated.admin.auth.admin.deleteUser(authenticated.user.id, false);
       const authIdentityDeleted = !deletion.error || authUserMissing(deletion.error);
       let refreshSessionsRevoked = authIdentityDeleted;
@@ -986,6 +1086,8 @@ const handler = async (request: Request): Promise<Response> => {
         authIdentityDeleted,
         refreshSessionsRevoked,
         authCleanupPending,
+        privateStorageDeleted,
+        privateStorageCleanupPending,
       }, requestId, config);
     }
 
@@ -1185,7 +1287,72 @@ const handler = async (request: Request): Promise<Response> => {
         p_media_type: mediaType, p_byte_length: byteLength,
         p_idempotency_key: databaseWriteToken, p_schema_version: context.schemaVersion,
       });
-      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 201, data, requestId, config);
+      if (error) return rpcFailure(request, requestId, config, error.message);
+      const intent = data && typeof data === "object" ? data as Record<string, unknown> : {};
+      const objectPath = typeof intent.objectPath === "string" ? intent.objectPath : "";
+      if (
+        intent.uploadTransport !== "supabase-signed"
+        || !objectPath.startsWith(`${config.region}/${authenticated.user.id}/${binderId}/`)
+      ) {
+        return failure(request, 502, "INVALID_UPSTREAM_RESPONSE", "PeacePad could not prepare private storage.", requestId, config);
+      }
+      const signed = await authenticated.admin.storage.from(PRIVATE_RECORDS_BUCKET)
+        .createSignedUploadUrl(objectPath, { upsert: false });
+      if (signed.error || !signed.data?.signedUrl) {
+        return failure(request, 503, "STORAGE_UNAVAILABLE", "Private storage is temporarily unavailable.", requestId, config);
+      }
+      return json(request, 201, { ...intent, uploadUrl: signed.data.signedUrl }, requestId, config);
+    }
+
+    if (attachmentCompletionMatch) {
+      const attachmentId = decodeURIComponent(attachmentCompletionMatch[1]);
+      if (!isUuid(attachmentId) || Object.keys(body).length !== 0) {
+        return failure(request, 400, "INVALID_REQUEST", "A valid attachment completion request is required.", requestId, config);
+      }
+      const { data: authorization, error: authorizationError } = await authenticated.admin.rpc(
+        "peacepad_v2_authorize_private_attachment_download",
+        { p_identity_id: authenticated.user.id, p_region: config.region, p_attachment_id: attachmentId },
+      );
+      // A not-yet-completed intent is intentionally not downloadable. Resolve
+      // its server-derived object path from the prepare receipt instead.
+      let objectPath = "";
+      if (!authorizationError && authorization && typeof authorization === "object") {
+        objectPath = typeof (authorization as Record<string, unknown>).objectPath === "string"
+          ? (authorization as Record<string, unknown>).objectPath as string : "";
+      } else {
+        const { data: prepared, error: preparedError } = await authenticated.admin.rpc(
+          "peacepad_v2_get_attachment_intent_for_completion",
+          { p_identity_id: authenticated.user.id, p_region: config.region, p_attachment_intent_id: attachmentId },
+        );
+        if (preparedError) return rpcFailure(request, requestId, config, preparedError.message);
+        objectPath = prepared && typeof prepared === "object"
+          && typeof (prepared as Record<string, unknown>).objectPath === "string"
+          ? (prepared as Record<string, unknown>).objectPath as string : "";
+      }
+      if (!objectPath.startsWith(`${config.region}/${authenticated.user.id}/`)) {
+        return failure(request, 502, "INVALID_UPSTREAM_RESPONSE", "PeacePad could not verify the private object path.", requestId, config);
+      }
+      const info = await authenticated.admin.storage.from(PRIVATE_RECORDS_BUCKET).info(objectPath);
+      if (info.error || !info.data) {
+        return failure(request, 409, "STORAGE_OBJECT_INVALID", "The uploaded attachment could not be verified.", requestId, config);
+      }
+      const storageInfo = info.data as unknown as Record<string, unknown>;
+      const observedSize = Number(storageInfo.size);
+      const observedType = typeof storageInfo.contentType === "string" ? storageInfo.contentType
+        : typeof storageInfo.content_type === "string" ? storageInfo.content_type : "";
+      if (!Number.isSafeInteger(observedSize) || observedSize < 1 || !observedType) {
+        return failure(request, 409, "STORAGE_OBJECT_INVALID", "The uploaded attachment metadata is invalid.", requestId, config);
+      }
+      const { data, error } = await authenticated.admin.rpc("peacepad_v2_complete_private_attachment", {
+        p_identity_id: authenticated.user.id,
+        p_region: config.region,
+        p_attachment_intent_id: attachmentId,
+        p_observed_media_type: observedType,
+        p_observed_byte_length: observedSize,
+        p_idempotency_key: databaseWriteToken,
+        p_schema_version: context.schemaVersion,
+      });
+      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
     }
 
     if (isTimelineEntryCreation) {

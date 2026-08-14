@@ -19,6 +19,7 @@ $deletionMinimizationMigrationPath = Join-Path $platformRoot 'supabase/migration
 $atomicInvitationMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090011_v2_accept_invitation_conversation.sql'
 $idempotencyReceiptMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090012_v2_idempotency_receipts.sql'
 $privateRecordsMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090013_v2_private_case_binders.sql'
+$privateAttachmentsMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608140001_v2_private_record_attachments.sql'
 $privateTimelineMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608100001_v2_private_source_timeline.sql'
 $audioCallMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608100002_v2_foreground_audio_calls.sql'
 $audioCallProofPath = Join-Path $platformRoot 'scripts/verify-audio-call-lifecycle.sql'
@@ -34,7 +35,7 @@ $authCleanupRunnerPath = Join-Path $platformRoot 'scripts/run-auth-cleanup.ps1'
 $deployRunnerPath = Join-Path $platformRoot 'scripts/deploy-supabase-free-staging.ps1'
 $configPath = Join-Path $platformRoot 'supabase/config.toml'
 
-foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $idempotencyReceiptMigrationPath, $privateRecordsMigrationPath, $privateTimelineMigrationPath, $audioCallMigrationPath, $audioCallProofPath, $audioCallSignalingMigrationPath, $audioCallSignalingProofPath, $audioCallSignalValidatorPath, $audioCallSignalTestPath, $audioCallTurnMigrationPath, $audioCallTurnProofPath, $audioCallTurnIssuerPath, $audioCallTurnTestPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
+foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $idempotencyReceiptMigrationPath, $privateRecordsMigrationPath, $privateAttachmentsMigrationPath, $privateTimelineMigrationPath, $audioCallMigrationPath, $audioCallProofPath, $audioCallSignalingMigrationPath, $audioCallSignalingProofPath, $audioCallSignalValidatorPath, $audioCallSignalTestPath, $audioCallTurnMigrationPath, $audioCallTurnProofPath, $audioCallTurnIssuerPath, $audioCallTurnTestPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
     throw "Required Supabase staging file is missing: $path"
   }
@@ -56,6 +57,7 @@ $deletionMinimizationMigration = Get-Content -LiteralPath $deletionMinimizationM
 $atomicInvitationMigration = Get-Content -LiteralPath $atomicInvitationMigrationPath -Raw
 $idempotencyReceiptMigration = Get-Content -LiteralPath $idempotencyReceiptMigrationPath -Raw
 $privateRecordsMigration = Get-Content -LiteralPath $privateRecordsMigrationPath -Raw
+$privateAttachmentsMigration = Get-Content -LiteralPath $privateAttachmentsMigrationPath -Raw
 $privateTimelineMigration = Get-Content -LiteralPath $privateTimelineMigrationPath -Raw
 $audioCallMigration = Get-Content -LiteralPath $audioCallMigrationPath -Raw
 $audioCallProof = Get-Content -LiteralPath $audioCallProofPath -Raw
@@ -499,6 +501,47 @@ foreach ($pattern in @(
 foreach ($route in @('/api/v2/case-binders', '/api/v2/attachment-upload-intents')) {
   if ($function -notmatch [regex]::Escape($route)) {
     throw "Edge Function is missing Private Records route: $route"
+  }
+}
+foreach ($table in @('private_attachment', 'private_storage_cleanup_outbox')) {
+  if ($privateAttachmentsMigration -notmatch "create table if not exists peacepad_v2\.$table") {
+    throw "Private attachment migration is missing table: $table"
+  }
+  if ($privateAttachmentsMigration -notmatch "alter table peacepad_v2\.$table enable row level security") {
+    throw "Private attachment migration is missing fail-closed RLS: $table"
+  }
+}
+foreach ($rpc in @(
+  'peacepad_v2_get_attachment_intent_for_completion',
+  'peacepad_v2_complete_private_attachment',
+  'peacepad_v2_list_private_attachments',
+  'peacepad_v2_authorize_private_attachment',
+  'peacepad_v2_list_private_storage_paths_for_account',
+  'peacepad_v2_ack_private_storage_cleanup',
+  'peacepad_v2_claim_private_storage_cleanup',
+  'peacepad_v2_finish_private_storage_cleanup'
+)) {
+  if ($privateAttachmentsMigration -notmatch "create or replace function public\.$rpc") {
+    throw "Private attachment migration is missing RPC: $rpc"
+  }
+  if ($privateAttachmentsMigration -notmatch "revoke all on function public\.$rpc") {
+    throw "Private attachment RPC is not revoked from mobile roles: $rpc"
+  }
+}
+foreach ($pattern in @(
+  "'supabase-signed'",
+  "'awaiting-upload'",
+  'peacepad-private-records',
+  'attachment\.uploaded',
+  'private_storage_cleanup_outbox'
+)) {
+  if ($privateAttachmentsMigration -notmatch $pattern) {
+    throw "Private attachment migration is missing required boundary: $pattern"
+  }
+}
+foreach ($route in @('/api/v2/attachments', '/complete', '/download')) {
+  if ($function -notmatch [regex]::Escape($route)) {
+    throw "Edge Function is missing Private Attachment route: $route"
   }
 }
 if ($privateTimelineMigration -notmatch 'create table if not exists peacepad_v2\.private_timeline_entry') {

@@ -66,7 +66,9 @@ describe("HttpPeacePadCoordinationApi", () => {
         version: 5,
         authIdentityDeleted: true,
         refreshSessionsRevoked: true,
-        authCleanupPending: false
+        authCleanupPending: false,
+        privateStorageDeleted: true,
+        privateStorageCleanupPending: false
       } : {}
     ));
     const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
@@ -347,6 +349,47 @@ describe("HttpPeacePadCoordinationApi", () => {
     expect(intentBody).not.toHaveProperty("file");
   });
 
+  it("uploads only to the verified signed URL and uses authenticated completion and download routes", async () => {
+    const signedUrl = "https://storage.peacepad.test/upload/one-time";
+    const fetcher = jest.fn(async (_input: string, _init?: RequestInit) => response(200, {}));
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
+    const intent = {
+      id: "77777777-7777-4777-8777-777777777777",
+      schemaVersion: "2.0" as const,
+      version: 1,
+      region: "ca" as const,
+      familyCircleId: "family-current",
+      ownerIdentityId: context.actor.identityId,
+      target: { kind: "private-binder" as const, binderId: "binder-current" },
+      originalFileName: "school-note.pdf",
+      mediaType: "application/pdf" as const,
+      byteLength: 16,
+      expiresAt: "2099-08-10T12:15:00.000Z",
+      status: "awaiting-upload" as const,
+      uploadTransport: "supabase-signed" as const,
+      uploadUrl: signedUrl,
+      objectPath: "ca/identity-current/binder-current/one-time.pdf",
+      provenance: { createdAt: "2026-08-14T12:00:00.000Z", createdBy: context.actor, source: "app" as const }
+    };
+    const bytes = new ArrayBuffer(16);
+
+    await api.uploadPrivateAttachment(intent, bytes);
+    await api.completePrivateAttachment(intent.id, { ...context, expectedVersion: 1 });
+    await api.listPrivateAttachments("binder/current");
+    await api.getPrivateAttachmentDownload(intent.id);
+
+    expect(fetcher.mock.calls[0]?.[0]).toBe(signedUrl);
+    const upload = fetcher.mock.calls[0]?.[1] as RequestInit;
+    expect(upload).toMatchObject({ method: "PUT", body: bytes });
+    expect(upload.headers).toMatchObject({ "Content-Type": "application/pdf", "x-upsert": "false" });
+    expect(upload.headers).not.toHaveProperty("Authorization");
+    expect(fetcher.mock.calls.map(([url]) => url)).toEqual(expect.arrayContaining([
+      `https://staging-api.peacepad.test/api/v2/attachments/${intent.id}/complete`,
+      "https://staging-api.peacepad.test/api/v2/attachments?caseBinderId=binder%2Fcurrent",
+      `https://staging-api.peacepad.test/api/v2/attachments/${intent.id}/download`
+    ]));
+  });
+
   it("uses content-free private timeline routes and write headers", async () => {
     const fetcher = jest.fn(async (_input: string, _init?: RequestInit) => response(200, {}));
     const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
@@ -437,7 +480,9 @@ describe("HttpPeacePadCoordinationApi", () => {
       version: 5,
       authIdentityDeleted: true,
       refreshSessionsRevoked: true,
-      authCleanupPending: false
+      authCleanupPending: false,
+      privateStorageDeleted: true,
+      privateStorageCleanupPending: false
     };
     const fetcher = jest.fn(async () => response(200, validReceipt));
     const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
@@ -454,7 +499,9 @@ describe("HttpPeacePadCoordinationApi", () => {
       { ...validReceipt, status: "pending" },
       { ...validReceipt, deletedAt: "not-a-date" },
       { ...validReceipt, version: 4 },
-      { ...validReceipt, authCleanupPending: "false" }
+      { ...validReceipt, authCleanupPending: "false" },
+      { ...validReceipt, privateStorageDeleted: "true" },
+      { ...validReceipt, privateStorageCleanupPending: "false" }
     ]) {
       const invalidApi = new HttpPeacePadCoordinationApi(config, jest.fn(async () => response(200, invalid)), accessToken);
       await expect(invalidApi.deleteAccount(context)).rejects.toMatchObject({

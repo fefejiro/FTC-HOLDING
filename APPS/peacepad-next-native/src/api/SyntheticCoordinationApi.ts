@@ -34,6 +34,8 @@ import {
   type MessageCheckPreference,
   type MessageEvent,
   type ParticipantGrant,
+  type PrivateAttachment,
+  type PrivateAttachmentDownload,
   type PrivateTimelineEntry,
   type RecordProvenance,
   type ScheduleEvent,
@@ -113,6 +115,8 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
   private previewAttempts = 0;
   private binders: CaseBinder[] = [];
   private timelineEntries: PrivateTimelineEntry[] = [];
+  private attachments: PrivateAttachment[] = [];
+  private attachmentIntents = new Map<string, AttachmentUploadIntent>();
   private audioCall: AudioCallSession | null = null;
 
   constructor(seedInvitations: readonly SeedInvitation[] = []) {
@@ -247,7 +251,7 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
   async createAttachmentUploadIntent(input: CreateAttachmentUploadIntentInput, _context: WriteContext): Promise<AttachmentUploadIntent> {
     this.assertCurrentFamily(input.familyCircleId);
     const now = new Date();
-    return {
+    const intent: AttachmentUploadIntent = {
       ...versioned(`attachment-intent-${Date.now().toString(36)}`),
       familyCircleId: input.familyCircleId,
       ownerIdentityId: "identity-current",
@@ -256,9 +260,49 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
       mediaType: input.mediaType,
       byteLength: input.byteLength,
       expiresAt: new Date(now.getTime() + 15 * 60 * 1000).toISOString(),
-      status: "metadata-prepared",
-      uploadTransport: "disabled",
-      uploadUrl: null
+      status: "awaiting-upload",
+      uploadTransport: "supabase-signed",
+      uploadUrl: "https://storage.peacepad.test/upload/fictional",
+      objectPath: `ca/identity-current/${input.target.kind === "private-binder" ? input.target.binderId : "unsupported"}/fictional`
+    };
+    this.attachmentIntents.set(intent.id, intent);
+    return intent;
+  }
+
+  async uploadPrivateAttachment(intent: AttachmentUploadIntent, bytes: ArrayBuffer): Promise<void> {
+    if (!this.attachmentIntents.has(intent.id) || bytes.byteLength !== intent.byteLength) {
+      throw new PeacePadApiError("The fictional private upload could not be verified.", "http", 400);
+    }
+  }
+
+  async completePrivateAttachment(attachmentId: EntityId, _context: WriteContext): Promise<PrivateAttachment> {
+    const intent = this.attachmentIntents.get(attachmentId);
+    if (!intent || intent.target.kind !== "private-binder") throw new PeacePadApiError("Attachment not found.", "http", 404);
+    const attachment: PrivateAttachment = {
+      ...versioned(intent.id),
+      familyCircleId: intent.familyCircleId,
+      ownerIdentityId: intent.ownerIdentityId,
+      target: intent.target,
+      originalFileName: intent.originalFileName,
+      mediaType: intent.mediaType,
+      byteLength: intent.byteLength,
+      status: "available"
+    };
+    this.attachments = [attachment, ...this.attachments.filter((candidate) => candidate.id !== attachment.id)];
+    return attachment;
+  }
+
+  async listPrivateAttachments(binderId: EntityId): Promise<readonly PrivateAttachment[]> {
+    return this.attachments.filter((attachment) => attachment.target.binderId === binderId);
+  }
+
+  async getPrivateAttachmentDownload(attachmentId: EntityId): Promise<PrivateAttachmentDownload> {
+    const attachment = this.attachments.find((candidate) => candidate.id === attachmentId);
+    if (!attachment) throw new PeacePadApiError("Attachment not found.", "http", 404);
+    return {
+      attachment,
+      downloadUrl: "https://storage.peacepad.test/download/fictional",
+      expiresAt: new Date(Date.now() + 60_000).toISOString()
     };
   }
 
@@ -384,7 +428,9 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
       version: (context.expectedVersion ?? 0) + 1,
       authIdentityDeleted: true,
       refreshSessionsRevoked: true,
-      authCleanupPending: false
+      authCleanupPending: false,
+      privateStorageDeleted: true,
+      privateStorageCleanupPending: false
     };
   }
 

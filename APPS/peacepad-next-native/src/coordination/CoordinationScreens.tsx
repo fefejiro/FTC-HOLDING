@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Image, Pressable, Share, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
+import { Image, Linking, Pressable, Share, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
+import * as DocumentPicker from "expo-document-picker";
+import { File } from "expo-file-system";
 import { InvitationQr } from "../components/InvitationQr";
 import { LabButton } from "../components/LabButton";
 import { AccessibleHeading } from "../components/AccessibleHeading";
@@ -708,12 +710,9 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
   const { locale } = useLocalization();
   const w = (key: Parameters<typeof workflowText>[1], values?: Readonly<Record<string, string>>) => workflowText(locale, key, values);
   const { events, sentMessages } = useCoordinationState();
-  const { archiveBinder, binder, binders, attachmentIntent, busy, createBinder, error: recordsError, linkTimelineSource, loading, prepareAttachment, reload, selectBinder, timelineEntries } = useRecordsState();
+  const { archiveBinder, attachments, binder, binders, attachmentIntent, busy, createBinder, error: recordsError, getAttachmentDownload, linkTimelineSource, loading, reload, selectBinder, timelineEntries, uploadAttachment } = useRecordsState();
   const [binderName, setBinderName] = useState("");
   const [childLabel, setChildLabel] = useState("");
-  const [fileName, setFileName] = useState("");
-  const [mediaType, setMediaType] = useState<AttachmentMediaType>("application/pdf");
-  const [byteLength, setByteLength] = useState("");
   const [error, setError] = useState<string>();
 
   const saveBinder = async () => {
@@ -723,11 +722,31 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
     try { await createBinder(binderName, childLabel); }
     catch (caught) { setError(caught instanceof Error ? caught.message : w("binderDetailsError")); }
   };
-  const prepare = async () => {
+  const chooseAndUpload = async () => {
     setError(undefined);
     try {
-      await prepareAttachment({ originalFileName: fileName, mediaType, byteLength: Number(byteLength) });
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ["image/jpeg", "image/png", "application/pdf", "text/plain"],
+        copyToCacheDirectory: true,
+        multiple: false
+      });
+      if (result.canceled) return;
+      const selected = result.assets[0];
+      const mediaType = selected.mimeType as AttachmentMediaType | undefined;
+      if (!selected.name || !mediaType || !["image/jpeg", "image/png", "application/pdf", "text/plain"].includes(mediaType)) {
+        throw new Error(w("attachmentTypeError"));
+      }
+      const file = new File(selected.uri);
+      const bytes = await file.arrayBuffer();
+      await uploadAttachment({ originalFileName: selected.name, mediaType, byteLength: bytes.byteLength, bytes });
     } catch (caught) { setError(caught instanceof Error ? caught.message : w("attachmentDetailsError")); }
+  };
+  const openAttachment = async (attachmentId: string) => {
+    setError(undefined);
+    try {
+      const download = await getAttachmentDownload(attachmentId);
+      await Linking.openURL(download.downloadUrl);
+    } catch (caught) { setError(caught instanceof Error ? caught.message : w("attachmentOpenError")); }
   };
   const linkSource = async (kind: "message-event" | "schedule-event", sourceId: string) => {
     setError(undefined);
@@ -770,15 +789,17 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
         {messageCandidate ? <LabButton disabled={busy} label={w("linkMessage")} onPress={() => void linkSource("message-event", messageCandidate.id)} variant="secondary" /> : null}
         {eventCandidate ? <LabButton disabled={busy} label={w("linkEvent")} onPress={() => void linkSource("schedule-event", eventCandidate.id)} variant="secondary" /> : null}
         <Text style={styles.fieldLabel}>{w("attachment")}</Text>
-        <TextInput accessibilityLabel={w("fileName")} onChangeText={setFileName} placeholder="school-note.pdf" style={styles.input} value={fileName} />
-        <TextInput accessibilityLabel={w("mediaType")} onChangeText={(value) => setMediaType(value as AttachmentMediaType)} placeholder="application/pdf" style={styles.input} value={mediaType} />
-        <TextInput accessibilityLabel={w("fileSize")} keyboardType="number-pad" onChangeText={setByteLength} placeholder="1200" style={styles.input} value={byteLength} />
-        <LabButton disabled={busy} label={busy ? w("preparing") : w("prepare")} onPress={() => void prepare()} />
+        <Text style={styles.caption}>{w("attachmentPrivacy")}</Text>
+        <LabButton disabled={busy} label={busy ? w("uploading") : w("chooseAttachment")} onPress={() => void chooseAndUpload()} />
         {attachmentIntent ? <View accessibilityLabel={w("prepared")} style={styles.successCard}>
-          <Text style={styles.heading}>{w("detailsPrepared")}</Text>
+          <Text style={styles.heading}>{w("uploadComplete")}</Text>
           <Text style={styles.body}>{attachmentIntent.originalFileName}</Text>
-          <Text style={styles.caption}>{w("noUpload")}</Text>
         </View> : null}
+        {attachments.map((attachment) => <View key={attachment.id} style={styles.successCard}>
+          <Text style={styles.heading}>{attachment.originalFileName}</Text>
+          <Text style={styles.caption}>{w("attachmentSize", { size: String(attachment.byteLength) })}</Text>
+          <LabButton disabled={busy} label={w("openAttachment")} onPress={() => void openAttachment(attachment.id)} variant="secondary" />
+        </View>)}
         <LabButton disabled={busy} label={w("archive")} onPress={() => void archiveBinder().catch(() => undefined)} variant="secondary" />
       </View> : null}
       {error || recordsError ? <Text accessibilityRole="alert" style={styles.error}>{error ?? recordsError}</Text> : null}

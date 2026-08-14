@@ -7,6 +7,8 @@ import {
   type AttachmentMediaType,
   type AttachmentUploadIntent,
   type CaseBinder,
+  type PrivateAttachment,
+  type PrivateAttachmentDownload,
   type PrivateTimelineEntry,
   type TimelineSourceKind
 } from "../domain/v2";
@@ -20,6 +22,7 @@ type RecordsContextValue = {
   binders: readonly CaseBinder[];
   binder?: CaseBinder;
   attachmentIntent?: AttachmentUploadIntent;
+  attachments: readonly PrivateAttachment[];
   timelineEntries: readonly PrivateTimelineEntry[];
   loading: boolean;
   busy: boolean;
@@ -28,6 +31,8 @@ type RecordsContextValue = {
   createBinder: (name: string, childLabel: string) => Promise<CaseBinder>;
   archiveBinder: () => Promise<CaseBinder>;
   prepareAttachment: (input: AttachmentInput) => Promise<AttachmentUploadIntent>;
+  uploadAttachment: (input: AttachmentInput & Readonly<{ bytes: ArrayBuffer }>) => Promise<PrivateAttachment>;
+  getAttachmentDownload: (attachmentId: string) => Promise<PrivateAttachmentDownload>;
   linkTimelineSource: (sourceKind: TimelineSourceKind, sourceId: string) => Promise<PrivateTimelineEntry>;
   reload: () => Promise<void>;
 };
@@ -80,12 +85,30 @@ function assertAttachmentIntent(value: AttachmentUploadIntent, runtime: Coordina
     || value.ownerIdentityId !== runtime.actorIdentityId
     || value.target.kind !== "private-binder"
     || value.target.binderId !== binderId
-    || value.status !== "metadata-prepared"
-    || value.uploadTransport !== "disabled"
-    || value.uploadUrl !== null
+    || value.status !== "awaiting-upload"
+    || value.uploadTransport !== "supabase-signed"
+    || typeof value.uploadUrl !== "string"
+    || !value.uploadUrl.startsWith("https://")
     || !value.id
     || Number.isNaN(Date.parse(value.expiresAt))
   ) throw new Error("PeacePad could not verify the attachment preparation response.");
+  return value;
+}
+
+function assertPrivateAttachment(value: PrivateAttachment, runtime: CoordinationRuntime, binderId: string): PrivateAttachment {
+  if (
+    !value
+    || value.schemaVersion !== PEACEPAD_V2_SCHEMA_VERSION
+    || value.region !== runtime.region
+    || value.familyCircleId !== runtime.familyCircleId
+    || value.ownerIdentityId !== runtime.actorIdentityId
+    || value.target.kind !== "private-binder"
+    || value.target.binderId !== binderId
+    || value.status !== "available"
+    || !value.id
+    || !Number.isSafeInteger(value.byteLength)
+    || value.byteLength < 1
+  ) throw new Error("PeacePad could not verify the private attachment response.");
   return value;
 }
 
@@ -121,12 +144,14 @@ export function RecordsStateProvider({ api, children, runtime }: RecordsProvider
   const [binders, setBinders] = useState<readonly CaseBinder[]>([]);
   const [selectedBinderId, setSelectedBinderId] = useState<string>();
   const [attachmentIntent, setAttachmentIntent] = useState<AttachmentUploadIntent>();
+  const [attachments, setAttachments] = useState<readonly PrivateAttachment[]>([]);
   const [timelineEntries, setTimelineEntries] = useState<readonly PrivateTimelineEntry[]>([]);
   const [loading, setLoading] = useState(persisted);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const generation = useRef(0);
   const timelineGeneration = useRef(0);
+  const attachmentGeneration = useRef(0);
   const demoService = useRef(new MetadataAttachmentService(demoActor));
 
   const binder = binders.find((candidate) => candidate.id === selectedBinderId)
@@ -159,10 +184,11 @@ export function RecordsStateProvider({ api, children, runtime }: RecordsProvider
     setBinders([]);
     setSelectedBinderId(undefined);
     setAttachmentIntent(undefined);
+    setAttachments([]);
     setTimelineEntries([]);
     setError(undefined);
     if (api && runtime) void reload();
-    return () => { generation.current += 1; timelineGeneration.current += 1; };
+    return () => { generation.current += 1; timelineGeneration.current += 1; attachmentGeneration.current += 1; };
   }, [api, reload, runtime?.actorIdentityId, runtime?.familyCircleId, runtime?.region, runtime?.sessionId]);
 
   useEffect(() => {
@@ -179,10 +205,25 @@ export function RecordsStateProvider({ api, children, runtime }: RecordsProvider
     return () => { timelineGeneration.current += 1; };
   }, [api, binder?.id, binder?.status, runtime?.actorIdentityId, runtime?.familyCircleId, runtime?.region, runtime?.sessionId]);
 
+  useEffect(() => {
+    const currentGeneration = ++attachmentGeneration.current;
+    setAttachments([]);
+    if (!api || !runtime || !binder || binder.status !== "active" || typeof api.listPrivateAttachments !== "function") return;
+    void api.listPrivateAttachments(binder.id).then((listed) => {
+      if (attachmentGeneration.current !== currentGeneration) return;
+      setAttachments(listed.map((candidate) => assertPrivateAttachment(candidate, runtime, binder.id)));
+    }).catch((caught) => {
+      if (attachmentGeneration.current !== currentGeneration) return;
+      setError(caught instanceof Error ? caught.message : "PeacePad could not load private attachments.");
+    });
+    return () => { attachmentGeneration.current += 1; };
+  }, [api, binder?.id, binder?.status, runtime?.actorIdentityId, runtime?.familyCircleId, runtime?.region, runtime?.sessionId]);
+
   const value = useMemo<RecordsContextValue>(() => ({
     binders,
     binder,
     attachmentIntent,
+    attachments,
     timelineEntries,
     loading,
     busy,
@@ -191,6 +232,7 @@ export function RecordsStateProvider({ api, children, runtime }: RecordsProvider
       if (!binders.some((candidate) => candidate.id === binderId && candidate.status === "active")) return;
       setSelectedBinderId(binderId);
       setAttachmentIntent(undefined);
+      setAttachments([]);
       setTimelineEntries([]);
     },
     async createBinder(name, childLabel) {
@@ -227,6 +269,7 @@ export function RecordsStateProvider({ api, children, runtime }: RecordsProvider
         setBinders((current) => [...current.filter((candidate) => candidate.id !== created.id), created]);
         setSelectedBinderId(created.id);
         setAttachmentIntent(undefined);
+        setAttachments([]);
         setTimelineEntries([]);
         return created;
       } catch (caught) {
@@ -256,6 +299,7 @@ export function RecordsStateProvider({ api, children, runtime }: RecordsProvider
         setBinders((current) => current.map((candidate) => candidate.id === archived.id ? archived : candidate));
         setSelectedBinderId(undefined);
         setAttachmentIntent(undefined);
+        setAttachments([]);
         setTimelineEntries([]);
         return archived;
       } catch (caught) {
@@ -301,6 +345,49 @@ export function RecordsStateProvider({ api, children, runtime }: RecordsProvider
         setBusy(false);
       }
     },
+    async uploadAttachment(input) {
+      if (!api || !runtime) throw new Error("Private file upload is available after sign-in.");
+      if (!binder || binder.status !== "active") throw new Error("Create or select an active Case Binder first.");
+      if (input.bytes.byteLength !== input.byteLength) throw new Error("PeacePad could not verify the selected file size.");
+      setBusy(true);
+      setError(undefined);
+      try {
+        const request: CreateAttachmentUploadIntentInput = {
+          familyCircleId: runtime.familyCircleId,
+          target: { kind: "private-binder", binderId: binder.id },
+          originalFileName: input.originalFileName,
+          mediaType: input.mediaType,
+          byteLength: input.byteLength
+        };
+        const prepared = assertAttachmentIntent(await api.createAttachmentUploadIntent(
+          request,
+          writeContext(runtime, "attachment-intent-prepare")
+        ), runtime, binder.id);
+        await api.uploadPrivateAttachment(prepared, input.bytes);
+        const completed = assertPrivateAttachment(await api.completePrivateAttachment(
+          prepared.id,
+          writeContext(runtime, "attachment-upload-complete", prepared.version)
+        ), runtime, binder.id);
+        setAttachmentIntent(prepared);
+        setAttachments((current) => [completed, ...current.filter((candidate) => candidate.id !== completed.id)]);
+        return completed;
+      } catch (caught) {
+        const message = caught instanceof Error ? caught.message : "PeacePad could not upload the private attachment.";
+        setError(message);
+        throw caught;
+      } finally {
+        setBusy(false);
+      }
+    },
+    async getAttachmentDownload(attachmentId) {
+      if (!api || !runtime) throw new Error("Private attachment download is available after sign-in.");
+      const result = await api.getPrivateAttachmentDownload(attachmentId);
+      const verified = assertPrivateAttachment(result.attachment, runtime, binder?.id ?? "");
+      if (!result.downloadUrl.startsWith("https://") || Number.isNaN(Date.parse(result.expiresAt)) || Date.parse(result.expiresAt) <= Date.now()) {
+        throw new Error("PeacePad could not verify the private download link.");
+      }
+      return { ...result, attachment: verified };
+    },
     async linkTimelineSource(sourceKind, sourceId) {
       if (!api || !runtime) throw new Error("Private timeline linking is available after staging sign-in.");
       if (!binder || binder.status !== "active") throw new Error("Create or select an active Case Binder first.");
@@ -328,7 +415,7 @@ export function RecordsStateProvider({ api, children, runtime }: RecordsProvider
       }
     },
     reload
-  }), [api, attachmentIntent, binder, binders, busy, error, loading, reload, runtime, timelineEntries]);
+  }), [api, attachmentIntent, attachments, binder, binders, busy, error, loading, reload, runtime, timelineEntries]);
 
   return <RecordsContext.Provider value={value}>{children}</RecordsContext.Provider>;
 }

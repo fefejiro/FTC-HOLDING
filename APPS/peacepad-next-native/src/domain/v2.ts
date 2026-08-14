@@ -240,10 +240,28 @@ export type AttachmentUploadIntent = VersionedEntity &
     mediaType: AttachmentMediaType;
     byteLength: number;
     expiresAt: IsoUtcTimestamp;
-    status: "metadata-prepared";
-    uploadTransport: "disabled";
-    uploadUrl: null;
+    status: "metadata-prepared" | "awaiting-upload";
+    uploadTransport: "disabled" | "supabase-signed";
+    uploadUrl: string | null;
+    objectPath?: string;
   }>;
+
+export type PrivateAttachment = VersionedEntity &
+  Readonly<{
+    familyCircleId: EntityId;
+    ownerIdentityId: EntityId;
+    target: Readonly<{ kind: "private-binder"; binderId: EntityId }>;
+    originalFileName: string;
+    mediaType: AttachmentMediaType;
+    byteLength: number;
+    status: "available";
+  }>;
+
+export type PrivateAttachmentDownload = Readonly<{
+  attachment: PrivateAttachment;
+  downloadUrl: string;
+  expiresAt: IsoUtcTimestamp;
+}>;
 
 export type PrepareAttachmentIntentRequest = Readonly<{
   familyCircleId: EntityId;
