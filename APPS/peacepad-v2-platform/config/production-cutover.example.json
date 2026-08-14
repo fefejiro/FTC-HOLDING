@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "cutoverApproved": false,
   "source": {
     "system": "legacy-peacepad-express-postgresql",
@@ -48,13 +48,34 @@
       "target": "calendar_layer + schedule_event",
       "strategy": "explicit-partnership-scope-and-family-layer-first-import",
       "required": true
+    },
+    {
+      "source": "notes + child updates",
+      "target": "legacy_record_archive",
+      "strategy": "immutable-read-only-family-record-archive",
+      "required": true
+    },
+    {
+      "source": "tasks",
+      "target": "legacy_task_archive",
+      "strategy": "immutable-read-only-family-archive",
+      "required": true
+    },
+    {
+      "source": "expenses + participants + settlements",
+      "target": "legacy_expense_archive",
+      "strategy": "immutable-read-only-reconciled-snapshot",
+      "required": true
+    },
+    {
+      "source": "supported message, receipt, and record attachments",
+      "target": "private storage + legacy_attachment_manifest",
+      "strategy": "opaque-source-locator-count-size-sha256-reconciliation",
+      "required": true
     }
   ],
   "unmappedLegacyData": [
-    "attachments-and-media",
     "children-profiles",
-    "tasks-and-notes",
-    "expenses-and-settlements",
     "call-recordings-and-transcripts",
     "ai-profiles-and-interventions",
     "push-subscriptions"
@@ -73,7 +94,10 @@
     "explicit-partnership-scope-for-every-conversation-and-event",
     "text-only-message-import-with-media-and-deleted-content-quarantined",
     "timestamped-consent-ledger-or-user-reconsent",
-    "fresh-target-or-reviewed-reconciliation-plan"
+    "fresh-target-or-reviewed-reconciliation-plan",
+    "no-raw-password-or-password-hash-import-without-isolated-supabase-compatibility-proof",
+    "no-legacy-call-recording-or-transcript-import",
+    "attachment-count-byte-length-and-sha256-reconciliation-before-write-enable"
   ],
   "rollback": {
     "legacyReadWriteRemainsAuthoritativeUntil": "post-cutover-acceptance",
