@@ -8,7 +8,7 @@ Branch: `feat/peacepad-v2-full-core`
 
 Pull request: [#250](https://github.com/fefejiro/FTC-HOLDING/pull/250)
 
-Latest implementation commit: `d3169759c`
+Latest implementation commit: `704253ad9`
 
 App: `APPS/peacepad-next-native`
 
@@ -44,6 +44,7 @@ must be migrated or bridged before V2 replaces the public app.
 | `ffcbf31cc` | Transactional family exit with disclosed shared-history retention and authorization cleanup |
 | `0e26ce399` | Privacy-safe support panel and content-free diagnostic identifier |
 | `d3169759c` | Actor-bound profile editing with optimistic concurrency, EN/FR/ES UI, accessible success/error announcements, and content-free audit |
+| `704253ad9` | Read-only legacy inventory now reports optional records, attachments, tasks, and expenses scope without emitting source content |
 
 Existing pre-PR work already supplies persistent messaging, Calendar basics,
 private Case Binders, account deletion, offline message retry, regional call
@@ -53,7 +54,7 @@ real-device calling.
 
 ## Latest verification
 
-Commit `d3169759c` passed locally:
+Commits `d3169759c` and `704253ad9` passed their scoped local checks:
 
 - TypeScript: `npm run typecheck`
 - Jest: 53 suites, 412 passed, 1 skipped
@@ -61,6 +62,7 @@ Commit `d3169759c` passed locally:
 - Native guardrails and 139-file secret scan
 - Edge static validator and Deno typecheck/tests
 - Platform 804-file secret scan
+- Legacy inventory static boundary and optional-scope checks
 - Fresh PostgreSQL 18.3: every migration applied twice
 - Profile proof: `PROFILE_UPDATE_POSTGRES_VERIFIED`
 - `git diff --check`
@@ -110,7 +112,7 @@ failures.
 
 ## Next developer: first three tasks
 
-1. Confirm the remote branch contains `d3169759c`, wait for the descendant-head
+1. Confirm the remote branch contains `704253ad9`, wait for the descendant-head
    Native and Infrastructure gates, record their URLs, and merge PR #250 only
    when the PeacePad checks pass.
 2. Start a new isolated branch for a **read-only real V1 inventory and migration
