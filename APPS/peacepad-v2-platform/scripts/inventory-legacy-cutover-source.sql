@@ -80,6 +80,23 @@ select jsonb_build_object(
   'eventsPartnershipScopeAvailable', exists (
     select 1 from source_columns where table_name = 'events' and column_name = 'partnership_id'
   ),
+  'migrationScopes', jsonb_build_object(
+    'users', exists (select 1 from source_columns where table_name = 'users'),
+    'partnerships', exists (select 1 from source_columns where table_name = 'partnerships'),
+    'participants', exists (select 1 from source_columns where table_name in ('conversation_members', 'partnership_members')),
+    'conversations', exists (select 1 from source_columns where table_name = 'conversations'),
+    'messages', exists (select 1 from source_columns where table_name = 'messages'),
+    'calendar', exists (select 1 from source_columns where table_name in ('events', 'calendar_events')),
+    'records', exists (select 1 from source_columns where table_name in ('records', 'case_binders')),
+    'attachments', exists (select 1 from source_columns where table_name in ('attachments', 'record_attachments')),
+    'tasks', exists (select 1 from source_columns where table_name = 'tasks'),
+    'expenses', exists (select 1 from source_columns where table_name = 'expenses')
+  ),
+  'availableOptionalTables', coalesce((
+    select jsonb_agg(distinct table_name order by table_name)
+    from source_columns
+    where table_name in ('calendar_events', 'records', 'case_binders', 'attachments', 'record_attachments', 'tasks', 'expenses')
+  ), '[]'::jsonb),
   'sourceSchemaFingerprint', (select value from source_fingerprint),
   'containsUserContent', false
 )::text;

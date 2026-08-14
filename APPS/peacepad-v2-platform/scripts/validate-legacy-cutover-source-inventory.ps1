@@ -18,6 +18,8 @@ foreach ($required in @(
   "'mode', 'read-only-source-inventory'",
   "'containsUserContent', false",
   "'eventsPartnershipScopeAvailable'",
+  "'migrationScopes'",
+  "'availableOptionalTables'",
   "'sourceSchemaFingerprint'",
   "'users', (select count(*) from peacepad.users)",
   "'messages', (select count(*) from peacepad.messages)"
