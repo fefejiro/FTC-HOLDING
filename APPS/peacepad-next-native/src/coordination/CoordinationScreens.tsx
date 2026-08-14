@@ -10,6 +10,7 @@ import { messageText } from "../localization/messageLocalization";
 import { workflowText } from "../localization/workflowLocalization";
 import { homeText } from "../localization/homeLocalization";
 import { callText } from "../localization/callLocalization";
+import { PublicOnboardingSlides } from "../auth/PublicOnboardingAuth";
 import { colors, spacing, typography, usesLargeTextLayout } from "../theme";
 import { useRecordsState } from "../records/RecordsState";
 import type { AttachmentMediaType } from "../domain/v2";
@@ -794,6 +795,10 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
   const accountActions = useOptionalStagingAccountActions();
   const { locale, setLocale, t } = useLocalization();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [replayIntroduction, setReplayIntroduction] = useState(false);
+  if (replayIntroduction) {
+    return <PublicOnboardingSlides compact onComplete={() => setReplayIntroduction(false)} />;
+  }
   return (
     <View style={styles.stack}>
       <AccessibleHeading style={styles.title}>{t("more.title")}</AccessibleHeading>
@@ -809,6 +814,10 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
         <Text style={styles.actionTitle}>{t("more.support.title")}</Text>
         <Text style={styles.caption}>{t("more.support.body")}</Text>
       </View>
+      <Pressable accessibilityRole="button" onPress={() => setReplayIntroduction(true)} style={styles.actionCard}>
+        <Text style={styles.actionTitle}>{t("more.introduction.title")}</Text>
+        <Text style={styles.caption}>{t("more.introduction.body")}</Text>
+      </Pressable>
       <View accessibilityLabel={t("language.title")} style={styles.actionCard}>
         <Text accessibilityRole="header" style={styles.actionTitle}>{t("language.title")}</Text>
         <Text style={styles.caption}>{t("language.body")}</Text>

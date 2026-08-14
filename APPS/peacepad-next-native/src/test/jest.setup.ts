@@ -35,3 +35,13 @@ jest.mock("expo-crypto", () => ({
   digestStringAsync: jest.fn(async () => "hashed-nonce"),
   randomUUID: jest.fn(() => "test-nonce")
 }));
+
+jest.mock("@react-native-google-signin/google-signin", () => ({
+  GoogleSignin: {
+    configure: jest.fn(),
+    hasPlayServices: jest.fn(async () => true),
+    signIn: jest.fn(async () => ({ type: "cancelled", data: null })),
+    signOut: jest.fn(async () => null)
+  },
+  isSuccessResponse: (response: { type?: string }) => response.type === "success"
+}));

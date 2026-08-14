@@ -31,6 +31,7 @@ function AuthActionsProbe() {
   return <>
     <Text testID="sign-up" onPress={() => void session.signUpWithPassword("new@example.com", "secure-password")}>sign-up</Text>
     <Text testID="apple" onPress={() => void session.signInWithApple("apple-token", "raw-nonce", "Peace Parent")}>apple</Text>
+    <Text testID="google" onPress={() => void session.signInWithGoogle("google-token")}>google</Text>
     <Text testID="reset" onPress={() => void session.sendPasswordReset("parent@example.com")}>reset</Text>
     <Text testID="update-password" onPress={() => void session.updatePassword(RECOVERY_PASSWORD)}>update-password</Text>
   </>;
@@ -175,6 +176,13 @@ describe("SupabaseSessionProvider", () => {
     await act(async () => screen.getByTestId("apple").props.onPress());
     expect(fake.auth.signInWithIdToken).toHaveBeenCalledWith({ provider: "apple", token: "apple-token", nonce: "raw-nonce" });
     expect(fake.auth.updateUser).toHaveBeenCalledWith({ data: { full_name: "Peace Parent" } });
+  });
+
+  it("passes only the native Google identity token to Supabase", async () => {
+    const fake = fakeClient();
+    render(<SupabaseSessionProvider client={fake.client}><AuthActionsProbe /></SupabaseSessionProvider>);
+    await act(async () => screen.getByTestId("google").props.onPress());
+    expect(fake.auth.signInWithIdToken).toHaveBeenCalledWith({ provider: "google", token: "google-token" });
   });
 });
 

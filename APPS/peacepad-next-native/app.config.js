@@ -8,11 +8,35 @@ const APPSTORE_PRODUCTION_BUILD_NUMBER = "5";
 const PLAYSTORE_VERSION_CODE = 42;
 const PRODUCTION_BUNDLE_ID = "ca.peacepad.family";
 const APP_STORE_ID = "6793350735";
+const GOOGLE_SIGN_IN_PLUGIN = "@react-native-google-signin/google-signin";
+const GOOGLE_CLIENT_ID_PATTERN = /^\d+-[a-z0-9-]+\.apps\.googleusercontent\.com$/i;
 const ANDROID_RELEASE_BLOCKED_PERMISSIONS = [
   "android.permission.READ_EXTERNAL_STORAGE",
   "android.permission.SYSTEM_ALERT_WINDOW",
   "android.permission.WRITE_EXTERNAL_STORAGE"
 ];
+
+function googleSignInPlugin() {
+  const webClientId = process.env.EXPO_PUBLIC_PEACEPAD_GOOGLE_WEB_CLIENT_ID?.trim() || "";
+  const iosClientId = process.env.EXPO_PUBLIC_PEACEPAD_GOOGLE_IOS_CLIENT_ID?.trim() || "";
+  const iosUrlScheme = process.env.PEACEPAD_GOOGLE_IOS_URL_SCHEME?.trim() || "";
+  if (
+    !GOOGLE_CLIENT_ID_PATTERN.test(webClientId)
+    || !GOOGLE_CLIENT_ID_PATTERN.test(iosClientId)
+    || iosUrlScheme !== `com.googleusercontent.apps.${iosClientId.replace(/\.apps\.googleusercontent\.com$/i, "")}`
+  ) {
+    throw new Error("PeacePad store builds require the approved Google Web/iOS OAuth clients and exact iOS URL scheme.");
+  }
+  return [GOOGLE_SIGN_IN_PLUGIN, { iosUrlScheme }];
+}
+
+function storePlugins(config, includeApple = false) {
+  return [
+    ...(config.plugins || []),
+    ...(includeApple ? ["expo-apple-authentication"] : []),
+    googleSignInPlugin()
+  ];
+}
 
 module.exports = ({ config }) => {
   const iosReleaseMode = process.env.PEACEPAD_IOS_RELEASE_MODE?.trim();
@@ -31,6 +55,7 @@ module.exports = ({ config }) => {
     return {
       ...config,
       version: TESTFLIGHT_VERSION,
+      plugins: storePlugins(config),
       android: {
         ...config.android,
         blockedPermissions: [
@@ -75,8 +100,7 @@ module.exports = ({ config }) => {
       scheme: "peacepad",
       version: TESTFLIGHT_VERSION,
       plugins: [
-        ...(config.plugins || []),
-        "expo-apple-authentication"
+        ...storePlugins(config, true)
       ],
       ios: {
         ...config.ios,
@@ -103,6 +127,7 @@ module.exports = ({ config }) => {
   return {
     ...config,
     version: TESTFLIGHT_VERSION,
+    plugins: storePlugins(config, true),
     ios: {
       ...config.ios,
       buildNumber: TESTFLIGHT_BUILD_NUMBER,

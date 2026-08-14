@@ -14,6 +14,15 @@ describe("PeacePad iOS release variant", () => {
   const originalAndroidMode = process.env.PEACEPAD_ANDROID_RELEASE_MODE;
   const originalEnvironment = process.env.EXPO_PUBLIC_PEACEPAD_ENV;
   const originalProductionWrites = process.env.EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED;
+  const originalGoogleWebClientId = process.env.EXPO_PUBLIC_PEACEPAD_GOOGLE_WEB_CLIENT_ID;
+  const originalGoogleIosClientId = process.env.EXPO_PUBLIC_PEACEPAD_GOOGLE_IOS_CLIENT_ID;
+  const originalGoogleIosUrlScheme = process.env.PEACEPAD_GOOGLE_IOS_URL_SCHEME;
+
+  beforeEach(() => {
+    process.env.EXPO_PUBLIC_PEACEPAD_GOOGLE_WEB_CLIENT_ID = "123456789-web.apps.googleusercontent.com";
+    process.env.EXPO_PUBLIC_PEACEPAD_GOOGLE_IOS_CLIENT_ID = "123456789-ios.apps.googleusercontent.com";
+    process.env.PEACEPAD_GOOGLE_IOS_URL_SCHEME = "com.googleusercontent.apps.123456789-ios";
+  });
 
   afterEach(() => {
     if (originalMode === undefined) delete process.env.PEACEPAD_IOS_RELEASE_MODE;
@@ -24,6 +33,12 @@ describe("PeacePad iOS release variant", () => {
     else process.env.EXPO_PUBLIC_PEACEPAD_ENV = originalEnvironment;
     if (originalProductionWrites === undefined) delete process.env.EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED;
     else process.env.EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED = originalProductionWrites;
+    if (originalGoogleWebClientId === undefined) delete process.env.EXPO_PUBLIC_PEACEPAD_GOOGLE_WEB_CLIENT_ID;
+    else process.env.EXPO_PUBLIC_PEACEPAD_GOOGLE_WEB_CLIENT_ID = originalGoogleWebClientId;
+    if (originalGoogleIosClientId === undefined) delete process.env.EXPO_PUBLIC_PEACEPAD_GOOGLE_IOS_CLIENT_ID;
+    else process.env.EXPO_PUBLIC_PEACEPAD_GOOGLE_IOS_CLIENT_ID = originalGoogleIosClientId;
+    if (originalGoogleIosUrlScheme === undefined) delete process.env.PEACEPAD_GOOGLE_IOS_URL_SCHEME;
+    else process.env.PEACEPAD_GOOGLE_IOS_URL_SCHEME = originalGoogleIosUrlScheme;
   });
 
   it("leaves the default lab identity unchanged", () => {
@@ -40,6 +55,10 @@ describe("PeacePad iOS release variant", () => {
     process.env.EXPO_PUBLIC_PEACEPAD_ENV = "staging";
     expect(resolveConfig({ config: structuredClone(appJson.expo) })).toMatchObject({
       version: "2.0.0",
+      plugins: expect.arrayContaining([
+        "expo-apple-authentication",
+        ["@react-native-google-signin/google-signin", { iosUrlScheme: "com.googleusercontent.apps.123456789-ios" }]
+      ]),
       ios: { buildNumber: "3", bundleIdentifier: "ca.peacepad.family" },
       extra: {
         appStoreId: "6793350735",
@@ -116,6 +135,9 @@ describe("PeacePad iOS release variant", () => {
         package: "ca.peacepad.family",
         versionCode: 42
       },
+      plugins: expect.arrayContaining([
+        ["@react-native-google-signin/google-signin", { iosUrlScheme: "com.googleusercontent.apps.123456789-ios" }]
+      ]),
       extra: {
         productionApiWritesEnabled: false,
         releaseChannel: "playstore-internal",
@@ -135,5 +157,13 @@ describe("PeacePad iOS release variant", () => {
     process.env.PEACEPAD_ANDROID_RELEASE_MODE = "production";
     process.env.EXPO_PUBLIC_PEACEPAD_ENV = "staging";
     expect(() => resolveConfig({ config: structuredClone(appJson.expo) })).toThrow("Unsupported PeacePad Android release mode");
+  });
+
+  it("fails closed when a store build lacks the exact Google OAuth client configuration", () => {
+    process.env.PEACEPAD_IOS_RELEASE_MODE = "appstore-production";
+    process.env.EXPO_PUBLIC_PEACEPAD_ENV = "production";
+    process.env.EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED = "true";
+    delete process.env.PEACEPAD_GOOGLE_IOS_URL_SCHEME;
+    expect(() => resolveConfig({ config: structuredClone(appJson.expo) })).toThrow("approved Google Web/iOS OAuth clients");
   });
 });

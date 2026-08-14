@@ -66,6 +66,7 @@ type SupabaseSessionValue = Readonly<{
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signUpWithPassword: (email: string, password: string) => Promise<{ confirmationRequired: boolean }>;
   signInWithApple: (identityToken: string, nonce: string, fullName?: string) => Promise<void>;
+  signInWithGoogle: (identityToken: string, nonce?: string) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -270,6 +271,21 @@ export function SupabaseSessionProvider({
       if (fullName) {
         const updated = await client.auth.updateUser({ data: { full_name: fullName } });
         if (updated.error) throw updated.error;
+      }
+    },
+    signInWithGoogle: async (identityToken, nonce) => {
+      setError(undefined);
+      setAuthIntent("default");
+      const result = await client.auth.signInWithIdToken({
+        provider: "google",
+        token: identityToken,
+        ...(nonce ? { nonce } : {})
+      });
+      if (result.error) {
+        setSession(undefined);
+        setStatus("signed-out");
+        setError(t("runtime.signInUnavailable"));
+        throw result.error;
       }
     },
     sendPasswordReset: async (email) => {

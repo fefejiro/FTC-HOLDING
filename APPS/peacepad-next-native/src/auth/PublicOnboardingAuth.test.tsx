@@ -6,8 +6,10 @@ import * as SecureStore from "expo-secure-store";
 import { LocalizationProvider } from "../localization/LocalizationProvider";
 import { useSupabaseSession } from "../session/SupabaseSessionProvider";
 import { PublicOnboardingAuth } from "./PublicOnboardingAuth";
+import { requestGoogleIdentityToken } from "./GoogleNativeAuth";
 
 jest.mock("../session/SupabaseSessionProvider", () => ({ useSupabaseSession: jest.fn() }));
+jest.mock("./GoogleNativeAuth", () => ({ requestGoogleIdentityToken: jest.fn() }));
 
 const sessionValue = (overrides: Record<string, unknown> = {}) => ({
   status: "signed-out",
@@ -18,6 +20,7 @@ const sessionValue = (overrides: Record<string, unknown> = {}) => ({
   signInWithPassword: jest.fn(async () => undefined),
   signUpWithPassword: jest.fn(async () => ({ confirmationRequired: true })),
   signInWithApple: jest.fn(async () => undefined),
+  signInWithGoogle: jest.fn(async () => undefined),
   sendPasswordReset: jest.fn(async () => undefined),
   updatePassword: jest.fn(async () => undefined),
   signOut: jest.fn(async () => undefined),
@@ -34,6 +37,7 @@ describe("PublicOnboardingAuth", () => {
     jest.spyOn(Crypto, "randomUUID").mockReturnValue("raw-nonce");
     jest.spyOn(Crypto, "digestStringAsync").mockResolvedValue("hashed-nonce");
     (useSupabaseSession as jest.Mock).mockReturnValue(sessionValue());
+    (requestGoogleIdentityToken as jest.Mock).mockResolvedValue(undefined);
   });
 
   it("opens with a short, warm first-run introduction and no staging language", async () => {
@@ -79,6 +83,16 @@ describe("PublicOnboardingAuth", () => {
     fireEvent.press(await screen.findByLabelText("Continue with Apple"));
     await waitFor(() => expect(signInWithApple).toHaveBeenCalledWith("apple-identity-token", "raw-nonce", "Peace Parent"));
     expect(AppleAuthentication.signInAsync).toHaveBeenCalledWith(expect.objectContaining({ nonce: "hashed-nonce" }));
+  });
+
+  it("passes only the native Google ID token to the Supabase session boundary", async () => {
+    secureStore.getItemAsync.mockResolvedValue("true");
+    const signInWithGoogle = jest.fn(async () => undefined);
+    (useSupabaseSession as jest.Mock).mockReturnValue(sessionValue({ signInWithGoogle }));
+    (requestGoogleIdentityToken as jest.Mock).mockResolvedValue("google-id-token");
+    render(<LocalizationProvider initialLocale="en" production><PublicOnboardingAuth /></LocalizationProvider>);
+    fireEvent.press(await screen.findByText("Continue with Google"));
+    await waitFor(() => expect(signInWithGoogle).toHaveBeenCalledWith("google-id-token"));
   });
 
   it("finishes a password-recovery callback before entering the family runtime", async () => {

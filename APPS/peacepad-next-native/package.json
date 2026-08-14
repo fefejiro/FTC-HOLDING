@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@expo-google-fonts/playfair-display": "^0.4.2",
+    "@react-native-google-signin/google-signin": "16.1.4",
     "@react-navigation/core": "7.21.10",
     "@react-navigation/elements": "2.9.35",
     "@react-navigation/native": "7.3.13",
