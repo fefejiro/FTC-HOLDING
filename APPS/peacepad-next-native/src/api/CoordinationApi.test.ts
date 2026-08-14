@@ -458,6 +458,33 @@ describe("HttpPeacePadCoordinationApi", () => {
     expect((fetcher.mock.calls[6]?.[1] as RequestInit).headers).not.toHaveProperty("Idempotency-Key");
   });
 
+  it("registers and revokes the exact protected device push receipt", async () => {
+    const fetcher = jest.fn(async (_input: string, _init?: RequestInit) => response(200, {}));
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
+    await api.registerDevicePush({
+      installationId: "10000000-0000-4000-8000-000000000010",
+      platform: "ios",
+      transport: "expo",
+      appId: "ca.peacepad.family",
+      token: `ExpoPushToken[${"a".repeat(24)}]`
+    }, { ...context, expectedVersion: null });
+    await api.revokeDevicePush("10000000-0000-4000-8000-000000000011", { ...context, expectedVersion: 3 });
+
+    expect(fetcher.mock.calls.map(([url]) => url)).toEqual([
+      "https://staging-api.peacepad.test/api/v2/devices/push",
+      "https://staging-api.peacepad.test/api/v2/devices/push/10000000-0000-4000-8000-000000000011"
+    ]);
+    expect(JSON.parse((fetcher.mock.calls[0]?.[1] as RequestInit).body as string)).toMatchObject({
+      platform: "ios",
+      transport: "expo",
+      appId: "ca.peacepad.family"
+    });
+    expect((fetcher.mock.calls[1]?.[1] as RequestInit).headers).toMatchObject({
+      "If-Match": "3",
+      "X-PeacePad-Region": "ca"
+    });
+  });
+
   it("refuses call signaling without a verified call version", async () => {
     const fetcher = jest.fn(async () => response(202, {}));
     const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);

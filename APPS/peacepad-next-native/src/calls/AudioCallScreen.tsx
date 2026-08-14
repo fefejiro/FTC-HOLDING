@@ -18,6 +18,7 @@ export function AudioCallScreen() {
   const statusBody = !state.call || terminal ? text("noCallBody")
     : state.call.status === "ringing" ? text("ringingBody")
       : text(state.mediaState);
+  const duration = `${Math.floor(state.durationSeconds / 60).toString().padStart(2, "0")}:${(state.durationSeconds % 60).toString().padStart(2, "0")}`;
 
   return <View style={{ gap: spacing.lg }}>
     <AccessibleHeading style={{ ...typography.title, color: colors.text }}>{text("title")}</AccessibleHeading>
@@ -25,13 +26,18 @@ export function AudioCallScreen() {
     <View accessibilityLiveRegion="polite" style={{ backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 22, borderWidth: 1, gap: spacing.md, padding: spacing.lg }}>
       <Text accessibilityRole="header" style={{ ...typography.subheading, color: colors.text }}>{title}</Text>
       <Text style={{ ...typography.body, color: colors.muted }}>{statusBody}</Text>
+      {state.call?.status === "active" ? <Text accessibilityLabel={`${text("duration")} ${duration}`} style={{ ...typography.body, color: colors.text }}>{duration}</Text> : null}
       {!state.call || terminal ? <LabButton disabled={state.busy || !state.hydrated} label={text("start")} onPress={() => void state.start()} /> : null}
       {state.call?.status === "ringing" && state.incoming ? <>
         <LabButton disabled={state.busy} label={text("accept")} onPress={() => void state.accept()} />
         <LabButton disabled={state.busy} label={text("decline")} onPress={() => void state.decline()} variant="secondary" />
       </> : null}
       {state.call?.status === "ringing" && !state.incoming ? <LabButton disabled={state.busy} label={text("cancel")} onPress={() => void state.end()} variant="secondary" /> : null}
-      {state.call?.status === "active" ? <LabButton disabled={state.busy} label={text("end")} onPress={() => void state.end()} /> : null}
+      {state.call?.status === "active" ? <>
+        <LabButton disabled={state.busy || state.mediaState === "unavailable"} label={text(state.muted ? "unmute" : "mute")} onPress={state.toggleMute} variant="secondary" />
+        {state.mediaState === "failed" ? <LabButton disabled={state.busy} label={text("reconnect")} onPress={state.retryMedia} variant="secondary" /> : null}
+        <LabButton disabled={state.busy} label={text("end")} onPress={() => void state.end()} />
+      </> : null}
       <LabButton disabled={state.busy} label={state.busy ? text("busy") : text("refresh")} onPress={() => void state.refresh()} variant="secondary" />
       {state.error ? <Text accessibilityRole="alert" style={{ ...typography.body, color: colors.dangerText }}>{state.error || text("error")}</Text> : null}
     </View>

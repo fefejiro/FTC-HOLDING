@@ -121,6 +121,28 @@ export type AudioCallTurnCredentials = Readonly<{
   }>[];
 }>;
 
+export type DevicePushRegistration = Readonly<{
+  registrationId: EntityId;
+  platform: "ios" | "android";
+  transport: "expo" | "apns-voip";
+  appId: "ca.peacepad.family" | "ca.peacepad.nextnative.lab";
+  version: number;
+}>;
+
+export type RegisterDevicePushInput = Readonly<{
+  installationId: EntityId;
+  platform: DevicePushRegistration["platform"];
+  transport: DevicePushRegistration["transport"];
+  appId: DevicePushRegistration["appId"];
+  token: string;
+}>;
+
+export type RevokedDevicePushRegistration = Readonly<{
+  registrationId: EntityId;
+  status: "revoked";
+  version: number;
+}>;
+
 export type CreateCalendarLayerInput = Readonly<{
   familyCircleId: EntityId;
   ownerIdentityId: EntityId;
@@ -203,6 +225,8 @@ export type LinkTimelineSourceInput = Readonly<{
 }>;
 
 export interface PeacePadCoordinationApi {
+  registerDevicePush(input: RegisterDevicePushInput, context: WriteContext): Promise<DevicePushRegistration>;
+  revokeDevicePush(registrationId: EntityId, context: WriteContext): Promise<RevokedDevicePushRegistration>;
   deleteAccount(context: WriteContext): Promise<DeletedAccount>;
   createFamily(familyName: string, context: WriteContext): Promise<CreatedFamily>;
   listCaseBinders(familyCircleId: EntityId): Promise<readonly CaseBinder[]>;
@@ -280,6 +304,19 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
     private readonly fetcher: FetchLike = fetch,
     private readonly accessToken: AccessTokenProvider = async () => undefined
   ) {}
+
+  registerDevicePush(input: RegisterDevicePushInput, context: WriteContext) {
+    return this.write<DevicePushRegistration>("/api/v2/devices/push", "POST", input, context);
+  }
+
+  revokeDevicePush(registrationId: EntityId, context: WriteContext) {
+    return this.write<RevokedDevicePushRegistration>(
+      `/api/v2/devices/push/${encodeURIComponent(registrationId)}`,
+      "DELETE",
+      undefined,
+      context
+    );
+  }
 
   createFamily(familyName: string, context: WriteContext) {
     return this.write<CreatedFamily>("/api/v2/families", "POST", { familyName: familyName.trim() }, context);

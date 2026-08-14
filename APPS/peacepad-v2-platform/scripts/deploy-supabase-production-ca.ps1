@@ -52,9 +52,10 @@ if ($visibleProject.Count -ne 1 -or $visibleProject[0].region -ne 'ca-central-1'
 
 $maintenanceSecret = [Environment]::GetEnvironmentVariable('PEACEPAD_MAINTENANCE_SECRET')
 $idempotencySecret = [Environment]::GetEnvironmentVariable('PEACEPAD_IDEMPOTENCY_SECRET')
-foreach ($value in @($maintenanceSecret, $idempotencySecret)) {
+$pushTokenSecret = [Environment]::GetEnvironmentVariable('PEACEPAD_PUSH_TOKEN_SECRET')
+foreach ($value in @($maintenanceSecret, $idempotencySecret, $pushTokenSecret)) {
   if ([string]::IsNullOrWhiteSpace($value) -or $value.Length -lt 32) {
-    throw 'Both production maintenance and idempotency secrets must be supplied through the process environment and contain at least 32 characters.'
+    throw 'Production maintenance, idempotency, and push-token secrets must be supplied through the process environment and contain at least 32 characters.'
   }
 }
 
@@ -68,6 +69,7 @@ Invoke-Supabase @(
   'PEACEPAD_ALLOWED_ORIGINS=https://peacepad.ca,https://www.peacepad.ca',
   "PEACEPAD_MAINTENANCE_SECRET=$maintenanceSecret",
   "PEACEPAD_IDEMPOTENCY_SECRET=$idempotencySecret",
+  "PEACEPAD_PUSH_TOKEN_SECRET=$pushTokenSecret",
   '--project-ref', $projectRef,
   '--agent', 'no'
 )

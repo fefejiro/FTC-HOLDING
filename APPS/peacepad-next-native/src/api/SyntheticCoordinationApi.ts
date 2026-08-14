@@ -5,6 +5,9 @@ import {
   type AudioCallSession,
   type AudioCallSignal,
   type AudioCallSignalReceipt,
+  type DevicePushRegistration,
+  type RegisterDevicePushInput,
+  type RevokedDevicePushRegistration,
   type CorrectMessageInput,
   type CreateAttachmentUploadIntentInput,
   type CreateCaseBinderInput,
@@ -118,6 +121,7 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
   private attachments: PrivateAttachment[] = [];
   private attachmentIntents = new Map<string, AttachmentUploadIntent>();
   private audioCall: AudioCallSession | null = null;
+  private devicePushRegistration: DevicePushRegistration | null = null;
 
   constructor(seedInvitations: readonly SeedInvitation[] = []) {
     seedInvitations.forEach((seed) => {
@@ -267,6 +271,28 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
     };
     this.attachmentIntents.set(intent.id, intent);
     return intent;
+  }
+
+  async registerDevicePush(input: RegisterDevicePushInput, _context: WriteContext): Promise<DevicePushRegistration> {
+    this.devicePushRegistration = {
+      registrationId: `push-${Date.now().toString(36)}`,
+      platform: input.platform,
+      transport: input.transport,
+      appId: input.appId,
+      version: (this.devicePushRegistration?.version ?? 0) + 1
+    };
+    return this.devicePushRegistration;
+  }
+
+  async revokeDevicePush(registrationId: EntityId, context: WriteContext): Promise<RevokedDevicePushRegistration> {
+    if (
+      !this.devicePushRegistration
+      || this.devicePushRegistration.registrationId !== registrationId
+      || this.devicePushRegistration.version !== context.expectedVersion
+    ) throw new PeacePadApiError("The notification registration changed.", "http", 409);
+    const response = { registrationId, status: "revoked" as const, version: this.devicePushRegistration.version + 1 };
+    this.devicePushRegistration = null;
+    return response;
   }
 
   async uploadPrivateAttachment(intent: AttachmentUploadIntent, bytes: ArrayBuffer): Promise<void> {

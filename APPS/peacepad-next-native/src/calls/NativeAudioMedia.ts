@@ -87,6 +87,12 @@ export class NativeAudioMediaSession {
     await this.peer.addIceCandidate(new RTCIceCandidate(signal.payload));
   }
 
+  setMuted(muted: boolean): void {
+    this.localStream.getAudioTracks().forEach((track) => {
+      track.enabled = !muted;
+    });
+  }
+
   close(): void {
     this.localStream.getTracks().forEach((track) => track.stop());
     this.peer.close();

@@ -20,6 +20,7 @@ function harness(identityId = "caller-1", accessToken: string | undefined = "tok
     acceptOffer: jest.fn(async () => ({ kind: "answer" as const, payload: { sdp: "v=0\r\nanswer" } })),
     acceptAnswer: jest.fn(async () => undefined),
     addIceCandidate: jest.fn(async () => undefined),
+    setMuted: jest.fn(),
     close: jest.fn(),
   };
   const channel: PeacePadRealtimeChannel = {
@@ -59,7 +60,7 @@ function harness(identityId = "caller-1", accessToken: string | undefined = "tok
 describe("active foreground audio media coordination", () => {
   it("subscribes before the caller offer, relays ICE, and closes cleanly", async () => {
     const test = harness();
-    const close = await test.start();
+    const controller = await test.start();
     expect(test.client.channel).toHaveBeenCalledTimes(1);
     expect(test.sent[0]).toEqual({ kind: "offer", payload: { sdp: "v=0\r\noffer" } });
     test.callbacks()?.onIceCandidate({ kind: "ice", payload: { candidate: "candidate", sdpMid: null, sdpMLineIndex: 0 } });
@@ -67,8 +68,10 @@ describe("active foreground audio media coordination", () => {
     expect(test.sent[1]?.kind).toBe("ice");
     test.callbacks()?.onConnectionStateChange("connected");
     expect(test.states).toEqual(["connecting", "connected"]);
-    await close();
-    await close();
+    controller.setMuted(true);
+    expect(test.media.setMuted).toHaveBeenCalledWith(true);
+    await controller.close();
+    await controller.close();
     expect(test.media.close).toHaveBeenCalledTimes(1);
     expect(test.client.removeChannel).toHaveBeenCalledTimes(1);
   });
@@ -80,6 +83,32 @@ describe("active foreground audio media coordination", () => {
     await new Promise((resolve) => setImmediate(resolve));
     expect(test.media.acceptOffer).toHaveBeenCalledWith("v=0\r\nremote");
     expect(test.sent).toEqual([{ kind: "answer", payload: { sdp: "v=0\r\nanswer" } }]);
+  });
+
+  it("applies remote answers and ICE only inside the active participant session", async () => {
+    const test = harness();
+    await test.start();
+    test.signal({ kind: "answer", payload: { sdp: "v=0\r\nremote-answer" } });
+    test.signal({ kind: "ice", payload: { candidate: "candidate:remote", sdpMid: "0", sdpMLineIndex: 0 } });
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(test.media.acceptAnswer).toHaveBeenCalledWith("v=0\r\nremote-answer");
+    expect(test.media.addIceCandidate).toHaveBeenCalledWith(expect.objectContaining({ kind: "ice" }));
+  });
+
+  it("closes media and reports failure when the peer connection fails", async () => {
+    const test = harness();
+    await test.start();
+    test.callbacks()?.onConnectionStateChange("failed");
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(test.states).toEqual(["connecting", "failed"]);
+    expect(test.media.close).toHaveBeenCalledTimes(1);
+    expect(test.client.removeChannel).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects media startup for an identity outside the exact call", async () => {
+    const test = harness("outsider-1");
+    await expect(test.start()).rejects.toThrow("unavailable for this identity");
+    expect(test.client.channel).not.toHaveBeenCalled();
   });
 
   it("fails closed before media creation when the authenticated token is absent", async () => {

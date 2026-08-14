@@ -14,6 +14,30 @@ jest.mock("expo-network", () => ({
   }))
 }));
 
+jest.mock("expo-device", () => ({ isDevice: true }));
+
+jest.mock("expo-constants", () => ({
+  __esModule: true,
+  default: {
+    expoConfig: {
+      ios: { bundleIdentifier: "ca.peacepad.family" },
+      android: { package: "ca.peacepad.family" },
+      extra: { eas: { projectId: "10000000-0000-4000-8000-000000000010" } }
+    },
+    easConfig: { projectId: "10000000-0000-4000-8000-000000000010" }
+  }
+}));
+
+jest.mock("expo-notifications", () => ({
+  AndroidImportance: { MAX: 5 },
+  AndroidNotificationVisibility: { PRIVATE: 0 },
+  getExpoPushTokenAsync: jest.fn(),
+  getPermissionsAsync: jest.fn(async () => ({ status: "undetermined" })),
+  requestPermissionsAsync: jest.fn(async () => ({ status: "denied" })),
+  setNotificationChannelAsync: jest.fn(async () => null),
+  setNotificationHandler: jest.fn()
+}));
+
 jest.mock("expo-apple-authentication", () => {
   const React = require("react");
   const { Pressable, Text } = require("react-native");
@@ -33,7 +57,7 @@ jest.mock("expo-apple-authentication", () => {
 jest.mock("expo-crypto", () => ({
   CryptoDigestAlgorithm: { SHA256: "SHA-256" },
   digestStringAsync: jest.fn(async () => "hashed-nonce"),
-  randomUUID: jest.fn(() => "test-nonce")
+  randomUUID: jest.fn(() => "10000000-0000-4000-8000-000000000099")
 }));
 
 jest.mock("@react-native-google-signin/google-signin", () => ({

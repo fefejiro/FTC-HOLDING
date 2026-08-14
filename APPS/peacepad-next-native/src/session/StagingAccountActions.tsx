@@ -5,6 +5,9 @@ export type StagingAccountActionsValue = Readonly<{
   deleteAccount: () => Promise<void>;
   deleting: boolean;
   error?: string;
+  notificationStatus?: "enabled" | "denied" | "unavailable" | "not-enabled" | "busy";
+  enableNotifications?: () => Promise<void>;
+  disableNotifications?: () => Promise<void>;
 }>;
 
 const StagingAccountActionsContext = createContext<StagingAccountActionsValue | undefined>(undefined);

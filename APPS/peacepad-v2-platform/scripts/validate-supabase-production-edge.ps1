@@ -30,6 +30,7 @@ foreach ($required in @(
   "`$functionRegion = 'ca-central-1'",
   'PEACEPAD_RUNTIME_ENVIRONMENT=production',
   'PEACEPAD_PRODUCTION_WRITES_ENABLED=false',
+  'PEACEPAD_PUSH_TOKEN_SECRET',
   'PEACEPAD_ALLOWED_ORIGINS=https://peacepad.ca,https://www.peacepad.ca',
   'SUPABASE_PRODUCTION_EDGE_DEPLOYED'
 )) {

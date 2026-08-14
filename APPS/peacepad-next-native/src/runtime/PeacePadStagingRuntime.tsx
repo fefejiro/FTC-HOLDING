@@ -17,6 +17,12 @@ import { colors, spacing, typography } from "../theme";
 import { secureMessageOutboxStore } from "../messaging/secureMessageOutbox";
 import { useOptionalLocalization } from "../localization/LocalizationProvider";
 import { PublicOnboardingAuth } from "../auth/PublicOnboardingAuth";
+import {
+  currentDeviceNotificationState,
+  disableDeviceNotifications,
+  enableDeviceNotifications,
+  type DeviceNotificationState
+} from "../notifications/DevicePushRegistration";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export function invitationCodeFromStagingUrl(url?: string | null, expectedProtocol = "peacepadnextlab:"): string | undefined {
@@ -193,6 +199,7 @@ export function PeacePadStagingRuntime({
   const [runtimeState, setRuntimeState] = useState<RuntimeState>({ status: "loading" });
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string>();
+  const [notificationStatus, setNotificationStatus] = useState<DeviceNotificationState | "busy">("not-enabled");
 
   const submitSignIn = useCallback(() => {
     const normalizedEmail = email.trim();
@@ -220,9 +227,24 @@ export function PeacePadStagingRuntime({
   } | undefined>(undefined);
   const lastReadyIdentity = useRef<string | undefined>(undefined);
   const signOutSafely = useCallback(async () => {
+    if (runtimeState.status === "ready") {
+      await disableDeviceNotifications(runtimeState.api, runtimeState.runtime).catch(() => undefined);
+    }
     await secureMessageOutboxStore.clear().catch(() => undefined);
     await auth.signOut();
-  }, [auth.signOut]);
+  }, [auth.signOut, runtimeState]);
+
+  useEffect(() => {
+    if (runtimeState.status !== "ready") {
+      setNotificationStatus("not-enabled");
+      return;
+    }
+    let active = true;
+    void currentDeviceNotificationState(runtimeState.runtime.actorIdentityId)
+      .then((status) => { if (active) setNotificationStatus(status); })
+      .catch(() => { if (active) setNotificationStatus("unavailable"); });
+    return () => { active = false; };
+  }, [runtimeState]);
 
   useEffect(() => {
     let mounted = true;
@@ -434,7 +456,24 @@ export function PeacePadStagingRuntime({
       sessionId: runtimeState.runtime.sessionId,
       displayName: null,
       version: runtimeState.runtime.identityVersion
-    }, runtimeState.runtime.region)
+    }, runtimeState.runtime.region),
+    notificationStatus,
+    enableNotifications: async () => {
+      setNotificationStatus("busy");
+      try {
+        setNotificationStatus(await enableDeviceNotifications(runtimeState.api, runtimeState.runtime));
+      } catch {
+        setNotificationStatus("unavailable");
+      }
+    },
+    disableNotifications: async () => {
+      setNotificationStatus("busy");
+      try {
+        setNotificationStatus(await disableDeviceNotifications(runtimeState.api, runtimeState.runtime));
+      } catch {
+        setNotificationStatus("unavailable");
+      }
+    }
   };
   return (
     <PendingStagingInvitationProvider code={incomingInvitationCode} onConsumed={() => setIncomingInvitationCode(undefined)}>

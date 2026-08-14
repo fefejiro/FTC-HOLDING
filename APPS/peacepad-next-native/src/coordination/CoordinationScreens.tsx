@@ -839,6 +839,26 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
         <Text style={styles.actionTitle}>{t("more.introduction.title")}</Text>
         <Text style={styles.caption}>{t("more.introduction.body")}</Text>
       </Pressable>
+      {accountActions?.enableNotifications ? <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ disabled: accountActions.notificationStatus === "busy" }}
+        disabled={accountActions.notificationStatus === "busy"}
+        onPress={() => void (
+          accountActions.notificationStatus === "enabled" && accountActions.disableNotifications
+            ? accountActions.disableNotifications()
+            : accountActions.enableNotifications!()
+        )}
+        style={styles.actionCard}
+      >
+        <Text style={styles.actionTitle}>{t("notifications.title")}</Text>
+        <Text accessibilityLiveRegion="polite" style={styles.caption}>{
+          accountActions.notificationStatus === "enabled" ? t("notifications.enabled")
+            : accountActions.notificationStatus === "denied" ? t("notifications.denied")
+            : accountActions.notificationStatus === "unavailable" ? t("notifications.unavailable")
+            : accountActions.notificationStatus === "busy" ? t("notifications.updating")
+            : t("notifications.enable")
+        }</Text>
+      </Pressable> : null}
       <View accessibilityLabel={t("language.title")} style={styles.actionCard}>
         <Text accessibilityRole="header" style={styles.actionTitle}>{t("language.title")}</Text>
         <Text style={styles.caption}>{t("language.body")}</Text>

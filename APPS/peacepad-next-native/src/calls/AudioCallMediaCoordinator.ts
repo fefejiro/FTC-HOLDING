@@ -10,7 +10,13 @@ export type AudioMediaSession = Readonly<{
   acceptOffer: (sdp: string) => Promise<AudioCallSignal & { kind: "answer" }>;
   acceptAnswer: (sdp: string) => Promise<void>;
   addIceCandidate: (signal: AudioCallSignal & { kind: "ice" }) => Promise<void>;
+  setMuted: (muted: boolean) => void;
   close: () => void;
+}>;
+
+export type AudioCallMediaController = Readonly<{
+  close: () => Promise<void>;
+  setMuted: (muted: boolean) => void;
 }>;
 
 export type AudioMediaFactory = (
@@ -36,7 +42,7 @@ type StartInput = Readonly<{
   onState: (state: AudioMediaConnectionState) => void;
 }>;
 
-export async function startAudioCallMedia({ api, call, localIdentityId, context, runtime, onState }: StartInput): Promise<() => Promise<void>> {
+export async function startAudioCallMedia({ api, call, localIdentityId, context, runtime, onState }: StartInput): Promise<AudioCallMediaController> {
   if (call.status !== "active") throw new Error("Audio media requires an active call.");
   if (localIdentityId !== call.callerIdentityId && localIdentityId !== call.calleeIdentityId) {
     throw new Error("Audio media is unavailable for this identity.");
@@ -52,6 +58,10 @@ export async function startAudioCallMedia({ api, call, localIdentityId, context,
     closed = true;
     media?.close();
     await closeSubscription?.().catch(() => undefined);
+  };
+  const controller: AudioCallMediaController = {
+    close,
+    setMuted: (muted) => media?.setMuted(muted),
   };
   const fail = () => {
     if (closed) return;
@@ -85,11 +95,11 @@ export async function startAudioCallMedia({ api, call, localIdentityId, context,
       api.getAudioCallTurnCredentials(call.id, context()),
     ]);
     if (!accessToken) throw new Error("The call session expired.");
-    if (closed) return close;
+    if (closed) return controller;
     closeSubscription = await openPrivateCallSignalSubscription({ client: runtime.realtimeClient, accessToken, call, localIdentityId, onSignal: receive });
     if (closed) {
       await closeSubscription();
-      return close;
+      return controller;
     }
     media = await runtime.createMedia(credentials.iceServers, {
       onIceCandidate: (signal) => { void send(signal).catch(fail); },
@@ -100,11 +110,11 @@ export async function startAudioCallMedia({ api, call, localIdentityId, context,
     });
     if (closed) {
       media.close();
-      return close;
+      return controller;
     }
     pendingSignals.splice(0).forEach(process);
     if (localIdentityId === call.callerIdentityId) await send(await media.createOffer());
-    return close;
+    return controller;
   } catch (error) {
     await close();
     onState("failed");

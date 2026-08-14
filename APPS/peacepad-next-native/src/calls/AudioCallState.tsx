@@ -3,7 +3,7 @@ import { createWriteContext } from "../domain/v2";
 import { SyntheticCoordinationApi } from "../api/SyntheticCoordinationApi";
 import type { AudioCallSession, PeacePadCoordinationApi } from "../api/CoordinationApi";
 import type { CoordinationRuntime } from "../coordination/CoordinationState";
-import { startAudioCallMedia, type AudioCallMediaRuntime, type AudioMediaConnectionState } from "./AudioCallMediaCoordinator";
+import { startAudioCallMedia, type AudioCallMediaController, type AudioCallMediaRuntime, type AudioMediaConnectionState } from "./AudioCallMediaCoordinator";
 
 type AudioCallStateValue = Readonly<{
   call: AudioCallSession | null;
@@ -12,11 +12,15 @@ type AudioCallStateValue = Readonly<{
   error?: string;
   incoming: boolean;
   mediaState: "unavailable" | AudioMediaConnectionState;
+  muted: boolean;
+  durationSeconds: number;
   refresh: () => Promise<void>;
   start: () => Promise<void>;
   accept: () => Promise<void>;
   decline: () => Promise<void>;
   end: () => Promise<void>;
+  toggleMute: () => void;
+  retryMedia: () => void;
 }>;
 
 const demoRuntime: CoordinationRuntime = {
@@ -49,7 +53,11 @@ export function AudioCallStateProvider({ api, children, mediaRuntime, runtime }:
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [mediaState, setMediaState] = useState<"unavailable" | AudioMediaConnectionState>("unavailable");
+  const [muted, setMuted] = useState(false);
+  const [durationSeconds, setDurationSeconds] = useState(0);
+  const [mediaAttempt, setMediaAttempt] = useState(0);
   const inFlight = useRef(false);
+  const mediaController = useRef<AudioCallMediaController | undefined>(undefined);
 
   const run = async (operation: () => Promise<AudioCallSession | null>) => {
     if (inFlight.current) return;
@@ -72,6 +80,17 @@ export function AudioCallStateProvider({ api, children, mediaRuntime, runtime }:
   const accept = () => call ? run(() => resolvedApi.acceptAudioCall(call.id, context(activeRuntime, call.version))) : Promise.resolve();
   const decline = () => call ? run(() => resolvedApi.declineAudioCall(call.id, context(activeRuntime, call.version))) : Promise.resolve();
   const end = () => call ? run(() => resolvedApi.endAudioCall(call.id, context(activeRuntime, call.version))) : Promise.resolve();
+  const toggleMute = () => {
+    setMuted((current) => {
+      const next = !current;
+      mediaController.current?.setMuted(next);
+      return next;
+    });
+  };
+  const retryMedia = () => {
+    setError(undefined);
+    setMediaAttempt((attempt) => attempt + 1);
+  };
 
   useEffect(() => {
     if (!shouldHydrate) return;
@@ -88,8 +107,10 @@ export function AudioCallStateProvider({ api, children, mediaRuntime, runtime }:
 
   useEffect(() => {
     let disposed = false;
-    let close: (() => Promise<void>) | undefined;
+    let controller: AudioCallMediaController | undefined;
     if (!mediaRuntime || call?.status !== "active") {
+      mediaController.current = undefined;
+      setMuted(false);
       setMediaState("unavailable");
       return;
     }
@@ -100,9 +121,13 @@ export function AudioCallStateProvider({ api, children, mediaRuntime, runtime }:
       context: () => context(activeRuntime, call.version),
       runtime: mediaRuntime,
       onState: (state) => { if (!disposed) setMediaState(state); },
-    }).then((cleanup) => {
-      if (disposed) void cleanup();
-      else close = cleanup;
+    }).then((startedController) => {
+      if (disposed) void startedController.close();
+      else {
+        controller = startedController;
+        mediaController.current = startedController;
+        startedController.setMuted(muted);
+      }
     }).catch((caught) => {
       if (!disposed) {
         setMediaState("failed");
@@ -111,15 +136,27 @@ export function AudioCallStateProvider({ api, children, mediaRuntime, runtime }:
     });
     return () => {
       disposed = true;
-      void close?.();
+      if (mediaController.current === controller) mediaController.current = undefined;
+      void controller?.close();
     };
-  }, [activeRuntime.actorIdentityId, activeRuntime.region, activeRuntime.sessionId, call?.id, call?.status, call?.version, mediaRuntime, resolvedApi]);
+  }, [activeRuntime.actorIdentityId, activeRuntime.region, activeRuntime.sessionId, call?.id, call?.status, call?.version, mediaAttempt, mediaRuntime, resolvedApi]);
+
+  useEffect(() => {
+    if (call?.status !== "active" || !call.acceptedAt) {
+      setDurationSeconds(0);
+      return;
+    }
+    const update = () => setDurationSeconds(Math.max(0, Math.floor((Date.now() - Date.parse(call.acceptedAt!)) / 1_000)));
+    update();
+    const timer = setInterval(update, 1_000);
+    return () => clearInterval(timer);
+  }, [call?.acceptedAt, call?.id, call?.status]);
 
   const value = useMemo<AudioCallStateValue>(() => ({
-    call, hydrated, busy, error, mediaState,
+    call, hydrated, busy, error, mediaState, muted, durationSeconds,
     incoming: Boolean(call && call.calleeIdentityId === activeRuntime.actorIdentityId),
-    refresh, start, accept, decline, end
-  }), [call, hydrated, busy, error, mediaState, activeRuntime.actorIdentityId]);
+    refresh, start, accept, decline, end, toggleMute, retryMedia
+  }), [call, hydrated, busy, error, mediaState, muted, durationSeconds, activeRuntime.actorIdentityId]);
   return <AudioCallStateContext.Provider value={value}>{children}</AudioCallStateContext.Provider>;
 }
 

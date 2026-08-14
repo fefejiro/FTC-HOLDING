@@ -14,6 +14,7 @@ type RuntimeConfig = Readonly<{
   allowedOrigins: readonly string[];
   maintenanceSecret: string;
   idempotencySecret: string;
+  pushTokenSecret: string;
   turnUrls: readonly string[];
   turnSharedSecret: string;
   environment: DeploymentEnvironment;
@@ -30,6 +31,7 @@ type ErrorCode =
   | "CONFIGURATION_ERROR"
   | "CONVERSATION_ACCESS_DENIED"
   | "DATABASE_NOT_READY"
+  | "DEVICE_PUSH_ACCESS_DENIED"
   | "FAMILY_ACCESS_DENIED"
   | "INVALID_REQUEST"
   | "IDENTITY_DELETED"
@@ -51,6 +53,7 @@ type ErrorCode =
   | "ORIGIN_NOT_ALLOWED"
   | "PROJECT_MISMATCH"
   | "PRODUCTION_WRITES_DISABLED"
+  | "PUSH_REGISTRATION_UNAVAILABLE"
   | "REGION_MISMATCH"
   | "SCHEMA_MISMATCH"
   | "CONCURRENCY_CONFLICT"
@@ -82,6 +85,7 @@ const readConfig = (): RuntimeConfig => {
       .filter(Boolean),
     maintenanceSecret: env("PEACEPAD_MAINTENANCE_SECRET"),
     idempotencySecret: env("PEACEPAD_IDEMPOTENCY_SECRET"),
+    pushTokenSecret: env("PEACEPAD_PUSH_TOKEN_SECRET"),
     turnUrls: parseTurnUrls(env("PEACEPAD_TURN_URLS")),
     turnSharedSecret: env("PEACEPAD_TURN_SHARED_SECRET"),
     environment: environment as DeploymentEnvironment,
@@ -243,6 +247,7 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     INVITATION_USED: "INVITATION_USED",
     CONCURRENCY_CONFLICT: "CONCURRENCY_CONFLICT",
     IDEMPOTENCY_CONFLICT: "IDEMPOTENCY_CONFLICT",
+    DEVICE_PUSH_ACCESS_DENIED: "DEVICE_PUSH_ACCESS_DENIED",
   };
   const invalidRequestCodes = new Set([
     "CONSENT_TYPE_INVALID", "DISPLAY_NAME_INVALID", "EXPECTED_VERSION_INVALID",
@@ -254,12 +259,13 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     "CASE_BINDER_INVALID", "ATTACHMENT_INTENT_INVALID", "ATTACHMENT_INTENT_EXPIRED",
     "ATTACHMENT_OBJECT_MISMATCH", "ATTACHMENT_STATE_INVALID", "CASE_BINDER_ARCHIVED",
     "TIMELINE_REQUEST_INVALID", "TIMELINE_SOURCE_INVALID", "TIMELINE_SOURCE_ALREADY_LINKED",
+    "DEVICE_PUSH_INVALID", "DEVICE_PUSH_CONFIGURATION_INVALID",
   ]);
   const safeCode = directCodes[message ?? ""] ?? (invalidRequestCodes.has(message ?? "") ? "INVALID_REQUEST" : "DATABASE_NOT_READY");
   const status = safeCode === "DATABASE_NOT_READY" ? 503
     : safeCode === "SIGNAL_RATE_LIMITED" ? 429
     : ["REGION_MISMATCH", "CONCURRENCY_CONFLICT", "IDEMPOTENCY_CONFLICT", "CALL_ALREADY_ACTIVE", "CALL_STATE_INVALID"].includes(safeCode) ? 409
-    : ["AI_CONSENT_REQUIRED", "INVITATION_SELF_ACCEPT_DENIED", "FAMILY_ACCESS_DENIED", "CONVERSATION_ACCESS_DENIED", "MESSAGE_ACCESS_DENIED", "MESSAGE_CHECK_DISABLED", "CALENDAR_ACCESS_DENIED", "CALL_ACCESS_DENIED"].includes(safeCode) ? 403
+    : ["AI_CONSENT_REQUIRED", "INVITATION_SELF_ACCEPT_DENIED", "FAMILY_ACCESS_DENIED", "CONVERSATION_ACCESS_DENIED", "MESSAGE_ACCESS_DENIED", "MESSAGE_CHECK_DISABLED", "CALENDAR_ACCESS_DENIED", "CALL_ACCESS_DENIED", "DEVICE_PUSH_ACCESS_DENIED"].includes(safeCode) ? 403
     : 400;
   return failure(request, status, safeCode as ErrorCode, safeCode === "DATABASE_NOT_READY" ? "The regional staging database is not ready." : "The request could not be completed.", requestId, config);
 };
@@ -311,6 +317,8 @@ const writeOperation = (method: string, path: string, body: Record<string, unkno
   if (method === "POST" && path === "/api/v2/families") return "family.created";
   if (method === "POST" && path === "/api/v2/invitations") return "invitation.created";
   if (method === "DELETE" && path === "/api/v2/account") return "account.deleted";
+  if (method === "POST" && path === "/api/v2/devices/push") return "device.push_registered";
+  if (method === "DELETE" && /^\/api\/v2\/devices\/push\/[^/]+$/.test(path)) return "device.push_revoked";
   if (method === "POST" && path === "/api/v2/conversations") return "conversation.created";
   if (method === "PUT" && /^\/api\/v2\/conversations\/[^/]+\/message-check$/.test(path)) return "message_check.updated";
   if (method === "POST" && /^\/api\/v2\/conversations\/[^/]+\/messages$/.test(path)) return "message.sent";
@@ -950,16 +958,18 @@ const handler = async (request: Request): Promise<Response> => {
   const isTimelineEntryCreation = path === "/api/v2/timeline-entries";
   const isAudioCallCreation = path === "/api/v2/calls";
   const audioCallTransition = path.match(/^\/api\/v2\/calls\/([^/]+)\/(accept|decline|end)$/);
+  const isDevicePushRegistration = path === "/api/v2/devices/push";
+  const devicePushRevocation = path.match(/^\/api\/v2\/devices\/push\/([^/]+)$/);
   if (
     (request.method === "POST" && ([
       "/api/v2/session/bootstrap",
       "/api/v2/consents",
       "/api/v2/families",
       "/api/v2/invitations",
-    ].includes(path) || isInvitationTransition || isConversationCreation || isMessageSend || isMessageLifecycle || isMessageCorrection || isCalendarLayerCreation || isScheduleEventCreation || isCaseBinderCreation || isAttachmentIntentCreation || attachmentCompletionMatch || isTimelineEntryCreation || isAudioCallCreation || audioCallTransition)) ||
+    ].includes(path) || isInvitationTransition || isConversationCreation || isMessageSend || isMessageLifecycle || isMessageCorrection || isCalendarLayerCreation || isScheduleEventCreation || isCaseBinderCreation || isAttachmentIntentCreation || attachmentCompletionMatch || isTimelineEntryCreation || isAudioCallCreation || audioCallTransition || isDevicePushRegistration)) ||
     (request.method === "PATCH" && (calendarLayerMatch || scheduleEventMatch || caseBinderMatch)) ||
     isMessageCheckUpdate ||
-    (request.method === "DELETE" && (isInvitationRevocation || isAccountDeletion || calendarLayerMatch || scheduleEventMatch))
+    (request.method === "DELETE" && (isInvitationRevocation || isAccountDeletion || calendarLayerMatch || scheduleEventMatch || devicePushRevocation))
   ) {
     const authenticated = await authenticate(request, config);
     if (!authenticated) {
@@ -1302,6 +1312,62 @@ const handler = async (request: Request): Promise<Response> => {
         return failure(request, 503, "STORAGE_UNAVAILABLE", "Private storage is temporarily unavailable.", requestId, config);
       }
       return json(request, 201, { ...intent, uploadUrl: signed.data.signedUrl }, requestId, config);
+    }
+
+    if (isDevicePushRegistration) {
+      const installationId = typeof body.installationId === "string" ? body.installationId : "";
+      const platform = body.platform === "ios" || body.platform === "android" ? body.platform : "";
+      const transport = body.transport === "expo" || body.transport === "apns-voip" ? body.transport : "";
+      const appId = typeof body.appId === "string" ? body.appId : "";
+      const token = typeof body.token === "string" ? body.token.trim() : "";
+      const validExpoToken = /^(?:ExponentPushToken|ExpoPushToken)\[[A-Za-z0-9_-]{20,200}\]$/.test(token);
+      const validVoipToken = /^[0-9a-f]{64,256}$/i.test(token) && token.length % 2 === 0;
+      const allowedAppId = config.environment === "production"
+        ? appId === "ca.peacepad.family"
+        : ["ca.peacepad.family", "ca.peacepad.nextnative.lab"].includes(appId);
+      if (
+        !isUuid(installationId) ||
+        !platform ||
+        !transport ||
+        !allowedAppId ||
+        (transport === "expo" ? !validExpoToken : platform !== "ios" || !validVoipToken) ||
+        Object.keys(body).some((key) => !["installationId", "platform", "transport", "appId", "token"].includes(key))
+      ) {
+        return failure(request, 400, "INVALID_REQUEST", "Device notification details are invalid.", requestId, config);
+      }
+      if (config.pushTokenSecret.length < 32) {
+        return failure(request, 503, "PUSH_REGISTRATION_UNAVAILABLE", "Device notifications are not configured.", requestId, config);
+      }
+      const { data, error } = await authenticated.admin.rpc("peacepad_v2_register_device_push", {
+        p_identity_id: authenticated.user.id,
+        p_region: config.region,
+        p_installation_id: installationId,
+        p_platform: platform,
+        p_transport: transport,
+        p_app_id: appId,
+        p_token: token,
+        p_token_secret: config.pushTokenSecret,
+        p_idempotency_key: databaseWriteToken,
+        p_schema_version: context.schemaVersion,
+      });
+      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 201, data, requestId, config);
+    }
+
+    if (request.method === "DELETE" && devicePushRevocation) {
+      const registrationId = decodeURIComponent(devicePushRevocation[1]);
+      const expectedVersion = Number((request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? "");
+      if (!isUuid(registrationId) || !Number.isInteger(expectedVersion) || expectedVersion < 1) {
+        return failure(request, 400, "INVALID_REQUEST", "A valid device registration version is required.", requestId, config);
+      }
+      const { data, error } = await authenticated.admin.rpc("peacepad_v2_revoke_device_push", {
+        p_identity_id: authenticated.user.id,
+        p_region: config.region,
+        p_registration_id: registrationId,
+        p_expected_version: expectedVersion,
+        p_idempotency_key: databaseWriteToken,
+        p_schema_version: context.schemaVersion,
+      });
+      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
     }
 
     if (attachmentCompletionMatch) {
