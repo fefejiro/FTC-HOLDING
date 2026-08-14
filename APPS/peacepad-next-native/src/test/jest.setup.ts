@@ -13,3 +13,25 @@ jest.mock("expo-network", () => ({
     type: "WIFI"
   }))
 }));
+
+jest.mock("expo-apple-authentication", () => {
+  const React = require("react");
+  const { Pressable, Text } = require("react-native");
+  const AppleAuthenticationButton = ({ accessibilityLabel, onPress }: { accessibilityLabel?: string; onPress?: () => void }) => (
+    React.createElement(Pressable, { accessibilityLabel, accessibilityRole: "button", onPress }, React.createElement(Text, null, accessibilityLabel))
+  );
+  return {
+    AppleAuthenticationButton,
+    AppleAuthenticationButtonStyle: { BLACK: 0, WHITE: 1, WHITE_OUTLINE: 2 },
+    AppleAuthenticationButtonType: { CONTINUE: 0, SIGN_IN: 1, SIGN_UP: 2 },
+    AppleAuthenticationScope: { EMAIL: 0, FULL_NAME: 1 },
+    isAvailableAsync: jest.fn(async () => true),
+    signInAsync: jest.fn()
+  };
+});
+
+jest.mock("expo-crypto", () => ({
+  CryptoDigestAlgorithm: { SHA256: "SHA-256" },
+  digestStringAsync: jest.fn(async () => "hashed-nonce"),
+  randomUUID: jest.fn(() => "test-nonce")
+}));

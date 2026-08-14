@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import * as SecureStore from "expo-secure-store";
-import { AppState } from "react-native";
+import { AppState, Linking } from "react-native";
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 import type { PeacePadSupabaseConfig } from "../config/environment";
 import { useOptionalLocalization, type MessageKey } from "../localization/LocalizationProvider";
@@ -54,14 +54,20 @@ export const secureSupabaseStorage = {
 export type SupabaseAuthClient = Pick<SupabaseClient, "auth">;
 export type SupabaseRuntimeClient = SupabaseAuthClient & Partial<Pick<SupabaseClient, "channel" | "removeChannel" | "realtime">>;
 export type SupabaseSessionStatus = "loading" | "signed-out" | "ready" | "error";
+export type SupabaseAuthIntent = "default" | "password-recovery";
 
 type SupabaseSessionValue = Readonly<{
   status: SupabaseSessionStatus;
   session?: Session;
   error?: string;
+  authIntent: SupabaseAuthIntent;
   realtimeClient?: PeacePadRealtimeClient;
   getAccessToken: () => Promise<string | undefined>;
   signInWithPassword: (email: string, password: string) => Promise<void>;
+  signUpWithPassword: (email: string, password: string) => Promise<{ confirmationRequired: boolean }>;
+  signInWithApple: (identityToken: string, nonce: string, fullName?: string) => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
+  updatePassword: (password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }>;
 
@@ -84,6 +90,21 @@ function safeAuthMessage(error: unknown, t: (key: MessageKey) => string): string
     : t("runtime.signInUnavailable");
 }
 
+export function sessionTokensFromAuthUrl(url?: string | null): { accessToken: string; refreshToken: string; intent: SupabaseAuthIntent } | undefined {
+  if (!url || url.trim() !== url) return undefined;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "peacepad:" || parsed.hostname !== "auth" || !/^\/(confirm|reset-password)\/?$/.test(parsed.pathname)) return undefined;
+    const values = new URLSearchParams(parsed.hash.startsWith("#") ? parsed.hash.slice(1) : parsed.hash);
+    const accessToken = values.get("access_token") ?? "";
+    const refreshToken = values.get("refresh_token") ?? "";
+    if (!accessToken || !refreshToken || accessToken.length > 8_192 || refreshToken.length > 8_192) return undefined;
+    return { accessToken, refreshToken, intent: parsed.pathname.startsWith("/reset-password") ? "password-recovery" : "default" };
+  } catch {
+    return undefined;
+  }
+}
+
 export function SupabaseSessionProvider({
   children,
   client
@@ -95,6 +116,7 @@ export function SupabaseSessionProvider({
   const [status, setStatus] = useState<SupabaseSessionStatus>("loading");
   const [session, setSession] = useState<Session>();
   const [error, setError] = useState<string>();
+  const [authIntent, setAuthIntent] = useState<SupabaseAuthIntent>("default");
   const mounted = useRef(true);
   const authGeneration = useRef(0);
   const realtimeClient = useMemo<PeacePadRealtimeClient | undefined>(() => {
@@ -125,9 +147,11 @@ export function SupabaseSessionProvider({
       setStatus(data.session ? "ready" : "signed-out");
       setError(undefined);
     });
-    const { data } = client.auth.onAuthStateChange((_event, nextSession) => {
+    const { data } = client.auth.onAuthStateChange((event, nextSession) => {
       if (!mounted.current) return;
       authGeneration.current += 1;
+      if (event === "PASSWORD_RECOVERY") setAuthIntent("password-recovery");
+      else if (!nextSession) setAuthIntent("default");
       setSession(nextSession ?? undefined);
       setStatus(nextSession ? "ready" : "signed-out");
       setError(undefined);
@@ -135,6 +159,35 @@ export function SupabaseSessionProvider({
     return () => {
       mounted.current = false;
       data.subscription.unsubscribe();
+    };
+  }, [client, t]);
+
+  useEffect(() => {
+    let active = true;
+    let liveUrlReceived = false;
+    const receive = async (url?: string | null) => {
+      const tokens = sessionTokensFromAuthUrl(url);
+      if (!active || !tokens) return;
+      setAuthIntent(tokens.intent);
+      const result = await client.auth.setSession({ access_token: tokens.accessToken, refresh_token: tokens.refreshToken });
+      if (!active) return;
+      if (result.error) {
+        setAuthIntent("default");
+        setSession(undefined);
+        setStatus("signed-out");
+        setError(t("runtime.signInUnavailable"));
+      }
+    };
+    const subscription = Linking.addEventListener("url", ({ url }) => {
+      liveUrlReceived = true;
+      void receive(url);
+    });
+    void Linking.getInitialURL().then((url) => {
+      if (!liveUrlReceived) void receive(url);
+    }).catch(() => undefined);
+    return () => {
+      active = false;
+      subscription.remove();
     };
   }, [client, t]);
 
@@ -174,10 +227,12 @@ export function SupabaseSessionProvider({
     status,
     session,
     error,
+    authIntent,
     realtimeClient,
     getAccessToken,
     signInWithPassword: async (email, password) => {
       setError(undefined);
+      setAuthIntent("default");
       const result = await client.auth.signInWithPassword({ email: email.trim(), password });
       if (result.error) {
         setSession(undefined);
@@ -186,8 +241,57 @@ export function SupabaseSessionProvider({
         throw result.error;
       }
     },
+    signUpWithPassword: async (email, password) => {
+      setError(undefined);
+      setAuthIntent("default");
+      const result = await client.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { emailRedirectTo: "peacepad://auth/confirm" }
+      });
+      if (result.error) {
+        setSession(undefined);
+        setStatus("signed-out");
+        setError(safeAuthMessage(result.error, t));
+        throw result.error;
+      }
+      return { confirmationRequired: !result.data.session };
+    },
+    signInWithApple: async (identityToken, nonce, fullName) => {
+      setError(undefined);
+      setAuthIntent("default");
+      const result = await client.auth.signInWithIdToken({ provider: "apple", token: identityToken, nonce });
+      if (result.error) {
+        setSession(undefined);
+        setStatus("signed-out");
+        setError(t("runtime.signInUnavailable"));
+        throw result.error;
+      }
+      if (fullName) {
+        const updated = await client.auth.updateUser({ data: { full_name: fullName } });
+        if (updated.error) throw updated.error;
+      }
+    },
+    sendPasswordReset: async (email) => {
+      setError(undefined);
+      const result = await client.auth.resetPasswordForEmail(email.trim(), { redirectTo: "peacepad://auth/reset-password" });
+      if (result.error) {
+        setError(t("runtime.signInUnavailable"));
+        throw result.error;
+      }
+    },
+    updatePassword: async (password) => {
+      setError(undefined);
+      const result = await client.auth.updateUser({ password });
+      if (result.error) {
+        setError(t("runtime.signInUnavailable"));
+        throw result.error;
+      }
+      setAuthIntent("default");
+    },
     signOut: async () => {
       authGeneration.current += 1;
+      setAuthIntent("default");
       setSession(undefined);
       setStatus("signed-out");
       try {
@@ -202,7 +306,7 @@ export function SupabaseSessionProvider({
         // Local authorization was already removed before the network operation.
       }
     }
-  }), [client, error, getAccessToken, realtimeClient, session, status, t]);
+  }), [authIntent, client, error, getAccessToken, realtimeClient, session, status, t]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

@@ -80,7 +80,8 @@ describe("PeacePad iOS release variant", () => {
     expect(resolveConfig({ config: structuredClone(appJson.expo) })).toMatchObject({
       version: "2.0.0",
       scheme: "peacepad",
-      ios: { buildNumber: "4", bundleIdentifier: "ca.peacepad.family" },
+      plugins: expect.arrayContaining(["expo-apple-authentication"]),
+      ios: { buildNumber: "5", bundleIdentifier: "ca.peacepad.family", usesAppleSignIn: true },
       extra: {
         appStoreId: "6793350735",
         environment: "production",
