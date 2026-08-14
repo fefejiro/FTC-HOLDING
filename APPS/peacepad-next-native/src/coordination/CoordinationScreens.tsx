@@ -14,6 +14,7 @@ import { homeText } from "../localization/homeLocalization";
 import { callText } from "../localization/callLocalization";
 import { PublicOnboardingSlides } from "../auth/PublicOnboardingAuth";
 import { LinkedSignInMethods } from "../auth/LinkedSignInMethods";
+import { SupportPanel } from "../support/SupportPanel";
 import { colors, spacing, typography, usesLargeTextLayout } from "../theme";
 import { useRecordsState } from "../records/RecordsState";
 import type { AttachmentMediaType } from "../domain/v2";
@@ -819,6 +820,7 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmLeaveFamily, setConfirmLeaveFamily] = useState(false);
   const [replayIntroduction, setReplayIntroduction] = useState(false);
+  const [showSupport, setShowSupport] = useState(false);
   if (replayIntroduction) {
     return <PublicOnboardingSlides compact onComplete={() => setReplayIntroduction(false)} />;
   }
@@ -833,10 +835,11 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
         <Text style={styles.actionTitle}>{t("more.privacy.title")}</Text>
         <Text style={styles.caption}>{t("more.privacy.body")}</Text>
       </View>
-      <View style={styles.actionCard}>
+      <Pressable accessibilityRole="button" onPress={() => setShowSupport((current) => !current)} style={styles.actionCard}>
         <Text style={styles.actionTitle}>{t("more.support.title")}</Text>
         <Text style={styles.caption}>{t("more.support.body")}</Text>
-      </View>
+      </Pressable>
+      {showSupport ? <View style={styles.actionCardLargeText}><SupportPanel /></View> : null}
       <Pressable accessibilityRole="button" onPress={() => setReplayIntroduction(true)} style={styles.actionCard}>
         <Text style={styles.actionTitle}>{t("more.introduction.title")}</Text>
         <Text style={styles.caption}>{t("more.introduction.body")}</Text>
