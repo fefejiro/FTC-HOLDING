@@ -8,7 +8,7 @@ Branch: `feat/peacepad-v2-full-core`
 
 Pull request: [#250](https://github.com/fefejiro/FTC-HOLDING/pull/250)
 
-Latest implementation commit: `704253ad9`
+Latest implementation commit: `d91a949bf`
 
 App: `APPS/peacepad-next-native`
 
@@ -45,6 +45,10 @@ must be migrated or bridged before V2 replaces the public app.
 | `0e26ce399` | Privacy-safe support panel and content-free diagnostic identifier |
 | `d3169759c` | Actor-bound profile editing with optimistic concurrency, EN/FR/ES UI, accessible success/error announcements, and content-free audit |
 | `704253ad9` | Read-only legacy inventory now reports optional records, attachments, tasks, and expenses scope without emitting source content |
+| `940cb599c` | Migration inventory evidence records the bounded read-only reconciliation scope |
+| `8394bf44f` | Privacy-safe account export manifest with JWT/region/version/idempotency guards and content-free audit |
+| `1b534773e` | Production upload workflow aligned to the app's current signed build 5 contract |
+| `d91a949bf` | Status handover updated to distinguish production build 5 from the internal TestFlight build 3 |
 
 Existing pre-PR work already supplies persistent messaging, Calendar basics,
 private Case Binders, account deletion, offline message retry, regional call
@@ -112,7 +116,7 @@ failures.
 
 ## Latest bounded slice: privacy-safe account export manifest
 
-The current working tree adds `POST /api/v2/account/export` and the matching
+The current branch adds `POST /api/v2/account/export` and the matching
 native `prepareAccountExport` contract. It requires the authenticated JWT,
 the exact region, an `If-Match` identity version, and an idempotency key. The
 server returns aggregate counts plus `contentIncluded: false`; it never
@@ -122,18 +126,22 @@ export manifest/preparation step, not yet a downloadable archive; a later
 signed bundle worker must be added before claiming full data-export support.
 
 Local proof for this slice: native TypeScript, Deno Edge check, diff check,
-and `CoordinationApi.test.ts` (33/33) pass. A platform PostgreSQL proof and
-hosted descendant gate still need to be added before this slice is considered
-hosted-verified.
+and `CoordinationApi.test.ts` (33/33) pass. Descendant Native and Infrastructure
+hosted gates passed at `1b534773e`; the account-export SQL proof is still a
+follow-up requirement before calling the export slice independently
+POSTGRES-VERIFIED.
 
 ## Next developer: first three tasks
 
-1. Confirm the remote branch contains the export slice, wait for the descendant-head
-   Native and Infrastructure gates, record their URLs, and merge PR #250 only
-   when the PeacePad checks pass.
-2. Start a new isolated branch for a **read-only real V1 inventory and migration
+1. Confirm the remote branch contains the export slice and the descendant-head
+   Native/Infrastructure PASS runs (`31842968700` / `31842968741`), then merge
+   PR #250 only when the repository checks pass.
+2. Resolve the production upload blocker: create the approved Google Web and
+   iOS OAuth clients for `ca.peacepad.family`, set the three protected EAS
+   production client-ID variables, then rerun the build-5 upload workflow.
+3. Start a new isolated branch for a **read-only real V1 inventory and migration
    reconciliation report**. Do not mutate production and do not copy passwords.
-3. Implement the next bounded production-core slice: authenticated data export
+4. Implement the next bounded production-core slice: authenticated data export
    with content-free audit, followed by device/session management. Keep video
    and Conch feature flags off.
 
