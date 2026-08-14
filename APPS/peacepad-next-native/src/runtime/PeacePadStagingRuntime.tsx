@@ -16,6 +16,7 @@ import { createWriteContext, type AcceptedInvitation, type InvitationPreview } f
 import { colors, spacing, typography } from "../theme";
 import { secureMessageOutboxStore } from "../messaging/secureMessageOutbox";
 import { useOptionalLocalization } from "../localization/LocalizationProvider";
+import { PublicOnboardingAuth } from "../auth/PublicOnboardingAuth";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export function invitationCodeFromStagingUrl(url?: string | null, expectedProtocol = "peacepadnextlab:"): string | undefined {
@@ -295,7 +296,7 @@ export function PeacePadStagingRuntime({
 
   useEffect(() => {
     const currentGeneration = ++generation.current;
-    if (auth.status !== "ready" || !auth.session) {
+    if (auth.status !== "ready" || !auth.session || auth.authIntent === "password-recovery") {
       setRuntimeState({ status: "loading" });
       return;
     }
@@ -365,11 +366,13 @@ export function PeacePadStagingRuntime({
       }
       setRuntimeState({ status: "error", message: error instanceof Error ? error.message : "PeacePad staging is unavailable." });
     });
-  }, [auth.getAccessToken, auth.session, auth.status, environment, fetcher, pendingActivation, reloadVersion, selectedFamilyCircleId, supabase]);
+  }, [auth.authIntent, auth.getAccessToken, auth.session, auth.status, environment, fetcher, pendingActivation, reloadVersion, selectedFamilyCircleId, supabase]);
 
   if (auth.status === "loading") return <GateMessage busy title={t("runtime.restoringSession")} body={t("runtime.checkingDevice")} />;
   if (auth.status === "error") return <GateMessage title={t("runtime.sessionUnavailable")} body={auth.error ?? t("runtime.restoreError")} />;
+  if (supabase.environment === "production" && auth.authIntent === "password-recovery") return <PublicOnboardingAuth />;
   if (auth.status === "signed-out") {
+    if (supabase.environment === "production") return <PublicOnboardingAuth />;
     return (
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.signInKeyboard}>
         <ScrollView

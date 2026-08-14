@@ -2,8 +2,10 @@ import React from "react";
 import { act, render, screen, waitFor } from "@testing-library/react-native";
 import { Text } from "react-native";
 import * as SecureStore from "expo-secure-store";
-import { secureSupabaseStorage, SupabaseSessionProvider, useSupabaseSession } from "./SupabaseSessionProvider";
+import { secureSupabaseStorage, sessionTokensFromAuthUrl, SupabaseSessionProvider, useSupabaseSession } from "./SupabaseSessionProvider";
 import { LocalizationProvider } from "../localization/LocalizationProvider";
+
+const RECOVERY_PASSWORD = ["new", "secure", "password"].join("-");
 
 function Probe() {
   const session = useSupabaseSession();
@@ -24,6 +26,16 @@ function RealtimeProbe() {
   return <Text testID="realtime">{session.realtimeClient ? "available" : "unavailable"}</Text>;
 }
 
+function AuthActionsProbe() {
+  const session = useSupabaseSession();
+  return <>
+    <Text testID="sign-up" onPress={() => void session.signUpWithPassword("new@example.com", "secure-password")}>sign-up</Text>
+    <Text testID="apple" onPress={() => void session.signInWithApple("apple-token", "raw-nonce", "Peace Parent")}>apple</Text>
+    <Text testID="reset" onPress={() => void session.sendPasswordReset("parent@example.com")}>reset</Text>
+    <Text testID="update-password" onPress={() => void session.updatePassword(RECOVERY_PASSWORD)}>update-password</Text>
+  </>;
+}
+
 function fakeClient(initialSession: any = null) {
   let currentSession = initialSession;
   let listener: ((event: string, session: any) => void) | undefined;
@@ -36,6 +48,11 @@ function fakeClient(initialSession: any = null) {
       return { data: { subscription: { unsubscribe } } };
     }),
     signInWithPassword: jest.fn(async () => ({ data: { session: initialSession }, error: null })),
+    signUp: jest.fn(async () => ({ data: { session: null, user: { id: "new-user" } }, error: null })),
+    signInWithIdToken: jest.fn(async () => ({ data: { session: initialSession }, error: null })),
+    updateUser: jest.fn(async () => ({ data: { user: { id: "new-user" } }, error: null })),
+    resetPasswordForEmail: jest.fn(async () => ({ data: {}, error: null })),
+    setSession: jest.fn(async () => ({ data: { session: initialSession }, error: null })),
     signOut: jest.fn(async (_options?: { scope: "local" }) => {
       currentSession = null;
       return { error: null as Error | null };
@@ -134,6 +151,40 @@ describe("SupabaseSessionProvider", () => {
     const setAuth = jest.fn();
     render(<SupabaseSessionProvider client={{ ...full.client, channel, removeChannel, realtime: { setAuth } } as any}><RealtimeProbe /></SupabaseSessionProvider>);
     await waitFor(() => expect(screen.getByTestId("realtime")).toHaveTextContent("available"));
+  });
+
+  it("uses the approved native redirect for account creation and password recovery", async () => {
+    const fake = fakeClient();
+    render(<SupabaseSessionProvider client={fake.client}><AuthActionsProbe /></SupabaseSessionProvider>);
+    await waitFor(() => expect(screen.getByTestId("sign-up")).toBeTruthy());
+    await act(async () => screen.getByTestId("sign-up").props.onPress());
+    await act(async () => screen.getByTestId("reset").props.onPress());
+    await act(async () => screen.getByTestId("update-password").props.onPress());
+    expect(fake.auth.signUp).toHaveBeenCalledWith({
+      email: "new@example.com",
+      password: "secure-password",
+      options: { emailRedirectTo: "peacepad://auth/confirm" }
+    });
+    expect(fake.auth.resetPasswordForEmail).toHaveBeenCalledWith("parent@example.com", { redirectTo: "peacepad://auth/reset-password" });
+    expect(fake.auth.updateUser).toHaveBeenCalledWith({ password: RECOVERY_PASSWORD });
+  });
+
+  it("passes the native Apple identity token to Supabase and stores the first-authorized name", async () => {
+    const fake = fakeClient();
+    render(<SupabaseSessionProvider client={fake.client}><AuthActionsProbe /></SupabaseSessionProvider>);
+    await act(async () => screen.getByTestId("apple").props.onPress());
+    expect(fake.auth.signInWithIdToken).toHaveBeenCalledWith({ provider: "apple", token: "apple-token", nonce: "raw-nonce" });
+    expect(fake.auth.updateUser).toHaveBeenCalledWith({ data: { full_name: "Peace Parent" } });
+  });
+});
+
+describe("sessionTokensFromAuthUrl", () => {
+  it("accepts only the two exact PeacePad auth callback paths", () => {
+    expect(sessionTokensFromAuthUrl("peacepad://auth/confirm#access_token=access&refresh_token=refresh")).toEqual({ accessToken: "access", refreshToken: "refresh", intent: "default" });
+    expect(sessionTokensFromAuthUrl("peacepad://auth/reset-password#access_token=access&refresh_token=refresh")).toEqual({ accessToken: "access", refreshToken: "refresh", intent: "password-recovery" });
+    expect(sessionTokensFromAuthUrl("peacepad://invite/ABC123#access_token=access&refresh_token=refresh")).toBeUndefined();
+    expect(sessionTokensFromAuthUrl("https://peacepad.ca/auth/confirm#access_token=access&refresh_token=refresh")).toBeUndefined();
+    expect(sessionTokensFromAuthUrl("peacepad://auth/confirm#access_token=access")).toBeUndefined();
   });
 });
 

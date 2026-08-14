@@ -4,7 +4,7 @@ const DUAL_SIMULATOR_MODE = "staging-simulator-dual";
 const PLAYSTORE_INTERNAL_MODE = "playstore-internal";
 const TESTFLIGHT_VERSION = "2.0.0";
 const TESTFLIGHT_BUILD_NUMBER = "3";
-const APPSTORE_PRODUCTION_BUILD_NUMBER = "4";
+const APPSTORE_PRODUCTION_BUILD_NUMBER = "5";
 const PLAYSTORE_VERSION_CODE = 42;
 const PRODUCTION_BUNDLE_ID = "ca.peacepad.family";
 const APP_STORE_ID = "6793350735";
@@ -74,10 +74,15 @@ module.exports = ({ config }) => {
       ...config,
       scheme: "peacepad",
       version: TESTFLIGHT_VERSION,
+      plugins: [
+        ...(config.plugins || []),
+        "expo-apple-authentication"
+      ],
       ios: {
         ...config.ios,
         buildNumber: APPSTORE_PRODUCTION_BUILD_NUMBER,
-        bundleIdentifier: PRODUCTION_BUNDLE_ID
+        bundleIdentifier: PRODUCTION_BUNDLE_ID,
+        usesAppleSignIn: true
       },
       extra: {
         ...config.extra,
