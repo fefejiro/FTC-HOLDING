@@ -316,6 +316,7 @@ const writeOperation = (method: string, path: string, body: Record<string, unkno
   if (method === "POST" && path === "/api/v2/consents") return "consent.recorded";
   if (method === "POST" && path === "/api/v2/families") return "family.created";
   if (method === "PATCH" && path === "/api/v2/account/profile") return "profile.updated";
+  if (method === "POST" && path === "/api/v2/account/export") return "account.exported";
   if (method === "DELETE" && /^\/api\/v2\/families\/[^/]+\/membership$/.test(path)) return "family.left";
   if (method === "POST" && path === "/api/v2/invitations") return "invitation.created";
   if (method === "DELETE" && path === "/api/v2/account") return "account.deleted";
@@ -944,6 +945,7 @@ const handler = async (request: Request): Promise<Response> => {
   const isInvitationTransition = /^\/api\/v2\/invitations\/[^/]+\/(accept|decline)$/.test(path);
   const isInvitationRevocation = /^\/api\/v2\/invitations\/[^/]+$/.test(path);
   const isAccountDeletion = path === "/api/v2/account";
+  const isAccountExport = path === "/api/v2/account/export";
   const isProfileUpdate = path === "/api/v2/account/profile";
   const familyExitMatch = path.match(/^\/api\/v2\/families\/([^/]+)\/membership$/);
   const isConversationCreation = path === "/api/v2/conversations";
@@ -970,6 +972,7 @@ const handler = async (request: Request): Promise<Response> => {
       "/api/v2/consents",
       "/api/v2/families",
       "/api/v2/invitations",
+      "/api/v2/account/export",
     ].includes(path) || isInvitationTransition || isConversationCreation || isMessageSend || isMessageLifecycle || isMessageCorrection || isCalendarLayerCreation || isScheduleEventCreation || isCaseBinderCreation || isAttachmentIntentCreation || attachmentCompletionMatch || isTimelineEntryCreation || isAudioCallCreation || audioCallTransition || isDevicePushRegistration)) ||
     (request.method === "PATCH" && (isProfileUpdate || calendarLayerMatch || scheduleEventMatch || caseBinderMatch)) ||
     isMessageCheckUpdate ||
@@ -1103,6 +1106,22 @@ const handler = async (request: Request): Promise<Response> => {
         privateStorageDeleted,
         privateStorageCleanupPending,
       }, requestId, config);
+    }
+
+    if (isAccountExport) {
+      const expectedVersionHeader = (request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? "";
+      const expectedVersion = Number(expectedVersionHeader);
+      if (Object.keys(body).length !== 0 || !Number.isInteger(expectedVersion) || expectedVersion < 1) {
+        return failure(request, 400, "INVALID_REQUEST", "A valid account version is required.", requestId, config);
+      }
+      const { data, error } = await authenticated.admin.rpc("peacepad_v2_prepare_account_export", {
+        p_identity_id: authenticated.user.id,
+        p_region: config.region,
+        p_expected_version: expectedVersion,
+        p_idempotency_key: databaseWriteToken,
+        p_schema_version: context.schemaVersion,
+      });
+      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
     }
 
     if (isMessageCheckUpdate && conversationMessageCheckMatch) {

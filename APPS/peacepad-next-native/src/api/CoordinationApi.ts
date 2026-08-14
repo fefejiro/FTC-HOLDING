@@ -121,6 +121,16 @@ export type AudioCallTurnCredentials = Readonly<{
   }>[];
 }>;
 
+export type AccountExportManifest = Readonly<{
+  identityId: EntityId;
+  region: "ca" | "us";
+  schemaVersion: "2.0";
+  generatedAt: string;
+  contentIncluded: false;
+  status: "manifest-ready";
+  counts: Readonly<Record<"families" | "conversations" | "messageEvents" | "calendarEvents" | "privateRecords" | "privateAttachments" | "legacyTasks" | "legacyExpenses", number>>;
+}>;
+
 export type LeftFamily = Readonly<{
   familyCircleId: EntityId;
   participantGrantId: EntityId;
@@ -243,6 +253,7 @@ export interface PeacePadCoordinationApi {
   registerDevicePush(input: RegisterDevicePushInput, context: WriteContext): Promise<DevicePushRegistration>;
   revokeDevicePush(registrationId: EntityId, context: WriteContext): Promise<RevokedDevicePushRegistration>;
   deleteAccount(context: WriteContext): Promise<DeletedAccount>;
+  prepareAccountExport(context: WriteContext): Promise<AccountExportManifest>;
   updateProfile(displayName: string, context: WriteContext): Promise<UpdatedProfile>;
   createFamily(familyName: string, context: WriteContext): Promise<CreatedFamily>;
   leaveFamily(familyCircleId: EntityId, context: WriteContext): Promise<LeftFamily>;
@@ -414,6 +425,25 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
       || typeof result.privateStorageCleanupPending !== "boolean"
     ) {
       throw new PeacePadApiError("PeacePad could not verify the account deletion receipt.", "http", 502);
+    }
+    return result;
+  }
+
+  async prepareAccountExport(context: WriteContext) {
+    const result = await this.write<AccountExportManifest>("/api/v2/account/export", "POST", {}, context);
+    if (
+      !result
+      || result.identityId !== context.actor.identityId
+      || result.region !== context.region
+      || result.schemaVersion !== "2.0"
+      || result.contentIncluded !== false
+      || result.status !== "manifest-ready"
+      || !result.generatedAt
+      || Number.isNaN(Date.parse(result.generatedAt))
+      || !result.counts
+      || Object.values(result.counts).some((value) => !Number.isInteger(value) || value < 0)
+    ) {
+      throw new PeacePadApiError("PeacePad could not verify the account export manifest.", "http", 502);
     }
     return result;
   }

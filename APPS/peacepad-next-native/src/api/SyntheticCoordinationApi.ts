@@ -16,6 +16,7 @@ import {
   type CreateInvitationInput,
   type CreatedInvitation,
   type CreatedFamily,
+  type AccountExportManifest,
   type CreateScheduleEventInput,
   type RecordMessageLifecycleInput,
   type MessageSearchResult,
@@ -467,6 +468,27 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
       participantGrantId: "grant-current",
       familyName: familyName.trim(),
       region: "ca"
+    };
+  }
+
+  async prepareAccountExport(context: WriteContext): Promise<AccountExportManifest> {
+    return {
+      identityId: context.actor.identityId,
+      region: context.region,
+      schemaVersion: "2.0",
+      generatedAt: new Date().toISOString(),
+      contentIncluded: false,
+      status: "manifest-ready",
+      counts: {
+        families: 1,
+        conversations: this.conversations.length,
+        messageEvents: this.messages.length,
+        calendarEvents: this.events.length,
+        privateRecords: this.binders.length,
+        privateAttachments: this.attachments.length,
+        legacyTasks: 0,
+        legacyExpenses: 0
+      }
     };
   }
 

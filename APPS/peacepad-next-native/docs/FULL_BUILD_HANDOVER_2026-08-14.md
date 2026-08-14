@@ -110,9 +110,25 @@ failures.
 7. **Store release:** build one exact signed Canada-production candidate, use
    internal cohorts first, then phased App Store and Play production rollouts.
 
+## Latest bounded slice: privacy-safe account export manifest
+
+The current working tree adds `POST /api/v2/account/export` and the matching
+native `prepareAccountExport` contract. It requires the authenticated JWT,
+the exact region, an `If-Match` identity version, and an idempotency key. The
+server returns aggregate counts plus `contentIncluded: false`; it never
+returns message bodies, filenames, object paths, tokens, or authentication
+material. The `account.exported` audit event is content-free. This is an
+export manifest/preparation step, not yet a downloadable archive; a later
+signed bundle worker must be added before claiming full data-export support.
+
+Local proof for this slice: native TypeScript, Deno Edge check, diff check,
+and `CoordinationApi.test.ts` (33/33) pass. A platform PostgreSQL proof and
+hosted descendant gate still need to be added before this slice is considered
+hosted-verified.
+
 ## Next developer: first three tasks
 
-1. Confirm the remote branch contains `704253ad9`, wait for the descendant-head
+1. Confirm the remote branch contains the export slice, wait for the descendant-head
    Native and Infrastructure gates, record their URLs, and merge PR #250 only
    when the PeacePad checks pass.
 2. Start a new isolated branch for a **read-only real V1 inventory and migration

@@ -63,6 +63,23 @@ describe("HttpPeacePadCoordinationApi", () => {
         displayName: "Calm Parent",
         region: context.region,
         version: 5
+      } : input.endsWith("/api/v2/account/export") ? {
+        identityId: context.actor.identityId,
+        region: context.region,
+        schemaVersion: "2.0",
+        generatedAt: "2026-08-14T12:00:00.000Z",
+        contentIncluded: false,
+        status: "manifest-ready",
+        counts: {
+          families: 1,
+          conversations: 1,
+          messageEvents: 2,
+          calendarEvents: 1,
+          privateRecords: 1,
+          privateAttachments: 0,
+          legacyTasks: 0,
+          legacyExpenses: 0
+        }
       } : input.endsWith("/api/v2/account") ? {
         identityId: context.actor.identityId,
         region: context.region,
@@ -83,6 +100,7 @@ describe("HttpPeacePadCoordinationApi", () => {
       } : {}
     ));
     const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
+    await expect(api.prepareAccountExport(context)).resolves.toMatchObject({ contentIncluded: false, status: "manifest-ready" });
     const layer = {
       id: "layer-1",
       schemaVersion: "2.0" as const,
@@ -372,7 +390,6 @@ describe("HttpPeacePadCoordinationApi", () => {
       version: 5
     }));
     const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
-
     await expect(api.updateProfile("  Calm Parent  ", context)).resolves.toMatchObject({
       displayName: "Calm Parent",
       version: 5
