@@ -58,7 +58,12 @@ describe("HttpPeacePadCoordinationApi", () => {
 
   it("routes the complete v2 coordination contract through versioned endpoints", async () => {
     const fetcher = jest.fn(async (input: string, _init?: RequestInit) => response(200,
-      input.endsWith("/api/v2/account") ? {
+      input.endsWith("/api/v2/account/profile") ? {
+        identityId: context.actor.identityId,
+        displayName: "Calm Parent",
+        region: context.region,
+        version: 5
+      } : input.endsWith("/api/v2/account") ? {
         identityId: context.actor.identityId,
         region: context.region,
         status: "deleted",
@@ -112,6 +117,7 @@ describe("HttpPeacePadCoordinationApi", () => {
     };
 
     await api.createFamily("Fictional Family", context);
+    await api.updateProfile(" Calm Parent ", context);
     await api.leaveFamily("family-current", context);
     await api.deleteAccount(context);
     await api.listCaseBinders("family-current");
@@ -161,6 +167,7 @@ describe("HttpPeacePadCoordinationApi", () => {
     const urls = fetcher.mock.calls.map(([url]) => url);
     expect(urls).toEqual(expect.arrayContaining([
       "https://staging-api.peacepad.test/api/v2/families",
+      "https://staging-api.peacepad.test/api/v2/account/profile",
       "https://staging-api.peacepad.test/api/v2/families/family-current/membership",
       "https://staging-api.peacepad.test/api/v2/account",
       "https://staging-api.peacepad.test/api/v2/case-binders?familyCircleId=family-current",
@@ -355,6 +362,54 @@ describe("HttpPeacePadCoordinationApi", () => {
     expect(intentBody).not.toHaveProperty("bytes");
     expect(intentBody).not.toHaveProperty("base64");
     expect(intentBody).not.toHaveProperty("file");
+  });
+
+  it("normalizes and verifies profile updates with optimistic concurrency", async () => {
+    const fetcher = jest.fn(async (_input: string, _init?: RequestInit) => response(200, {
+      identityId: context.actor.identityId,
+      displayName: "Calm Parent",
+      region: context.region,
+      version: 5
+    }));
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
+
+    await expect(api.updateProfile("  Calm Parent  ", context)).resolves.toMatchObject({
+      displayName: "Calm Parent",
+      version: 5
+    });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "https://staging-api.peacepad.test/api/v2/account/profile",
+      expect.objectContaining({ method: "PATCH" })
+    );
+    const request = fetcher.mock.calls[0]?.[1] as RequestInit;
+    expect(JSON.parse(request.body as string)).toEqual({ displayName: "Calm Parent" });
+    expect(request.headers).toMatchObject({ "If-Match": "4" });
+  });
+
+  it.each(["", "   ", "Parent\nName", "x".repeat(121)])(
+    "rejects an invalid profile name before a network request",
+    async (displayName) => {
+      const fetcher = jest.fn();
+      const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
+      await expect(api.updateProfile(displayName, context)).rejects.toMatchObject({ status: 400 });
+      expect(fetcher).not.toHaveBeenCalled();
+    }
+  );
+
+  it("fails closed when a profile update receipt does not match the verified actor", async () => {
+    const api = new HttpPeacePadCoordinationApi(
+      config,
+      jest.fn(async () => response(200, {
+        identityId: "identity-other",
+        displayName: "Calm Parent",
+        region: "ca",
+        version: 5
+      })),
+      accessToken
+    );
+
+    await expect(api.updateProfile("Calm Parent", context)).rejects.toMatchObject({ status: 502 });
   });
 
   it("uploads only to the verified signed URL and uses authenticated completion and download routes", async () => {

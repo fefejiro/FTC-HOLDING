@@ -821,6 +821,9 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
   const [confirmLeaveFamily, setConfirmLeaveFamily] = useState(false);
   const [replayIntroduction, setReplayIntroduction] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
+  const [profileName, setProfileName] = useState(accountActions?.displayName ?? "");
+  const [profileSaved, setProfileSaved] = useState(false);
+  useEffect(() => setProfileName(accountActions?.displayName ?? ""), [accountActions?.displayName]);
   if (replayIntroduction) {
     return <PublicOnboardingSlides compact onComplete={() => setReplayIntroduction(false)} />;
   }
@@ -845,6 +848,28 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
         <Text style={styles.caption}>{t("more.introduction.body")}</Text>
       </Pressable>
       <LinkedSignInMethods />
+      {accountActions?.updateProfile ? <View style={styles.actionCardLargeText}>
+        <Text accessibilityRole="header" style={styles.actionTitle}>{t("profile.title")}</Text>
+        <Text style={styles.caption}>{t("profile.body")}</Text>
+        <TextInput
+          accessibilityLabel={t("profile.name")}
+          autoCapitalize="words"
+          maxLength={120}
+          onChangeText={(value) => { setProfileName(value); setProfileSaved(false); }}
+          placeholder={t("profile.name")}
+          style={styles.input}
+          value={profileName}
+        />
+        <LabButton
+          disabled={accountActions.updatingProfile || !profileName.trim() || profileName.trim() === accountActions.displayName}
+          label={accountActions.updatingProfile ? t("profile.saving") : t("profile.save")}
+          onPress={() => void accountActions.updateProfile!(profileName)
+            .then(() => setProfileSaved(true))
+            .catch(() => setProfileSaved(false))}
+        />
+        {profileSaved ? <Text accessibilityLiveRegion="polite" style={styles.success}>{t("profile.saved")}</Text> : null}
+        {accountActions.profileError ? <Text accessibilityRole="alert" style={styles.error}>{accountActions.profileError}</Text> : null}
+      </View> : null}
       {accountActions?.enableNotifications ? <Pressable
         accessibilityRole="button"
         accessibilityState={{ disabled: accountActions.notificationStatus === "busy" }}
@@ -945,6 +970,7 @@ const styles = StyleSheet.create({
   qrCard: { alignItems: "center", alignSelf: "center", backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: spacing.sm, padding: spacing.md },
   qrLabel: { ...typography.caption, color: colors.text, fontWeight: "800" },
   error: { ...typography.body, color: colors.dangerText, fontWeight: "700" },
+  success: { ...typography.body, color: colors.successText, fontWeight: "700" },
   titleRow: { flexDirection: "row", justifyContent: "space-between" },
   segmented: { backgroundColor: colors.brandSoft, borderRadius: 18, flexDirection: "row", padding: spacing.xs },
   segment: { alignItems: "center", borderRadius: 14, flex: 1, justifyContent: "center", minHeight: 48, paddingVertical: spacing.md },

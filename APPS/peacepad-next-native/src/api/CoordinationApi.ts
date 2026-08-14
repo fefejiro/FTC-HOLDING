@@ -129,6 +129,13 @@ export type LeftFamily = Readonly<{
   version: number;
 }>;
 
+export type UpdatedProfile = Readonly<{
+  identityId: EntityId;
+  displayName: string;
+  region: "ca" | "us";
+  version: number;
+}>;
+
 export type DevicePushRegistration = Readonly<{
   registrationId: EntityId;
   platform: "ios" | "android";
@@ -236,6 +243,7 @@ export interface PeacePadCoordinationApi {
   registerDevicePush(input: RegisterDevicePushInput, context: WriteContext): Promise<DevicePushRegistration>;
   revokeDevicePush(registrationId: EntityId, context: WriteContext): Promise<RevokedDevicePushRegistration>;
   deleteAccount(context: WriteContext): Promise<DeletedAccount>;
+  updateProfile(displayName: string, context: WriteContext): Promise<UpdatedProfile>;
   createFamily(familyName: string, context: WriteContext): Promise<CreatedFamily>;
   leaveFamily(familyCircleId: EntityId, context: WriteContext): Promise<LeftFamily>;
   listCaseBinders(familyCircleId: EntityId): Promise<readonly CaseBinder[]>;
@@ -325,6 +333,30 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
       undefined,
       context
     );
+  }
+
+  async updateProfile(displayName: string, context: WriteContext) {
+    const normalized = displayName.trim();
+    if (!normalized || normalized.length > 120 || /[\u0000-\u001f\u007f]/.test(normalized)) {
+      throw new PeacePadApiError("Enter a valid profile name.", "http", 400);
+    }
+    const result = await this.write<UpdatedProfile>(
+      "/api/v2/account/profile",
+      "PATCH",
+      { displayName: normalized },
+      context
+    );
+    if (
+      !result
+      || result.identityId !== context.actor.identityId
+      || result.displayName !== normalized
+      || result.region !== context.region
+      || !Number.isInteger(result.version)
+      || result.version <= (context.expectedVersion ?? 0)
+    ) {
+      throw new PeacePadApiError("PeacePad could not verify the profile update.", "http", 502);
+    }
+    return result;
   }
 
   createFamily(familyName: string, context: WriteContext) {

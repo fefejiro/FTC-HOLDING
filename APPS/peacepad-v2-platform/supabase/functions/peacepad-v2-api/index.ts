@@ -315,6 +315,7 @@ const writeOperation = (method: string, path: string, body: Record<string, unkno
   if (method === "POST" && path === "/api/v2/session/bootstrap") return "identity.bootstrapped";
   if (method === "POST" && path === "/api/v2/consents") return "consent.recorded";
   if (method === "POST" && path === "/api/v2/families") return "family.created";
+  if (method === "PATCH" && path === "/api/v2/account/profile") return "profile.updated";
   if (method === "DELETE" && /^\/api\/v2\/families\/[^/]+\/membership$/.test(path)) return "family.left";
   if (method === "POST" && path === "/api/v2/invitations") return "invitation.created";
   if (method === "DELETE" && path === "/api/v2/account") return "account.deleted";
@@ -943,6 +944,7 @@ const handler = async (request: Request): Promise<Response> => {
   const isInvitationTransition = /^\/api\/v2\/invitations\/[^/]+\/(accept|decline)$/.test(path);
   const isInvitationRevocation = /^\/api\/v2\/invitations\/[^/]+$/.test(path);
   const isAccountDeletion = path === "/api/v2/account";
+  const isProfileUpdate = path === "/api/v2/account/profile";
   const familyExitMatch = path.match(/^\/api\/v2\/families\/([^/]+)\/membership$/);
   const isConversationCreation = path === "/api/v2/conversations";
   const isMessageSend = /^\/api\/v2\/conversations\/[^/]+\/messages$/.test(path);
@@ -969,7 +971,7 @@ const handler = async (request: Request): Promise<Response> => {
       "/api/v2/families",
       "/api/v2/invitations",
     ].includes(path) || isInvitationTransition || isConversationCreation || isMessageSend || isMessageLifecycle || isMessageCorrection || isCalendarLayerCreation || isScheduleEventCreation || isCaseBinderCreation || isAttachmentIntentCreation || attachmentCompletionMatch || isTimelineEntryCreation || isAudioCallCreation || audioCallTransition || isDevicePushRegistration)) ||
-    (request.method === "PATCH" && (calendarLayerMatch || scheduleEventMatch || caseBinderMatch)) ||
+    (request.method === "PATCH" && (isProfileUpdate || calendarLayerMatch || scheduleEventMatch || caseBinderMatch)) ||
     isMessageCheckUpdate ||
     (request.method === "DELETE" && (isInvitationRevocation || isAccountDeletion || familyExitMatch || calendarLayerMatch || scheduleEventMatch || devicePushRevocation))
   ) {
@@ -1141,6 +1143,24 @@ const handler = async (request: Request): Promise<Response> => {
         p_schema_version: context.schemaVersion,
       });
       return error ? rpcFailure(request, requestId, config, error.message) : json(request, 201, data, requestId, config);
+    }
+
+    if (isProfileUpdate) {
+      const displayName = typeof body.displayName === "string" ? body.displayName.trim() : "";
+      const expectedVersionHeader = (request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? "";
+      const expectedVersion = Number(expectedVersionHeader);
+      if (Object.keys(body).some((key) => key !== "displayName") || displayName.length < 1 || displayName.length > 120 || /[\u0000-\u001f\u007f]/.test(displayName) || !Number.isInteger(expectedVersion) || expectedVersion < 1) {
+        return failure(request, 400, "INVALID_REQUEST", "A valid profile name and version are required.", requestId, config);
+      }
+      const { data, error } = await authenticated.admin.rpc("peacepad_v2_update_profile", {
+        p_identity_id: authenticated.user.id,
+        p_region: config.region,
+        p_display_name: displayName,
+        p_expected_version: expectedVersion,
+        p_idempotency_key: databaseWriteToken,
+        p_schema_version: context.schemaVersion,
+      });
+      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
     }
 
     if (familyExitMatch) {

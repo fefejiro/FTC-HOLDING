@@ -67,7 +67,7 @@ type RuntimeState =
   | { status: "membership-empty"; api: PeacePadCoordinationApi; verified: VerifiedSessionContext }
   | { status: "membership-selection"; api: PeacePadCoordinationApi; memberships: readonly Membership[]; verified: VerifiedSessionContext }
   | { status: "conversation-empty"; api: PeacePadCoordinationApi; membership: Membership; verified: VerifiedSessionContext }
-  | { status: "ready"; api: PeacePadCoordinationApi; runtime: CoordinationRuntime }
+  | { status: "ready"; api: PeacePadCoordinationApi; runtime: CoordinationRuntime; verified: VerifiedSessionContext }
   | { status: "error"; message: string };
 
 type PendingStagingInvitation = Readonly<{
@@ -201,6 +201,8 @@ export function PeacePadStagingRuntime({
   const [deleteError, setDeleteError] = useState<string>();
   const [leaveFamilyBusy, setLeaveFamilyBusy] = useState(false);
   const [leaveFamilyError, setLeaveFamilyError] = useState<string>();
+  const [profileBusy, setProfileBusy] = useState(false);
+  const [profileError, setProfileError] = useState<string>();
   const [notificationStatus, setNotificationStatus] = useState<DeviceNotificationState | "busy">("not-enabled");
 
   const submitSignIn = useCallback(() => {
@@ -390,6 +392,7 @@ export function PeacePadStagingRuntime({
       setRuntimeState({
         status: "ready",
         api,
+        verified,
         runtime: {
           actorIdentityId: verified.actor.identityId,
           identityVersion: verified.actor.version,
@@ -490,6 +493,23 @@ export function PeacePadStagingRuntime({
       displayName: null,
       version: runtimeState.runtime.identityVersion
     }, runtimeState.runtime.region),
+    displayName: runtimeState.verified.actor.displayName ?? "",
+    updatingProfile: profileBusy,
+    profileError,
+    updateProfile: async (displayName: string) => {
+      setProfileBusy(true);
+      setProfileError(undefined);
+      try {
+        await runtimeState.api.updateProfile(displayName, runtimeWriteContext(runtimeState.verified, runtimeState.runtime.identityVersion));
+        setReloadVersion((value) => value + 1);
+      } catch (cause) {
+        const message = cause instanceof Error ? cause.message : t("profile.error");
+        setProfileError(message);
+        throw cause;
+      } finally {
+        setProfileBusy(false);
+      }
+    },
     leaveFamily: () => leaveVerifiedFamily(runtimeState.api, runtimeState.runtime),
     leavingFamily: leaveFamilyBusy,
     leaveFamilyError,

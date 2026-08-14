@@ -5,6 +5,10 @@ export type StagingAccountActionsValue = Readonly<{
   deleteAccount: () => Promise<void>;
   deleting: boolean;
   error?: string;
+  displayName?: string;
+  updateProfile?: (displayName: string) => Promise<void>;
+  updatingProfile?: boolean;
+  profileError?: string;
   leaveFamily?: () => Promise<void>;
   leavingFamily?: boolean;
   leaveFamilyError?: string;

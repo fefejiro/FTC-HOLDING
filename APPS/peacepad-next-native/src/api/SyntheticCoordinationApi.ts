@@ -695,6 +695,17 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
     this.invitationStates.set(invitationId, nextState);
   }
 
+  async updateProfile(displayName: string, context: WriteContext) {
+    const normalized = displayName.trim();
+    if (!normalized || normalized.length > 120) throw new Error("Enter a valid profile name.");
+    return {
+      identityId: context.actor.identityId,
+      displayName: normalized,
+      region: context.region,
+      version: (context.expectedVersion ?? 0) + 1
+    } as const;
+  }
+
   private assertInvitationVersion(invitationId: EntityId, expectedVersion: number | null) {
     const seed = this.invitationsById.get(invitationId);
     if (seed && expectedVersion !== seed.preview.version) {

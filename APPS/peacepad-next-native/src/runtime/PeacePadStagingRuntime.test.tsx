@@ -703,6 +703,52 @@ describe("PeacePadStagingRuntime gates", () => {
     expect(auth.signOut).not.toHaveBeenCalled();
   });
 
+  it("updates the verified profile with actor-bound optimistic concurrency", async () => {
+    (useSupabaseSession as jest.Mock).mockReturnValue(authValue());
+    const updateProfile = jest.fn(async () => ({
+      identityId: IDENTITY,
+      displayName: "Calm Parent",
+      region: "ca",
+      version: 4
+    }));
+    (createStagingCoordinationClient as jest.Mock).mockReturnValue({
+      updateProfile,
+      listConversations: jest.fn(async () => [{ id: CONVERSATION, status: "active" }]),
+      listCalendarLayers: jest.fn(async () => []),
+      listScheduleEvents: jest.fn(async () => []),
+      listMessages: jest.fn(async () => []),
+      getMessageCheckPreference: jest.fn(async () => ({
+        aiAssistanceEnabled: false,
+        conversationId: CONVERSATION,
+        enabled: false,
+        id: "66666666-6666-4666-8666-666666666666",
+        identityId: IDENTITY,
+        provenance: { createdAt: "2026-08-09T12:00:00.000Z", createdBy: { identityId: IDENTITY, sessionId: SESSION }, source: "app" },
+        region: "ca",
+        schemaVersion: "2.0",
+        version: 0
+      }))
+    });
+
+    function ProfileProbe() {
+      const actions = useOptionalStagingAccountActions();
+      return <Text accessibilityRole="button" onPress={() => void actions?.updateProfile?.("Calm Parent")}>update profile</Text>;
+    }
+
+    const fetcher = sessionResponse();
+    render(<PeacePadStagingRuntime environment={environment} fetcher={fetcher} supabase={supabase}><ProfileProbe /></PeacePadStagingRuntime>);
+    await waitFor(() => expect(screen.getByText("update profile")).toBeTruthy());
+    fireEvent.press(screen.getByText("update profile"));
+
+    await waitFor(() => expect(updateProfile).toHaveBeenCalledWith("Calm Parent", expect.objectContaining({
+      actor: { identityId: IDENTITY, sessionId: SESSION },
+      expectedVersion: 3,
+      region: "ca",
+      schemaVersion: "2.0"
+    })));
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
+  });
+
   it("leaves only the verified family grant with optimistic concurrency", async () => {
     const auth = authValue();
     (useSupabaseSession as jest.Mock).mockReturnValue(auth);

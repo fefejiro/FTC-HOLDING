@@ -131,6 +131,8 @@ jobs:
             -f APPS/peacepad-v2-platform/scripts/verify-device-push-registrations.sql
           psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d peacepad_v2_test \
             -f APPS/peacepad-v2-platform/scripts/verify-family-exit.sql
+          psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d peacepad_v2_test \
+            -f APPS/peacepad-v2-platform/scripts/verify-profile-updates.sql
 
       - name: Confirm workflow cannot deploy
         shell: bash

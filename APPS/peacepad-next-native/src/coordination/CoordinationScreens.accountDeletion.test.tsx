@@ -48,6 +48,49 @@ describe("staging account deletion", () => {
     await waitFor(() => expect(signOut).toHaveBeenCalledTimes(1));
   });
 
+  it("edits the verified profile without exposing identity identifiers", async () => {
+    const updateProfile = jest.fn(async () => undefined);
+    render(withLocalization(
+      <StagingAccountActionsProvider value={{
+        signOut,
+        deleteAccount: jest.fn(),
+        deleting: false,
+        displayName: "Original Parent",
+        updateProfile,
+        updatingProfile: false
+      }}>
+        <MoreScreen setScreen={jest.fn()} />
+      </StagingAccountActionsProvider>
+    ));
+
+    const input = screen.getByLabelText("Display name");
+    expect(input.props.value).toBe("Original Parent");
+    fireEvent.changeText(input, "Calm Parent");
+    fireEvent.press(screen.getByRole("button", { name: "Save profile" }));
+
+    await waitFor(() => expect(updateProfile).toHaveBeenCalledWith("Calm Parent"));
+    expect(await screen.findByText("Profile saved.")).toHaveProp("accessibilityLiveRegion", "polite");
+    expect(screen.queryByText(/identity-current/i)).toBeNull();
+  });
+
+  it("announces a safe localized profile error", () => {
+    render(withLocalization(
+      <StagingAccountActionsProvider value={{
+        signOut,
+        deleteAccount: jest.fn(),
+        deleting: false,
+        displayName: "Parent",
+        updateProfile: jest.fn(async () => undefined),
+        updatingProfile: false,
+        profileError: "PeacePad could not update this profile."
+      }}>
+        <MoreScreen setScreen={jest.fn()} />
+      </StagingAccountActionsProvider>
+    ));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("PeacePad could not update this profile.");
+  });
+
   it("replays the three-screen introduction from Settings without signing out", () => {
     render(withLocalization(<MoreScreen setScreen={jest.fn()} />));
     fireEvent.press(screen.getByRole("button", { name: "Replay introduction" }));
