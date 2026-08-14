@@ -1,5 +1,7 @@
 # PeacePad Native V2 status
 
+> Current full-build implementation handover: [FULL_BUILD_HANDOVER_2026-08-14.md](FULL_BUILD_HANDOVER_2026-08-14.md).
+
 ## Snapshot
 
 - Snapshot date: 2026-08-13
