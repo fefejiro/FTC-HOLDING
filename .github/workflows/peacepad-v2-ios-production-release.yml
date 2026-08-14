@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       authorization:
-        description: Type I_CONFIRM_PRODUCTION_BUILD_4_UPLOAD
+        description: Type I_CONFIRM_PRODUCTION_BUILD_5_UPLOAD
         required: true
         type: string
 
@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   build-and-upload:
-    name: Build and upload production 2.0.0 (4)
+    name: Build and upload production 2.0.0 (5)
     runs-on: macos-26-intel
     timeout-minutes: 120
     env:
@@ -46,7 +46,7 @@ jobs:
           set -euo pipefail
           [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-          test "${{ inputs.authorization }}" = "I_CONFIRM_PRODUCTION_BUILD_4_UPLOAD"
+          test "${{ inputs.authorization }}" = "I_CONFIRM_PRODUCTION_BUILD_5_UPLOAD"
           git merge-base --is-ancestor "$PRODUCTION_BASELINE" "$EXPECTED_SHA"
           git diff --check "$EXPECTED_SHA"
           test -z "$(git status --porcelain)"
@@ -93,7 +93,7 @@ jobs:
             --non-interactive
           jq -e '
             .appConfig.version == "2.0.0"
-            and .appConfig.ios.buildNumber == "4"
+            and .appConfig.ios.buildNumber == "5"
             and .appConfig.ios.bundleIdentifier == "ca.peacepad.family"
             and .appConfig.extra.appStoreId == "6793350735"
             and .appConfig.extra.environment == "production"
@@ -121,11 +121,11 @@ jobs:
               --local \
               --non-interactive \
               --freeze-credentials \
-              --output "$RUNNER_TEMP/peacepad-v2-production-2.0.0-4.ipa"
+              --output "$RUNNER_TEMP/peacepad-v2-production-2.0.0-5.ipa"
           EOF
           )
           npx --yes eas-cli@21.8.0 env:exec production "$release_command" --non-interactive
-          shasum -a 256 "$RUNNER_TEMP/peacepad-v2-production-2.0.0-4.ipa" > "$RUNNER_TEMP/peacepad-v2-production-2.0.0-4.sha256"
+          shasum -a 256 "$RUNNER_TEMP/peacepad-v2-production-2.0.0-5.ipa" > "$RUNNER_TEMP/peacepad-v2-production-2.0.0-5.sha256"
 
       - name: Upload exact IPA to App Store Connect
         id: submit
@@ -140,7 +140,7 @@ jobs:
           npx --yes eas-cli@21.8.0 submit \
             --platform ios \
             --profile appstore-production \
-            --path "$RUNNER_TEMP/peacepad-v2-production-2.0.0-4.ipa" \
+            --path "$RUNNER_TEMP/peacepad-v2-production-2.0.0-5.ipa" \
             --non-interactive \
             --wait | tee "$RUNNER_TEMP/peacepad-v2-production-submit.txt"
 
@@ -155,7 +155,7 @@ jobs:
           evidence="$RUNNER_TEMP/peacepad-v2-production-evidence"
           mkdir -p "$evidence"
           cp "$RUNNER_TEMP/peacepad-v2-xcode-version.txt" "$evidence/" 2>/dev/null || true
-          cp "$RUNNER_TEMP/peacepad-v2-production-2.0.0-4.sha256" "$evidence/" 2>/dev/null || true
+          cp "$RUNNER_TEMP/peacepad-v2-production-2.0.0-5.sha256" "$evidence/" 2>/dev/null || true
           cp "$RUNNER_TEMP/peacepad-v2-production-submit.txt" "$evidence/" 2>/dev/null || true
           jq -n \
             --arg result "$(test "$BUILD_OUTCOME" = success && test "$SUBMIT_OUTCOME" = success && echo APP_STORE_CONNECT_UPLOAD_VERIFIED || echo PRODUCTION_UPLOAD_NOT_VERIFIED)" \
@@ -172,7 +172,7 @@ jobs:
               appStoreId: "6793350735",
               bundleIdentifier: "ca.peacepad.family",
               version: "2.0.0",
-              buildNumber: "4",
+              buildNumber: "5",
               runtime: "production-ca",
               productionApiWritesEnabled: true,
               buildOutcome: $buildOutcome,
@@ -197,4 +197,4 @@ jobs:
           name: peacepad-v2-ios-production-ipa-${{ inputs.source_sha }}
           if-no-files-found: error
           retention-days: 1
-          path: ${{ runner.temp }}/peacepad-v2-production-2.0.0-4.ipa
+          path: ${{ runner.temp }}/peacepad-v2-production-2.0.0-5.ipa
