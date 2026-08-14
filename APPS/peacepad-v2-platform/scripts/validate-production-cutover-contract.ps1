@@ -11,7 +11,7 @@ function Assert-Contract {
   if (-not $Condition) { throw "PEACEPAD_V2_PRODUCTION_CUTOVER_CONTRACT_BLOCKED: $Message" }
 }
 
-Assert-Contract ($manifest.schemaVersion -eq 1) "Unknown production-cutover contract version."
+Assert-Contract ($manifest.schemaVersion -eq 2) "Unknown production-cutover contract version."
 Assert-Contract ($manifest.cutoverApproved -eq $false) "Committed contract must not approve production cutover."
 Assert-Contract ($manifest.source.system -eq "legacy-peacepad-express-postgresql") "Legacy source system changed without review."
 Assert-Contract ($manifest.source.identityProvider -eq "legacy-replit-auth") "Legacy identity source changed without review."
@@ -27,6 +27,10 @@ $requiredMappings = @{
   "conversations + conversation_members" = "conversation"
   "messages" = "message_event"
   "events" = "calendar_layer + schedule_event"
+  "notes + child updates" = "legacy_record_archive"
+  "tasks" = "legacy_task_archive"
+  "expenses + participants + settlements" = "legacy_expense_archive"
+  "supported message, receipt, and record attachments" = "private storage + legacy_attachment_manifest"
 }
 foreach ($source in $requiredMappings.Keys) {
   $matches = @($manifest.mappings | Where-Object { $_.source -eq $source -and $_.target -eq $requiredMappings[$source] -and $_.required -eq $true })
@@ -38,17 +42,17 @@ $requiredImportControls = @(
   "explicit-partnership-scope-for-every-conversation-and-event",
   "text-only-message-import-with-media-and-deleted-content-quarantined",
   "timestamped-consent-ledger-or-user-reconsent",
-  "fresh-target-or-reviewed-reconciliation-plan"
+  "fresh-target-or-reviewed-reconciliation-plan",
+  "no-raw-password-or-password-hash-import-without-isolated-supabase-compatibility-proof",
+  "no-legacy-call-recording-or-transcript-import",
+  "attachment-count-byte-length-and-sha256-reconciliation-before-write-enable"
 )
 foreach ($item in $requiredImportControls) {
   Assert-Contract (@($manifest.requiredImportControls) -contains $item) "Required import control '$item' is missing."
 }
 
 $requiredUnmapped = @(
-  "attachments-and-media",
   "children-profiles",
-  "tasks-and-notes",
-  "expenses-and-settlements",
   "call-recordings-and-transcripts",
   "ai-profiles-and-interventions",
   "push-subscriptions"
