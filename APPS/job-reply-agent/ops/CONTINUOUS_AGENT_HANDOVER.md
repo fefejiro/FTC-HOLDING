@@ -2,10 +2,10 @@
 
 ## Last Verified State
 
-- Updated: 2026-08-10 17:27 America/New_York
+- Updated: 2026-08-15 America/New_York
 - Engineering branch: `agent/job-agent-continuous`
-- Recorded parent HEAD: `2809fddfa Clarify JobAgent release evidence`;
-  verify the current HEAD because the final handover commit follows it
+- Current checked-out HEAD before this handover commit: `56550a942 Record green
+  JobAgent release gates`
 - Draft PR: `https://github.com/fefejiro/FTC-HOLDING/pull/192`
 - Autonomous worktree: `D:\FTC-HOLDING-worktrees\job-agent-continuous`
 - Autonomous branch: `agent/job-agent-continuous`
@@ -17,6 +17,25 @@
 This file is a resumable evidence record, not a claim that every external
 connector or production release gate is complete. Verify drift-prone runtime
 facts before changing them.
+
+## Operational Proof Since The Previous Handover
+
+- On 2026-08-13, Fejiro's visible authenticated LinkedIn profile submitted
+  **Business Analyst - Order Management & Replenishment Systems** to
+  **Apptoza Inc.** in Oakville, Ontario (hybrid).
+- The submission confirmation and LinkedIn **My Jobs > Applied** record were
+  both captured. This is a `submitted_verified` local-pilot record, not a SaaS
+  cloud connector certification.
+- The role-specific DOCX was generated at
+  `C:\FTC HOLDING\APPS\job-reply-agent\resumes\generated\Business Analyst
+  Order Management Replenishment - Fejiro Efiuvwere - Apptoza Inc Resume.docx`.
+  Proof screenshots are local run artifacts under this worktree's `.local`
+  directory and must not be committed or copied into a tenant data store.
+- A role-specific **Director, Implementation - Upshop** package was generated
+  and structurally audited on 2026-08-15. It has **not** been uploaded or
+  submitted: the authenticated LinkedIn window could not be made the active
+  desktop window from the current VS Code session. Treat it as `package_ready`,
+  not `submission_attempted`.
 
 ## Completed In The Latest Increment
 
@@ -70,8 +89,20 @@ facts before changing them.
 - iOS source generation/sync: passed; no Xcode, simulator, device, archive, or
   TestFlight test was available on Windows.
 - Strict deployment-environment release checks were not run in this increment.
-- No recruiter email, job application, browser action, deployment, DNS change,
-  secret change, billing action, or production mutation occurred.
+- In the 2026-08-10 engineering increment, no recruiter email, job application,
+  browser action, deployment, DNS change, secret change, billing action, or
+  production mutation occurred. The later 2026-08-13 LinkedIn proof run is
+  recorded separately above.
+
+### 2026-08-15 Documentation Preflight
+
+- `npm run build`: passed.
+- A test retry with `--runInBand` was invalid because Vitest does not support
+  that Jest flag. A subsequent normal `npm test` run exceeded the local command
+  window while running in parallel with network checks; it is not test evidence
+  and must be rerun alone before a release claim.
+- No SaaS deployment, DNS, billing, credential, queue, or database mutation was
+  made while preparing this handover.
 
 ## Current Boundaries And Manual Gates
 
@@ -98,6 +129,9 @@ facts before changing them.
    on an Android device and an iOS device without exposing tokens in URLs/logs.
 3. Replace placeholder native artwork and complete signed internal-test builds.
 4. Audit queue idempotency, lease recovery, and dead-letter operator visibility.
+5. Restore the configured approved BA golden-template source before generating
+   another BA/BSA package. The runtime correctly refuses unapproved fallback
+   templates; do not weaken that guard to continue an application.
 
 ## Resume Command
 

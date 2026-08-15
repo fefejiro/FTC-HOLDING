@@ -11,6 +11,21 @@
 - Hosted product: `https://jobagent.unalabs.cloud`
 - Native application ID: `cloud.unalabs.jobagent`
 
+### Current Operational Snapshot - 2026-08-15
+
+- The cloud/PWA/mobile code is a private beta foundation, not a public release.
+- The Fejiro local pilot has a fresh verified LinkedIn proof record for
+  **Business Analyst - Order Management & Replenishment Systems at Apptoza**:
+  confirmation plus LinkedIn Applied-history evidence. Its resume and raw
+  evidence remain in the operational state root; do not import them into the
+  engineering worktree or another tenant.
+- The Upshop **Director, Implementation** tailored package is ready but not
+  uploaded or submitted. The visible browser window was not safely foregrounded,
+  so the correct outcome is `package_ready`.
+- The configured BA golden-template path is currently absent. Resume generation
+  must fail closed until the approved source is restored. The IT manager orange
+  template remains available for IT-management roles.
+
 Do not develop from the shared `C:\FTC HOLDING` checkout. It contains other
 active product work. Do not copy OAuth tokens, browser profiles, generated
 resumes, databases, or candidate evidence into this engineering worktree.
@@ -32,6 +47,11 @@ npm run production:check
 Expected application test baseline at handover: `28` files passed, `1` skipped;
 `210` tests passed and `8` skipped. The static production check passes with the
 expected warning that deployment-only checks were not run locally.
+
+On 2026-08-15, `npm run build` passed. Do not treat the historical suite count
+as current proof until `npm test` is rerun independently: an attempted normal
+run exceeded the local command window, and an earlier retry used unsupported
+Vitest flag `--runInBand`.
 
 Because the C drive is nearly full, use D for Android caches and temporary files:
 
@@ -104,6 +124,8 @@ required check makes them an actual merge blocker.
 6. Complete fresh Fejiro connector proof runs and the 14-day isolated Chukwuma
    pilot before broader invitations.
 7. Audit queue lease recovery and dead-letter operator visibility.
+8. Restore and assert the approved BA golden-template path in a regression test;
+   retain the current fail-closed template guard.
 
 ## Safety Boundaries
 

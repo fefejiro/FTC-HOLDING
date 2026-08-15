@@ -36,7 +36,9 @@ JobAgent now has two deliberately separate execution boundaries:
 The hosted foundation is deployed to an Una Labs Railway project with separate
 web, worker, migration, PostgreSQL, and private-bucket resources. Its temporary
 Railway hostname is live for controlled QA. The branded
-`jobagent.unalabs.cloud` domain is registered and awaits Cloudflare DNS.
+`jobagent.unalabs.cloud` domain has been exposed as the invite-only candidate
+surface; revalidate `/readyz`, DNS/TLS, and the deployed commit before calling
+it a production release.
 Transactional email, Google production verification, operator MFA enrollment,
 the Pro-plan backup/restore drill, and channel proof runs remain release gates.
 
@@ -46,6 +48,20 @@ This is not yet:
 - A certified autonomous job-board submission engine
 - A device-tested or distributed native iOS or Android app
 - Ready for App Store or Play Store distribution
+
+## Current Pilot Evidence - 2026-08-15
+
+- The local Fejiro operator runtime completed a fresh proof-backed LinkedIn
+  submission for Apptoza's **Business Analyst - Order Management &
+  Replenishment Systems** role. It has both LinkedIn confirmation and
+  Applied-history evidence.
+- This validates one candidate-owned visible-browser action only. It does not
+  certify LinkedIn as an unattended SaaS connector, establish cloud-to-browser
+  trusted-runner delivery, or satisfy broader pilot acceptance criteria.
+- The next candidate package, Upshop **Director, Implementation**, is
+  `package_ready` but unsubmitted because the authenticated LinkedIn window was
+  not safely available in the foreground. The correct SaaS behavior is to retain
+  the package and create a manual gate, never to retry with an unknown profile.
 
 ## Native Foundation Status - 2026-08-10
 
