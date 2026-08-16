@@ -15,6 +15,10 @@ RUN npm run build \
 
 FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production
+ARG RELEASE_SHA=unknown
+ARG BUILD_TIMESTAMP=unknown
+ENV RELEASE_SHA=$RELEASE_SHA
+ENV BUILD_TIMESTAMP=$BUILD_TIMESTAMP
 WORKDIR /app
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl \

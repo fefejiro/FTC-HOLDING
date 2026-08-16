@@ -112,6 +112,7 @@ import type { ApplicationProof, ConnectorSource, ConnectorStatus } from "./produ
 import { connectorStatusSurface } from "./product_release_gates.js";
 import { validateResumeUpload } from "./product_resume.js";
 import { productSecretKeyring } from "./product_secret_crypto.js";
+import { productReleaseInfo } from "./product_release.js";
 
 const HOST = process.env.HOST || "0.0.0.0";
 const PORT = Number(process.env.PORT || 3000);
@@ -691,6 +692,9 @@ export async function createProductServer(storage: ProductObjectStorage = create
       if (!mutationOriginAllowed(req)) return json(res, 403, { error: "Origin rejected." });
 
       if (req.method === "GET" && url.pathname === "/healthz") return json(res, 200, { ok: true });
+      if (req.method === "GET" && url.pathname === "/api/v1/release") {
+        return json(res, 200, { release: productReleaseInfo() });
+      }
       if (req.method === "GET" && url.pathname === "/readyz") {
         try {
           if (process.env.NODE_ENV === "production") await assertProductDatabaseRole(db);

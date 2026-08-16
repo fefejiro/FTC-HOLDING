@@ -127,6 +127,8 @@ jobs:
       - name: Build immutable web and worker image
         run: >-
           docker build
+          --build-arg RELEASE_SHA=${{ github.sha }}
+          --build-arg BUILD_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           --tag una-jobagent:${{ github.sha }}
           --tag "${IMAGE_NAME}:${{ github.sha }}"
           .

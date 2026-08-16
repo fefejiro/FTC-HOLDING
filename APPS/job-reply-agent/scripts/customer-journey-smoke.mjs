@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { chromium } from "playwright";
 
+const liveBaseUrl = String(process.env.CUSTOMER_SMOKE_BASE_URL || "").trim().replace(/\/$/, "");
 const root = path.resolve(import.meta.dirname, "..", "public");
 const mime = { ".css": "text/css", ".html": "text/html", ".js": "text/javascript", ".json": "application/json", ".png": "image/png", ".webmanifest": "application/manifest+json" };
 const user = { id: "smoke-user", email: "smoke@example.test", role: "candidate", status: "active", emailVerified: true, mfaEnabled: false };
@@ -38,12 +39,22 @@ const server = http.createServer((req, res) => {
 });
 
 const browser = await chromium.launch({ headless: true });
-await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-const port = server.address().port;
+if (liveBaseUrl && !/^https:\/\//i.test(liveBaseUrl)) throw new Error("CUSTOMER_SMOKE_BASE_URL must use HTTPS.");
+if (liveBaseUrl && (!process.env.CUSTOMER_SMOKE_EMAIL || !process.env.CUSTOMER_SMOKE_PASSWORD)) throw new Error("CUSTOMER_SMOKE_EMAIL and CUSTOMER_SMOKE_PASSWORD are required for live smoke.");
+if (!liveBaseUrl) await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+const baseUrl = liveBaseUrl || `http://127.0.0.1:${server.address().port}`;
 try {
   for (const viewport of [{ name: "mobile", width: 390, height: 844 }, { name: "desktop", width: 1440, height: 1000 }]) {
     const page = await browser.newPage({ viewport });
-    await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "networkidle" });
+    await page.goto(`${baseUrl}/`, { waitUntil: "networkidle" });
+    if (liveBaseUrl) {
+      await page.locator('#login-form input[name="email"]').fill(process.env.CUSTOMER_SMOKE_EMAIL);
+      await page.locator('#login-form input[name="password"]').fill(process.env.CUSTOMER_SMOKE_PASSWORD || "");
+      await page.getByRole("button", { name: "Sign in", exact: true }).click();
+      await page.locator("#app-shell").waitFor({ state: "visible", timeout: 20_000 });
+      const releaseResponse = await page.request.get(`${baseUrl}/api/v1/release`);
+      if (!releaseResponse.ok()) throw new Error(`live release endpoint returned ${releaseResponse.status()}`);
+    }
     await page.locator('[data-view="opportunities"]').click();
     await page.getByRole("button", { name: "Analyze fit" }).click();
     await page.locator("#job-insight-form textarea").fill("Requirements discovery, UAT, and stakeholder delivery.");
@@ -65,4 +76,4 @@ try {
     console.log(`customer journey smoke passed: ${viewport.name} (${viewport.width}x${viewport.height})`);
     await page.close();
   }
-} finally { await browser.close(); server.close(); }
+} finally { await browser.close(); if (!liveBaseUrl) server.close(); }

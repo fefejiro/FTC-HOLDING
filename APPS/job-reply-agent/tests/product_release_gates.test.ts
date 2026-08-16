@@ -6,6 +6,7 @@ import {
   connectorStatusSurface,
   schedulerConnectorStatusSurface
 } from "../src/product_release_gates.js";
+import { productReleaseInfo, PRODUCT_SCHEMA_VERSION } from "../src/product_release.js";
 
 const releaseGateStatuses = [
   "blocked_auth",
@@ -15,6 +16,30 @@ const releaseGateStatuses = [
 ] as const satisfies readonly ConnectorStatus[];
 
 describe("product release-gate status surfaces", () => {
+  it("exposes only safe release identity fields", () => {
+    const previous = {
+      RELEASE_SHA: process.env.RELEASE_SHA,
+      BUILD_TIMESTAMP: process.env.BUILD_TIMESTAMP,
+      NODE_ENV: process.env.NODE_ENV
+    };
+    process.env.RELEASE_SHA = "64953ce5f09e638d24facd80340fc8f9d576d35f";
+    process.env.BUILD_TIMESTAMP = "2026-08-16T21:00:00.000Z";
+    process.env.NODE_ENV = "production";
+    try {
+      expect(productReleaseInfo()).toEqual({
+        commitSha: "64953ce5f09e638d24facd80340fc8f9d576d35f",
+        buildTimestamp: "2026-08-16T21:00:00.000Z",
+        environment: "production",
+        schemaVersion: PRODUCT_SCHEMA_VERSION
+      });
+    } finally {
+      for (const [key, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
+  });
+
   it.each(releaseGateStatuses)("keeps %s distinct on connector and scheduler surfaces", (status) => {
     const connector = {
       source: status === "pilot_only" ? "gmail" : "linkedin",

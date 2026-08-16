@@ -36,6 +36,15 @@
 - This is a browser/UI regression gate, not proof of a live connector,
   authenticated job-board submission, mobile device build, or store review.
 
+### RC0 Evidence Increment - 2026-08-16
+
+- PR #192 and `origin/agent/job-agent-continuous` now point to the RC0 candidate
+  SHA recorded in `ops/RELEASE_STATUS.md`.
+- Added `/api/v1/release` and release metadata propagation through Docker/CI.
+- The live release, tenant isolation, queue recovery, app-link publication, and
+  device/store gates remain pending external proof. Do not infer them from a
+  successful local build.
+
 Do not develop from the shared `C:\FTC HOLDING` checkout. It contains other
 active product work. Do not copy OAuth tokens, browser profiles, generated
 resumes, databases, or candidate evidence into this engineering worktree.

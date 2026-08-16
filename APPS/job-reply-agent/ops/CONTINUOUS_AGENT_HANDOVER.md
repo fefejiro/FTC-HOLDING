@@ -2,6 +2,11 @@
 
 ## Last Verified State
 
+RC0 evidence preparation is in progress for commit
+`64953ce5f09e638d24facd80340fc8f9d576d35f`. The commit is pushed and PR #192
+matches it. See `ops/RELEASE_STATUS.md` and
+`docs/PRODUCT_RELEASE_EVIDENCE_2026-08-16.md` for the evidence boundary.
+
 - Updated: 2026-08-15 America/New_York
 - Engineering branch: `agent/job-agent-continuous`
 - Current checked-out HEAD before this handover commit: `56550a942 Record green
