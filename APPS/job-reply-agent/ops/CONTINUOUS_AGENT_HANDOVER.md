@@ -3,7 +3,7 @@
 ## Last Verified State
 
 RC0 evidence preparation is in progress for commit
-  `d3b3e804c57609e93789f2f860de51ac7ee70ee0`. The commit is pushed and PR #192
+  `1d9638a3d42dc78ab22c906a5ff4a21ab75f7aa5`. The commit is pushed and PR #192
 matches it. See `ops/RELEASE_STATUS.md` and
 `docs/PRODUCT_RELEASE_EVIDENCE_2026-08-16.md` for the evidence boundary.
 

@@ -2,7 +2,7 @@
 
 ## Release Identity
 
-- Candidate SHA: `d3b3e804c57609e93789f2f860de51ac7ee70ee0`
+- Candidate SHA: `1d9638a3d42dc78ab22c906a5ff4a21ab75f7aa5`
 - Branch: `agent/job-agent-continuous`
 - Pull request: #192, draft
 - Remote branch head: matched to candidate SHA

@@ -1,7 +1,7 @@
 # JobAgent RC0 Release Status
 
 Updated: 2026-08-16
-Release target: `d3b3e804c57609e93789f2f860de51ac7ee70ee0`
+Release target: `1d9638a3d42dc78ab22c906a5ff4a21ab75f7aa5`
 Branch: `agent/job-agent-continuous`
 PR: `https://github.com/fefejiro/FTC-HOLDING/pull/192`
 
