@@ -47,7 +47,7 @@ describe("public beta PWA", () => {
     ]) {
       expect(html).toContain(`id="${id}"`);
     }
-    for (const route of ["/privacy", "/terms", "/google-data", "/retention", "/account-deletion"]) {
+    for (const route of ["/privacy", "/terms", "/google-data", "/retention", "/support", "/account-deletion"]) {
       expect(html).toContain(`href="${route}"`);
     }
     expect(app).toContain('cookie("jobagent_csrf")');
@@ -61,7 +61,8 @@ describe("public beta PWA", () => {
       "terms.html",
       "google-data.html",
       "retention.html",
-      "account-deletion.html"
+      "account-deletion.html",
+      "support.html"
     ];
     for (const page of pages) {
       const content = fs.readFileSync(path.join(publicRoot, page), "utf8");
@@ -71,6 +72,7 @@ describe("public beta PWA", () => {
       expect(fs.readFileSync(path.join(publicRoot, page), "utf8"))
         .toContain("privacy@unalabs.cloud");
     }
+    expect(fs.readFileSync(path.join(publicRoot, "support.html"), "utf8")).toContain("support@unalabs.cloud");
     const google = fs.readFileSync(path.join(publicRoot, "google-data.html"), "utf8");
     expect(google).toContain("Limited Use");
     expect(google).toContain("Gmail modify");

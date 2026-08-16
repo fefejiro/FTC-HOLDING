@@ -640,7 +640,8 @@ const STATIC_FILES: Record<string, StaticAsset> = {
   "/terms": { file: "terms.html", type: "text/html; charset=utf-8", cache: "public, max-age=3600" },
   "/google-data": { file: "google-data.html", type: "text/html; charset=utf-8", cache: "public, max-age=3600" },
   "/retention": { file: "retention.html", type: "text/html; charset=utf-8", cache: "public, max-age=3600" },
-  "/account-deletion": { file: "account-deletion.html", type: "text/html; charset=utf-8", cache: "public, max-age=3600" }
+  "/account-deletion": { file: "account-deletion.html", type: "text/html; charset=utf-8", cache: "public, max-age=3600" },
+  "/support": { file: "support.html", type: "text/html; charset=utf-8", cache: "public, max-age=3600" }
 };
 
 async function serveStatic(res: ServerResponse, pathname: string): Promise<boolean> {

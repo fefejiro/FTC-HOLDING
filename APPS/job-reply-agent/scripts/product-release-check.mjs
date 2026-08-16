@@ -59,6 +59,7 @@ for (const required of [
   "public/google-data.html",
   "public/retention.html",
   "public/account-deletion.html",
+  "public/support.html",
   "public/icon-192.png",
   "public/icon-192.png.b64",
   "public/icon.png",
