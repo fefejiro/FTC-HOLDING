@@ -26,6 +26,16 @@
   must fail closed until the approved source is restored. The IT manager orange
   template remains available for IT-management roles.
 
+### Customer App Launch Increment - 2026-08-16
+
+- Added `npm run customer:smoke`, a deterministic Playwright smoke for the
+  customer PWA at 390x844 and 1440x1000.
+- The smoke covers ranked opportunities, fit and ATS analysis, interview prep,
+  approval actions, verified-application activity, and application timeline
+  rendering using local mocked API responses only.
+- This is a browser/UI regression gate, not proof of a live connector,
+  authenticated job-board submission, mobile device build, or store review.
+
 Do not develop from the shared `C:\FTC HOLDING` checkout. It contains other
 active product work. Do not copy OAuth tokens, browser profiles, generated
 resumes, databases, or candidate evidence into this engineering worktree.
@@ -114,7 +124,8 @@ required check makes them an actual merge blocker.
 
 ## Open Release Gates
 
-1. Add responsive Playwright coverage at mobile and desktop viewports.
+1. Run `npm run customer:smoke` in CI and extend it when new customer journeys
+   are added.
 2. Publish Android Digital Asset Links and Apple App Site Association files,
    then prove OAuth return on physical Android and iOS devices.
 3. Replace generated native icons and splash artwork.

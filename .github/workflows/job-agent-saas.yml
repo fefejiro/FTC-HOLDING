@@ -73,6 +73,11 @@ jobs:
       - name: Unit, integration, RLS, and document audits
         run: npm test --workspaces=false
 
+      - name: Customer journey browser smoke
+        run: |
+          npx playwright install --with-deps chromium
+          npm run customer:smoke --workspaces=false
+
       - name: Validate strict production configuration
         env:
           NODE_ENV: production

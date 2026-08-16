@@ -31,6 +31,18 @@ npm run mobile:open:android
 generate and synchronize the iOS source project but cannot produce or validate
 an App Store archive.
 
+Customer journey smoke coverage runs on Windows without credentials or a live
+database. It serves the checked-in product shell locally and uses mocked,
+tenant-owned responses to exercise both mobile and desktop layouts:
+
+```powershell
+npm run customer:smoke
+```
+
+This proves customer UI behavior only. It does not prove OAuth, job-board
+authentication, external submissions, device signing, TestFlight, Play, or
+store approval.
+
 ## Release Gates
 
 Source generation is not store readiness. Before beta distribution:

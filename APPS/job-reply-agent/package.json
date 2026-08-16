@@ -31,6 +31,7 @@
     "mobile:open:ios": "cap open ios",
     "production:check": "node scripts/product-release-check.mjs",
     "production:check:strict": "node scripts/product-release-check.mjs --strict",
+    "customer:smoke": "node scripts/customer-journey-smoke.mjs",
     "report": "tsx src/main.ts report:daily",
     "gmail:auth:url": "tsx src/main.ts gmail:auth:url",
     "gmail:auth:local": "tsx src/main.ts gmail:auth:local",

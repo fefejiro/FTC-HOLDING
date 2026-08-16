@@ -22,9 +22,12 @@ record evidence below the item, and commit its own changes.
     the static production release check passed in the isolated worktree. The
     dependency-complete release checkout independently passed the focused tests,
     full TypeScript build, and lint after integration review.
-- [ ] Add responsive Playwright coverage for match explanations, ATS gap reports,
+- [x] Add responsive Playwright coverage for match explanations, ATS gap reports,
   application timelines, interview preparation, and approval flows at one mobile
   and one desktop viewport; keep unavailable live-service checks clearly separate.
+  - Evidence (2026-08-16): `npm run customer:smoke` passes the local customer
+    shell with mocked tenant-owned API responses at 390x844 and 1440x1000. It
+    does not claim live connector, browser, or store proof.
 - [ ] Audit queue idempotency, lease recovery, and dead-letter operator visibility;
   implement the smallest missing test-backed product increment without changing
   live worker schedules or production configuration.
