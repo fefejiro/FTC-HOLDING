@@ -2,7 +2,7 @@
 
 ## Release Identity
 
-- Candidate SHA: `64953ce5f09e638d24facd80340fc8f9d576d35f`
+- Candidate SHA: `d3b3e804c57609e93789f2f860de51ac7ee70ee0`
 - Branch: `agent/job-agent-continuous`
 - Pull request: #192, draft
 - Remote branch head: matched to candidate SHA
@@ -17,7 +17,7 @@
 - Local customer smoke passed with mocked tenant-owned responses at `390x844`
   and `1440x1000`.
 - Existing local checks passed: lint, TypeScript build, static production check,
-  and the full test suite (`210 passed, 8 skipped`).
+  and the full test suite (`211 passed, 8 skipped`).
 
 ## Pending External Proof
 

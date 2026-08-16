@@ -1,7 +1,7 @@
 # JobAgent RC0 Release Status
 
 Updated: 2026-08-16
-Release target: `64953ce5f09e638d24facd80340fc8f9d576d35f`
+Release target: `d3b3e804c57609e93789f2f860de51ac7ee70ee0`
 Branch: `agent/job-agent-continuous`
 PR: `https://github.com/fefejiro/FTC-HOLDING/pull/192`
 
@@ -17,6 +17,15 @@ PR: `https://github.com/fefejiro/FTC-HOLDING/pull/192`
 - **Blocked:** asset links need the production Android signing fingerprint and
   Apple Team ID; hosted deployment needs a usable release environment and
   database/storage credentials.
+
+## Queue Audit
+
+- **Implemented locally:** pg-boss queues use tenant/user operation grouping,
+  singleton idempotency keys, five retries with exponential backoff, 30-minute
+  expiry, 14-day successful-job retention, and a 30-day dead-letter queue.
+- **Live evidence pending:** expired-lease recovery, retry execution,
+  dead-letter inspection, operator replay, and preservation of proof artifacts
+  require the hosted queue database and worker.
 
 ## Required Evidence Before RC0 Green
 
