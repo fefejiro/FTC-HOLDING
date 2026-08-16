@@ -1,0 +1,47 @@
+name: JobAgent production health
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jobagent-production-health
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      JOBAGENT_ORIGIN: https://jobagent-web-production.up.railway.app
+    steps:
+      - name: Verify readiness contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$(curl --fail --silent --show-error --retry 3 --retry-all-errors \
+            --max-time 20 "${JOBAGENT_ORIGIN}/readyz")"
+          READY_RESPONSE="$response" node -e '
+            const value = JSON.parse(process.env.READY_RESPONSE);
+            if (
+              value.ready !== true
+              || value.database !== "connected"
+              || value.tenantIsolationRole !== "enforced"
+              || value.objectStorage !== "s3"
+            ) {
+              throw new Error(`Unexpected readiness response: ${JSON.stringify(value)}`);
+            }
+          '
+
+      - name: Verify public PWA assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in manifest.webmanifest sw.js icon-192.png icon.png; do
+            curl --fail --silent --show-error --retry 3 --retry-all-errors \
+              --max-time 20 --output /dev/null "${JOBAGENT_ORIGIN}/${path}"
+          done

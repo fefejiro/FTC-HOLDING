@@ -1,0 +1,11 @@
+default_resume: ../resumes/Chukwuma Mezie-Okoye Golden Template.docx
+mappings:
+  - role_family: communications_marketing
+    keywords: [corporate communications, internal communications, public relations, brand, content marketing, growth marketing, head of marketing]
+    resume: ../resumes/Chukwuma Mezie-Okoye Golden Template.docx
+  - role_family: digital_product_transformation
+    keywords: [digital transformation, product manager, digital project manager, account manager, product development]
+    resume: ../resumes/Chukwuma Mezie-Okoye Golden Template.docx
+  - role_family: ai_emerging_technology
+    keywords: [ai prompt engineer, ai automation, ai trainer, ai data specialist, no-code, n8n, knime]
+    resume: ../resumes/Chukwuma Mezie-Okoye Golden Template.docx

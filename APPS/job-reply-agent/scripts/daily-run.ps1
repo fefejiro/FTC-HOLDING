@@ -1,22 +1,146 @@
-# Daily Job Agent Run
-# Scans inbox -> drafts replies -> approves -> sends -> emails morning report
+param(
+  [Parameter(Mandatory=$true)]
+  [ValidatePattern("^[a-z0-9][a-z0-9_-]{1,31}$")]
+  [string]$InstanceId,
+  [switch]$BrowserCycle,
+  [string]$ProjectRoot = "",
+  [string]$StateRoot = ""
+)
+
+# Scheduled Job Agent Run
+# Default mode is quiet/background: status, premium queues, and trust reports only.
+# Use -BrowserCycle, or JOB_AGENT_BROWSER_CYCLE=1, for explicit laptop browser proof runs.
 $ErrorActionPreference = "Continue"
-$root = "C:\FTC HOLDING\APPS\job-reply-agent"
-$logDir = Join-Path $root "logs"
+if (-not $ProjectRoot) { $ProjectRoot = Split-Path -Parent $PSScriptRoot }
+if (-not $StateRoot) { $StateRoot = $ProjectRoot }
+$root = (Resolve-Path -LiteralPath $ProjectRoot).Path
+$statePath = (Resolve-Path -LiteralPath $StateRoot).Path
+$env:JOB_AGENT_INSTANCE_ID = $InstanceId
+$env:JOB_AGENT_STATE_ROOT = $statePath
+$logDir = Join-Path $statePath "instances\$InstanceId\scheduler-logs"
 New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 $stamp = Get-Date -Format "yyyy-MM-dd"
-$log = Join-Path $logDir "daily-$stamp.log"
+$log = Join-Path $logDir "$InstanceId-scheduler-$stamp.log"
+$lock = Join-Path $logDir "scheduler.lock"
+
+if (Test-Path $lock) {
+  try {
+    $lockInfo = Get-Content $lock -Raw | ConvertFrom-Json
+    $lockPid = [int]$lockInfo.pid
+    $lockAgeMinutes = ((Get-Date) - [datetime]$lockInfo.startedAt).TotalMinutes
+    if ($lockPid -gt 0 -and (Get-Process -Id $lockPid -ErrorAction SilentlyContinue) -and $lockAgeMinutes -lt 45) {
+      "=== Skipped $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss'): scheduler already running as PID $lockPid ===" | Tee-Object -FilePath $log -Append
+      exit 0
+    }
+  } catch {
+    # Broken/stale lock; replace it below.
+  }
+}
+
+@{ pid = $PID; startedAt = (Get-Date).ToString("o") } | ConvertTo-Json | Set-Content -Path $lock -Encoding UTF8
+
+try {
 
 function Run-Step($label, $cmd) {
-  "=== $label ($(Get-Date -Format 'HH:mm:ss')) ===" | Tee-Object -FilePath $log -Append
+  $header = "=== $label ($(Get-Date -Format 'HH:mm:ss')) ==="
+  $header | Tee-Object -FilePath $log -Append | Out-Host
   Push-Location $root
   try {
-    & cmd /c $cmd 2>&1 | Tee-Object -FilePath $log -Append
+    $output = & cmd /c "$cmd 2>&1"
+    $exitCode = $LASTEXITCODE
+    if ($null -ne $output) {
+      $output | Tee-Object -FilePath $log -Append | Out-Host
+    }
+    return $exitCode
   } finally {
     Pop-Location
   }
 }
 
-Run-Step "1. Scan + Draft" "npm run run:gmail-cycle"
+"=== Scheduler start $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" | Tee-Object -FilePath $log -Append
+"Instance: $InstanceId" | Tee-Object -FilePath $log -Append
+"Working dir: $root" | Tee-Object -FilePath $log -Append
+"State root: $statePath" | Tee-Object -FilePath $log -Append
+$pausedSourcesRaw = if ($env:JOB_AGENT_PAUSED_SOURCES) { $env:JOB_AGENT_PAUSED_SOURCES } else { "dice,indeed,monster" }
+$pausedSources = @($pausedSourcesRaw -split "," | ForEach-Object { $_.Trim().ToLowerInvariant() } | Where-Object { $_ })
+function Test-SourcePaused($source) {
+  return $pausedSources -contains $source.ToLowerInvariant()
+}
+"Paused sources: $($pausedSources -join ', ')" | Tee-Object -FilePath $log -Append
+$allowBrowserCycle = $BrowserCycle -or $env:JOB_AGENT_BROWSER_CYCLE -in @("1", "true", "TRUE", "yes", "YES", "on", "ON")
 
-"=== Done $(Get-Date -Format 'HH:mm:ss') ===" | Tee-Object -FilePath $log -Append
+if (-not $allowBrowserCycle) {
+  "Browser cycle is disabled for scheduled/background mode. Chrome/CDP will not be checked or controlled." | Tee-Object -FilePath $log -Append
+  $statusExit = Run-Step "1. Status snapshot" "npm run hunt:status"
+  $queueExit = Run-Step "2. Premium LinkedIn queue snapshot" "npm run hunt:premium-queue -- --source=linkedin --limit=10"
+  if (Test-SourcePaused "indeed") {
+    "=== 3. Premium Indeed queue snapshot skipped: source paused ===" | Tee-Object -FilePath $log -Append
+    $indeedQueueExit = 0
+  } else {
+    $indeedQueueExit = Run-Step "3. Premium Indeed queue snapshot" "npm run hunt:premium-queue -- --source=indeed --limit=10"
+  }
+  if (Test-SourcePaused "monster") {
+    "=== 4. Premium Monster queue snapshot skipped: source paused ===" | Tee-Object -FilePath $log -Append
+    $monsterQueueExit = 0
+  } else {
+    $monsterQueueExit = Run-Step "4. Premium Monster queue snapshot" "npm run hunt:premium-queue -- --source=monster --limit=10"
+  }
+  $trustExit = Run-Step "5. Trust report snapshot" "npm run hunt:trust-report -- --limit=15"
+  if ($statusExit -ne 0) { exit $statusExit }
+  if ($queueExit -ne 0) { exit $queueExit }
+  if ($indeedQueueExit -ne 0) { exit $indeedQueueExit }
+  if ($monsterQueueExit -ne 0) { exit $monsterQueueExit }
+  if ($trustExit -ne 0) { exit $trustExit }
+  "=== Success $(Get-Date -Format 'HH:mm:ss'): quiet status/queue-only mode ===" | Tee-Object -FilePath $log -Append
+  exit 0
+}
+
+$existingCdp = $false
+try {
+  $ready = Invoke-WebRequest -Uri "http://127.0.0.1:9333/json/version" -UseBasicParsing -TimeoutSec 2
+  $existingCdp = $ready.StatusCode -eq 200
+} catch {
+  $existingCdp = $false
+}
+
+if (-not $existingCdp) {
+  "No Chrome CDP session is already available on 127.0.0.1:9333. Not launching a new Chrome/profile; keeping Fejiro's existing Chrome window untouched." | Tee-Object -FilePath $log -Append
+  $statusExit = Run-Step "1. Status snapshot" "npm run hunt:status"
+  $queueExit = Run-Step "2. Premium LinkedIn queue snapshot" "npm run hunt:premium-queue -- --source=linkedin --limit=10"
+  if (Test-SourcePaused "indeed") {
+    "=== 3. Premium Indeed queue snapshot skipped: source paused ===" | Tee-Object -FilePath $log -Append
+    $indeedQueueExit = 0
+  } else {
+    $indeedQueueExit = Run-Step "3. Premium Indeed queue snapshot" "npm run hunt:premium-queue -- --source=indeed --limit=10"
+  }
+  if (Test-SourcePaused "monster") {
+    "=== 4. Premium Monster queue snapshot skipped: source paused ===" | Tee-Object -FilePath $log -Append
+    $monsterQueueExit = 0
+  } else {
+    $monsterQueueExit = Run-Step "4. Premium Monster queue snapshot" "npm run hunt:premium-queue -- --source=monster --limit=10"
+  }
+  $trustExit = Run-Step "5. Trust report snapshot" "npm run hunt:trust-report -- --limit=15"
+  if ($statusExit -ne 0) { exit $statusExit }
+  if ($queueExit -ne 0) { exit $queueExit }
+  if ($indeedQueueExit -ne 0) { exit $indeedQueueExit }
+  if ($monsterQueueExit -ne 0) { exit $monsterQueueExit }
+  if ($trustExit -ne 0) { exit $trustExit }
+  "=== Success $(Get-Date -Format 'HH:mm:ss'): no-launch status/queue-only mode ===" | Tee-Object -FilePath $log -Append
+  exit 0
+}
+
+$env:JOB_AGENT_CDP_URL = "http://127.0.0.1:9333"
+$env:JOB_AGENT_REQUIRE_CDP = "true"
+$env:JOB_AGENT_SCRAPER_TIMEOUT_MS = "20000"
+
+$exitCode = Run-Step "1. LinkedIn laptop scout/package cycle" "npm run hunt:scrape-linkedin && npm run hunt:score -- --source=linkedin && npm run hunt:package -- --source=linkedin && npm run hunt:premium-queue -- --source=linkedin --limit=10"
+
+if ($exitCode -ne 0) {
+  "=== FAILED with exit code $exitCode at $(Get-Date -Format 'HH:mm:ss') ===" | Tee-Object -FilePath $log -Append
+  exit $exitCode
+}
+
+"=== Success $(Get-Date -Format 'HH:mm:ss') ===" | Tee-Object -FilePath $log -Append
+} finally {
+  Remove-Item -Path $lock -Force -ErrorAction SilentlyContinue
+}

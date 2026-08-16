@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#191b1d">
+  <link rel="icon" href="/icon.png">
+  <link rel="stylesheet" href="/styles.css">
+  <title>Data Retention | Una Labs JobAgent</title>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/"><img src="/icon.png" width="36" height="36" alt=""><span><strong>JobAgent</strong><small>Una Labs</small></span></a>
+    <a class="button subtle" href="/">Return to JobAgent</a>
+  </header>
+  <main class="legal-page">
+    <p class="eyebrow">Retention</p>
+    <h1>JobAgent Data Retention Schedule</h1>
+    <p class="effective">Effective July 27, 2026</p>
+    <table>
+      <thead><tr><th>Data</th><th>Normal retention</th><th>Deletion behavior</th></tr></thead>
+      <tbody>
+        <tr><td>Raw recruiter-email content</td><td>Up to 30 days</td><td>Purged by the retention worker or sooner on account deletion.</td></tr>
+        <tr><td>Email and application identifiers, status, proof, and audit metadata</td><td>Up to 12 months</td><td>Removed on account deletion unless a narrow legal or security hold applies.</td></tr>
+        <tr><td>Resumes, cover letters, career facts, and preferences</td><td>Until the user deletes the item or account</td><td>Removed from active storage during deletion.</td></tr>
+        <tr><td>OAuth credentials and runner secrets</td><td>While the connection or device remains active</td><td>Purged from active systems immediately after revocation or account deletion.</td></tr>
+        <tr><td>Expired invitations, verification links, reset links, OAuth states, and replay nonces</td><td>Only for their short validity and abuse-prevention window</td><td>Removed automatically after expiry.</td></tr>
+        <tr><td>Encrypted backups</td><td>Rolling operational backups</td><td>Expired within 30 days after source deletion.</td></tr>
+      </tbody>
+    </table>
+    <h2>Account export and deletion</h2>
+    <p>Use Security and privacy in JobAgent to export your active account record before deletion. Deleting an account is permanent and also revokes hosted connections. See <a href="/account-deletion">account deletion</a> for the available methods.</p>
+    <h2>Security holds</h2>
+    <p>A narrowly scoped record may be retained longer when reasonably necessary to investigate fraud, protect users, resolve a payment dispute, or comply with law. It will not be used to continue automation.</p>
+    <h2>Contact</h2>
+    <p>Retention questions may be sent to <a href="mailto:privacy@unalabs.cloud">privacy@unalabs.cloud</a>.</p>
+  </main>
+  <footer><span>Una Labs JobAgent</span><nav aria-label="Legal"><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/google-data">Google data</a><a href="/account-deletion">Delete account</a></nav></footer>
+</body>
+</html>
