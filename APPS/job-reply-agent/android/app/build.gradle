@@ -3,12 +3,25 @@ apply plugin: 'com.android.application'
 android {
     namespace = "cloud.unalabs.jobagent"
     compileSdk = rootProject.ext.compileSdkVersion
+    def jobAgentKeystorePath = System.getenv("JOBAGENT_KEYSTORE_PATH") ?: project.findProperty("JOBAGENT_KEYSTORE_PATH")
+    def jobAgentKeystorePassword = System.getenv("JOBAGENT_KEYSTORE_PASSWORD") ?: project.findProperty("JOBAGENT_KEYSTORE_PASSWORD")
+    def jobAgentKeyAlias = System.getenv("JOBAGENT_KEY_ALIAS") ?: project.findProperty("JOBAGENT_KEY_ALIAS")
+    signingConfigs {
+        release {
+            if (jobAgentKeystorePath && jobAgentKeystorePassword && jobAgentKeyAlias) {
+                storeFile file(jobAgentKeystorePath)
+                storePassword jobAgentKeystorePassword
+                keyAlias jobAgentKeyAlias
+                keyPassword jobAgentKeystorePassword
+            }
+        }
+    }
     defaultConfig {
         applicationId "cloud.unalabs.jobagent"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "1.0"
+        versionName "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -19,6 +32,9 @@ android {
     buildTypes {
         release {
             minifyEnabled false
+            if (jobAgentKeystorePath && jobAgentKeystorePassword && jobAgentKeyAlias) {
+                signingConfig signingConfigs.release
+            }
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
