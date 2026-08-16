@@ -2,9 +2,9 @@
 
 ## Last Verified State
 
-RC0 evidence preparation is in progress for commit
-  `1d9638a3d42dc78ab22c906a5ff4a21ab75f7aa5`. The commit is pushed and PR #192
-matches it. See `ops/RELEASE_STATUS.md` and
+RC0 evidence preparation is in progress for code image commit
+`d3b3e804c57609e93789f2f860de51ac7ee70ee0`. The code image is pushed and PR #192
+contains it plus evidence-only documentation commits. See `ops/RELEASE_STATUS.md` and
 `docs/PRODUCT_RELEASE_EVIDENCE_2026-08-16.md` for the evidence boundary.
 
 - Updated: 2026-08-15 America/New_York
