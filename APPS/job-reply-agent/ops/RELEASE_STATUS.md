@@ -17,6 +17,8 @@ PR: `https://github.com/fefejiro/FTC-HOLDING/pull/192` (documentation head follo
 - **Blocked:** asset links need the production Android signing fingerprint and
   Apple Team ID; hosted deployment needs a usable release environment and
   database/storage credentials.
+- Hosted probe on 2026-08-16 returned `404` for the expected health, release,
+  and app-link paths.
 
 ## Queue Audit
 

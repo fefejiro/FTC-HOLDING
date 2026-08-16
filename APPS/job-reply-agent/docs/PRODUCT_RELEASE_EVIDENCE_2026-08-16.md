@@ -18,6 +18,9 @@
   and `1440x1000`.
 - Existing local checks passed: lint, TypeScript build, static production check,
   and the full test suite (`211 passed, 8 skipped`).
+- GitHub JobAgent SaaS workflow `31973938950` passed both
+  `standalone-and-security` and `immutable-image`; the browser smoke, strict
+  production configuration, and secret scan passed within that workflow.
 
 ## Pending External Proof
 
@@ -30,6 +33,14 @@
 - Two-tenant RLS, signed-download, proof, and idempotency evidence.
 - pg-boss retry/lease/dead-letter/replay evidence.
 - Android `assetlinks.json` and Apple `apple-app-site-association` publication.
+
+## Hosted Probe
+
+On 2026-08-16, `https://jobagent.unalabs.cloud` returned `404` for `/healthz`,
+`/readyz`, `/api/v1/release`, `/.well-known/assetlinks.json`, and
+`/.well-known/apple-app-site-association`. This is evidence that the hosted RC0
+surface is not currently available at the expected domain, not evidence of a
+successful deployment.
 
 ## Honest Boundary
 
