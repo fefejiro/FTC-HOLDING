@@ -78,6 +78,10 @@ The signed release bundle is:
   `82cee97805ab12c30ac1e48466bad54ec30bf337` with App Store upload disabled.
   This proves the protected signing material and archive path, not an uploaded
   IPA, TestFlight build, App Review submission, or public availability.
+- The exported IPA was retrieved from the workflow evidence and verified with
+  SHA-256 `24116be9079a15dbcabd3e2e4371ced358b72340718b67ed8898349ba489871a`.
+  Its signed application identity is
+  `G6UNC88GQ5.cloud.unalabs.jobagent`.
 
 Final store screenshots were generated under:
 
