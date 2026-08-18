@@ -40,6 +40,12 @@ publisher identity. Treat account switches, two-factor prompts, legal terms,
 export attestations, and developer agreements as owner actions; do not bypass
 or certify them on the owner's behalf.
 
+The Android release workflow accepts a JobAgent-specific Google Play service
+account when one is enrolled. Until then, it may use the existing protected
+PeacePad publisher service-account secret because it is attached to the same
+approved Fejiro Play publisher account. This is a publishing credential only;
+UnaScout continues to use its own Android upload key and package ID.
+
 ## Audience And Positioning
 
 UnaScout is for adult job seekers who want explainable matching, truthful resume
