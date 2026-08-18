@@ -131,12 +131,25 @@ own evidence.
   inspected. Default Capacitor artwork is no longer present.
 - JobAgent-specific Android signing material is enrolled in protected GitHub
   Actions secrets. The AAB has not yet been uploaded to Play Console.
+- A production-track upload was attempted from GitHub Actions run `32189803248`
+  on 2026-08-18. Metadata validation, screenshot generation, and signed AAB
+  creation completed; Google Play rejected the API request with `The caller does
+  not have permission`. No Play release was created. Grant the protected
+  publisher service account access to `cloud.unalabs.jobagent` in Play Console,
+  then rerun `UnaScout Android release` with `upload_to_play=true`.
+- The Android workflow now preserves the signed AAB and store screenshots even
+  when a Play upload fails, so the next provider response and release artifact
+  remain available for audit.
 - A dedicated zero-cost `macos-26` GitHub Actions workflow exists for iOS and
   enforces Xcode 26 plus JobAgent-specific Apple distribution credentials.
   PeacePad credentials are not reused.
 - App Store Connect is visibly authenticated to the correct organization and
   the UnaScout record exists as Apple ID `6802774371`; no uploaded build has
   yet been evidenced.
+- Apple upload remains blocked by the Account Holder's outstanding Developer
+  Program License Agreement acceptance and missing App Store Connect API upload
+  credentials. The signed IPA and valid UnaScout App Store provisioning profile
+  are ready; no App Store build has been uploaded or submitted for review.
 - Apple Developer portal confirms team/App ID prefix `G6UNC88GQ5`, and the
   hosted Apple App Site Association response is externally verified at `200`
   for `G6UNC88GQ5.cloud.unalabs.jobagent`. The App ID registration and App Store
