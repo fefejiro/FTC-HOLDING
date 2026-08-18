@@ -5,6 +5,7 @@
 - Internal product: `JobAgent`
 - Public brand: `UnaScout` by Una Labs
 - Exact deployed commit: `c96c1115dc51b890a1bc1f8d90ad022121360d5b`
+- Current externally verified production commit: `058bbd40fb3df3ced6c8a8263d8353e270dfea5a`
 - Latest merged test/evidence head: `2d6b42818d835e198b28e139e7ff81d19bcd03b9`
 - Native application ID: `cloud.unalabs.jobagent`
 - Native version: `1.0.1 (2)`
@@ -99,8 +100,12 @@ was present.
 - `https://jobagent.unalabs.cloud/`, `/app`, `/healthz`, `/readyz`,
   `/api/v1/release`, `/api/v1/plans`, and `/edgez` return healthy production
   responses. The release endpoint identifies deployed commit
-  `c96c1115dc51b890a1bc1f8d90ad022121360d5b` and schema
+  `058bbd40fb3df3ced6c8a8263d8353e270dfea5a` and schema
   `011_revenue_launch`.
+- The public landing page now exposes a canonical URL, Open Graph, Twitter
+  card, and `SoftwareApplication` structured data. Production `robots.txt`
+  and `sitemap.xml` both return `200`; the sitemap contains the public landing,
+  privacy, terms, and support pages.
 - A disposable owner-controlled tenant completed public registration, Mailjet
   verification, login, recommendation/analysis, approval, proof timeline, and
   interview-preparation smoke at both required viewports. Redacted screenshots
