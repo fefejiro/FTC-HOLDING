@@ -6,13 +6,14 @@ android {
     def jobAgentKeystorePath = System.getenv("JOBAGENT_KEYSTORE_PATH") ?: project.findProperty("JOBAGENT_KEYSTORE_PATH")
     def jobAgentKeystorePassword = System.getenv("JOBAGENT_KEYSTORE_PASSWORD") ?: project.findProperty("JOBAGENT_KEYSTORE_PASSWORD")
     def jobAgentKeyAlias = System.getenv("JOBAGENT_KEY_ALIAS") ?: project.findProperty("JOBAGENT_KEY_ALIAS")
+    def jobAgentKeyPassword = System.getenv("JOBAGENT_KEY_PASSWORD") ?: project.findProperty("JOBAGENT_KEY_PASSWORD") ?: jobAgentKeystorePassword
     signingConfigs {
         release {
             if (jobAgentKeystorePath && jobAgentKeystorePassword && jobAgentKeyAlias) {
                 storeFile file(jobAgentKeystorePath)
                 storePassword jobAgentKeystorePassword
                 keyAlias jobAgentKeyAlias
-                keyPassword jobAgentKeystorePassword
+                keyPassword jobAgentKeyPassword
             }
         }
     }

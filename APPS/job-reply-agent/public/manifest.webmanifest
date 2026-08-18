@@ -1,6 +1,6 @@
 {
-  "name": "Una Labs JobAgent",
-  "short_name": "JobAgent",
+  "name": "UnaScout by Una Labs",
+  "short_name": "UnaScout",
   "description": "Candidate job search, approvals, and application proof workspace.",
   "start_url": "/app",
   "scope": "/",
