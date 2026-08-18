@@ -17,9 +17,10 @@
 - Added the iOS privacy manifest, non-exempt-encryption declaration, and an
   iPhone-only v1 target.
 - Kept native clients free of Stripe checkout and external purchase prompts.
-- Added exact-domain association generation. Runtime association endpoints fail
-  closed until `APPLE_APP_ID_PREFIX` and `PLAY_APP_SIGNING_SHA256` contain the
-  identities issued by Apple and Google.
+- Added exact-domain association generation. The Apple association endpoint is
+  now live and verified at `200` with App ID prefix `G6UNC88GQ5`; Android
+  Digital Asset Links remains fail-closed until Google Play App Signing issues
+  the distribution certificate fingerprint.
 - Added complete English (U.S.) Apple and Google store metadata, ASO guidance,
   deterministic screenshot capture, and metadata validation.
 - Updated iOS release automation to use Xcode 26 on `macos-26`, validate a
@@ -99,6 +100,9 @@ was present.
   restricted key replaces the unsuitable CLI session credential.
 - App Store Connect is visibly authenticated to the Fejiro Technology
   Consultancy organization.
+- Apple Developer portal is authenticated to the same organization and confirms
+  App ID prefix `G6UNC88GQ5`; `/.well-known/apple-app-site-association` now
+  returns `200` with `G6UNC88GQ5.cloud.unalabs.jobagent`.
 - No UnaScout App Store record, uploaded iOS build, TestFlight build, App Review
   submission, or public listing is yet evidenced.
 - No UnaScout Play Console record or uploaded AAB is yet evidenced.
@@ -112,8 +116,9 @@ was present.
    webhook/entitlement/cancellation/refund evidence before enabling checkout.
 2. Keep the exact runtime image in place; merged head `2d6b42818` is release
    tooling/evidence only and passed CI before merge.
-3. Create the Apple and Google app records, obtain their exact association and
-   signing identities, deploy the association responses, and verify them live.
+3. Complete the Apple and Google app records. Apple associated-domain identity
+   is externally verified; obtain the Google Play App Signing fingerprint,
+   deploy Android Digital Asset Links, and verify it live.
 4. Produce the signed iOS archive with dedicated JobAgent credentials and upload
    it through the GitHub Actions macOS workflow.
 5. Upload the canonical CI AAB for the first Play release, complete policy
