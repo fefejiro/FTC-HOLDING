@@ -13,6 +13,24 @@
 - Default language: `English (U.S.)` for the first global listing; Canadian positioning remains in the product and campaign targeting
 - Copyright: `2026 Fejiro Technology Consultancy Inc.`
 
+## Release Account Routing
+
+Use the existing authenticated account/profile that owns each release surface.
+This is operational routing information only: never record passwords, API keys,
+recovery codes, cookies, or one-time authentication codes here.
+
+| Surface | Account or browser profile | Purpose |
+| --- | --- | --- |
+| Stripe | `Fejiro.Efiuvwere@gmail.com` | Una Labs billing account and restricted worker keys |
+| Railway | `mike.fejiro@gmail.com` | `una-jobagent` production project and service configuration |
+| Google Play Console | Chrome profile `Peace Pad` (`peacepad@peacepad.ca`) | Existing Fejiro publisher account used for Android releases |
+| App Store Connect | Fejiro Efiuvwere Apple profile | Fejiro Technology Consultancy Inc. iOS record, builds, and review |
+
+Before any irreversible console action, confirm the visible organization and
+publisher identity. Treat account switches, two-factor prompts, legal terms,
+export attestations, and developer agreements as owner actions; do not bypass
+or certify them on the owner's behalf.
+
 ## Audience And Positioning
 
 UnaScout is for adult job seekers who want explainable matching, truthful resume
