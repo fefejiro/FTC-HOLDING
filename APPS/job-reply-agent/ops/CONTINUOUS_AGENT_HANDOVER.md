@@ -37,6 +37,9 @@ facts before changing them.
 - Clean install, build, lint, `229` application tests, `7` Worker tests, both
   required browser viewports, strict production checks, and scoped production
   audits pass.
+- GitHub Actions run `32089839983` passed all three JobAgent jobs on workflow
+  head `1fb76183539f578764770092daf193e1c73b9664`, including the immutable image,
+  billing gateway, Linux browser smoke, strict configuration, and secret scan.
 - Cloudflare `/edgez` is live, but `/`, `/healthz`, `/readyz`, and
   `/api/v1/release` return `404`. Do not deploy the shared Worker or activate
   checkout until the JobAgent origin is restored and webhook delivery is proven.

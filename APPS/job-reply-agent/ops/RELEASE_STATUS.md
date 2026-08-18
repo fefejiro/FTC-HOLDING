@@ -18,6 +18,9 @@ Schema version: `011_revenue_launch`
   `7` tests; customer smoke at `390x844` and `1440x1000`; static and strict
   release checks; application and Worker production audits with `0`
   vulnerabilities when correctly scoped with `--workspaces=false`.
+- **Verified in CI:** GitHub Actions run `32089839983` passed the
+  `standalone-and-security`, `immutable-image`, and `billing-gateway` jobs on
+  workflow head `1fb76183539f578764770092daf193e1c73b9664`.
 - **Deployed:** the existing Cloudflare edge route only. The RC3 web, API,
   worker, migration, PostgreSQL, private storage, and shared Stripe Worker
   changes are not deployed.
