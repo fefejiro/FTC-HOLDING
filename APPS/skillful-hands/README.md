@@ -19,7 +19,7 @@ The production output is written to `dist`.
 
 The website is a compact static multi-page experience:
 
-- `/` Overview and programme carousel
+- `/` Overview, hero photo controls and compact programme pathways
 - `/about/` Organisation and founder
 - `/programmes/` Programme details
 - `/partner-with-us/` Partnership audiences
@@ -34,10 +34,11 @@ not choose or store a visitor's email provider.
 
 Edit public copy and programme content in `src/content/site.ts`. Founder and
 workshop photography are supplied by Skillful Hands CIC. The homepage uses an
-accessible workshop-photo carousel with pause controls and reduced-motion
-support. The official Skillful Hands CIC logo artwork is used in the header and
-footer. The primary hero image is an approved illustrative workshop scene; the
-other workshop photographs are authentic supplied assets.
+accessible workshop-photo sequence with pause controls and reduced-motion
+support. Programme pathways are static, compact links to the detailed
+programme page. The official Skillful Hands CIC logo artwork is used in the
+header and footer. The primary hero image is an approved illustrative workshop
+scene; the other workshop photographs are authentic supplied assets.
 
 ## Deployment
 
@@ -54,6 +55,10 @@ domain launches and certificate recovery.
 Photography permissions and future brand assets remain content-governance
 requirements. Monique Hughes's portrait and the current workshop images are
 supplied assets.
+
+The final visual polish removes the decorative community ribbon, gives each
+programme detail a wider image-and-copy layout, and keeps the footer logo clear
+on both desktop and mobile. These are presentation choices, not content claims.
 
 ## Reusing this foundation
 

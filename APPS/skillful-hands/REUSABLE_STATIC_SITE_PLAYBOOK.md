@@ -20,7 +20,7 @@ governance review.
 | Shared metadata and page frame | `src/layouts/PageLayout.astro` |
 | Navigation and footer | `src/components/Header.astro` and `src/components/Footer.astro` |
 | Standard site journeys | Home, About, Programmes or Services, Partner with us, Contact |
-| Lightweight interactivity | Progressive JavaScript only for the mobile menu and accessible carousel |
+| Lightweight interactivity | Progressive JavaScript only for the mobile menu and hero-photo controls |
 | Deployment | Static Astro output on Cloudflare Pages |
 
 ## Start a new client site
@@ -36,8 +36,10 @@ governance review.
 4. Replace brand tokens, fonts and the logo. Use the supplied logo artwork,
    never recreate a distinctive logo using web fonts.
 5. Add only approved, permissioned photographs. Optimise their dimensions and
-   provide accurate alt text. Use restrained image carousels with pause and
-   reduced-motion support where they communicate more than a static image.
+   provide accurate alt text. If a small photo sequence communicates more than
+   one static image, keep it restrained, pauseable and reduced-motion safe. Do
+   not use a carousel for programme navigation when compact static links are
+   clearer.
 6. Keep calls to action real. Use an internal route for fuller context and a
    meaningful endpoint such as `mailto:` only where email is the agreed contact
    journey.
@@ -60,7 +62,7 @@ Before release, confirm:
 - All pages, navigation, primary calls to action and contact links work.
 - Responsive visual QA covers 375px, 430px, 768px, 1024px and 1440px.
 - Keyboard QA covers the skip link, visible focus states, mobile-menu Escape
-  behaviour and focus return, carousel controls and all primary links.
+  behaviour and focus return, hero-photo controls and all primary links.
 - No horizontal overflow, clipped text, excessive blank areas or distorted
   images appear at those sizes.
 - `prefers-reduced-motion` limits animation and any carousel can be paused.
@@ -68,6 +70,10 @@ Before release, confirm:
   manifest match the approved public identity.
 - Production verification distinguishes build evidence from live DNS, HTTPS,
   redirects and route evidence.
+- On final visual review, remove decorative ribbons that compete with copy,
+  keep programme imagery prominent with a generous two-column desktop layout,
+  stack image before copy on mobile, and size the full logo clearly in the
+  footer.
 
 ## Cloudflare Pages release
 

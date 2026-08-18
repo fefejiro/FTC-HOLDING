@@ -29,7 +29,7 @@ Reasoning:
 
 ## Information Architecture
 
-1. Home: hero, overview, programme carousel and contact call to action
+1. Home: hero, overview, compact programme pathways and contact call to action
 2. About: purpose and founder
 3. Programmes: programme details and enquiry routes
 4. Partner with us: partnership audiences and enquiry routes
@@ -190,6 +190,19 @@ Preferred production flow:
 - Add subtle, reduced-motion-safe transitions
 - Add real or clearly labelled placeholder assets
 
+### Final visual QA lessons
+
+- Keep programme detail cards wide enough for the photograph and copy to read as
+  separate editorial columns on desktop. Stack the image above the copy on
+  smaller screens.
+- Avoid decorative braid or ribbon artwork when it competes with community copy
+  or creates an apparent page edge. Brand elements should support hierarchy,
+  not become a second subject.
+- Use the complete supplied logo artwork with responsive dimensions in both
+  header and footer. Do not substitute a text approximation or a tiny mark.
+- Keep the homepage compact: use static programme links for orientation and
+  reserve detailed descriptions for `/programmes/`.
+
 ### Phase 4: Quality
 
 - Run build and lint checks
@@ -219,3 +232,12 @@ The first release is complete when:
 - the build is reproducible from the repository
 - deployment and content-editing instructions are documented
 - no database, authentication, or unnecessary backend has been introduced
+
+## Release record
+
+The final layout polish was released in commit `b8a0ea9` on
+`feat/skillful-hands-foundation` and deployed to the `skillful-hands-cic`
+Cloudflare Pages project. It removed the community ribbon, widened programme
+image-and-copy cards, enlarged the footer logo, and preserved the static
+homepage pathways. Production verification completed 20/20 checks after the
+deployment.
