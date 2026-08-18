@@ -4,10 +4,8 @@
 
 - Internal product: `JobAgent`
 - Public brand: `UnaScout` by Una Labs
-- Current `origin/main`: `c96c1115dc51b890a1bc1f8d90ad022121360d5b`
 - Exact deployed commit: `c96c1115dc51b890a1bc1f8d90ad022121360d5b`
-- Follow-up branch: `fix/jobagent-repeatable-live-smoke`
-- Follow-up commit: `e09c445d9`
+- Latest merged test/evidence head: `2d6b42818d835e198b28e139e7ff81d19bcd03b9`
 - Native application ID: `cloud.unalabs.jobagent`
 - Native version: `1.0.1 (2)`
 - Schema version: `011_revenue_launch`
@@ -112,8 +110,8 @@ was present.
 1. Install the permanent Stripe live restricted key, bootstrap and verify the
    approved catalog, prove no-charge Checkout and portal creation, then complete
    webhook/entitlement/cancellation/refund evidence before enabling checkout.
-2. Merge the guarded repeatable-fixture follow-up `e09c445d9` after CI. It is
-   release tooling only; the exact runtime image is already deployed and proven.
+2. Keep the exact runtime image in place; merged head `2d6b42818` is release
+   tooling/evidence only and passed CI before merge.
 3. Create the Apple and Google app records, obtain their exact association and
    signing identities, deploy the association responses, and verify them live.
 4. Produce the signed iOS archive with dedicated JobAgent credentials and upload
