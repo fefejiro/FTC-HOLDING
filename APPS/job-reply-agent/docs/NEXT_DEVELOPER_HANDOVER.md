@@ -130,10 +130,11 @@ edits against the same files concurrently. The release auditor is read-only.
 
 ## Current CI And PR State
 
-PR #253 contains the revenue code image and this evidence update. Local checks
-are green. Require the complete `JobAgent SaaS Release Gates` workflow on the
-documentation head before merge. Keep unrelated monorepo workflows separate
-unless a repository-level required check makes them a real merge blocker.
+PR #253 contains the revenue code image and this evidence update. GitHub Actions
+run `32089839983` passed `standalone-and-security`, `immutable-image`, and
+`billing-gateway` on workflow head `1fb76183539f578764770092daf193e1c73b9664`.
+Keep unrelated monorepo workflows separate unless a repository-level required
+check makes them a real merge blocker.
 
 The previous PR #192 and run `31434235006` remain historical RC0 evidence; they
 do not prove the RC3 code image, schema `011_revenue_launch`, or hosted revenue

@@ -46,6 +46,22 @@ The unscoped monorepo audit includes ignored/extraneous root packages and is not
 the application release audit. The application-local and Worker-local audits
 are the relevant standalone results.
 
+## GitHub Actions Evidence
+
+- Workflow: `JobAgent SaaS release gates`
+- Run: `https://github.com/fefejiro/FTC-HOLDING/actions/runs/32089839983`
+- Head: `1fb76183539f578764770092daf193e1c73b9664`
+- Result: all three jobs passed.
+- `standalone-and-security` passed clean install, audit, static checks,
+  compile/lint, `229` tests, browser smoke, strict configuration, and Gitleaks.
+- `immutable-image` built the image and proved all entrypoints/public assets.
+- `billing-gateway` passed clean install, audit, typecheck, and `7` isolated
+  Stripe/Mailjet Worker tests.
+- Two earlier manual runs were cancelled after `playwright install --with-deps`
+  stalled on separate runners. Workflow head `1fb761835` installs only Chromium
+  and caps the smoke step at five minutes; its browser smoke completed in 16
+  seconds.
+
 ## External Probe
 
 On 2026-08-17:
