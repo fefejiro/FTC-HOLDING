@@ -22,6 +22,12 @@ export function productDbConfig(): ProductDbConfig {
 
 let pool: pg.Pool | null = null;
 
+const LEGACY_MIGRATION_CHECKSUMS: Readonly<Record<string, readonly string[]>> = {
+  "004_saas_foundation.sql": [
+    "e47711701b98b8c8cabdcced3842a4d547a70ad7720f21c4fa97300b874081c2"
+  ]
+};
+
 function sha256(value: string): string {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
@@ -34,12 +40,13 @@ export function migrationChecksum(sql: string): string {
   return sha256(normalizeMigrationSql(sql));
 }
 
-export function acceptedMigrationChecksums(sql: string): Set<string> {
+export function acceptedMigrationChecksums(sql: string, name?: string): Set<string> {
   const normalized = normalizeMigrationSql(sql);
   return new Set([
     migrationChecksum(sql),
     sha256(sql),
-    sha256(normalized.replace(/\n/g, "\r\n"))
+    sha256(normalized.replace(/\n/g, "\r\n")),
+    ...(name ? LEGACY_MIGRATION_CHECKSUMS[name] || [] : [])
   ]);
 }
 
@@ -97,7 +104,7 @@ export async function migrateProductDb(db = getProductPool()): Promise<void> {
         [name]
       );
       if (existing.rows[0]) {
-        if (!acceptedMigrationChecksums(sql).has(existing.rows[0].sha256)) {
+        if (!acceptedMigrationChecksums(sql, name).has(existing.rows[0].sha256)) {
           throw new Error(`Applied migration ${name} does not match its release checksum.`);
         }
         continue;

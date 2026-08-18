@@ -26,6 +26,14 @@ describe("product migration checksums", () => {
     expect(acceptedMigrationChecksums(sql)).toContain(productionChecksum);
   });
 
+  it("accepts the exact mixed-newline checksum only for its production migration", () => {
+    const sql = fs.readFileSync(path.resolve("migrations/004_saas_foundation.sql"), "utf8");
+    const productionChecksum = "e47711701b98b8c8cabdcced3842a4d547a70ad7720f21c4fa97300b874081c2";
+
+    expect(acceptedMigrationChecksums(sql, "004_saas_foundation.sql")).toContain(productionChecksum);
+    expect(acceptedMigrationChecksums(sql, "005_product_lifecycle.sql")).not.toContain(productionChecksum);
+  });
+
   it("rejects a checksum for changed SQL", () => {
     const sql = "CREATE TABLE example (id uuid PRIMARY KEY);\n";
     const changed = `${sql}ALTER TABLE example ADD COLUMN title text;\n`;
