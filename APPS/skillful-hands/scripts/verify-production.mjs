@@ -1,4 +1,4 @@
-import { resolve4, resolve6 } from "node:dns/promises";
+import { lookup, resolve4, resolve6 } from "node:dns/promises";
 
 const args = Object.fromEntries(
   process.argv.slice(2).map((argument) => {
@@ -40,6 +40,10 @@ try {
     ...(await resolve4(domain).catch(() => [])),
     ...(await resolve6(domain).catch(() => [])),
   ];
+  if (addresses.length === 0) {
+    const fallback = await lookup(domain, { all: true }).catch(() => []);
+    addresses.push(...fallback.map(({ address }) => address));
+  }
   record("DNS", addresses.length > 0, addresses.join(", ") || "no addresses");
 } catch (error) {
   record("DNS", false, error.message);
