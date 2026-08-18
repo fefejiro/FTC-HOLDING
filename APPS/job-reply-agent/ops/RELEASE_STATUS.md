@@ -3,7 +3,8 @@
 Updated: 2026-08-18 America/New_York
 Code image: `e6fe31c63`
 Branch: `release/unascout-store-publish`
-Draft PR: pending branch push
+Evidence head: `daec0390537d75b14b8a38a31889e9e3550dda43`
+Draft PR: `https://github.com/fefejiro/FTC-HOLDING/pull/257`
 Schema version: `011_revenue_launch`
 
 ## State
@@ -19,9 +20,10 @@ Schema version: `011_revenue_launch`
   a signed Android `1.0.1 (2)` AAB; static and strict
   release checks; application and Worker production audits with `0`
   vulnerabilities when correctly scoped with `--workspaces=false`.
-- **Verified in CI:** GitHub Actions run `32089839983` passed the
-  `standalone-and-security`, `immutable-image`, and `billing-gateway` jobs on
-  workflow head `1fb76183539f578764770092daf193e1c73b9664`.
+- **Verified in CI:** GitHub Actions run `32142960353` passed the current SaaS,
+  security, billing, immutable-image, browser-smoke, and signed-Android jobs.
+  Dedicated Android run `32142993982` also passed and retained artifact
+  `9326695864` on evidence head `daec03905`.
 - **Deployed:** the existing Cloudflare edge route only. The RC3 web, API,
   worker, migration, PostgreSQL, private storage, and shared Stripe Worker
   changes are not deployed.
@@ -111,6 +113,9 @@ own evidence.
 - A local signed Android `1.0.1 (2)` release AAB was built and
   signature-verified on 2026-08-18 with SHA-256
   `D2BFD88D7DF5A8D88130FE7349A6E8D30DC42FCE4487E045C7F625DACA22BAED`.
+- The remote release artifact has SHA-256
+  `714A82DDFDC3B993D2704BE5090111ECFCDCB4CE13BA1B56AB0079C786049107`
+  and the same verified JobAgent upload signer.
 - Final native icons, splash screens, Apple/Google listing metadata, a Google
   feature graphic, and ten phone screenshots have been generated and visually
   inspected. Default Capacitor artwork is no longer present.

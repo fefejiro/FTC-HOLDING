@@ -5,7 +5,8 @@
 - Repository: `fefejiro/FTC-HOLDING`
 - Branch: `release/unascout-store-publish`
 - Store code image: `e6fe31c63`
-- Draft PR: pending branch push
+- Evidence head: `daec0390537d75b14b8a38a31889e9e3550dda43`
+- Draft PR: `https://github.com/fefejiro/FTC-HOLDING/pull/257`
 - Clean worktree: `D:\FTC-HOLDING-worktrees\unascout-main-release`
 - Product root: `D:\FTC-HOLDING-worktrees\unascout-main-release\APPS\job-reply-agent`
 - Operational state root: `C:\FTC HOLDING\APPS\job-reply-agent`
@@ -151,8 +152,8 @@ workflow.
    bootstrap the exact Stripe catalog and then activate checkout.
 4. Publish Android Digital Asset Links and Apple App Site Association files,
    then prove OAuth return on physical Android and iOS devices.
-5. Push and verify the UnaScout store release commit `e6fe31c63`, then retain
-   the CI logs and signed artifacts.
+5. Preserve successful CI runs `32142960353` and `32142993982` plus Android
+   artifact `9326695864` as the store-candidate receipts.
 6. Create the Apple and Google app records. Configure dedicated Apple signing,
    upload the first Play AAB manually, and complete Play testing/TestFlight.
 7. Upload the completed listing metadata and screenshots, finish store privacy,

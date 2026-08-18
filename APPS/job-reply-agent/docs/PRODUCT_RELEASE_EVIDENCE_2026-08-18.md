@@ -6,6 +6,8 @@
 - Public brand: `UnaScout` by Una Labs
 - Branch: `release/unascout-store-publish`
 - Release commit: `e6fe31c63`
+- Evidence head: `daec0390537d75b14b8a38a31889e9e3550dda43`
+- Draft PR: `https://github.com/fefejiro/FTC-HOLDING/pull/257`
 - Native application ID: `cloud.unalabs.jobagent`
 - Native version: `1.0.1 (2)`
 - Schema version: `011_revenue_launch`
@@ -52,6 +54,26 @@ The signed release bundle is:
   `FF:B8:EE:4A:EA:C9:B1:CB:82:6D:FB:B1:0C:02:FD:35:3F:40:A2:CC:19:D5:F9:63:75:75:F8:06:7F:48:80:FD`
 - Signing material remains outside Git in `D:\jobagent-release-secrets`.
 
+## Remote CI Evidence
+
+- JobAgent SaaS release gates:
+  `https://github.com/fefejiro/FTC-HOLDING/actions/runs/32142960353`
+- UnaScout Android release:
+  `https://github.com/fefejiro/FTC-HOLDING/actions/runs/32142993982`
+- Both runs completed successfully against evidence head `daec03905`.
+- The SaaS run passed standalone install, dependency audit, build, lint, all
+  application and billing tests, PostgreSQL isolation checks, browser smoke,
+  strict configuration, secret scanning, immutable-image inspection, and a
+  signed Android build.
+- The dedicated Android run regenerated store screenshots, built and synced the
+  release, imported the protected JobAgent key, signed the AAB, recorded its
+  digest, and uploaded the artifact. Play upload was intentionally skipped.
+- Remote AAB artifact ID: `9326695864`
+- Remote AAB SHA-256:
+  `714A82DDFDC3B993D2704BE5090111ECFCDCB4CE13BA1B56AB0079C786049107`
+- Remote AAB signer SHA-256:
+  `FF:B8:EE:4A:EA:C9:B1:CB:82:6D:FB:B1:0C:02:FD:35:3F:40:A2:CC:19:D5:F9:63:75:75:F8:06:7F:48:80:FD`
+
 Final store screenshots were generated under:
 
 `D:\FTC-HOLDING-temp\unascout-store-assets-final`
@@ -73,16 +95,15 @@ was present.
 
 ## Required External Gates
 
-1. Push `e6fe31c63`, obtain green CI, and retain signed build artifacts.
-2. Recover or replace the dedicated JobAgent Railway origin and verify the exact
+1. Recover or replace the dedicated JobAgent Railway origin and verify the exact
    release SHA, schema, queues, database, storage, and backup behavior.
-3. Create the Apple and Google app records, obtain their exact association and
+2. Create the Apple and Google app records, obtain their exact association and
    signing identities, deploy the association responses, and verify them live.
-4. Produce the signed iOS archive with dedicated JobAgent credentials and upload
+3. Produce the signed iOS archive with dedicated JobAgent credentials and upload
    it through the GitHub Actions macOS workflow.
-5. Upload the signed AAB manually for the first Play release, complete policy
+4. Upload the signed AAB manually for the first Play release, complete policy
    declarations and testing requirements, and submit the eligible track.
-6. Complete physical iPhone and Android launch, sign-in, deep-link, privacy,
+5. Complete physical iPhone and Android launch, sign-in, deep-link, privacy,
    pause/export/delete, and purchase-boundary tests.
 
 ## Not Claimed

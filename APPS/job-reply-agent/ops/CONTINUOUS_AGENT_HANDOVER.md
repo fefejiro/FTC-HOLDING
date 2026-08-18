@@ -11,7 +11,8 @@ and no payment has been accepted. See `ops/RELEASE_STATUS.md` and
 - Updated: 2026-08-18 America/New_York
 - Engineering branch: `release/unascout-store-publish`
 - Store code image: `e6fe31c63`
-- Draft PR: pending branch push
+- Evidence head: `daec0390537d75b14b8a38a31889e9e3550dda43`
+- Draft PR: `https://github.com/fefejiro/FTC-HOLDING/pull/257`
 - Store-release worktree: `D:\FTC-HOLDING-worktrees\unascout-main-release`
 - Operational engineering worktree: `D:\FTC-HOLDING-worktrees\job-agent-continuous`
 - Operational branch: `agent/job-agent-continuous`
@@ -160,6 +161,10 @@ facts before changing them.
 - The signed Android `1.0.1 (2)` AAB was verified locally with SHA-256
   `D2BFD88D7DF5A8D88130FE7349A6E8D30DC42FCE4487E045C7F625DACA22BAED`.
   Its upload key remains outside Git under `D:\jobagent-release-secrets`.
+- GitHub runs `32142960353` and `32142993982` passed. Remote Android artifact
+  `9326695864` has SHA-256
+  `714A82DDFDC3B993D2704BE5090111ECFCDCB4CE13BA1B56AB0079C786049107`
+  and the same upload signer.
 - App Store Connect is visibly logged in to the Fejiro Technology Consultancy
   organization. App creation, Apple signing, build upload, and review are not
   yet evidenced.
