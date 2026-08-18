@@ -28,7 +28,8 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="jobagent.unalabs.cloud" />
+                    android:host="jobagent.unalabs.cloud"
+                    android:pathPrefix="/app" />
             </intent-filter>
 
         </activity>

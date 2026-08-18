@@ -4,18 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#191b1d">
-  <meta name="description" content="Una Labs JobAgent candidate workspace">
+  <meta name="description" content="UnaScout job search, resume tailoring, interview preparation, and application proof workspace">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icon.png">
   <link rel="apple-touch-icon" href="/icon.png">
   <link rel="stylesheet" href="/styles.css">
-  <title>Una Labs JobAgent</title>
+  <title>UnaScout by Una Labs</title>
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="/app" aria-label="JobAgent workspace home">
+    <a class="brand" href="/app" aria-label="UnaScout workspace home">
       <img src="/icon.png" width="36" height="36" alt="">
-      <span><strong>JobAgent</strong><small>Una Labs</small></span>
+      <span><strong>UnaScout</strong><small>by Una Labs</small></span>
     </a>
     <div class="top-actions">
       <span id="global-status" class="status-chip neutral">Checking</span>
@@ -27,7 +27,7 @@
   <main id="auth-view" class="auth-layout">
     <section class="auth-panel" aria-labelledby="auth-title">
       <p class="eyebrow">Founding Access</p>
-      <h1 id="auth-title">Sign in to JobAgent</h1>
+      <h1 id="auth-title">Sign in to UnaScout</h1>
       <div id="auth-message" class="notice" aria-live="polite" hidden></div>
       <form id="login-form" class="form-stack">
         <label>Email<input name="email" type="email" autocomplete="email" required></label>
@@ -214,7 +214,7 @@
           <h2>Usage this period</h2>
           <ul id="usage-list" class="record-list"></ul>
         </section>
-        <section class="content-band">
+        <section id="available-plans-band" class="content-band">
           <h2>Available plans</h2>
           <div id="workspace-plan-grid" class="workspace-plan-grid"></div>
           <p id="billing-result" class="form-result" aria-live="polite"></p>
@@ -292,7 +292,7 @@
   </dialog>
 
   <footer>
-    <span>Una Labs JobAgent</span>
+    <span>UnaScout by Una Labs</span>
     <nav aria-label="Legal"><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/support">Support</a><a href="/google-data">Google data</a><a href="/retention">Retention</a><a href="/account-deletion">Delete account</a></nav>
   </footer>
   <script src="/native-bridge.js" defer></script>

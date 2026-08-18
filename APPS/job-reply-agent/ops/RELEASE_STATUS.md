@@ -1,9 +1,10 @@
-# JobAgent Revenue Launch RC3 Status
+# UnaScout Store Release Candidate Status
 
-Updated: 2026-08-17 America/New_York
-Code image: `407100eb9d872fc2ee857ad482af4807aa5cfd84`
-Branch: `release/jobagent-revenue-launch-rc3`
-Draft PR: `https://github.com/fefejiro/FTC-HOLDING/pull/253`
+Updated: 2026-08-18 America/New_York
+Code image: `e6fe31c63`
+Branch: `release/unascout-store-publish`
+Evidence head: `daec0390537d75b14b8a38a31889e9e3550dda43`
+Draft PR: `https://github.com/fefejiro/FTC-HOLDING/pull/257`
 Schema version: `011_revenue_launch`
 
 ## State
@@ -13,14 +14,16 @@ Schema version: `011_revenue_launch`
   attribution, revenue tables with forced RLS, plan entitlements, usage ledger,
   Stripe-hosted Checkout and Customer Portal contracts, Mailjet transaction
   gateway support, billing lifecycle handling, and native purchase boundaries.
-- **Verified locally:** clean application and Worker installs; TypeScript build;
-  lint; `30` application test files with `229` tests; `1` Worker test file with
-  `7` tests; customer smoke at `390x844` and `1440x1000`; static and strict
+- **Verified locally:** TypeScript build; lint; `30` passed application test
+  files and `1` skipped file with `226` passed tests and `11` skipped; customer
+  smoke at `390x844` and `1440x1000`; store metadata and native-contract checks;
+  a signed Android `1.0.1 (2)` AAB; static and strict
   release checks; application and Worker production audits with `0`
   vulnerabilities when correctly scoped with `--workspaces=false`.
-- **Verified in CI:** GitHub Actions run `32089839983` passed the
-  `standalone-and-security`, `immutable-image`, and `billing-gateway` jobs on
-  workflow head `1fb76183539f578764770092daf193e1c73b9664`.
+- **Verified in CI:** GitHub Actions run `32142960353` passed the current SaaS,
+  security, billing, immutable-image, browser-smoke, and signed-Android jobs.
+  Dedicated Android run `32142993982` also passed and retained artifact
+  `9326695864` on evidence head `daec03905`.
 - **Deployed:** the existing Cloudflare edge route only. The RC3 web, API,
   worker, migration, PostgreSQL, private storage, and shared Stripe Worker
   changes are not deployed.
@@ -107,13 +110,21 @@ own evidence.
 - Initial live collision screening found no exact UnaScout Apple App Store,
   Google Play, Canadian trademark-search, or USPTO web result. This is not final
   legal clearance.
-- A local signed Android `1.0.1` release AAB was built and signature-verified on
-  2026-08-17 with SHA-256
-  `AD89023B145FC57F00595024C546096730B7917F1E8A9BA1A7ACF623CDFBCD54`.
+- A local signed Android `1.0.1 (2)` release AAB was built and
+  signature-verified on 2026-08-18 with SHA-256
+  `D2BFD88D7DF5A8D88130FE7349A6E8D30DC42FCE4487E045C7F625DACA22BAED`.
+- The remote release artifact has SHA-256
+  `714A82DDFDC3B993D2704BE5090111ECFCDCB4CE13BA1B56AB0079C786049107`
+  and the same verified JobAgent upload signer.
+- Final native icons, splash screens, Apple/Google listing metadata, a Google
+  feature graphic, and ten phone screenshots have been generated and visually
+  inspected. Default Capacitor artwork is no longer present.
 - JobAgent-specific Android signing material is enrolled in protected GitHub
   Actions secrets. The AAB has not yet been uploaded to Play Console.
-- A dedicated zero-cost macOS GitHub Actions workflow exists for iOS, but it
-  intentionally fails until JobAgent-specific Apple distribution credentials
-  are supplied. PeacePad credentials are not reused.
+- A dedicated zero-cost `macos-26` GitHub Actions workflow exists for iOS and
+  enforces Xcode 26 plus JobAgent-specific Apple distribution credentials.
+  PeacePad credentials are not reused.
+- App Store Connect is visibly authenticated to the correct organization, but
+  no UnaScout app record or uploaded build has yet been evidenced.
 - Both native shells still depend on the hosted origin. Store rollout remains
   blocked while `/app`, `/healthz`, `/readyz`, and `/api/v1/release` return 404.

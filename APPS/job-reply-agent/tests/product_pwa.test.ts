@@ -33,7 +33,7 @@ describe("public beta PWA", () => {
   it("ships a public, evidence-grounded pricing experience", () => {
     const landing = fs.readFileSync(path.join(publicRoot, "landing.html"), "utf8");
     const script = fs.readFileSync(path.join(publicRoot, "landing.js"), "utf8");
-    for (const plan of ["Free Preview", "Job Search Sprint", "JobAgent Monthly", "JobAgent Annual"]) {
+    for (const plan of ["Free Preview", "Job Search Sprint", "UnaScout Monthly", "UnaScout Annual"]) {
       expect(landing).toContain(plan);
     }
     expect(landing).toContain("FOUNDING25");
@@ -80,7 +80,7 @@ describe("public beta PWA", () => {
     ];
     for (const page of pages) {
       const content = fs.readFileSync(path.join(publicRoot, page), "utf8");
-      expect(content).toContain("Una Labs JobAgent");
+      expect(content).toContain("UnaScout by Una Labs");
     }
     for (const page of ["privacy.html", "google-data.html", "retention.html", "account-deletion.html"]) {
       expect(fs.readFileSync(path.join(publicRoot, page), "utf8"))

@@ -2,17 +2,18 @@
 
 ## Last Verified State
 
-Revenue-launch code image `407100eb9d872fc2ee857ad482af4807aa5cfd84` is
-pushed in draft PR #253. Local release checks are green. The hosted origin is
-not running, checkout remains disabled, and no payment has been accepted. See
-`ops/RELEASE_STATUS.md` and
-`docs/PRODUCT_RELEASE_EVIDENCE_2026-08-17.md` for the exact evidence boundary.
+UnaScout store-release code image `e6fe31c63` is committed on
+`release/unascout-store-publish`. Local release checks and the signed Android
+bundle are green. The hosted origin is not running, checkout remains disabled,
+and no payment has been accepted. See `ops/RELEASE_STATUS.md` and
+`docs/PRODUCT_RELEASE_EVIDENCE_2026-08-18.md` for the exact evidence boundary.
 
-- Updated: 2026-08-17 America/New_York
-- Engineering branch: `release/jobagent-revenue-launch-rc3`
-- Revenue code image: `407100eb9d872fc2ee857ad482af4807aa5cfd84`
-- Draft PR: `https://github.com/fefejiro/FTC-HOLDING/pull/253`
-- Revenue worktree: `D:\FTC-HOLDING-worktrees\jobagent-revenue-launch-rc3`
+- Updated: 2026-08-18 America/New_York
+- Engineering branch: `release/unascout-store-publish`
+- Store code image: `e6fe31c63`
+- Evidence head: `daec0390537d75b14b8a38a31889e9e3550dda43`
+- Draft PR: `https://github.com/fefejiro/FTC-HOLDING/pull/257`
+- Store-release worktree: `D:\FTC-HOLDING-worktrees\unascout-main-release`
 - Operational engineering worktree: `D:\FTC-HOLDING-worktrees\job-agent-continuous`
 - Operational branch: `agent/job-agent-continuous`
 - Windows task: `JobReplyAgent-Product-Continuous`
@@ -152,6 +153,21 @@ facts before changing them.
   made while preparing this handover.
 
 ## Current Boundaries And Manual Gates
+
+- The current store-release branch is `release/unascout-store-publish` at
+  `e6fe31c63`. It contains the locked UnaScout public brand, final native art,
+  store metadata, screenshot automation, iOS privacy declarations, hardened
+  association routes, and release workflows.
+- The signed Android `1.0.1 (2)` AAB was verified locally with SHA-256
+  `D2BFD88D7DF5A8D88130FE7349A6E8D30DC42FCE4487E045C7F625DACA22BAED`.
+  Its upload key remains outside Git under `D:\jobagent-release-secrets`.
+- GitHub runs `32142960353` and `32142993982` passed. Remote Android artifact
+  `9326695864` has SHA-256
+  `714A82DDFDC3B993D2704BE5090111ECFCDCB4CE13BA1B56AB0079C786049107`
+  and the same upload signer.
+- App Store Connect is visibly logged in to the Fejiro Technology Consultancy
+  organization. App creation, Apple signing, build upload, and review are not
+  yet evidenced.
 
 - The scheduled product agent runs only while the Windows computer is on and
   the configured user has an interactive session.

@@ -3,11 +3,12 @@
 ## Start Here
 
 - Repository: `fefejiro/FTC-HOLDING`
-- Branch: `release/jobagent-revenue-launch-rc3`
-- Revenue code image: `407100eb9d872fc2ee857ad482af4807aa5cfd84`
-- Draft PR: `https://github.com/fefejiro/FTC-HOLDING/pull/253`
-- Clean worktree: `D:\FTC-HOLDING-worktrees\jobagent-revenue-launch-rc3`
-- Product root: `D:\FTC-HOLDING-worktrees\jobagent-revenue-launch-rc3\APPS\job-reply-agent`
+- Branch: `release/unascout-store-publish`
+- Store code image: `e6fe31c63`
+- Evidence head: `daec0390537d75b14b8a38a31889e9e3550dda43`
+- Draft PR: `https://github.com/fefejiro/FTC-HOLDING/pull/257`
+- Clean worktree: `D:\FTC-HOLDING-worktrees\unascout-main-release`
+- Product root: `D:\FTC-HOLDING-worktrees\unascout-main-release\APPS\job-reply-agent`
 - Operational state root: `C:\FTC HOLDING\APPS\job-reply-agent`
 - Hosted product: `https://jobagent.unalabs.cloud`
 - Native application ID: `cloud.unalabs.jobagent`
@@ -71,7 +72,7 @@ resumes, databases, or candidate evidence into this engineering worktree.
 ## First Ten Minutes
 
 ```powershell
-Set-Location "D:\FTC-HOLDING-worktrees\jobagent-revenue-launch-rc3"
+Set-Location "D:\FTC-HOLDING-worktrees\unascout-main-release"
 git status -sb
 git pull --ff-only
 Set-Location "APPS\job-reply-agent"
@@ -82,10 +83,11 @@ npm run lint
 npm run production:check
 ```
 
-Expected application test baseline: `30` files and `229` tests passed. Worker
-baseline: `1` file and `7` tests passed. Customer smoke passes at `390x844` and
-`1440x1000`. Use `npm audit --omit=dev --workspaces=false`; an unscoped audit
-from this monorepo includes unrelated/extraneous root packages.
+Expected application test baseline: `30` passed files, `1` skipped file, `226`
+passed tests, and `11` skipped tests. Worker baseline: `1` file and `7` tests
+passed. Customer smoke passes at `390x844` and `1440x1000`. Use
+`npm audit --omit=dev --workspaces=false`; an unscoped audit from this monorepo
+includes unrelated/extraneous root packages.
 
 Because the C drive is nearly full, use D for Android caches and temporary files:
 
@@ -150,10 +152,12 @@ workflow.
    bootstrap the exact Stripe catalog and then activate checkout.
 4. Publish Android Digital Asset Links and Apple App Site Association files,
    then prove OAuth return on physical Android and iOS devices.
-5. Replace generated native icons and splash artwork.
-6. Configure signing outside git and complete Play testing/TestFlight.
-7. Complete store privacy declarations, screenshots, accessibility review, and
-   review submissions.
+5. Preserve successful CI runs `32142960353` and `32142993982` plus Android
+   artifact `9326695864` as the store-candidate receipts.
+6. Create the Apple and Google app records. Configure dedicated Apple signing,
+   upload the first Play AAB manually, and complete Play testing/TestFlight.
+7. Upload the completed listing metadata and screenshots, finish store privacy,
+   age-rating, data-safety, trader, and review declarations, and submit reviews.
 8. Complete fresh Fejiro connector proof runs and the 14-day isolated Chukwuma
    pilot before broader invitations.
 9. Audit queue lease recovery and dead-letter operator visibility against the

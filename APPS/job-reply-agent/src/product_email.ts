@@ -13,7 +13,7 @@ function emailConfig() {
   const gatewaySecret = String(process.env.JOBAGENT_BILLING_SHARED_SECRET || "").trim();
   const from = String(
     process.env.TRANSACTIONAL_EMAIL_FROM
-    || "Una Labs JobAgent <jobagent@unalabs.cloud>"
+    || "UnaScout by Una Labs <jobagent@unalabs.cloud>"
   ).trim();
   const appOrigin = String(process.env.APP_ORIGIN || "").replace(/\/$/, "");
   const gatewayConfigured = gatewayUrl.startsWith("https://") && Boolean(gatewaySecret);
@@ -71,9 +71,9 @@ export async function sendVerificationEmail(email: string, token: string) {
   const url = link("/verify-email", token);
   return await sendTransactionalEmail({
     to: email,
-    subject: "Verify your Una Labs JobAgent email",
-    text: `Verify your email to continue setting up JobAgent: ${url}\n\nThis link expires in 24 hours.`,
-    html: `<p>Verify your email to continue setting up JobAgent.</p><p><a href="${url}">Verify email</a></p><p>This link expires in 24 hours.</p>`
+    subject: "Verify your UnaScout email",
+    text: `Verify your email to continue setting up UnaScout: ${url}\n\nThis link expires in 24 hours.`,
+    html: `<p>Verify your email to continue setting up UnaScout.</p><p><a href="${url}">Verify email</a></p><p>This link expires in 24 hours.</p>`
   });
 }
 
@@ -81,9 +81,9 @@ export async function sendPasswordResetEmail(email: string, token: string) {
   const url = link("/reset-password", token);
   return await sendTransactionalEmail({
     to: email,
-    subject: "Reset your Una Labs JobAgent password",
-    text: `Reset your JobAgent password: ${url}\n\nThis link expires in one hour. Ignore this message if you did not request it.`,
-    html: `<p>Reset your JobAgent password.</p><p><a href="${url}">Reset password</a></p><p>This link expires in one hour. Ignore this message if you did not request it.</p>`
+    subject: "Reset your UnaScout password",
+    text: `Reset your UnaScout password: ${url}\n\nThis link expires in one hour. Ignore this message if you did not request it.`,
+    html: `<p>Reset your UnaScout password.</p><p><a href="${url}">Reset password</a></p><p>This link expires in one hour. Ignore this message if you did not request it.</p>`
   });
 }
 
@@ -91,9 +91,9 @@ export async function sendInvitationEmail(email: string, token: string, expiresA
   const url = link("/accept-invite", token);
   return await sendTransactionalEmail({
     to: email,
-    subject: "Your Una Labs JobAgent invitation",
-    text: `Your private JobAgent invitation is ready: ${url}\n\nIt expires ${expiresAt}.`,
-    html: `<p>Your private JobAgent invitation is ready.</p><p><a href="${url}">Accept invitation</a></p><p>It expires ${expiresAt}.</p>`
+    subject: "Your UnaScout invitation",
+    text: `Your private UnaScout invitation is ready: ${url}\n\nIt expires ${expiresAt}.`,
+    html: `<p>Your private UnaScout invitation is ready.</p><p><a href="${url}">Accept invitation</a></p><p>It expires ${expiresAt}.</p>`
   });
 }
 

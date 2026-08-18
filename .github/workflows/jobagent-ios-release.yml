@@ -2,18 +2,29 @@ name: UnaScout iOS release
 
 on:
   workflow_dispatch:
+    inputs:
+      upload_to_app_store:
+        description: Upload the signed IPA to App Store Connect
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
 
 jobs:
   signed-archive:
-    runs-on: macos-15
+    runs-on: macos-26
     defaults:
       run:
         working-directory: APPS/job-reply-agent
     steps:
       - uses: actions/checkout@v4
+      - name: Verify required Apple toolchain
+        run: |
+          xcodebuild -version | tee ios-xcode-version.txt
+          XCODE_MAJOR="$(xcodebuild -version | awk '/Xcode/{split($2,v,"."); print v[1]}')"
+          test "$XCODE_MAJOR" -ge 26 || { echo "Xcode 26 or later is required"; exit 1; }
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -23,12 +34,16 @@ jobs:
         env:
           CERTIFICATE: ${{ secrets.JOBAGENT_IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
           PROFILE: ${{ secrets.JOBAGENT_IOS_PROVISIONING_PROFILE_BASE64 }}
+          APPLE_TEAM_ID: ${{ secrets.JOBAGENT_APPLE_TEAM_ID }}
         run: |
           test -n "$CERTIFICATE" || { echo "Missing JOBAGENT_IOS_DISTRIBUTION_CERTIFICATE_BASE64"; exit 1; }
           test -n "$PROFILE" || { echo "Missing JOBAGENT_IOS_PROVISIONING_PROFILE_BASE64"; exit 1; }
+          test -n "$APPLE_TEAM_ID" || { echo "Missing JOBAGENT_APPLE_TEAM_ID"; exit 1; }
       - name: Install and synchronize iOS
         run: |
           npm ci --workspaces=false
+          npm run store:metadata:check
+          npm run production:check
           npm run build
           npm run mobile:sync:ios
       - name: Import signing identity and profile
@@ -47,13 +62,76 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" jobagent-build.keychain
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
           printf '%s' "$PROFILE" | base64 --decode > "$HOME/Library/MobileDevice/Provisioning Profiles/jobagent.mobileprovision"
+          security cms -D -i "$HOME/Library/MobileDevice/Provisioning Profiles/jobagent.mobileprovision" > "$RUNNER_TEMP/jobagent-profile.plist"
+          /usr/libexec/PlistBuddy -c 'Print :Name' "$RUNNER_TEMP/jobagent-profile.plist" > "$RUNNER_TEMP/jobagent-profile-name.txt"
+          PROFILE_APP_ID="$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$RUNNER_TEMP/jobagent-profile.plist")"
+          case "$PROFILE_APP_ID" in
+            *.cloud.unalabs.jobagent) ;;
+            *) echo "Provisioning profile is not for cloud.unalabs.jobagent"; exit 1 ;;
+          esac
+          APP_ID_PREFIX="${PROFILE_APP_ID%.cloud.unalabs.jobagent}"
+          printf 'bundle_id=cloud.unalabs.jobagent\napp_id_prefix=%s\n' "$APP_ID_PREFIX" > ios-signing-identity.txt
       - name: Archive UnaScout
+        env:
+          APPLE_TEAM_ID: ${{ secrets.JOBAGENT_APPLE_TEAM_ID }}
         run: |
-          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release -archivePath "$RUNNER_TEMP/UnaScout.xcarchive" archive CODE_SIGN_STYLE=Manual PRODUCT_BUNDLE_IDENTIFIER=cloud.unalabs.jobagent
-      - name: Upload archive evidence
+          PROFILE_NAME="$(cat "$RUNNER_TEMP/jobagent-profile-name.txt")"
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release -archivePath "$RUNNER_TEMP/UnaScout.xcarchive" archive \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
+            PRODUCT_BUNDLE_IDENTIFIER=cloud.unalabs.jobagent
+      - name: Export signed IPA
+        env:
+          APPLE_TEAM_ID: ${{ secrets.JOBAGENT_APPLE_TEAM_ID }}
+        run: |
+          PROFILE_NAME="$(cat "$RUNNER_TEMP/jobagent-profile-name.txt")"
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>teamID</key><string>${APPLE_TEAM_ID}</string>
+            <key>provisioningProfiles</key><dict><key>cloud.unalabs.jobagent</key><string>${PROFILE_NAME}</string></dict>
+            <key>uploadSymbols</key><true/>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/UnaScout.xcarchive" -exportPath "$RUNNER_TEMP/UnaScout-export" -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
+          shasum -a 256 "$RUNNER_TEMP/UnaScout-export/"*.ipa | tee ios-ipa-sha256.txt
+      - name: Upload IPA to App Store Connect
+        if: ${{ inputs.upload_to_app_store }}
+        env:
+          ASC_KEY_ID: ${{ secrets.JOBAGENT_ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.JOBAGENT_ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY_BASE64: ${{ secrets.JOBAGENT_ASC_PRIVATE_KEY_BASE64 }}
+        run: |
+          test -n "$ASC_KEY_ID" || { echo "Missing JOBAGENT_ASC_KEY_ID"; exit 1; }
+          test -n "$ASC_ISSUER_ID" || { echo "Missing JOBAGENT_ASC_ISSUER_ID"; exit 1; }
+          test -n "$ASC_PRIVATE_KEY_BASE64" || { echo "Missing JOBAGENT_ASC_PRIVATE_KEY_BASE64"; exit 1; }
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          printf '%s' "$ASC_PRIVATE_KEY_BASE64" | base64 --decode > "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          xcrun altool --upload-app --type ios --file "$RUNNER_TEMP/UnaScout-export/"*.ipa --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+      - name: Wait for App Store Connect processing
+        if: ${{ inputs.upload_to_app_store }}
+        env:
+          ASC_KEY_ID: ${{ secrets.JOBAGENT_ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.JOBAGENT_ASC_ISSUER_ID }}
+          ASC_BUNDLE_ID: cloud.unalabs.jobagent
+          ASC_BUILD_NUMBER: 2
+        run: |
+          export ASC_PRIVATE_KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          node scripts/poll-app-store-build.mjs
+      - name: Upload signed release evidence
         uses: actions/upload-artifact@v4
         with:
-          name: unascout-ios-archive-${{ github.sha }}
-          path: ${{ runner.temp }}/UnaScout.xcarchive
+          name: unascout-ios-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/UnaScout.xcarchive
+            ${{ runner.temp }}/UnaScout-export/*.ipa
+            APPS/job-reply-agent/ios-ipa-sha256.txt
+            APPS/job-reply-agent/ios-xcode-version.txt
+            APPS/job-reply-agent/ios-signing-identity.txt
           retention-days: 14
           if-no-files-found: error

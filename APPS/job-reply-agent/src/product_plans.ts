@@ -116,7 +116,7 @@ export function publicPlans(): PublicPlan[] {
     },
     {
       code: "jobagent_monthly",
-      name: "JobAgent Monthly",
+      name: "UnaScout Monthly",
       amountCadCents: configuredInteger("JOBAGENT_MONTHLY_CAD_CENTS", 2999, 100),
       interval: "month",
       allowances: configuredAllowances("jobagent_monthly"),
@@ -128,7 +128,7 @@ export function publicPlans(): PublicPlan[] {
     },
     {
       code: "jobagent_annual",
-      name: "JobAgent Annual",
+      name: "UnaScout Annual",
       amountCadCents: configuredInteger("JOBAGENT_ANNUAL_CAD_CENTS", 23999, 100),
       interval: "year",
       allowances: configuredAllowances("jobagent_annual"),
