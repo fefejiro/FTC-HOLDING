@@ -4,10 +4,10 @@
 
 - Internal product: `JobAgent`
 - Public brand: `UnaScout` by Una Labs
-- Branch: `release/unascout-store-publish`
-- Release commit: `e6fe31c63`
-- Evidence head: `daec0390537d75b14b8a38a31889e9e3550dda43`
-- Draft PR: `https://github.com/fefejiro/FTC-HOLDING/pull/257`
+- Release-hardening branch: `feat/jobagent-live-proof`
+- Release-hardening commit: `b3dbfb888`
+- Base and current `origin/main`: `997be2a3384556273aaae3bca8bfe61e2ecde3e4`
+- Exact deployed commit: `7756c6f3e496d48c2952b1d132dbabb547a4d244`
 - Native application ID: `cloud.unalabs.jobagent`
 - Native version: `1.0.1 (2)`
 - Schema version: `011_revenue_launch`
@@ -36,7 +36,7 @@
 |---|---|
 | TypeScript build | Passed |
 | Lint | Passed |
-| Application tests | `30` passed files, `1` skipped; `226` passed tests, `11` skipped |
+| Application tests | `31` passed files, `1` skipped; `230` passed tests, `11` skipped |
 | Store metadata and native contract check | Passed |
 | Customer smoke | Passed at `390x844` and `1440x1000` |
 | Store screenshots | 5 Apple images at `1290x2796`; 5 Google images at `1080x1920` |
@@ -84,30 +84,49 @@ was present.
 
 ## External State
 
+- Railway is authenticated to `Michael Fejiro's Projects` on the Hobby plan.
+  Dedicated project `una-jobagent` has web, worker, migration, PostgreSQL,
+  private storage, and backup resources online.
+- `https://jobagent.unalabs.cloud/`, `/app`, `/healthz`, `/readyz`,
+  `/api/v1/release`, `/api/v1/plans`, and `/edgez` return healthy production
+  responses. The release endpoint identifies deployed commit
+  `7756c6f3e496d48c2952b1d132dbabb547a4d244` and schema
+  `011_revenue_launch`.
+- A disposable owner-controlled tenant completed public registration, Mailjet
+  verification, login, recommendation/analysis, approval, proof timeline, and
+  interview-preparation smoke at both required viewports. Redacted screenshots
+  are retained in `D:\FTC-HOLDING-releases\unascout\live-proof-20260818`.
+- The deployed shared Worker returns healthy status and Mailjet delivery is
+  proven. Stripe catalog and Checkout remain disabled until a permanent live
+  restricted key replaces the unsuitable CLI session credential.
 - App Store Connect is visibly authenticated to the Fejiro Technology
   Consultancy organization.
 - No UnaScout App Store record, uploaded iOS build, TestFlight build, App Review
   submission, or public listing is yet evidenced.
 - No UnaScout Play Console record or uploaded AAB is yet evidenced.
-- The hosted Cloudflare edge remains separate from the unavailable JobAgent
-  application origin. `/app`, `/healthz`, `/readyz`, and `/api/v1/release` must
-  return the exact release before either native shell can be released safely.
+- The hosted origin is available, but it still reports the prior exact deployed
+  commit. Merge and deploy `b3dbfb888` before treating the native privacy and
+  Gmail-boundary hardening as production evidence.
 
 ## Required External Gates
 
-1. Recover or replace the dedicated JobAgent Railway origin and verify the exact
-   release SHA, schema, queues, database, storage, and backup behavior.
-2. Create the Apple and Google app records, obtain their exact association and
+1. Install the permanent Stripe live restricted key, bootstrap and verify the
+   approved catalog, prove no-charge Checkout and portal creation, then complete
+   webhook/entitlement/cancellation/refund evidence before enabling checkout.
+2. Merge and deploy `b3dbfb888` as one immutable release and rerun the exact-SHA
+   plus responsive live customer smoke.
+3. Create the Apple and Google app records, obtain their exact association and
    signing identities, deploy the association responses, and verify them live.
-3. Produce the signed iOS archive with dedicated JobAgent credentials and upload
+4. Produce the signed iOS archive with dedicated JobAgent credentials and upload
    it through the GitHub Actions macOS workflow.
-4. Upload the signed AAB manually for the first Play release, complete policy
+5. Upload the canonical CI AAB for the first Play release, complete policy
    declarations and testing requirements, and submit the eligible track.
-5. Complete physical iPhone and Android launch, sign-in, deep-link, privacy,
+6. Complete physical iPhone and Android launch, sign-in, deep-link, privacy,
    pause/export/delete, and purchase-boundary tests.
 
 ## Not Claimed
 
-This evidence does not claim a live backend, TestFlight availability, Play
-testing, store review, public store availability, active customer billing, or a
-genuine paid transaction.
+This evidence claims a live backend and responsive customer proof for the exact
+deployed SHA stated above. It does not claim active customer billing, a genuine
+paid transaction, TestFlight availability, Play testing, store review, or public
+store availability.

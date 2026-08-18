@@ -340,7 +340,7 @@
         connector.assistedSubmission ? "Assisted submission" : null,
         connector.controlledSubmission ? "Controlled submission" : null,
         connector.proofReconciliation ? "Proof reconciliation" : null
-      ].filter(Boolean).join(" · ");
+      ].filter(Boolean).join(" / ");
       summary.append(heading, status, capability);
       if (connection?.providerAccount) {
         const account = document.createElement("p");
@@ -351,6 +351,11 @@
       actions.className = "actions";
       if (connection?.status === "connected") {
         actions.append(actionButton("Revoke", "revoke-connection", connector.source, "danger"));
+      } else if (window.JobAgentNative?.isNative && connector.source === "gmail") {
+        const nativeBoundary = document.createElement("p");
+        nativeBoundary.className = "field-help";
+        nativeBoundary.textContent = "Connect Gmail from the UnaScout web app.";
+        actions.append(nativeBoundary);
       } else {
         const label = connector.source === "gmail" ? "Connect Gmail" : "Prepare connection";
         actions.append(actionButton(label, "connect", connector.source, "secondary"));
