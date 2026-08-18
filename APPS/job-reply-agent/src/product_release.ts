@@ -1,4 +1,4 @@
-export const PRODUCT_SCHEMA_VERSION = "010_trust_first_pilot";
+export const PRODUCT_SCHEMA_VERSION = "011_revenue_launch";
 
 function safeValue(value: unknown, fallback: string): string {
   const normalized = String(value || "").trim();

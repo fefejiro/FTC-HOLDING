@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: "Una Labs JobAgent",
   webDir: "public",
   server: {
-    url: "https://jobagent.unalabs.cloud",
+    url: "https://jobagent.unalabs.cloud/app",
     cleartext: false,
     allowNavigation: ["jobagent.unalabs.cloud"]
   },

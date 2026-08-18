@@ -51,6 +51,10 @@ for (const required of [
   "cloudflare/jobagent-edge/wrangler.jsonc",
   "cloudflare/jobagent-edge/src/index.js",
   "public/index.html",
+  "public/landing.html",
+  "public/landing.css",
+  "public/landing.js",
+  "public/product-preview.png",
   "public/app.js",
   "public/manifest.webmanifest",
   "public/sw.js",
@@ -66,6 +70,8 @@ for (const required of [
   "public/icon.png.b64",
   "migrations/008_safe_public_beta.sql",
   "migrations/009_application_evidence.sql",
+  "migrations/010_trust_first_pilot.sql",
+  "migrations/011_revenue_launch.sql",
   "scripts/install-trusted-runner.ps1",
   "scripts/provision-railway-database.mjs",
   "src/product_runner_client.ts",
@@ -75,8 +81,12 @@ for (const required of [
 }
 
 const railwayIgnore = fs.readFileSync(railwayIgnorePath, "utf8");
-if (!railwayIgnore.split(/\r?\n/).some((line) => line.trim() === "*.png")) {
-  warnings.push("Railway upload rules no longer exclude binary PNG artifacts; review the upload scope.");
+if (railwayIgnore.split(/\r?\n/).some((line) => line.trim() === "*.png")) {
+  for (const asset of ["icon-192.png", "icon.png", "product-preview.png"]) {
+    if (!railwayIgnore.includes(`!APPS/job-reply-agent/public/${asset}`)) {
+      failures.push(`Railway upload rules exclude required public asset: ${asset}`);
+    }
+  }
 }
 
 for (const icon of ["icon-192.png", "icon.png"]) {
@@ -169,10 +179,29 @@ if (strict) {
     if (["web", "worker", "all"].includes(processType)) {
       if (!(process.env.GMAIL_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "").trim()) failures.push("GMAIL_CLIENT_ID or GOOGLE_CLIENT_ID is required.");
       if (!(process.env.GMAIL_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET || "").trim()) failures.push("GMAIL_CLIENT_SECRET or GOOGLE_CLIENT_SECRET is required.");
-      if (!(process.env.RESEND_API_KEY || "").startsWith("re_")) failures.push("RESEND_API_KEY is required.");
-      if (!(process.env.RESEND_INBOUND_WEBHOOK_SECRET || "").startsWith("whsec_")) failures.push("RESEND_INBOUND_WEBHOOK_SECRET is required.");
-      if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(process.env.INBOUND_EMAIL_DOMAIN || "")) failures.push("INBOUND_EMAIL_DOMAIN must be a valid domain.");
       if (!(process.env.TRANSACTIONAL_EMAIL_FROM || "").includes("@")) failures.push("TRANSACTIONAL_EMAIL_FROM is required.");
+      const resendConfigured = (process.env.RESEND_API_KEY || "").startsWith("re_");
+      const gatewayUrl = process.env.JOBAGENT_EMAIL_GATEWAY_URL || "";
+      const billingGatewayUrl = process.env.JOBAGENT_BILLING_GATEWAY_URL || "";
+      const billingSecret = process.env.JOBAGENT_BILLING_SHARED_SECRET || "";
+      const gatewayConfigured = /^https:\/\//.test(gatewayUrl) && billingSecret.length >= 32;
+      if (!resendConfigured && !gatewayConfigured) {
+        failures.push("Resend or the authenticated JobAgent email gateway must be configured.");
+      }
+      if (resendConfigured) {
+        if (!(process.env.RESEND_INBOUND_WEBHOOK_SECRET || "").startsWith("whsec_")) failures.push("RESEND_INBOUND_WEBHOOK_SECRET is required when Resend is enabled.");
+        if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(process.env.INBOUND_EMAIL_DOMAIN || "")) failures.push("INBOUND_EMAIL_DOMAIN must be a valid domain when Resend is enabled.");
+      }
+      if (processType === "web" || processType === "all") {
+        if (!/^https:\/\//.test(billingGatewayUrl)) failures.push("JOBAGENT_BILLING_GATEWAY_URL must use HTTPS.");
+        if (billingSecret.length < 32) failures.push("JOBAGENT_BILLING_SHARED_SECRET must be at least 32 characters.");
+        if (process.env.PUBLIC_SIGNUP_ENABLED !== "true") failures.push("PUBLIC_SIGNUP_ENABLED must be true for the revenue launch.");
+        if (process.env.BILLING_CHECKOUT_ENABLED !== "true") failures.push("BILLING_CHECKOUT_ENABLED must be true for the revenue launch.");
+        const signupCap = Number(process.env.PUBLIC_SIGNUP_CAP || "");
+        if (!Number.isInteger(signupCap) || signupCap < 1 || signupCap > 10_000) {
+          failures.push("PUBLIC_SIGNUP_CAP must be an integer between 1 and 10000.");
+        }
+      }
     }
   }
 

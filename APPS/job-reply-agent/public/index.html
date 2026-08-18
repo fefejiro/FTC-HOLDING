@@ -13,7 +13,7 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="/" aria-label="JobAgent home">
+    <a class="brand" href="/app" aria-label="JobAgent workspace home">
       <img src="/icon.png" width="36" height="36" alt="">
       <span><strong>JobAgent</strong><small>Una Labs</small></span>
     </a>
@@ -26,7 +26,7 @@
 
   <main id="auth-view" class="auth-layout">
     <section class="auth-panel" aria-labelledby="auth-title">
-      <p class="eyebrow">Invite-only beta</p>
+      <p class="eyebrow">Founding Access</p>
       <h1 id="auth-title">Sign in to JobAgent</h1>
       <div id="auth-message" class="notice" aria-live="polite" hidden></div>
       <form id="login-form" class="form-stack">
@@ -34,13 +34,15 @@
         <label>Password<input name="password" type="password" autocomplete="current-password" minlength="12" required></label>
         <label id="mfa-field" hidden>Authenticator code<input name="mfaCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6"></label>
         <button class="button primary" type="submit">Sign in</button>
+        <button id="show-register" class="button secondary" type="button">Create account</button>
         <button id="show-reset" class="text-button" type="button">Forgot password</button>
       </form>
       <form id="register-form" class="form-stack" hidden>
         <label>Email<input name="email" type="email" autocomplete="email" required></label>
         <label>Create password<input name="password" type="password" autocomplete="new-password" minlength="12" required></label>
         <input name="inviteToken" type="hidden">
-        <button class="button primary" type="submit">Accept invitation</button>
+        <button class="button primary" type="submit">Create account</button>
+        <button class="text-button" data-auth-screen="login" type="button">Back to sign in</button>
       </form>
       <form id="reset-request-form" class="form-stack" hidden>
         <label>Email<input name="email" type="email" autocomplete="email" required></label>
@@ -66,6 +68,7 @@
         <button class="nav-item" type="button" data-view="approvals">Approvals</button>
         <button class="nav-item" type="button" data-view="interview">Interview prep</button>
         <button class="nav-item" type="button" data-view="activity">Activity</button>
+        <button class="nav-item" type="button" data-view="plan">Plan</button>
         <button class="nav-item" type="button" data-view="security">Security</button>
         <button id="operator-nav" class="nav-item" type="button" data-view="operator" hidden>Operator</button>
       </nav>
@@ -198,6 +201,24 @@
         <ul id="application-list" class="record-list detailed"></ul>
         <h2>Audit history</h2>
         <ul id="audit-list" class="record-list"></ul>
+      </section>
+
+      <section class="view" data-view-panel="plan">
+        <div class="page-heading"><div><p class="eyebrow">Membership</p><h1>Plan and usage</h1></div><button id="manage-billing" class="button secondary" type="button" hidden>Manage billing</button></div>
+        <section class="plan-summary">
+          <div><span>Current plan</span><strong id="current-plan">Loading</strong></div>
+          <div><span>Status</span><strong id="plan-status">Loading</strong></div>
+          <div><span>Renews or resets</span><strong id="plan-period-end">Loading</strong></div>
+        </section>
+        <section class="content-band">
+          <h2>Usage this period</h2>
+          <ul id="usage-list" class="record-list"></ul>
+        </section>
+        <section class="content-band">
+          <h2>Available plans</h2>
+          <div id="workspace-plan-grid" class="workspace-plan-grid"></div>
+          <p id="billing-result" class="form-result" aria-live="polite"></p>
+        </section>
       </section>
 
       <section class="view" data-view-panel="security">

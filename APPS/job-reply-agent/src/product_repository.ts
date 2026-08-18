@@ -831,6 +831,20 @@ export async function generateProductJobInsight(
   }, db);
 }
 
+export async function productJobMatchExists(
+  db: pg.Pool,
+  userId: string,
+  jobMatchId: string
+): Promise<boolean> {
+  return withTenant(userId, async (client) => {
+    const result = await client.query(
+      "SELECT 1 FROM product_job_matches WHERE user_id=$1 AND id=$2",
+      [userId, jobMatchId]
+    );
+    return Boolean(result.rows[0]);
+  }, db);
+}
+
 export async function getProductJobInsight(
   db: pg.Pool,
   userId: string,
