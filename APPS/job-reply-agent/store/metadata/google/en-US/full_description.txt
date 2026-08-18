@@ -1,0 +1,32 @@
+Run a clearer, more truthful job search with UnaScout.
+
+UnaScout helps you understand job fit, tailor application materials from verified experience, prepare for interviews, and track each important step in one organized workspace.
+
+EXPLAINABLE JOB MATCHES
+Review fit scores based on your approved skills, experience, preferences, location, and required qualifications. See supported matches, missing requirements, and policy conflicts before deciding whether to apply.
+
+TRUTHFUL RESUME TAILORING
+Create role-specific application packages from career facts you have reviewed. UnaScout can reorganize and emphasize approved experience while warning you about unsupported keywords and claims.
+
+INTERVIEW PREPARATION
+Practice questions connected to the role and prepare answers grounded in experience you can stand behind.
+
+APPLICATION TRACKING
+Keep recommendations, approvals, recruiter responses, applications, outcomes, and confirmation evidence together. Review a timeline of important actions and proof.
+
+PRIVACY AND CONTROL
+Sensitive or uncertain actions require review. Pause assistance, revoke connected accounts, export your information, and initiate account deletion from the app.
+
+KEY FEATURES
+- Career Truth Bank for approved experience and skills
+- Explainable job-match and ATS gap analysis
+- Job-specific resume and application packages
+- Approval controls for sensitive actions
+- Interview preparation grounded in your experience
+- Application and outcome tracking
+- Evidence-backed activity timeline
+- Pause, export, revocation, and deletion controls
+
+UnaScout supports job-search organization, analysis, preparation, and controlled assistance. It does not guarantee interviews, offers, or employment, and it does not invent qualifications.
+
+The Android app includes free features and access for existing UnaScout customers. Purchases and external payment links are not offered inside the app.

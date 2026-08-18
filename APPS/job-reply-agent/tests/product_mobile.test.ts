@@ -50,8 +50,39 @@ describe("native mobile shell", () => {
     expect(manifest).toContain('android:autoVerify="true"');
     expect(manifest).toContain('android:scheme="https"');
     expect(manifest).toContain('android:host="jobagent.unalabs.cloud"');
+    expect(manifest).toContain('android:pathPrefix="/app"');
     expect(entitlements).toContain("applinks:jobagent.unalabs.cloud");
     expect(xcodeProject).toContain("CODE_SIGN_ENTITLEMENTS = App/App.entitlements;");
+    expect(xcodeProject).toContain("TARGETED_DEVICE_FAMILY = 1;");
+  });
+
+  it("ships an app-owned privacy manifest and keeps native commerce read-only", () => {
+    const privacy = fs.readFileSync(
+      path.join(root, "ios", "App", "App", "PrivacyInfo.xcprivacy"),
+      "utf8"
+    );
+    const plist = fs.readFileSync(path.join(root, "ios", "App", "App", "Info.plist"), "utf8");
+    const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
+    expect(privacy).toContain("NSPrivacyTracking");
+    expect(privacy).toContain("<false/>");
+    expect(plist).toContain("ITSAppUsesNonExemptEncryption");
+    expect(app).toContain('$("#available-plans-band").hidden = true;');
+    expect(app).toContain('renderBilling(await api("/api/v1/billing/entitlement"))');
+    expect(app).toContain("if (window.JobAgentNative?.isNative) return;");
+  });
+
+  it("publishes exact, server-owned mobile association documents", () => {
+    const server = fs.readFileSync(path.join(root, "src", "product_server.ts"), "utf8");
+    const generator = fs.readFileSync(path.join(root, "scripts", "generate-store-associations.mjs"), "utf8");
+    for (const source of [server, generator]) {
+      expect(source).toContain("PLAY_APP_SIGNING_SHA256");
+      expect(source).toContain("APPLE_APP_ID_PREFIX");
+      expect(source).toContain("cloud.unalabs.jobagent");
+      expect(source).toContain("/api/v1/oauth/gmail/callback*");
+      expect(source).toContain("exclude: true");
+    }
+    expect(server).toContain('"/.well-known/assetlinks.json"');
+    expect(server).toContain('"/.well-known/apple-app-site-association"');
   });
 
   it("excludes local signing and service credentials from version control", () => {

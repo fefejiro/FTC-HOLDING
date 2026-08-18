@@ -365,6 +365,58 @@ function json(res: ServerResponse, status: number, body: unknown): void {
   res.end(JSON.stringify(body));
 }
 
+function publicAssociationJson(res: ServerResponse, body: unknown): void {
+  securityHeaders(res);
+  res.writeHead(200, {
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "public, max-age=3600"
+  });
+  res.end(JSON.stringify(body));
+}
+
+function mobileAssociationDocument(pathname: string): unknown | null {
+  if (pathname === "/.well-known/assetlinks.json") {
+    const fingerprints = String(process.env.PLAY_APP_SIGNING_SHA256 || "")
+      .split(",")
+      .map((value) => value.trim().toUpperCase())
+      .filter(Boolean);
+    if (!fingerprints.length
+        || fingerprints.some((value) => !/^(?:[0-9A-F]{2}:){31}[0-9A-F]{2}$/.test(value))) {
+      return null;
+    }
+    return [{
+      relation: ["delegate_permission/common.handle_all_urls"],
+      target: {
+        namespace: "android_app",
+        package_name: "cloud.unalabs.jobagent",
+        sha256_cert_fingerprints: fingerprints
+      }
+    }];
+  }
+  if (pathname === "/.well-known/apple-app-site-association") {
+    const appIdPrefix = String(process.env.APPLE_APP_ID_PREFIX || "").trim().toUpperCase();
+    if (!/^[A-Z0-9]{10}$/.test(appIdPrefix)) return null;
+    const appId = `${appIdPrefix}.cloud.unalabs.jobagent`;
+    return {
+      applinks: {
+        apps: [],
+        details: [{
+          appIDs: [appId],
+          components: [
+            { "/": "/api/v1/oauth/gmail/callback*", exclude: true, comment: "OAuth exchange must complete on the server" },
+            { "/": "/app*", comment: "UnaScout customer workspace" },
+            { "/": "/accept-invite*", comment: "Invitation acceptance" },
+            { "/": "/verify-email*", comment: "Email verification" },
+            { "/": "/reset-password*", comment: "Password reset" }
+          ]
+        }]
+      },
+      webcredentials: { apps: [appId] }
+    };
+  }
+  return null;
+}
+
 function html(res: ServerResponse, status: number, body: string): void {
   securityHeaders(res);
   res.writeHead(status, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
@@ -507,7 +559,7 @@ function renderPage(authenticated: boolean): string {
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#17202a">
   <link rel="manifest" href="/manifest.webmanifest">
-  <title>Una Labs JobAgent</title>
+  <title>UnaScout by Una Labs</title>
   <style>
     :root{font-family:Inter,system-ui,sans-serif;color:#17202a;background:#f4f6f8}
     *{box-sizing:border-box}body{margin:0}header{background:#17202a;color:#fff;padding:18px 24px;border-bottom:4px solid #d45113}
@@ -526,7 +578,7 @@ function renderPage(authenticated: boolean): string {
   </style>
 </head>
 <body>
-  <header><strong>Una Labs JobAgent</strong></header>
+  <header><strong>UnaScout by Una Labs</strong></header>
   <main>
     <section id="auth" class="band"${authenticated ? " hidden" : ""}>
       <h1>Sign in</h1>
@@ -726,6 +778,16 @@ export async function createProductServer(storage: ProductObjectStorage = create
       if (!mutationOriginAllowed(req)) return json(res, 403, { error: "Origin rejected." });
 
       if (req.method === "GET" && url.pathname === "/healthz") return json(res, 200, { ok: true });
+      if (req.method === "GET" && [
+        "/.well-known/assetlinks.json",
+        "/.well-known/apple-app-site-association"
+      ].includes(url.pathname)) {
+        const document = mobileAssociationDocument(url.pathname);
+        if (!document) {
+          return json(res, 503, { error: "Mobile association identity is not configured." });
+        }
+        return publicAssociationJson(res, document);
+      }
       if (req.method === "GET" && url.pathname === "/api/v1/release") {
         return json(res, 200, { release: productReleaseInfo() });
       }
@@ -1053,12 +1115,12 @@ export async function createProductServer(storage: ProductObjectStorage = create
 
       const user = await authenticatedUser(req, db);
       if (req.method === "GET" && url.pathname === "/api/v1/oauth/gmail/callback") {
-        if (!user) return html(res, 401, "<h1>Sign in required</h1><p>Return to JobAgent and start the Gmail connection again.</p>");
+        if (!user) return html(res, 401, "<h1>Sign in required</h1><p>Return to UnaScout and start the Gmail connection again.</p>");
         const providerError = url.searchParams.get("error");
         const code = String(url.searchParams.get("code") || "");
         const state = String(url.searchParams.get("state") || "");
         if (providerError || !code || !state || code.length > 4096 || state.length > 512) {
-          return html(res, 400, "<h1>Gmail connection was not completed</h1><p>Return to JobAgent and try again.</p>");
+          return html(res, 400, "<h1>Gmail connection was not completed</h1><p>Return to UnaScout and try again.</p>");
         }
         try {
           await completeProductGmailOAuth(db, {
@@ -1134,7 +1196,7 @@ export async function createProductServer(storage: ProductObjectStorage = create
         }
         const secret = createTotpSecret();
         await saveEncryptedMfaSecret(db, user.id, secret);
-        const issuer = encodeURIComponent("Una Labs JobAgent");
+        const issuer = encodeURIComponent("UnaScout by Una Labs");
         const account = encodeURIComponent(user.email);
         return json(res, 200, {
           secret,

@@ -67,7 +67,9 @@ jobs:
         run: npm audit --omit=dev --workspaces=false
 
       - name: Static release and secret checks
-        run: npm run production:check --workspaces=false
+        run: |
+          npm run production:check --workspaces=false
+          npm run store:metadata:check --workspaces=false
 
       - name: Compile and lint
         run: npm run lint --workspaces=false

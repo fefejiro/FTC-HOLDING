@@ -166,8 +166,8 @@
 
   function showAuthScreen(name) {
     const screens = {
-      login: ["#login-form", "Sign in to JobAgent"],
-      register: ["#register-form", "Create your JobAgent account"],
+      login: ["#login-form", "Sign in to UnaScout"],
+      register: ["#register-form", "Create your UnaScout account"],
       resetRequest: ["#reset-request-form", "Reset your password"],
       resetConfirm: ["#reset-confirm-form", "Choose a new password"]
     };
@@ -544,7 +544,15 @@
   }
 
   function planName(code) {
-    return state.plans.find((plan) => plan.code === code)?.name || statusLabel(code);
+    const nativeSafeNames = {
+      free_preview: "Free Preview",
+      sprint_weekly: "Job Search Sprint",
+      jobagent_monthly: "UnaScout Monthly",
+      jobagent_annual: "UnaScout Annual"
+    };
+    return state.plans.find((plan) => plan.code === code)?.name
+      || nativeSafeNames[code]
+      || statusLabel(code);
   }
 
   function money(cents) {
@@ -574,6 +582,11 @@
 
     const grid = $("#workspace-plan-grid");
     grid.replaceChildren();
+    if (window.JobAgentNative?.isNative) {
+      $("#available-plans-band").hidden = true;
+      return;
+    }
+    $("#available-plans-band").hidden = false;
     for (const plan of state.plans) {
       const card = document.createElement("article");
       card.className = `workspace-plan${plan.code === entitlement.planCode ? " current" : ""}`;
@@ -610,6 +623,12 @@
   }
 
   async function loadBilling() {
+    if (window.JobAgentNative?.isNative) {
+      state.plans = [];
+      state.checkoutEnabled = false;
+      renderBilling(await api("/api/v1/billing/entitlement"));
+      return;
+    }
     const [{ plans, checkoutEnabled }, billing] = await Promise.all([
       api("/api/v1/plans"),
       api("/api/v1/billing/entitlement")
@@ -636,7 +655,7 @@
     const entry = new URLSearchParams(location.search);
     const billingState = entry.get("billing");
     const requestedPlan = entry.get("plan");
-    if (billingState || requestedPlan) {
+    if (!window.JobAgentNative?.isNative && (billingState || requestedPlan)) {
       $('[data-view="plan"]').click();
       if (billingState === "success") {
         setResult(
@@ -901,7 +920,7 @@
             await window.JobAgentNative.openExternal(result.authorizationUrl);
             setResult(
               "#inbound-result",
-              "Continue securely in your browser, then return to JobAgent.",
+              "Continue securely in your browser, then return to UnaScout.",
               "good"
             );
           } else {
@@ -1101,7 +1120,7 @@
           ? "Email already verified."
           : result.sent
             ? "Verification email sent."
-            : "Verification email is temporarily unavailable. Contact the JobAgent operator.",
+            : "Verification email is temporarily unavailable. Contact UnaScout support.",
         result.alreadyVerified || result.sent ? "good" : "danger"
       );
     } catch (error) {
@@ -1161,7 +1180,7 @@
   });
 
   $("#pause-account").addEventListener("click", async () => {
-    if (!confirm("Pause JobAgent and revoke the hosted Gmail connection?")) return;
+    if (!confirm("Pause UnaScout and revoke the hosted Gmail connection?")) return;
     try {
       await api("/api/v1/account/pause", { method: "POST", body: "{}" });
       location.reload();
@@ -1298,7 +1317,7 @@
     const pathname = location.pathname;
     if (pathname === "/accept-invite" && params.get("token")) {
       showAuthScreen("register");
-      $("#auth-title").textContent = "Accept your JobAgent invitation";
+      $("#auth-title").textContent = "Accept your UnaScout invitation";
       $("#register-form").elements.inviteToken.value = params.get("token");
       if (params.get("email")) $("#register-form").elements.email.value = params.get("email");
       return true;
