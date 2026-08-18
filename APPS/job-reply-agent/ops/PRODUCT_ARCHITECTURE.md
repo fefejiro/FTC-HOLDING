@@ -33,14 +33,20 @@ JobAgent now has two deliberately separate execution boundaries:
   surfaces. It uses system-browser OAuth and exact-origin app links; it does not
   own job-board sessions or automation credentials.
 
-The hosted foundation is deployed to an Una Labs Railway project with separate
-web, worker, migration, PostgreSQL, and private-bucket resources. Its temporary
-Railway hostname is live for controlled QA. The branded
-`jobagent.unalabs.cloud` domain has been exposed as the invite-only candidate
-surface; revalidate `/readyz`, DNS/TLS, and the deployed commit before calling
-it a production release.
-Transactional email, Google production verification, operator MFA enrollment,
-the Pro-plan backup/restore drill, and channel proof runs remain release gates.
+Historical evidence records a dedicated Una Labs Railway topology with separate
+web, worker, migration, PostgreSQL, and private-bucket resources. The current
+Railway CLI identity cannot access that project. On 2026-08-17 the branded
+domain's Cloudflare `/edgez` returned `200`, while `/`, `/healthz`, `/readyz`,
+and `/api/v1/release` returned `404`. The hosted origin is therefore unavailable
+and no current production deployment is claimed.
+
+Revenue-launch code image `407100eb9d872fc2ee857ad482af4807aa5cfd84`
+packages the existing product for a founding launch: public product/pricing,
+`/app`, capped registration, acquisition events, entitlements, usage limits,
+Stripe-hosted billing contracts, Mailjet delivery contracts, and fail-closed
+checkout activation. Transactional delivery, Stripe lifecycle, hosted package
+fulfillment, Google production verification, operator MFA, backup/restore, and
+channel proof runs remain release gates.
 
 This is not yet:
 
@@ -117,7 +123,10 @@ the two-week Chukwuma pilot remain release gates.
 
 ## SaaS Foundation Status - 2026-07-27
 
-The safe public-beta boundary is implemented and deployed:
+The safe public-beta boundary was implemented and historically deployed. That
+deployment is not currently reachable through the branded origin; treat the
+following as implemented architecture until the exact current release is
+redeployed and independently verified:
 
 - Expiring one-use invitations, verified email, password recovery, rotated
   password sessions, login throttling, CSRF protection, and mandatory operator MFA
@@ -150,12 +159,37 @@ The safe public-beta boundary is implemented and deployed:
   facts, 68 content-deduplicated resumes, 96 applications, 65 private evidence
   artifacts, and 31 deliberately downgraded unverified records
 
-The hosted services and tenant foundation are verified. A public beta is not
-declared complete until Cloudflare activates the branded domain, the Railway
-workspace is upgraded from Hobby to Pro, the email provider and operator MFA
-are configured, Google verification passes, the backup restore and incident
-drills pass, fresh channel proof runs complete, and the 14-day Chukwuma
-isolation pilot passes.
+Historical hosted evidence does not make the current origin healthy. A public
+or paid launch is not declared complete until the dedicated project is restored,
+the exact release SHA and schema are live, email and Stripe lifecycles pass,
+backup restore and incident drills pass, fresh channel proof runs complete, and
+the isolated pilot boundaries remain intact.
+
+## Revenue And Cloud Operations - 2026-08-17
+
+The commercial surface uses configurable server-side plan definitions and an
+isolated module in the existing `una-stripe-api` Worker. Stripe-hosted Checkout
+and Customer Portal keep card handling outside JobAgent. Tenant access changes
+only from verified, idempotent billing events. Live checkout is additionally
+guarded by `BILLING_CHECKOUT_ENABLED` so a polished interface cannot collect
+money before fulfillment is proven.
+
+Cloud is the durable system of record, but local execution remains useful:
+
+- GitHub owns source, migrations, runbooks, release tags, and review history.
+- CI owns reproducible build/test/store artifacts with retention limits.
+- Dedicated PostgreSQL and private object storage own customer data and files;
+  encrypted off-provider backups require a restore drill.
+- Stripe owns payment credentials and records; JobAgent stores identifiers,
+  entitlement state, usage, and idempotent event metadata.
+- Candidate browser sessions remain on the enrolled runner device.
+- Local `D:` worktrees and dependency/build caches are disposable acceleration,
+  not the only copy of product or customer state.
+
+Moving the existing PostgreSQL, pg-boss, private-storage, auth, and trusted-runner
+contracts to a different free platform would be a replatform, not a storage
+cleanup. Recovering the original dedicated Railway account/project is the
+lowest-risk path before considering paid replacement hosting.
 
 ## Target Platform
 

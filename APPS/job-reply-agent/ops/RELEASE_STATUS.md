@@ -1,49 +1,88 @@
-# JobAgent RC0 Release Status
+# JobAgent Revenue Launch RC3 Status
 
-Updated: 2026-08-16
-Release target (code image): `d3b3e804c57609e93789f2f860de51ac7ee70ee0`
-Branch: `agent/job-agent-continuous`
-PR: `https://github.com/fefejiro/FTC-HOLDING/pull/192` (documentation head follows the code image)
+Updated: 2026-08-17 America/New_York
+Code image: `407100eb9d872fc2ee857ad482af4807aa5cfd84`
+Branch: `release/jobagent-revenue-launch-rc3`
+Draft PR: `https://github.com/fefejiro/FTC-HOLDING/pull/253`
+Schema version: `011_revenue_launch`
 
 ## State
 
-- **Completed:** release commit pushed; PR head matches the release SHA; JobAgent
-  CI was triggered; safe `/api/v1/release` endpoint added; Docker and CI carry
-  commit/build metadata; local customer smoke passes at mobile and desktop.
-- **Deployed:** not yet independently verified for the RC0 SHA.
-- **Externally verified:** none for this RC0 release yet.
-- **Paused:** live customer smoke, connector proof, and device/store work await
-  hosted credentials and an authenticated candidate session.
-- **Blocked:** asset links need the production Android signing fingerprint and
-  Apple Team ID; hosted deployment needs a usable release environment and
-  database/storage credentials.
-- Hosted probe on 2026-08-16 returned `404` for the expected health, release,
-  and app-link paths.
+- **Completed in the repository:** public launch and pricing experience at `/`,
+  authenticated workspace at `/app`, capped public registration, UTM/referral
+  attribution, revenue tables with forced RLS, plan entitlements, usage ledger,
+  Stripe-hosted Checkout and Customer Portal contracts, Mailjet transaction
+  gateway support, billing lifecycle handling, and native purchase boundaries.
+- **Verified locally:** clean application and Worker installs; TypeScript build;
+  lint; `30` application test files with `229` tests; `1` Worker test file with
+  `7` tests; customer smoke at `390x844` and `1440x1000`; static and strict
+  release checks; application and Worker production audits with `0`
+  vulnerabilities when correctly scoped with `--workspaces=false`.
+- **Deployed:** the existing Cloudflare edge route only. The RC3 web, API,
+  worker, migration, PostgreSQL, private storage, and shared Stripe Worker
+  changes are not deployed.
+- **Externally verified:** `https://jobagent.unalabs.cloud/edgez` returned `200`
+  from Cloudflare with `{"ready":true,"edge":"cloudflare","origin":"configured"}`
+  on 2026-08-17.
+- **Paused:** `BILLING_CHECKOUT_ENABLED` remains false in any live environment;
+  the Stripe catalog bootstrap has not been run; no live-mode Checkout session,
+  subscription, charge, or customer activation has been created.
+- **Blocked:** the current Railway CLI identity can access only the PeacePad Free
+  workspace. It cannot access the original dedicated `una-jobagent` project.
+  JobAgent must not be inserted into PeacePad's database or Free project.
 
-## Queue Audit
+## Hosted Probe
 
-- **Implemented locally:** pg-boss queues use tenant/user operation grouping,
-  singleton idempotency keys, five retries with exponential backoff, 30-minute
-  expiry, 14-day successful-job retention, and a 30-day dead-letter queue.
-- **Live evidence pending:** expired-lease recovery, retry execution,
-  dead-letter inspection, operator replay, and preservation of proof artifacts
-  require the hosted queue database and worker.
+The same 2026-08-17 probe returned:
 
-## Required Evidence Before RC0 Green
+| Route | Status |
+|---|---:|
+| `/` | `404` |
+| `/edgez` | `200` |
+| `/healthz` | `404` |
+| `/readyz` | `404` |
+| `/api/v1/release` | `404` |
 
-1. Hosted `/api/v1/release` returns the exact SHA, build timestamp, environment,
-   and schema version.
-2. `/readyz` proves the runtime role, PostgreSQL, and private storage together.
-3. Live customer smoke passes at `390x844` and `1440x1000` with redacted trace
-   and screenshot artifacts.
-4. Auth, invitation, export, pause/revoke, deletion initiation, expiry, and
-   unauthorized-access checks pass against the hosted environment.
-5. Two isolated tenants pass profile, resume, application, approval, proof,
-   signed-download, and idempotency checks.
-6. Queue retry, lease recovery, dead-letter visibility, replay, and evidence
-   preservation are recorded.
-7. Android and Apple association files are published and verified for the exact
-   domain using real signing identifiers.
+Cloudflare DNS, TLS, and edge routing are alive. The origin application is not.
+This is not a production or revenue-ready deployment.
 
-No store readiness, connector certification, TestFlight, Play testing, or
-public-beta claim is made by this file.
+## Revenue Activation Gates
+
+1. Recover the Railway account/workspace that owns `una-jobagent`, or explicitly
+   fund a new dedicated Hobby project. Do not replatform PostgreSQL, pg-boss,
+   private storage, workers, and auth merely to avoid this single hosting gate.
+2. Deploy code image `407100eb9d872fc2ee857ad482af4807aa5cfd84` as web,
+   worker, and migration services with dedicated PostgreSQL and private storage.
+3. Prove `/healthz`, `/readyz`, and `/api/v1/release` report the exact image and
+   schema `011_revenue_launch`.
+4. Deploy the isolated JobAgent module in `una-stripe-api`, run the authenticated
+   catalog status/bootstrap flow, and verify the exact CAD prices plus
+   `FOUNDING25` constraints.
+5. Complete a Stripe test-mode lifecycle through cancellation/refund and prove
+   webhook idempotency, tenant entitlement, usage limits, and Mailjet delivery.
+6. Prove the hosted tailored-package workflow before setting
+   `BILLING_CHECKOUT_ENABLED=true` or taking a genuine payment.
+
+## Cloud-First Storage Model
+
+- GitHub is the source-of-truth for code, migrations, runbooks, and release tags.
+- GitHub Actions should produce immutable build, test, screenshot, trace, AAB,
+  and IPA artifacts with explicit retention periods.
+- Production PostgreSQL and private object storage own customer records and
+  documents. Encrypted off-provider backups must be restored in a drill before
+  commercial launch.
+- Stripe owns payment credentials and payment records; the database stores only
+  Stripe identifiers, entitlement state, and idempotent event metadata.
+- Browser cookies, job-board sessions, signing private keys, and OAuth refresh
+  tokens never enter source control or ordinary CI artifacts.
+- `D:` holds isolated worktrees, dependency caches, Android/Gradle caches, and
+  temporary release evidence. Those directories are reproducible and may be
+  pruned after the remote branch and CI artifacts are verified.
+
+## Store Boundary
+
+The shared Capacitor source remains a free companion for analysis, tracking,
+approvals, proof, and existing customer access. No in-app Stripe checkout or
+external purchase prompt is introduced. Signed store builds, physical-device
+checks, Play submission, TestFlight, and App Store review still require their
+own evidence.
