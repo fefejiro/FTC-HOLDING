@@ -31,6 +31,8 @@ try {
   );
   if (!identity.rows[0]) throw new Error("Disposable smoke identity was not found.");
 
+  await client.query("DELETE FROM usage_ledger WHERE user_id=$1", [userId]);
+
   await client.query(
     `INSERT INTO product_career_truth_banks (user_id, facts, approved_at, updated_at)
      VALUES ($1,$2::jsonb,now(),now())
@@ -78,11 +80,16 @@ try {
   );
 
   await client.query(
+    `DELETE FROM product_approval_requests
+      WHERE user_id=$1 AND job_match_id=$2 AND action='package.review'
+        AND payload->>'fixture'='true'`,
+    [userId, fitJob.rows[0].id]
+  );
+  await client.query(
     `INSERT INTO product_approval_requests
        (user_id, job_match_id, action, reason, payload, status)
      VALUES ($1,$2,'package.review','Review the tailored application package before use.',
-             '{"fixture":true}'::jsonb,'pending')
-     ON CONFLICT DO NOTHING`,
+             '{"fixture":true}'::jsonb,'pending')`,
     [userId, fitJob.rows[0].id]
   );
 

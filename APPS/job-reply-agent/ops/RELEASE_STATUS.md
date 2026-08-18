@@ -1,10 +1,10 @@
 # UnaScout Store Release Candidate Status
 
 Updated: 2026-08-18 America/New_York
-Release-hardening code image: `b3dbfb888`
-Branch: `feat/jobagent-live-proof`
-Base and current `origin/main`: `997be2a3384556273aaae3bca8bfe61e2ecde3e4`
-Exact deployed application image: `7756c6f3e496d48c2952b1d132dbabb547a4d244`
+Current `origin/main`: `c96c1115dc51b890a1bc1f8d90ad022121360d5b`
+Exact deployed application image: `c96c1115dc51b890a1bc1f8d90ad022121360d5b`
+Follow-up branch: `fix/jobagent-repeatable-live-smoke`
+Follow-up code image: `e09c445d9`
 Schema version: `011_revenue_launch`
 
 ## State
@@ -35,7 +35,7 @@ Schema version: `011_revenue_launch`
   email verification, login, seeded recommendations, fit/ATS analysis,
   approval handling, proof timeline, interview preparation, and responsive
   browser smoke passed at `390x844` and `1440x1000`. Redacted screenshots are
-  stored under `D:\FTC-HOLDING-releases\unascout\live-proof-20260818`.
+  stored under `D:\FTC-HOLDING-releases\unascout\live-proof-c96c1115`.
 - **Paused:** `BILLING_CHECKOUT_ENABLED` remains false. The permanent Stripe
   live key still must be installed in the Worker, after which the authenticated
   idempotent catalog bootstrap and a no-charge live Checkout creation proof can
@@ -80,8 +80,8 @@ work is deliberately narrow:
    webhook idempotency, tenant entitlement, usage limits, and Mailjet delivery.
 5. Prove the hosted tailored-package workflow before accepting a genuine
    payment.
-6. Build and deploy the merged `b3dbfb888` increment as one immutable image and
-   rerun release-SHA and live-browser evidence before store submission.
+6. Merge the repeatable-fixture follow-up `e09c445d9`; it changes release proof
+   tooling only and does not require a production runtime redeploy.
    `BILLING_CHECKOUT_ENABLED=true` or taking a genuine payment.
 
 ## Cloud-First Storage Model
