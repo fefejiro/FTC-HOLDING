@@ -2,18 +2,18 @@
 
 ## Last Verified State
 
-UnaScout release-hardening image `b3dbfb888` is committed on
-`feat/jobagent-live-proof`. Local release checks, the live customer smoke, and
+UnaScout exact image `c96c1115dc51b890a1bc1f8d90ad022121360d5b` is merged to
+`main` and deployed. Local release checks, the live customer smoke, and
 the signed Android bundle are green. The dedicated Railway Hobby origin is
 running; checkout remains disabled pending a permanent Stripe key and catalog
 proof, and no payment has been accepted. See `ops/RELEASE_STATUS.md` and
 `docs/PRODUCT_RELEASE_EVIDENCE_2026-08-18.md` for the exact evidence boundary.
 
 - Updated: 2026-08-18 America/New_York
-- Engineering branch: `feat/jobagent-live-proof`
-- Release-hardening image: `b3dbfb888`
-- Current `origin/main`: `997be2a3384556273aaae3bca8bfe61e2ecde3e4`
-- Exact deployed image: `7756c6f3e496d48c2952b1d132dbabb547a4d244`
+- Current `origin/main`: `c96c1115dc51b890a1bc1f8d90ad022121360d5b`
+- Exact deployed image: `c96c1115dc51b890a1bc1f8d90ad022121360d5b`
+- Follow-up branch: `fix/jobagent-repeatable-live-smoke`
+- Follow-up image: `e09c445d9`
 - Store-release worktree: `D:\FTC-HOLDING-worktrees\unascout-main-release`
 - Operational engineering worktree: `D:\FTC-HOLDING-worktrees\job-agent-continuous`
 - Operational branch: `agent/job-agent-continuous`
@@ -33,12 +33,12 @@ facts before changing them.
   services online, PostgreSQL, private storage, and backup resources present.
 - `https://jobagent.unalabs.cloud` now serves the product. `/healthz`, `/readyz`,
   `/api/v1/release`, `/api/v1/plans`, and `/edgez` return `200`; the release
-  endpoint reports deployed SHA `7756c6f3e496d48c2952b1d132dbabb547a4d244`
+  endpoint reports deployed SHA `c96c1115dc51b890a1bc1f8d90ad022121360d5b`
   and schema `011_revenue_launch`.
 - A disposable public tenant completed Mailjet email verification and the live
   customer journey. Responsive Playwright passed at `390x844` and `1440x1000`.
   Redacted artifacts are under
-  `D:\FTC-HOLDING-releases\unascout\live-proof-20260818`.
+  `D:\FTC-HOLDING-releases\unascout\live-proof-c96c1115`.
 - The latest source hardens production smoke diagnostics, keeps native Gmail
   connection on the hosted web surface, and declares the app's linked Apple
   privacy data categories. Full Vitest passed: `31` files plus one skipped,
@@ -180,8 +180,9 @@ Historical snapshot, superseded by the 2026-08-18 live production proof above.
 
 ## Current Boundaries And Manual Gates
 
-- The current release-hardening branch is `feat/jobagent-live-proof` at
-  `b3dbfb888`. It contains the locked UnaScout public brand, final native art,
+- The current production release is `main` at
+  `c96c1115dc51b890a1bc1f8d90ad022121360d5b`. It contains the locked UnaScout
+  public brand, final native art,
   store metadata, screenshot automation, iOS privacy declarations, hardened
   association routes, and release workflows.
 - The signed Android `1.0.1 (2)` AAB was verified locally with SHA-256
@@ -217,8 +218,9 @@ Historical snapshot, superseded by the 2026-08-18 live production proof above.
 1. Install the permanent restricted Stripe live key in the deployed Worker,
    bootstrap the exact catalog, prove no-charge live Checkout and Customer
    Portal creation, and complete the test-mode entitlement/cancellation cycle.
-2. Push `feat/jobagent-live-proof`, complete CI, merge, deploy one exact immutable
-   image to web/worker/migration, and rerun release-SHA plus live browser proof.
+2. Merge the guarded repeatable-fixture follow-up `e09c445d9`; production already
+   runs the exact customer image and does not need a runtime redeploy for this
+   test-only script change.
 3. Prove hosted tailored-package fulfillment before enabling checkout.
 4. Create the Play app record, enable Play App Signing, upload the canonical CI
    AAB, and capture the Play signing SHA-256 for the live association document.

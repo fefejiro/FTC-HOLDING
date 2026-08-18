@@ -3,10 +3,10 @@
 ## Start Here
 
 - Repository: `fefejiro/FTC-HOLDING`
-- Branch: `feat/jobagent-live-proof`
-- Release-hardening image: `b3dbfb888`
-- Current `origin/main`: `997be2a3384556273aaae3bca8bfe61e2ecde3e4`
-- Exact deployed image: `7756c6f3e496d48c2952b1d132dbabb547a4d244`
+- Current `origin/main`: `c96c1115dc51b890a1bc1f8d90ad022121360d5b`
+- Exact deployed image: `c96c1115dc51b890a1bc1f8d90ad022121360d5b`
+- Follow-up branch: `fix/jobagent-repeatable-live-smoke`
+- Follow-up image: `e09c445d9`
 - Clean worktree: `D:\FTC-HOLDING-worktrees\unascout-main-release`
 - Product root: `D:\FTC-HOLDING-worktrees\unascout-main-release\APPS\job-reply-agent`
 - Operational state root: `C:\FTC HOLDING\APPS\job-reply-agent`
@@ -37,11 +37,11 @@ Historical snapshot, superseded by the 2026-08-18 live release snapshot below.
 - The public product and application origin are live. `/healthz`, `/readyz`,
   `/api/v1/release`, `/api/v1/plans`, and `/edgez` return `200` and identify
   schema `011_revenue_launch` plus deployed SHA
-  `7756c6f3e496d48c2952b1d132dbabb547a4d244`.
+  `c96c1115dc51b890a1bc1f8d90ad022121360d5b`.
 - A disposable public tenant completed Mailjet verification and the live
   customer smoke at `390x844` and `1440x1000`. Evidence is under
-  `D:\FTC-HOLDING-releases\unascout\live-proof-20260818`.
-- `b3dbfb888` corrects production-smoke drift, declares the Apple privacy data
+  `D:\FTC-HOLDING-releases\unascout\live-proof-c96c1115`.
+- Main commit `c96c1115` corrects production-smoke drift, declares the Apple privacy data
   categories actually used, and prevents a broken native Gmail OAuth launch by
   directing connection setup to the hosted web app.
 - Full Vitest is green: `31` passed files plus one skipped; `230` passed tests
@@ -152,10 +152,10 @@ edits against the same files concurrently. The release auditor is read-only.
 ## Current CI And PR State
 
 Historical PRs #253 and #257 contain the revenue and store-release increments.
-The current release-hardening branch is `feat/jobagent-live-proof` at
-`b3dbfb888`; push it and require a fresh complete JobAgent CI run before merging
-or deploying it. Keep unrelated monorepo workflows separate unless a
-repository-level required check makes them a real merge blocker.
+PR #261 merged as `c96c1115dc51b890a1bc1f8d90ad022121360d5b` after all four
+JobAgent release jobs passed. That exact image is deployed and passed the live
+two-viewport smoke. Follow-up `e09c445d9` only makes the guarded disposable
+fixture repeatable and still requires its own CI before merge.
 
 The previous PR #192 and run `31434235006` remain historical RC0 evidence; they
 do not prove the RC3 code image, schema `011_revenue_launch`, or hosted revenue
@@ -168,8 +168,8 @@ workflow.
 2. Bootstrap and verify the exact Stripe catalog, create a no-charge live
    Checkout session, then prove webhook, entitlement, portal, cancellation,
    refund, Mailjet, export, and deletion behavior before activating checkout.
-3. Push and merge `b3dbfb888`, deploy the exact merged image as web, worker, and
-   migration, and repeat release-SHA plus two-viewport live proof.
+3. Merge `e09c445d9` after CI. No production runtime redeploy is required for
+   that test-only fixture change.
 4. Publish Android Digital Asset Links and Apple App Site Association files,
    then prove OAuth return on physical Android and iOS devices.
 5. Preserve successful CI runs `32142960353` and `32142993982` plus Android

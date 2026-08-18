@@ -4,10 +4,10 @@
 
 - Internal product: `JobAgent`
 - Public brand: `UnaScout` by Una Labs
-- Release-hardening branch: `feat/jobagent-live-proof`
-- Release-hardening commit: `b3dbfb888`
-- Base and current `origin/main`: `997be2a3384556273aaae3bca8bfe61e2ecde3e4`
-- Exact deployed commit: `7756c6f3e496d48c2952b1d132dbabb547a4d244`
+- Current `origin/main`: `c96c1115dc51b890a1bc1f8d90ad022121360d5b`
+- Exact deployed commit: `c96c1115dc51b890a1bc1f8d90ad022121360d5b`
+- Follow-up branch: `fix/jobagent-repeatable-live-smoke`
+- Follow-up commit: `e09c445d9`
 - Native application ID: `cloud.unalabs.jobagent`
 - Native version: `1.0.1 (2)`
 - Schema version: `011_revenue_launch`
@@ -90,12 +90,12 @@ was present.
 - `https://jobagent.unalabs.cloud/`, `/app`, `/healthz`, `/readyz`,
   `/api/v1/release`, `/api/v1/plans`, and `/edgez` return healthy production
   responses. The release endpoint identifies deployed commit
-  `7756c6f3e496d48c2952b1d132dbabb547a4d244` and schema
+  `c96c1115dc51b890a1bc1f8d90ad022121360d5b` and schema
   `011_revenue_launch`.
 - A disposable owner-controlled tenant completed public registration, Mailjet
   verification, login, recommendation/analysis, approval, proof timeline, and
   interview-preparation smoke at both required viewports. Redacted screenshots
-  are retained in `D:\FTC-HOLDING-releases\unascout\live-proof-20260818`.
+  are retained in `D:\FTC-HOLDING-releases\unascout\live-proof-c96c1115`.
 - The deployed shared Worker returns healthy status and Mailjet delivery is
   proven. Stripe catalog and Checkout remain disabled until a permanent live
   restricted key replaces the unsuitable CLI session credential.
@@ -104,17 +104,16 @@ was present.
 - No UnaScout App Store record, uploaded iOS build, TestFlight build, App Review
   submission, or public listing is yet evidenced.
 - No UnaScout Play Console record or uploaded AAB is yet evidenced.
-- The hosted origin is available, but it still reports the prior exact deployed
-  commit. Merge and deploy `b3dbfb888` before treating the native privacy and
-  Gmail-boundary hardening as production evidence.
+- The hosted origin reports the exact merged commit, so the native privacy and
+  Gmail-boundary hardening are part of the deployed customer image.
 
 ## Required External Gates
 
 1. Install the permanent Stripe live restricted key, bootstrap and verify the
    approved catalog, prove no-charge Checkout and portal creation, then complete
    webhook/entitlement/cancellation/refund evidence before enabling checkout.
-2. Merge and deploy `b3dbfb888` as one immutable release and rerun the exact-SHA
-   plus responsive live customer smoke.
+2. Merge the guarded repeatable-fixture follow-up `e09c445d9` after CI. It is
+   release tooling only; the exact runtime image is already deployed and proven.
 3. Create the Apple and Google app records, obtain their exact association and
    signing identities, deploy the association responses, and verify them live.
 4. Produce the signed iOS archive with dedicated JobAgent credentials and upload
