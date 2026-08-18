@@ -193,3 +193,59 @@ jobs:
       - name: Publish commit-addressed image
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: docker push "${IMAGE_NAME}:${{ github.sha }}"
+
+  signed-android-bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: APPS/job-reply-agent
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: APPS/job-reply-agent/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Clean application install
+        run: npm ci --workspaces=false
+
+      - name: Build and synchronize UnaScout Android
+        run: |
+          npm run build
+          npm run mobile:sync:android
+
+      - name: Import JobAgent upload key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.JOBAGENT_ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$KEYSTORE_BASE64"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/app/jobagent-upload.jks
+
+      - name: Build signed AAB
+        env:
+          JOBAGENT_KEYSTORE_PATH: ${{ github.workspace }}/APPS/job-reply-agent/android/app/jobagent-upload.jks
+          JOBAGENT_KEYSTORE_PASSWORD: ${{ secrets.JOBAGENT_ANDROID_KEYSTORE_PASSWORD }}
+          JOBAGENT_KEY_ALIAS: ${{ secrets.JOBAGENT_ANDROID_KEY_ALIAS }}
+          JOBAGENT_KEY_PASSWORD: ${{ secrets.JOBAGENT_ANDROID_KEY_PASSWORD }}
+        run: ./android/gradlew :app:bundleRelease --no-daemon -p android
+
+      - name: Record release digest
+        run: sha256sum android/app/build/outputs/bundle/release/app-release.aab | tee android-aab-sha256.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unascout-android-${{ github.sha }}
+          path: |
+            APPS/job-reply-agent/android/app/build/outputs/bundle/release/app-release.aab
+            APPS/job-reply-agent/android-aab-sha256.txt
+          retention-days: 14
+          if-no-files-found: error
