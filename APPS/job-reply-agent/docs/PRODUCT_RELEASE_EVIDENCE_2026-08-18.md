@@ -4,9 +4,9 @@
 
 - Internal product: `JobAgent`
 - Public brand: `UnaScout` by Una Labs
-- Exact deployed commit: `b3a1077b2100774b9394f19dcf4f5cbfce7ded61`
-- Current externally verified production commit: `b3a1077b2100774b9394f19dcf4f5cbfce7ded61`
-- Latest merged test/evidence head: `b3a1077b2100774b9394f19dcf4f5cbfce7ded61`
+- Exact deployed commit: `22db89fb9a58bbb07e3be64919f08f9bd0b5c6d8`
+- Current externally verified production commit: `22db89fb9a58bbb07e3be64919f08f9bd0b5c6d8`
+- Latest tested native-artifact head: `b3a1077b2100774b9394f19dcf4f5cbfce7ded61`
 - Native application ID: `cloud.unalabs.jobagent`
 - Native version: `1.0.1 (2)`
 - Schema version: `011_revenue_launch`
@@ -31,6 +31,9 @@
   secrets and record bundle and signer evidence.
 - Added a canonical UnaScout master logo and generated matching iOS, Android,
   PWA, Apple, and Google store assets from that single source.
+- Promoted a PWA cache-key update so the manifest and service worker request
+  the new icon immediately rather than waiting for the previous public cache
+  entry to expire.
 
 ## Verification Results
 

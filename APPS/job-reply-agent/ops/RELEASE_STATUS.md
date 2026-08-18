@@ -1,8 +1,8 @@
 # UnaScout Store Release Candidate Status
 
 Updated: 2026-08-18 America/New_York
-Exact deployed application image: `b3a1077b2100774b9394f19dcf4f5cbfce7ded61`
-Latest merged test/evidence head: `b3a1077b2100774b9394f19dcf4f5cbfce7ded61`
+Exact deployed application image: `22db89fb9a58bbb07e3be64919f08f9bd0b5c6d8`
+Latest tested native-artifact head: `b3a1077b2100774b9394f19dcf4f5cbfce7ded61`
 Schema version: `011_revenue_launch`
 
 ## State
@@ -26,6 +26,9 @@ Schema version: `011_revenue_launch`
   SaaS gates and produced the signed Android AAB for `b3a1077b`; GitHub Actions
   run `32176666950` produced the matching signed iOS IPA. The canonical
   UnaScout logo is present in both artifacts and the live PWA origin.
+- **PWA cache promotion:** the live `22db89fb` runtime versions manifest and
+  service-worker icon requests, so new installs receive the canonical icon
+  without waiting for the earlier Cloudflare cache entry to age out.
 - **Deployed:** the dedicated Railway Hobby project `una-jobagent` has web,
   worker, migration, PostgreSQL, backup, and private object storage resources.
   The shared Cloudflare Stripe/Mailjet Worker module is also deployed.
