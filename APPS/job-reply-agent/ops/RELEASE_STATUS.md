@@ -1,8 +1,8 @@
 # UnaScout Store Release Candidate Status
 
 Updated: 2026-08-18 America/New_York
-Exact deployed application image: `c96c1115dc51b890a1bc1f8d90ad022121360d5b`
-Latest merged test/evidence head: `2d6b42818d835e198b28e139e7ff81d19bcd03b9`
+Exact deployed application image: `b3a1077b2100774b9394f19dcf4f5cbfce7ded61`
+Latest merged test/evidence head: `b3a1077b2100774b9394f19dcf4f5cbfce7ded61`
 Schema version: `011_revenue_launch`
 
 ## State
@@ -22,6 +22,10 @@ Schema version: `011_revenue_launch`
   security, billing, immutable-image, browser-smoke, and signed-Android jobs.
   Dedicated Android run `32142993982` also passed and retained artifact
   `9326695864` on evidence head `daec03905`.
+- **Current release evidence:** GitHub Actions run `32176635059` passed the
+  SaaS gates and produced the signed Android AAB for `b3a1077b`; GitHub Actions
+  run `32176666950` produced the matching signed iOS IPA. The canonical
+  UnaScout logo is present in both artifacts and the live PWA origin.
 - **Deployed:** the dedicated Railway Hobby project `una-jobagent` has web,
   worker, migration, PostgreSQL, backup, and private object storage resources.
   The shared Cloudflare Stripe/Mailjet Worker module is also deployed.
@@ -78,8 +82,8 @@ work is deliberately narrow:
    webhook idempotency, tenant entitlement, usage limits, and Mailjet delivery.
 5. Prove the hosted tailored-package workflow before accepting a genuine
    payment.
-6. No runtime redeploy is required for merged head `2d6b42818`; it changes only
-   guarded release-proof tooling and evidence documentation.
+6. The `b3a1077b` release is deployed to the live origin; future promotions
+   must retain explicit release-SHA verification.
    `BILLING_CHECKOUT_ENABLED=true` or taking a genuine payment.
 
 ## Cloud-First Storage Model
@@ -127,12 +131,14 @@ own evidence.
 - A dedicated zero-cost `macos-26` GitHub Actions workflow exists for iOS and
   enforces Xcode 26 plus JobAgent-specific Apple distribution credentials.
   PeacePad credentials are not reused.
-- App Store Connect is visibly authenticated to the correct organization, but
-  no UnaScout app record or uploaded build has yet been evidenced.
+- App Store Connect is visibly authenticated to the correct organization and
+  the UnaScout record exists as Apple ID `6802774371`; no uploaded build has
+  yet been evidenced.
 - Apple Developer portal confirms team/App ID prefix `G6UNC88GQ5`, and the
   hosted Apple App Site Association response is externally verified at `200`
   for `G6UNC88GQ5.cloud.unalabs.jobagent`. The App ID registration and App Store
-  record are still pending final console actions.
+  record exists as Apple ID `6802774371`; the uploaded build and review remain
+  pending final console actions.
 - Both native shells still depend on the hosted origin. The origin is now live;
   store rollout remains gated by exact-image redeployment, association identities,
   physical-device proof, publisher records, signing, and store review.

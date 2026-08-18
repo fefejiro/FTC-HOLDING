@@ -4,9 +4,9 @@
 
 - Internal product: `JobAgent`
 - Public brand: `UnaScout` by Una Labs
-- Exact deployed commit: `c96c1115dc51b890a1bc1f8d90ad022121360d5b`
-- Current externally verified production commit: `058bbd40fb3df3ced6c8a8263d8353e270dfea5a`
-- Latest merged test/evidence head: `2d6b42818d835e198b28e139e7ff81d19bcd03b9`
+- Exact deployed commit: `b3a1077b2100774b9394f19dcf4f5cbfce7ded61`
+- Current externally verified production commit: `b3a1077b2100774b9394f19dcf4f5cbfce7ded61`
+- Latest merged test/evidence head: `b3a1077b2100774b9394f19dcf4f5cbfce7ded61`
 - Native application ID: `cloud.unalabs.jobagent`
 - Native version: `1.0.1 (2)`
 - Schema version: `011_revenue_launch`
@@ -29,6 +29,8 @@
   Connect processing.
 - Updated Android release automation to require JobAgent-specific signing
   secrets and record bundle and signer evidence.
+- Added a canonical UnaScout master logo and generated matching iOS, Android,
+  PWA, Apple, and Google store assets from that single source.
 
 ## Verification Results
 
@@ -42,14 +44,14 @@
 | Store screenshots | 5 Apple images at `1284x2778`; 5 Google images at `1080x1920` |
 | Google feature graphic | `1024x500` |
 | Android debug build | Passed |
-| Android signed release bundle | Passed |
+| Android signed release bundle | Passed on `b3a1077b` |
 
 The signed release bundle is:
 
 `D:\FTC-HOLDING-worktrees\unascout-main-release\APPS\job-reply-agent\android\app\build\outputs\bundle\release\app-release.aab`
 
-- Size: `3,250,977` bytes
-- AAB SHA-256: `D2BFD88D7DF5A8D88130FE7349A6E8D30DC42FCE4487E045C7F625DACA22BAED`
+- Size: `3,841,088` bytes
+- AAB SHA-256: `740B0DA0108A49680EBCD33DCCAF16AFE5AB30BD841FF1A92A1E22433F4A19E0`
 - Upload signer SHA-256:
   `FF:B8:EE:4A:EA:C9:B1:CB:82:6D:FB:B1:0C:02:FD:35:3F:40:A2:CC:19:D5:F9:63:75:75:F8:06:7F:48:80:FD`
 - Signing material remains outside Git in `D:\jobagent-release-secrets`.
@@ -57,10 +59,9 @@ The signed release bundle is:
 ## Remote CI Evidence
 
 - JobAgent SaaS release gates:
-  `https://github.com/fefejiro/FTC-HOLDING/actions/runs/32142960353`
-- UnaScout Android release:
-  `https://github.com/fefejiro/FTC-HOLDING/actions/runs/32142993982`
-- Both runs completed successfully against evidence head `daec03905`.
+  `https://github.com/fefejiro/FTC-HOLDING/actions/runs/32176635059`
+- Both the SaaS gates and signed Android bundle completed successfully against
+  `b3a1077b2100774b9394f19dcf4f5cbfce7ded61`.
 - The SaaS run passed standalone install, dependency audit, build, lint, all
   application and billing tests, PostgreSQL isolation checks, browser smoke,
   strict configuration, secret scanning, immutable-image inspection, and a
@@ -68,19 +69,20 @@ The signed release bundle is:
 - The dedicated Android run regenerated store screenshots, built and synced the
   release, imported the protected JobAgent key, signed the AAB, recorded its
   digest, and uploaded the artifact. Play upload was intentionally skipped.
-- Remote AAB artifact ID: `9326695864`
+- Remote AAB artifact:
+  `unascout-android-b3a1077b2100774b9394f19dcf4f5cbfce7ded61`
 - Remote AAB SHA-256:
-  `714A82DDFDC3B993D2704BE5090111ECFCDCB4CE13BA1B56AB0079C786049107`
+  `740B0DA0108A49680EBCD33DCCAF16AFE5AB30BD841FF1A92A1E22433F4A19E0`
 - Remote AAB signer SHA-256:
   `FF:B8:EE:4A:EA:C9:B1:CB:82:6D:FB:B1:0C:02:FD:35:3F:40:A2:CC:19:D5:F9:63:75:75:F8:06:7F:48:80:FD`
 - Dedicated iOS signed archive workflow:
-  `https://github.com/fefejiro/FTC-HOLDING/actions/runs/32172747061`
-- The iOS workflow completed successfully from
-  `82cee97805ab12c30ac1e48466bad54ec30bf337` with App Store upload disabled.
+  `https://github.com/fefejiro/FTC-HOLDING/actions/runs/32176666950`
+- The iOS workflow completed successfully from `b3a1077b` with App Store
+  upload disabled.
   This proves the protected signing material and archive path, not an uploaded
   IPA, TestFlight build, App Review submission, or public availability.
 - The exported IPA was retrieved from the workflow evidence and verified with
-  SHA-256 `24116be9079a15dbcabd3e2e4371ced358b72340718b67ed8898349ba489871a`.
+  SHA-256 `95EF5BA50344780AAD474EE10D3F991F805C345A8855825E2D603F10367E344D`.
   Its signed application identity is
   `G6UNC88GQ5.cloud.unalabs.jobagent`.
 
@@ -100,7 +102,7 @@ was present.
 - `https://jobagent.unalabs.cloud/`, `/app`, `/healthz`, `/readyz`,
   `/api/v1/release`, `/api/v1/plans`, and `/edgez` return healthy production
   responses. The release endpoint identifies deployed commit
-  `058bbd40fb3df3ced6c8a8263d8353e270dfea5a` and schema
+  `b3a1077b2100774b9394f19dcf4f5cbfce7ded61` and schema
   `011_revenue_launch`.
 - The public landing page now exposes a canonical URL, Open Graph, Twitter
   card, and `SoftwareApplication` structured data. Production `robots.txt`
@@ -134,8 +136,8 @@ was present.
 1. Install the permanent Stripe live restricted key, bootstrap and verify the
    approved catalog, prove no-charge Checkout and portal creation, then complete
    webhook/entitlement/cancellation/refund evidence before enabling checkout.
-2. Keep the exact runtime image in place; merged head `2d6b42818` is release
-   tooling/evidence only and passed CI before merge.
+2. Keep the exact runtime image in place; `b3a1077b` is deployed and its
+   release gates passed before promotion.
 3. Complete the Google Play record. Apple associated-domain identity and its
    app record are externally verified; obtain the Google Play App Signing
    fingerprint, deploy Android Digital Asset Links, and verify it live.
