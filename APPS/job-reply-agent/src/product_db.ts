@@ -22,6 +22,27 @@ export function productDbConfig(): ProductDbConfig {
 
 let pool: pg.Pool | null = null;
 
+function sha256(value: string): string {
+  return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+export function normalizeMigrationSql(sql: string): string {
+  return sql.replace(/\r\n?/g, "\n");
+}
+
+export function migrationChecksum(sql: string): string {
+  return sha256(normalizeMigrationSql(sql));
+}
+
+export function acceptedMigrationChecksums(sql: string): Set<string> {
+  const normalized = normalizeMigrationSql(sql);
+  return new Set([
+    migrationChecksum(sql),
+    sha256(sql),
+    sha256(normalized.replace(/\n/g, "\r\n"))
+  ]);
+}
+
 export function createProductPool(connectionString?: string): pg.Pool {
   const cfg = connectionString
     ? {
@@ -70,13 +91,13 @@ export async function migrateProductDb(db = getProductPool()): Promise<void> {
     );
     for (const name of migrations) {
       const sql = fs.readFileSync(path.join(migrationRoot, name), "utf8");
-      const sha256 = crypto.createHash("sha256").update(sql).digest("hex");
+      const checksum = migrationChecksum(sql);
       const existing = await client.query<{ sha256: string }>(
         "SELECT sha256 FROM product_schema_migrations WHERE name=$1",
         [name]
       );
       if (existing.rows[0]) {
-        if (existing.rows[0].sha256 !== sha256) {
+        if (!acceptedMigrationChecksums(sql).has(existing.rows[0].sha256)) {
           throw new Error(`Applied migration ${name} does not match its release checksum.`);
         }
         continue;
@@ -86,7 +107,7 @@ export async function migrateProductDb(db = getProductPool()): Promise<void> {
         await client.query(sql);
         await client.query(
           "INSERT INTO product_schema_migrations (name, sha256) VALUES ($1,$2)",
-          [name, sha256]
+          [name, checksum]
         );
         await client.query("COMMIT");
       } catch (error) {
