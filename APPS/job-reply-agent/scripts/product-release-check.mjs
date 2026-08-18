@@ -70,6 +70,7 @@ for (const required of [
   "public/icon-192.png.b64",
   "public/icon.png",
   "public/icon.png.b64",
+  "store/assets/brand/unascout-master-icon.png",
   "migrations/008_safe_public_beta.sql",
   "migrations/009_application_evidence.sql",
   "migrations/010_trust_first_pilot.sql",

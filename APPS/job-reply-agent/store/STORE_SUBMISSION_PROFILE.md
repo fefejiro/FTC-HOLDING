@@ -13,6 +13,15 @@
 - Default language: `English (U.S.)` for the first global listing; Canadian positioning remains in the product and campaign targeting
 - Copyright: `2026 Fejiro Technology Consultancy Inc.`
 
+## Brand Asset Source
+
+- Canonical UnaScout icon: `store/assets/brand/unascout-master-icon.png`
+- Generate all iOS, Android, PWA, and store derivatives with
+  `npm run store:native-assets`; do not replace an individual store asset by
+  hand.
+- The Apple Store icon is supplied by the signed iOS build. The generic App
+  Store Connect placeholder remains until that build is uploaded and processed.
+
 ## Release Account Routing
 
 Use the existing authenticated account/profile that owns each release surface.
