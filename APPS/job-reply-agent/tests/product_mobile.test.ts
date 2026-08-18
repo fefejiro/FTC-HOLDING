@@ -8,9 +8,9 @@ describe("native mobile shell", () => {
   it("uses the production HTTPS product without permitting arbitrary navigation", () => {
     const config = fs.readFileSync(path.join(root, "capacitor.config.ts"), "utf8");
     expect(config).toContain('appId: "cloud.unalabs.jobagent"');
-    expect(config).toContain('appName: "Una Labs JobAgent"');
+    expect(config).toContain('appName: "UnaScout"');
     expect(config).toContain('webDir: "public"');
-    expect(config).toContain('url: "https://jobagent.unalabs.cloud"');
+    expect(config).toContain('url: "https://jobagent.unalabs.cloud/app"');
     expect(config).toContain('allowNavigation: ["jobagent.unalabs.cloud"]');
     expect(config).toContain("cleartext: false");
     expect(config).toContain("allowMixedContent: false");
@@ -30,6 +30,8 @@ describe("native mobile shell", () => {
     expect(app).toContain("window.JobAgentNative.openExternal(result.authorizationUrl)");
     expect(app).toContain('"jobagent:native-resume"');
     expect(html.indexOf('/native-bridge.js')).toBeLessThan(html.indexOf('/app.js'));
+    expect(app).toContain("!window.JobAgentNative?.isNative");
+    expect(app).toContain("if (window.JobAgentNative?.isNative) return");
   });
 
   it("declares verified HTTPS return links on Android and iOS", () => {

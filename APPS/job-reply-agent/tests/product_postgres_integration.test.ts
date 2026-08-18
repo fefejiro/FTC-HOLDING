@@ -9,6 +9,12 @@ import {
   type GmailOAuthDeps
 } from "../src/product_gmail_oauth.js";
 import { executeIdempotentMutation } from "../src/product_idempotency.js";
+import {
+  applyBillingEvent,
+  consumePlanUsage,
+  ensureFreeEntitlement,
+  getBillingEntitlement
+} from "../src/product_billing.js";
 import { getProductConnectionSecret, revokeProductConnection } from "../src/product_repository.js";
 import type { SecretKeyring } from "../src/product_secret_crypto.js";
 
@@ -156,6 +162,129 @@ describeDatabase("PostgreSQL tenant isolation", () => {
       [[userA, userB]]
     );
     expect(count.rows[0].count).toBe(2);
+  });
+
+  it("isolates billing records and usage keys between tenants", async () => {
+    if (!appPool) return;
+    await ensureFreeEntitlement(appPool, userA);
+    await ensureFreeEntitlement(appPool, userB);
+    await withTenant(userB, (client) => client.query(
+      `INSERT INTO billing_customers (user_id, stripe_customer_id, livemode)
+       VALUES ($1,$2,false)`,
+      [userB, `cus_tenant_b_${suffix}`]
+    ), appPool);
+    const crossTenant = await withTenant(userA, (client) => client.query(
+      "SELECT stripe_customer_id FROM billing_customers WHERE user_id=$1",
+      [userB]
+    ), appPool);
+    expect(crossTenant.rowCount).toBe(0);
+
+    const [usageA, usageB] = await Promise.all([
+      consumePlanUsage(appPool, userA, "fit_analysis", 1, "shared-billing-usage-key"),
+      consumePlanUsage(appPool, userB, "fit_analysis", 1, "shared-billing-usage-key")
+    ]);
+    expect(usageA.allowed).toBe(true);
+    expect(usageB.allowed).toBe(true);
+  });
+
+  it("serializes concurrent usage so an allowance cannot be overspent", async () => {
+    if (!appPool) return;
+    await ensureFreeEntitlement(appPool, userA);
+    await withTenant(userA, async (client) => {
+      await client.query("DELETE FROM usage_ledger WHERE user_id=$1", [userA]);
+      await client.query(
+        `UPDATE plan_entitlements
+            SET allowances=jsonb_set(allowances,'{fit_analysis}','1'::jsonb),
+                period_start=now() - interval '1 minute',
+                period_end=now() + interval '1 day'
+          WHERE user_id=$1`,
+        [userA]
+      );
+    }, appPool);
+    const results = await Promise.all([
+      consumePlanUsage(appPool, userA, "fit_analysis", 1, "concurrent-usage-a"),
+      consumePlanUsage(appPool, userA, "fit_analysis", 1, "concurrent-usage-b")
+    ]);
+    expect(results.filter((result) => result.allowed)).toHaveLength(1);
+    expect(results.filter((result) => !result.allowed)).toHaveLength(1);
+  });
+
+  it("reconciles the Stripe lifecycle idempotently and keeps its records tenant-private", async () => {
+    if (!appPool) return;
+    const digest = crypto.createHash("sha256").update(`billing-${suffix}`).digest("hex");
+    const event = (eventId: string, eventType: string, status: string) => ({
+      stripeEventId: eventId,
+      eventType,
+      eventCreatedAt: new Date().toISOString(),
+      livemode: false,
+      userId: userA,
+      stripeObjectId: `object_${suffix}`,
+      customerId: `cus_tenant_a_${suffix}`,
+      subscriptionId: `sub_tenant_a_${suffix}`,
+      priceId: `price_monthly_${suffix}`,
+      planCode: "jobagent_monthly" as const,
+      subscriptionStatus: status,
+      periodStart: new Date(Date.now() - 60_000).toISOString(),
+      periodEnd: new Date(Date.now() + 30 * 86_400_000).toISOString(),
+      metadata: { service_type: "jobagent_subscription" }
+    });
+
+    const activated = await applyBillingEvent(
+      appPool,
+      event(`evt_active_${suffix}`, "checkout.session.completed", "active"),
+      digest
+    );
+    expect(activated.replayed).toBe(false);
+    expect(activated.entitlement).toMatchObject({ planCode: "jobagent_monthly", status: "active" });
+
+    const replayed = await applyBillingEvent(
+      appPool,
+      event(`evt_active_${suffix}`, "checkout.session.completed", "active"),
+      digest
+    );
+    expect(replayed.replayed).toBe(true);
+
+    await applyBillingEvent(
+      appPool,
+      event(`evt_failed_${suffix}`, "invoice.payment_failed", "past_due"),
+      digest
+    );
+    await expect(getBillingEntitlement(appPool, userA)).resolves.toMatchObject({
+      planCode: "jobagent_monthly",
+      status: "past_due",
+      allowances: { fit_analysis: 3, tailored_package: 1 }
+    });
+
+    await applyBillingEvent(
+      appPool,
+      event(`evt_paid_${suffix}`, "invoice.payment_succeeded", "active"),
+      digest
+    );
+    await expect(getBillingEntitlement(appPool, userA)).resolves.toMatchObject({
+      planCode: "jobagent_monthly",
+      status: "active",
+      allowances: { fit_analysis: 100, tailored_package: 25 }
+    });
+
+    await applyBillingEvent(
+      appPool,
+      event(`evt_deleted_${suffix}`, "customer.subscription.deleted", "canceled"),
+      digest
+    );
+    await expect(getBillingEntitlement(appPool, userA)).resolves.toMatchObject({ status: "canceled" });
+
+    await applyBillingEvent(
+      appPool,
+      event(`evt_refund_${suffix}`, "charge.refunded", "active"),
+      digest
+    );
+    await expect(getBillingEntitlement(appPool, userA)).resolves.toMatchObject({ status: "suspended" });
+
+    const crossTenant = await withTenant(userB, (client) => client.query(
+      "SELECT stripe_event_id FROM billing_events WHERE user_id=$1",
+      [userA]
+    ), appPool);
+    expect(crossTenant.rowCount).toBe(0);
   });
 
   it("replays a completed mutation without running its action twice", async () => {

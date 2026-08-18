@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "APPS/job-reply-agent/**"
+      - "workers/stripe-api/**"
       - ".railwayignore"
       - ".github/workflows/job-agent-saas.yml"
       - ".github/workflows/job-agent-uptime.yml"
@@ -12,6 +13,7 @@ on:
       - main
     paths:
       - "APPS/job-reply-agent/**"
+      - "workers/stripe-api/**"
       - ".railwayignore"
       - ".github/workflows/job-agent-saas.yml"
       - ".github/workflows/job-agent-uptime.yml"
@@ -74,9 +76,19 @@ jobs:
         run: npm test --workspaces=false
 
       - name: Customer journey browser smoke
+        timeout-minutes: 5
         run: |
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
           npm run customer:smoke --workspaces=false
+
+      - name: Upload customer smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jobagent-customer-smoke-${{ github.sha }}
+          path: APPS/job-reply-agent/.local/qa-revenue-launch/*.png
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Validate strict production configuration
         env:
@@ -101,6 +113,12 @@ jobs:
           RESEND_INBOUND_WEBHOOK_SECRET: whsec_release_check
           INBOUND_EMAIL_DOMAIN: jobs.unalabs.cloud
           TRANSACTIONAL_EMAIL_FROM: Una Labs JobAgent <jobagent@unalabs.cloud>
+          JOBAGENT_BILLING_GATEWAY_URL: https://una-stripe-api.example.test
+          JOBAGENT_EMAIL_GATEWAY_URL: https://una-stripe-api.example.test
+          JOBAGENT_BILLING_SHARED_SECRET: 0123456789abcdef0123456789abcdef
+          PUBLIC_SIGNUP_ENABLED: "true"
+          PUBLIC_SIGNUP_CAP: "100"
+          BILLING_CHECKOUT_ENABLED: "true"
           AUTO_MIGRATE: "false"
         run: npm run production:check:strict --workspaces=false
 
@@ -112,6 +130,33 @@ jobs:
           zricethezav/gitleaks:v8.28.0
           dir /repo/APPS/job-reply-agent
           --no-banner --redact
+
+  billing-gateway:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: workers/stripe-api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: workers/stripe-api/package-lock.json
+
+      - name: Clean worker install
+        run: npm ci
+
+      - name: Audit worker production dependencies
+        run: npm audit --omit=dev
+
+      - name: Type-check shared Stripe and Mailjet worker
+        run: npm run typecheck
+
+      - name: Test JobAgent billing isolation and webhook dispatch
+        run: npm test
 
   immutable-image:
     runs-on: ubuntu-latest
@@ -139,7 +184,7 @@ jobs:
           --entrypoint node
           una-jobagent:${{ github.sha }}
           -e
-          "const fs=require('fs'); for (const f of ['dist/product_entrypoint.js','dist/product_server.js','dist/product_worker.js','dist/product_migrate.js','dist/product_pilot_import.js','public/index.html','public/icon.png','public/privacy.html']) { fs.accessSync(f, fs.constants.R_OK); }"
+          "const fs=require('fs'); for (const f of ['dist/product_entrypoint.js','dist/product_server.js','dist/product_worker.js','dist/product_migrate.js','dist/product_pilot_import.js','migrations/011_revenue_launch.sql','public/landing.html','public/product-preview.png','public/index.html','public/icon.png','public/privacy.html']) { fs.accessSync(f, fs.constants.R_OK); }"
 
       - name: Authenticate to GitHub Container Registry
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -148,3 +193,61 @@ jobs:
       - name: Publish commit-addressed image
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: docker push "${IMAGE_NAME}:${{ github.sha }}"
+
+  signed-android-bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: APPS/job-reply-agent
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: APPS/job-reply-agent/package-lock.json
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Clean application install
+        run: npm ci --workspaces=false
+
+      - name: Build and synchronize UnaScout Android
+        run: |
+          npm run build
+          npm run mobile:sync:android
+
+      - name: Import JobAgent upload key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.JOBAGENT_ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$KEYSTORE_BASE64"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/app/jobagent-upload.jks
+
+      - name: Build signed AAB
+        env:
+          JOBAGENT_KEYSTORE_PATH: ${{ github.workspace }}/APPS/job-reply-agent/android/app/jobagent-upload.jks
+          JOBAGENT_KEYSTORE_PASSWORD: ${{ secrets.JOBAGENT_ANDROID_KEYSTORE_PASSWORD }}
+          JOBAGENT_KEY_ALIAS: ${{ secrets.JOBAGENT_ANDROID_KEY_ALIAS }}
+          JOBAGENT_KEY_PASSWORD: ${{ secrets.JOBAGENT_ANDROID_KEY_PASSWORD }}
+        run: |
+          chmod +x android/gradlew
+          ./android/gradlew :app:bundleRelease --no-daemon -p android
+
+      - name: Record release digest
+        run: sha256sum android/app/build/outputs/bundle/release/app-release.aab | tee android-aab-sha256.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unascout-android-${{ github.sha }}
+          path: |
+            APPS/job-reply-agent/android/app/build/outputs/bundle/release/app-release.aab
+            APPS/job-reply-agent/android-aab-sha256.txt
+          retention-days: 14
+          if-no-files-found: error

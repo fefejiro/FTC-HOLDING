@@ -1,0 +1,59 @@
+name: UnaScout iOS release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  signed-archive:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: APPS/job-reply-agent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: APPS/job-reply-agent/package-lock.json
+      - name: Require JobAgent-specific Apple signing material
+        env:
+          CERTIFICATE: ${{ secrets.JOBAGENT_IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          PROFILE: ${{ secrets.JOBAGENT_IOS_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          test -n "$CERTIFICATE" || { echo "Missing JOBAGENT_IOS_DISTRIBUTION_CERTIFICATE_BASE64"; exit 1; }
+          test -n "$PROFILE" || { echo "Missing JOBAGENT_IOS_PROVISIONING_PROFILE_BASE64"; exit 1; }
+      - name: Install and synchronize iOS
+        run: |
+          npm ci --workspaces=false
+          npm run build
+          npm run mobile:sync:ios
+      - name: Import signing identity and profile
+        env:
+          CERTIFICATE: ${{ secrets.JOBAGENT_IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.JOBAGENT_IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          PROFILE: ${{ secrets.JOBAGENT_IOS_PROVISIONING_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.JOBAGENT_IOS_KEYCHAIN_PASSWORD }}
+        run: |
+          security create-keychain -p "$KEYCHAIN_PASSWORD" jobagent-build.keychain
+          security set-keychain-settings -lut 21600 jobagent-build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" jobagent-build.keychain
+          printf '%s' "$CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/jobagent.p12"
+          security import "$RUNNER_TEMP/jobagent.p12" -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k jobagent-build.keychain
+          security list-keychain -d user -s jobagent-build.keychain
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" jobagent-build.keychain
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          printf '%s' "$PROFILE" | base64 --decode > "$HOME/Library/MobileDevice/Provisioning Profiles/jobagent.mobileprovision"
+      - name: Archive UnaScout
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release -archivePath "$RUNNER_TEMP/UnaScout.xcarchive" archive CODE_SIGN_STYLE=Manual PRODUCT_BUNDLE_IDENTIFIER=cloud.unalabs.jobagent
+      - name: Upload archive evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: unascout-ios-archive-${{ github.sha }}
+          path: ${{ runner.temp }}/UnaScout.xcarchive
+          retention-days: 14
+          if-no-files-found: error

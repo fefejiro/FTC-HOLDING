@@ -20,6 +20,7 @@ import {
   verifyPassword
 } from "./product_auth.js";
 import { assertProductDatabaseRole, getProductPool, migrateProductDb } from "./product_db.js";
+import { configuredPublicSignupCap } from "./product_registration.js";
 import { executeIdempotentMutation, normalizeIdempotencyKey, type MutationResponse } from "./product_idempotency.js";
 import {
   beginProductGmailOAuth,
@@ -49,6 +50,7 @@ import {
   productAuditLog,
   productConversionAnalytics,
   productDashboard,
+  productJobMatchExists,
   createProductInterviewPrep,
   recordProductOutcome,
   requestProductConnection,
@@ -113,10 +115,20 @@ import { connectorStatusSurface } from "./product_release_gates.js";
 import { validateResumeUpload } from "./product_resume.js";
 import { productSecretKeyring } from "./product_secret_crypto.js";
 import { productReleaseInfo } from "./product_release.js";
+import {
+  applyBillingEvent,
+  billingUsageSummary,
+  consumePlanUsage,
+  createBillingCheckout,
+  createBillingPortal,
+  recordFunnelEvent,
+  verifyBillingPayloadSignature
+} from "./product_billing.js";
+import { billingCheckoutEnabled, publicPlans } from "./product_plans.js";
 
 const HOST = process.env.HOST || "0.0.0.0";
 const PORT = Number(process.env.PORT || 3000);
-const CONSENT_VERSION = "2026-07-27";
+const CONSENT_VERSION = "2026-08-17";
 const MAX_BODY_BYTES = 7_500_000;
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PUBLIC_ROOT = path.join(ROOT, "public");
@@ -124,7 +136,19 @@ const PUBLIC_ROOT = path.join(ROOT, "public");
 const registrationSchema = z.object({
   email: z.string().email().transform((value) => value.trim().toLowerCase()),
   password: z.string().min(12).max(200),
-  inviteToken: z.string().min(20).max(500)
+  inviteToken: z.string().max(500).optional(),
+  acquisition: z.object({
+    source: z.string().max(100).optional(),
+    medium: z.string().max(100).optional(),
+    campaign: z.string().max(150).optional(),
+    content: z.string().max(150).optional(),
+    term: z.string().max(150).optional(),
+    referral: z.string().max(500).optional()
+  }).default({})
+});
+
+const billingCheckoutSchema = z.object({
+  planCode: z.enum(["sprint_weekly", "jobagent_monthly", "jobagent_annual"])
 });
 
 const loginSchema = z.object({
@@ -415,6 +439,7 @@ export function mutationOriginAllowed(req: IncomingMessage): boolean {
   if (!["POST", "PUT", "PATCH", "DELETE"].includes(req.method || "")) return true;
   const pathname = new URL(req.url || "/", "http://localhost").pathname;
   if (pathname === "/api/v1/webhooks/resend/inbound"
+      || pathname === "/api/v1/internal/billing/events"
       || pathname === "/api/v1/runner/enroll"
       || pathname.startsWith("/api/v1/runner/device/")) return true;
   const allowedOrigins = [
@@ -619,7 +644,10 @@ interface StaticAsset {
 }
 
 const STATIC_FILES: Record<string, StaticAsset> = {
-  "/": { file: "index.html", type: "text/html; charset=utf-8", cache: "no-store" },
+  "/": { file: "landing.html", type: "text/html; charset=utf-8", cache: "no-store" },
+  "/app": { file: "index.html", type: "text/html; charset=utf-8", cache: "no-store" },
+  "/landing.js": { file: "landing.js", type: "text/javascript; charset=utf-8", cache: "no-cache" },
+  "/landing.css": { file: "landing.css", type: "text/css; charset=utf-8", cache: "public, max-age=3600" },
   "/app.js": { file: "app.js", type: "text/javascript; charset=utf-8", cache: "no-cache" },
   "/styles.css": { file: "styles.css", type: "text/css; charset=utf-8", cache: "public, max-age=3600" },
   "/manifest.webmanifest": { file: "manifest.webmanifest", type: "application/manifest+json", cache: "public, max-age=3600" },
@@ -636,6 +664,11 @@ const STATIC_FILES: Record<string, StaticAsset> = {
     cache: "public, max-age=86400",
     base64Fallback: "icon.png.b64"
   },
+  "/product-preview.png": {
+    file: "product-preview.png",
+    type: "image/png",
+    cache: "public, max-age=86400"
+  },
   "/privacy": { file: "privacy.html", type: "text/html; charset=utf-8", cache: "public, max-age=3600" },
   "/terms": { file: "terms.html", type: "text/html; charset=utf-8", cache: "public, max-age=3600" },
   "/google-data": { file: "google-data.html", type: "text/html; charset=utf-8", cache: "public, max-age=3600" },
@@ -646,7 +679,7 @@ const STATIC_FILES: Record<string, StaticAsset> = {
 
 async function serveStatic(res: ServerResponse, pathname: string): Promise<boolean> {
   const publicPath = ["/accept-invite", "/verify-email", "/reset-password"].includes(pathname)
-    ? "/"
+    ? "/app"
     : pathname;
   const asset = STATIC_FILES[publicPath];
   if (!asset) return false;
@@ -696,6 +729,18 @@ export async function createProductServer(storage: ProductObjectStorage = create
       if (req.method === "GET" && url.pathname === "/api/v1/release") {
         return json(res, 200, { release: productReleaseInfo() });
       }
+      if (req.method === "GET" && url.pathname === "/api/v1/plans") {
+        return json(res, 200, {
+          plans: publicPlans(),
+          checkoutEnabled: billingCheckoutEnabled(),
+          currency: "CAD",
+          foundingOffer: {
+            code: "FOUNDING25",
+            description: "25% off the first three monthly payments",
+            redemptionLimit: 100
+          }
+        });
+      }
       if (req.method === "GET" && url.pathname === "/readyz") {
         try {
           if (process.env.NODE_ENV === "production") await assertProductDatabaseRole(db);
@@ -711,26 +756,74 @@ export async function createProductServer(storage: ProductObjectStorage = create
           return json(res, 503, { ready: false, database: "unavailable" });
         }
       }
+      if (req.method === "POST" && url.pathname === "/api/v1/internal/billing/events") {
+        const rawBody = await readText(req);
+        const timestamp = String(req.headers["x-jobagent-timestamp"] || "");
+        const signature = String(req.headers["x-jobagent-signature"] || "");
+        const secret = String(process.env.JOBAGENT_BILLING_SHARED_SECRET || "").trim();
+        if (!verifyBillingPayloadSignature(rawBody, timestamp, signature, secret)) {
+          return json(res, 401, { error: "Billing event signature is invalid or expired." });
+        }
+        let payload: unknown;
+        try {
+          payload = rawBody ? JSON.parse(rawBody) : {};
+        } catch {
+          return json(res, 400, { error: "Billing event payload is invalid." });
+        }
+        const digest = crypto.createHash("sha256").update(rawBody).digest("hex");
+        const result = await applyBillingEvent(db, payload, digest);
+        return json(res, 200, { accepted: true, replayed: result.replayed });
+      }
       if (req.method === "POST" && url.pathname === "/api/v1/auth/register") {
         const input = registrationSchema.parse(await readJson(req));
         const passwordHash = hashPassword(input.password);
         const client = await db.connect();
         try {
           await client.query("BEGIN");
-          const invitation = await consumeProductInvitation(client, input.email, input.inviteToken);
-          if (!invitation) {
+          const inviteToken = String(input.inviteToken || "").trim();
+          const invitation = inviteToken
+            ? await consumeProductInvitation(client, input.email, inviteToken)
+            : null;
+          if (inviteToken && !invitation) {
             await client.query("ROLLBACK");
             return json(res, 403, { error: "Invitation is invalid, expired, or already used." });
           }
+          const publicRegistration = !invitation;
+          if (publicRegistration && process.env.PUBLIC_SIGNUP_ENABLED !== "true") {
+            await client.query("ROLLBACK");
+            return json(res, 403, { error: "Public registration is not open yet." });
+          }
+          if (publicRegistration) {
+            const configuredCap = configuredPublicSignupCap();
+            if (configuredCap !== null) {
+              await client.query("SELECT pg_advisory_xact_lock(hashtext('jobagent-public-registration'))");
+              const count = await client.query<{ count: number }>(
+                `SELECT count(*)::integer AS count
+                   FROM product_users
+                  WHERE registration_source='public' AND status <> 'deleted'`
+              );
+              if (Number(count.rows[0]?.count || 0) >= configuredCap) {
+                await client.query("ROLLBACK");
+                return json(res, 403, { error: "Public registration is temporarily at capacity." });
+              }
+            }
+          }
           const inserted = await client.query(
-            `INSERT INTO product_users (email, password_hash, role)
-             VALUES ($1,$2,$3)
+            `INSERT INTO product_users
+               (email, password_hash, role, registration_source, acquisition)
+             VALUES ($1,$2,$3,$4,$5::jsonb)
              RETURNING id, email, status, role,
                        email_verified_at AS "emailVerifiedAt",
                        mfa_enabled AS "mfaEnabled"`,
-            [input.email, passwordHash, invitation.role]
+            [
+              input.email,
+              passwordHash,
+              invitation?.role || "candidate",
+              invitation ? "invitation" : "public",
+              JSON.stringify(input.acquisition)
+            ]
           );
-          await linkInvitationUser(client, invitation.id, inserted.rows[0].id);
+          if (invitation) await linkInvitationUser(client, invitation.id, inserted.rows[0].id);
           await client.query("SELECT set_config('app.user_id', $1, true)", [inserted.rows[0].id]);
           await client.query(
             "INSERT INTO product_onboarding (user_id) VALUES ($1)",
@@ -739,6 +832,21 @@ export async function createProductServer(storage: ProductObjectStorage = create
           await client.query(
             "INSERT INTO product_audit_logs (user_id, actor_user_id, action, target_type, target_id) VALUES ($1::uuid,$1::uuid,'account.created','user',$1::text)",
             [inserted.rows[0].id]
+          );
+          await client.query(
+            `INSERT INTO plan_entitlements
+               (user_id, plan_code, status, allowances, source)
+             VALUES ($1,'free_preview','active',$2::jsonb,'system')`,
+            [inserted.rows[0].id, JSON.stringify(publicPlans()[0].allowances)]
+          );
+          await client.query(
+            `INSERT INTO product_funnel_events
+               (user_id, event_key, event_name, properties)
+             VALUES ($1,'signup','signup',$2::jsonb)`,
+            [
+              inserted.rows[0].id,
+              JSON.stringify({ registrationSource: invitation ? "invitation" : "public", ...input.acquisition })
+            ]
           );
           await client.query("COMMIT");
           const verification = await createEmailVerificationToken(db, inserted.rows[0].id);
@@ -811,6 +919,9 @@ export async function createProductServer(storage: ProductObjectStorage = create
       if (req.method === "POST" && url.pathname === "/api/v1/auth/verify-email") {
         const input = tokenSchema.parse(await readJson(req));
         const verified = await verifyProductEmail(db, input.token);
+        if (verified) {
+          await recordFunnelEvent(db, verified.id, "email_verified", {}, "email_verified");
+        }
         return verified
           ? json(res, 200, { verified: true, email: verified.email })
           : json(res, 400, { error: "Verification link is invalid or expired." });
@@ -956,9 +1067,9 @@ export async function createProductServer(storage: ProductObjectStorage = create
             code,
             state
           });
-          return redirect(res, "/?connection=gmail-connected");
+          return redirect(res, "/app?connection=gmail-connected");
         } catch {
-          return redirect(res, "/?connection=gmail-failed");
+          return redirect(res, "/app?connection=gmail-failed");
         }
       }
       if (req.method === "GET" && await serveStatic(res, url.pathname)) return;
@@ -976,6 +1087,40 @@ export async function createProductServer(storage: ProductObjectStorage = create
       }
       if (req.method === "GET" && url.pathname === "/api/v1/me") {
         return json(res, 200, { user: publicProductUser(user) });
+      }
+      if (req.method === "GET" && url.pathname === "/api/v1/billing/entitlement") {
+        return json(res, 200, await billingUsageSummary(db, user.id));
+      }
+      if (req.method === "GET" && url.pathname === "/api/v1/billing/usage") {
+        return json(res, 200, await billingUsageSummary(db, user.id));
+      }
+      if (req.method === "POST" && url.pathname === "/api/v1/billing/checkout") {
+        if (!billingCheckoutEnabled()) {
+          return json(res, 503, { error: "Paid checkout is not open yet." });
+        }
+        if (!user.emailVerifiedAt) return json(res, 403, { error: "Verify your email before upgrading." });
+        if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
+        const body = await readJson(req);
+        const input = billingCheckoutSchema.parse(body);
+        return idempotentMutation(req, res, {
+          db, userId: user.id, requestPath: url.pathname, body,
+          action: async () => {
+            const key = normalizeIdempotencyKey(
+              req.headers["idempotency-key"] || req.headers["x-idempotency-key"]
+            );
+            const checkout = await createBillingCheckout(db, user, input.planCode, key);
+            return { status: 201, body: checkout };
+          }
+        });
+      }
+      if (req.method === "POST" && url.pathname === "/api/v1/billing/portal") {
+        if (!hasRecentAuthentication(user)) {
+          return json(res, 401, { error: "Sign in again before opening billing settings." });
+        }
+        return idempotentMutation(req, res, {
+          db, userId: user.id, requestPath: url.pathname, body: {},
+          action: async () => ({ status: 200, body: await createBillingPortal(db, user.id) })
+        });
       }
       if (req.method === "POST" && url.pathname === "/api/v1/auth/verification/resend") {
         if (user.emailVerifiedAt) return json(res, 200, { sent: false, alreadyVerified: true });
@@ -1333,12 +1478,41 @@ export async function createProductServer(storage: ProductObjectStorage = create
       }
       if (req.method === "POST" && jobInsight) {
         if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
+        if (!user.emailVerifiedAt) return json(res, 403, { error: "Verify your email before running an analysis." });
         const body = await readJson(req);
         const input = trustAnalysisSchema.parse(body);
+        if (!await productJobMatchExists(db, user.id, jobInsight[1])) {
+          return json(res, 404, { error: "Job match was not found." });
+        }
         return idempotentMutation(req, res, {
           db, userId: user.id, requestPath: url.pathname, body,
           action: async () => {
+            const usage = await consumePlanUsage(
+              db,
+              user.id,
+              "fit_analysis",
+              1,
+              normalizeIdempotencyKey(
+                req.headers["idempotency-key"] || req.headers["x-idempotency-key"]
+              ),
+              { jobMatchId: jobInsight[1] }
+            );
+            if (!usage.allowed) {
+              return {
+                status: 402,
+                body: { error: "Your fit-analysis allowance is used for this period.", usage }
+              };
+            }
             const insight = await generateProductJobInsight(db, user.id, jobInsight[1], input.jobDescription);
+            if (insight) {
+              await recordFunnelEvent(
+                db,
+                user.id,
+                "first_value",
+                { feature: "fit_analysis" },
+                "first_value"
+              );
+            }
             return insight
               ? { status: 200, body: { insight } }
               : { status: 404, body: { error: "Job match was not found." } };
@@ -1348,10 +1522,30 @@ export async function createProductServer(storage: ProductObjectStorage = create
       const interviewPrep = url.pathname.match(/^\/api\/v1\/jobs\/([0-9a-f-]{36})\/interview-prep$/i);
       if (req.method === "POST" && interviewPrep) {
         if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
+        if (!user.emailVerifiedAt) return json(res, 403, { error: "Verify your email before creating interview preparation." });
         const body = await readJson(req);
+        if (!await productJobMatchExists(db, user.id, interviewPrep[1])) {
+          return json(res, 404, { error: "Job match was not found." });
+        }
         return idempotentMutation(req, res, {
           db, userId: user.id, requestPath: url.pathname, body,
           action: async () => {
+            const usage = await consumePlanUsage(
+              db,
+              user.id,
+              "interview_prep",
+              1,
+              normalizeIdempotencyKey(
+                req.headers["idempotency-key"] || req.headers["x-idempotency-key"]
+              ),
+              { jobMatchId: interviewPrep[1] }
+            );
+            if (!usage.allowed) {
+              return {
+                status: 402,
+                body: { error: "Your interview-prep allowance is used for this period.", usage }
+              };
+            }
             const session = await createProductInterviewPrep(db, user.id, interviewPrep[1]);
             return session
               ? { status: 201, body: { session } }
@@ -1401,7 +1595,7 @@ export async function createProductServer(storage: ProductObjectStorage = create
         if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
         const body = await readJson(req);
         const record = onboardingSchema.parse(body);
-        const completed = record.consent.truthConfirmed && record.consent.assistedApplications;
+        const completed = record.consent.truthConfirmed;
         return idempotentMutation(req, res, {
           db, userId: user.id, requestPath: url.pathname, body,
           action: async () => ({
@@ -1437,6 +1631,15 @@ export async function createProductServer(storage: ProductObjectStorage = create
                   google_data: false
                 }, policy as unknown as Record<string, unknown>);
                 await ensureConnectorCapabilities(db, user.id);
+                if (completed) {
+                  await recordFunnelEvent(
+                    db,
+                    user.id,
+                    "onboarding_completed",
+                    {},
+                    "onboarding_completed"
+                  );
+                }
                 return onboarding;
               })()
             }

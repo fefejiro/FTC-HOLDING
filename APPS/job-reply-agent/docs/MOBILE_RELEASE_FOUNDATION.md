@@ -8,7 +8,8 @@ onboarding, job review, approvals, application proof, alerts, and account
 controls. Resume tailoring, Gmail processing, job-board sessions, and browser
 automation remain on the hosted services and enrolled trusted runner.
 
-- Product name: `Una Labs JobAgent`
+- Public product name: `UnaScout`
+- Internal engineering identity: `JobAgent`
 - Application ID: `cloud.unalabs.jobagent`
 - Hosted origin: `https://jobagent.unalabs.cloud`
 - Minimum Android API: Capacitor 8 default (API 24 or newer)

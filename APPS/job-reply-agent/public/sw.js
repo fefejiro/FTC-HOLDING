@@ -1,5 +1,8 @@
-const CACHE_NAME = "jobagent-shell-v2";
-const SHELL = ["/", "/styles.css", "/app.js", "/icon-192.png", "/icon.png", "/manifest.webmanifest"];
+const CACHE_NAME = "jobagent-shell-v3";
+const SHELL = [
+  "/", "/app", "/landing.css", "/landing.js", "/styles.css", "/app.js",
+  "/icon-192.png", "/icon.png", "/product-preview.png", "/manifest.webmanifest"
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL)));

@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Una Labs JobAgent</string>
-    <string name="title_activity_main">Una Labs JobAgent</string>
+    <string name="app_name">UnaScout</string>
+    <string name="title_activity_main">UnaScout</string>
     <string name="package_name">cloud.unalabs.jobagent</string>
     <string name="custom_url_scheme">cloud.unalabs.jobagent</string>
 </resources>

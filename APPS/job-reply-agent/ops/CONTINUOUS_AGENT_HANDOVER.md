@@ -2,18 +2,19 @@
 
 ## Last Verified State
 
-RC0 evidence preparation is in progress for code image commit
-`d3b3e804c57609e93789f2f860de51ac7ee70ee0`. The code image is pushed and PR #192
-contains it plus evidence-only documentation commits. See `ops/RELEASE_STATUS.md` and
-`docs/PRODUCT_RELEASE_EVIDENCE_2026-08-16.md` for the evidence boundary.
+Revenue-launch code image `407100eb9d872fc2ee857ad482af4807aa5cfd84` is
+pushed in draft PR #253. Local release checks are green. The hosted origin is
+not running, checkout remains disabled, and no payment has been accepted. See
+`ops/RELEASE_STATUS.md` and
+`docs/PRODUCT_RELEASE_EVIDENCE_2026-08-17.md` for the exact evidence boundary.
 
-- Updated: 2026-08-15 America/New_York
-- Engineering branch: `agent/job-agent-continuous`
-- Current checked-out HEAD before this handover commit: `56550a942 Record green
-  JobAgent release gates`
-- Draft PR: `https://github.com/fefejiro/FTC-HOLDING/pull/192`
-- Autonomous worktree: `D:\FTC-HOLDING-worktrees\job-agent-continuous`
-- Autonomous branch: `agent/job-agent-continuous`
+- Updated: 2026-08-17 America/New_York
+- Engineering branch: `release/jobagent-revenue-launch-rc3`
+- Revenue code image: `407100eb9d872fc2ee857ad482af4807aa5cfd84`
+- Draft PR: `https://github.com/fefejiro/FTC-HOLDING/pull/253`
+- Revenue worktree: `D:\FTC-HOLDING-worktrees\jobagent-revenue-launch-rc3`
+- Operational engineering worktree: `D:\FTC-HOLDING-worktrees\job-agent-continuous`
+- Operational branch: `agent/job-agent-continuous`
 - Windows task: `JobReplyAgent-Product-Continuous`
 - Task policy: every 6 hours, no overlap, 45-minute limit, maximum two model
   runs per day, product engineering only
@@ -22,6 +23,47 @@ contains it plus evidence-only documentation commits. See `ops/RELEASE_STATUS.md
 This file is a resumable evidence record, not a claim that every external
 connector or production release gate is complete. Verify drift-prone runtime
 facts before changing them.
+
+## Revenue Launch Increment - 2026-08-17
+
+- Added the public product/pricing route, `/app` workspace boundary, capped
+  public registration, acquisition tracking, plan entitlements, usage ledger,
+  billing state, and a checkout kill switch.
+- Added an isolated JobAgent module to the shared Stripe/Mailjet Worker. It
+  validates exact plan prices and founding promotion terms and will not route
+  unrelated Una Labs Stripe events into JobAgent.
+- Added repository and PostgreSQL coverage for activation, replay, failed
+  payment, recovery, cancellation, refund, usage, and tenant isolation.
+- Clean install, build, lint, `229` application tests, `7` Worker tests, both
+  required browser viewports, strict production checks, and scoped production
+  audits pass.
+- GitHub Actions run `32089839983` passed all three JobAgent jobs on workflow
+  head `1fb76183539f578764770092daf193e1c73b9664`, including the immutable image,
+  billing gateway, Linux browser smoke, strict configuration, and secret scan.
+- Cloudflare `/edgez` is live, but `/`, `/healthz`, `/readyz`, and
+  `/api/v1/release` return `404`. Do not deploy the shared Worker or activate
+  checkout until the JobAgent origin is restored and webhook delivery is proven.
+- The current Railway identity owns only the PeacePad Free project. Do not mix
+  JobAgent into it. Recover the original `una-jobagent` account/project first.
+- `npm run revenue:deploy:preflight` now checks system-drive headroom, clean Git
+  scope, exact `una-jobagent` Railway visibility, and public edge/origin health.
+  It fails closed and is the first command for every deployment attempt.
+- C: pressure was recovered from 162 MB to about 16.9 GB free without deleting
+  source or active sessions. Reproducible npm and Playwright data plus the
+  verified closed `2026-08-06` Codex session archive now live on D: behind
+  junctions. Future npm, Gradle, and user temp paths also target D:.
+
+## Cloud-First Operating Model
+
+- Keep code, migrations, documentation, and release tags in GitHub.
+- Keep durable CI outputs in GitHub Actions artifacts with explicit retention.
+- Keep customer data in dedicated PostgreSQL/private object storage with an
+  encrypted off-provider backup and a tested restore.
+- Keep cookies, job-board sessions, signing private keys, and OAuth refresh
+  tokens out of source control and ordinary CI artifacts.
+- Use `D:` for disposable worktrees, npm/Gradle caches, and temporary evidence.
+  Prune them only after the branch, CI artifacts, and any required evidence are
+  safely remote.
 
 ## Operational Proof Since The Previous Handover
 
@@ -113,12 +155,15 @@ facts before changing them.
 
 - The scheduled product agent runs only while the Windows computer is on and
   the configured user has an interactive session.
-- The branch is pushed to `origin/agent/job-agent-continuous`; the unattended
-  task still does not push future commits automatically.
+- Revenue work is pushed to `origin/release/jobagent-revenue-launch-rc3` in
+  draft PR #253. The scheduled task remains on the separate operational branch
+  and must not merge or deploy revenue changes unattended.
 - Gmail OAuth, authenticated job-board proof runs, deployment operations, and
   candidate actions remain separate explicitly authorized workflows.
 - Public beta expansion still depends on external and pilot gates documented in
   `PRODUCT_ARCHITECTURE.md`.
+- Paid checkout is a separate kill-switched capability. A pricing page or green
+  local test does not authorize catalog creation, Worker deployment, or charges.
 - App/Universal Link association files are not yet deployed and device-verified.
 - Native signing, final icons, screenshots, privacy declarations, Play internal
   testing, TestFlight, and store reviews remain open.
@@ -127,14 +172,16 @@ facts before changing them.
 
 ## Next Highest-Impact Work
 
-1. Add responsive Playwright coverage for match explanations, ATS gap reports,
-   application timelines, interview preparation, and approvals on mobile and
-   desktop.
-2. Publish exact-domain Android/Apple association files, then prove OAuth return
-   on an Android device and an iOS device without exposing tokens in URLs/logs.
-3. Replace placeholder native artwork and complete signed internal-test builds.
-4. Audit queue idempotency, lease recovery, and dead-letter operator visibility.
-5. Restore the configured approved BA golden-template source before generating
+1. Recover the Railway account/workspace that owns the original dedicated
+   `una-jobagent` project. Do not deploy into PeacePad's Free project.
+2. Deploy the exact revenue code image and prove health, readiness, release SHA,
+   migration `011_revenue_launch`, private storage, and queue operation.
+3. Deploy the shared Worker increment, bootstrap the exact Stripe catalog, and
+   run the complete test-mode payment/entitlement/cancellation lifecycle.
+4. Prove hosted tailored-package fulfillment before enabling checkout.
+5. Publish exact-domain Android/Apple association files, then prove OAuth return
+   on physical Android and iOS devices without exposing tokens in URLs/logs.
+6. Restore the configured approved BA golden-template source before generating
    another BA/BSA package. The runtime correctly refuses unapproved fallback
    templates; do not weaken that guard to continue an application.
 

@@ -171,6 +171,40 @@ h2 { margin: 0 0 14px; font-size: 19px; }
 .connection-card h2, .connection-row h2 { text-transform: capitalize; }
 .connection-card p, .connection-row p { color: #5b676d; margin: 10px 0 0; min-height: 20px; }
 
+.plan-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.plan-summary div {
+  min-height: 94px;
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid #c8d0d3;
+  background: #fff;
+}
+.plan-summary span { color: #5d686e; font-size: 13px; }
+.plan-summary strong { font-size: 18px; text-transform: capitalize; }
+.workspace-plan-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.workspace-plan {
+  min-height: 178px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 18px;
+  border: 1px solid #c7d0d4;
+  border-radius: 6px;
+  background: #fff;
+}
+.workspace-plan.current { border-top: 5px solid #14855a; }
+.workspace-plan h3, .workspace-plan p { margin: 0; }
+.workspace-plan p { color: #5b676d; line-height: 1.45; }
+.workspace-plan .button, .workspace-plan .status-chip { margin-top: auto; }
+
 .health-output { min-height: 160px; margin: 0 0 24px; padding: 16px; overflow: auto; color: #d6f5e7; background: #202527; border-left: 4px solid #18a36d; }
 
 dialog {
@@ -198,8 +232,9 @@ footer nav { display: flex; gap: 14px; flex-wrap: wrap; }
 .legal-page th, .legal-page td { padding: 10px; text-align: left; vertical-align: top; border: 1px solid #bbc4c8; }
 
 @media (max-width: 860px) {
-  .app-shell { grid-template-columns: 1fr; }
-  .sidebar { padding: 8px 12px; position: sticky; top: 68px; z-index: 15; overflow-x: auto; }
+  .app-shell { display: block; min-height: calc(100vh - 68px); }
+  .sidebar { min-height: 0; padding: 8px 12px; position: sticky; top: 68px; z-index: 15; overflow-x: auto; scrollbar-width: none; }
+  .sidebar::-webkit-scrollbar { display: none; }
   .sidebar nav { display: flex; min-width: max-content; }
   .nav-item { width: auto; border-left: 0; border-bottom: 3px solid transparent; }
   .nav-item.active { border-left: 0; border-bottom-color: #f15a24; }
@@ -215,7 +250,7 @@ footer nav { display: flex; gap: 14px; flex-wrap: wrap; }
   .workspace { padding: 20px 14px 40px; }
   .page-heading { min-height: 62px; }
   .page-heading h1 { font-size: 24px; }
-  .split-layout, .form-grid, .connection-grid { grid-template-columns: 1fr; }
+  .split-layout, .form-grid, .connection-grid, .plan-summary, .workspace-plan-grid { grid-template-columns: 1fr; }
   .wide { grid-column: auto; }
   .inline-form { grid-template-columns: 1fr; align-items: stretch; }
   .vault-row { grid-template-columns: minmax(0, 1fr) auto; }
