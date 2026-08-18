@@ -81,6 +81,15 @@ jobs:
           npx playwright install chromium
           npm run customer:smoke --workspaces=false
 
+      - name: Upload customer smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jobagent-customer-smoke-${{ github.sha }}
+          path: APPS/job-reply-agent/.local/qa-revenue-launch/*.png
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Validate strict production configuration
         env:
           NODE_ENV: production
