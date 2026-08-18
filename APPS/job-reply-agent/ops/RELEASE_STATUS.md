@@ -99,3 +99,21 @@ approvals, proof, and existing customer access. No in-app Stripe checkout or
 external purchase prompt is introduced. Signed store builds, physical-device
 checks, Play submission, TestFlight, and App Store review still require their
 own evidence.
+
+## Mobile Brand And Build Evidence
+
+- Public store identity is locked as `UnaScout` by Una Labs; internal engineering
+  identifiers remain `JobAgent` and `cloud.unalabs.jobagent`.
+- Initial live collision screening found no exact UnaScout Apple App Store,
+  Google Play, Canadian trademark-search, or USPTO web result. This is not final
+  legal clearance.
+- A local signed Android `1.0.1` release AAB was built and signature-verified on
+  2026-08-17 with SHA-256
+  `AD89023B145FC57F00595024C546096730B7917F1E8A9BA1A7ACF623CDFBCD54`.
+- JobAgent-specific Android signing material is enrolled in protected GitHub
+  Actions secrets. The AAB has not yet been uploaded to Play Console.
+- A dedicated zero-cost macOS GitHub Actions workflow exists for iOS, but it
+  intentionally fails until JobAgent-specific Apple distribution credentials
+  are supplied. PeacePad credentials are not reused.
+- Both native shells still depend on the hosted origin. Store rollout remains
+  blocked while `/app`, `/healthz`, `/readyz`, and `/api/v1/release` return 404.

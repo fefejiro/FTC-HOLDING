@@ -2,7 +2,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
   appId: "cloud.unalabs.jobagent",
-  appName: "Una Labs JobAgent",
+  appName: "UnaScout",
   webDir: "public",
   server: {
     url: "https://jobagent.unalabs.cloud/app",

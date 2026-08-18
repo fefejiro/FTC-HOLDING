@@ -8,7 +8,7 @@ describe("native mobile shell", () => {
   it("uses the production HTTPS product without permitting arbitrary navigation", () => {
     const config = fs.readFileSync(path.join(root, "capacitor.config.ts"), "utf8");
     expect(config).toContain('appId: "cloud.unalabs.jobagent"');
-    expect(config).toContain('appName: "Una Labs JobAgent"');
+    expect(config).toContain('appName: "UnaScout"');
     expect(config).toContain('webDir: "public"');
     expect(config).toContain('url: "https://jobagent.unalabs.cloud/app"');
     expect(config).toContain('allowNavigation: ["jobagent.unalabs.cloud"]');
