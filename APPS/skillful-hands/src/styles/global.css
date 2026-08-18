@@ -425,3 +425,28 @@ footer { padding: 48px 0 20px; color: white; background: var(--plum-deep); }
   .values-grid { grid-template-columns: 1fr; }
   .values-grid article, .values-grid article:nth-child(3n) { min-height: auto; border-right: 0; }
 }
+
+/* Follow-up polish: keep workshop imagery prominent and remove the community ribbon. */
+.communities::after { display: none; }
+.programme-page-grid { grid-template-columns: 1fr; gap: 28px; }
+.programme-page-card { min-height: 540px; grid-template-columns: minmax(340px, .9fr) 1.1fr; }
+.programme-page-card > img { min-height: 540px; }
+.programme-page-content { padding: clamp(34px, 4.5vw, 58px); }
+.programme-page-card h2 { font-size: clamp(3rem, 4.3vw, 4.75rem); }
+.programme-page-card > img { order: 1; }
+.programme-page-content { order: 2; }
+.programme-page-card:nth-child(even) > img { order: 2; }
+.programme-page-card:nth-child(even) .programme-page-content { order: 1; }
+.footer-brand img { width: 158px; height: 158px; }
+
+@media (max-width: 820px) {
+  .programme-page-card { min-height: 500px; grid-template-columns: minmax(235px, .75fr) 1.25fr; }
+  .programme-page-card > img { min-height: 500px; }
+}
+
+@media (max-width: 560px) {
+  .programme-page-card, .programme-page-card:nth-child(even) { grid-template-columns: 1fr; }
+  .programme-page-card > img, .programme-page-card:nth-child(even) > img { order: 1; min-height: 250px; max-height: 300px; }
+  .programme-page-content, .programme-page-card:nth-child(even) .programme-page-content { order: 2; }
+  .footer-brand img { width: 140px; height: 140px; }
+}
