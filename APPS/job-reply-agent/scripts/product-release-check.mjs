@@ -54,6 +54,8 @@ for (const required of [
   "public/landing.html",
   "public/landing.css",
   "public/landing.js",
+  "public/robots.txt",
+  "public/sitemap.xml",
   "public/product-preview.png",
   "public/app.js",
   "public/manifest.webmanifest",

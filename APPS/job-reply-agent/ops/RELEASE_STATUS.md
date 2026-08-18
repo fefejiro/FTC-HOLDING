@@ -129,6 +129,10 @@ own evidence.
   PeacePad credentials are not reused.
 - App Store Connect is visibly authenticated to the correct organization, but
   no UnaScout app record or uploaded build has yet been evidenced.
+- Apple Developer portal confirms team/App ID prefix `G6UNC88GQ5`, and the
+  hosted Apple App Site Association response is externally verified at `200`
+  for `G6UNC88GQ5.cloud.unalabs.jobagent`. The App ID registration and App Store
+  record are still pending final console actions.
 - Both native shells still depend on the hosted origin. The origin is now live;
   store rollout remains gated by exact-image redeployment, association identities,
   physical-device proof, publisher records, signing, and store review.

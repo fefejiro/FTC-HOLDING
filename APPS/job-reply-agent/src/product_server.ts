@@ -700,6 +700,8 @@ const STATIC_FILES: Record<string, StaticAsset> = {
   "/app": { file: "index.html", type: "text/html; charset=utf-8", cache: "no-store" },
   "/landing.js": { file: "landing.js", type: "text/javascript; charset=utf-8", cache: "no-cache" },
   "/landing.css": { file: "landing.css", type: "text/css; charset=utf-8", cache: "public, max-age=3600" },
+  "/robots.txt": { file: "robots.txt", type: "text/plain; charset=utf-8", cache: "public, max-age=3600" },
+  "/sitemap.xml": { file: "sitemap.xml", type: "application/xml; charset=utf-8", cache: "public, max-age=3600" },
   "/app.js": { file: "app.js", type: "text/javascript; charset=utf-8", cache: "no-cache" },
   "/styles.css": { file: "styles.css", type: "text/css; charset=utf-8", cache: "public, max-age=3600" },
   "/manifest.webmanifest": { file: "manifest.webmanifest", type: "application/manifest+json", cache: "public, max-age=3600" },
