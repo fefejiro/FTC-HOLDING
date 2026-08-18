@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "APPS/job-reply-agent/**"
+      - "workers/stripe-api/**"
       - ".railwayignore"
       - ".github/workflows/job-agent-saas.yml"
       - ".github/workflows/job-agent-uptime.yml"
@@ -12,6 +13,7 @@ on:
       - main
     paths:
       - "APPS/job-reply-agent/**"
+      - "workers/stripe-api/**"
       - ".railwayignore"
       - ".github/workflows/job-agent-saas.yml"
       - ".github/workflows/job-agent-uptime.yml"
@@ -101,6 +103,12 @@ jobs:
           RESEND_INBOUND_WEBHOOK_SECRET: whsec_release_check
           INBOUND_EMAIL_DOMAIN: jobs.unalabs.cloud
           TRANSACTIONAL_EMAIL_FROM: Una Labs JobAgent <jobagent@unalabs.cloud>
+          JOBAGENT_BILLING_GATEWAY_URL: https://una-stripe-api.example.test
+          JOBAGENT_EMAIL_GATEWAY_URL: https://una-stripe-api.example.test
+          JOBAGENT_BILLING_SHARED_SECRET: 0123456789abcdef0123456789abcdef
+          PUBLIC_SIGNUP_ENABLED: "true"
+          PUBLIC_SIGNUP_CAP: "100"
+          BILLING_CHECKOUT_ENABLED: "true"
           AUTO_MIGRATE: "false"
         run: npm run production:check:strict --workspaces=false
 
@@ -112,6 +120,33 @@ jobs:
           zricethezav/gitleaks:v8.28.0
           dir /repo/APPS/job-reply-agent
           --no-banner --redact
+
+  billing-gateway:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: workers/stripe-api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: workers/stripe-api/package-lock.json
+
+      - name: Clean worker install
+        run: npm ci
+
+      - name: Audit worker production dependencies
+        run: npm audit --omit=dev
+
+      - name: Type-check shared Stripe and Mailjet worker
+        run: npm run typecheck
+
+      - name: Test JobAgent billing isolation and webhook dispatch
+        run: npm test
 
   immutable-image:
     runs-on: ubuntu-latest
@@ -139,7 +174,7 @@ jobs:
           --entrypoint node
           una-jobagent:${{ github.sha }}
           -e
-          "const fs=require('fs'); for (const f of ['dist/product_entrypoint.js','dist/product_server.js','dist/product_worker.js','dist/product_migrate.js','dist/product_pilot_import.js','public/index.html','public/icon.png','public/privacy.html']) { fs.accessSync(f, fs.constants.R_OK); }"
+          "const fs=require('fs'); for (const f of ['dist/product_entrypoint.js','dist/product_server.js','dist/product_worker.js','dist/product_migrate.js','dist/product_pilot_import.js','migrations/011_revenue_launch.sql','public/landing.html','public/product-preview.png','public/index.html','public/icon.png','public/privacy.html']) { fs.accessSync(f, fs.constants.R_OK); }"
 
       - name: Authenticate to GitHub Container Registry
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

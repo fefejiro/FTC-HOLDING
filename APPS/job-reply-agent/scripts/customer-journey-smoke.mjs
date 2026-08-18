@@ -5,6 +5,9 @@ import { chromium } from "playwright";
 
 const liveBaseUrl = String(process.env.CUSTOMER_SMOKE_BASE_URL || "").trim().replace(/\/$/, "");
 const root = path.resolve(import.meta.dirname, "..", "public");
+const artifactRoot = path.resolve(
+  process.env.CUSTOMER_SMOKE_ARTIFACT_DIR || path.join(import.meta.dirname, "..", ".local", "qa-revenue-launch")
+);
 const mime = { ".css": "text/css", ".html": "text/html", ".js": "text/javascript", ".json": "application/json", ".png": "image/png", ".webmanifest": "application/manifest+json" };
 const user = { id: "smoke-user", email: "smoke@example.test", role: "candidate", status: "active", emailVerified: true, mfaEnabled: false };
 const jobId = "11111111-1111-4111-8111-111111111111";
@@ -12,7 +15,10 @@ const applicationId = "22222222-2222-4222-8222-222222222222";
 
 function json(res, status, body) { res.writeHead(status, { "content-type": "application/json", "set-cookie": "jobagent_csrf=smoke-csrf" }); res.end(JSON.stringify(body)); }
 function staticFile(req, res) {
-  const requestPath = req.url === "/" ? "/index.html" : req.url.split("?")[0];
+  const pathname = req.url.split("?")[0];
+  const requestPath = pathname === "/"
+    ? "/landing.html"
+    : pathname === "/app" ? "/index.html" : pathname;
   const file = path.resolve(root, `.${requestPath}`);
   if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end("Not found"); return; }
   res.writeHead(200, { "content-type": mime[path.extname(file)] || "application/octet-stream" }); fs.createReadStream(file).pipe(res);
@@ -20,6 +26,16 @@ function staticFile(req, res) {
 const server = http.createServer((req, res) => {
   if (!req.url?.startsWith("/api/")) return staticFile(req, res);
   if (req.url === "/api/v1/me") return json(res, 200, { user });
+  if (req.url === "/api/v1/plans") return json(res, 200, { plans: [
+    { code: "free_preview", name: "Free Preview", amountCadCents: 0, interval: null, allowances: { fit_analysis: 3, tailored_package: 1 }, features: [] },
+    { code: "sprint_weekly", name: "Job Search Sprint", amountCadCents: 999, interval: "week", allowances: { fit_analysis: 15, tailored_package: 5 }, features: [] },
+    { code: "jobagent_monthly", name: "JobAgent Monthly", amountCadCents: 2999, interval: "month", allowances: { fit_analysis: 100, tailored_package: 25 }, features: [] },
+    { code: "jobagent_annual", name: "JobAgent Annual", amountCadCents: 23999, interval: "year", allowances: { fit_analysis: 100, tailored_package: 25 }, features: [] }
+  ] });
+  if (req.url === "/api/v1/billing/entitlement" || req.url === "/api/v1/billing/usage") return json(res, 200, {
+    entitlement: { planCode: "free_preview", status: "active", source: "system", periodEnd: "2026-09-01T00:00:00.000Z" },
+    usage: { fit_analysis: { used: 1, remaining: 2, limit: 3 }, tailored_package: { used: 0, remaining: 1, limit: 1 } }
+  });
   if (req.url === "/api/v1/onboarding") return json(res, 200, { onboarding: { completed: true, record: { fullName: "Smoke Candidate", phone: "555-0100", location: "Toronto, ON", timeZone: "America/Toronto", linkedIn: "https://www.linkedin.com/in/smoke", targetTitles: ["Business Analyst"], excludedTitles: [], locations: ["Remote"], workModes: ["remote"], employmentTypes: ["permanent"], compensationFloor: "$100,000", workAuthorization: "Authorized to work", sponsorshipRequired: false, consent: { truthConfirmed: true, assistedApplications: true } } } });
   if (req.url === "/api/v1/automation-policy") return json(res, 200, { policy: { mode: "approval_required", timeZone: "America/Toronto", maxDraftsPerDay: 50, maxRecruiterSendsPerDay: 10, maxApplicationsPerDay: 10, maxApplicationsPerBoard: 5, quietHoursStart: 23, quietHoursEnd: 7, recruiterDrafts: true, recruiterSends: false, assistedApplications: true, controlledSubmissions: false } });
   if (req.url === "/api/v1/resumes") return json(res, 200, { resumes: [{ id: "33333333-3333-4333-8333-333333333333", filename: "smoke-resume.docx", byteSize: 1024, storageStatus: "private", isDefault: true }] });
@@ -44,9 +60,21 @@ if (liveBaseUrl && (!process.env.CUSTOMER_SMOKE_EMAIL || !process.env.CUSTOMER_S
 if (!liveBaseUrl) await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 const baseUrl = liveBaseUrl || `http://127.0.0.1:${server.address().port}`;
 try {
+  fs.mkdirSync(artifactRoot, { recursive: true });
   for (const viewport of [{ name: "mobile", width: 390, height: 844 }, { name: "desktop", width: 1440, height: 1000 }]) {
     const page = await browser.newPage({ viewport });
     await page.goto(`${baseUrl}/`, { waitUntil: "networkidle" });
+    await page.locator("#pricing").waitFor({ state: "visible" });
+    if (!(await page.locator("body").innerText()).includes("JobAgent Monthly")) {
+      throw new Error(`${viewport.name}: public pricing did not render`);
+    }
+    const landingOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+    if (landingOverflow) throw new Error(`${viewport.name}: public page has horizontal overflow`);
+    await page.screenshot({
+      path: path.join(artifactRoot, `${viewport.name}-landing.png`),
+      fullPage: true
+    });
+    await page.goto(`${baseUrl}/app`, { waitUntil: "networkidle" });
     if (liveBaseUrl) {
       await page.locator('#login-form input[name="email"]').fill(process.env.CUSTOMER_SMOKE_EMAIL);
       await page.locator('#login-form input[name="password"]').fill(process.env.CUSTOMER_SMOKE_PASSWORD || "");
@@ -73,6 +101,12 @@ try {
     await page.locator('[data-view="interview"]').click();
     const body = await page.locator("body").innerText();
     if (!body.includes("Business Analyst interview")) throw new Error(`${viewport.name}: interview prep was not rendered: ${body.slice(-500)}`);
+    const appOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+    if (appOverflow) throw new Error(`${viewport.name}: workspace has horizontal overflow`);
+    await page.screenshot({
+      path: path.join(artifactRoot, `${viewport.name}-workspace.png`),
+      fullPage: true
+    });
     console.log(`customer journey smoke passed: ${viewport.name} (${viewport.width}x${viewport.height})`);
     await page.close();
   }

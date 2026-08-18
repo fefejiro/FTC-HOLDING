@@ -13,7 +13,7 @@ describe("public beta PWA", () => {
     expect(html).toContain('<script src="/app.js" defer></script>');
     expect(html).not.toMatch(/<script(?![^>]+src=)[^>]*>/i);
     expect(manifest.display).toBe("standalone");
-    expect(manifest.start_url).toBe("/");
+    expect(manifest.start_url).toBe("/app");
     expect(manifest.icons).toEqual(expect.arrayContaining([
       expect.objectContaining({ src: "/icon-192.png", sizes: "192x192" }),
       expect.objectContaining({ src: "/icon.png", sizes: "512x512" })
@@ -28,6 +28,20 @@ describe("public beta PWA", () => {
     }
     expect(worker).toContain('url.pathname.startsWith("/api/")');
     expect(worker).not.toMatch(/cache\.put\([^)]*\/api\//);
+  });
+
+  it("ships a public, evidence-grounded pricing experience", () => {
+    const landing = fs.readFileSync(path.join(publicRoot, "landing.html"), "utf8");
+    const script = fs.readFileSync(path.join(publicRoot, "landing.js"), "utf8");
+    for (const plan of ["Free Preview", "Job Search Sprint", "JobAgent Monthly", "JobAgent Annual"]) {
+      expect(landing).toContain(plan);
+    }
+    expect(landing).toContain("FOUNDING25");
+    expect(landing).toContain("No card required");
+    expect(landing).toContain("does not promise interviews or employment");
+    expect(landing).not.toMatch(/\b(?:guaranteed job|guaranteed interview|millions of users)\b/i);
+    expect(script).toContain('fetch("/api/v1/plans"');
+    expect(script).toContain("jobagent_acquisition");
   });
 
   it("exposes the full candidate safety and privacy surface", () => {

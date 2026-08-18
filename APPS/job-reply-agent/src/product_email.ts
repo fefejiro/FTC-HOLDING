@@ -9,21 +9,30 @@ export interface TransactionalEmail {
 
 function emailConfig() {
   const apiKey = String(process.env.RESEND_API_KEY || "").trim();
+  const gatewayUrl = String(process.env.JOBAGENT_EMAIL_GATEWAY_URL || "").replace(/\/+$/, "");
+  const gatewaySecret = String(process.env.JOBAGENT_BILLING_SHARED_SECRET || "").trim();
   const from = String(
     process.env.TRANSACTIONAL_EMAIL_FROM
     || "Una Labs JobAgent <jobagent@unalabs.cloud>"
   ).trim();
   const appOrigin = String(process.env.APP_ORIGIN || "").replace(/\/$/, "");
-  if (process.env.NODE_ENV === "production" && (!apiKey || !appOrigin.startsWith("https://"))) {
+  const gatewayConfigured = gatewayUrl.startsWith("https://") && Boolean(gatewaySecret);
+  if (process.env.NODE_ENV === "production"
+      && ((!apiKey && !gatewayConfigured) || !appOrigin.startsWith("https://"))) {
     throw new Error("Transactional email and HTTPS application origin must be configured.");
   }
-  return { apiKey, from, appOrigin };
+  return { apiKey, gatewayUrl, gatewaySecret, gatewayConfigured, from, appOrigin };
 }
 
 export function transactionalEmailConfigured(): boolean {
   const apiKey = String(process.env.RESEND_API_KEY || "").trim();
+  const gatewayUrl = String(process.env.JOBAGENT_EMAIL_GATEWAY_URL || "").replace(/\/+$/, "");
+  const gatewaySecret = String(process.env.JOBAGENT_BILLING_SHARED_SECRET || "").trim();
   const appOrigin = String(process.env.APP_ORIGIN || "").replace(/\/$/, "");
-  return Boolean(apiKey && appOrigin.startsWith("https://"));
+  return Boolean(
+    appOrigin.startsWith("https://")
+    && (apiKey || (gatewayUrl.startsWith("https://") && gatewaySecret))
+  );
 }
 
 function link(pathname: string, token: string): string {
@@ -32,7 +41,20 @@ function link(pathname: string, token: string): string {
 }
 
 export async function sendTransactionalEmail(message: TransactionalEmail): Promise<string | null> {
-  const { apiKey, from } = emailConfig();
+  const { apiKey, gatewayUrl, gatewaySecret, gatewayConfigured, from } = emailConfig();
+  if (gatewayConfigured) {
+    const response = await fetch(`${gatewayUrl}/api/jobagent/email`, {
+      method: "POST",
+      headers: {
+        "authorization": `Bearer ${gatewaySecret}`,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({ ...message, from })
+    });
+    const payload = await response.json() as { id?: string; error?: string };
+    if (!response.ok) throw new Error(`Transactional email failed: ${payload.error || response.status}`);
+    return payload.id || null;
+  }
   if (!apiKey) return null;
   const response = await new Resend(apiKey).emails.send({
     from,

@@ -2,7 +2,7 @@
   "name": "Una Labs JobAgent",
   "short_name": "JobAgent",
   "description": "Candidate job search, approvals, and application proof workspace.",
-  "start_url": "/",
+  "start_url": "/app",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f1f3f4",

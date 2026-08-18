@@ -1,4 +1,9 @@
 import Stripe from 'stripe';
+import {
+  forwardJobAgentStripeEvent,
+  handleJobAgentRoute,
+  normalizeJobAgentStripeEvent,
+} from './jobagent';
 
 export interface Env {
   STRIPE_SECRET_KEY: string;
@@ -27,6 +32,25 @@ export interface Env {
   AUTOCOLLECT_DAILY_EMAIL_CAP?: string;
   AUTOCOLLECT_MAX_SEND_PER_RUN?: string;
   GITHUB_TOKEN?: string;
+  JOBAGENT_API_ORIGIN?: string;
+  JOBAGENT_APP_ORIGIN?: string;
+  JOBAGENT_BILLING_SHARED_SECRET?: string;
+  JOBAGENT_SPRINT_WEEKLY_LOOKUP_KEY?: string;
+  JOBAGENT_MONTHLY_LOOKUP_KEY?: string;
+  JOBAGENT_ANNUAL_LOOKUP_KEY?: string;
+  JOBAGENT_SPRINT_WEEKLY_CAD_CENTS?: string;
+  JOBAGENT_MONTHLY_CAD_CENTS?: string;
+  JOBAGENT_ANNUAL_CAD_CENTS?: string;
+  JOBAGENT_FOUNDING_PROMOTION_CODE?: string;
+  JOBAGENT_EMAIL_FROM?: string;
+  SPARK_ENABLED?: string;
+  SPARK_PREVIEW_TURNS?: string;
+  SPARK_MAX_TURNS?: string;
+  SPARK_MAX_TOKENS_PER_TURN?: string;
+  SPARK_RATE_LIMIT_WINDOW_MS?: string;
+  SPARK_RATE_LIMIT_MAX?: string;
+  SPARK_PASS_PRICE_CAD?: string;
+  STRIPE_PRICE_SPARK_PASS?: string;
 }
 
 // ── Spark in-memory rate limit store (per worker instance) ─────────────
@@ -39,6 +63,7 @@ function shouldDeliverBridgeWebhook(env: Env): boolean {
 
 const ALLOWED_ORIGINS = [
   'https://unalabs.cloud',
+  'https://jobagent.unalabs.cloud',
   'http://localhost:3000',
   'http://localhost:3001',
 ];
@@ -531,7 +556,7 @@ function isActivationTier(value: string): value is (typeof ACTIVATION_TIERS)[num
   return (ACTIVATION_TIERS as readonly string[]).includes(value);
 }
 
-function normalizeCheckoutType(value: string): 'subscription' | 'activation' {
+function normalizeCheckoutType(value: unknown): 'subscription' | 'activation' {
   return value === 'activation' ? 'activation' : 'subscription';
 }
 
@@ -3463,6 +3488,16 @@ async function handleStripeWebhook(req: Request, env: Env, origin: string | null
   logEvent('stripe_webhook_received', { type: event.type, id: event.id });
 
   try {
+    const jobAgentEvent = await normalizeJobAgentStripeEvent(stripe, event);
+    if (jobAgentEvent) {
+      await forwardJobAgentStripeEvent(env, jobAgentEvent);
+      logEvent('jobagent_stripe_event_delivered', {
+        stripeEventId: event.id,
+        type: event.type,
+        userId: jobAgentEvent.userId,
+      });
+      return json({ received: true, service: 'jobagent' }, 200, origin);
+    }
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
       if (session.payment_status === 'paid' || session.status === 'complete') {
@@ -5358,6 +5393,19 @@ export default {
       return new Response(null, { status: 204, headers: corsHeaders(origin) });
     }
 
+    if (url.pathname.startsWith('/api/jobagent/')) {
+      try {
+        return await handleJobAgentRoute(req, env, getStripe(env), origin)
+          || json({ error: 'Not found.' }, 404, origin);
+      } catch (error) {
+        logEvent('jobagent_route_failed', {
+          path: url.pathname,
+          errorClass: error instanceof Error ? error.name : 'UnknownError',
+        });
+        return json({ error: 'JobAgent billing service is unavailable.' }, 503, origin);
+      }
+    }
+
     if (req.method === 'GET' && url.pathname === '/api/checkout-success') {
       return handleCheckoutSuccess(req, env);
     }
@@ -5447,6 +5495,7 @@ export default {
           docs: {
             admin_status_summary: '/api/admin/status-summary',
             checkout_success: '/api/checkout-success',
+            jobagent_checkout: '/api/jobagent/checkout',
           },
         },
         200,

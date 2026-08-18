@@ -5,7 +5,10 @@
     user: null,
     installPrompt: null,
     mfaPending: false,
-    dashboard: null
+    dashboard: null,
+    plans: [],
+    billing: null,
+    checkoutEnabled: false
   };
 
   const $ = (selector, root = document) => root.querySelector(selector);
@@ -164,7 +167,7 @@
   function showAuthScreen(name) {
     const screens = {
       login: ["#login-form", "Sign in to JobAgent"],
-      register: ["#register-form", "Accept your JobAgent invitation"],
+      register: ["#register-form", "Create your JobAgent account"],
       resetRequest: ["#reset-request-form", "Reset your password"],
       resetConfirm: ["#reset-confirm-form", "Choose a new password"]
     };
@@ -540,6 +543,82 @@
     }
   }
 
+  function planName(code) {
+    return state.plans.find((plan) => plan.code === code)?.name || statusLabel(code);
+  }
+
+  function money(cents) {
+    return new Intl.NumberFormat("en-CA", {
+      style: "currency",
+      currency: "CAD"
+    }).format(Number(cents || 0) / 100);
+  }
+
+  function renderBilling(data) {
+    state.billing = data;
+    const entitlement = data.entitlement;
+    $("#current-plan").textContent = planName(entitlement.planCode);
+    $("#plan-status").textContent = statusLabel(entitlement.status);
+    $("#plan-period-end").textContent = dateLabel(entitlement.periodEnd);
+    $("#manage-billing").hidden = window.JobAgentNative?.isNative
+      || entitlement.source !== "stripe";
+
+    const usageList = $("#usage-list");
+    usageList.replaceChildren();
+    for (const [key, value] of Object.entries(data.usage || {})) {
+      usageList.append(recordItem(
+        statusLabel(key),
+        [`${value.used} used | ${value.remaining} remaining | ${value.limit} total`]
+      ));
+    }
+
+    const grid = $("#workspace-plan-grid");
+    grid.replaceChildren();
+    for (const plan of state.plans) {
+      const card = document.createElement("article");
+      card.className = `workspace-plan${plan.code === entitlement.planCode ? " current" : ""}`;
+      const heading = document.createElement("h3");
+      heading.textContent = plan.name;
+      const price = document.createElement("strong");
+      price.textContent = plan.amountCadCents
+        ? `${money(plan.amountCadCents)} / ${plan.interval}`
+        : "Free";
+      const allowance = document.createElement("p");
+      allowance.textContent = `${plan.allowances.fit_analysis} analyses | ${plan.allowances.tailored_package} tailored packages`;
+      card.append(heading, price, allowance);
+      if (!window.JobAgentNative?.isNative
+          && state.checkoutEnabled
+          && plan.code !== "free_preview"
+          && plan.code !== entitlement.planCode) {
+        card.append(actionButton("Upgrade", "billing-checkout", plan.code, "primary"));
+      } else if (!window.JobAgentNative?.isNative
+          && !state.checkoutEnabled
+          && plan.code !== "free_preview"
+          && plan.code !== entitlement.planCode) {
+        const marker = document.createElement("span");
+        marker.className = "status-chip warning";
+        marker.textContent = "Opening shortly";
+        card.append(marker);
+      } else if (plan.code === entitlement.planCode) {
+        const marker = document.createElement("span");
+        marker.className = "status-chip good";
+        marker.textContent = "Current plan";
+        card.append(marker);
+      }
+      grid.append(card);
+    }
+  }
+
+  async function loadBilling() {
+    const [{ plans, checkoutEnabled }, billing] = await Promise.all([
+      api("/api/v1/plans"),
+      api("/api/v1/billing/entitlement")
+    ]);
+    state.plans = plans || [];
+    state.checkoutEnabled = checkoutEnabled === true;
+    renderBilling(billing);
+  }
+
   async function loadWorkspace() {
     const [onboarding, policy] = await Promise.all([
       api("/api/v1/onboarding"),
@@ -551,8 +630,25 @@
       loadResumes(),
       loadDashboard(),
       loadAudit(),
-      loadOperator()
+      loadOperator(),
+      loadBilling()
     ]);
+    const entry = new URLSearchParams(location.search);
+    const billingState = entry.get("billing");
+    const requestedPlan = entry.get("plan");
+    if (billingState || requestedPlan) {
+      $('[data-view="plan"]').click();
+      if (billingState === "success") {
+        setResult(
+          "#billing-result",
+          "Payment received. Your plan will update as soon as Stripe confirms the subscription.",
+          "good"
+        );
+      } else if (billingState === "cancelled") {
+        setResult("#billing-result", "Checkout was cancelled. Your current plan is unchanged.");
+      }
+      history.replaceState({}, "", "/app");
+    }
   }
 
   async function initializeSession() {
@@ -597,9 +693,16 @@
   $("#register-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
+      const payload = formObject(event.currentTarget);
+      if (!payload.inviteToken) delete payload.inviteToken;
+      try {
+        payload.acquisition = JSON.parse(sessionStorage.getItem("jobagent_acquisition") || "{}");
+      } catch {
+        payload.acquisition = {};
+      }
       const { user, verificationEmailSent } = await api("/api/v1/auth/register", {
         method: "POST",
-        body: JSON.stringify(formObject(event.currentTarget))
+        body: JSON.stringify(payload)
       });
       showAuthenticated(user);
       showNotice(
@@ -1118,6 +1221,7 @@
     }
   });
 
+  $("#show-register").addEventListener("click", () => showAuthScreen("register"));
   $("#show-reset").addEventListener("click", () => showAuthScreen("resetRequest"));
   $$("[data-auth-screen]").forEach((button) => {
     button.addEventListener("click", () => showAuthScreen(button.dataset.authScreen));
@@ -1129,6 +1233,9 @@
         panel.classList.toggle("active", panel.dataset.viewPanel === button.dataset.view);
       });
       if (button.dataset.view === "activity") loadAudit().catch(() => undefined);
+      if (button.dataset.view === "plan") loadBilling().catch((error) => {
+        setResult("#billing-result", error.message, "danger");
+      });
       if (button.dataset.view === "operator") loadOperator().catch(() => undefined);
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
@@ -1137,6 +1244,35 @@
     showNotice("#account-banner", error.message, "danger");
   }));
   $("#refresh-operator").addEventListener("click", () => loadOperator());
+  $("#workspace-plan-grid").addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-action='billing-checkout']");
+    if (!button) return;
+    if (window.JobAgentNative?.isNative) return;
+    button.disabled = true;
+    try {
+      const checkout = await api("/api/v1/billing/checkout", {
+        method: "POST",
+        body: JSON.stringify({ planCode: button.dataset.value })
+      });
+      if (!checkout.url) throw new Error("Secure checkout is temporarily unavailable.");
+      location.assign(checkout.url);
+    } catch (error) {
+      button.disabled = false;
+      setResult("#billing-result", error.message, "danger");
+    }
+  });
+  $("#manage-billing").addEventListener("click", async (event) => {
+    if (window.JobAgentNative?.isNative) return;
+    event.currentTarget.disabled = true;
+    try {
+      const portal = await api("/api/v1/billing/portal", { method: "POST", body: "{}" });
+      if (!portal.url) throw new Error("Billing settings are temporarily unavailable.");
+      location.assign(portal.url);
+    } catch (error) {
+      event.currentTarget.disabled = false;
+      setResult("#billing-result", error.message, "danger");
+    }
+  });
 
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
@@ -1162,6 +1298,7 @@
     const pathname = location.pathname;
     if (pathname === "/accept-invite" && params.get("token")) {
       showAuthScreen("register");
+      $("#auth-title").textContent = "Accept your JobAgent invitation";
       $("#register-form").elements.inviteToken.value = params.get("token");
       if (params.get("email")) $("#register-form").elements.email.value = params.get("email");
       return true;
@@ -1182,15 +1319,27 @@
       } catch (error) {
         showNotice("#auth-message", error.message, "danger");
       }
-      history.replaceState({}, "", "/");
+      history.replaceState({}, "", "/app");
       return true;
     }
     const connection = params.get("connection");
     if (connection) {
-      history.replaceState({}, "", "/");
+      history.replaceState({}, "", "/app");
       if (connection === "gmail-failed") {
         showNotice("#account-banner", "Gmail connection failed. No token was retained.", "danger");
       }
+    }
+    if (pathname === "/app" && params.get("mode") === "register") {
+      showAuthScreen("register");
+      for (const name of ["source", "medium", "campaign", "content", "term"]) {
+        const value = params.get(`utm_${name}`);
+        if (!value) continue;
+        let stored = {};
+        try { stored = JSON.parse(sessionStorage.getItem("jobagent_acquisition") || "{}"); } catch {}
+        stored[name] = value;
+        sessionStorage.setItem("jobagent_acquisition", JSON.stringify(stored));
+      }
+      return true;
     }
     return false;
   }
