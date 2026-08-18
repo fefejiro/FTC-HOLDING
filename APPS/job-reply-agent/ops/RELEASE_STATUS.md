@@ -51,6 +51,12 @@ This is not a production or revenue-ready deployment.
 
 ## Revenue Activation Gates
 
+The local release preflight now proves disk headroom, clean Git scope, exact
+Railway project visibility, and hosted route health in one fail-closed command:
+`npm run revenue:deploy:preflight`. On 2026-08-17 it correctly stopped because
+the active Railway identity cannot see `una-jobagent` and the origin routes are
+still `404`.
+
 1. Recover the Railway account/workspace that owns `una-jobagent`, or explicitly
    fund a new dedicated Hobby project. Do not replatform PostgreSQL, pg-boss,
    private storage, workers, and auth merely to avoid this single hosting gate.

@@ -31,6 +31,7 @@
     "mobile:open:ios": "cap open ios",
     "production:check": "node scripts/product-release-check.mjs",
     "production:check:strict": "node scripts/product-release-check.mjs --strict",
+    "revenue:deploy:preflight": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/revenue-deploy-preflight.ps1",
     "customer:smoke": "node scripts/customer-journey-smoke.mjs",
     "report": "tsx src/main.ts report:daily",
     "gmail:auth:url": "tsx src/main.ts gmail:auth:url",
