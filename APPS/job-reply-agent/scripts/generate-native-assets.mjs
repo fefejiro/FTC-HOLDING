@@ -4,6 +4,7 @@ import zlib from "node:zlib";
 import { chromium } from "playwright";
 
 const root = path.resolve(import.meta.dirname, "..");
+const masterIcon = path.join(root, "store", "assets", "brand", "unascout-master-icon.png");
 const iconSvg = (background = true, preserveAlpha = false) => `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   ${background ? `<rect width="1024" height="1024" fill="#151719"${preserveAlpha ? ' fill-opacity="0.999"' : ""}/>` : ""}
@@ -23,6 +24,17 @@ async function renderSvg(svg, output, width, height, omitBackground = false) {
   fs.mkdirSync(path.dirname(output), { recursive: true });
   await page.setViewportSize({ width, height });
   await page.setContent(`<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden}svg{display:block;width:100%;height:100%}</style>${svg}`);
+  await page.screenshot({ path: output, omitBackground });
+}
+
+async function renderMasterIcon(output, width, height, omitBackground = false) {
+  if (!fs.existsSync(masterIcon)) {
+    throw new Error(`Missing UnaScout master icon: ${masterIcon}`);
+  }
+  fs.mkdirSync(path.dirname(output), { recursive: true });
+  const source = `data:image/png;base64,${fs.readFileSync(masterIcon).toString("base64")}`;
+  await page.setViewportSize({ width, height });
+  await page.setContent(`<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#ffffff}img{display:block;width:100%;height:100%;object-fit:cover}</style><img src="${source}" alt="">`);
   await page.screenshot({ path: output, omitBackground });
 }
 
@@ -130,19 +142,19 @@ function forceOpaqueRgbaPng(file) {
 }
 
 const iosIcon = path.join(root, "ios", "App", "App", "Assets.xcassets", "AppIcon.appiconset", "AppIcon-512@2x.png");
-await renderSvg(iconSvg(true), iosIcon, 1024, 1024);
+await renderMasterIcon(iosIcon, 1024, 1024);
 
 const pwaSizes = [[512, "icon.png"], [192, "icon-192.png"]];
 for (const [size, name] of pwaSizes) {
   const output = path.join(root, "public", name);
-  await renderSvg(iconSvg(true), output, size, size);
+  await renderMasterIcon(output, size, size);
   fs.writeFileSync(`${output}.b64`, `${fs.readFileSync(output).toString("base64")}\n`);
 }
 
 const googleListingIcon = path.join(root, "store", "assets", "google", "icon-512.png");
-await renderSvg(iconSvg(true, true), googleListingIcon, 512, 512, true);
+await renderMasterIcon(googleListingIcon, 512, 512, true);
 forceOpaqueRgbaPng(googleListingIcon);
-await renderSvg(iconSvg(true), path.join(root, "store", "assets", "apple", "icon-1024.png"), 1024, 1024);
+await renderMasterIcon(path.join(root, "store", "assets", "apple", "icon-1024.png"), 1024, 1024);
 
 const androidDensities = {
   mdpi: { icon: 48, foreground: 108 },
@@ -153,10 +165,9 @@ const androidDensities = {
 };
 for (const [density, sizes] of Object.entries(androidDensities)) {
   const destination = path.join(root, "android", "app", "src", "main", "res", `mipmap-${density}`);
-  await renderSvg(iconSvg(true), path.join(destination, "ic_launcher.png"), sizes.icon, sizes.icon);
-  await renderSvg(iconSvg(true), path.join(destination, "ic_launcher_round.png"), sizes.icon, sizes.icon);
-  const foreground = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-220 -220 1464 1464">${iconSvg(false).replace(/<\/?svg[^>]*>/g, "")}</svg>`;
-  await renderSvg(foreground, path.join(destination, "ic_launcher_foreground.png"), sizes.foreground, sizes.foreground, true);
+  await renderMasterIcon(path.join(destination, "ic_launcher.png"), sizes.icon, sizes.icon);
+  await renderMasterIcon(path.join(destination, "ic_launcher_round.png"), sizes.icon, sizes.icon);
+  await renderMasterIcon(path.join(destination, "ic_launcher_foreground.png"), sizes.foreground, sizes.foreground, true);
 }
 
 const splashRoot = path.join(root, "android", "app", "src", "main", "res");
