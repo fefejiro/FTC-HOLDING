@@ -19,7 +19,7 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: APPS/job-reply-agent/package-lock.json
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
@@ -43,7 +43,9 @@ jobs:
           JOBAGENT_KEYSTORE_PASSWORD: ${{ secrets.JOBAGENT_ANDROID_KEYSTORE_PASSWORD }}
           JOBAGENT_KEY_ALIAS: ${{ secrets.JOBAGENT_ANDROID_KEY_ALIAS }}
           JOBAGENT_KEY_PASSWORD: ${{ secrets.JOBAGENT_ANDROID_KEY_PASSWORD }}
-        run: ./android/gradlew :app:bundleRelease --no-daemon -p android
+        run: |
+          chmod +x android/gradlew
+          ./android/gradlew :app:bundleRelease --no-daemon -p android
       - name: Record bundle digest
         run: sha256sum android/app/build/outputs/bundle/release/app-release.aab | tee android-aab-sha256.txt
       - uses: actions/upload-artifact@v4
