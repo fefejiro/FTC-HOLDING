@@ -5410,6 +5410,10 @@ export default {
       return handleCheckoutSuccess(req, env);
     }
 
+    if (req.method === 'GET' && url.pathname === '/api/status') {
+      return json(await getPublicStatusSummary(req, env), 200, origin);
+    }
+
     // ── Spark AI chat routes ──────────────────────────────────────────────
     if (req.method === 'POST' && url.pathname === '/api/spark/chat') {
       return handleSparkChat(req, env, origin);
