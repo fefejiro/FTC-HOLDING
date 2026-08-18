@@ -3,10 +3,10 @@
 ## Start Here
 
 - Repository: `fefejiro/FTC-HOLDING`
-- Branch: `release/unascout-store-publish`
-- Store code image: `e6fe31c63`
-- Evidence head: `daec0390537d75b14b8a38a31889e9e3550dda43`
-- Draft PR: `https://github.com/fefejiro/FTC-HOLDING/pull/257`
+- Branch: `feat/jobagent-live-proof`
+- Release-hardening image: `b3dbfb888`
+- Current `origin/main`: `997be2a3384556273aaae3bca8bfe61e2ecde3e4`
+- Exact deployed image: `7756c6f3e496d48c2952b1d132dbabb547a4d244`
 - Clean worktree: `D:\FTC-HOLDING-worktrees\unascout-main-release`
 - Product root: `D:\FTC-HOLDING-worktrees\unascout-main-release\APPS\job-reply-agent`
 - Operational state root: `C:\FTC HOLDING\APPS\job-reply-agent`
@@ -15,21 +15,40 @@
 
 ### Revenue Launch Snapshot - 2026-08-17
 
+Historical snapshot, superseded by the 2026-08-18 live release snapshot below.
+
 - Revenue launch code and tests are complete locally; hosted deployment is not.
 - The public product route, `/app` workspace, capped signup, pricing,
   entitlements, usage, acquisition events, and Stripe/Mailjet gateway contracts
   are implemented.
 - Checkout is fail-closed. Do not enable `BILLING_CHECKOUT_ENABLED` until the
   hosted tailored-package workflow and the complete Stripe test lifecycle pass.
-- Cloudflare `/edgez` returns `200`. `/`, `/healthz`, `/readyz`, and
-  `/api/v1/release` return `404` because the JobAgent origin is unavailable.
-- The active Railway identity sees only the PeacePad Free project. Do not deploy
-  JobAgent into that project or database. Recover the original dedicated
-  `una-jobagent` account/project, then deploy the exact revenue code image.
-- The shared `una-stripe-api` Worker changes are committed but deliberately not
-  deployed while the backend webhook receiver is unavailable.
+- At that snapshot Cloudflare `/edgez` returned `200` while the origin was
+  unavailable. The dedicated Hobby origin and shared Worker were restored on
+  2026-08-18; use the live snapshot below as current truth.
 - No Stripe catalog, live Checkout, subscription, charge, customer activation,
   public beta, connector certification, or store submission is claimed.
+
+### Live Release Snapshot - 2026-08-18
+
+- The Railway access blocker is resolved. `una-jobagent` is in Michael Fejiro's
+  Hobby workspace with web, worker, migration, PostgreSQL, private storage, and
+  backup resources online.
+- The public product and application origin are live. `/healthz`, `/readyz`,
+  `/api/v1/release`, `/api/v1/plans`, and `/edgez` return `200` and identify
+  schema `011_revenue_launch` plus deployed SHA
+  `7756c6f3e496d48c2952b1d132dbabb547a4d244`.
+- A disposable public tenant completed Mailjet verification and the live
+  customer smoke at `390x844` and `1440x1000`. Evidence is under
+  `D:\FTC-HOLDING-releases\unascout\live-proof-20260818`.
+- `b3dbfb888` corrects production-smoke drift, declares the Apple privacy data
+  categories actually used, and prevents a broken native Gmail OAuth launch by
+  directing connection setup to the hosted web app.
+- Full Vitest is green: `31` passed files plus one skipped; `230` passed tests
+  plus `11` skipped. Store metadata and native-contract checks also pass.
+- Billing is still fail-closed. A permanent Stripe live restricted key must be
+  installed in `una-stripe-api`, then catalog, no-charge Checkout creation,
+  portal, webhook, entitlement, cancellation, and refund paths must be proven.
 
 ### Current Operational Snapshot - 2026-08-15
 
@@ -83,7 +102,7 @@ npm run lint
 npm run production:check
 ```
 
-Expected application test baseline: `30` passed files, `1` skipped file, `226`
+Expected application test baseline: `31` passed files, `1` skipped file, `230`
 passed tests, and `11` skipped tests. Worker baseline: `1` file and `7` tests
 passed. Customer smoke passes at `390x844` and `1440x1000`. Use
 `npm audit --omit=dev --workspaces=false`; an unscoped audit from this monorepo
@@ -132,11 +151,11 @@ edits against the same files concurrently. The release auditor is read-only.
 
 ## Current CI And PR State
 
-PR #253 contains the revenue code image and this evidence update. GitHub Actions
-run `32089839983` passed `standalone-and-security`, `immutable-image`, and
-`billing-gateway` on workflow head `1fb76183539f578764770092daf193e1c73b9664`.
-Keep unrelated monorepo workflows separate unless a repository-level required
-check makes them a real merge blocker.
+Historical PRs #253 and #257 contain the revenue and store-release increments.
+The current release-hardening branch is `feat/jobagent-live-proof` at
+`b3dbfb888`; push it and require a fresh complete JobAgent CI run before merging
+or deploying it. Keep unrelated monorepo workflows separate unless a
+repository-level required check makes them a real merge blocker.
 
 The previous PR #192 and run `31434235006` remain historical RC0 evidence; they
 do not prove the RC3 code image, schema `011_revenue_launch`, or hosted revenue
@@ -144,18 +163,20 @@ workflow.
 
 ## Open Release Gates
 
-1. Recover the original dedicated Railway project and deploy the exact revenue
-   code image as web, worker, migration, PostgreSQL, and private storage.
-2. Prove live health, readiness, release SHA, schema, signup, package delivery,
-   Stripe lifecycle, Mailjet delivery, cancellation, export, and deletion.
-3. Deploy `una-stripe-api` only after the backend webhook receiver is healthy;
-   bootstrap the exact Stripe catalog and then activate checkout.
+1. Install a permanent restricted Stripe live key in `una-stripe-api` through
+   the secure secret prompt. Never paste it into chat, source, or shell history.
+2. Bootstrap and verify the exact Stripe catalog, create a no-charge live
+   Checkout session, then prove webhook, entitlement, portal, cancellation,
+   refund, Mailjet, export, and deletion behavior before activating checkout.
+3. Push and merge `b3dbfb888`, deploy the exact merged image as web, worker, and
+   migration, and repeat release-SHA plus two-viewport live proof.
 4. Publish Android Digital Asset Links and Apple App Site Association files,
    then prove OAuth return on physical Android and iOS devices.
 5. Preserve successful CI runs `32142960353` and `32142993982` plus Android
    artifact `9326695864` as the store-candidate receipts.
 6. Create the Apple and Google app records. Configure dedicated Apple signing,
-   upload the first Play AAB manually, and complete Play testing/TestFlight.
+   upload the canonical CI Play AAB, and complete the eligible Play track plus
+   TestFlight processing with external receipts.
 7. Upload the completed listing metadata and screenshots, finish store privacy,
    age-rating, data-safety, trader, and review declarations, and submit reviews.
 8. Complete fresh Fejiro connector proof runs and the 14-day isolated Chukwuma

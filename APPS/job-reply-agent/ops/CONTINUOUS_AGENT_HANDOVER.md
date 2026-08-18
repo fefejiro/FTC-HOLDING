@@ -2,17 +2,18 @@
 
 ## Last Verified State
 
-UnaScout store-release code image `e6fe31c63` is committed on
-`release/unascout-store-publish`. Local release checks and the signed Android
-bundle are green. The hosted origin is not running, checkout remains disabled,
-and no payment has been accepted. See `ops/RELEASE_STATUS.md` and
+UnaScout release-hardening image `b3dbfb888` is committed on
+`feat/jobagent-live-proof`. Local release checks, the live customer smoke, and
+the signed Android bundle are green. The dedicated Railway Hobby origin is
+running; checkout remains disabled pending a permanent Stripe key and catalog
+proof, and no payment has been accepted. See `ops/RELEASE_STATUS.md` and
 `docs/PRODUCT_RELEASE_EVIDENCE_2026-08-18.md` for the exact evidence boundary.
 
 - Updated: 2026-08-18 America/New_York
-- Engineering branch: `release/unascout-store-publish`
-- Store code image: `e6fe31c63`
-- Evidence head: `daec0390537d75b14b8a38a31889e9e3550dda43`
-- Draft PR: `https://github.com/fefejiro/FTC-HOLDING/pull/257`
+- Engineering branch: `feat/jobagent-live-proof`
+- Release-hardening image: `b3dbfb888`
+- Current `origin/main`: `997be2a3384556273aaae3bca8bfe61e2ecde3e4`
+- Exact deployed image: `7756c6f3e496d48c2952b1d132dbabb547a4d244`
 - Store-release worktree: `D:\FTC-HOLDING-worktrees\unascout-main-release`
 - Operational engineering worktree: `D:\FTC-HOLDING-worktrees\job-agent-continuous`
 - Operational branch: `agent/job-agent-continuous`
@@ -25,7 +26,34 @@ This file is a resumable evidence record, not a claim that every external
 connector or production release gate is complete. Verify drift-prone runtime
 facts before changing them.
 
+## Live Production Proof - 2026-08-18
+
+- Railway CLI and browser access now resolve to `Michael Fejiro's Projects` on
+  Hobby plan. Dedicated project `una-jobagent` is recovered with all application
+  services online, PostgreSQL, private storage, and backup resources present.
+- `https://jobagent.unalabs.cloud` now serves the product. `/healthz`, `/readyz`,
+  `/api/v1/release`, `/api/v1/plans`, and `/edgez` return `200`; the release
+  endpoint reports deployed SHA `7756c6f3e496d48c2952b1d132dbabb547a4d244`
+  and schema `011_revenue_launch`.
+- A disposable public tenant completed Mailjet email verification and the live
+  customer journey. Responsive Playwright passed at `390x844` and `1440x1000`.
+  Redacted artifacts are under
+  `D:\FTC-HOLDING-releases\unascout\live-proof-20260818`.
+- The latest source hardens production smoke diagnostics, keeps native Gmail
+  connection on the hosted web surface, and declares the app's linked Apple
+  privacy data categories. Full Vitest passed: `31` files plus one skipped,
+  `230` tests plus `11` skipped.
+- The shared Stripe/Mailjet Worker is deployed and Mailjet delivery is proven.
+  Billing remains fail-closed because the Worker still needs a permanent Stripe
+  live restricted key. A Stripe CLI session token is not accepted as that
+  credential and must not be used as a production replacement.
+- No App Store Connect UnaScout record, signed IPA, TestFlight build, Play app
+  record, Play AAB upload, track rollout, review submission, or public listing
+  is claimed.
+
 ## Revenue Launch Increment - 2026-08-17
+
+Historical snapshot, superseded by the 2026-08-18 live production proof above.
 
 - Added the public product/pricing route, `/app` workspace boundary, capped
   public registration, acquisition tracking, plan entitlements, usage ledger,
@@ -41,11 +69,9 @@ facts before changing them.
 - GitHub Actions run `32089839983` passed all three JobAgent jobs on workflow
   head `1fb76183539f578764770092daf193e1c73b9664`, including the immutable image,
   billing gateway, Linux browser smoke, strict configuration, and secret scan.
-- Cloudflare `/edgez` is live, but `/`, `/healthz`, `/readyz`, and
-  `/api/v1/release` return `404`. Do not deploy the shared Worker or activate
-  checkout until the JobAgent origin is restored and webhook delivery is proven.
-- The current Railway identity owns only the PeacePad Free project. Do not mix
-  JobAgent into it. Recover the original `una-jobagent` account/project first.
+- At that snapshot the origin returned `404` and the active Railway identity did
+  not expose the dedicated project. Both were restored on 2026-08-18. Checkout
+  still remains fail-closed pending Stripe catalog and lifecycle proof.
 - `npm run revenue:deploy:preflight` now checks system-drive headroom, clean Git
   scope, exact `una-jobagent` Railway visibility, and public edge/origin health.
   It fails closed and is the first command for every deployment attempt.
@@ -154,8 +180,8 @@ facts before changing them.
 
 ## Current Boundaries And Manual Gates
 
-- The current store-release branch is `release/unascout-store-publish` at
-  `e6fe31c63`. It contains the locked UnaScout public brand, final native art,
+- The current release-hardening branch is `feat/jobagent-live-proof` at
+  `b3dbfb888`. It contains the locked UnaScout public brand, final native art,
   store metadata, screenshot automation, iOS privacy declarations, hardened
   association routes, and release workflows.
 - The signed Android `1.0.1 (2)` AAB was verified locally with SHA-256
@@ -188,16 +214,19 @@ facts before changing them.
 
 ## Next Highest-Impact Work
 
-1. Recover the Railway account/workspace that owns the original dedicated
-   `una-jobagent` project. Do not deploy into PeacePad's Free project.
-2. Deploy the exact revenue code image and prove health, readiness, release SHA,
-   migration `011_revenue_launch`, private storage, and queue operation.
-3. Deploy the shared Worker increment, bootstrap the exact Stripe catalog, and
-   run the complete test-mode payment/entitlement/cancellation lifecycle.
-4. Prove hosted tailored-package fulfillment before enabling checkout.
-5. Publish exact-domain Android/Apple association files, then prove OAuth return
+1. Install the permanent restricted Stripe live key in the deployed Worker,
+   bootstrap the exact catalog, prove no-charge live Checkout and Customer
+   Portal creation, and complete the test-mode entitlement/cancellation cycle.
+2. Push `feat/jobagent-live-proof`, complete CI, merge, deploy one exact immutable
+   image to web/worker/migration, and rerun release-SHA plus live browser proof.
+3. Prove hosted tailored-package fulfillment before enabling checkout.
+4. Create the Play app record, enable Play App Signing, upload the canonical CI
+   AAB, and capture the Play signing SHA-256 for the live association document.
+5. Create the Apple app record and App ID, provision dedicated UnaScout signing,
+   run the macOS GitHub workflow, and upload/process the first IPA.
+6. Publish exact-domain Android/Apple association files, then prove OAuth return
    on physical Android and iOS devices without exposing tokens in URLs/logs.
-6. Restore the configured approved BA golden-template source before generating
+7. Restore the configured approved BA golden-template source before generating
    another BA/BSA package. The runtime correctly refuses unapproved fallback
    templates; do not weaken that guard to continue an application.
 
