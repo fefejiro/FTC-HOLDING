@@ -3,7 +3,7 @@ import { site } from "../content/site";
 ---
 <footer>
   <div class="container footer-grid">
-    <div><a class="brand brand-logo footer-brand" href="/"><img src="/images/skillful-hands-cic-logo.png" width="418" height="417" alt="Skillful Hands CIC" /></a><p>{site.tagline}</p><div class="footer-social"><a href={site.instagram} target="_blank" rel="noreferrer" aria-label="Skillful Hands CIC on Instagram">Instagram</a><a href={site.linkedin} target="_blank" rel="noreferrer" aria-label="Skillful Hands CIC on LinkedIn">LinkedIn</a></div></div>
+    <div><a class="brand brand-logo footer-brand" href="/"><img src="/images/skillful-hands-cic-logo.png" width="418" height="417" alt="Skillful Hands CIC" /></a><p>{site.tagline}</p><div class="footer-social"><a href={site.instagram} target="_blank" rel="noreferrer" aria-label="Skillful Hands CIC on Instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.4" cy="6.6" r="1"/></svg><span class="sr-only">Instagram</span></a><a href={site.linkedin} target="_blank" rel="noreferrer" aria-label="Skillful Hands CIC on LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5A2.5 2.5 0 1 0 5 8.5 2.5 2.5 0 0 0 5 3.5ZM3 9.5h4v11H3zM9.5 9.5h3.8V11c.8-1.2 2.1-1.9 4.1-1.9 3.2 0 4.6 2 4.6 5.4v6H18v-5.4c0-1.7-.6-2.7-2-2.7-1.6 0-2.5 1.1-2.5 3.2v4.9H9.5z"/></svg><span class="sr-only">LinkedIn</span></a></div></div>
     <div><p class="footer-label">Contact</p><a href="/contact">Contact Skillful Hands CIC</a><a href={`mailto:${site.email}`}>{site.email}</a></div>
     <div><p class="footer-label">Explore</p>{site.nav.slice(0, 3).map((item) => <a href={item.href}>{item.label}</a>)}</div>
   </div>

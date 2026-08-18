@@ -32,11 +32,12 @@ not choose or store a visitor's email provider.
 
 ## Content
 
-Edit public copy and programme-slide content in `src/content/site.ts`. Founder
-and workshop photography are supplied by Skillful Hands CIC. The homepage uses
-a small, accessible workshop-photo carousel with pause controls and
-reduced-motion support. The official logo artwork has not yet been supplied as
-a standalone asset, so the header uses the existing SH monogram until it is.
+Edit public copy and programme content in `src/content/site.ts`. Founder and
+workshop photography are supplied by Skillful Hands CIC. The homepage uses an
+accessible workshop-photo carousel with pause controls and reduced-motion
+support. The official Skillful Hands CIC logo artwork is used in the header and
+footer. The primary hero image is an approved illustrative workshop scene; the
+other workshop photographs are authentic supplied assets.
 
 ## Deployment
 
@@ -50,9 +51,9 @@ Pages project:
 Use [CLOUDFLARE_PAGES_RUNBOOK.md](./CLOUDFLARE_PAGES_RUNBOOK.md) for future
 domain launches and certificate recovery.
 
-Final logo artwork, full brand asset pack, photography permissions and founder
-approval remain content-governance requirements. Monique Hughes's portrait and
-the current workshop images are supplied assets.
+Photography permissions and future brand assets remain content-governance
+requirements. Monique Hughes's portrait and the current workshop images are
+supplied assets.
 
 ## Reusing this foundation
 

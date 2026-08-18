@@ -10,7 +10,8 @@ const jsonLd = {
   name: site.name,
   url: site.canonical,
   email: site.email,
-  description: site.description
+  description: site.description,
+  sameAs: [site.instagram, site.linkedin]
 };
 ---
 <!doctype html>
@@ -18,7 +19,7 @@ const jsonLd = {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
-    <title>Skillful Hands CIC | Practical Skills. Brighter Futures.</title>
+    <title>Skillful Hands CIC | Creating Skills. Building Futures.</title>
     <meta name="description" content={site.description} />
     <link rel="canonical" href={site.canonical} />
     <meta property="og:type" content="website" />
@@ -26,14 +27,14 @@ const jsonLd = {
     <meta property="og:description" content={site.description} />
     <meta property="og:url" content={site.canonical} />
     <meta property="og:locale" content="en_GB" />
-    <meta property="og:image" content={`${site.canonical}images/social-founder-20260813.webp`} />
+    <meta property="og:image" content={`${site.canonical}images/social-hero-workshop.webp`} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Monique Hughes, founder of Skillful Hands CIC, near the London Eye" />
+    <meta property="og:image:alt" content="Illustrative practical hair-learning workshop scene" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={`${site.name} | ${site.tagline}`} />
     <meta name="twitter:description" content={site.description} />
-    <meta name="twitter:image" content={`${site.canonical}images/social-founder-20260813.webp`} />
+    <meta name="twitter:image" content={`${site.canonical}images/social-hero-workshop.webp`} />
     <meta name="theme-color" content="#D94F00" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="manifest" href="/site.webmanifest" />
@@ -44,42 +45,34 @@ const jsonLd = {
     <Header />
     <main id="main-content" tabindex="-1">
       <section class="hero">
-        <div class="hero-slides" data-hero-slides aria-label="Workshop photographs">
-          {site.heroSlides.map((slide, index) => (
-            <figure class={`hero-slide ${index === 0 ? "is-active" : ""}`} data-hero-slide aria-hidden={index === 0 ? "false" : "true"} style={`--hero-photo: url('/images/${slide.image}.webp')`}>
-              <img
-                src={`/images/${slide.image}.webp`}
-                srcset={`/images/${slide.image}-640.webp 640w, /images/${slide.image}-960.webp 960w, /images/${slide.image}.webp 1440w`}
-                sizes="100vw"
-                width="1440"
-                height="1920"
-                fetchpriority={index === 0 ? "high" : "auto"}
-                loading={index === 0 ? "eager" : "lazy"}
-                decoding="async"
-                alt={slide.alt}
-                style={`object-position: ${slide.position}`}
-              />
-            </figure>
-          ))}
-        </div>
-        <div class="hero-overlay"></div>
-        <div class="container hero-content">
-          <p class="eyebrow">Community skills and personal development</p>
-          <h1>Skillful Hands CIC</h1>
-          <p class="hero-line">{site.tagline}</p>
-          <p class="hero-copy">{site.description}</p>
-          <div class="button-row">
-            <a class="button" href="/programmes">Explore our programmes</a>
-            <a class="text-link light" href="/contact">Start a conversation <span aria-hidden="true">&rarr;</span></a>
+        <div class="hero-copy-panel">
+          <div class="container hero-content">
+            <p class="eyebrow">Community skills and personal development</p>
+            <h1>{site.hero.heading}</h1>
+            <p class="hero-line">{site.hero.accent}</p>
+            <p class="hero-copy">{site.description}</p>
+            <p class="hero-statement">{site.hero.statement}</p>
+            <div class="button-row">
+              <a class="button button-hero" href="/programmes">{site.hero.cta} <span aria-hidden="true">&rarr;</span></a>
+            </div>
           </div>
         </div>
-        <div class="hero-controls" data-hero-controls>
-          <div class="hero-dots" aria-label="Workshop photographs">
-            {site.heroSlides.map((_, index) => <button type="button" aria-pressed={index === 0 ? "true" : "false"} aria-label={`Show workshop photograph ${index + 1}`} data-hero-to={index}></button>)}
+        <div class="hero-media-panel">
+          <div class="hero-slides" data-hero-slides aria-label="Workshop photographs">
+            {site.heroSlides.map((slide, index) => (
+              <figure class={`hero-slide ${index === 0 ? "is-active" : ""}`} data-hero-slide aria-hidden={index === 0 ? "false" : "true"}>
+                <img src={`/images/${slide.image}.webp`} srcset={`/images/${slide.image}-640.webp 640w, /images/${slide.image}-960.webp 960w, /images/${slide.image}.webp 1440w`} sizes="(max-width: 820px) 100vw, 52vw" width="1440" height="1150" fetchpriority={index === 0 ? "high" : "auto"} loading={index === 0 ? "eager" : "lazy"} decoding="async" alt={slide.alt} style={`object-position: ${slide.position}`} />
+              </figure>
+            ))}
           </div>
-          <button class="hero-motion" type="button" data-hero-motion aria-label="Pause automatic workshop photographs">Pause photos</button>
+          <div class="hero-controls" data-hero-controls>
+            <div class="hero-dots" aria-label="Workshop photographs">
+              {site.heroSlides.map((_, index) => <button type="button" aria-pressed={index === 0 ? "true" : "false"} aria-label={`Show workshop photograph ${index + 1}`} data-hero-to={index}></button>)}
+            </div>
+            <button class="hero-motion" type="button" data-hero-motion aria-label="Pause automatic workshop photographs">Pause photos</button>
+          </div>
+          <a class="hero-next" href="/programmes"><span>See what we offer</span><span aria-hidden="true">&rarr;</span></a>
         </div>
-        <a class="hero-next" href="/programmes"><span>See what we offer</span><span aria-hidden="true">&rarr;</span></a>
       </section>
 
       <section id="about" class="about-compact">
@@ -96,42 +89,9 @@ const jsonLd = {
 
       <section id="programmes" class="section programmes">
         <div class="container">
-          <div class="section-heading">
-            <div><p class="eyebrow">Explore our programmes</p><h2>One practical skill. Many possibilities.</h2></div>
-            <p>Choose a programme to see how learning, conversation and confidence come together.</p>
-          </div>
-          <div class="showcase" data-showcase>
-            <div class="showcase-tabs" role="tablist" aria-label="Programme slides">
-              {site.programmes.map((item, index) => (
-                <button type="button" role="tab" aria-selected={index === 0 ? "true" : "false"} aria-controls={`programme-panel-${index}`} id={`programme-tab-${index}`} data-slide-to={index}>
-                  <span>{item.number}</span>{item.title}
-                </button>
-              ))}
-            </div>
-            <div class="showcase-window">
-              <div class="showcase-track">
-                {site.programmes.map((item, index) => (
-                  <article class={`showcase-slide tone-${item.tone}`} id={`programme-panel-${index}`} role="tabpanel" aria-labelledby={`programme-tab-${index}`} aria-hidden={index === 0 ? "false" : "true"}>
-                    <div class="showcase-copy">
-                      <p class="showcase-audience">{item.audience}</p>
-                      <h3>{item.title}</h3>
-                      <p class="programme-strapline">{item.strapline}</p>
-                      <p>{item.description}</p>
-                      <ul>{item.focus.map((focus) => <li>{focus}</li>)}</ul>
-                    </div>
-                    <div class="showcase-visual" aria-hidden="true">
-                      <span class="visual-word">Learn</span><span class="visual-word">Connect</span><span class="visual-word">Grow</span><div class="visual-mark">SH</div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </div>
-            <div class="showcase-controls">
-              <button type="button" class="round-control" data-previous aria-label="Previous programme">&#8592;</button>
-              <p aria-live="polite"><span data-current>1</span> / {site.programmes.length}</p>
-              <button type="button" class="round-control" data-next aria-label="Next programme">&#8594;</button>
-              <button type="button" class="motion-control" data-motion aria-label="Pause automatic programme slides">Pause</button>
-            </div>
+          <div class="programme-intro"><p class="eyebrow">Our programmes</p><h2>Five pathways. One purpose.</h2><p>Creating skills and building futures through practical learning, conversation and confidence.</p></div>
+          <div class="programme-pathways">
+            {site.programmes.map((item) => <a class={`programme-pathway tone-${item.tone}`} href={`/programmes#programme-${item.number}`}><span class="programme-icon" aria-hidden="true">{item.number}</span><strong>{item.title}</strong><small>{item.audience}</small></a>)}
           </div>
         </div>
       </section>
@@ -139,7 +99,7 @@ const jsonLd = {
       <section id="founder" class="section founder">
         <div class="container founder-grid">
           <figure class="founder-portrait">
-            <img src="/images/monique-hughes.webp" srcset="/images/monique-hughes-640.webp 640w, /images/monique-hughes-960.webp 960w, /images/monique-hughes.webp 1200w" sizes="(max-width: 820px) calc(100vw - 40px), 42vw" width="1200" height="1802" loading="lazy" decoding="async" alt="Monique Hughes, founder of Skillful Hands CIC, standing near the London Eye" />
+            <img src="/images/monique-hughes-cropped.webp" srcset="/images/monique-hughes-cropped-640.webp 640w, /images/monique-hughes-cropped-960.webp 960w, /images/monique-hughes-cropped.webp 1200w" sizes="(max-width: 820px) calc(100vw - 40px), 42vw" width="1200" height="1500" loading="lazy" decoding="async" alt="Monique Hughes, founder of Skillful Hands CIC" />
           </figure>
           <div>
             <p class="eyebrow">Meet the founder</p>
@@ -173,7 +133,7 @@ const jsonLd = {
           <div><p>Interested in a programme, partnership, or community collaboration?</p><a class="button button-gold" href="/contact">Contact Skillful Hands CIC</a></div>
         </div>
       </section>
-      <section class="follow-section"><div class="container follow-inner"><div><p class="eyebrow">Follow our journey</p><h2>Stay connected with Skillful Hands CIC.</h2></div><div class="social-actions"><a href={site.instagram} target="_blank" rel="noreferrer" aria-label="Follow Skillful Hands CIC on Instagram">Instagram <span aria-hidden="true">↗</span></a><a href={site.linkedin} target="_blank" rel="noreferrer" aria-label="Follow Skillful Hands CIC on LinkedIn">LinkedIn <span aria-hidden="true">↗</span></a></div></div></section>
+      <section class="follow-section"><div class="container follow-inner"><div><p class="eyebrow">Follow our journey</p><h2>Stay connected with Skillful Hands CIC.</h2></div><div class="social-actions"><a href={site.instagram} target="_blank" rel="noreferrer" aria-label="Follow Skillful Hands CIC on Instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.4" cy="6.6" r="1"/></svg><span>Instagram</span></a><a href={site.linkedin} target="_blank" rel="noreferrer" aria-label="Follow Skillful Hands CIC on LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5A2.5 2.5 0 1 0 5 8.5 2.5 2.5 0 0 0 5 3.5ZM3 9.5h4v11H3zM9.5 9.5h3.8V11c.8-1.2 2.1-1.9 4.1-1.9 3.2 0 4.6 2 4.6 5.4v6H18v-5.4c0-1.7-.6-2.7-2-2.7-1.6 0-2.5 1.1-2.5 3.2v4.9H9.5z"/></svg><span>LinkedIn</span></a></div></div></section>
     </main>
     <Footer />
     <script>
@@ -210,62 +170,6 @@ const jsonLd = {
         startHero();
       }
 
-      const showcase = document.querySelector<HTMLElement>("[data-showcase]");
-      if (showcase) {
-        const track = showcase.querySelector<HTMLElement>(".showcase-track");
-        const slides = [...showcase.querySelectorAll<HTMLElement>(".showcase-slide")];
-        const tabs = [...showcase.querySelectorAll<HTMLButtonElement>("[data-slide-to]")];
-        const currentLabel = showcase.querySelector<HTMLElement>("[data-current]");
-        const motionButton = showcase.querySelector<HTMLButtonElement>("[data-motion]");
-        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        let current = 0;
-        let timer: number | undefined;
-        let manuallyPaused = reduceMotion;
-
-        const show = (next: number, focusTab = false) => {
-          current = (next + slides.length) % slides.length;
-          if (track) track.style.transform = `translateX(-${current * 100}%)`;
-          slides.forEach((slide, index) => slide.setAttribute("aria-hidden", String(index !== current)));
-          tabs.forEach((tab, index) => {
-            tab.setAttribute("aria-selected", String(index === current));
-            tab.tabIndex = index === current ? 0 : -1;
-          });
-          if (currentLabel) currentLabel.textContent = String(current + 1);
-          if (focusTab) tabs[current]?.focus();
-        };
-        const stop = () => window.clearInterval(timer);
-        const start = () => {
-          stop();
-          if (!manuallyPaused) timer = window.setInterval(() => show(current + 1), 6500);
-        };
-
-        tabs.forEach((tab, index) => {
-          tab.addEventListener("click", () => { show(index); start(); });
-          tab.addEventListener("keydown", (event) => {
-            if (event.key === "ArrowRight") show(current + 1, true);
-            if (event.key === "ArrowLeft") show(current - 1, true);
-          });
-        });
-        showcase.querySelector("[data-previous]")?.addEventListener("click", () => { show(current - 1); start(); });
-        showcase.querySelector("[data-next]")?.addEventListener("click", () => { show(current + 1); start(); });
-        motionButton?.addEventListener("click", () => {
-          manuallyPaused = !manuallyPaused;
-          motionButton.textContent = manuallyPaused ? "Play" : "Pause";
-          motionButton.setAttribute("aria-label", manuallyPaused ? "Play automatic programme slides" : "Pause automatic programme slides");
-          manuallyPaused ? stop() : start();
-        });
-        showcase.addEventListener("mouseenter", stop);
-        showcase.addEventListener("mouseleave", start);
-        showcase.addEventListener("focusin", stop);
-        showcase.addEventListener("focusout", start);
-        document.addEventListener("visibilitychange", () => document.hidden ? stop() : start());
-        show(0);
-        if (motionButton && reduceMotion) {
-          motionButton.textContent = "Play";
-          motionButton.setAttribute("aria-label", "Play automatic programme slides");
-        }
-        start();
-      }
     </script>
   </body>
 </html>

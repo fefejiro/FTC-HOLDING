@@ -7,13 +7,22 @@ export const site = {
   instagram: "https://www.instagram.com/skillfulhandscic?igsh=MWM0aHIya3lkb3NzOQ==",
   linkedin: "https://www.linkedin.com/company/skillful-hands-cic/",
   nav: [
-    { label: "About", href: "/about" },
-    { label: "Programmes", href: "/programmes" },
+    { label: "Home", href: "/" },
+    { label: "About us", href: "/about" },
+    { label: "Our programmes", href: "/programmes" },
     { label: "Founder", href: "/about#founder" },
-    { label: "Partner with us", href: "/partner-with-us" }
+    { label: "Partner with us", href: "/partner-with-us" },
+    { label: "Contact", href: "/contact" }
   ],
+  hero: {
+    heading: "One practical skill.",
+    accent: "Many possibilities.",
+    statement: "Hair is the engagement tool. What happens around it is bigger.",
+    cta: "Discover our programmes"
+  },
   outcomes: ["Practical skills", "Meaningful conversations", "Stronger futures"],
   heroSlides: [
+    { image: "hero-reference-workshop", alt: "Illustrative practical hair-learning workshop scene", position: "center" },
     { image: "workshop-braid-leader", alt: "Facilitator and mannequin heads during a Skillful Hands CIC practical hair session", position: "center 42%" },
     { image: "workshop-library", alt: "Participant practising a braid on a mannequin head at a learning table", position: "center 54%" },
     { image: "workshop-hands", alt: "Hands working on a mannequin head during a practical hair-learning session", position: "center 48%" }
@@ -32,8 +41,8 @@ export const site = {
       focus: ["Relationships", "Sexual health", "Wellbeing", "Confidence", "Positive choices"], tone: "gold", image: "workshop-library", imageAlt: "Participant practising practical hair skills at a learning table"
     },
     {
-      number: "03", title: "Women's Confidence Programme", audience: "Women rebuilding and moving forward", strapline: "Rebuilding confidence. Rediscovering skills. Looking ahead.",
-      description: "The Women's Confidence Programme supports women rebuilding their lives after significant transitions or barriers to opportunity.",
+      number: "03", title: "Rejesha Crown", audience: "Women rebuilding and moving forward", strapline: "Rebuilding confidence. Rediscovering skills. Looking ahead.",
+      description: "Rejesha Crown supports women rebuilding their lives after significant transitions or barriers to opportunity.",
       detail: "In a supportive, non-judgemental environment, practical hair skills sit alongside conversations about confidence, identity, relationships, wellbeing, employability, financial confidence and future planning. The focus is on skills, confidence and what comes next, not on defining women by their past.",
       focus: ["Confidence", "Identity", "Wellbeing", "Employability", "Financial confidence", "New beginnings"], tone: "red", image: "workshop-hands", imageAlt: "Hands demonstrating a practical hair technique on a mannequin head"
     },
@@ -59,6 +68,23 @@ export const site = {
       "Sometimes the best conversations happen when your hands are busy."
     ]
   },
+  mission: [
+    "To use practical hair skills as an engagement tool to create welcoming, non-judgemental spaces where young people and adults can learn, connect and have meaningful conversations.",
+    "Through hands-on learning, we support confidence, wellbeing, relationships, transferable skills and access to future opportunities."
+  ],
+  vision: [
+    "We want to see communities where young people and adults feel heard, valued, connected and confident about their future.",
+    "Skillful Hands demonstrates how practical and culturally relevant approaches can engage people differently, creating spaces where skills are developed, conversations happen naturally and communities have a voice."
+  ],
+  values: [
+    { title: "No judgement", text: "Creating spaces where people feel comfortable learning, talking and asking questions." },
+    { title: "Community voice", text: "Listening to lived experience and allowing participants and communities to help shape our work." },
+    { title: "Equity", text: "Recognising different barriers and opportunities while keeping programmes inclusive." },
+    { title: "Connection", text: "Creating opportunities to learn together, build relationships and strengthen belonging." },
+    { title: "Practical learning", text: "Recognising that not everybody learns or engages best in a traditional classroom." },
+    { title: "Growth", text: "Focusing on people’s potential and where they can go next." },
+    { title: "Listen. Learn. Adapt.", text: "Using participant feedback and programme outcomes to continuously improve our work." }
+  ],
   partners: [
     { title: "Schools and colleges", text: "Practical, confidence-building enrichment for young people." },
     { title: "Councils and community groups", text: "Accessible programmes shaped around local needs and opportunity." },

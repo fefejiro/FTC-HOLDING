@@ -11,7 +11,7 @@ const domain = args.domain ?? process.env.SITE_DOMAIN ?? "skillfulhandscic.uk";
 const expectedEmail =
   args.email ?? process.env.SITE_EMAIL ?? "skillfulhandcic@gmail.com";
 const forbiddenText =
-  args.forbid ?? process.env.SITE_FORBIDDEN_TEXT ?? "Rejesha Crown";
+  args.forbid ?? process.env.SITE_FORBIDDEN_TEXT ?? "Women's Confidence Programme";
 const origin = `https://${domain}`;
 const checks = [];
 

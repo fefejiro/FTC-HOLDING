@@ -61,8 +61,10 @@ She created Skillful Hands to use hair as a practical tool for confidence, conne
 ### Programmes
 
 - Hair for Youth: Hair education, confidence, creativity, and life skills for young people.
-- Women's Confidence Programme: Confidence, employability, and personal development programme for women. The final official name remains pending founder confirmation and must not be displayed as "Rejesha Crown".
-- Beyond the Chair: Hair, wellbeing, entrepreneurship, and economic opportunity for adults.
+- Growing & Glowing: School-based practical hair activities, personal development and relationship education.
+- Rejesha Crown: Confidence, employability and personal development programme for women rebuilding and moving forward.
+- Beyond the Chair: Hair, wellbeing, creativity and social connection for adults.
+- Roots & Rhythms: Hair, music, culture and conversation for creative and cultural programmes.
 
 ### Contact
 
@@ -106,7 +108,7 @@ Use Barlow Condensed for headings, Barlow for body text and Caveat sparingly for
 
 ### Imagery
 
-Prioritise authentic photographs of hands, hair education, teaching, tools, community activity, and Monique. If authentic assets are unavailable, use carefully selected temporary imagery and document every placeholder for later replacement.
+Prioritise authentic photographs of hands, hair education, teaching, tools, community activity, and Monique. The approved illustrative workshop scene is used only as the homepage hero image and is labelled accurately in alt text.
 
 ## Functional Requirements
 
