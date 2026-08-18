@@ -102,7 +102,9 @@ jobs:
           track: ${{ inputs.track }}
           status: ${{ inputs.release_status }}
           whatsNewDirectory: APPS/job-reply-agent/store/metadata/google/whatsnew
-      - uses: actions/upload-artifact@v4
+      # Preserve the signed bundle and generated store assets even when the provider upload is rejected.
+      - if: ${{ always() }}
+        uses: actions/upload-artifact@v4
         with:
           name: unascout-android-${{ github.sha }}
           path: |
