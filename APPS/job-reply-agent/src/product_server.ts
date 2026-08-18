@@ -20,6 +20,7 @@ import {
   verifyPassword
 } from "./product_auth.js";
 import { assertProductDatabaseRole, getProductPool, migrateProductDb } from "./product_db.js";
+import { configuredPublicSignupCap } from "./product_registration.js";
 import { executeIdempotentMutation, normalizeIdempotencyKey, type MutationResponse } from "./product_idempotency.js";
 import {
   beginProductGmailOAuth,
@@ -736,7 +737,7 @@ export async function createProductServer(storage: ProductObjectStorage = create
           foundingOffer: {
             code: "FOUNDING25",
             description: "25% off the first three monthly payments",
-            customerLimit: 100
+            redemptionLimit: 100
           }
         });
       }
@@ -793,16 +794,18 @@ export async function createProductServer(storage: ProductObjectStorage = create
             return json(res, 403, { error: "Public registration is not open yet." });
           }
           if (publicRegistration) {
-            await client.query("SELECT pg_advisory_xact_lock(hashtext('jobagent-public-registration'))");
-            const cap = Math.min(Math.max(Number(process.env.PUBLIC_SIGNUP_CAP || 100), 1), 10_000);
-            const count = await client.query<{ count: number }>(
-              `SELECT count(*)::integer AS count
-                 FROM product_users
-                WHERE registration_source='public' AND status <> 'deleted'`
-            );
-            if (Number(count.rows[0]?.count || 0) >= cap) {
-              await client.query("ROLLBACK");
-              return json(res, 403, { error: "Founding Access is currently full." });
+            const configuredCap = configuredPublicSignupCap();
+            if (configuredCap !== null) {
+              await client.query("SELECT pg_advisory_xact_lock(hashtext('jobagent-public-registration'))");
+              const count = await client.query<{ count: number }>(
+                `SELECT count(*)::integer AS count
+                   FROM product_users
+                  WHERE registration_source='public' AND status <> 'deleted'`
+              );
+              if (Number(count.rows[0]?.count || 0) >= configuredCap) {
+                await client.query("ROLLBACK");
+                return json(res, 403, { error: "Public registration is temporarily at capacity." });
+              }
             }
           }
           const inserted = await client.query(
