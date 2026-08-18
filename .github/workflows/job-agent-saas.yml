@@ -76,8 +76,9 @@ jobs:
         run: npm test --workspaces=false
 
       - name: Customer journey browser smoke
+        timeout-minutes: 5
         run: |
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
           npm run customer:smoke --workspaces=false
 
       - name: Validate strict production configuration
