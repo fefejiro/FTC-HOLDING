@@ -33,6 +33,10 @@ Schema version: `011_revenue_launch`
 - **Blocked:** the current Railway CLI identity can access only the PeacePad Free
   workspace. It cannot access the original dedicated `una-jobagent` project.
   JobAgent must not be inserted into PeacePad's database or Free project.
+- **Commercial access:** public registration is unlimited by default when
+  `PUBLIC_SIGNUP_ENABLED=true`. `PUBLIC_SIGNUP_CAP` is now optional and reserved
+  for an explicit emergency capacity limit. The first-100 limit applies only to
+  `FOUNDING25` redemptions, not to customer registration.
 
 ## Hosted Probe
 
