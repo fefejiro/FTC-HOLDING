@@ -65,10 +65,15 @@ describe("native mobile shell", () => {
     const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
     expect(privacy).toContain("NSPrivacyTracking");
     expect(privacy).toContain("<false/>");
+    expect(privacy).toContain("NSPrivacyCollectedDataTypeEmailAddress");
+    expect(privacy).toContain("NSPrivacyCollectedDataTypeUserID");
+    expect(privacy).toContain("NSPrivacyCollectedDataTypeOtherUserContent");
+    expect(privacy).toContain("NSPrivacyCollectedDataTypeProductInteraction");
     expect(plist).toContain("ITSAppUsesNonExemptEncryption");
     expect(app).toContain('$("#available-plans-band").hidden = true;');
     expect(app).toContain('renderBilling(await api("/api/v1/billing/entitlement"))');
     expect(app).toContain("if (window.JobAgentNative?.isNative) return;");
+    expect(app).toContain("Connect Gmail from the UnaScout web app.");
   });
 
   it("publishes exact, server-owned mobile association documents", () => {

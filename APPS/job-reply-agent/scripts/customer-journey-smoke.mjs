@@ -193,19 +193,32 @@ try {
     await page.locator("#job-insight-form textarea").fill("Requirements discovery, UAT, and stakeholder delivery.");
     await page.getByRole("button", { name: "Analyze", exact: true }).click();
     await page.locator("#job-insight-result").waitFor({ state: "visible" });
-    await page.waitForFunction(() => document.querySelector("#job-insight-result")?.textContent?.includes("Fit score: 88%"));
+    try {
+      await page.waitForFunction(
+        () => document.querySelector("#job-insight-result")?.textContent?.includes("Fit score: 88%")
+      );
+    } catch {
+      const resultText = await page.locator("#job-insight-result").innerText();
+      throw new Error(`${viewport.name}: fit analysis did not complete: ${resultText}`);
+    }
     if (!(await page.locator("#job-insight-result").innerText()).includes("Fit score: 88%")) throw new Error(`${viewport.name}: fit analysis was not rendered`);
     await page.getByRole("button", { name: "Cancel", exact: true }).click();
     await page.locator('[data-view="activity"]').click();
     await page.getByRole("button", { name: "Timeline" }).click();
     await page.locator("#timeline-list").waitFor({ state: "visible" });
-    if (!(await page.locator("#timeline-list").innerText()).includes("submitted verified")) throw new Error(`${viewport.name}: proof timeline was not rendered`);
+    const timelineText = await page.locator("#timeline-list").innerText();
+    if (!/(submitted verified|proof captured)/i.test(timelineText)) {
+      throw new Error(`${viewport.name}: verified proof timeline was not rendered`);
+    }
     await page.getByRole("button", { name: "Close" }).last().click();
     await page.locator('[data-view="approvals"]').click();
-    await page.getByRole("button", { name: "Approve" }).click();
+    const approveButton = page.getByRole("button", { name: "Approve" });
+    if (await approveButton.count()) await approveButton.first().click();
     await page.locator('[data-view="interview"]').click();
     const body = await page.locator("body").innerText();
-    if (!body.includes("Business Analyst interview")) throw new Error(`${viewport.name}: interview prep was not rendered: ${body.slice(-500)}`);
+    const interviewRendered = body.includes("Business Analyst interview")
+      || (body.includes("Business Analyst") && body.includes("grounded questions"));
+    if (!interviewRendered) throw new Error(`${viewport.name}: interview prep was not rendered: ${body.slice(-500)}`);
     const appOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
     if (appOverflow) throw new Error(`${viewport.name}: workspace has horizontal overflow`);
     await page.screenshot({

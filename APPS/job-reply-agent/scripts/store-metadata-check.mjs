@@ -116,6 +116,16 @@ const privacyManifest = read("ios/App/App/PrivacyInfo.xcprivacy");
 if (!privacyManifest.includes("NSPrivacyTracking") || !privacyManifest.includes("<false/>")) {
   throw new Error("The app-owned Apple privacy manifest must explicitly declare tracking disabled");
 }
+for (const dataType of [
+  "NSPrivacyCollectedDataTypeEmailAddress",
+  "NSPrivacyCollectedDataTypeUserID",
+  "NSPrivacyCollectedDataTypeOtherUserContent",
+  "NSPrivacyCollectedDataTypeProductInteraction"
+]) {
+  if (!privacyManifest.includes(dataType)) {
+    throw new Error(`The Apple privacy manifest is missing ${dataType}`);
+  }
+}
 const infoPlist = read("ios/App/App/Info.plist");
 if (!infoPlist.includes("ITSAppUsesNonExemptEncryption")) {
   throw new Error("The iOS export-compliance declaration is missing");
