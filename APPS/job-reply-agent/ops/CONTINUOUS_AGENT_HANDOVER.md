@@ -10,10 +10,8 @@ proof, and no payment has been accepted. See `ops/RELEASE_STATUS.md` and
 `docs/PRODUCT_RELEASE_EVIDENCE_2026-08-18.md` for the exact evidence boundary.
 
 - Updated: 2026-08-18 America/New_York
-- Current `origin/main`: `c96c1115dc51b890a1bc1f8d90ad022121360d5b`
 - Exact deployed image: `c96c1115dc51b890a1bc1f8d90ad022121360d5b`
-- Follow-up branch: `fix/jobagent-repeatable-live-smoke`
-- Follow-up image: `e09c445d9`
+- Latest merged test/evidence head: `2d6b42818d835e198b28e139e7ff81d19bcd03b9`
 - Store-release worktree: `D:\FTC-HOLDING-worktrees\unascout-main-release`
 - Operational engineering worktree: `D:\FTC-HOLDING-worktrees\job-agent-continuous`
 - Operational branch: `agent/job-agent-continuous`
@@ -218,9 +216,8 @@ Historical snapshot, superseded by the 2026-08-18 live production proof above.
 1. Install the permanent restricted Stripe live key in the deployed Worker,
    bootstrap the exact catalog, prove no-charge live Checkout and Customer
    Portal creation, and complete the test-mode entitlement/cancellation cycle.
-2. Merge the guarded repeatable-fixture follow-up `e09c445d9`; production already
-   runs the exact customer image and does not need a runtime redeploy for this
-   test-only script change.
+2. Keep the exact deployed customer image in place; merged head `2d6b42818`
+   changes only guarded release-proof tooling and evidence documentation.
 3. Prove hosted tailored-package fulfillment before enabling checkout.
 4. Create the Play app record, enable Play App Signing, upload the canonical CI
    AAB, and capture the Play signing SHA-256 for the live association document.

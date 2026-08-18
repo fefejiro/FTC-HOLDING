@@ -1,10 +1,8 @@
 # UnaScout Store Release Candidate Status
 
 Updated: 2026-08-18 America/New_York
-Current `origin/main`: `c96c1115dc51b890a1bc1f8d90ad022121360d5b`
 Exact deployed application image: `c96c1115dc51b890a1bc1f8d90ad022121360d5b`
-Follow-up branch: `fix/jobagent-repeatable-live-smoke`
-Follow-up code image: `e09c445d9`
+Latest merged test/evidence head: `2d6b42818d835e198b28e139e7ff81d19bcd03b9`
 Schema version: `011_revenue_launch`
 
 ## State
@@ -80,8 +78,8 @@ work is deliberately narrow:
    webhook idempotency, tenant entitlement, usage limits, and Mailjet delivery.
 5. Prove the hosted tailored-package workflow before accepting a genuine
    payment.
-6. Merge the repeatable-fixture follow-up `e09c445d9`; it changes release proof
-   tooling only and does not require a production runtime redeploy.
+6. No runtime redeploy is required for merged head `2d6b42818`; it changes only
+   guarded release-proof tooling and evidence documentation.
    `BILLING_CHECKOUT_ENABLED=true` or taking a genuine payment.
 
 ## Cloud-First Storage Model

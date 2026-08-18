@@ -3,10 +3,8 @@
 ## Start Here
 
 - Repository: `fefejiro/FTC-HOLDING`
-- Current `origin/main`: `c96c1115dc51b890a1bc1f8d90ad022121360d5b`
 - Exact deployed image: `c96c1115dc51b890a1bc1f8d90ad022121360d5b`
-- Follow-up branch: `fix/jobagent-repeatable-live-smoke`
-- Follow-up image: `e09c445d9`
+- Latest merged test/evidence head: `2d6b42818d835e198b28e139e7ff81d19bcd03b9`
 - Clean worktree: `D:\FTC-HOLDING-worktrees\unascout-main-release`
 - Product root: `D:\FTC-HOLDING-worktrees\unascout-main-release\APPS\job-reply-agent`
 - Operational state root: `C:\FTC HOLDING\APPS\job-reply-agent`
@@ -154,8 +152,8 @@ edits against the same files concurrently. The release auditor is read-only.
 Historical PRs #253 and #257 contain the revenue and store-release increments.
 PR #261 merged as `c96c1115dc51b890a1bc1f8d90ad022121360d5b` after all four
 JobAgent release jobs passed. That exact image is deployed and passed the live
-two-viewport smoke. Follow-up `e09c445d9` only makes the guarded disposable
-fixture repeatable and still requires its own CI before merge.
+two-viewport smoke. Merged head `2d6b42818` makes the guarded disposable fixture
+repeatable; its complete JobAgent CI run passed before merge.
 
 The previous PR #192 and run `31434235006` remain historical RC0 evidence; they
 do not prove the RC3 code image, schema `011_revenue_launch`, or hosted revenue
@@ -168,8 +166,8 @@ workflow.
 2. Bootstrap and verify the exact Stripe catalog, create a no-charge live
    Checkout session, then prove webhook, entitlement, portal, cancellation,
    refund, Mailjet, export, and deletion behavior before activating checkout.
-3. Merge `e09c445d9` after CI. No production runtime redeploy is required for
-   that test-only fixture change.
+3. Do not redeploy solely for merged head `2d6b42818`; it changes only guarded
+   release-proof tooling and evidence documentation.
 4. Publish Android Digital Asset Links and Apple App Site Association files,
    then prove OAuth return on physical Android and iOS devices.
 5. Preserve successful CI runs `32142960353` and `32142993982` plus Android
