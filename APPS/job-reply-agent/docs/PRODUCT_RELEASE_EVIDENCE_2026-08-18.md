@@ -38,7 +38,7 @@
 | Application tests | `31` passed files, `1` skipped; `230` passed tests, `11` skipped |
 | Store metadata and native contract check | Passed |
 | Customer smoke | Passed at `390x844` and `1440x1000` |
-| Store screenshots | 5 Apple images at `1290x2796`; 5 Google images at `1080x1920` |
+| Store screenshots | 5 Apple images at `1284x2778`; 5 Google images at `1080x1920` |
 | Google feature graphic | `1024x500` |
 | Android debug build | Passed |
 | Android signed release bundle | Passed |
@@ -72,6 +72,12 @@ The signed release bundle is:
   `714A82DDFDC3B993D2704BE5090111ECFCDCB4CE13BA1B56AB0079C786049107`
 - Remote AAB signer SHA-256:
   `FF:B8:EE:4A:EA:C9:B1:CB:82:6D:FB:B1:0C:02:FD:35:3F:40:A2:CC:19:D5:F9:63:75:75:F8:06:7F:48:80:FD`
+- Dedicated iOS signed archive workflow:
+  `https://github.com/fefejiro/FTC-HOLDING/actions/runs/32172747061`
+- The iOS workflow completed successfully from
+  `82cee97805ab12c30ac1e48466bad54ec30bf337` with App Store upload disabled.
+  This proves the protected signing material and archive path, not an uploaded
+  IPA, TestFlight build, App Review submission, or public availability.
 
 Final store screenshots were generated under:
 
@@ -98,13 +104,18 @@ was present.
 - The deployed shared Worker returns healthy status and Mailjet delivery is
   proven. Stripe catalog and Checkout remain disabled until a permanent live
   restricted key replaces the unsuitable CLI session credential.
-- App Store Connect is visibly authenticated to the Fejiro Technology
-  Consultancy organization.
+- App Store Connect is visibly authenticated to the Fejiro Efiuvwere Apple
+  profile for Fejiro Technology Consultancy Inc. The UnaScout record exists as
+  Apple ID `6802774371`, bundle ID `cloud.unalabs.jobagent`, SKU
+  `unascout-ios-2026`, and version `1.0` in Prepare for Submission.
+- Apple screenshots, Productivity category, `4+` age rating, and store
+  metadata are staged. App Privacy responses are staged but deliberately not
+  published because Apple presents a final owner legal attestation.
 - Apple Developer portal is authenticated to the same organization and confirms
   App ID prefix `G6UNC88GQ5`; `/.well-known/apple-app-site-association` now
   returns `200` with `G6UNC88GQ5.cloud.unalabs.jobagent`.
-- No UnaScout App Store record, uploaded iOS build, TestFlight build, App Review
-  submission, or public listing is yet evidenced.
+- No UnaScout uploaded iOS build, TestFlight build, App Review submission, or
+  public listing is yet evidenced.
 - No UnaScout Play Console record or uploaded AAB is yet evidenced.
 - The hosted origin reports the exact merged commit, so the native privacy and
   Gmail-boundary hardening are part of the deployed customer image.
@@ -116,11 +127,12 @@ was present.
    webhook/entitlement/cancellation/refund evidence before enabling checkout.
 2. Keep the exact runtime image in place; merged head `2d6b42818` is release
    tooling/evidence only and passed CI before merge.
-3. Complete the Apple and Google app records. Apple associated-domain identity
-   is externally verified; obtain the Google Play App Signing fingerprint,
-   deploy Android Digital Asset Links, and verify it live.
-4. Produce the signed iOS archive with dedicated JobAgent credentials and upload
-   it through the GitHub Actions macOS workflow.
+3. Complete the Google Play record. Apple associated-domain identity and its
+   app record are externally verified; obtain the Google Play App Signing
+   fingerprint, deploy Android Digital Asset Links, and verify it live.
+4. Obtain App Store Connect API access through the account holder's legal
+   confirmation, then create upload credentials, upload the already-proven
+   signed iOS archive, and verify Apple processing.
 5. Upload the canonical CI AAB for the first Play release, complete policy
    declarations and testing requirements, and submit the eligible track.
 6. Complete physical iPhone and Android launch, sign-in, deep-link, privacy,
