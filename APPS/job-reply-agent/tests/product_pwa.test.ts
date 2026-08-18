@@ -15,8 +15,8 @@ describe("public beta PWA", () => {
     expect(manifest.display).toBe("standalone");
     expect(manifest.start_url).toBe("/app");
     expect(manifest.icons).toEqual(expect.arrayContaining([
-      expect.objectContaining({ src: "/icon-192.png", sizes: "192x192" }),
-      expect.objectContaining({ src: "/icon.png", sizes: "512x512" })
+      expect.objectContaining({ src: "/icon-192.png?v=b3a1077b", sizes: "192x192" }),
+      expect.objectContaining({ src: "/icon.png?v=b3a1077b", sizes: "512x512" })
     ]));
     for (const icon of ["icon-192.png", "icon.png"]) {
       const binary = fs.readFileSync(path.join(publicRoot, icon));
