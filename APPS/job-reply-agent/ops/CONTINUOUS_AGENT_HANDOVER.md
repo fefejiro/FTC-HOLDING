@@ -45,6 +45,13 @@ facts before changing them.
   checkout until the JobAgent origin is restored and webhook delivery is proven.
 - The current Railway identity owns only the PeacePad Free project. Do not mix
   JobAgent into it. Recover the original `una-jobagent` account/project first.
+- `npm run revenue:deploy:preflight` now checks system-drive headroom, clean Git
+  scope, exact `una-jobagent` Railway visibility, and public edge/origin health.
+  It fails closed and is the first command for every deployment attempt.
+- C: pressure was recovered from 162 MB to about 16.9 GB free without deleting
+  source or active sessions. Reproducible npm and Playwright data plus the
+  verified closed `2026-08-06` Codex session archive now live on D: behind
+  junctions. Future npm, Gradle, and user temp paths also target D:.
 
 ## Cloud-First Operating Model
 

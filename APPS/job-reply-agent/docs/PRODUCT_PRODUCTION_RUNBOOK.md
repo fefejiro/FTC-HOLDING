@@ -24,19 +24,24 @@ images. Runtime services never receive the migration credential.
 
 ## Release sequence
 
-1. Run `npm ci --workspaces=false`, `npm run lint --workspaces=false`,
+1. Run `npm run revenue:deploy:preflight`. It must fail unless C: has release
+   headroom, the worktree is clean, the exact `una-jobagent` Railway project is
+   visible to the current CLI identity, and every hosted readiness route is
+   healthy. A failure is a stop signal, never permission to use another product's
+   project.
+2. Run `npm ci --workspaces=false`, `npm run lint --workspaces=false`,
    `npm test --workspaces=false`, and `npm audit --omit=dev --workspaces=false`.
-2. Run `npm run production:check` and the strict check with production variables.
-3. Build the Docker image from the release commit and record its digest.
-4. Deploy `jobagent-migrate`; require a clean exit and the migration checksum log.
-5. Deploy web and worker from the same commit. Require `/readyz` to report the
+3. Run `npm run production:check` and the strict check with production variables.
+4. Build the Docker image from the release commit and record its digest.
+5. Deploy `jobagent-migrate`; require a clean exit and the migration checksum log.
+6. Deploy web and worker from the same commit. Require `/readyz` to report the
    database, RLS role, and private object storage ready.
    On `main`, publish `ghcr.io/<owner>/una-jobagent:<commit>` once and pin web,
    worker, and migration to that exact digest.
-6. Verify the worker-ready log lists all queues and no restart loop exists.
-7. Verify the branded HTTPS origin, security headers, PWA manifest, mobile and
+7. Verify the worker-ready log lists all queues and no restart loop exists.
+8. Verify the branded HTTPS origin, security headers, PWA manifest, mobile and
    desktop layouts, offline shell, and private signed downloads.
-8. Run PostgreSQL cross-tenant tests, OAuth replay/mismatch tests, queue
+9. Run PostgreSQL cross-tenant tests, OAuth replay/mismatch tests, queue
    idempotency tests, runner-signature tests, deletion tests, and resume audits.
 
 `AUTO_MIGRATE` remains `false`. Schema changes run only in the one-shot service.
