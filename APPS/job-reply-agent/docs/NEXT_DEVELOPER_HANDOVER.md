@@ -3,13 +3,32 @@
 ## Start Here
 
 - Repository: `fefejiro/FTC-HOLDING`
-- Branch: `agent/job-agent-continuous`
-- Draft PR: `https://github.com/fefejiro/FTC-HOLDING/pull/192`
-- Clean worktree: `D:\FTC-HOLDING-worktrees\job-agent-continuous`
-- Product root: `D:\FTC-HOLDING-worktrees\job-agent-continuous\APPS\job-reply-agent`
+- Branch: `release/jobagent-revenue-launch-rc3`
+- Revenue code image: `407100eb9d872fc2ee857ad482af4807aa5cfd84`
+- Draft PR: `https://github.com/fefejiro/FTC-HOLDING/pull/253`
+- Clean worktree: `D:\FTC-HOLDING-worktrees\jobagent-revenue-launch-rc3`
+- Product root: `D:\FTC-HOLDING-worktrees\jobagent-revenue-launch-rc3\APPS\job-reply-agent`
 - Operational state root: `C:\FTC HOLDING\APPS\job-reply-agent`
 - Hosted product: `https://jobagent.unalabs.cloud`
 - Native application ID: `cloud.unalabs.jobagent`
+
+### Revenue Launch Snapshot - 2026-08-17
+
+- Revenue launch code and tests are complete locally; hosted deployment is not.
+- The public product route, `/app` workspace, capped signup, pricing,
+  entitlements, usage, acquisition events, and Stripe/Mailjet gateway contracts
+  are implemented.
+- Checkout is fail-closed. Do not enable `BILLING_CHECKOUT_ENABLED` until the
+  hosted tailored-package workflow and the complete Stripe test lifecycle pass.
+- Cloudflare `/edgez` returns `200`. `/`, `/healthz`, `/readyz`, and
+  `/api/v1/release` return `404` because the JobAgent origin is unavailable.
+- The active Railway identity sees only the PeacePad Free project. Do not deploy
+  JobAgent into that project or database. Recover the original dedicated
+  `una-jobagent` account/project, then deploy the exact revenue code image.
+- The shared `una-stripe-api` Worker changes are committed but deliberately not
+  deployed while the backend webhook receiver is unavailable.
+- No Stripe catalog, live Checkout, subscription, charge, customer activation,
+  public beta, connector certification, or store submission is claimed.
 
 ### Current Operational Snapshot - 2026-08-15
 
@@ -52,25 +71,21 @@ resumes, databases, or candidate evidence into this engineering worktree.
 ## First Ten Minutes
 
 ```powershell
-Set-Location "D:\FTC-HOLDING-worktrees\job-agent-continuous"
+Set-Location "D:\FTC-HOLDING-worktrees\jobagent-revenue-launch-rc3"
 git status -sb
 git pull --ff-only
 Set-Location "APPS\job-reply-agent"
 npm ci --workspaces=false
-npm test --workspaces=false
+npm test --workspaces=false -- --run
 npm run build
 npm run lint
 npm run production:check
 ```
 
-Expected application test baseline at handover: `28` files passed, `1` skipped;
-`210` tests passed and `8` skipped. The static production check passes with the
-expected warning that deployment-only checks were not run locally.
-
-On 2026-08-15, `npm run build` passed. Do not treat the historical suite count
-as current proof until `npm test` is rerun independently: an attempted normal
-run exceeded the local command window, and an earlier retry used unsupported
-Vitest flag `--runInBand`.
+Expected application test baseline: `30` files and `229` tests passed. Worker
+baseline: `1` file and `7` tests passed. Customer smoke passes at `390x844` and
+`1440x1000`. Use `npm audit --omit=dev --workspaces=false`; an unscoped audit
+from this monorepo includes unrelated/extraneous root packages.
 
 Because the C drive is nearly full, use D for Android caches and temporary files:
 
@@ -115,36 +130,34 @@ edits against the same files concurrently. The release auditor is read-only.
 
 ## Current CI And PR State
 
-PR #192 is draft and was mergeable at the last check. The immutable-image job
-passes. The first standalone-and-security run failed because unquoted Bash globs
-expanded into `node_modules` paths. After quoting them, clean install, audit,
-static checks, compile/lint, and all tests passed. The strict configuration step
-then exposed a stale CI fixture missing the required backup URL and encryption
-key; the handover update supplies synthetic values. The final secret scan also
-identified a false
-positive where a historical Cloudflare deployment UUID followed `API routes.
-Version:`. The evidence wording now identifies it as a deployment UUID without
-removing the proof. Run `31434235006` passed the complete JobAgent
-standalone-and-security and immutable-image jobs after these corrections.
+PR #253 contains the revenue code image and this evidence update. Local checks
+are green. Require the complete `JobAgent SaaS Release Gates` workflow on the
+documentation head before merge. Keep unrelated monorepo workflows separate
+unless a repository-level required check makes them a real merge blocker.
 
-Unrelated Garden Portal workflows also ran on the monorepo PR and failed. Keep
-their status separate from JobAgent release evidence unless a repository-level
-required check makes them an actual merge blocker.
+The previous PR #192 and run `31434235006` remain historical RC0 evidence; they
+do not prove the RC3 code image, schema `011_revenue_launch`, or hosted revenue
+workflow.
 
 ## Open Release Gates
 
-1. Run `npm run customer:smoke` in CI and extend it when new customer journeys
-   are added.
-2. Publish Android Digital Asset Links and Apple App Site Association files,
+1. Recover the original dedicated Railway project and deploy the exact revenue
+   code image as web, worker, migration, PostgreSQL, and private storage.
+2. Prove live health, readiness, release SHA, schema, signup, package delivery,
+   Stripe lifecycle, Mailjet delivery, cancellation, export, and deletion.
+3. Deploy `una-stripe-api` only after the backend webhook receiver is healthy;
+   bootstrap the exact Stripe catalog and then activate checkout.
+4. Publish Android Digital Asset Links and Apple App Site Association files,
    then prove OAuth return on physical Android and iOS devices.
-3. Replace generated native icons and splash artwork.
-4. Configure signing outside git and complete Play internal testing/TestFlight.
-5. Complete store privacy declarations, screenshots, accessibility review, and
+5. Replace generated native icons and splash artwork.
+6. Configure signing outside git and complete Play testing/TestFlight.
+7. Complete store privacy declarations, screenshots, accessibility review, and
    review submissions.
-6. Complete fresh Fejiro connector proof runs and the 14-day isolated Chukwuma
+8. Complete fresh Fejiro connector proof runs and the 14-day isolated Chukwuma
    pilot before broader invitations.
-7. Audit queue lease recovery and dead-letter operator visibility.
-8. Restore and assert the approved BA golden-template path in a regression test;
+9. Audit queue lease recovery and dead-letter operator visibility against the
+   restored hosted environment.
+10. Restore and assert the approved BA golden-template path in a regression test;
    retain the current fail-closed template guard.
 
 ## Safety Boundaries
@@ -163,5 +176,5 @@ required check makes them an actual merge blocker.
 ## Required End Of Run
 
 Update `ops/CONTINUOUS_AGENT_HANDOVER.md`, run checks proportional to the change,
-commit only scoped files, push the branch, and update PR #192. Record completed,
-deployed, verified, paused, and blocked states separately.
+commit only scoped files, push the branch, and update the active draft PR. Record
+completed, deployed, verified, paused, and blocked states separately.
