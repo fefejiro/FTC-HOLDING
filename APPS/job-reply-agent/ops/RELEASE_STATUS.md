@@ -41,10 +41,13 @@ Schema version: `011_revenue_launch`
   approval handling, proof timeline, interview preparation, and responsive
   browser smoke passed at `390x844` and `1440x1000`. Redacted screenshots are
   stored under `D:\FTC-HOLDING-releases\unascout\live-proof-c96c1115`.
-- **Paused:** `BILLING_CHECKOUT_ENABLED` remains false. The permanent Stripe
-  live key still must be installed in the Worker, after which the authenticated
-  idempotent catalog bootstrap and a no-charge live Checkout creation proof can
-  run. No genuine charge or paid activation is claimed.
+- **Paused:** `BILLING_CHECKOUT_ENABLED` remains false. The app-to-Worker
+  authenticated catalog probe reaches the deployed JobAgent route, but Stripe
+  rejects the currently installed restricted key as invalid. A replacement
+  recurring-billing restricted key is prepared in the authenticated Una Labs
+  Stripe account and requires the owner's action-time confirmation before it
+  can be created and installed in the Worker. No genuine charge or paid
+  activation is claimed.
 - **External review gates:** Apple reports UnaScout `Waiting for Review`; Google
   Play reports the Production changes in review. Public-store availability is
   not claimed until each store approves the release and its public URL resolves.
@@ -85,9 +88,11 @@ work is deliberately narrow:
    webhook idempotency, tenant entitlement, usage limits, and Mailjet delivery.
 5. Prove the hosted tailored-package workflow before accepting a genuine
    payment.
-6. The `b3a1077b` release is deployed to the live origin; future promotions
-   must retain explicit release-SHA verification.
-   `BILLING_CHECKOUT_ENABLED=true` or taking a genuine payment.
+6. The live origin reports `22db89fb`; the tested native artifacts remain tied
+   to `b3a1077b`. Future promotions must retain explicit release-SHA and
+   artifact-provenance verification.
+7. Do not set `BILLING_CHECKOUT_ENABLED=true` or take a genuine payment until
+   the preceding catalog, Checkout, portal, and entitlement proofs pass.
 
 ## Cloud-First Storage Model
 

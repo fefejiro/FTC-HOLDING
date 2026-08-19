@@ -105,7 +105,7 @@ was present.
 - `https://jobagent.unalabs.cloud/`, `/app`, `/healthz`, `/readyz`,
   `/api/v1/release`, `/api/v1/plans`, and `/edgez` return healthy production
   responses. The release endpoint identifies deployed commit
-  `b3a1077b2100774b9394f19dcf4f5cbfce7ded61` and schema
+  `22db89fb9a58bbb07e3be64919f08f9bd0b5c6d8` and schema
   `011_revenue_launch`.
 - The public landing page now exposes a canonical URL, Open Graph, Twitter
   card, and `SoftwareApplication` structured data. Production `robots.txt`
@@ -116,8 +116,12 @@ was present.
   interview-preparation smoke at both required viewports. Redacted screenshots
   are retained in `D:\FTC-HOLDING-releases\unascout\live-proof-c96c1115`.
 - The deployed shared Worker returns healthy status and Mailjet delivery is
-  proven. Stripe catalog and Checkout remain disabled until a permanent live
-  restricted key replaces the unsuitable CLI session credential.
+  proven. On 2026-08-18, the authenticated JobAgent catalog probe reached the
+  live Worker but Stripe rejected the installed restricted key as invalid.
+  Stripe catalog and Checkout therefore remain disabled. A replacement
+  recurring-billing restricted key is prepared in the authenticated Una Labs
+  Stripe account and awaits the mandatory action-time confirmation for key
+  creation and secure Worker installation.
 - App Store Connect is visibly authenticated to the Fejiro Efiuvwere Apple
   profile for Fejiro Technology Consultancy Inc. The UnaScout record exists as
   Apple ID `6802774371`, bundle ID `cloud.unalabs.jobagent`, SKU
@@ -152,6 +156,18 @@ was present.
    policy declarations, and screenshots as immutable release evidence.
 6. Complete physical iPhone and Android launch, sign-in, deep-link, privacy,
    pause/export/delete, and purchase-boundary tests.
+
+## Revenue Verification Update
+
+- Live signup is available at `/app?mode=register`, including paid-plan entry
+  links that retain the requested plan through registration and open the plan
+  workspace after authentication.
+- The live plans endpoint returns the approved CAD prices and reports
+  `checkoutEnabled: false`, which keeps paid actions fail-closed.
+- Focused verification passed on 2026-08-18: `workers/stripe-api` JobAgent
+  billing tests `7/7`; application billing tests `5/5`.
+- The replacement key has not been created or transmitted without the required
+  owner confirmation. No checkout session, subscription, or charge is claimed.
 
 ## Not Claimed
 
