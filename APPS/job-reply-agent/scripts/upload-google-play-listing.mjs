@@ -75,7 +75,11 @@ try {
     }
   }
 
-  const committed = await publisher.edits.commit({ packageName, editId });
+  const committed = await publisher.edits.commit({
+    packageName,
+    editId,
+    changesNotSentForReview: true,
+  });
   console.log(
     JSON.stringify(
       {
