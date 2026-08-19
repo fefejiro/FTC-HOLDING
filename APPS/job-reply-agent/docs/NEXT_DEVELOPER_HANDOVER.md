@@ -210,8 +210,10 @@ completed, deployed, verified, paused, and blocked states separately.
   configured; required listing artwork and copy are saved; Google accepted 11
   changes for review and now reports `Changes in review`.
 - Just Checking In iOS `1.0.0`: `Waiting for Review`.
-- `UnaScout-Store-Review-Watch` checks the public Apple/Google URLs every 30
-  minutes and records status under
+- PeacePad iOS `2.0.0 (4)`: submitted on 2026-08-18 and `Waiting for Review`;
+  Apple submission `32c20f0e-60b8-4865-bdbd-29cf6b718fdf`.
+- `UnaScout-Store-Review-Watch` checks the exact requested Apple versions and
+  UnaScout Google Play URL every 30 minutes and records status under
   `D:\FTC-HOLDING-releases\unascout\store-release-2026-08-18`.
 - Treat store upload, review submission, approval, and public availability as
   four separate evidence states.

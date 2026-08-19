@@ -186,9 +186,12 @@ store availability.
   Play accepted 11 changes for review and now reports `Changes in review`.
   Public availability is not yet claimed.
 - Just Checking In `1.0.0` remains `Waiting for Review` in App Store Connect.
+- PeacePad `2.0.0 (4)` was submitted to App Review and reports `Waiting for
+  Review`; Apple submission ID `32c20f0e-60b8-4865-bdbd-29cf6b718fdf`.
 - Portal screenshots are retained outside Git at
   `D:\FTC-HOLDING-releases\unascout\store-release-2026-08-18`.
-- Read-only scheduled task `UnaScout-Store-Review-Watch` checks public release
-  availability every 30 minutes and writes `store-status.json` plus
+- Read-only scheduled task `UnaScout-Store-Review-Watch` checks the exact
+  requested Apple versions and UnaScout Google Play availability every 30
+  minutes and writes `store-status.json` plus
   `store-status-history.jsonl` in that directory. Its first scheduled execution
-  completed with result `0`; all three public listings were still unavailable.
+  completed with result `0`; all four requested releases were still unavailable.

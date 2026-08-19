@@ -177,5 +177,9 @@ require their own proof.
   now reports `Changes in review`. This is not yet public Play availability.
 - **Just Checking In:** App Store Connect still reports `1.0.0 Waiting for
   Review`. No withdrawal or duplicate submission was made.
+- **PeacePad:** App Store Connect accepted `2.0.0 (4)` for review and reports
+  `Waiting for Review`; submission ID
+  `32c20f0e-60b8-4865-bdbd-29cf6b718fdf`. The existing public `1.0` listing
+  is not evidence that `2.0.0` has been released.
 - **Evidence:** redacted portal screenshots are stored under
   `D:\FTC-HOLDING-releases\unascout\store-release-2026-08-18`.
