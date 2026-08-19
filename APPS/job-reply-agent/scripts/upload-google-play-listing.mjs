@@ -75,11 +75,22 @@ try {
     }
   }
 
-  const committed = await publisher.edits.commit({
-    packageName,
-    editId,
-    changesNotSentForReview: true,
-  });
+  let committed;
+  try {
+    committed = await publisher.edits.commit({
+      packageName,
+      editId,
+      changesNotSentForReview: true,
+    });
+  } catch (error) {
+    const message = error?.response?.data?.error?.message ?? error?.message ?? "";
+    if (!message.includes("must not be set")) {
+      throw error;
+    }
+
+    // Some Play accounts force every committed edit into review automatically.
+    committed = await publisher.edits.commit({ packageName, editId });
+  }
   console.log(
     JSON.stringify(
       {
