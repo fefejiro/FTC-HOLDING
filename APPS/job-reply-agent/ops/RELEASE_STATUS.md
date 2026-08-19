@@ -183,3 +183,17 @@ require their own proof.
   is not evidence that `2.0.0` has been released.
 - **Evidence:** redacted portal screenshots are stored under
   `D:\FTC-HOLDING-releases\unascout\store-release-2026-08-18`.
+
+## 2026-08-19 Google Play rejection recovery
+
+- Google Play rejected the UnaScout submission because the reviewer could not
+  sign in with the credentials declared in **Sign in details**. This was a
+  reviewer-access failure, not an Android target API or bundle-signing failure.
+- The dedicated reviewer account was reactivated and its password rotated in
+  the production database. The same current credentials were saved in the
+  Play Console declaration, with email verification and no two-step, payment,
+  location, or external-connector gate required for review.
+- The corrected access declaration is saved and is waiting in **Publishing
+  overview** to be sent back to Google for review. Do not claim approval or
+  public availability until Play Console reports an accepted release and the
+  public listing resolves.
