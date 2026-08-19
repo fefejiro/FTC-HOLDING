@@ -55,6 +55,15 @@ Owner account: Fejiro Play organization, developer account `9098950441049789979`
 - Google Play production already contains version code `1`, so the generated-icon build was incremented to version code `2` (`0.2.0`) before upload.
 - Rebuilt signed AAB: `C:\Users\mikef\Downloads\JustCheckingIn-generated-icon-v2.aab`.
 - Version-code-2 AAB SHA-256: `0272C6A1B9FBB4267AB8736FDBF4F6B6A09DB7F7E4689E321E81679879589129`.
+
+### Play Console setup status
+
+- IARC content rating submitted on 19 August 2026 with Game category and low-content responses; current ratings include Everyone/PEGI 3.
+- Target audience saved as 13-15, 16-17 and 18 and over.
+- Data safety saved as no data collection and no data sharing; privacy policy shown as `https://unalabs.cloud/privacy/`.
+- Store listing copy is saved as a draft.
+- Remaining manual assets: Play app icon, feature graphic and 2-8 genuine phone screenshots. Do not fabricate screenshots; capture them from the real game build.
+- The current production draft still contains version code 1 until the version-code-2 AAB is manually uploaded.
 - The Play upload picker cannot be populated by this browser channel. The
   bundle is ready at `C:\Users\mikef\Downloads\JustCheckingIn-generated-icon.aab`
   for manual selection in the open Play Console picker.
