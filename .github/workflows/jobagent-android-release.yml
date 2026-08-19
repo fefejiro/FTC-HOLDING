@@ -28,6 +28,11 @@ on:
           - completed
           - inProgress
           - halted
+      upload_store_listing:
+        description: Upload the approved UnaScout store listing and imagery
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -56,6 +61,11 @@ jobs:
         run: |
           npm run store:metadata:check
           npm run production:check
+      - name: Upload approved Google Play listing
+        if: ${{ inputs.upload_store_listing }}
+        env:
+          JOBAGENT_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.JOBAGENT_PLAY_SERVICE_ACCOUNT_JSON || secrets.PEACEPAD_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: node scripts/upload-google-play-listing.mjs
       - name: Generate exact-release store screenshots
         env:
           STORE_SCREENSHOT_DIR: ${{ runner.temp }}/unascout-store-assets
