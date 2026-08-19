@@ -219,10 +219,10 @@ Historical snapshot, superseded by the 2026-08-18 live production proof above.
 2. Keep the exact deployed customer image in place; merged head `2d6b42818`
    changes only guarded release-proof tooling and evidence documentation.
 3. Prove hosted tailored-package fulfillment before enabling checkout.
-4. Create the Play app record, enable Play App Signing, upload the canonical CI
-   AAB, and capture the Play signing SHA-256 for the live association document.
-5. Create the Apple app record and App ID, provision dedicated UnaScout signing,
-   run the macOS GitHub workflow, and upload/process the first IPA.
+4. Poll the submitted Play Production release until approval, capture the Play
+   signing SHA-256, deploy Android Digital Asset Links, and verify the public URL.
+5. Poll UnaScout and Just Checking In App Review until Apple publishes them;
+   capture the public URLs without withdrawing or duplicating submissions.
 6. Publish exact-domain Android/Apple association files, then prove OAuth return
    on physical Android and iOS devices without exposing tokens in URLs/logs.
 7. Restore the configured approved BA golden-template source before generating
@@ -251,3 +251,14 @@ Every interactive or scheduled product-engineering run must update this file
 before its final commit. Replace stale evidence rather than stacking optimistic
 claims. Keep completed, deployed, externally verified, paused, and blocked
 states distinct.
+
+## 2026-08-18 Store Portal Handover
+
+- Apple: UnaScout `1.0` is `Waiting for Review`, submission
+  `0083ab51-caa4-43c4-97ba-06ed1bdfeac0`; automatic release is enabled.
+- Google Play: release `1.0.1 (2)`, required listing assets, approved text, and
+  177-region full rollout are saved in the Production track. Google Play
+  accepted 11 changes for review and reports `Changes in review`.
+- Just Checking In: `1.0.0 Waiting for Review` remains unchanged.
+- Do not call either app publicly available until its public store URL resolves
+  and the store reports a released/available state.

@@ -45,9 +45,9 @@ Schema version: `011_revenue_launch`
   live key still must be installed in the Worker, after which the authenticated
   idempotent catalog bootstrap and a no-charge live Checkout creation proof can
   run. No genuine charge or paid activation is claimed.
-- **Blocked external gates:** the first Play Console app record/AAB upload and
-  Apple app record/signing credentials still require their respective publisher
-  portals. There is no TestFlight, Play-track, review, or public-store proof yet.
+- **External review gates:** Apple reports UnaScout `Waiting for Review`; Google
+  Play reports the Production changes in review. Public-store availability is
+  not claimed until each store approves the release and its public URL resolves.
 - **Commercial access:** public registration is unlimited by default when
   `PUBLIC_SIGNUP_ENABLED=true`. `PUBLIC_SIGNUP_CAP` is now optional and reserved
   for an explicit emergency capacity limit. The first-100 limit applies only to
@@ -109,9 +109,9 @@ work is deliberately narrow:
 
 The shared Capacitor source remains a free companion for analysis, tracking,
 approvals, proof, and existing customer access. No in-app Stripe checkout or
-external purchase prompt is introduced. Signed store builds, physical-device
-checks, Play submission, TestFlight, and App Store review still require their
-own evidence.
+external purchase prompt is introduced. Signed builds and both review
+submissions are evidenced; physical-device checks and public availability still
+require their own proof.
 
 ## Mobile Brand And Build Evidence
 
@@ -130,31 +130,47 @@ own evidence.
   feature graphic, and ten phone screenshots have been generated and visually
   inspected. Default Capacitor artwork is no longer present.
 - JobAgent-specific Android signing material is enrolled in protected GitHub
-  Actions secrets. The AAB has not yet been uploaded to Play Console.
-- A production-track upload was attempted from GitHub Actions run `32189803248`
-  on 2026-08-18. Metadata validation, screenshot generation, and signed AAB
-  creation completed; Google Play rejected the API request with `The caller does
-  not have permission`. No Play release was created. Grant the protected
-  publisher service account access to `cloud.unalabs.jobagent` in Play Console,
-  then rerun `UnaScout Android release` with `upload_to_play=true`.
+  Actions secrets. Signed AAB `1.0.1 (2)` is uploaded to Play Console and is in
+  review for a full Production rollout.
+- GitHub Actions run `32189803248` remains historical evidence of an earlier
+  service-account permission failure. The authenticated Play Console flow later
+  completed the record, listing, declarations, AAB release, and review
+  submission without weakening account permissions.
 - The Android workflow now preserves the signed AAB and store screenshots even
   when a Play upload fails, so the next provider response and release artifact
   remain available for audit.
 - A dedicated zero-cost `macos-26` GitHub Actions workflow exists for iOS and
   enforces Xcode 26 plus JobAgent-specific Apple distribution credentials.
   PeacePad credentials are not reused.
-- App Store Connect is visibly authenticated to the correct organization and
-  the UnaScout record exists as Apple ID `6802774371`; no uploaded build has
-  yet been evidenced.
-- Apple upload remains blocked by the Account Holder's outstanding Developer
-  Program License Agreement acceptance and missing App Store Connect API upload
-  credentials. The signed IPA and valid UnaScout App Store provisioning profile
-  are ready; no App Store build has been uploaded or submitted for review.
+- App Store Connect is visibly authenticated to the correct organization. The
+  UnaScout record exists as Apple ID `6802774371`; build `1.0.1 (2)` was
+  selected for iOS version `1.0`, and the version is `Waiting for Review`.
+- The Account Holder accepted the required Apple agreement. The build, listing,
+  privacy responses, reviewer access, pricing, availability, and review
+  submission are complete; only Apple's external review remains.
 - Apple Developer portal confirms team/App ID prefix `G6UNC88GQ5`, and the
   hosted Apple App Site Association response is externally verified at `200`
   for `G6UNC88GQ5.cloud.unalabs.jobagent`. The App ID registration and App Store
-  record exists as Apple ID `6802774371`; the uploaded build and review remain
-  pending final console actions.
+  record exists as Apple ID `6802774371`; the review submission is externally
+  verified and waiting on Apple.
 - Both native shells still depend on the hosted origin. The origin is now live;
   store rollout remains gated by exact-image redeployment, association identities,
   physical-device proof, publisher records, signing, and store review.
+
+## 2026-08-18 Store Submission Update
+
+- **Apple submitted:** UnaScout AI Job Search `1.0` (Apple ID `6802774371`,
+  bundle `cloud.unalabs.jobagent`) was submitted to App Review with automatic
+  release enabled. App Store Connect reports `Waiting for Review`; submission
+  ID `0083ab51-caa4-43c4-97ba-06ed1bdfeac0`. This is not yet public App Store
+  availability.
+- **Google Play submitted:** signed release `1.0.1 (2)` is attached to the
+  Production track with full rollout selected for 177 countries/regions. The
+  approved listing copy, app icon, feature graphic, and two phone screenshots
+  are saved. The advertising ID declaration truthfully records that the app does
+  not use Advertising ID. Google Play accepted all 11 changes for review and
+  now reports `Changes in review`. This is not yet public Play availability.
+- **Just Checking In:** App Store Connect still reports `1.0.0 Waiting for
+  Review`. No withdrawal or duplicate submission was made.
+- **Evidence:** redacted portal screenshots are stored under
+  `D:\FTC-HOLDING-releases\unascout\store-release-2026-08-18`.

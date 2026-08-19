@@ -172,11 +172,10 @@ workflow.
    then prove OAuth return on physical Android and iOS devices.
 5. Preserve successful CI runs `32142960353` and `32142993982` plus Android
    artifact `9326695864` as the store-candidate receipts.
-6. Create the Apple and Google app records. Configure dedicated Apple signing,
-   upload the canonical CI Play AAB, and complete the eligible Play track plus
-   TestFlight processing with external receipts.
-7. Upload the completed listing metadata and screenshots, finish store privacy,
-   age-rating, data-safety, trader, and review declarations, and submit reviews.
+6. Poll Apple and Google review state. Do not alter, withdraw, or duplicate the
+   accepted submissions unless a store returns an actionable rejection.
+7. Capture each released public URL and complete physical-device launch,
+   sign-in, deep-link, privacy, pause/export/delete, and purchase-boundary proof.
 8. Complete fresh Fejiro connector proof runs and the 14-day isolated Chukwuma
    pilot before broader invitations.
 9. Audit queue lease recovery and dead-letter operator visibility against the
@@ -202,3 +201,14 @@ workflow.
 Update `ops/CONTINUOUS_AGENT_HANDOVER.md`, run checks proportional to the change,
 commit only scoped files, push the branch, and update the active draft PR. Record
 completed, deployed, verified, paused, and blocked states separately.
+
+## Current Store Review State (2026-08-18)
+
+- UnaScout iOS `1.0`: submitted, `Waiting for Review`, automatic release on,
+  Apple submission `0083ab51-caa4-43c4-97ba-06ed1bdfeac0`.
+- UnaScout Android `1.0.1 (2)`: Production release and 177-region targeting are
+  configured; required listing artwork and copy are saved; Google accepted 11
+  changes for review and now reports `Changes in review`.
+- Just Checking In iOS `1.0.0`: `Waiting for Review`.
+- Treat store upload, review submission, approval, and public availability as
+  four separate evidence states.

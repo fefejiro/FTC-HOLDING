@@ -121,16 +121,18 @@ was present.
 - App Store Connect is visibly authenticated to the Fejiro Efiuvwere Apple
   profile for Fejiro Technology Consultancy Inc. The UnaScout record exists as
   Apple ID `6802774371`, bundle ID `cloud.unalabs.jobagent`, SKU
-  `unascout-ios-2026`, and version `1.0` in Prepare for Submission.
-- Apple screenshots, Productivity category, `4+` age rating, and store
-  metadata are staged. App Privacy responses are staged but deliberately not
-  published because Apple presents a final owner legal attestation.
+  `unascout-ios-2026`, and version `1.0` in `Waiting for Review`.
+- Apple screenshots, Productivity category, `4+` age rating, store metadata,
+  App Privacy responses, reviewer access, pricing, and availability are
+  complete and submitted.
 - Apple Developer portal is authenticated to the same organization and confirms
   App ID prefix `G6UNC88GQ5`; `/.well-known/apple-app-site-association` now
   returns `200` with `G6UNC88GQ5.cloud.unalabs.jobagent`.
-- No UnaScout uploaded iOS build, TestFlight build, App Review submission, or
-  public listing is yet evidenced.
-- No UnaScout Play Console record or uploaded AAB is yet evidenced.
+- UnaScout iOS build `1.0.1 (2)` is attached to version `1.0`; App Review
+  submission is verified, but public listing availability is not yet evidenced.
+- UnaScout Play Console record, signed AAB `1.0.1 (2)`, Production rollout,
+  listing, policy declarations, and review submission are externally verified;
+  public Play availability is not yet evidenced.
 - The hosted origin reports the exact merged commit, so the native privacy and
   Gmail-boundary hardening are part of the deployed customer image.
 
@@ -141,14 +143,13 @@ was present.
    webhook/entitlement/cancellation/refund evidence before enabling checkout.
 2. Keep the exact runtime image in place; `b3a1077b` is deployed and its
    release gates passed before promotion.
-3. Complete the Google Play record. Apple associated-domain identity and its
-   app record are externally verified; obtain the Google Play App Signing
-   fingerprint, deploy Android Digital Asset Links, and verify it live.
-4. Obtain App Store Connect API access through the account holder's legal
-   confirmation, then create upload credentials, upload the already-proven
-   signed iOS archive, and verify Apple processing.
-5. Upload the canonical CI AAB for the first Play release, complete policy
-   declarations and testing requirements, and submit the eligible track.
+3. Poll the submitted Google Play Production release until approval, obtain the
+   Play App Signing fingerprint, deploy Android Digital Asset Links, and verify
+   both the association document and public listing.
+4. Poll the submitted Apple version until approval and verify automatic release
+   plus the public App Store URL.
+5. Preserve the signed AAB, Apple submission ID, Play review receipt, metadata,
+   policy declarations, and screenshots as immutable release evidence.
 6. Complete physical iPhone and Android launch, sign-in, deep-link, privacy,
    pause/export/delete, and purchase-boundary tests.
 
@@ -158,3 +159,16 @@ This evidence claims a live backend and responsive customer proof for the exact
 deployed SHA stated above. It does not claim active customer billing, a genuine
 paid transaction, TestFlight availability, Play testing, store review, or public
 store availability.
+
+## Store Submission Receipts
+
+- UnaScout iOS `1.0` is submitted to Apple App Review and currently reports
+  `Waiting for Review`. Apple submission ID:
+  `0083ab51-caa4-43c4-97ba-06ed1bdfeac0`.
+- UnaScout Android `1.0.1 (2)` is staged for a 100% Production rollout across
+  177 countries/regions. Listing text and required artwork are saved. Google
+  Play accepted 11 changes for review and now reports `Changes in review`.
+  Public availability is not yet claimed.
+- Just Checking In `1.0.0` remains `Waiting for Review` in App Store Connect.
+- Portal screenshots are retained outside Git at
+  `D:\FTC-HOLDING-releases\unascout\store-release-2026-08-18`.
