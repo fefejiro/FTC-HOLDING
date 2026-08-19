@@ -8,7 +8,9 @@ $sourceIcon = Join-Path $Root 'store/assets/brand/unascout-master-icon.png'
 $sourcePreview = Join-Path $Root 'public/product-preview.png'
 $outputRoot = Join-Path $Root 'store/assets/google'
 $screenshotsRoot = Join-Path $outputRoot 'phone'
+$appleScreenshotsRoot = Join-Path $Root 'store/assets/apple/screenshots/en-US'
 New-Item -ItemType Directory -Force -Path $screenshotsRoot | Out-Null
+New-Item -ItemType Directory -Force -Path $appleScreenshotsRoot | Out-Null
 
 function New-Brush([string]$hex) {
     return [System.Drawing.SolidBrush]::new([System.Drawing.ColorTranslator]::FromHtml($hex))
@@ -84,8 +86,29 @@ foreach ($slide in $slides) {
     $cg.DrawString('Match  |  Tailor  |  Prepare  |  Track', [System.Drawing.Font]::new($fontFamily, 22, [System.Drawing.FontStyle]::Bold), (New-Brush '#FFFFFF'), 164, 1815)
     $cg.Dispose()
     Save-Png $canvas (Join-Path $screenshotsRoot $slide.File)
+
+    # App Store 6.9-inch portrait screenshot: 1290 x 2796.
+    $appleCanvas = [System.Drawing.Bitmap]::new(1290, 2796)
+    $ag = [System.Drawing.Graphics]::FromImage($appleCanvas)
+    $ag.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+    $ag.Clear([System.Drawing.ColorTranslator]::FromHtml('#F4F7F8'))
+    $ag.FillRectangle((New-Brush '#151A1D'), 0, 0, 1290, 34)
+    $ag.DrawImage($icon, 88, 116, 154, 154)
+    $ag.DrawString('UnaScout', [System.Drawing.Font]::new($fontFamily, 38, [System.Drawing.FontStyle]::Bold), (New-Brush '#101820'), 274, 132)
+    $ag.DrawString('by Una Labs', [System.Drawing.Font]::new($fontFamily, 21, [System.Drawing.FontStyle]::Regular), (New-Brush '#53656B'), 279, 197)
+    $ag.DrawString($slide.Eyebrow, [System.Drawing.Font]::new($fontFamily, 23, [System.Drawing.FontStyle]::Bold), (New-Brush $slide.Accent), 88, 382)
+    $ag.DrawString($slide.Title, [System.Drawing.Font]::new($fontFamily, 60, [System.Drawing.FontStyle]::Bold), (New-Brush '#101820'), [System.Drawing.RectangleF]::new(84, 458, 1122, 330))
+    $ag.DrawString($slide.Body, [System.Drawing.Font]::new($fontFamily, 29, [System.Drawing.FontStyle]::Regular), (New-Brush '#42545A'), [System.Drawing.RectangleF]::new(88, 816, 1100, 190))
+    $ag.FillRectangle((New-Brush '#FFFFFF'), 64, 1090, 1162, 1155)
+    Draw-FitImage $ag $preview ([System.Drawing.RectangleF]::new(94, 1128, 1102, 1075))
+    $ag.FillRectangle((New-Brush $slide.Accent), 64, 2245, 1162, 14)
+    $ag.FillRectangle((New-Brush '#151A1D'), 0, 2558, 1290, 238)
+    $ag.DrawString('Match  |  Tailor  |  Prepare  |  Track', [System.Drawing.Font]::new($fontFamily, 27, [System.Drawing.FontStyle]::Bold), (New-Brush '#FFFFFF'), 197, 2647)
+    $ag.Dispose()
+    $appleFile = $slide.File.Replace('-1080x1920', '-1290x2796')
+    Save-Png $appleCanvas (Join-Path $appleScreenshotsRoot $appleFile)
 }
 
 $icon.Dispose()
 $preview.Dispose()
-Write-Output "Generated Google Play marketing assets in $outputRoot"
+Write-Output "Generated Google Play and App Store marketing assets."
