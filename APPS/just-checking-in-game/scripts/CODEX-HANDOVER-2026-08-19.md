@@ -12,7 +12,9 @@ Owner account: Fejiro Play organization, developer account `9098950441049789979`
 - Privacy policy was saved as `https://unalabs.cloud/privacy/`.
 - Ads declaration was saved as **No, my app does not contain ads**.
 - Content-rating questionnaire was opened but not verified as submitted.
-- No Android bundle has been uploaded.
+- The corrected Android bundle `JustCheckingIn-icon-v2.aab` was uploaded to the
+  Production draft release in Play Console on 19 August 2026. Play identifies
+  it as version `1 (0.1.0)` and target SDK 36.
 - The app is not published on Google Play. Do not report it as published until a production track and public Play URL prove it.
 
 ## Icon correction
@@ -25,9 +27,12 @@ Owner account: Fejiro Play organization, developer account `9098950441049789979`
 - Corrected signed bundle built successfully at
   `D:\FTC-GAMES\just-checking-in-game-clean\Builds\Android\JustCheckingIn.aab`.
 - Corrected bundle SHA-256: `148205D847F9392ECAD4673E84C65E4DD55DB75DF59B41F0AC9EDDE688CE07C3`.
-- The bundle contains Android `mipmap-*/app_icon.png` assets. It has not yet
-  been uploaded to Play Console because this browser channel cannot attach a
-  local file through the Play upload picker.
+- The bundle contains Android `mipmap-*/app_icon.png` assets and the corrected
+  branded icon is present in the uploaded artifact. SHA-256 remains
+  `148205D847F9392ECAD4673E84C65E4DD55DB75DF59B41F0AC9EDDE688CE07C3`.
+- The Play draft currently remains blocked from review by incomplete app setup
+  and store listing assets. No review submission or public publication has
+  occurred.
 
 ## Android build work
 
@@ -69,11 +74,14 @@ Get-FileHash 'D:\FTC-GAMES\just-checking-in-game-clean\Builds\Android\JustChecki
 
 ## Next Play Console steps
 
-1. Reconnect the authenticated Chrome Play Console session. The previous browser-control channel dropped even though the owner could still see the Play tabs.
+1. Reconnect the authenticated Chrome Play Console session and continue the
+   existing Production draft release.
 2. Finish the JCI content-rating questionnaire as a **Game**, using the owner mailbox `fejiro.efiuvwere@gmail.com` and truthful answers from `GAME-BRIEF.md` and `SECURITY-PRIVACY.md`.
 3. Complete target audience, data safety, category/contact, and store listing. JCI documentation says there are no microphone, camera, location, contact, recording, or transcription permissions; spoken answers are not recorded and remote state is compact metadata only.
 4. Upload the verified AAB to the first available release track, preferably Production if Play permits it. If Play requires testing, record the exact policy gate and use the required track.
-5. Submit the release for review only after all mandatory declarations and listing assets are complete.
+5. Add the required store listing icon, feature graphic and 2-8 phone
+   screenshots, then submit the release for review only after all mandatory
+   declarations and listing assets are complete.
 6. Verify public availability from the Play listing and release status. A console upload or review submission is not publication.
 
 ## Important separate issue
