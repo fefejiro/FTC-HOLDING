@@ -193,7 +193,8 @@ require their own proof.
   the production database. The same current credentials were saved in the
   Play Console declaration, with email verification and no two-step, payment,
   location, or external-connector gate required for review.
-- The corrected access declaration is saved and is waiting in **Publishing
-  overview** to be sent back to Google for review. Do not claim approval or
-  public availability until Play Console reports an accepted release and the
-  public listing resolves.
+- The corrected access declaration was saved and the pending production
+  changes were resubmitted from **Publishing overview** on 2026-08-19. Play
+  Console now reports **Changes in review**. Do not claim approval or public
+  availability until Play Console reports an accepted release and the public
+  listing resolves.
