@@ -15,6 +15,20 @@ Owner account: Fejiro Play organization, developer account `9098950441049789979`
 - No Android bundle has been uploaded.
 - The app is not published on Google Play. Do not report it as published until a production track and public Play URL prove it.
 
+## Icon correction
+
+- The Unity project had empty Android and iOS icon slots, which caused the
+  missing/default app icon reported during release preparation.
+- A branded Just Checking In icon was added at
+  `Assets/_Game/Art/jci-icon.png` and the editor build script now applies it
+  to Android and iOS player settings before every build.
+- Corrected signed bundle built successfully at
+  `D:\FTC-GAMES\just-checking-in-game-clean\Builds\Android\JustCheckingIn.aab`.
+- Corrected bundle SHA-256: `148205D847F9392ECAD4673E84C65E4DD55DB75DF59B41F0AC9EDDE688CE07C3`.
+- The bundle contains Android `mipmap-*/app_icon.png` assets. It has not yet
+  been uploaded to Play Console because this browser channel cannot attach a
+  local file through the Play upload picker.
+
 ## Android build work
 
 The source Unity project used for this release is outside the Git checkout:
@@ -69,4 +83,3 @@ The screenshot showing **App rejected** is for **UnaScout AI Job Search**, not J
 ## Source and repository note
 
 `C:\FTC HOLDING\APPS\just-checking-in-game` contains the operational scripts but is not itself a Git repository. This handover is committed from the FTC root repository under `APPS/just-checking-in-game/scripts`. The Unity project and external release artifacts remain outside the repository and must be moved into the proper versioned game checkout before the next repeatable release.
-
