@@ -33,6 +33,12 @@ Owner account: Fejiro Play organization, developer account `9098950441049789979`
 - The Play draft currently remains blocked from review by incomplete app setup
   and store listing assets. No review submission or public publication has
   occurred.
+- Play setup progress is now 5 of 11 complete: Government apps, Financial
+  features, Health, Casual game category and listing contact email are saved.
+- Store listing copy is saved as a draft. Required listing media still missing:
+  the 512 px app icon upload, a 1,024 x 500 feature graphic and 2-8 genuine
+  phone screenshots. Do not fabricate screenshots or claim the listing is
+  ready until these are supplied.
 
 ## Android build work
 
