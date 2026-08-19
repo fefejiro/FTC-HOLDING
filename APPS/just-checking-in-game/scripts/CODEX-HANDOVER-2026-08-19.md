@@ -40,6 +40,19 @@ Owner account: Fejiro Play organization, developer account `9098950441049789979`
   phone screenshots. Do not fabricate screenshots or claim the listing is
   ready until these are supplied.
 
+## Generated icon refresh
+
+- A new generated icon was created for the store and copied to
+  `Assets/_Game/Art/jci-icon-generated.png`.
+- Icon SHA-256: `06320F8C45A1B258FAFE125C559F3AD5F592656D8B8D9ACACF0A4338663E4E82`.
+- The Unity build script now uses the generated icon and the signed rebuild
+  completed successfully.
+- Generated-icon AAB SHA-256:
+  `926699B8F0F80D833578940CA2FCCF3DA2D4AAD025609154FE2B0A0DBD6FFC78`.
+- The Play upload picker cannot be populated by this browser channel. The
+  bundle is ready at `C:\Users\mikef\Downloads\JustCheckingIn-generated-icon.aab`
+  for manual selection in the open Play Console picker.
+
 ## Android build work
 
 The source Unity project used for this release is outside the Git checkout:
