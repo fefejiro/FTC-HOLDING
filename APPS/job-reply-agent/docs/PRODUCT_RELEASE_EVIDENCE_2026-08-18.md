@@ -172,3 +172,7 @@ store availability.
 - Just Checking In `1.0.0` remains `Waiting for Review` in App Store Connect.
 - Portal screenshots are retained outside Git at
   `D:\FTC-HOLDING-releases\unascout\store-release-2026-08-18`.
+- Read-only scheduled task `UnaScout-Store-Review-Watch` checks public release
+  availability every 30 minutes and writes `store-status.json` plus
+  `store-status-history.jsonl` in that directory. Its first scheduled execution
+  completed with result `0`; all three public listings were still unavailable.

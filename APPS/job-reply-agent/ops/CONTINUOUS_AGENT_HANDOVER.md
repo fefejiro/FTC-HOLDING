@@ -260,5 +260,9 @@ states distinct.
   177-region full rollout are saved in the Production track. Google Play
   accepted 11 changes for review and reports `Changes in review`.
 - Just Checking In: `1.0.0 Waiting for Review` remains unchanged.
+- Scheduled task `UnaScout-Store-Review-Watch` probes the two UnaScout public
+  URLs and the Just Checking In App Store URL every 30 minutes. It is read-only,
+  writes `store-status.json` plus a JSONL history under the evidence directory,
+  and its verified task result is `0`.
 - Do not call either app publicly available until its public store URL resolves
   and the store reports a released/available state.

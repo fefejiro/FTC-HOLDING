@@ -210,5 +210,8 @@ completed, deployed, verified, paused, and blocked states separately.
   configured; required listing artwork and copy are saved; Google accepted 11
   changes for review and now reports `Changes in review`.
 - Just Checking In iOS `1.0.0`: `Waiting for Review`.
+- `UnaScout-Store-Review-Watch` checks the public Apple/Google URLs every 30
+  minutes and records status under
+  `D:\FTC-HOLDING-releases\unascout\store-release-2026-08-18`.
 - Treat store upload, review submission, approval, and public availability as
   four separate evidence states.
