@@ -4,13 +4,13 @@
 
 ## Snapshot
 
-- Snapshot date: 2026-08-13
+- Snapshot date: 2026-08-18
 - Branch: `feat/peacepad-v2-supabase-free-staging`
 - Verified implementation baseline: `12f557c897bc14b1ce151c6f8f6136c44f72d691`
 - Ledger evidence applies only to the exact commit listed in each row
 - Lab default app version: `0.0.1`
 - Guarded internal TestFlight candidate: `2.0.0` (`3`) is Apple-processed `VALID` and assigned to the existing 2-person `PeacePad Internal` group
-- Public App Store version: `2.0.0` is `PREPARE_FOR_SUBMISSION` under manual release control; no build is attached
+- Public App Store version: `2.0.0` build `4` is `WAITING_FOR_REVIEW` with automatic release after approval
 - Guarded Android store candidate: `2.0.0` (`42`) is active on Google Play Internal Testing for the existing 8-person `Test List`; public Production is unchanged
 - Staging/lab bundle: `ca.peacepad.nextnative.lab`
 - Future production bundle: `ca.peacepad.family`
@@ -22,6 +22,21 @@ scenario, environment/device, timestamp, result, and artifact. Older evidence
 is historical and cannot independently pass a release gate.
 
 ## Release verdict
+
+### App Store review submission -- 2026-08-18
+
+App Store Connect accepted PeacePad `2.0.0` build `4` into App Review and now
+reports `WAITING_FOR_REVIEW`. The submitted review ID is
+`32c20f0e-60b8-4865-bdbd-29cf6b718fdf`; automatic release after approval and
+immediate availability to all users are selected. The exact uploaded artifact
+was produced by GitHub Actions run `31751117107` at control SHA
+`88f83002d25225f3f231fbb3b3331b1ebf172cfe` from target SHA
+`82b9075fbca36fe4e1c41e4d695a0e6a4b181dba`. Its evidence manifest records
+successful build and App Store Connect upload for bundle `ca.peacepad.family`,
+the Canada production runtime, and production writes enabled.
+
+This proves submission, not Apple approval or public App Store availability.
+The public release remains pending App Review.
 
 ### Canada production runtime update — 2026-08-13
 
