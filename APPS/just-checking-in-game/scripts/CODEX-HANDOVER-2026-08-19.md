@@ -49,6 +49,12 @@ Owner account: Fejiro Play organization, developer account `9098950441049789979`
   completed successfully.
 - Generated-icon AAB SHA-256:
   `926699B8F0F80D833578940CA2FCCF3DA2D4AAD025609154FE2B0A0DBD6FFC78`.
+
+### Version-code rebuild
+
+- Google Play production already contains version code `1`, so the generated-icon build was incremented to version code `2` (`0.2.0`) before upload.
+- Rebuilt signed AAB: `C:\Users\mikef\Downloads\JustCheckingIn-generated-icon-v2.aab`.
+- Version-code-2 AAB SHA-256: `0272C6A1B9FBB4267AB8736FDBF4F6B6A09DB7F7E4689E321E81679879589129`.
 - The Play upload picker cannot be populated by this browser channel. The
   bundle is ready at `C:\Users\mikef\Downloads\JustCheckingIn-generated-icon.aab`
   for manual selection in the open Play Console picker.
