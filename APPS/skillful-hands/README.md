@@ -60,6 +60,14 @@ The final visual polish removes the decorative community ribbon, gives each
 programme detail a wider image-and-copy layout, and keeps the footer logo clear
 on both desktop and mobile. These are presentation choices, not content claims.
 
+## Project handover
+
+The current production state, content-maintenance guidance, billing handover
+and remaining owner decisions are recorded in
+[HANDOVER-2026-08-20.md](./HANDOVER-2026-08-20.md). The Stripe invoice record
+is kept separately under `docs/billing` because it is operational rather than
+public website content.
+
 ## Reusing this foundation
 
 This app is intentionally a reusable foundation for small, high-quality static

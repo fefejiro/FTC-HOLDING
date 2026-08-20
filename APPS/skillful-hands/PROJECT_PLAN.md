@@ -241,3 +241,12 @@ Cloudflare Pages project. It removed the community ribbon, widened programme
 image-and-copy cards, enlarged the footer logo, and preserved the static
 homepage pathways. Production verification completed 20/20 checks after the
 deployment.
+
+## Operational close-out
+
+The delivery handover is recorded in `HANDOVER-2026-08-20.md`. Una Labs Stripe
+invoice `D9Z0S4PG-0001` was sent on 20 August 2026 for CAD 3,600.00, after the
+CAD 100.00 deposit reported for 14 August 2026, and is due 3 September 2026.
+Its operational record lives in `docs/billing/`; it is deliberately separate
+from public site content. Any reminder configuration must be invoice-specific
+or explicitly approved as an account-wide Stripe policy.
