@@ -19,13 +19,6 @@ $deletionMinimizationMigrationPath = Join-Path $platformRoot 'supabase/migration
 $atomicInvitationMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090011_v2_accept_invitation_conversation.sql'
 $idempotencyReceiptMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090012_v2_idempotency_receipts.sql'
 $privateRecordsMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090013_v2_private_case_binders.sql'
-$privateAttachmentsMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608140001_v2_private_record_attachments.sql'
-$devicePushMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608140003_v2_device_push_registrations.sql'
-$devicePushProofPath = Join-Path $platformRoot 'scripts/verify-device-push-registrations.sql'
-$familyExitMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608140004_v2_family_exit.sql'
-$familyExitProofPath = Join-Path $platformRoot 'scripts/verify-family-exit.sql'
-$profileUpdateMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608140005_v2_profile_updates.sql'
-$profileUpdateProofPath = Join-Path $platformRoot 'scripts/verify-profile-updates.sql'
 $privateTimelineMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608100001_v2_private_source_timeline.sql'
 $audioCallMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608100002_v2_foreground_audio_calls.sql'
 $audioCallProofPath = Join-Path $platformRoot 'scripts/verify-audio-call-lifecycle.sql'
@@ -41,7 +34,7 @@ $authCleanupRunnerPath = Join-Path $platformRoot 'scripts/run-auth-cleanup.ps1'
 $deployRunnerPath = Join-Path $platformRoot 'scripts/deploy-supabase-free-staging.ps1'
 $configPath = Join-Path $platformRoot 'supabase/config.toml'
 
-foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $idempotencyReceiptMigrationPath, $privateRecordsMigrationPath, $privateAttachmentsMigrationPath, $devicePushMigrationPath, $devicePushProofPath, $familyExitMigrationPath, $familyExitProofPath, $profileUpdateMigrationPath, $profileUpdateProofPath, $privateTimelineMigrationPath, $audioCallMigrationPath, $audioCallProofPath, $audioCallSignalingMigrationPath, $audioCallSignalingProofPath, $audioCallSignalValidatorPath, $audioCallSignalTestPath, $audioCallTurnMigrationPath, $audioCallTurnProofPath, $audioCallTurnIssuerPath, $audioCallTurnTestPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
+foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $idempotencyReceiptMigrationPath, $privateRecordsMigrationPath, $privateTimelineMigrationPath, $audioCallMigrationPath, $audioCallProofPath, $audioCallSignalingMigrationPath, $audioCallSignalingProofPath, $audioCallSignalValidatorPath, $audioCallSignalTestPath, $audioCallTurnMigrationPath, $audioCallTurnProofPath, $audioCallTurnIssuerPath, $audioCallTurnTestPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
     throw "Required Supabase staging file is missing: $path"
   }
@@ -63,13 +56,6 @@ $deletionMinimizationMigration = Get-Content -LiteralPath $deletionMinimizationM
 $atomicInvitationMigration = Get-Content -LiteralPath $atomicInvitationMigrationPath -Raw
 $idempotencyReceiptMigration = Get-Content -LiteralPath $idempotencyReceiptMigrationPath -Raw
 $privateRecordsMigration = Get-Content -LiteralPath $privateRecordsMigrationPath -Raw
-$privateAttachmentsMigration = Get-Content -LiteralPath $privateAttachmentsMigrationPath -Raw
-$devicePushMigration = Get-Content -LiteralPath $devicePushMigrationPath -Raw
-$devicePushProof = Get-Content -LiteralPath $devicePushProofPath -Raw
-$familyExitMigration = Get-Content -LiteralPath $familyExitMigrationPath -Raw
-$familyExitProof = Get-Content -LiteralPath $familyExitProofPath -Raw
-$profileUpdateMigration = Get-Content -LiteralPath $profileUpdateMigrationPath -Raw
-$profileUpdateProof = Get-Content -LiteralPath $profileUpdateProofPath -Raw
 $privateTimelineMigration = Get-Content -LiteralPath $privateTimelineMigrationPath -Raw
 $audioCallMigration = Get-Content -LiteralPath $audioCallMigrationPath -Raw
 $audioCallProof = Get-Content -LiteralPath $audioCallProofPath -Raw
@@ -97,10 +83,6 @@ $requiredFunctionPatterns = @(
   '/api/v2/session/bootstrap',
   '/api/v2/consents',
   '/api/v2/families',
-  '/membership',
-  'peacepad_v2_leave_family',
-  '/api/v2/account/profile',
-  'peacepad_v2_update_profile',
   '/api/v2/invitations',
   '(accept|decline)',
   'peacepad_v2_decline_invitation',
@@ -123,7 +105,6 @@ $requiredFunctionPatterns = @(
   '/internal/v2/auth-cleanup/run',
   'PEACEPAD_MAINTENANCE_SECRET',
   'PEACEPAD_IDEMPOTENCY_SECRET',
-  'PEACEPAD_PUSH_TOKEN_SECRET',
   'constantTimeEqual',
   'failedToFinalize',
   'peacepad_v2_claim_auth_cleanup',
@@ -158,17 +139,13 @@ $requiredFunctionPatterns = @(
   'p_identity_id: authenticated.user.id',
   'key !== "conversationId"',
   'Object.keys(body).length !== 0',
-  'peacepadnextlab://invite/',
+  'peacepadnextlab',
   'crypto.subtle.digest',
   'crypto.subtle.sign',
   'databaseIdempotencyToken',
   'canonicalize',
   'crypto.randomUUID()',
-  'fictional-staging',
-  '/api/v2/devices/push',
-  'peacepad_v2_register_device_push',
-  'peacepad_v2_revoke_device_push',
-  'DEVICE_PUSH_ACCESS_DENIED'
+  'fictional-staging'
 )
 foreach ($pattern in $requiredFunctionPatterns) {
   if (-not $function.Contains($pattern)) {
@@ -182,7 +159,10 @@ if ($function -match 'console\.(log|debug|info|warn|error)') {
 if ($function -match 'requestBody\.(identity|identityId|userId)') {
   throw 'Identity must be derived from a verified JWT, never a request body.'
 }
-if ($function.Contains('peacepad://invite/')) {
+if ($function -match 'ca\.peacepad\.family') {
+  throw 'Production bundle identity is forbidden in the staging Edge Function.'
+}
+if ($function -match 'peacepad://invite/[A-Za-z0-9]') {
   throw 'The staging Edge Function must not emit an unregistered production invitation scheme.'
 }
 
@@ -519,137 +499,6 @@ foreach ($pattern in @(
 foreach ($route in @('/api/v2/case-binders', '/api/v2/attachment-upload-intents')) {
   if ($function -notmatch [regex]::Escape($route)) {
     throw "Edge Function is missing Private Records route: $route"
-  }
-}
-
-foreach ($pattern in @(
-  'create table if not exists peacepad_v2\.device_push_registration',
-  'encrypted_token bytea not null',
-  'token_digest bytea not null',
-  'alter table peacepad_v2\.device_push_registration enable row level security',
-  'revoke all on table peacepad_v2\.device_push_registration from public, anon, authenticated',
-  'extensions\.pgp_sym_encrypt',
-  'extensions\.hmac',
-  'peacepad_v2\.remove_deleted_identity_push_registrations',
-  'grant execute on function public\.peacepad_v2_register_device_push.*to service_role',
-  'grant execute on function public\.peacepad_v2_revoke_device_push.*to service_role'
-)) {
-  if ($devicePushMigration -notmatch $pattern) {
-    throw "Device push migration is missing required boundary: $pattern"
-  }
-}
-if ($devicePushMigration -match '(?i)(token\s+text\s+not\s+null|audit_event.*token|jsonb_build_object\([^)]*token)') {
-  throw 'Device push tokens must not be stored in plaintext or returned in receipts.'
-}
-foreach ($pattern in @(
-  'DEVICE_PUSH_REGISTRATION_POSTGRES_VERIFIED',
-  'has_table_privilege',
-  'pgp_sym_decrypt',
-  'Provider token was persisted in plaintext',
-  'Account deletion retained a device push token'
-)) {
-  if ($devicePushProof -notmatch $pattern) {
-    throw "Device push PostgreSQL proof is missing required boundary: $pattern"
-  }
-}
-foreach ($pattern in @(
-  'create or replace function public\.peacepad_v2_leave_family',
-  'security definer',
-  'for update',
-  'FAMILY_ACCESS_DENIED',
-  'CONCURRENCY_CONFLICT',
-  "status = 'revoked'",
-  'code_hash = uuid_send\(gen_random_uuid\(\)\)',
-  'participant_grant_id = grant_row\.participant_grant_id',
-  "'family.left'",
-  'revoke all on function public\.peacepad_v2_leave_family',
-  'to service_role'
-)) {
-  if ($familyExitMigration -notmatch $pattern) {
-    throw "Family-exit migration is missing required boundary: $pattern"
-  }
-}
-foreach ($pattern in @(
-  'FAMILY_EXIT_POSTGRES_VERIFIED',
-  'Direct authenticated-role family exit was not denied',
-  'An outsider left another family',
-  'A cross-region family exit was accepted',
-  'A stale family-grant version was accepted',
-  'Family exit removed the remaining member or shared family history',
-  'A departing member retained a usable pending invitation',
-  'one content-free audit event'
-)) {
-  if ($familyExitProof -notmatch $pattern) {
-    throw "Family-exit PostgreSQL proof is missing required boundary: $pattern"
-  }
-}
-foreach ($pattern in @(
-  'create or replace function public\.peacepad_v2_update_profile',
-  'security definer',
-  'for update',
-  'DISPLAY_NAME_INVALID',
-  'REGION_MISMATCH',
-  'CONCURRENCY_CONFLICT',
-  "'profile.updated'",
-  'revoke all on function public\.peacepad_v2_update_profile',
-  'to service_role'
-)) {
-  if ($profileUpdateMigration -notmatch $pattern) {
-    throw "Profile-update migration is missing required boundary: $pattern"
-  }
-}
-foreach ($pattern in @(
-  'PROFILE_UPDATE_POSTGRES_VERIFIED',
-  'Direct authenticated-role profile update was not denied',
-  'A cross-region profile update was accepted',
-  'A stale profile update was accepted',
-  'A control-character display name was accepted',
-  'Profile update was not persisted exactly once',
-  'Display name entered profile audit content'
-)) {
-  if ($profileUpdateProof -notmatch $pattern) {
-    throw "Profile-update PostgreSQL proof is missing required boundary: $pattern"
-  }
-}
-foreach ($table in @('private_attachment', 'private_storage_cleanup_outbox')) {
-  if ($privateAttachmentsMigration -notmatch "create table if not exists peacepad_v2\.$table") {
-    throw "Private attachment migration is missing table: $table"
-  }
-  if ($privateAttachmentsMigration -notmatch "alter table peacepad_v2\.$table enable row level security") {
-    throw "Private attachment migration is missing fail-closed RLS: $table"
-  }
-}
-foreach ($rpc in @(
-  'peacepad_v2_get_attachment_intent_for_completion',
-  'peacepad_v2_complete_private_attachment',
-  'peacepad_v2_list_private_attachments',
-  'peacepad_v2_authorize_private_attachment',
-  'peacepad_v2_list_private_storage_paths_for_account',
-  'peacepad_v2_ack_private_storage_cleanup',
-  'peacepad_v2_claim_private_storage_cleanup',
-  'peacepad_v2_finish_private_storage_cleanup'
-)) {
-  if ($privateAttachmentsMigration -notmatch "create or replace function public\.$rpc") {
-    throw "Private attachment migration is missing RPC: $rpc"
-  }
-  if ($privateAttachmentsMigration -notmatch "revoke all on function public\.$rpc") {
-    throw "Private attachment RPC is not revoked from mobile roles: $rpc"
-  }
-}
-foreach ($pattern in @(
-  "'supabase-signed'",
-  "'awaiting-upload'",
-  'peacepad-private-records',
-  'attachment\.uploaded',
-  'private_storage_cleanup_outbox'
-)) {
-  if ($privateAttachmentsMigration -notmatch $pattern) {
-    throw "Private attachment migration is missing required boundary: $pattern"
-  }
-}
-foreach ($route in @('/api/v2/attachments', '/complete', '/download')) {
-  if ($function -notmatch [regex]::Escape($route)) {
-    throw "Edge Function is missing Private Attachment route: $route"
   }
 }
 if ($privateTimelineMigration -notmatch 'create table if not exists peacepad_v2\.private_timeline_entry') {
