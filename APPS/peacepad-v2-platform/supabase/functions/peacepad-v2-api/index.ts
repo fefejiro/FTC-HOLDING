@@ -20,6 +20,9 @@ type RuntimeConfig = Readonly<{
   productionWritesEnabled: boolean;
 }>;
 
+const authRequiredMessage = (config: RuntimeConfig): string =>
+  config.environment === "production" ? "A valid PeacePad session is required." : "A valid fictional staging session is required.";
+
 type ErrorCode =
   | "AI_CONSENT_REQUIRED"
   | "AUTH_REQUIRED"
@@ -513,7 +516,7 @@ const handler = async (request: Request): Promise<Response> => {
   if (request.method === "GET" && path === "/api/v2/session") {
     const authenticated = await authenticate(request, config);
     if (!authenticated) {
-      return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
+      return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
     }
     const { data: bindings, error } = await authenticated.admin.rpc("peacepad_v2_get_session_binding", {
       p_identity_id: authenticated.user.id,
@@ -530,7 +533,7 @@ const handler = async (request: Request): Promise<Response> => {
     }
     const sessionId = verifiedSessionId(request);
     if (!sessionId) {
-      return failure(request, 401, "AUTH_REQUIRED", "The verified staging session is missing required context.", requestId, config);
+      return failure(request, 401, "AUTH_REQUIRED", config.environment === "production" ? "The verified PeacePad session is missing required context." : "The verified staging session is missing required context.", requestId, config);
     }
     const { data: memberships, error: membershipError } = await authenticated.admin.rpc("peacepad_v2_list_active_memberships", {
       p_identity_id: authenticated.user.id,
@@ -554,7 +557,7 @@ const handler = async (request: Request): Promise<Response> => {
 
   if (request.method === "POST" && path === "/api/v2/invitations/resolve") {
     const authenticated = await authenticate(request, config);
-    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
     const body = await readJsonObject(request);
     const code = typeof body?.code === "string" ? body.code.replace(/\s+/g, "").toUpperCase() : "";
     if (!/^[A-Z0-9]{6}$/.test(code)) return failure(request, 400, "INVITATION_INVALID", "Enter a valid invitation code.", requestId, config);
@@ -579,7 +582,7 @@ const handler = async (request: Request): Promise<Response> => {
   const conversationMessageCheckMatch = path.match(/^\/api\/v2\/conversations\/([^/]+)\/message-check$/);
   if (request.method === "GET" && conversationMessageCheckMatch) {
     const authenticated = await authenticate(request, config);
-    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
     const conversationId = decodeURIComponent(conversationMessageCheckMatch[1]);
     if (!isUuid(conversationId)) return failure(request, 400, "INVALID_REQUEST", "A valid conversation is required.", requestId, config);
     const { data, error } = await authenticated.admin.rpc("peacepad_v2_get_message_check", {
@@ -592,7 +595,7 @@ const handler = async (request: Request): Promise<Response> => {
 
   if (request.method === "POST" && path === "/api/v2/message-previews") {
     const authenticated = await authenticate(request, config);
-    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
     const body = await readJsonObject(request);
     const conversationId = typeof body?.conversationId === "string" ? body.conversationId : "";
     const content = typeof body?.content === "string" ? body.content : "";
@@ -619,7 +622,7 @@ const handler = async (request: Request): Promise<Response> => {
     (request.method === "POST" && conversationSearchMatch)
   ) {
     const authenticated = await authenticate(request, config);
-    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
     if (request.method === "GET" && path === "/api/v2/conversations") {
       const familyId = new URL(request.url).searchParams.get("familyCircleId")?.trim() ?? "";
       if (!isUuid(familyId)) return failure(request, 400, "INVALID_REQUEST", "A valid family is required.", requestId, config);
@@ -658,7 +661,7 @@ const handler = async (request: Request): Promise<Response> => {
 
   if (request.method === "GET" && ["/api/v2/calendar-layers", "/api/v2/schedule-events"].includes(path)) {
     const authenticated = await authenticate(request, config);
-    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
     const familyId = new URL(request.url).searchParams.get("familyCircleId")?.trim() ?? "";
     if (!isUuid(familyId)) return failure(request, 400, "INVALID_REQUEST", "A valid family is required.", requestId, config);
     const rpcName = path === "/api/v2/calendar-layers"
@@ -674,7 +677,7 @@ const handler = async (request: Request): Promise<Response> => {
 
   if (request.method === "GET" && path === "/api/v2/case-binders") {
     const authenticated = await authenticate(request, config);
-    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
     const familyId = new URL(request.url).searchParams.get("familyCircleId")?.trim() ?? "";
     if (!isUuid(familyId)) return failure(request, 400, "INVALID_REQUEST", "A valid family is required.", requestId, config);
     const { data, error } = await authenticated.admin.rpc("peacepad_v2_list_case_binders", {
@@ -687,7 +690,7 @@ const handler = async (request: Request): Promise<Response> => {
 
   if (request.method === "GET" && path === "/api/v2/timeline-entries") {
     const authenticated = await authenticate(request, config);
-    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
     const query = new URL(request.url).searchParams;
     const binderId = query.get("caseBinderId")?.trim() ?? "";
     const before = query.get("before")?.trim() || null;
@@ -708,7 +711,7 @@ const handler = async (request: Request): Promise<Response> => {
 
   if (request.method === "GET" && path === "/api/v2/calls/current") {
     const authenticated = await authenticate(request, config);
-    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
     const conversationId = new URL(request.url).searchParams.get("conversationId")?.trim() ?? "";
     if (!isUuid(conversationId)) return failure(request, 400, "INVALID_REQUEST", "A valid conversation is required.", requestId, config);
     const { data, error } = await authenticated.admin.rpc("peacepad_v2_get_current_audio_call", {
@@ -722,7 +725,7 @@ const handler = async (request: Request): Promise<Response> => {
   const audioCallTurnMatch = path.match(/^\/api\/v2\/calls\/([^/]+)\/turn-credentials$/);
   if (request.method === "GET" && audioCallTurnMatch) {
     const authenticated = await authenticate(request, config);
-    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
     const callId = audioCallTurnMatch[1];
     const expectedVersionHeader = (request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? "";
     const expectedVersion = Number(expectedVersionHeader);
@@ -772,7 +775,7 @@ const handler = async (request: Request): Promise<Response> => {
   const audioCallSignalMatch = path.match(/^\/api\/v2\/calls\/([^/]+)\/signals$/);
   if (request.method === "POST" && audioCallSignalMatch) {
     const authenticated = await authenticate(request, config);
-    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
     const callId = audioCallSignalMatch[1];
     const expectedVersionHeader = (request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? "";
     const expectedVersion = Number(expectedVersionHeader);
@@ -881,7 +884,7 @@ const handler = async (request: Request): Promise<Response> => {
   ) {
     const authenticated = await authenticate(request, config);
     if (!authenticated) {
-      return failure(request, 401, "AUTH_REQUIRED", "A valid fictional staging session is required.", requestId, config);
+      return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
     }
     const context = writeHeaders(request, config, requestId);
     if (!context.ok) return context.error;
@@ -1355,7 +1358,7 @@ const handler = async (request: Request): Promise<Response> => {
         },
       },
       code,
-      deepLink: `peacepadnextlab://invite/${code}`,
+      deepLink: `${config.environment === "production" ? "peacepad" : "peacepadnextlab"}://invite/${code}`,
     }, requestId, config);
   }
 

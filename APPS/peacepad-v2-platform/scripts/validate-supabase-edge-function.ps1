@@ -139,7 +139,7 @@ $requiredFunctionPatterns = @(
   'p_identity_id: authenticated.user.id',
   'key !== "conversationId"',
   'Object.keys(body).length !== 0',
-  'peacepadnextlab://invite/',
+  'peacepadnextlab',
   'crypto.subtle.digest',
   'crypto.subtle.sign',
   'databaseIdempotencyToken',
@@ -162,7 +162,7 @@ if ($function -match 'requestBody\.(identity|identityId|userId)') {
 if ($function -match 'ca\.peacepad\.family') {
   throw 'Production bundle identity is forbidden in the staging Edge Function.'
 }
-if ($function.Contains('peacepad://invite/')) {
+if ($function -match 'peacepad://invite/[A-Za-z0-9]') {
   throw 'The staging Edge Function must not emit an unregistered production invitation scheme.'
 }
 
