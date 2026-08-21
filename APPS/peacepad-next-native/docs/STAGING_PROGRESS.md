@@ -8,6 +8,18 @@ Branch: `agent/peacepad-native-staging-clean`
 Draft PR: [#172](https://github.com/fefejiro/FTC-HOLDING/pull/172)  
 Latest staging branch commit: `eb329c27`
 
+## Current customer-workflow handover — 2026-08-20
+
+Candidate `402b19ed6` is the latest hosted-verified code checkpoint. The
+public onboarding/auth experience is implemented in
+`src/auth/PublicOnboardingAuth.tsx` with three first-run slides, Apple sign-in,
+email account creation/verification, sign-in, password reset, and recovery.
+The adjacent API fix emits `peacepad://` invitation links in production while
+retaining `peacepadnextlab://` for staging. Native run `32439903555` and
+Infrastructure run `32439903562` passed. Store publication, V1 data migration,
+physical-device sign-in/call testing, and public production cutover remain
+separate gates and are not implied by this checkpoint.
+
 Current successor: `feat/peacepad-v2-supabase-free-staging`, draft PR
 [#177](https://github.com/fefejiro/FTC-HOLDING/pull/177). The authoritative
 current state is maintained in [STATUS.md](STATUS.md); the rows below retain the

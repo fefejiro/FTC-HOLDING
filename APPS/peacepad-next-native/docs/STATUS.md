@@ -21,6 +21,20 @@ is historical and cannot independently pass a release gate.
 
 ## Release verdict
 
+### Customer workflow correction — 2026-08-20
+
+Candidate `402b19ed6` is hosted-verified by Native run
+[`32439903555`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/32439903555)
+and Infrastructure run
+[`32439903562`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/32439903562).
+The production auth surface now has the public onboarding/auth component with
+three concise intro slides, separate create/sign-in actions, Apple sign-in,
+email verification, password reset, and recovery handling. The API now emits
+the production `peacepad://` invitation scheme and production-safe auth error
+copy; staging keeps its `peacepadnextlab://` boundary. This is a code and
+hosted-gate update only: it does not claim a new iOS binary, App Review, Play
+Production rollout, migration of V1 accounts, or public V2 cutover.
+
 ### Canada production runtime update — 2026-08-13
 
 Exact source `82b9075fb` now contains the guarded App Store production runtime
