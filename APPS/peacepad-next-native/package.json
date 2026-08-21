@@ -94,6 +94,9 @@
     ]
   },
   "expo": {
+    "install": {
+      "exclude": ["expo", "jest-expo"]
+    },
     "doctor": {
       "reactNativeDirectoryCheck": {
         "enabled": true,
