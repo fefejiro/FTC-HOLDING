@@ -67,6 +67,36 @@ export function CaseStudyPage({ study }: { study: CaseStudyContent }) {
               </div>
             ))}
           </div>
+
+          {study.platforms && study.platforms.length > 0 ? (
+            <div className="mt-6 rounded-[24px] border border-border bg-bg-subtle p-6">
+              <div className="flex flex-wrap items-baseline justify-between gap-3">
+                <div>
+                  <Badge variant="muted">Platform and release track</Badge>
+                  <h2 className="mt-3 text-h4 text-tx-heading">Where this product stands</h2>
+                </div>
+                <p className="text-caption text-tx-muted">Store availability is kept separate from portfolio proof.</p>
+              </div>
+              <div className="mt-5 grid gap-4 md:grid-cols-3">
+                {study.platforms.map((platform) => (
+                  <div key={platform.platform} className="rounded-2xl border border-border bg-white p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-body font-semibold text-tx-heading">{platform.platform}</p>
+                      <span className="rounded-full bg-brand-teal-light px-2.5 py-1 text-caption font-semibold text-brand-teal">
+                        {platform.status}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-body-sm leading-relaxed text-tx-secondary">{platform.detail}</p>
+                    {platform.href ? (
+                      <a className="mt-3 inline-block text-body-sm font-semibold text-brand-teal hover:underline" href={platform.href} target="_blank" rel="noreferrer">
+                        Open surface →
+                      </a>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
       </section>
 

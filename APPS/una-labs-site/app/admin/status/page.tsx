@@ -159,7 +159,7 @@ export default function AdminStatusPage() {
               <Badge variant="teal">Portfolio Status</Badge>
               <h1 className="mt-5 text-4xl font-bold tracking-tight text-slate-900">Project Delivery Control Tower</h1>
               <p className="mt-4 text-lg text-slate-600 max-w-3xl leading-relaxed">
-                One operating board for Una Labs, SayWetin, PeacePad, Dispatch, and ATEAM. This page refreshes every 60 seconds with live endpoint probes and project delivery telemetry.
+                One operating board for Una Labs, SayWetin, PeacePad, Just Checking In Game, UnaScout, Dispatch, and ATEAM. This page refreshes every 60 seconds with live endpoint probes and project delivery telemetry.
               </p>
               <p className="mt-3 text-sm text-slate-500 font-medium">
                 {selectedProject ? `Viewing: ${selectedProject.name} · Last refreshed: ${formatDate(selectedProject.generatedAt)}` : 'Loading portfolio status...'}
