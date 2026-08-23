@@ -114,6 +114,71 @@ export interface PlatformStatus {
   href?: string;
 }
 
+export interface ShippedProduct {
+  slug: string;
+  name: string;
+  icon: string;
+  description: string;
+  maturity: 'Live' | 'Available' | 'Improving' | 'Preview' | 'Store submission pending';
+  web?: PlatformStatus;
+  ios?: PlatformStatus;
+  android?: PlatformStatus;
+  liveUrl?: string;
+  appStoreUrl?: string;
+  playStoreUrl?: string;
+  demoUrl?: string;
+  caseStudyUrl?: string;
+}
+
+/** Public product registry. Store states are intentionally conservative and evidence-led. */
+export const shippedProducts: ShippedProduct[] = [
+  {
+    slug: 'peacepad', name: 'PeacePad', icon: '◌',
+    description: 'Calmer co-parenting tools for messages, shared plans, and family coordination.',
+    maturity: 'Improving',
+    web: { platform: 'Web', status: 'Live', detail: 'Open the current public product.', href: 'https://peacepad.ca' },
+    ios: { platform: 'iOS', status: 'Release track', detail: 'App Store release work is in progress; public availability is tracked separately.' },
+    android: { platform: 'Android', status: 'Available', detail: 'Current Google Play listing.', href: 'https://play.google.com/store/apps/details?id=ca.peacepad.family' },
+    liveUrl: 'https://peacepad.ca', playStoreUrl: 'https://play.google.com/store/apps/details?id=ca.peacepad.family', caseStudyUrl: '/products/peacepad',
+  },
+  {
+    slug: 'just-checking-in-game', name: 'Just Checking In', icon: '♥',
+    description: 'A small, warm check-in game designed for quick moments of connection.',
+    maturity: 'Store submission pending',
+    ios: { platform: 'iOS', status: 'Release track', detail: 'The iOS store workflow is maintained through App Store Connect.' },
+    android: { platform: 'Android', status: 'Release track', detail: 'Android release operations are maintained in Play Console.' },
+    caseStudyUrl: '/products/just-checking-in-game',
+  },
+  {
+    slug: 'dispatch', name: 'Dispatch', icon: '↗',
+    description: 'Real-time roadside service coordination from request to resolution.',
+    maturity: 'Live',
+    web: { platform: 'Web', status: 'Live', detail: 'Open the operational product.', href: 'https://dispatch.unalabs.cloud' },
+    liveUrl: 'https://dispatch.unalabs.cloud', caseStudyUrl: '/products/dispatch',
+  },
+  {
+    slug: 'saywetin', name: 'SayWetin', icon: '◎',
+    description: 'Culture-aware language and voice tools that make AI feel more local.',
+    maturity: 'Available',
+    web: { platform: 'Web', status: 'Live', detail: 'Explore the current product surface.', href: 'https://saywetin.app' },
+    liveUrl: 'https://saywetin.app', caseStudyUrl: '/products/saywetin',
+  },
+  {
+    slug: 'unascout', name: 'UnaScout', icon: '⌕',
+    description: 'An evidence-led job search workflow for discovery, tailoring, and approval.',
+    maturity: 'Improving',
+    ios: { platform: 'iOS', status: 'Release track', detail: 'The iOS listing and review workflow are managed in App Store Connect.' },
+    web: { platform: 'Web', status: 'Product operations', detail: 'The workflow is operated with explicit approval boundaries.' },
+    caseStudyUrl: '/products/unascout',
+  },
+  {
+    slug: 'jobagent', name: 'JobAgent', icon: '✦',
+    description: 'A controlled application workspace that keeps discovery, drafting, and proof together.',
+    maturity: 'Preview',
+    web: { platform: 'Web', status: 'Preview', detail: 'Available for qualified workflow reviews.' },
+  },
+];
+
 export interface DemoModule {
   slug: string;
   label: string;
@@ -1475,16 +1540,16 @@ export const demoModules: DemoModule[] = [
   },
   {
     slug: 'peacepad',
-    label: 'AI Automation',
+    label: 'Shared Family Tools',
     product: 'PeacePad',
-    title: 'AI-backed analysis built for high-trust decisions',
+    title: 'Calmer coordination for co-parents',
     description:
       'PeacePad walks users through sensitive residential data analysis with calm, guided UX — showing how AI can feel trustworthy in emotionally loaded contexts.',
     placeholder: 'Walkthrough coming soon.',
     bullets: [
-      'Structured data capture that reduces user anxiety.',
-      'AI-generated insights surfaced at the right moment.',
-      'Built for repeat use, not just a one-time demo.',
+      'A focused place for shared family coordination.',
+      'Clear updates without a noisy project-management layer.',
+      'Built for repeat use and everyday trust.',
     ],
     cta: { label: 'See PeacePad case study', href: '/products/peacepad' },
   },

@@ -15,6 +15,7 @@ interface WorkflowAnimationProps {
 export function WorkflowAnimation({ steps, intervalMs = 2800 }: WorkflowAnimationProps) {
   const [current, setCurrent] = useState(0);
   const [visible, setVisible] = useState(true);
+  const [reduceMotion, setReduceMotion] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const advance = (next: number) => {
@@ -26,6 +27,15 @@ export function WorkflowAnimation({ steps, intervalMs = 2800 }: WorkflowAnimatio
   };
 
   useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setReduceMotion(media.matches);
+    update();
+    media.addEventListener?.('change', update);
+    return () => media.removeEventListener?.('change', update);
+  }, []);
+
+  useEffect(() => {
+    if (reduceMotion) return;
     timerRef.current = setInterval(() => {
       setCurrent((prev) => {
         const next = (prev + 1) % steps.length;
@@ -35,12 +45,13 @@ export function WorkflowAnimation({ steps, intervalMs = 2800 }: WorkflowAnimatio
     }, intervalMs);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [steps.length, intervalMs]);
+  }, [steps.length, intervalMs, reduceMotion]);
 
   const goTo = (i: number) => {
     if (timerRef.current) clearInterval(timerRef.current);
     advance(i);
     setCurrent(i);
+    if (reduceMotion) return;
     timerRef.current = setInterval(() => {
       setCurrent((prev) => {
         const next = (prev + 1) % steps.length;

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge';
 import { FEATURES } from '@/lib/constants';
 
 const INTERVAL_MS = 4500;
+const VISIBLE_FEATURES = FEATURES.slice(0, 4);
 
 export function FeatureCarousel() {
   const [active, setActive] = useState(0);
@@ -16,7 +17,7 @@ export function FeatureCarousel() {
     if (intervalRef.current) clearInterval(intervalRef.current);
     intervalRef.current = setInterval(() => {
       if (!pausedRef.current) {
-        setActive((prev) => (prev + 1) % FEATURES.length);
+        setActive((prev) => (prev + 1) % VISIBLE_FEATURES.length);
       }
     }, INTERVAL_MS);
   };
@@ -42,7 +43,7 @@ export function FeatureCarousel() {
             <Badge variant="teal">What gets handled</Badge>
           </div>
           <h2 className="text-h2 text-tx-heading">
-            From rough request to paid delivery — all of it.
+            The useful parts of building something new
           </h2>
         </div>
 
@@ -52,7 +53,7 @@ export function FeatureCarousel() {
           onMouseEnter={() => { pausedRef.current = true; }}
           onMouseLeave={() => { pausedRef.current = false; }}
         >
-          {FEATURES.map((feature, i) => (
+          {VISIBLE_FEATURES.map((feature, i) => (
             <Link
               key={feature.id}
               href={`/how-it-works?module=${feature.slug}`}
@@ -85,7 +86,7 @@ export function FeatureCarousel() {
           role="tablist"
           aria-label="Feature selection"
         >
-          {FEATURES.map((feature, i) => (
+          {VISIBLE_FEATURES.map((feature, i) => (
             <button
               key={feature.id}
               role="tab"

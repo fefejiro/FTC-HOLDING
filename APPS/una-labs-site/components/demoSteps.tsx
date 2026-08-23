@@ -172,30 +172,30 @@ export const demoSteps: Record<string, { label: string; screen: React.ReactNode 
       label: 'Step 1 — Structured data capture',
       screen: (
         <div className="space-y-3">
-          <ScreenTitle>Situation intake</ScreenTitle>
-          <ScreenRow label="Parties" value="2 residents" />
+          <ScreenTitle>Family conversation</ScreenTitle>
+          <ScreenRow label="Conversation" value="School pickup" />
           <ScreenRow label="Context" value="Lease dispute — noise & damages" />
-          <ScreenRow label="Prior attempts" value="1 mediation, unresolved" />
-          <ScreenRow label="Urgency" value="Moderate" />
+          <ScreenRow label="Shared with" value="Jordan" />
+          <ScreenRow label="State" value="Ready to send" accent />
           <div className="mt-4">
-            <ScreenPulse label="Sending to AI analysis…" />
+            <ScreenPulse label="Private preview data only" />
           </div>
         </div>
       ),
     },
     {
-      label: 'Step 2 — AI processing',
+      label: 'Preview — Shared calendar',
       screen: (
         <div className="flex flex-col items-center justify-center py-6 space-y-4 text-center">
           <div className="space-y-2 w-full max-w-xs">
-            <ScreenSub>Parsing conflict structure</ScreenSub>
+            <ScreenSub>Pickup plan</ScreenSub>
             <ScreenBar pct={100} />
-            <ScreenSub>Identifying common ground</ScreenSub>
+            <ScreenSub>Calendar visibility</ScreenSub>
             <ScreenBar pct={78} />
-            <ScreenSub>Generating resolution options</ScreenSub>
+            <ScreenSub>Reminder set</ScreenSub>
             <ScreenBar pct={45} />
           </div>
-          <ScreenPulse label="AI working — calm, structured output ahead" />
+          <ScreenPulse label="Shared plan ready" />
         </div>
       ),
     },
