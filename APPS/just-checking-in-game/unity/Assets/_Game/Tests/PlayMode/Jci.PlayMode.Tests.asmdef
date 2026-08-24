@@ -1,8 +1,8 @@
 {
-  "name": "Jci.EditMode.Tests",
-  "rootNamespace": "Jci.Tests",
-  "references": ["Jci.Runtime", "UnityEngine.TestRunner", "UnityEditor.TestRunner"],
-  "includePlatforms": ["Editor"],
+  "name": "Jci.PlayMode.Tests",
+  "rootNamespace": "Jci.Tests.PlayMode",
+  "references": ["Jci.Runtime", "UnityEngine.UI", "UnityEngine.TestRunner"],
+  "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
   "overrideReferences": true,

@@ -106,6 +106,7 @@ namespace Jci.Presentation
             AddButton(body, "Check in with myself", ShowSelf, Parse(Teal));
             AddButton(body, "Together here", ShowTogetherPicker, Parse(Coral));
             AddButton(body, "Connection Journey", ShowJourney, Parse(Gold), Parse(Ink));
+            AddButton(body, "Reduced motion: " + (reducedMotion ? "On" : "Off"), ToggleReducedMotion, Parse(Card), Parse(Ink));
             AddText(body, "Offline by design. Nothing you say is sent or recorded.", 13, new Color(1, 1, 1, .75f), FontStyle.Normal, 58);
         }
 
@@ -248,7 +249,20 @@ namespace Jci.Presentation
             ShowHome();
         }
 
-        private void Haptic() { if (!reducedMotion) Handheld.Vibrate(); }
+        private void ToggleReducedMotion()
+        {
+            reducedMotion = !reducedMotion;
+            PlayerPrefs.SetInt("jci.reducedMotion", reducedMotion ? 1 : 0);
+            PlayerPrefs.Save();
+            ShowHome();
+        }
+
+        private void Haptic()
+        {
+#if UNITY_IOS && !UNITY_EDITOR
+            if (!reducedMotion) Handheld.Vibrate();
+#endif
+        }
 
         private static RectTransform MakePanel(Transform parent, string name, Color color)
         {
@@ -265,14 +279,33 @@ namespace Jci.Presentation
 
         private static Text AddText(Transform parent, string value, int size, Color color, FontStyle style, float height, Color? background = null)
         {
+            RectTransform layoutRect = null;
+            if (background.HasValue)
+            {
+                var card = new GameObject("Text card", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+                card.transform.SetParent(parent, false);
+                card.GetComponent<Image>().color = background.Value;
+                layoutRect = card.GetComponent<RectTransform>();
+                layoutRect.anchorMin = new Vector2(0, 1); layoutRect.anchorMax = new Vector2(1, 1); layoutRect.pivot = new Vector2(0, 1); layoutRect.sizeDelta = new Vector2(0, height);
+                var cardLayout = card.GetComponent<LayoutElement>(); cardLayout.preferredHeight = height; cardLayout.flexibleWidth = 1;
+                parent = card.transform;
+            }
+
             var go = new GameObject("Text", typeof(RectTransform), typeof(Text));
             go.transform.SetParent(parent, false);
             var text = go.GetComponent<Text>();
-            text.text = value; text.font = Resources.GetBuiltinResource<Font>("Arial.ttf"); text.fontSize = size; text.fontStyle = style; text.color = color;
+            text.text = value; text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); text.fontSize = size; text.fontStyle = style; text.color = color;
             text.alignment = TextAnchor.MiddleLeft; text.horizontalOverflow = HorizontalWrapMode.Wrap; text.verticalOverflow = VerticalWrapMode.Overflow; text.raycastTarget = false;
-            var rect = text.rectTransform; rect.anchorMin = new Vector2(0, 1); rect.anchorMax = new Vector2(1, 1); rect.pivot = new Vector2(0, 1); rect.sizeDelta = new Vector2(0, height);
-            var layout = text.gameObject.AddComponent<LayoutElement>(); layout.preferredHeight = height; layout.flexibleWidth = 1;
-            if (background.HasValue) text.gameObject.AddComponent<Image>().color = background.Value;
+            var rect = text.rectTransform;
+            if (layoutRect != null)
+            {
+                rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one; rect.offsetMin = new Vector2(18, 12); rect.offsetMax = new Vector2(-18, -12);
+            }
+            else
+            {
+                rect.anchorMin = new Vector2(0, 1); rect.anchorMax = new Vector2(1, 1); rect.pivot = new Vector2(0, 1); rect.sizeDelta = new Vector2(0, height);
+                var layout = text.gameObject.AddComponent<LayoutElement>(); layout.preferredHeight = height; layout.flexibleWidth = 1;
+            }
             return text;
         }
 

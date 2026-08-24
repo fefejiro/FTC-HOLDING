@@ -16,6 +16,8 @@ namespace Jci.Tests.PlayMode
         [UnitySetUp]
         public IEnumerator SetUp()
         {
+            DeleteLocalData();
+            PlayerPrefs.DeleteKey("jci.reducedMotion");
             game = new GameObject("JCI test runtime");
             game.AddComponent<JustCheckingInGame>();
             yield return null;
@@ -26,6 +28,8 @@ namespace Jci.Tests.PlayMode
         {
             if (game != null) Object.Destroy(game);
             yield return null;
+            DeleteLocalData();
+            PlayerPrefs.DeleteKey("jci.reducedMotion");
         }
 
         [UnityTest]
@@ -34,6 +38,7 @@ namespace Jci.Tests.PlayMode
             var canvas = game.GetComponentInChildren<Canvas>();
             Assert.That(canvas, Is.Not.Null);
             Assert.That(canvas.GetComponent<UnityEngine.UI.GraphicRaycaster>(), Is.Not.Null);
+            yield return null;
         }
 
         [UnityTest]
@@ -43,7 +48,7 @@ namespace Jci.Tests.PlayMode
             Click("Drained");
             Click("Finish this check-in");
             yield return null;
-            var path = Path.Combine(Application.persistentDataPath, "jci-local-v1.json");
+            var path = Path.Combine(UnityEngine.Application.persistentDataPath, "jci-local-v1.json");
             Assert.That(File.Exists(path), Is.True);
             var json = File.ReadAllText(path);
             Assert.That(json, Does.Contain("drained"));
@@ -55,14 +60,14 @@ namespace Jci.Tests.PlayMode
         public IEnumerator TogetherFlowEndsAndPausePersistsRecovery()
         {
             Click("Together here");
-            var input = Object.FindFirstObjectByType<InputField>();
+            var input = Object.FindAnyObjectByType<InputField>();
             Assert.That(input, Is.Not.Null);
             input.text = "Test connection";
             Click("Save name and start");
             Click("Answered — next prompt");
             game.SendMessage("OnApplicationPause", true);
             yield return null;
-            Assert.That(File.ReadAllText(Path.Combine(Application.persistentDataPath, "jci-local-v1.json")), Does.Contain("ActiveSession"));
+            Assert.That(File.ReadAllText(Path.Combine(UnityEngine.Application.persistentDataPath, "jci-local-v1.json")), Does.Contain("ActiveSession"));
             Click("End check-in");
             Assert.That(FindButton("Back home"), Is.Not.Null);
         }
@@ -74,7 +79,42 @@ namespace Jci.Tests.PlayMode
             Assert.That(button, Is.Not.Null);
             for (var i = 0; i < 10; i++) button.onClick.Invoke();
             yield return null;
-            Assert.That(Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None).Length, Is.EqualTo(1));
+            Assert.That(game.GetComponentsInChildren<Canvas>(true).Length, Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator ActiveSessionRestoresAfterRelaunch()
+        {
+            Click("Together here");
+            var input = Object.FindAnyObjectByType<InputField>();
+            input.text = "Relaunch connection";
+            Click("Save name and start");
+            Click("Answered — next prompt");
+            game.SendMessage("OnApplicationPause", true);
+            Object.Destroy(game);
+            yield return null;
+
+            game = new GameObject("JCI relaunched runtime");
+            game.AddComponent<JustCheckingInGame>();
+            yield return null;
+            Assert.That(FindButton("Resume your check-in"), Is.Not.Null);
+            Click("Resume your check-in");
+            Assert.That(FindButton("End check-in"), Is.Not.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator ReducedMotionPreferencePersistsAcrossRelaunch()
+        {
+            Click("Reduced motion: Off");
+            Assert.That(PlayerPrefs.GetInt("jci.reducedMotion", 0), Is.EqualTo(1));
+            Assert.That(FindButton("Reduced motion: On"), Is.Not.Null);
+            Object.Destroy(game);
+            yield return null;
+
+            game = new GameObject("JCI reduced-motion runtime");
+            game.AddComponent<JustCheckingInGame>();
+            yield return null;
+            Assert.That(FindButton("Reduced motion: On"), Is.Not.Null);
         }
 
         private static void Click(string label)
@@ -93,6 +133,13 @@ namespace Jci.Tests.PlayMode
             }
 
             return null;
+        }
+
+        private static void DeleteLocalData()
+        {
+            var directory = UnityEngine.Application.persistentDataPath;
+            if (!Directory.Exists(directory)) return;
+            foreach (var path in Directory.GetFiles(directory, "jci-local-v1.json*")) File.Delete(path);
         }
     }
 }

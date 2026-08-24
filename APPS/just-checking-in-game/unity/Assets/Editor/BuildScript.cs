@@ -151,7 +151,13 @@ namespace Jci.Editor
 
         private static void ConfigureIosPlayerSettings()
         {
-            PlayerSettings.iOS.appleEnableAutomaticSigning = false;
+            string teamId = Environment.GetEnvironmentVariable("JCI_APPLE_TEAM_ID");
+            if (!string.IsNullOrWhiteSpace(teamId))
+            {
+                PlayerSettings.iOS.appleDeveloperTeamID = teamId;
+            }
+
+            PlayerSettings.iOS.appleEnableAutomaticSigning = true;
             PlayerSettings.iOS.targetDevice = iOSTargetDevice.iPhoneAndiPad;
         }
 
