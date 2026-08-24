@@ -2,6 +2,7 @@ const TESTFLIGHT_MODE = "testflight-internal";
 const APPSTORE_PRODUCTION_MODE = "appstore-production";
 const DUAL_SIMULATOR_MODE = "staging-simulator-dual";
 const PLAYSTORE_INTERNAL_MODE = "playstore-internal";
+const PLAYSTORE_PRODUCTION_MODE = "playstore-production";
 const TESTFLIGHT_VERSION = "2.0.1";
 const TESTFLIGHT_BUILD_NUMBER = "3";
 const APPSTORE_PRODUCTION_BUILD_NUMBER = "5";
@@ -51,11 +52,15 @@ module.exports = ({ config }) => {
   }
   if (!iosReleaseMode && !androidReleaseMode) return config;
   if (androidReleaseMode) {
-    if (androidReleaseMode !== PLAYSTORE_INTERNAL_MODE) {
+    if (![PLAYSTORE_INTERNAL_MODE, PLAYSTORE_PRODUCTION_MODE].includes(androidReleaseMode)) {
       throw new Error(`Unsupported PeacePad Android release mode: ${androidReleaseMode}`);
     }
-    if (process.env.EXPO_PUBLIC_PEACEPAD_ENV !== "staging") {
-      throw new Error("The Android internal Play candidate must use the guarded staging runtime.");
+    const isProduction = androidReleaseMode === PLAYSTORE_PRODUCTION_MODE;
+    if (process.env.EXPO_PUBLIC_PEACEPAD_ENV !== (isProduction ? "production" : "staging")) {
+      throw new Error(`The ${isProduction ? "Android Play production" : "Android internal Play"} candidate must use the ${isProduction ? "production" : "guarded staging"} runtime.`);
+    }
+    if (isProduction && process.env.EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED !== "true") {
+      throw new Error("The Android Play production candidate requires explicit production-write authorization.");
     }
     return {
       ...config,
@@ -74,8 +79,9 @@ module.exports = ({ config }) => {
       },
       extra: {
         ...config.extra,
-        releaseChannel: PLAYSTORE_INTERNAL_MODE,
-        productionApiWritesEnabled: false,
+        environment: isProduction ? "production" : "staging",
+        releaseChannel: androidReleaseMode,
+        productionApiWritesEnabled: isProduction,
         googleSignInEnabled: googleSignInEnabled(),
         submittedBundleId: PRODUCTION_BUNDLE_ID
       }
@@ -176,6 +182,14 @@ module.exports.androidPlayStoreContract = {
   blockedPermissions: ANDROID_RELEASE_BLOCKED_PERMISSIONS,
   bundleIdentifier: PRODUCTION_BUNDLE_ID,
   mode: PLAYSTORE_INTERNAL_MODE,
+  version: TESTFLIGHT_VERSION,
+  versionCode: PLAYSTORE_VERSION_CODE
+};
+
+module.exports.androidPlayStoreProductionContract = {
+  blockedPermissions: ANDROID_RELEASE_BLOCKED_PERMISSIONS,
+  bundleIdentifier: PRODUCTION_BUNDLE_ID,
+  mode: PLAYSTORE_PRODUCTION_MODE,
   version: TESTFLIGHT_VERSION,
   versionCode: PLAYSTORE_VERSION_CODE
 };

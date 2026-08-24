@@ -38,6 +38,23 @@ TestFlight upload, Google Play upload, or public release is claimed.
 - The Edge validation checks the environment-selected invitation scheme rather
   than rejecting the legitimate production bundle identifier globally.
 
+## Reused Android release path
+
+The repository also contains older `APPS/peacepad` Capacitor release notes.
+Those notes document the legacy web-wrapper app and are not the V2 build
+surface. V2 keeps the previously established EAS path: a Play App Signing-
+compatible upload key, an AAB build, Internal Testing first, then Closed
+Testing and phased Production promotion of the exact verified artifact.
+
+The current candidate exposes two explicit Android EAS modes:
+
+- `playstore-internal`: staging runtime, production writes disabled.
+- `playstore-production`: Canada production runtime, explicit production-write
+  authorization, version `2.0.1`, version code `43`.
+
+The production profile remains guarded; it must not be built until production
+OAuth, migration/rollback, canary, and physical-device gates are complete.
+
 ## Verified locally
 
 Passed:
@@ -64,6 +81,7 @@ worktree to `D:\PeacePadRelease\recovery\`.
 - Signed iOS/Android artifact IDs and hashes for this exact commit.
 - Production OAuth credentials/provider callback behavior.
 - TestFlight, Play Internal Testing, App Review, or public availability.
+- Android `playstore-production` signed AAB and Play promotion.
 
 ## Reviewer verdict
 
