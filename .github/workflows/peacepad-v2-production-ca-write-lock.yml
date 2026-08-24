@@ -23,7 +23,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      API_BASE_URL: https://qzekqjewpugdotskrtni.supabase.co/functions/v1/peacepad-v2-api
+      # Use Supabase's dedicated Functions hostname so hosted runners do not
+      # traverse the general project gateway that intermittently returned 503.
+      API_BASE_URL: https://qzekqjewpugdotskrtni.functions.supabase.co/peacepad-v2-api
       SUPABASE_PUBLISHABLE_KEY: ${{ vars.PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY }}
 
     steps:
