@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      APPROVED_SOURCE_SHA: eb7c14399f3ffa67517acafd8f56a2a1b17fe284
+      APPROVED_SOURCE_SHA: ad52f0c322f2aa1fb66df973db139faf59b3f56d
 
     steps:
       - name: Checkout reviewed source
