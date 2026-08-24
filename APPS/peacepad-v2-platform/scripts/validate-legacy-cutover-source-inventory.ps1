@@ -21,8 +21,9 @@ foreach ($required in @(
   "'migrationScopes'",
   "'availableOptionalTables'",
   "'sourceSchemaFingerprint'",
-  "'users', (select count(*) from peacepad.users)",
-  "'messages', (select count(*) from peacepad.messages)"
+  "'sourceSchema', 'public'",
+  "'users', (select count(*) from public.users)",
+  "'messages', (select count(*) from public.messages)"
 )) {
   if (-not $sql.Contains($required)) { throw "Legacy inventory SQL is missing required boundary: $required" }
 }
@@ -30,7 +31,7 @@ if ($sql -match '(?im)^\s*(insert|update|delete|alter|create|drop|truncate)\b') 
   throw 'Legacy source inventory SQL must not contain a mutating statement.'
 }
 foreach ($prohibited in @('email', 'display_name', 'content', 'title', 'description', 'id')) {
-  if ($sql -match "jsonb_build_object\([\s\S]*'$prohibited'\s*,\s*peacepad") {
+  if ($sql -match "jsonb_build_object\([\s\S]*'$prohibited'\s*,\s*public\.") {
     throw "Legacy source inventory must not emit source content field: $prohibited"
   }
 }

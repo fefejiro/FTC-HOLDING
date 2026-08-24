@@ -12,16 +12,16 @@
 begin transaction read only;
 set local statement_timeout = '30s';
 set local lock_timeout = '5s';
-set local search_path = peacepad, public;
+set local search_path = public;
 
 do $$
 begin
-  if to_regclass('peacepad.users') is null
-    or to_regclass('peacepad.partnerships') is null
-    or to_regclass('peacepad.conversations') is null
-    or to_regclass('peacepad.conversation_members') is null
-    or to_regclass('peacepad.messages') is null
-    or to_regclass('peacepad.events') is null then
+  if to_regclass('public.users') is null
+    or to_regclass('public.partnerships') is null
+    or to_regclass('public.conversations') is null
+    or to_regclass('public.conversation_members') is null
+    or to_regclass('public.messages') is null
+    or to_regclass('public.events') is null then
     raise exception 'LEGACY_SOURCE_INVENTORY_REQUIRED_TABLE_MISSING';
   end if;
 end;
@@ -45,7 +45,7 @@ with expected_columns(table_name, column_name) as (
 ), source_columns as (
   select table_name, column_name, data_type, is_nullable
   from information_schema.columns
-  where table_schema = 'peacepad'
+  where table_schema = 'public'
 ), missing_columns as (
   select expected_columns.table_name, expected_columns.column_name
   from expected_columns
@@ -64,14 +64,14 @@ with expected_columns(table_name, column_name) as (
 select jsonb_build_object(
   'schemaVersion', 1,
   'mode', 'read-only-source-inventory',
-  'sourceSchema', 'peacepad',
+  'sourceSchema', 'public',
   'tableCounts', jsonb_build_object(
-    'users', (select count(*) from peacepad.users),
-    'partnerships', (select count(*) from peacepad.partnerships),
-    'conversations', (select count(*) from peacepad.conversations),
-    'conversation_members', (select count(*) from peacepad.conversation_members),
-    'messages', (select count(*) from peacepad.messages),
-    'events', (select count(*) from peacepad.events)
+    'users', (select count(*) from public.users),
+    'partnerships', (select count(*) from public.partnerships),
+    'conversations', (select count(*) from public.conversations),
+    'conversation_members', (select count(*) from public.conversation_members),
+    'messages', (select count(*) from public.messages),
+    'events', (select count(*) from public.events)
   ),
   'missingRequiredColumns', coalesce((
     select jsonb_agg(table_name || '.' || column_name order by table_name, column_name)
@@ -87,15 +87,20 @@ select jsonb_build_object(
     'conversations', exists (select 1 from source_columns where table_name = 'conversations'),
     'messages', exists (select 1 from source_columns where table_name = 'messages'),
     'calendar', exists (select 1 from source_columns where table_name in ('events', 'calendar_events')),
-    'records', exists (select 1 from source_columns where table_name in ('records', 'case_binders')),
-    'attachments', exists (select 1 from source_columns where table_name in ('attachments', 'record_attachments')),
+    'records', exists (select 1 from source_columns where table_name in ('notes', 'child_updates', 'records', 'case_binders')),
+    'attachments', exists (
+      select 1 from source_columns
+      where (table_name = 'messages' and column_name = 'file_url')
+         or (table_name = 'expenses' and column_name = 'receipt_url')
+         or table_name in ('attachments', 'record_attachments')
+    ),
     'tasks', exists (select 1 from source_columns where table_name = 'tasks'),
     'expenses', exists (select 1 from source_columns where table_name = 'expenses')
   ),
   'availableOptionalTables', coalesce((
     select jsonb_agg(distinct table_name order by table_name)
     from source_columns
-    where table_name in ('calendar_events', 'records', 'case_binders', 'attachments', 'record_attachments', 'tasks', 'expenses')
+    where table_name in ('calendar_events', 'notes', 'child_updates', 'records', 'case_binders', 'attachments', 'record_attachments', 'tasks', 'expenses')
   ), '[]'::jsonb),
   'sourceSchemaFingerprint', (select value from source_fingerprint),
   'containsUserContent', false
