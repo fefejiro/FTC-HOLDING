@@ -2,7 +2,8 @@
 
 Date: 2026-08-24  
 Branch: `release/peacepad-2.0.1`  
-Candidate commit: `aa8854a75` (`prepare PeacePad 2.0.1 release candidate`)
+Branch head: `657c3b9a0` (`docs: hand off PeacePad 2.0.1 candidate`)  
+Release implementation commit: `aa8854a75` (`prepare PeacePad 2.0.1 release candidate`)
 
 This is a reviewer handover for a candidate only. No App Store submission,
 TestFlight upload, Google Play upload, or public release is claimed.
