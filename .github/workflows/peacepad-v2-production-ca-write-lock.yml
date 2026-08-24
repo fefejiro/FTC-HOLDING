@@ -1,0 +1,80 @@
+name: PeacePad V2 Canada Production Write Lock
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */6 * * *"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/peacepad-v2-production-ca-write-lock.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: peacepad-v2-production-ca-write-lock
+  cancel-in-progress: false
+
+jobs:
+  verify-write-lock:
+    name: Verify Canada production remains fail-closed
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      API_BASE_URL: https://qzekqjewpugdotskrtni.supabase.co/functions/v1/peacepad-v2-api
+
+    steps:
+      - name: Verify health and readiness boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          for route in health readyz; do
+            response="$(curl --fail --silent --show-error \
+              --connect-timeout 10 \
+              --max-time 20 \
+              "$API_BASE_URL/$route")"
+            jq -e '
+              .status == (if $route == "health" then "ok" else "ready" end)
+              and .environment == "production"
+              and .region == "ca"
+              and .writesEnabled == false
+            ' --arg route "$route" <<<"$response" >/dev/null
+          done
+
+      - name: Verify writes are rejected before authentication
+        shell: bash
+        run: |
+          set -euo pipefail
+          body_path="$RUNNER_TEMP/write-lock-response.json"
+          status="$(curl --silent --show-error \
+            --connect-timeout 10 \
+            --max-time 20 \
+            --output "$body_path" \
+            --write-out '%{http_code}' \
+            --request POST \
+            --header 'content-type: application/json' \
+            --data '{}' \
+            "$API_BASE_URL/api/v2/invitations")"
+          test "$status" = "503"
+          jq -e '
+            .error.code == "PRODUCTION_WRITES_DISABLED"
+            and .error.message == "Production writes are not enabled."
+            and (.error.requestId | type == "string" and length > 0)
+          ' "$body_path" >/dev/null
+
+      - name: Publish non-secret boundary evidence
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## PeacePad V2 Canada production write lock"
+            echo
+            echo "- Project: \`qzekqjewpugdotskrtni\`"
+            echo "- Expected environment: \`production\`"
+            echo "- Expected region: \`ca\`"
+            echo "- Expected writes enabled: \`false\`"
+            echo "- Verified at: \`$(date -u +'%Y-%m-%dT%H:%M:%SZ')\`"
+            echo "- Result: \`${{ job.status }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
