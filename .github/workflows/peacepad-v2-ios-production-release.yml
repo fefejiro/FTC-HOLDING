@@ -104,6 +104,14 @@ jobs:
           ' "$config_path" >/dev/null
           rm -f "$config_path"
 
+      - name: Require the Canada production write boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          health="$(curl --fail --location --retry 3 --connect-timeout 20 --max-time 60 \
+            https://qzekqjewpugdotskrtni.supabase.co/functions/v1/peacepad-v2-api/health)"
+          node -e 'const health=JSON.parse(process.argv[1]); if(health.status!=="ok"||health.environment!=="production"||health.region!=="ca"||health.writesEnabled!==true) process.exit(1)' "$health"
+
       - name: Build signed production IPA locally
         id: build
         working-directory: ${{ runner.temp }}/peacepad-next-native-production
