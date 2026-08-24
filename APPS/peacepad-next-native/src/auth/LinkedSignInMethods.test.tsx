@@ -7,12 +7,17 @@ import { requestGoogleIdentityCredential } from "./GoogleNativeAuth";
 import { LinkedSignInMethods } from "./LinkedSignInMethods";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as Crypto from "expo-crypto";
+import Constants from "expo-constants";
 
 jest.mock("../session/SupabaseSessionProvider", () => ({
   useOptionalSupabaseSession: jest.fn()
 }));
 jest.mock("./GoogleNativeAuth", () => ({
   requestGoogleIdentityCredential: jest.fn()
+}));
+jest.mock("expo-constants", () => ({
+  __esModule: true,
+  default: { expoConfig: { extra: { googleSignInEnabled: true } } }
 }));
 jest.mock("expo-apple-authentication", () => ({
   AppleAuthenticationScope: { EMAIL: 0 },
@@ -34,6 +39,7 @@ describe("LinkedSignInMethods", () => {
     Object.defineProperty(Platform, "OS", { configurable: true, value: "android" });
     (requestGoogleIdentityCredential as jest.Mock).mockResolvedValue(credential);
     (AppleAuthentication.signInAsync as jest.Mock).mockResolvedValue({ identityToken: "apple-id", user: "apple-subject" });
+    (Constants.expoConfig!.extra as Record<string, unknown>).googleSignInEnabled = true;
   });
 
   afterAll(() => {
@@ -67,6 +73,19 @@ describe("LinkedSignInMethods", () => {
     (useOptionalSupabaseSession as jest.Mock).mockReturnValue(undefined);
     render(<LocalizationProvider initialLocale="en"><LinkedSignInMethods /></LocalizationProvider>);
     expect(screen.queryByText("Sign-in methods")).toBeNull();
+  });
+
+  it("hides Google provider controls when OAuth is unavailable", async () => {
+    (Constants.expoConfig!.extra as Record<string, unknown>).googleSignInEnabled = false;
+    (useOptionalSupabaseSession as jest.Mock).mockReturnValue({
+      status: "ready",
+      getLinkedProviders: jest.fn(async () => ["email"]),
+      linkProvider: jest.fn(),
+      unlinkProvider: jest.fn()
+    });
+    render(<LocalizationProvider initialLocale="en"><LinkedSignInMethods /></LocalizationProvider>);
+    expect(await screen.findByText("Sign-in methods")).toBeTruthy();
+    expect(screen.queryByText(/Google/)).toBeNull();
   });
 
   it("links Apple on iOS only after a fresh nonce-bound Apple challenge", async () => {

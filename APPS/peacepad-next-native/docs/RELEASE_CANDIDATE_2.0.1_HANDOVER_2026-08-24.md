@@ -1,0 +1,72 @@
+# PeacePad 2.0.1 release-candidate handover
+
+Date: 2026-08-24  
+Branch: `release/peacepad-2.0.1`  
+Initial release implementation: `aa8854a75` (`prepare PeacePad 2.0.1 release candidate`)
+Current review-correction head: see PR #279; this committed handover does not
+self-reference a SHA that cannot exist until after the document is committed.
+
+This is a reviewer handover for a candidate only. No App Store submission,
+TestFlight upload, Google Play upload, or public release is claimed.
+
+## Release contract
+
+| Surface | Candidate value |
+| --- | --- |
+| Marketing version | `2.0.1` |
+| iOS build | `5` |
+| Android version code | `43` |
+| iOS bundle / Android package | `ca.peacepad.family` |
+| App Store record | `6793350735` |
+| Runtime | Canada production configuration only |
+| Google sign-in | Enabled only with valid Web/iOS OAuth IDs and matching iOS URL scheme |
+
+## Reconciled source
+
+- Started from the clean `feat/peacepad-v2-full-core` source at
+  `8b18ac3179a3854ea2f6cd6d3b07cd451616bf24`.
+- Reused only the focused onboarding/recovery and icon/workflow commits from
+  the newer source; no historical mega-PR was merged wholesale.
+- Preserved the existing authorization, regional, audit, deletion, and
+  staging guardrails.
+- Google OAuth is fail-safe: missing credentials remove the native plugin and
+  hide Google controls in onboarding and linked-sign-in settings. Email and
+  Apple remain available.
+- The ordinary lab manifest remains `0.0.1`; only explicit store modes resolve
+  to marketing version `2.0.1`, preventing release identity from leaking into
+  lab and Simulator builds.
+- The Edge validation checks the environment-selected invitation scheme rather
+  than rejecting the legitimate production bundle identifier globally.
+
+## Verified locally
+
+Passed:
+
+- `node scripts/check-lab-guardrails.cjs`
+- `node scripts/check-secrets.cjs` — 141 files checked
+- `git diff --check`
+- Direct dynamic-config checks for production-without-Google and
+  staging-with-valid-Google configuration
+- `scripts/validate-supabase-edge-function.ps1` â€”
+  `SUPABASE_EDGE_BOUNDARY_LOCAL_VERIFIED`
+
+The clean worktree has no tracked or untracked source changes after the
+candidate commit. Generated dependency-install output was moved outside the
+worktree to `D:\PeacePadRelease\recovery\`.
+
+## Not yet verified
+
+- TypeScript, focused Jest, full Jest/coverage, Expo export, and native builds.
+  A root clean install still reports a pre-existing monorepo lock mismatch.
+  The focused PR relies on hosted CI for the authoritative clean-install and
+  test result; no broad lockfile rewrite was accepted into this candidate.
+- iPhone or Android physical-device journey.
+- Signed iOS/Android artifact IDs and hashes for this exact commit.
+- Production OAuth credentials/provider callback behavior.
+- TestFlight, Play Internal Testing, App Review, or public availability.
+
+## Reviewer verdict
+
+`DO NOT APPROVE FOR STORE SUBMISSION` yet. The source candidate is prepared,
+but dependency reproducibility, exact-platform builds, provider validation, and
+physical-device evidence remain release gates.

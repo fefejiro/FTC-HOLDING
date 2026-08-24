@@ -158,7 +158,7 @@ $requiredFunctionPatterns = @(
   'p_identity_id: authenticated.user.id',
   'key !== "conversationId"',
   'Object.keys(body).length !== 0',
-  'peacepadnextlab://invite/',
+  'peacepadnextlab',
   'crypto.subtle.digest',
   'crypto.subtle.sign',
   'databaseIdempotencyToken',
@@ -182,8 +182,8 @@ if ($function -match 'console\.(log|debug|info|warn|error)') {
 if ($function -match 'requestBody\.(identity|identityId|userId)') {
   throw 'Identity must be derived from a verified JWT, never a request body.'
 }
-if ($function.Contains('peacepad://invite/')) {
-  throw 'The staging Edge Function must not emit an unregistered production invitation scheme.'
+if ($function -notmatch 'config\.environment === "production"\s*\?\s*"peacepad"\s*:\s*"peacepadnextlab"') {
+  throw 'Invitation deep links must select the production or lab scheme from the verified runtime environment.'
 }
 
 foreach ($rpc in @('peacepad_v2_ready', 'peacepad_v2_get_region_binding')) {

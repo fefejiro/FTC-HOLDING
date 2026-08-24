@@ -2,10 +2,10 @@ const TESTFLIGHT_MODE = "testflight-internal";
 const APPSTORE_PRODUCTION_MODE = "appstore-production";
 const DUAL_SIMULATOR_MODE = "staging-simulator-dual";
 const PLAYSTORE_INTERNAL_MODE = "playstore-internal";
-const TESTFLIGHT_VERSION = "2.0.0";
+const TESTFLIGHT_VERSION = "2.0.1";
 const TESTFLIGHT_BUILD_NUMBER = "3";
 const APPSTORE_PRODUCTION_BUILD_NUMBER = "5";
-const PLAYSTORE_VERSION_CODE = 42;
+const PLAYSTORE_VERSION_CODE = 43;
 const PRODUCTION_BUNDLE_ID = "ca.peacepad.family";
 const APP_STORE_ID = "6793350735";
 const GOOGLE_SIGN_IN_PLUGIN = "@react-native-google-signin/google-signin";
@@ -25,17 +25,22 @@ function googleSignInPlugin() {
     || !GOOGLE_CLIENT_ID_PATTERN.test(iosClientId)
     || iosUrlScheme !== `com.googleusercontent.apps.${iosClientId.replace(/\.apps\.googleusercontent\.com$/i, "")}`
   ) {
-    throw new Error("PeacePad store builds require the approved Google Web/iOS OAuth clients and exact iOS URL scheme.");
+    return null;
   }
   return [GOOGLE_SIGN_IN_PLUGIN, { iosUrlScheme }];
 }
 
 function storePlugins(config, includeApple = false) {
+  const googlePlugin = googleSignInPlugin();
   return [
     ...(config.plugins || []),
     ...(includeApple ? ["expo-apple-authentication"] : []),
-    googleSignInPlugin()
+    ...(googlePlugin ? [googlePlugin] : [])
   ];
+}
+
+function googleSignInEnabled() {
+  return Boolean(googleSignInPlugin());
 }
 
 module.exports = ({ config }) => {
@@ -71,6 +76,7 @@ module.exports = ({ config }) => {
         ...config.extra,
         releaseChannel: PLAYSTORE_INTERNAL_MODE,
         productionApiWritesEnabled: false,
+        googleSignInEnabled: googleSignInEnabled(),
         submittedBundleId: PRODUCTION_BUNDLE_ID
       }
     };
@@ -114,6 +120,7 @@ module.exports = ({ config }) => {
         environment: "production",
         releaseChannel: APPSTORE_PRODUCTION_MODE,
         productionApiWritesEnabled: true,
+        googleSignInEnabled: googleSignInEnabled(),
         submittedBundleId: PRODUCTION_BUNDLE_ID
       }
     };
@@ -138,6 +145,7 @@ module.exports = ({ config }) => {
       appStoreId: APP_STORE_ID,
       releaseChannel: TESTFLIGHT_MODE,
       productionApiWritesEnabled: false,
+      googleSignInEnabled: googleSignInEnabled(),
       submittedBundleId: PRODUCTION_BUNDLE_ID
     }
   };

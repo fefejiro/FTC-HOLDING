@@ -54,7 +54,7 @@ describe("PeacePad iOS release variant", () => {
     process.env.PEACEPAD_IOS_RELEASE_MODE = "testflight-internal";
     process.env.EXPO_PUBLIC_PEACEPAD_ENV = "staging";
     expect(resolveConfig({ config: structuredClone(appJson.expo) })).toMatchObject({
-      version: "2.0.0",
+      version: "2.0.1",
       plugins: expect.arrayContaining([
         "expo-apple-authentication",
         ["@react-native-google-signin/google-signin", { iosUrlScheme: "com.googleusercontent.apps.123456789-ios" }]
@@ -97,7 +97,7 @@ describe("PeacePad iOS release variant", () => {
     process.env.EXPO_PUBLIC_PEACEPAD_ENV = "production";
     process.env.EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED = "true";
     expect(resolveConfig({ config: structuredClone(appJson.expo) })).toMatchObject({
-      version: "2.0.0",
+      version: "2.0.1",
       scheme: "peacepad",
       plugins: expect.arrayContaining(["expo-apple-authentication"]),
       ios: { buildNumber: "5", bundleIdentifier: "ca.peacepad.family", usesAppleSignIn: true },
@@ -125,7 +125,7 @@ describe("PeacePad iOS release variant", () => {
     process.env.PEACEPAD_ANDROID_RELEASE_MODE = "playstore-internal";
     process.env.EXPO_PUBLIC_PEACEPAD_ENV = "staging";
     expect(resolveConfig({ config: structuredClone(appJson.expo) })).toMatchObject({
-      version: "2.0.0",
+      version: "2.0.1",
       android: {
         blockedPermissions: [
           "android.permission.READ_EXTERNAL_STORAGE",
@@ -133,7 +133,7 @@ describe("PeacePad iOS release variant", () => {
           "android.permission.WRITE_EXTERNAL_STORAGE"
         ],
         package: "ca.peacepad.family",
-        versionCode: 42
+        versionCode: 43
       },
       plugins: expect.arrayContaining([
         ["@react-native-google-signin/google-signin", { iosUrlScheme: "com.googleusercontent.apps.123456789-ios" }]
@@ -159,11 +159,14 @@ describe("PeacePad iOS release variant", () => {
     expect(() => resolveConfig({ config: structuredClone(appJson.expo) })).toThrow("Unsupported PeacePad Android release mode");
   });
 
-  it("fails closed when a store build lacks the exact Google OAuth client configuration", () => {
+  it("keeps email and Apple available when Google OAuth is not configured", () => {
     process.env.PEACEPAD_IOS_RELEASE_MODE = "appstore-production";
     process.env.EXPO_PUBLIC_PEACEPAD_ENV = "production";
     process.env.EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED = "true";
     delete process.env.PEACEPAD_GOOGLE_IOS_URL_SCHEME;
-    expect(() => resolveConfig({ config: structuredClone(appJson.expo) })).toThrow("approved Google Web/iOS OAuth clients");
+    expect(resolveConfig({ config: structuredClone(appJson.expo) })).toMatchObject({
+      plugins: expect.arrayContaining(["expo-apple-authentication"]),
+      extra: { googleSignInEnabled: false }
+    });
   });
 });
