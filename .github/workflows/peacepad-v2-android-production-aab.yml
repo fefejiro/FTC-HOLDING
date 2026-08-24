@@ -1,4 +1,4 @@
-name: PeacePad V2 Android Internal AAB
+name: PeacePad V2 Android Production AAB
 
 on:
   workflow_dispatch:
@@ -16,12 +16,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: peacepad-v2-android-internal-aab
+  group: peacepad-v2-android-production-aab
   cancel-in-progress: false
 
 jobs:
-  build-signed-internal-aab:
-    name: Build signed Android AAB without Play publication
+  build-signed-production-aab:
+    name: Build signed Android production AAB without Play publication
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -95,36 +95,37 @@ jobs:
           }));
           NODE
 
-      - name: Verify guarded Android contract and start signed AAB build
+      - name: Verify Canada production contract and start signed AAB build
         working-directory: ${{ runner.temp }}/peacepad-next-native-release
         shell: bash
         env:
           EXPECTED_SHA: ${{ inputs.source_sha }}
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EAS_NO_VCS: "1"
-          EXPO_PUBLIC_PEACEPAD_ENV: staging
-          PEACEPAD_ANDROID_RELEASE_MODE: playstore-internal
+          EXPO_PUBLIC_PEACEPAD_ENV: production
+          PEACEPAD_ANDROID_RELEASE_MODE: playstore-production
         run: |
           set -euo pipefail
           trap 'rm -f credentials.json "$RUNNER_TEMP/peacepad-upload.keystore"' EXIT
           release_command=$(cat <<'EOF'
             set -eu
-            export EXPO_PUBLIC_PEACEPAD_ENV=staging
-            export PEACEPAD_ANDROID_RELEASE_MODE=playstore-internal
+            export EXPO_PUBLIC_PEACEPAD_ENV=production
+            export PEACEPAD_ANDROID_RELEASE_MODE=playstore-production
             node scripts/check-lab-guardrails.cjs
-            node -e "const cfg=require(\"./app.config.js\")({config:require(\"./app.json\").expo}); if(cfg.android.package!==\"ca.peacepad.family\"||cfg.version!==\"2.0.1\"||cfg.android.versionCode!==43||cfg.extra.productionApiWritesEnabled!==false) process.exit(1)"
-            npx --yes eas-cli@21.8.0 build --platform android --profile playstore-internal --non-interactive --wait --json > "$RUNNER_TEMP/peacepad-v2-android-build.json"
+            node -e 'const cfg=require("./app.config.js")({config:require("./app.json").expo}); if(cfg.android.package!=="ca.peacepad.family"||cfg.version!=="2.0.1"||cfg.android.versionCode!==43||cfg.extra.productionApiWritesEnabled!==true||cfg.extra.googleSignInEnabled!==true) process.exit(1);'
+            npx --yes eas-cli@21.8.0 build --platform android --profile playstore-production --non-interactive --wait --json > "$RUNNER_TEMP/peacepad-v2-android-production-build.json"
           EOF
           )
           npx --yes eas-cli@21.8.0 env:exec production "$release_command" --non-interactive
-            node -e 'const fs=require("fs"); const b=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/peacepad-v2-android-build.json","utf8")); const first=Array.isArray(b)?b[0]:b; if(!first?.id||!first?.artifacts?.buildUrl) process.exit(1); fs.writeFileSync(process.env.RUNNER_TEMP+"/peacepad-v2-android-build.manifest", `source_sha=${process.env.EXPECTED_SHA||""}\nprofile=playstore-internal\npackage=ca.peacepad.family\nversion=2.0.1\nversion_code=43\nplay_submission_attempted=false\nbuild_id=${first.id}\nartifact_url=${first.artifacts.buildUrl}\n`);'
-      - name: Upload AAB build evidence without Play submission
+          node -e 'const fs=require("fs"); const b=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/peacepad-v2-android-production-build.json","utf8")); const first=Array.isArray(b)?b[0]:b; if(!first?.id||!first?.artifacts?.buildUrl) process.exit(1); fs.writeFileSync(process.env.RUNNER_TEMP+"/peacepad-v2-android-production-build.manifest", `source_sha=${process.env.EXPECTED_SHA||""}\nprofile=playstore-production\npackage=ca.peacepad.family\nversion=2.0.1\nversion_code=43\nproduction_writes_enabled=true\nplay_submission_attempted=false\nbuild_id=${first.id}\nartifact_url=${first.artifacts.buildUrl}\n`);'
+
+      - name: Upload production AAB build evidence without Play submission
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: peacepad-v2-android-internal-${{ inputs.source_sha }}
+          name: peacepad-v2-android-production-${{ inputs.source_sha }}
           if-no-files-found: warn
           retention-days: 7
           path: |
-            ${{ runner.temp }}/peacepad-v2-android-build.json
-            ${{ runner.temp }}/peacepad-v2-android-build.manifest
+            ${{ runner.temp }}/peacepad-v2-android-production-build.json
+            ${{ runner.temp }}/peacepad-v2-android-production-build.manifest
