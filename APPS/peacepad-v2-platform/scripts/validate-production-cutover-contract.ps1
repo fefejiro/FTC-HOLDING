@@ -19,6 +19,12 @@ Assert-Contract ($manifest.target.system -eq "peacepad-native-v2-supabase") "V2 
 Assert-Contract ($manifest.target.identityProvider -eq "supabase-auth") "V2 identity target changed without review."
 Assert-Contract ($manifest.target.region -eq "unset") "Committed contract must not name an unverified production region."
 Assert-Contract ($manifest.identityStrategy -eq "claim-after-supabase-auth") "Identity migration must not silently recreate legacy sessions."
+Assert-Contract ($manifest.scopeReconciliation.sourceEvidenceRequired -eq $true) "Scope reconciliation must require read-only source evidence."
+Assert-Contract ($manifest.scopeReconciliation.safelyScopedRows -eq "import-only-after-exact-source-inventory-reconciliation") "Safely scoped rows must be reconciled before import."
+Assert-Contract ($manifest.scopeReconciliation.unscopedRows -eq "retain-in-read-only-v1-quarantine-until-verified-user-claim") "Unscoped rows must remain quarantined until a verified user claim."
+Assert-Contract ($manifest.scopeReconciliation.ambiguousRows -eq "block-cutover-and-require-human-review") "Ambiguous source ownership must block cutover."
+Assert-Contract ($manifest.scopeReconciliation.silentDropAllowed -eq $false) "Unscoped source rows must not be silently dropped."
+Assert-Contract ($manifest.scopeReconciliation.automaticReassignmentAllowed -eq $false) "Unscoped source rows must not be automatically reassigned."
 
 $requiredMappings = @{
   "users" = "identity"
@@ -40,6 +46,9 @@ foreach ($source in $requiredMappings.Keys) {
 $requiredImportControls = @(
   "supabase-auth-user-exists-for-every-verified-email-claim",
   "explicit-partnership-scope-for-every-conversation-and-event",
+  "exact-safely-scoped-and-unscoped-count-reconciliation",
+  "unscoped-rows-retained-in-read-only-v1-quarantine-until-verified-user-claim",
+  "no-silent-drop-or-automatic-reassignment-of-unscoped-data",
   "text-only-message-import-with-media-and-deleted-content-quarantined",
   "timestamped-consent-ledger-or-user-reconsent",
   "fresh-target-or-reviewed-reconciliation-plan",
