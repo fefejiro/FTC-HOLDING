@@ -2,7 +2,7 @@
   "expo": {
     "name": "PeacePad",
     "slug": "peacepad-next-native-lab",
-    "version": "0.0.1",
+    "version": "2.0.1",
     "icon": "./assets/icon.png",
     "orientation": "portrait",
     "scheme": "peacepadnextlab",

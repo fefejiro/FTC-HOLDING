@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as Crypto from "expo-crypto";
+import Constants from "expo-constants";
 import { Platform, Text, View } from "react-native";
 import { LabButton } from "../components/LabButton";
 import { useOptionalLocalization, type SupportedLocale } from "../localization/LocalizationProvider";
@@ -38,6 +39,7 @@ export function LinkedSignInMethods() {
   const { locale } = useOptionalLocalization();
   const auth = useOptionalSupabaseSession();
   const strings = localized(locale);
+  const googleSignInEnabled = Constants.expoConfig?.extra?.googleSignInEnabled === true;
   const [providers, setProviders] = useState<LinkedAuthProvider[]>([]);
   const [busy, setBusy] = useState<"apple" | "google">();
   const [pendingRemove, setPendingRemove] = useState<"apple" | "google">();
@@ -94,7 +96,7 @@ export function LinkedSignInMethods() {
   const methods = ([
     { provider: "email" as const, label: strings.email, available: true },
     { provider: "apple" as const, label: strings.apple, available: Platform.OS === "ios" },
-    { provider: "google" as const, label: strings.google, available: true }
+    { provider: "google" as const, label: strings.google, available: googleSignInEnabled }
   ]).filter(({ available }) => available);
 
   if (!auth || auth.status !== "ready") return null;

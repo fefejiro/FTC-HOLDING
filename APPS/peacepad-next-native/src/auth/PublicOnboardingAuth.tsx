@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
+import Constants from "expo-constants";
 import {
   ActivityIndicator,
   Image,
@@ -94,6 +95,7 @@ export function PublicOnboardingAuth() {
   const { locale } = useOptionalLocalization();
   const auth = useSupabaseSession();
   const strings = localized(locale);
+  const googleSignInEnabled = Constants.expoConfig?.extra?.googleSignInEnabled === true;
   const [restoring, setRestoring] = useState(true);
   const [introComplete, setIntroComplete] = useState(false);
   const [mode, setMode] = useState<"create" | "sign-in">("create");
@@ -158,7 +160,7 @@ export function PublicOnboardingAuth() {
   };
 
   const signInWithGoogle = async () => {
-    if (busy) return;
+    if (busy || !googleSignInEnabled) return;
     setBusy(true); setError(undefined); setMessage(undefined);
     try {
       const identityToken = await requestGoogleIdentityToken();
@@ -221,8 +223,8 @@ export function PublicOnboardingAuth() {
           onPress={() => void signInWithApple()}
           style={styles.appleButton}
         /> : null}
-        <LabButton disabled={busy} label={strings.google} onPress={() => void signInWithGoogle()} />
-        <Text style={styles.or}>{strings.or}</Text>
+        {googleSignInEnabled ? <LabButton disabled={busy} label={strings.google} onPress={() => void signInWithGoogle()} /> : null}
+        {appleAvailable || googleSignInEnabled ? <Text style={styles.or}>{strings.or}</Text> : null}
         <TextInput accessibilityLabel={strings.email} autoCapitalize="none" autoComplete="email" keyboardType="email-address" onChangeText={setEmail} onSubmitEditing={() => passwordInput.current?.focus()} placeholder={strings.email} returnKeyType="next" style={styles.input} textContentType="emailAddress" value={email} />
         <TextInput accessibilityLabel={strings.password} autoComplete={mode === "create" ? "new-password" : "current-password"} onChangeText={setPassword} onSubmitEditing={() => void submit()} placeholder={strings.password} ref={passwordInput} returnKeyType="done" secureTextEntry style={styles.input} textContentType={mode === "create" ? "newPassword" : "password"} value={password} />
         {mode === "create" ? <Text style={styles.hint}>{strings.passwordHint}</Text> : null}
