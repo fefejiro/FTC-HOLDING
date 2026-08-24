@@ -1,9 +1,9 @@
 # PeacePad 2.0.1 release-candidate handover
 
-Date: 2026-08-24  
-Branch: `fix/peacepad-2.0.1-android-production-profile-v2`  
-Initial release implementation: `aa8854a75` (`prepare PeacePad 2.0.1 release candidate`)  
-Current control head: `2a557ef28` (`release(peacepad): align iOS production workflow with 2.0.1`)  
+Date: 2026-08-24
+Branch: `fix/peacepad-2.0.1-android-production-profile-v2`
+Initial release implementation: `aa8854a75` (`prepare PeacePad 2.0.1 release candidate`)
+Current control head: `2a557ef28` (`release(peacepad): align iOS production workflow with 2.0.1`)
 Control PR: [#294](https://github.com/fefejiro/FTC-HOLDING/pull/294) (merged)
 
 This is a reviewer handover for a candidate only. No App Store submission,
