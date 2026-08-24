@@ -27,7 +27,7 @@ jobs:
     env:
       APP_PATH: APPS/peacepad-next-native
       EXPECTED_SHA: ${{ inputs.source_sha }}
-      APPROVED_SOURCE_SHA: ad52f0c322f2aa1fb66df973db139faf59b3f56d
+      APPROVED_SOURCE_SHA: f1827ad92bc1868aa7c74264963e4a987de29367
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       EAS_NO_VCS: "1"
       FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: "30"
