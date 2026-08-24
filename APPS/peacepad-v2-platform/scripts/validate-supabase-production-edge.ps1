@@ -25,6 +25,9 @@ foreach ($required in @(
   if (-not $function.Contains($required)) { throw "Production Edge runtime boundary is missing: $required" }
 }
 if ($function -match 'productionWritesEnabled:\s*true') { throw 'Production writes must not default to enabled.' }
+if ($function.Contains('env("SB_REGION")')) {
+  throw 'Production availability must not compare the caller-near Edge PoP with the Canada data region.'
+}
 foreach ($required in @(
   "`$projectRef = 'qzekqjewpugdotskrtni'",
   "`$functionRegion = 'ca-central-1'",

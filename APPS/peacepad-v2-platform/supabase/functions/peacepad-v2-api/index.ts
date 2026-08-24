@@ -60,7 +60,6 @@ type ErrorCode =
   | "REGION_MISMATCH"
   | "SCHEMA_MISMATCH"
   | "CONCURRENCY_CONFLICT"
-  | "RUNTIME_REGION_MISMATCH"
   | "SESSION_REVOCATION_FAILED"
   | "SIGNAL_DELIVERY_UNAVAILABLE"
   | "SIGNAL_RATE_LIMITED"
@@ -394,10 +393,10 @@ const validateRuntimeBoundary = (
   if (requestedRegion && requestedRegion !== config.region) {
     return failure(request, 409, "REGION_MISMATCH", "The requested data region does not match this service.", requestId, config);
   }
-  const runtimeRegion = env("SB_REGION");
-  if (runtimeRegion && runtimeRegion !== config.functionRegion) {
-    return failure(request, 503, "RUNTIME_REGION_MISMATCH", "The regional staging function is unavailable.", requestId, config);
-  }
+  // Supabase Edge Functions can execute in a caller-near point of presence.
+  // SB_REGION therefore describes the current Edge runtime, not the approved
+  // database/data-residency boundary. The configured project ref, Supabase URL,
+  // PeacePad region, and request region remain the fail-closed authority.
   return null;
 };
 
