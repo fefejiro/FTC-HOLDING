@@ -18,6 +18,8 @@ foreach ($required in @(
   "'mode', 'read-only-source-inventory'",
   "'containsUserContent', false",
   "'eventsPartnershipScopeAvailable'",
+  "'scopeReconciliation'",
+  "'messagesUnscoped'",
   "'migrationScopes'",
   "'availableOptionalTables'",
   "'sourceSchemaFingerprint'",

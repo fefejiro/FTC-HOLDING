@@ -60,6 +60,46 @@ with expected_columns(table_name, column_name) as (
   ), '')) as value
   from source_columns
   where source_columns.table_name in ('users', 'partnerships', 'conversations', 'conversation_members', 'messages', 'events')
+), user_partnerships as (
+  select users.id as user_id,
+    users.active_partnership_id,
+    count(partnerships.id) as membership_count,
+    bool_or(partnerships.id = users.active_partnership_id) as active_matches_membership
+  from public.users
+  left join public.partnerships
+    on partnerships.user1_id = users.id or partnerships.user2_id = users.id
+  group by users.id, users.active_partnership_id
+), event_scope as (
+  select events.id,
+    case
+      when user_partnerships.user_id is null then 'creator-missing'
+      when user_partnerships.active_partnership_id is not null and user_partnerships.active_matches_membership then 'active-partnership'
+      when user_partnerships.membership_count = 1 then 'unique-membership'
+      when user_partnerships.membership_count = 0 then 'no-partnership'
+      else 'ambiguous'
+    end as scope_status
+  from public.events
+  left join user_partnerships on user_partnerships.user_id = events.created_by
+), conversation_pairs as (
+  select conversations.id,
+    count(conversation_members.user_id) as member_count,
+    min(conversation_members.user_id) as member_a,
+    max(conversation_members.user_id) as member_b
+  from public.conversations
+  left join public.conversation_members on conversation_members.conversation_id = conversations.id
+  group by conversations.id
+), conversation_scope as (
+  select conversation_pairs.id,
+    conversation_pairs.member_count,
+    count(partnerships.id) as partnership_matches
+  from conversation_pairs
+  left join public.partnerships
+    on conversation_pairs.member_count = 2
+   and (
+     (partnerships.user1_id = conversation_pairs.member_a and partnerships.user2_id = conversation_pairs.member_b)
+     or (partnerships.user1_id = conversation_pairs.member_b and partnerships.user2_id = conversation_pairs.member_a)
+   )
+  group by conversation_pairs.id, conversation_pairs.member_count
 )
 select jsonb_build_object(
   'schemaVersion', 1,
@@ -79,6 +119,22 @@ select jsonb_build_object(
   ), '[]'::jsonb),
   'eventsPartnershipScopeAvailable', exists (
     select 1 from source_columns where table_name = 'events' and column_name = 'partnership_id'
+  ),
+  'scopeReconciliation', jsonb_build_object(
+    'eventsSafelyScoped', (select count(*) from event_scope where scope_status in ('active-partnership', 'unique-membership')),
+    'eventsUnscoped', (select count(*) from event_scope where scope_status not in ('active-partnership', 'unique-membership')),
+    'conversationsSafelyScoped', (select count(*) from conversation_scope where member_count = 2 and partnership_matches = 1),
+    'conversationsUnscoped', (select count(*) from conversation_scope where not (member_count = 2 and partnership_matches = 1)),
+    'messagesSafelyScoped', (
+      select count(*) from public.messages
+      join conversation_scope on conversation_scope.id = messages.conversation_id
+      where conversation_scope.member_count = 2 and conversation_scope.partnership_matches = 1
+    ),
+    'messagesUnscoped', (
+      select count(*) from public.messages
+      join conversation_scope on conversation_scope.id = messages.conversation_id
+      where not (conversation_scope.member_count = 2 and conversation_scope.partnership_matches = 1)
+    )
   ),
   'migrationScopes', jsonb_build_object(
     'users', exists (select 1 from source_columns where table_name = 'users'),
