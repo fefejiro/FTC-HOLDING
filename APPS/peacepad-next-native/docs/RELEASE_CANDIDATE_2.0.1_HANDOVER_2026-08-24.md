@@ -1,10 +1,10 @@
 # PeacePad 2.0.1 release-candidate handover
 
-Date: 2026-08-24  
-Branch: `release/peacepad-2.0.1`  
+Date: 2026-08-24
+Branch: `fix/peacepad-2.0.1-android-production-profile-v2`
 Initial release implementation: `aa8854a75` (`prepare PeacePad 2.0.1 release candidate`)
-Current review-correction head: see PR #279; this committed handover does not
-self-reference a SHA that cannot exist until after the document is committed.
+Current control head: `2a557ef28` (`release(peacepad): align iOS production workflow with 2.0.1`)
+Control PR: [#294](https://github.com/fefejiro/FTC-HOLDING/pull/294) (merged)
 
 This is a reviewer handover for a candidate only. No App Store submission,
 TestFlight upload, Google Play upload, or public release is claimed.
@@ -82,6 +82,13 @@ worktree to `D:\PeacePadRelease\recovery\`.
 - Production OAuth credentials/provider callback behavior.
 - TestFlight, Play Internal Testing, App Review, or public availability.
 - Android `playstore-production` signed AAB and Play promotion.
+
+## Current evidence and blocker
+
+- Hosted exact-head Native V2 gates passed at [run 32782416804](https://github.com/fefejiro/FTC-HOLDING/actions/runs/32782416804): isolated dependency install, secret scan, guardrails, TypeScript, Jest/coverage, Expo Doctor, and iOS export.
+- The iOS production workflow now asserts source baseline `eb7c14399f3ffa67517acafd8f56a2a1b17fe284`, version `2.0.1`, build `5`, and matching IPA/evidence names.
+- Canada production API health is reachable at `https://qzekqjewpugdotskrtni.supabase.co/functions/v1/peacepad-v2-api/health` and returns HTTP 200 with `environment=production`, `region=ca`, and `writesEnabled=false`.
+- Static production-edge and cutover-contract checks pass, but production cutover remains blocked: no provider backup/PITR evidence, full migration rehearsal and rollback, controlled two-account production canary, physical-device journey, signed artifacts, or public store release has been verified.
 
 ## Reviewer verdict
 
