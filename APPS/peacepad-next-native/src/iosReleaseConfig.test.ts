@@ -154,9 +154,9 @@ describe("PeacePad iOS release variant", () => {
     process.env.EXPO_PUBLIC_PEACEPAD_ENV = "production";
     expect(() => resolveConfig({ config: structuredClone(appJson.expo) })).toThrow("must use the guarded staging runtime");
     delete process.env.PEACEPAD_IOS_RELEASE_MODE;
-    process.env.PEACEPAD_ANDROID_RELEASE_MODE = "production";
+    process.env.PEACEPAD_ANDROID_RELEASE_MODE = "playstore-production";
     process.env.EXPO_PUBLIC_PEACEPAD_ENV = "staging";
-    expect(() => resolveConfig({ config: structuredClone(appJson.expo) })).toThrow("Unsupported PeacePad Android release mode");
+    expect(() => resolveConfig({ config: structuredClone(appJson.expo) })).toThrow("must use the production runtime");
   });
 
   it("keeps email and Apple available when Google OAuth is not configured", () => {
@@ -167,6 +167,35 @@ describe("PeacePad iOS release variant", () => {
     expect(resolveConfig({ config: structuredClone(appJson.expo) })).toMatchObject({
       plugins: expect.arrayContaining(["expo-apple-authentication"]),
       extra: { googleSignInEnabled: false }
+    });
+  });
+
+  it("requires the explicit Canada production runtime for the Play production build", () => {
+    process.env.PEACEPAD_ANDROID_RELEASE_MODE = "playstore-production";
+    process.env.EXPO_PUBLIC_PEACEPAD_ENV = "production";
+    process.env.EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED = "true";
+    expect(resolveConfig({ config: structuredClone(appJson.expo) })).toMatchObject({
+      version: "2.0.1",
+      android: {
+        package: "ca.peacepad.family",
+        versionCode: 43
+      },
+      extra: {
+        environment: "production",
+        productionApiWritesEnabled: true,
+        releaseChannel: "playstore-production",
+        submittedBundleId: "ca.peacepad.family"
+      }
+    });
+    expect(easJson.build["playstore-production"]).toMatchObject({
+      distribution: "store",
+      environment: "production",
+      env: {
+        EXPO_PUBLIC_PEACEPAD_ENV: "production",
+        EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED: "true",
+        PEACEPAD_ANDROID_RELEASE_MODE: "playstore-production"
+      },
+      android: { buildType: "app-bundle", credentialsSource: "local" }
     });
   });
 });
