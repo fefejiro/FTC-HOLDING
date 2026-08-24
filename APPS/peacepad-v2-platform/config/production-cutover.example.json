@@ -12,6 +12,14 @@
     "region": "unset"
   },
   "identityStrategy": "claim-after-supabase-auth",
+  "scopeReconciliation": {
+    "sourceEvidenceRequired": true,
+    "safelyScopedRows": "import-only-after-exact-source-inventory-reconciliation",
+    "unscopedRows": "retain-in-read-only-v1-quarantine-until-verified-user-claim",
+    "ambiguousRows": "block-cutover-and-require-human-review",
+    "silentDropAllowed": false,
+    "automaticReassignmentAllowed": false
+  },
   "mappings": [
     {
       "source": "users",
@@ -92,6 +100,9 @@
   "requiredImportControls": [
     "supabase-auth-user-exists-for-every-verified-email-claim",
     "explicit-partnership-scope-for-every-conversation-and-event",
+    "exact-safely-scoped-and-unscoped-count-reconciliation",
+    "unscoped-rows-retained-in-read-only-v1-quarantine-until-verified-user-claim",
+    "no-silent-drop-or-automatic-reassignment-of-unscoped-data",
     "text-only-message-import-with-media-and-deleted-content-quarantined",
     "timestamped-consent-ledger-or-user-reconsent",
     "fresh-target-or-reviewed-reconciliation-plan",
