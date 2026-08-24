@@ -2,8 +2,9 @@
 
 Date: 2026-08-24  
 Branch: `release/peacepad-2.0.1`  
-Branch head: `657c3b9a0` (`docs: hand off PeacePad 2.0.1 candidate`)  
-Release implementation commit: `aa8854a75` (`prepare PeacePad 2.0.1 release candidate`)
+Initial release implementation: `aa8854a75` (`prepare PeacePad 2.0.1 release candidate`)
+Current review-correction head: see PR #279; this committed handover does not
+self-reference a SHA that cannot exist until after the document is committed.
 
 This is a reviewer handover for a candidate only. No App Store submission,
 TestFlight upload, Google Play upload, or public release is claimed.
@@ -31,6 +32,11 @@ TestFlight upload, Google Play upload, or public release is claimed.
 - Google OAuth is fail-safe: missing credentials remove the native plugin and
   hide Google controls in onboarding and linked-sign-in settings. Email and
   Apple remain available.
+- The ordinary lab manifest remains `0.0.1`; only explicit store modes resolve
+  to marketing version `2.0.1`, preventing release identity from leaking into
+  lab and Simulator builds.
+- The Edge validation checks the environment-selected invitation scheme rather
+  than rejecting the legitimate production bundle identifier globally.
 
 ## Verified locally
 
@@ -41,6 +47,8 @@ Passed:
 - `git diff --check`
 - Direct dynamic-config checks for production-without-Google and
   staging-with-valid-Google configuration
+- `scripts/validate-supabase-edge-function.ps1` â€”
+  `SUPABASE_EDGE_BOUNDARY_LOCAL_VERIFIED`
 
 The clean worktree has no tracked or untracked source changes after the
 candidate commit. Generated dependency-install output was moved outside the
@@ -48,10 +56,10 @@ worktree to `D:\PeacePadRelease\recovery\`.
 
 ## Not yet verified
 
-- TypeScript, focused Jest, full Jest/coverage, Expo export, and native builds:
-  the isolated install could not complete because the existing package lock
-  and package manifest are out of sync; the available partial dependencies do
-  not provide a valid Expo toolchain.
+- TypeScript, focused Jest, full Jest/coverage, Expo export, and native builds.
+  A root clean install still reports a pre-existing monorepo lock mismatch.
+  The focused PR relies on hosted CI for the authoritative clean-install and
+  test result; no broad lockfile rewrite was accepted into this candidate.
 - iPhone or Android physical-device journey.
 - Signed iOS/Android artifact IDs and hashes for this exact commit.
 - Production OAuth credentials/provider callback behavior.

@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react-nativ
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
+import Constants from "expo-constants";
 import { LocalizationProvider } from "../localization/LocalizationProvider";
 import { useSupabaseSession } from "../session/SupabaseSessionProvider";
 import { PublicOnboardingAuth } from "./PublicOnboardingAuth";
@@ -10,6 +11,10 @@ import { requestGoogleIdentityToken } from "./GoogleNativeAuth";
 
 jest.mock("../session/SupabaseSessionProvider", () => ({ useSupabaseSession: jest.fn() }));
 jest.mock("./GoogleNativeAuth", () => ({ requestGoogleIdentityToken: jest.fn() }));
+jest.mock("expo-constants", () => ({
+  __esModule: true,
+  default: { expoConfig: { extra: { googleSignInEnabled: true } } }
+}));
 
 const sessionValue = (overrides: Record<string, unknown> = {}) => ({
   status: "signed-out",
@@ -38,6 +43,7 @@ describe("PublicOnboardingAuth", () => {
     jest.spyOn(Crypto, "digestStringAsync").mockResolvedValue("hashed-nonce");
     (useSupabaseSession as jest.Mock).mockReturnValue(sessionValue());
     (requestGoogleIdentityToken as jest.Mock).mockResolvedValue(undefined);
+    (Constants.expoConfig!.extra as Record<string, unknown>).googleSignInEnabled = true;
   });
 
   it("opens with a short, warm first-run introduction and no staging language", async () => {
@@ -93,6 +99,15 @@ describe("PublicOnboardingAuth", () => {
     render(<LocalizationProvider initialLocale="en" production><PublicOnboardingAuth /></LocalizationProvider>);
     fireEvent.press(await screen.findByText("Continue with Google"));
     await waitFor(() => expect(signInWithGoogle).toHaveBeenCalledWith("google-id-token"));
+  });
+
+  it("hides Google without blocking email and Apple when OAuth is unavailable", async () => {
+    (Constants.expoConfig!.extra as Record<string, unknown>).googleSignInEnabled = false;
+    secureStore.getItemAsync.mockResolvedValue("true");
+    render(<LocalizationProvider initialLocale="en" production><PublicOnboardingAuth /></LocalizationProvider>);
+    expect(await screen.findByLabelText("Email")).toBeTruthy();
+    expect(screen.queryByText("Continue with Google")).toBeNull();
+    expect(screen.getByLabelText("Continue with Apple")).toBeTruthy();
   });
 
   it("finishes a password-recovery callback before entering the family runtime", async () => {
