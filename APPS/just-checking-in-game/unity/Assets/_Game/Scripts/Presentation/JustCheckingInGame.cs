@@ -47,6 +47,20 @@ namespace Jci.Presentation
             ShowHome();
         }
 
+        private void OnApplicationPause(bool paused)
+        {
+            if (paused && together != null && together.Phase == SessionPhase.Active)
+            {
+                document.ActiveSession = together.Snapshot();
+                store.Save(document);
+            }
+        }
+
+        private void OnApplicationFocus(bool focused)
+        {
+            if (!focused) OnApplicationPause(true);
+        }
+
         private void BuildCanvas()
         {
             var go = new GameObject("JCI Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));

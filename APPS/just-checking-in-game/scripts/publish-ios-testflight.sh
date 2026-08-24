@@ -34,15 +34,14 @@ grep -q 'bundleVersion: 1.1.0' "${UNITY_PROJECT}/ProjectSettings/ProjectSettings
 grep -q 'iPhone: 3' "${UNITY_PROJECT}/ProjectSettings/ProjectSettings.asset" || fail "ProjectSettings is not iOS build 3"
 grep -q 'iPhone: com.ftcholding.justcheckingin' "${UNITY_PROJECT}/ProjectSettings/ProjectSettings.asset" || fail "Bundle ID mismatch"
 
-UNITY_VERSION="$(${UNITY_PATH} -version 2>/dev/null | head -n 1 || true)"
+UNITY_VERSION="$("${UNITY_PATH}" -version 2>/dev/null | head -n 1 || true)"
 echo "[JCI] Unity: ${UNITY_VERSION}"
 [[ "${UNITY_VERSION}" == *"${UNITY_VERSION_EXPECTED}"* ]] || fail "Unity version mismatch; expected ${UNITY_VERSION_EXPECTED}"
 
 echo "[JCI] Stage 1/4: Unity iOS export"
 rm -rf "${IOS_EXPORT}" "${ARCHIVE_PATH}" "${EXPORT_DIR}"
 mkdir -p "${IOS_EXPORT}"
-"${UNITY_PATH}" -batchmode -quit -projectPath "${UNITY_PROJECT}" -buildTarget iOS -executeMethod Jci.Editor.BuildScript.Expor­tiOS -logFile "${LOG_DIR}/unity-ios-${RUN_ID}.log"
-
+"${UNITY_PATH}" -batchmode -quit -projectPath "${UNITY_PROJECT}" -buildTarget iOS -executeMethod Jci.Editor.BuildScript.ExportiOS -logFile "${LOG_DIR}/unity-ios-${RUN_ID}.log"
 XCODE_PROJECT="${IOS_EXPORT}/Unity-iPhone.xcodeproj"
 [[ -d "${XCODE_PROJECT}" ]] || fail "Unity export did not produce ${XCODE_PROJECT}"
 
@@ -73,10 +72,16 @@ echo "[JCI] Stage 3/4: export and validate IPA"
 xcodebuild -exportArchive -archivePath "${ARCHIVE_PATH}" -exportPath "${EXPORT_DIR}" \
   -exportOptionsPlist "${EXPORT_OPTIONS}" -allowProvisioningUpdates
 [[ -f "${IPA_PATH}" ]] || { IPA_PATH="$(find "${EXPORT_DIR}" -maxdepth 1 -name '*.ipa' -print -quit)"; [[ -n "${IPA_PATH}" ]] || fail "IPA was not exported"; }
-xcrun altool --validate-app -f "${IPA_PATH}" -t ios -u "${APPLE_ID}" -p "${APPLE_APP_SPECIFIC_PASSWORD}"
+if ! xcrun altool --validate-app -f "${IPA_PATH}" -t ios -u "${APPLE_ID}" -p "${APPLE_APP_SPECIFIC_PASSWORD}"; then
+  echo "[JCI] altool validation unavailable; using iTMSTransporter validation"
+  xcrun iTMSTransporter -m validate -assetFile "${IPA_PATH}" -u "${APPLE_ID}" -p "${APPLE_APP_SPECIFIC_PASSWORD}"
+fi
 
 echo "[JCI] Stage 4/4: upload to App Store Connect"
-xcrun altool --upload-app -f "${IPA_PATH}" -t ios -u "${APPLE_ID}" -p "${APPLE_APP_SPECIFIC_PASSWORD}"
+if ! xcrun altool --upload-app -f "${IPA_PATH}" -t ios -u "${APPLE_ID}" -p "${APPLE_APP_SPECIFIC_PASSWORD}"; then
+  echo "[JCI] altool upload unavailable; using iTMSTransporter upload"
+  xcrun iTMSTransporter -m upload -assetFile "${IPA_PATH}" -u "${APPLE_ID}" -p "${APPLE_APP_SPECIFIC_PASSWORD}"
+fi
 
 echo "[JCI] Upload completed. This is not public availability. Confirm build 3 in App Store Connect, submit review with automatic release, then verify the public listing after approval."
 echo "[JCI] IPA=${IPA_PATH}"
