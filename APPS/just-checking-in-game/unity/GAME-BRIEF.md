@@ -1,0 +1,23 @@
+# GAME-BRIEF
+
+- Title: Just Checking In
+- Working title: Just Checking In
+- Positioning: A premium conversation and personal check-in app for meaningful moments, alone or together.
+- Audience: Solo reflection, couples, friends, and family.
+- Core loop: Open app -> choose self or shared check-in -> draw affirmation/card prompt -> reflect/respond/pass -> save highlights -> close with summary/intention.
+- Local play flow: Together Here pass-and-play with privacy curtain, turn handoff, optional follow-up, save card locally.
+- Remote play flow: Host creates private two-player room -> share join code/link/QR -> guest joins -> synchronized turn-based session with host-authoritative state.
+- Engine: Unity 6.3 LTS (latest patch) with URP and mobile-first UX.
+- Engine justification: One stack for polished 2.5D presentation, deterministic domain logic, and reusable FTC GameCore package.
+- Presentation target: Premium 2.5D room, tactile card animations, calm lighting themes by deck, strong readability and accessibility.
+- Monetization direction: Generous free core; premium deck/theme expansion and optional subscription only after core retention validation.
+- Minimum device targets: Android ARM64 API 24+; iPhone devices supported by current Unity 6.3 iOS export.
+- Privacy posture: No recording/transcribing of spoken answers; remote sync sends compact action/state metadata only.
+- Comp benchmark: I Am (daily affirmations utility pattern) and relationship card-session apps (flow reference only, no copied text/branding).
+- Kill criteria: If retention and session completion fail after controlled iteration and quality gates, pause expansion and reassess category fit.
+- Launch acceptance criteria:
+  - Solo, Together Here, Remote Together functional.
+  - Deterministic session reducer with tests.
+  - Android AAB build and iOS Xcode export succeed.
+  - Security/privacy constraints pass (no microphone/camera permissions; no sensitive payloads).
+  - 20 consecutive stable remote sessions with no desync.
