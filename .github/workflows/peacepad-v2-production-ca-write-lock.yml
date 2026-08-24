@@ -24,12 +24,14 @@ jobs:
     timeout-minutes: 5
     env:
       API_BASE_URL: https://qzekqjewpugdotskrtni.supabase.co/functions/v1/peacepad-v2-api
+      SUPABASE_PUBLISHABLE_KEY: ${{ vars.PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY }}
 
     steps:
       - name: Verify health and readiness boundary
         shell: bash
         run: |
           set -euo pipefail
+          test -n "$SUPABASE_PUBLISHABLE_KEY"
           for route in health readyz; do
             response="$(curl --fail --silent --show-error \
               --connect-timeout 10 \
@@ -37,6 +39,7 @@ jobs:
               --retry 3 \
               --retry-all-errors \
               --retry-delay 2 \
+              --header "apikey: $SUPABASE_PUBLISHABLE_KEY" \
               "$API_BASE_URL/$route")"
             jq -e '
               .status == (if $route == "health" then "ok" else "ready" end)
@@ -57,6 +60,7 @@ jobs:
             --output "$body_path" \
             --write-out '%{http_code}' \
             --request POST \
+            --header "apikey: $SUPABASE_PUBLISHABLE_KEY" \
             --header 'content-type: application/json' \
             --data '{}' \
             "$API_BASE_URL/api/v2/invitations")"
