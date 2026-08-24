@@ -1,14 +1,14 @@
 using System;
-using System.Collections.Generic;
+using System.IO;
+using Jci.Application;
+using Jci.Domain;
+using Jci.Infrastructure;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Jci.Presentation
 {
-    /// <summary>
-    /// A self-contained, offline prompt game. It intentionally stores no player
-    /// data and uses no services: a family can pass the device around, draw a
-    /// prompt, talk, and move to the next turn.
-    /// </summary>
+    /// <summary>Offline-first uGUI shell. Only documented local IDs and metrics are persisted.</summary>
     public sealed class JustCheckingInGame : MonoBehaviour
     {
         private const string Background = "#102A43";
@@ -18,276 +18,287 @@ namespace Jci.Presentation
         private const string Teal = "#2A9D8F";
         private const string Gold = "#E9C46A";
 
-        private readonly List<Prompt> prompts = new List<Prompt>
-        {
-            new Prompt("Today", "What is one word that describes how you feel right now?"),
-            new Prompt("Small win", "What is something you did well this week?"),
-            new Prompt("Connection", "Who helped you recently, and how did it make a difference?"),
-            new Prompt("Kindness", "What is one kind thing you could do for someone today?"),
-            new Prompt("Energy", "What gives you energy when your day feels busy?"),
-            new Prompt("Gratitude", "What is one ordinary thing you are grateful for?"),
-            new Prompt("Listen", "What would you like someone to understand about you today?"),
-            new Prompt("Hope", "What is one thing you are looking forward to?"),
-            new Prompt("Support", "When do you feel most supported by other people?"),
-            new Prompt("Pause", "What would make the rest of today feel a little better?"),
-            new Prompt("Memory", "Share a moment that made you smile recently."),
-            new Prompt("Brave", "What is something new you would like to try?"),
-        };
-
-        private Texture2D colourTexture;
-        private GUIStyle titleStyle;
-        private GUIStyle eyebrowStyle;
-        private GUIStyle bodyStyle;
-        private GUIStyle cardLabelStyle;
-        private GUIStyle cardTitleStyle;
-        private GUIStyle cardBodyStyle;
-        private GUIStyle buttonStyle;
-        private GUIStyle secondaryButtonStyle;
-        private int promptIndex;
-        private bool hasPrompt;
-        private int turns;
+        private Canvas canvas;
+        private RectTransform body;
+        private InputField nameInput;
+        private JciLocalStore store;
+        private JciStoreDocument document;
+        private JciTogetherSession together;
+        private MoodOption selectedMood;
+        private bool reducedMotion;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Create()
         {
-            if (FindAnyObjectByType<JustCheckingInGame>() != null)
-            {
-                return;
-            }
-
-            var gameObject = new GameObject("Just Checking In Game");
-            DontDestroyOnLoad(gameObject);
-            gameObject.AddComponent<JustCheckingInGame>();
+            if (FindAnyObjectByType<JustCheckingInGame>() != null) return;
+            var go = new GameObject("Just Checking In Game");
+            DontDestroyOnLoad(go);
+            go.AddComponent<JustCheckingInGame>();
         }
 
         private void Awake()
         {
-            Application.targetFrameRate = 60;
+            UnityEngine.Application.targetFrameRate = 60;
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
-            colourTexture = new Texture2D(1, 1, TextureFormat.RGBA32, false);
-            colourTexture.SetPixel(0, 0, Color.white);
-            colourTexture.Apply();
-            promptIndex = UnityEngine.Random.Range(0, prompts.Count);
+            reducedMotion = PlayerPrefs.GetInt("jci.reducedMotion", 0) == 1;
+            store = new JciLocalStore(Path.Combine(UnityEngine.Application.persistentDataPath, "jci-local-v1.json"));
+            document = store.Load();
+            BuildCanvas();
+            ShowHome();
         }
 
-        private void OnDestroy()
+        private void BuildCanvas()
         {
-            if (colourTexture != null)
+            var go = new GameObject("JCI Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            go.transform.SetParent(transform, false);
+            canvas = go.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 10;
+            var scaler = go.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(390, 844);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = 0.5f;
+            var background = MakePanel(go.transform, "Background", Parse(Background));
+            Stretch(background);
+            var safe = new GameObject("Safe Area", typeof(RectTransform), typeof(JciSafeArea));
+            safe.transform.SetParent(go.transform, false);
+            Stretch(safe.GetComponent<RectTransform>());
+            body = MakePanel(safe.transform, "Body", new Color(0, 0, 0, 0));
+            body.offsetMin = new Vector2(26, 24);
+            body.offsetMax = new Vector2(-26, -24);
+            var layout = body.gameObject.AddComponent<VerticalLayoutGroup>();
+            layout.spacing = 12;
+            layout.padding = new RectOffset(0, 0, 0, 0);
+            layout.childControlWidth = true;
+            layout.childControlHeight = false;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+        }
+
+        private void ClearBody()
+        {
+            for (var i = body.childCount - 1; i >= 0; i--) Destroy(body.GetChild(i).gameObject);
+            AddText(body, "JUST CHECKING IN", 16, Parse(Gold), FontStyle.Bold, 32);
+            var hero = AddText(body, "A little time to connect.", 30, Color.white, FontStyle.Bold, 72);
+            hero.rectTransform.sizeDelta = new Vector2(0, 72);
+        }
+
+        private void ShowHome()
+        {
+            ClearBody();
+            AddText(body, "Choose a gentle way to check in.", 18, Color.white, FontStyle.Normal, 50);
+            if (document.ActiveSession != null) AddButton(body, "Resume your check-in", ResumeTogether, Parse(Coral));
+            AddButton(body, "Check in with myself", ShowSelf, Parse(Teal));
+            AddButton(body, "Together here", ShowTogetherPicker, Parse(Coral));
+            AddButton(body, "Connection Journey", ShowJourney, Parse(Gold), Parse(Ink));
+            AddText(body, "Offline by design. Nothing you say is sent or recorded.", 13, new Color(1, 1, 1, .75f), FontStyle.Normal, 58);
+        }
+
+        private void ShowSelf()
+        {
+            selectedMood = null;
+            ClearBody();
+            AddText(body, "How are you arriving today?", 22, Color.white, FontStyle.Bold, 54);
+            foreach (var mood in JciContent.Moods) AddButton(body, mood.Label, () => SelectMood(mood), Parse(Teal));
+            AddButton(body, "Back", ShowHome, Parse(Card), Parse(Ink));
+        }
+
+        private void SelectMood(MoodOption mood)
+        {
+            selectedMood = mood;
+            ClearBody();
+            AddText(body, "A small reminder for this moment", 21, Color.white, FontStyle.Bold, 58);
+            var affirmation = JciContent.FindAffirmation(mood.Id);
+            AddText(body, affirmation.Text, 25, Parse(Ink), FontStyle.Bold, 150, Parse(Card));
+            AddButton(body, "Finish this check-in", FinishSelf, Parse(Coral));
+            AddButton(body, "Choose a different feeling", ShowSelf, Parse(Card), Parse(Ink));
+        }
+
+        private void FinishSelf()
+        {
+            if (selectedMood == null) return;
+            var affirmation = JciContent.FindAffirmation(selectedMood.Id);
+            document.SelfCheckIns.Add(new SelfCheckInRecord(Guid.NewGuid().ToString("N"), selectedMood.Id, affirmation.Id, DateTime.UtcNow.Ticks));
+            store.Save(document);
+            Haptic();
+            ClearBody();
+            AddText(body, "You made space for yourself.", 25, Color.white, FontStyle.Bold, 70);
+            AddText(body, affirmation.Text, 19, Parse(Card), FontStyle.Normal, 110);
+            AddButton(body, "Back home", ShowHome, Parse(Teal));
+        }
+
+        private void ShowTogetherPicker()
+        {
+            ClearBody();
+            AddText(body, "Who are you checking in with?", 21, Color.white, FontStyle.Bold, 54);
+            foreach (var connection in document.Connections)
             {
-                Destroy(colourTexture);
+                var local = connection;
+                AddButton(body, local.DisplayName, () => StartTogether(local.Id), Parse(Teal));
             }
+            nameInput = AddInput(body, "Name a connection (kept on this device)");
+            AddButton(body, "Save name and start", CreateAndStartTogether, Parse(Coral));
+            AddButton(body, "Back", ShowHome, Parse(Card), Parse(Ink));
         }
 
-        private void OnGUI()
+        private void CreateAndStartTogether()
         {
-            EnsureStyles();
-            var width = Screen.width;
-            var height = Screen.height;
-            var horizontal = Mathf.Max(30f, width * 0.065f);
-            var top = Mathf.Max(42f, height * 0.07f);
-            var contentWidth = width - (horizontal * 2f);
+            var name = nameInput == null ? string.Empty : nameInput.text.Trim();
+            if (name.Length == 0) return;
+            var connection = new LocalConnection(Guid.NewGuid().ToString("N"), name, DateTime.UtcNow.Ticks);
+            document.Connections.Add(connection);
+            store.Save(document);
+            StartTogether(connection.Id);
+        }
 
-            DrawRect(new Rect(0, 0, width, height), Parse(Background));
-            DrawCircle(new Vector2(width * 0.86f, height * 0.1f), width * 0.28f, Parse("#173D5C"));
-            DrawCircle(new Vector2(width * 0.1f, height * 0.9f), width * 0.20f, Parse("#173D5C"));
+        private void StartTogether(string connectionId)
+        {
+            together = new JciTogetherSession(JciContent.Prompts, unchecked((int)DateTime.UtcNow.Ticks));
+            together.Start(connectionId, DateTime.UtcNow.Ticks);
+            document.ActiveSession = together.Snapshot();
+            store.Save(document);
+            ShowTogether();
+        }
 
-            GUI.Label(new Rect(horizontal, top, contentWidth, 34), "JUST CHECKING IN", eyebrowStyle);
-            GUI.Label(new Rect(horizontal, top + 46, contentWidth, 112), "A little time\nto connect.", titleStyle);
+        private void ResumeTogether()
+        {
+            together = new JciTogetherSession(JciContent.Prompts, unchecked((int)DateTime.UtcNow.Ticks));
+            together.Restore(document.ActiveSession);
+            ShowTogether();
+        }
 
-            if (!hasPrompt)
+        private void ShowTogether()
+        {
+            ClearBody();
+            if (together == null || together.CurrentPrompt == null) { ShowHome(); return; }
+            AddText(body, "TOGETHER · TURN " + together.TurnNumber.ToString("00"), 15, Parse(Gold), FontStyle.Bold, 34);
+            AddText(body, together.CurrentPrompt.Text, 23, Parse(Ink), FontStyle.Bold, 205, Parse(Card));
+            AddButton(body, "Answered — next prompt", CompleteTurn, Parse(Coral));
+            AddButton(body, "Pass this one", PassTurn, Parse(Teal));
+            AddButton(body, "End check-in", EndTogether, Parse(Card), Parse(Ink));
+        }
+
+        private void CompleteTurn() { together.CompleteCurrent(); SaveActiveAndRefresh(); }
+        private void PassTurn() { together.PassCurrent(); SaveActiveAndRefresh(); }
+
+        private void SaveActiveAndRefresh()
+        {
+            document.ActiveSession = together.Snapshot();
+            store.Save(document);
+            Haptic();
+            ShowTogether();
+        }
+
+        private void EndTogether()
+        {
+            var summary = together.End(DateTime.UtcNow.Ticks, Guid.NewGuid().ToString("N"));
+            document.TogetherSessions.Add(summary);
+            document.ActiveSession = null;
+            store.Save(document);
+            Haptic();
+            ClearBody();
+            AddText(body, "Check-in complete.", 26, Color.white, FontStyle.Bold, 70);
+            AddText(body, summary.QuestionsCompleted + " answered · " + summary.QuestionsPassed + " passed", 19, Parse(Card), FontStyle.Normal, 66);
+            AddButton(body, "Back home", ShowHome, Parse(Teal));
+        }
+
+        private void ShowJourney()
+        {
+            ClearBody();
+            AddText(body, "Your local connection journey", 22, Color.white, FontStyle.Bold, 65);
+            foreach (var connection in document.Connections)
             {
-                DrawWelcome(horizontal, top + 205, contentWidth, height);
-                return;
+                var local = connection;
+                var count = document.TogetherSessions.FindAll(s => s.ConnectionId == local.Id).Count;
+                AddButton(body, local.DisplayName + " · " + count + " check-ins", () => DeleteConnection(local), Parse(Teal));
             }
-
-            DrawPrompt(horizontal, top + 205, contentWidth, height);
+            AddText(body, "Tap a name to remove its local label. Nothing leaves this device.", 13, new Color(1, 1, 1, .75f), FontStyle.Normal, 58);
+            AddButton(body, "Add a connection", ShowTogetherPicker, Parse(Coral));
+            AddButton(body, "Reset all local data", ResetLocalData, Parse(Coral));
+            AddButton(body, "Back", ShowHome, Parse(Card), Parse(Ink));
         }
 
-        private void DrawWelcome(float horizontal, float top, float contentWidth, float height)
+        private void DeleteConnection(LocalConnection connection)
         {
-            GUI.Label(
-                new Rect(horizontal, top, contentWidth, 115),
-                "Take turns. Draw a prompt. Make room for the conversation that matters.",
-                bodyStyle);
-
-            var cardTop = top + 155;
-            DrawRoundedCard(new Rect(horizontal, cardTop, contentWidth, Mathf.Min(225f, height * 0.25f)), Parse(Card));
-            GUI.Label(new Rect(horizontal + 30, cardTop + 30, contentWidth - 60, 35), "HOW TO PLAY", cardLabelStyle);
-            GUI.Label(
-                new Rect(horizontal + 30, cardTop + 75, contentWidth - 60, 120),
-                "1. Pass the device to the next player.\n2. Draw a prompt and take your time.\n3. Listen without fixing. Then pass it on.",
-                cardBodyStyle);
-
-            var buttonTop = Mathf.Min(height - 130f, cardTop + 270f);
-            if (GUI.Button(new Rect(horizontal, buttonTop, contentWidth, 64), "Start checking in", buttonStyle))
-            {
-                hasPrompt = true;
-                turns = 1;
-            }
+            document.Connections.Remove(connection);
+            store.Save(document);
+            ShowJourney();
         }
 
-        private void DrawPrompt(float horizontal, float top, float contentWidth, float height)
+        private void ResetLocalData()
         {
-            GUI.Label(new Rect(horizontal, top, contentWidth, 30), $"TURN {turns:00}", eyebrowStyle);
-            var cardTop = top + 44;
-            var cardHeight = Mathf.Min(340f, height * 0.42f);
-            DrawRoundedCard(new Rect(horizontal, cardTop, contentWidth, cardHeight), Parse(Card));
-
-            var prompt = prompts[promptIndex];
-            GUI.Label(new Rect(horizontal + 30, cardTop + 32, contentWidth - 60, 34), prompt.Category.ToUpperInvariant(), cardLabelStyle);
-            GUI.Label(new Rect(horizontal + 30, cardTop + 86, contentWidth - 60, cardHeight - 125), prompt.Text, cardTitleStyle);
-
-            var buttonTop = cardTop + cardHeight + 30;
-            if (GUI.Button(new Rect(horizontal, buttonTop, contentWidth, 64), "Next prompt", buttonStyle))
-            {
-                DrawNextPrompt();
-            }
-
-            if (GUI.Button(new Rect(horizontal, buttonTop + 80, contentWidth, 52), "Pass this one", secondaryButtonStyle))
-            {
-                DrawNextPrompt();
-            }
-
-            GUI.Label(new Rect(horizontal, height - 48, contentWidth, 28), "There is no score. Listening is the win.", eyebrowStyle);
+            store.DeleteAll();
+            document = new JciStoreDocument();
+            together = null;
+            ShowHome();
         }
 
-        private void DrawNextPrompt()
-        {
-            var next = UnityEngine.Random.Range(0, prompts.Count - 1);
-            if (next >= promptIndex)
-            {
-                next++;
-            }
+        private void Haptic() { if (!reducedMotion) Handheld.Vibrate(); }
 
-            promptIndex = next;
-            turns++;
+        private static RectTransform MakePanel(Transform parent, string name, Color color)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            go.GetComponent<Image>().color = color;
+            return go.GetComponent<RectTransform>();
         }
 
-        private void EnsureStyles()
+        private static void Stretch(RectTransform rect)
         {
-            if (titleStyle != null)
-            {
-                return;
-            }
-
-            titleStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontStyle = FontStyle.Bold,
-                fontSize = Mathf.Clamp(Mathf.RoundToInt(Screen.width * 0.09f), 28, 58),
-                wordWrap = true,
-                alignment = TextAnchor.UpperLeft,
-                normal = { textColor = Color.white },
-            };
-            eyebrowStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontStyle = FontStyle.Bold,
-                fontSize = Mathf.Clamp(Mathf.RoundToInt(Screen.width * 0.035f), 13, 21),
-                wordWrap = true,
-                alignment = TextAnchor.UpperLeft,
-                normal = { textColor = Parse(Gold) },
-            };
-            bodyStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = Mathf.Clamp(Mathf.RoundToInt(Screen.width * 0.046f), 17, 27),
-                wordWrap = true,
-                alignment = TextAnchor.UpperLeft,
-                normal = { textColor = Color.white },
-            };
-            cardLabelStyle = new GUIStyle(eyebrowStyle)
-            {
-                normal = { textColor = Parse(Coral) },
-            };
-            cardTitleStyle = new GUIStyle(titleStyle)
-            {
-                normal = { textColor = Parse(Ink) },
-            };
-            cardBodyStyle = new GUIStyle(bodyStyle)
-            {
-                normal = { textColor = Parse(Ink) },
-            };
-            buttonStyle = new GUIStyle(GUI.skin.button)
-            {
-                fontStyle = FontStyle.Bold,
-                fontSize = Mathf.Clamp(Mathf.RoundToInt(Screen.width * 0.048f), 17, 27),
-                alignment = TextAnchor.MiddleCenter,
-                normal = { textColor = Color.white, background = MakeTexture(Parse(Coral)) },
-                hover = { textColor = Color.white, background = MakeTexture(Parse("#D6573B")) },
-                active = { textColor = Color.white, background = MakeTexture(Parse("#C94D33")) },
-            };
-            secondaryButtonStyle = new GUIStyle(buttonStyle)
-            {
-                normal = { textColor = Parse(Card), background = MakeTexture(Parse(Background)) },
-                hover = { textColor = Parse(Card), background = MakeTexture(Parse("#173D5C")) },
-                active = { textColor = Parse(Card), background = MakeTexture(Parse("#173D5C")) },
-            };
+            rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one; rect.offsetMin = Vector2.zero; rect.offsetMax = Vector2.zero;
         }
 
-        private void DrawRoundedCard(Rect rect, Color color)
+        private static Text AddText(Transform parent, string value, int size, Color color, FontStyle style, float height, Color? background = null)
         {
-            DrawRect(rect, color);
-            DrawRect(new Rect(rect.x, rect.y, 7, rect.height), Parse(Teal));
+            var go = new GameObject("Text", typeof(RectTransform), typeof(Text));
+            go.transform.SetParent(parent, false);
+            var text = go.GetComponent<Text>();
+            text.text = value; text.font = Resources.GetBuiltinResource<Font>("Arial.ttf"); text.fontSize = size; text.fontStyle = style; text.color = color;
+            text.alignment = TextAnchor.MiddleLeft; text.horizontalOverflow = HorizontalWrapMode.Wrap; text.verticalOverflow = VerticalWrapMode.Overflow; text.raycastTarget = false;
+            var rect = text.rectTransform; rect.anchorMin = new Vector2(0, 1); rect.anchorMax = new Vector2(1, 1); rect.pivot = new Vector2(0, 1); rect.sizeDelta = new Vector2(0, height);
+            var layout = text.gameObject.AddComponent<LayoutElement>(); layout.preferredHeight = height; layout.flexibleWidth = 1;
+            if (background.HasValue) text.gameObject.AddComponent<Image>().color = background.Value;
+            return text;
         }
 
-        private void DrawRect(Rect rect, Color color)
+        private static Button AddButton(Transform parent, string label, UnityEngine.Events.UnityAction action, Color background, Color? foreground = null)
         {
-            var previous = GUI.color;
-            GUI.color = color;
-            GUI.DrawTexture(rect, colourTexture);
-            GUI.color = previous;
+            var go = new GameObject(label, typeof(RectTransform), typeof(Image), typeof(Button));
+            go.transform.SetParent(parent, false);
+            var rect = go.GetComponent<RectTransform>(); rect.anchorMin = new Vector2(0, 1); rect.anchorMax = new Vector2(1, 1); rect.pivot = new Vector2(.5f, 1); rect.sizeDelta = new Vector2(0, 58);
+            var layout = go.AddComponent<LayoutElement>(); layout.preferredHeight = 58; layout.flexibleWidth = 1;
+            go.GetComponent<Image>().color = background;
+            var button = go.GetComponent<Button>(); button.onClick.AddListener(action);
+            var text = AddText(go.transform, label, 17, foreground ?? Color.white, FontStyle.Bold, 58); text.alignment = TextAnchor.MiddleCenter; text.rectTransform.anchorMin = Vector2.zero; text.rectTransform.anchorMax = Vector2.one; text.rectTransform.offsetMin = new Vector2(12, 0); text.rectTransform.offsetMax = new Vector2(-12, 0);
+            return button;
         }
 
-        private void DrawCircle(Vector2 centre, float radius, Color color)
+        private static InputField AddInput(Transform parent, string placeholder)
         {
-            const int steps = 36;
-            var points = new Vector3[steps + 1];
-            for (var i = 0; i <= steps; i++)
-            {
-                var angle = i * Mathf.PI * 2f / steps;
-                points[i] = new Vector3(centre.x + Mathf.Cos(angle) * radius, centre.y + Mathf.Sin(angle) * radius, 0);
-            }
-
-            var previous = GUI.color;
-            GUI.color = color;
-            for (var i = 0; i < steps; i++)
-            {
-                DrawLine(points[i], points[i + 1], 2f);
-            }
-            GUI.color = previous;
+            var go = new GameObject("Connection name", typeof(RectTransform), typeof(Image), typeof(InputField));
+            go.transform.SetParent(parent, false);
+            var rect = go.GetComponent<RectTransform>(); rect.anchorMin = new Vector2(0, 1); rect.anchorMax = new Vector2(1, 1); rect.pivot = new Vector2(.5f, 1); rect.sizeDelta = new Vector2(0, 54);
+            var layout = go.AddComponent<LayoutElement>(); layout.preferredHeight = 54; layout.flexibleWidth = 1;
+            go.GetComponent<Image>().color = Parse(Card);
+            var input = go.GetComponent<InputField>();
+            var text = AddText(go.transform, string.Empty, 17, Parse(Ink), FontStyle.Normal, 54); text.rectTransform.anchorMin = Vector2.zero; text.rectTransform.anchorMax = Vector2.one; text.rectTransform.offsetMin = new Vector2(12, 0); text.rectTransform.offsetMax = new Vector2(-12, 0); input.textComponent = text;
+            var hint = AddText(go.transform, placeholder, 16, new Color(.1f, .16f, .26f, .55f), FontStyle.Normal, 54); hint.rectTransform.anchorMin = Vector2.zero; hint.rectTransform.anchorMax = Vector2.one; hint.rectTransform.offsetMin = new Vector2(12, 0); hint.rectTransform.offsetMax = new Vector2(-12, 0); input.placeholder = hint;
+            return input;
         }
 
-        private static void DrawLine(Vector3 from, Vector3 to, float width)
-        {
-            var delta = to - from;
-            var angle = Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg;
-            GUIUtility.RotateAroundPivot(angle, from);
-            GUI.DrawTexture(new Rect(from.x, from.y, delta.magnitude, width), Texture2D.whiteTexture);
-            GUIUtility.RotateAroundPivot(-angle, from);
-        }
+        private static Color Parse(string html) { ColorUtility.TryParseHtmlString(html, out var color); return color; }
+    }
 
-        private Texture2D MakeTexture(Color color)
+    internal sealed class JciSafeArea : MonoBehaviour
+    {
+        private RectTransform rect; private Rect last;
+        private void Awake() { rect = GetComponent<RectTransform>(); Apply(); }
+        private void Update() { if (last != Screen.safeArea) Apply(); }
+        private void Apply()
         {
-            var texture = new Texture2D(1, 1, TextureFormat.RGBA32, false);
-            texture.SetPixel(0, 0, color);
-            texture.Apply();
-            return texture;
-        }
-
-        private static Color Parse(string html)
-        {
-            ColorUtility.TryParseHtmlString(html, out var colour);
-            return colour;
-        }
-
-        private readonly struct Prompt
-        {
-            public Prompt(string category, string text)
-            {
-                Category = category;
-                Text = text;
-            }
-
-            public string Category { get; }
-            public string Text { get; }
+            last = Screen.safeArea; var min = last.position; var max = min + last.size;
+            rect.anchorMin = new Vector2(min.x / Screen.width, min.y / Screen.height); rect.anchorMax = new Vector2(max.x / Screen.width, max.y / Screen.height); rect.offsetMin = rect.offsetMax = Vector2.zero;
         }
     }
 }

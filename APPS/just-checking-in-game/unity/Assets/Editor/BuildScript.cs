@@ -16,6 +16,9 @@ namespace Jci.Editor
     /// </summary>
     public static class BuildScript
     {
+        private const string MarketingVersion = "1.1.0";
+        private const int AndroidVersionCode = 3;
+        private const string IosBuildNumber = "3";
         private const string AndroidOutputPath = "Builds/Android/JustCheckingIn.aab";
         private const string IosOutputPath = "Builds/iOS/JustCheckingIn";
         private const string BootScenePath = "Assets/_Game/Scenes/Boot.unity";
@@ -100,6 +103,9 @@ namespace Jci.Editor
         private static void ConfigureCommonPlayerSettings()
         {
             PlayerSettings.productName = "Just Checking In";
+            PlayerSettings.bundleVersion = MarketingVersion;
+            PlayerSettings.Android.bundleVersionCode = AndroidVersionCode;
+            PlayerSettings.iOS.buildNumber = IosBuildNumber;
             PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "com.ftcholding.justcheckingin");
             PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.iOS, "com.ftcholding.justcheckingin");
             ConfigureAppIcon();

@@ -2,45 +2,41 @@
 
 ## Privacy commitments (launch)
 
-1. Spoken answers are never recorded, transcribed, or uploaded.
-2. Remote sessions synchronize compact state metadata only.
-3. Saved cards remain local unless explicit future sync feature is added.
-4. No contact access required.
-5. No in-app voice/video for launch.
+1. Spoken and typed answers are never recorded, transcribed, or uploaded.
+2. Version 1.1 stores only mood IDs, affirmation IDs, dates, session metrics,
+   and names that the user chooses for local connections.
+3. All saved state remains on the device under the app's persistent data path.
+4. No contact access is required.
+5. No in-app voice, video, network sync, or analytics is used.
 
 ## Data boundaries
 
-Allowed remote state data:
+Allowed local state data:
 
 - schemaVersion
-- stateVersion
-- phase
-- deckId
-- deckContentVersion
-- shuffleSeed
-- drawIndex
-- currentCardId
-- currentTurnPlayerId
-- followUpCardId
-- lastProcessedActionId
-- updatedAtUnixMs
-- expiresAtUnixMs
+- local connection IDs and names
+- mood IDs and affirmation IDs
+- session start/end dates and answered/passed counts
+- category count summaries
+- active prompt ID needed for relaunch recovery
 
-Forbidden remote data:
+Forbidden data:
 
 - spoken answers
 - typed notes/answers
-- prompt text body
-- invite URLs/codes in analytics
-- display names in analytics
-- personal contact data
+- typed notes or answers
+- recordings or transcripts
+- prompt text bodies
+- invite URLs/codes
+- contact data
+- network or analytics events
 
 ## Security controls
 
 1. Signing secrets are externalized to environment variables or external secret stores.
 2. Build scripts fail closed when required signing variables are missing.
-3. Rooms are private, ephemeral, and locked at two players.
-4. Session reconcile logic must reject stale/duplicate actions.
+3. Local persistence uses a versioned JSON document and quarantines corrupt files.
+4. Reset/delete removes the local document and connection labels.
 
 ## Permissions stance
 
