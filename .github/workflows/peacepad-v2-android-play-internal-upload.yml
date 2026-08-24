@@ -32,6 +32,8 @@ jobs:
     name: Upload reviewed staging AAB to Google Play Internal Testing
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      APPROVED_SOURCE_SHA: eb7c14399f3ffa67517acafd8f56a2a1b17fe284
 
     steps:
       - name: Require explicit internal-staging authorization
@@ -54,6 +56,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          test "$EXPECTED_SHA" = "$APPROVED_SOURCE_SHA"
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           git diff --check "$EXPECTED_SHA"
           test -z "$(git status --porcelain)"
@@ -80,7 +83,7 @@ jobs:
             export EXPO_PUBLIC_PEACEPAD_ENV=staging
             export PEACEPAD_ANDROID_RELEASE_MODE=playstore-internal
             node scripts/check-lab-guardrails.cjs
-            node -e 'const cfg=require("./app.config.js")({config:require("./app.json").expo}); if(cfg.android.package!=="ca.peacepad.family"||cfg.android.versionCode!==42||cfg.extra.productionApiWritesEnabled!==false) process.exit(1);'
+            node -e 'const cfg=require("./app.config.js")({config:require("./app.json").expo}); if(cfg.version!=="2.0.1"||cfg.android.package!=="ca.peacepad.family"||cfg.android.versionCode!==43||cfg.extra.productionApiWritesEnabled!==false) process.exit(1);'
           )
 
       - name: Require a PeacePad-specific Play upload credential
@@ -110,8 +113,8 @@ jobs:
             && build.platform === 'ANDROID'
             && build.distribution === 'STORE'
             && build.buildProfile === 'playstore-internal'
-            && build.appVersion === '2.0.0'
-            && String(build.appBuildVersion) === '42'
+            && build.appVersion === '2.0.1'
+            && String(build.appBuildVersion) === '43'
             && build.project?.ownerAccount?.name === 'official_fejiro'
             && build.project?.slug === 'peacepad-next-native-lab'
             && typeof build.artifacts?.buildUrl === 'string';
@@ -151,7 +154,8 @@ jobs:
           source_sha=$EXPECTED_SHA
           eas_build_id=$EAS_BUILD_ID
           package=ca.peacepad.family
-          version_code=42
+          version=2.0.1
+          version_code=43
           track=internal
           production_writes_enabled=false
           upload_outcome=$UPLOAD_OUTCOME
