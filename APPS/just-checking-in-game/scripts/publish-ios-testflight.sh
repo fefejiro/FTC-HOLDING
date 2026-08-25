@@ -34,15 +34,13 @@ echo "[JCI] iOS 1.1.0/build 3 publish run ${RUN_ID}"
 need_cmd xcodebuild
 need_cmd xcrun
 
-for name in JCI_APPLE_TEAM_ID APPLE_ID APPLE_APP_SPECIFIC_PASSWORD; do
-  [[ -n "${!name:-}" ]] || fail "Missing required environment variable: ${name}"
-done
-
 XCODE_AUTH_ARGS=()
+HAS_API_KEY_AUTH=false
 if [[ -n "${JCI_APPLE_API_KEY_ID:-}" || -n "${JCI_APPLE_API_ISSUER_ID:-}" || -n "${JCI_APPLE_API_PRIVATE_KEY:-}" ]]; then
   for name in JCI_APPLE_API_KEY_ID JCI_APPLE_API_ISSUER_ID JCI_APPLE_API_PRIVATE_KEY; do
     [[ -n "${!name:-}" ]] || fail "All three App Store Connect API key values are required when API-key signing is enabled: JCI_APPLE_API_KEY_ID, JCI_APPLE_API_ISSUER_ID, JCI_APPLE_API_PRIVATE_KEY"
   done
+  HAS_API_KEY_AUTH=true
   API_KEY_PATH="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/AuthKey_${JCI_APPLE_API_KEY_ID}.p8"
   umask 077
   printf '%s\n' "${JCI_APPLE_API_PRIVATE_KEY}" > "${API_KEY_PATH}"
@@ -52,7 +50,12 @@ if [[ -n "${JCI_APPLE_API_KEY_ID:-}" || -n "${JCI_APPLE_API_ISSUER_ID:-}" || -n 
     -authenticationKeyIssuerID "${JCI_APPLE_API_ISSUER_ID}"
   )
   echo "[JCI] App Store Connect API-key authentication configured (secret value withheld)"
+else
+  for name in JCI_APPLE_TEAM_ID APPLE_ID APPLE_APP_SPECIFIC_PASSWORD; do
+    [[ -n "${!name:-}" ]] || fail "Missing required environment variable: ${name}"
+  done
 fi
+[[ -n "${JCI_APPLE_TEAM_ID:-}" ]] || fail "Missing required environment variable: JCI_APPLE_TEAM_ID"
 
 grep -q 'bundleVersion: 1.1.0' "${UNITY_PROJECT}/ProjectSettings/ProjectSettings.asset" || fail "ProjectSettings is not version 1.1.0"
 grep -q 'iPhone: 3' "${UNITY_PROJECT}/ProjectSettings/ProjectSettings.asset" || fail "ProjectSettings is not iOS build 3"
@@ -97,13 +100,19 @@ echo "[JCI] Stage 3/4: export and validate IPA"
 xcodebuild -exportArchive -archivePath "${ARCHIVE_PATH}" -exportPath "${EXPORT_DIR}" \
   -exportOptionsPlist "${EXPORT_OPTIONS}" "${XCODE_AUTH_ARGS[@]}" -allowProvisioningUpdates
 [[ -f "${IPA_PATH}" ]] || { IPA_PATH="$(find "${EXPORT_DIR}" -maxdepth 1 -name '*.ipa' -print -quit)"; [[ -n "${IPA_PATH}" ]] || fail "IPA was not exported"; }
-if ! xcrun altool --validate-app -f "${IPA_PATH}" -t ios -u "${APPLE_ID}" -p "${APPLE_APP_SPECIFIC_PASSWORD}"; then
+if [[ "${HAS_API_KEY_AUTH}" == true ]]; then
+  xcrun iTMSTransporter -m validate -assetFile "${IPA_PATH}" \
+    -apiKey "${JCI_APPLE_API_KEY_ID}" -apiIssuer "${JCI_APPLE_API_ISSUER_ID}"
+elif ! xcrun altool --validate-app -f "${IPA_PATH}" -t ios -u "${APPLE_ID}" -p "${APPLE_APP_SPECIFIC_PASSWORD}"; then
   echo "[JCI] altool validation unavailable; using iTMSTransporter validation"
   xcrun iTMSTransporter -m validate -assetFile "${IPA_PATH}" -u "${APPLE_ID}" -p "${APPLE_APP_SPECIFIC_PASSWORD}"
 fi
 
 echo "[JCI] Stage 4/4: upload to App Store Connect"
-if ! xcrun altool --upload-app -f "${IPA_PATH}" -t ios -u "${APPLE_ID}" -p "${APPLE_APP_SPECIFIC_PASSWORD}"; then
+if [[ "${HAS_API_KEY_AUTH}" == true ]]; then
+  xcrun iTMSTransporter -m upload -assetFile "${IPA_PATH}" \
+    -apiKey "${JCI_APPLE_API_KEY_ID}" -apiIssuer "${JCI_APPLE_API_ISSUER_ID}"
+elif ! xcrun altool --upload-app -f "${IPA_PATH}" -t ios -u "${APPLE_ID}" -p "${APPLE_APP_SPECIFIC_PASSWORD}"; then
   echo "[JCI] altool upload unavailable; using iTMSTransporter upload"
   xcrun iTMSTransporter -m upload -assetFile "${IPA_PATH}" -u "${APPLE_ID}" -p "${APPLE_APP_SPECIFIC_PASSWORD}"
 fi
