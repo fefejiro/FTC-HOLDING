@@ -65,12 +65,18 @@ UNITY_VERSION="$("${UNITY_PATH}" -version 2>/dev/null | head -n 1 || true)"
 echo "[JCI] Unity: ${UNITY_VERSION}"
 [[ "${UNITY_VERSION}" == *"${UNITY_VERSION_EXPECTED}"* ]] || fail "Unity version mismatch; expected ${UNITY_VERSION_EXPECTED}"
 
-echo "[JCI] Stage 1/4: Unity iOS export"
-rm -rf "${IOS_EXPORT}" "${ARCHIVE_PATH}" "${EXPORT_DIR}"
-mkdir -p "${IOS_EXPORT}"
-"${UNITY_PATH}" -batchmode -quit -projectPath "${UNITY_PROJECT}" -buildTarget iOS -executeMethod Jci.Editor.BuildScript.ExportiOS -logFile "${LOG_DIR}/unity-ios-${RUN_ID}.log"
 XCODE_PROJECT="${IOS_EXPORT}/Unity-iPhone.xcodeproj"
-[[ -d "${XCODE_PROJECT}" ]] || fail "Unity export did not produce ${XCODE_PROJECT}"
+if [[ "${JCI_SKIP_UNITY_EXPORT:-false}" == "true" ]]; then
+  echo "[JCI] Stage 1/4: Unity iOS export (reusing verified GameCI export)"
+  [[ -d "${XCODE_PROJECT}" ]] || fail "Verified GameCI export missing: ${XCODE_PROJECT}"
+else
+  echo "[JCI] Stage 1/4: Unity iOS export"
+  rm -rf "${IOS_EXPORT}"
+  mkdir -p "${IOS_EXPORT}"
+  "${UNITY_PATH}" -batchmode -quit -projectPath "${UNITY_PROJECT}" -buildTarget iOS -executeMethod Jci.Editor.BuildScript.ExportiOS -logFile "${LOG_DIR}/unity-ios-${RUN_ID}.log"
+  [[ -d "${XCODE_PROJECT}" ]] || fail "Unity export did not produce ${XCODE_PROJECT}"
+fi
+rm -rf "${ARCHIVE_PATH}" "${EXPORT_DIR}"
 
 echo "[JCI] Stage 2/4: archive"
 xcodebuild -project "${XCODE_PROJECT}" -scheme Unity-iPhone -configuration Release \

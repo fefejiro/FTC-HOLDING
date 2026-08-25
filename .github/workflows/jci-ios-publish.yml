@@ -93,6 +93,7 @@ jobs:
           UNITY_LICENSE: ${{ secrets.JCI_UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.JCI_UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.JCI_UNITY_PASSWORD }}
+          JCI_SKIP_UNITY_EXPORT: "true"
           JCI_APPLE_TEAM_ID: ${{ secrets.JCI_APPLE_TEAM_ID }}
           JCI_APPLE_API_KEY_ID: ${{ secrets.JCI_APPLE_API_KEY_ID }}
           JCI_APPLE_API_ISSUER_ID: ${{ secrets.JCI_APPLE_API_ISSUER_ID }}
