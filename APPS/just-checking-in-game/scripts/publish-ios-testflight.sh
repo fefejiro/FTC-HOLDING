@@ -81,7 +81,7 @@ rm -rf "${ARCHIVE_PATH}" "${EXPORT_DIR}"
 echo "[JCI] Stage 2/4: archive"
 xcodebuild -project "${XCODE_PROJECT}" -scheme Unity-iPhone -configuration Release \
   -destination generic/platform=iOS -archivePath "${ARCHIVE_PATH}" \
-  CODE_SIGN_STYLE=Automatic CODE_SIGN_IDENTITY="Apple Distribution" DEVELOPMENT_TEAM="${JCI_APPLE_TEAM_ID}" \
+  CODE_SIGN_STYLE=Automatic DEVELOPMENT_TEAM="${JCI_APPLE_TEAM_ID}" \
   "${XCODE_AUTH_ARGS[@]}" \
   -allowProvisioningUpdates archive
 
@@ -96,7 +96,6 @@ cat > "${EXPORT_OPTIONS}" <<PLIST
 <key>destination</key><string>export</string>
 <key>method</key><string>app-store-connect</string>
 <key>signingStyle</key><string>automatic</string>
-<key>signingCertificate</key><string>Apple Distribution</string>
 <key>teamID</key><string>${JCI_APPLE_TEAM_ID}</string>
 <key>stripSwiftSymbols</key><true/>
 <key>compileBitcode</key><false/>
