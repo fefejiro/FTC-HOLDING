@@ -33,6 +33,40 @@ jobs:
           grep -q 'iPhone: 3' "$JCI_PROJECT/ProjectSettings/ProjectSettings.asset"
           grep -q 'iPhone: com.ftcholding.justcheckingin' "$JCI_PROJECT/ProjectSettings/ProjectSettings.asset"
 
+      - name: Fail fast if release credentials are not configured
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.JCI_UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.JCI_UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.JCI_UNITY_PASSWORD }}
+          APPLE_TEAM: ${{ secrets.JCI_APPLE_TEAM_ID }}
+          APPLE_ID: ${{ secrets.JCI_APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.JCI_APPLE_APP_SPECIFIC_PASSWORD }}
+          API_KEY_ID: ${{ secrets.JCI_APPLE_API_KEY_ID }}
+          API_ISSUER: ${{ secrets.JCI_APPLE_API_ISSUER_ID }}
+          API_PRIVATE_KEY: ${{ secrets.JCI_APPLE_API_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          missing=()
+          for pair in \
+            JCI_UNITY_LICENSE:"$UNITY_LICENSE" \
+            JCI_UNITY_EMAIL:"$UNITY_EMAIL" \
+            JCI_UNITY_PASSWORD:"$UNITY_PASSWORD" \
+            JCI_APPLE_TEAM_ID:"$APPLE_TEAM" \
+            JCI_APPLE_ID:"$APPLE_ID" \
+            JCI_APPLE_APP_SPECIFIC_PASSWORD:"$APPLE_PASSWORD" \
+            JCI_APPLE_API_KEY_ID:"$API_KEY_ID" \
+            JCI_APPLE_API_ISSUER_ID:"$API_ISSUER" \
+            JCI_APPLE_API_PRIVATE_KEY:"$API_PRIVATE_KEY"; do
+            name="${pair%%:*}"
+            value="${pair#*:}"
+            [[ -n "$value" ]] || missing+=("$name")
+          done
+          if (( ${#missing[@]} )); then
+            printf '[JCI][FAIL] Missing GitHub Actions secrets: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
+
       - name: Export iOS project with Unity 6000.4.5f1
         uses: game-ci/unity-builder@v4
         env:
