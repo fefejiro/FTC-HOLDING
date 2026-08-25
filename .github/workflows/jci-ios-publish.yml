@@ -90,12 +90,20 @@ jobs:
       - name: Run the existing JCI publish wrapper
         shell: bash
         env:
+          UNITY_LICENSE: ${{ secrets.JCI_UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.JCI_UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.JCI_UNITY_PASSWORD }}
           JCI_APPLE_TEAM_ID: ${{ secrets.JCI_APPLE_TEAM_ID }}
           JCI_APPLE_API_KEY_ID: ${{ secrets.JCI_APPLE_API_KEY_ID }}
           JCI_APPLE_API_ISSUER_ID: ${{ secrets.JCI_APPLE_API_ISSUER_ID }}
           JCI_APPLE_API_PRIVATE_KEY: ${{ secrets.JCI_APPLE_API_PRIVATE_KEY }}
         working-directory: APPS/just-checking-in-game
-        run: ./scripts/publish-ios-testflight.sh
+        run: |
+          set -euo pipefail
+          license_dir="$HOME/Library/Application Support/Unity"
+          mkdir -p "$license_dir"
+          printf '%s\n' "$UNITY_LICENSE" > "$license_dir/Unity_lic.ulf"
+          ./scripts/publish-ios-testflight.sh
 
       - name: Preserve release evidence
         if: always()
