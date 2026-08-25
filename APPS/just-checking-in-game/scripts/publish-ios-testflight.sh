@@ -13,6 +13,9 @@ LOG_DIR="${ROOT_DIR}/scripts/_ops-reports"
 RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)"
 LOG_PATH="${LOG_DIR}/publish-ios-${RUN_ID}.log"
 API_KEY_PATH=""
+CERTIFICATE_PATH=""
+KEYCHAIN_PATH=""
+KEYCHAIN_PASSWORD=""
 
 mkdir -p "${LOG_DIR}"
 exec > >(tee -a "${LOG_PATH}") 2>&1
@@ -25,7 +28,15 @@ cleanup_api_key() {
     rm -f "${API_KEY_PATH}"
   fi
 }
-trap cleanup_api_key EXIT
+cleanup_signing_material() {
+  if [[ -n "${CERTIFICATE_PATH}" && -f "${CERTIFICATE_PATH}" ]]; then
+    rm -f "${CERTIFICATE_PATH}"
+  fi
+  if [[ -n "${KEYCHAIN_PATH}" && -f "${KEYCHAIN_PATH}" ]]; then
+    security delete-keychain "${KEYCHAIN_PATH}" >/dev/null 2>&1 || true
+  fi
+}
+trap 'cleanup_api_key; cleanup_signing_material' EXIT
 
 echo "[JCI] iOS 1.1.0/build 3 publish run ${RUN_ID}"
 [[ "$(uname -s)" == "Darwin" ]] || fail "This wrapper must run on macOS with Xcode."
@@ -56,6 +67,8 @@ else
   done
 fi
 [[ -n "${JCI_APPLE_TEAM_ID:-}" ]] || fail "Missing required environment variable: JCI_APPLE_TEAM_ID"
+[[ -n "${JCI_SIGNING_CERTIFICATE_BASE64:-}" ]] || fail "Missing required environment variable: JCI_SIGNING_CERTIFICATE_BASE64"
+[[ -n "${JCI_SIGNING_CERTIFICATE_PASSWORD:-}" ]] || fail "Missing required environment variable: JCI_SIGNING_CERTIFICATE_PASSWORD"
 
 grep -q 'bundleVersion: 1.1.0' "${UNITY_PROJECT}/ProjectSettings/ProjectSettings.asset" || fail "ProjectSettings is not version 1.1.0"
 grep -q 'iPhone: 3' "${UNITY_PROJECT}/ProjectSettings/ProjectSettings.asset" || fail "ProjectSettings is not iOS build 3"
@@ -64,6 +77,22 @@ grep -q 'iPhone: com.ftcholding.justcheckingin' "${UNITY_PROJECT}/ProjectSetting
 UNITY_VERSION="$("${UNITY_PATH}" -version 2>/dev/null | head -n 1 || true)"
 echo "[JCI] Unity: ${UNITY_VERSION}"
 [[ "${UNITY_VERSION}" == *"${UNITY_VERSION_EXPECTED}"* ]] || fail "Unity version mismatch; expected ${UNITY_VERSION_EXPECTED}"
+
+echo "[JCI] Importing the existing team distribution certificate"
+CERTIFICATE_PATH="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/jci-distribution.p12"
+if ! printf '%s' "${JCI_SIGNING_CERTIFICATE_BASE64}" | base64 --decode > "${CERTIFICATE_PATH}" 2>/dev/null; then
+  printf '%s' "${JCI_SIGNING_CERTIFICATE_BASE64}" | base64 -D > "${CERTIFICATE_PATH}"
+fi
+KEYCHAIN_PATH="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/jci-signing.keychain-db"
+KEYCHAIN_PASSWORD="$(uuidgen)"
+security create-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_PATH}"
+security set-keychain-settings -lut 21600 "${KEYCHAIN_PATH}"
+security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_PATH}"
+security import "${CERTIFICATE_PATH}" -k "${KEYCHAIN_PATH}" -P "${JCI_SIGNING_CERTIFICATE_PASSWORD}" -T /usr/bin/codesign -T /usr/bin/security
+security set-key-partition-list -S apple-tool:,apple: -s -k "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_PATH}"
+security list-keychains -d user -s "${KEYCHAIN_PATH}"
+security default-keychain -s "${KEYCHAIN_PATH}"
+security find-identity -v -p codesigning "${KEYCHAIN_PATH}" | grep -Eq 'Apple Distribution|iPhone Distribution' || fail "Existing distribution certificate was not imported"
 
 XCODE_PROJECT="${IOS_EXPORT}/Unity-iPhone.xcodeproj"
 if [[ "${JCI_SKIP_UNITY_EXPORT:-false}" == "true" ]]; then
