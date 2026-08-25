@@ -1,0 +1,79 @@
+name: Just Checking In iOS publish
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jci-ios-publish
+  cancel-in-progress: false
+
+env:
+  JCI_PROJECT: APPS/just-checking-in-game/unity
+  JCI_UNITY_VERSION: 6000.4.5f1
+
+jobs:
+  publish:
+    name: Unity export, Xcode archive, and App Store upload
+    runs-on: macos-15
+    timeout-minutes: 120
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@v4
+
+      - name: Normalize scripts and verify source metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          sed -i '' $'s/\r$//' APPS/just-checking-in-game/scripts/*.sh
+          chmod +x APPS/just-checking-in-game/scripts/*.sh
+          grep -q 'bundleVersion: 1.1.0' "$JCI_PROJECT/ProjectSettings/ProjectSettings.asset"
+          grep -q 'iPhone: 3' "$JCI_PROJECT/ProjectSettings/ProjectSettings.asset"
+          grep -q 'iPhone: com.ftcholding.justcheckingin' "$JCI_PROJECT/ProjectSettings/ProjectSettings.asset"
+
+      - name: Export iOS project with Unity 6000.4.5f1
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.JCI_UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.JCI_UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.JCI_UNITY_PASSWORD }}
+          JCI_APPLE_TEAM_ID: ${{ secrets.JCI_APPLE_TEAM_ID }}
+        with:
+          projectPath: ${{ env.JCI_PROJECT }}
+          unityVersion: ${{ env.JCI_UNITY_VERSION }}
+          targetPlatform: iOS
+          buildMethod: Jci.Editor.BuildScript.ExportiOS
+          allowDirtyBuild: true
+          cacheUnityInstallationOnMac: true
+
+      - name: Verify Unity editor is available to the existing wrapper
+        shell: bash
+        run: |
+          set -euo pipefail
+          unity_path="$(find /Applications/Unity/Hub/Editor -path '*/6000.4.5f1/Unity.app/Contents/MacOS/Unity' -type f -print -quit 2>/dev/null || true)"
+          test -n "$unity_path" || { echo '[JCI][FAIL] Unity 6000.4.5f1 was not installed by the build action'; exit 1; }
+          echo "UNITY_PATH=$unity_path" >> "$GITHUB_ENV"
+          "$unity_path" -version
+
+      - name: Run the existing JCI publish wrapper
+        shell: bash
+        env:
+          JCI_APPLE_TEAM_ID: ${{ secrets.JCI_APPLE_TEAM_ID }}
+          APPLE_ID: ${{ secrets.JCI_APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.JCI_APPLE_APP_SPECIFIC_PASSWORD }}
+          JCI_APPLE_API_KEY_ID: ${{ secrets.JCI_APPLE_API_KEY_ID }}
+          JCI_APPLE_API_ISSUER_ID: ${{ secrets.JCI_APPLE_API_ISSUER_ID }}
+          JCI_APPLE_API_PRIVATE_KEY: ${{ secrets.JCI_APPLE_API_PRIVATE_KEY }}
+        working-directory: APPS/just-checking-in-game
+        run: ./scripts/publish-ios-testflight.sh
+
+      - name: Preserve release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jci-ios-publish-evidence-${{ github.run_id }}
+          path: APPS/just-checking-in-game/scripts/_ops-reports
+          if-no-files-found: warn
+          retention-days: 30
