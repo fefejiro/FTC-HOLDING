@@ -100,7 +100,7 @@ describe("PeacePad iOS release variant", () => {
       version: "2.0.1",
       scheme: "peacepad",
       plugins: expect.arrayContaining(["expo-apple-authentication"]),
-      ios: { buildNumber: "5", bundleIdentifier: "ca.peacepad.family", usesAppleSignIn: true },
+      ios: { buildNumber: "6", bundleIdentifier: "ca.peacepad.family", usesAppleSignIn: true },
       extra: {
         appStoreId: "6793350735",
         environment: "production",
@@ -178,7 +178,7 @@ describe("PeacePad iOS release variant", () => {
       version: "2.0.1",
       android: {
         package: "ca.peacepad.family",
-        versionCode: 43
+        versionCode: 44
       },
       extra: {
         environment: "production",
