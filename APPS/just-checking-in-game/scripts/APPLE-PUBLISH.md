@@ -25,7 +25,7 @@ The wrapper fails closed unless macOS, Unity `6000.4.5f1`, Xcode, the exact vers
 
 ## Apple-side gates
 
-1. Confirm the uploaded build is `1.1.0 (3)` in App Store Connect.
+1. Confirm the uploaded build is `1.1.0 (4)` in App Store Connect.
 2. Complete truthful screenshots, metadata, privacy answers, age rating, review notes, and export compliance.
 3. Select automatic release and submit for App Review.
 4. Do not call the app public while it is only uploaded, in TestFlight, or Waiting for Review.
