@@ -4,18 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Publish the JCI iOS candidate or run a read-only App Store Connect status check
+        description: Publish the JCI iOS candidate or run a scoped App Store Connect operation
         required: true
         default: publish
         type: choice
         options:
           - publish
           - asc-status
-  push:
-    paths:
-      - APPS/just-checking-in-game/scripts/app-store-connect-status.mjs
-      - APPS/just-checking-in-game/scripts/app-store-connect-prepare-release.mjs
-      - APPS/just-checking-in-game/scripts/app-store-connect-submit-review.mjs
+          - asc-prepare
+          - asc-submit
 
 permissions:
   contents: read
@@ -30,7 +27,7 @@ env:
 
 jobs:
   publish:
-    if: github.event_name == 'workflow_dispatch' && inputs.mode != 'asc-status'
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'publish'
     name: Unity export, Xcode archive, and App Store upload
     runs-on: macos-26
     timeout-minutes: 120
@@ -140,7 +137,7 @@ jobs:
           retention-days: 30
 
   asc-status:
-    if: github.event_name == 'push' || inputs.mode == 'asc-status'
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'asc-status'
     name: Read-only App Store Connect status
     runs-on: ubuntu-latest
     permissions:
@@ -156,7 +153,7 @@ jobs:
         run: node APPS/just-checking-in-game/scripts/app-store-connect-status.mjs
 
   asc-prepare:
-    if: github.event_name == 'push' && (contains(github.event.head_commit.message, 'asc-prepare') || contains(github.event.head_commit.message, 'asc prepare'))
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'asc-prepare'
     name: Prepare JCI 1.1.0 App Store version
     runs-on: ubuntu-latest
     permissions:
@@ -172,7 +169,7 @@ jobs:
         run: node APPS/just-checking-in-game/scripts/app-store-connect-prepare-release.mjs
 
   asc-submit:
-    if: github.event_name == 'push' && contains(github.event.head_commit.message, 'asc-submit')
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'asc-submit'
     name: Submit JCI 1.1.0 for App Review
     runs-on: ubuntu-latest
     permissions:
