@@ -18,7 +18,7 @@ namespace Jci.Editor
     {
         private const string MarketingVersion = "1.1.0";
         private const int AndroidVersionCode = 3;
-        private const string IosBuildNumber = "3";
+        private const string IosBuildNumber = "4";
         private const string AndroidOutputPath = "Builds/Android/JustCheckingIn.aab";
         private const string IosOutputPath = "Builds/iOS/JustCheckingIn";
         private const string BootScenePath = "Assets/_Game/Scenes/Boot.unity";
