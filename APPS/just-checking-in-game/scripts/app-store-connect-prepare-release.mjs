@@ -48,6 +48,14 @@ if (!version) {
   console.log(`Using existing App Store version ${version.id} (1.1.0)`);
 }
 
+// Apple keeps a withdrawn review version in WAITING_FOR_REVIEW while its
+// reviewed build is being removed. Explicitly clear the relationship first;
+// this is the supported API path for replacing a build after withdrawal.
+await request(`appStoreVersions/${version.id}/relationships/build`, {
+  method: "PATCH",
+  body: JSON.stringify({ data: null }),
+});
+console.log(`Removed any prior build from version ${version.id}`);
 await request(`appStoreVersions/${version.id}/relationships/build`, {
   method: "PATCH",
   body: JSON.stringify({ data: { type: "builds", id: build.id } }),
