@@ -49,6 +49,21 @@ if (alreadySubmitted) {
   }
 }
 
+// The legacy version-submission resource is still the API operation Apple
+// documents for moving a WAITING_FOR_REVIEW app version to DEVELOPER_REJECTED.
+// That state transition is required before a replacement build can be chosen.
+try {
+  const legacySubmission = await request("appStoreVersions/b238fc00-0b34-4ba6-b04e-54fa7a9b4a0e/appStoreVersionSubmission");
+  const legacyId = legacySubmission.data?.id;
+  if (legacyId) {
+    await request(`appStoreVersionSubmissions/${legacyId}`, { method: "DELETE" });
+    console.log(`Removed legacy app-version submission ${legacyId}`);
+  }
+} catch (error) {
+  if (error.status !== 404 && error.status !== 409) throw error;
+  console.log(`Legacy app-version submission removal unavailable (${error.status}); continuing with review item cleanup`);
+}
+
 // A withdrawn submission can retain its app-version item while ASC continues
 // to report WAITING_FOR_REVIEW. Remove only the known JCI 1.1.0 item so the
 // version can accept the corrected build 4.
