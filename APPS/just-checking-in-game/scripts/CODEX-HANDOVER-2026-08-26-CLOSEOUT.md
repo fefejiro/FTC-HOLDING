@@ -1,0 +1,84 @@
+# Just Checking In release closeout
+
+Date: 2026-08-26  
+Owner account: Fejiro Play organization, developer account `9098950441049789979`  
+Canonical source branch: `codex/jci-ios-1.1-main2`  
+Canonical source commit: `bbb17c0009c9678521e56d6bd4a5606ca6851b8e`
+
+## Store status (verified live)
+
+### Apple App Store
+
+- App: Just Checking In Game, App Store ID `6799443182`.
+- Public baseline `1.0.0` remains **Ready for Distribution**.
+- New version `1.1.0` with build `4` is **Waiting for Review**.
+- Uploaded build `4` is shown as version `1.1.0`; processing state was valid.
+- Release selection is **Automatically release this version after App Review**.
+- Phased release is not selected; update is configured for immediate availability after approval.
+- This is not public yet. Public URL to verify after approval:
+  `https://apps.apple.com/us/app/just-checking-in-game/id6799443182`
+
+### Google Play
+
+- Developer account: Fejiro organization, ID `9098950441049789979`.
+- Play app ID: `4974165497912861650`.
+- Package: `com.ftcholding.justcheckingin`.
+- Current dashboard state: app **Draft**, update status **In review**.
+- No public Play listing URL was verified; do not call this release live.
+- Submission was sent after the owner-selected Data Safety **No** answer and an explicit acknowledgment of Google's warning.
+- Google retained the warning: **Device or other IDs not declared**. The release may still be rejected.
+
+## Artifact and source-integrity finding
+
+The current Play artifact is not built from the same source state as the iOS 1.1 candidate.
+
+- Android artifact: `D:\FTC-GAMES\just-checking-in-game-clean\Builds\Android\JustCheckingIn.aab`
+- Size: `31,755,025` bytes
+- SHA-256: `0272C6A1B9FBB4267AB8736FDBF4F6B6A09DB7F7E4689E321E81679879589129`
+- Play identifies it as version `0.2.0`, version code `2`, target SDK `36`.
+- The external clean project has `bundleVersion: 0.3.0`, only the older presentation script, and does not contain the canonical 1.1 files `JciTogetherSession`, `JciModels`, or `JciLocalStore`.
+- Canonical iOS source is version `1.1.0`, build `4`, and includes the 1.1 Self/Together flows, local persistence, summaries, glass UI, motion and reduced-motion support.
+
+Therefore Android is **not the same code** as the iOS 1.1 candidate and must not be approved as a parity release. A corrected Android build from the canonical worktree requires a new signed artifact and a higher Android version code before Play resubmission.
+
+## Privacy and policy evidence
+
+- Canonical game scripts contain no runtime network, analytics, Firebase, advertising, microphone, camera, location, recording, or device-ID calls.
+- Unity Analytics and Unity Ads are disabled in `ProjectSettings/UnityConnectSettings.asset`.
+- The uploaded AAB manifest contains `INTERNET` but no `AD_ID` permission.
+- The AAB still contains Unity advertising/Firebase helper references; this is the likely reason Play's static checks flagged Device or other IDs. Treat this as a scanner finding, not proof of runtime transmission.
+- Data Safety **No** is saved, but Google warned that the declaration may be inaccurate for the uploaded bundle.
+
+## QA evidence boundary
+
+- Canonical source includes EditMode coverage in `unity/Assets/_Game/Tests/EditMode` and PlayMode coverage in `unity/Assets/_Game/Tests/PlayMode` for domain transitions, local persistence, relaunch and reduced-motion behavior.
+- No fresh Unity test run or physical-device end-to-end run was recorded during this closeout. Do not represent those checks as newly passed until they are run against the exact artifact intended for each store.
+
+## Notifications reviewed
+
+- “Add Play Games Services/Sidekick” is optional and was not enabled.
+- The Google Play Games on PC form factor is currently opted in; opting out would publish an immediate availability change and was not performed.
+- Android developer verification due 2026-09-30 is an account-owner task.
+- The memory/device-migration quality notice is informational; no JCI-specific action was shown.
+
+## Repository and PR closeout
+
+- Worktree is clean at the canonical commit above.
+- JCI PRs #298, #299, #300, #301 and #302 are merged and closed.
+- No open JCI PR was found in `fefejiro/FTC-HOLDING`.
+- No PeacePad or unrelated project changes were made as part of this closeout.
+
+## Reusable update workflow
+
+1. Start from the canonical JCI worktree, never the older external clean project.
+2. Run the Unity EditMode and PlayMode suites and record results.
+3. Verify marketing version, platform version code/build, bundle/package IDs, signing identity and artifact hash.
+4. Run the existing iOS wrapper from `scripts/publish-ios-testflight.sh` after LF normalization and Mac/Xcode preflight.
+5. Upload the Android artifact only after confirming its source hash matches the canonical commit and its Play declarations match runtime behavior.
+6. Treat upload, review, approval and public availability as separate states; record each portal status and URL.
+7. Ask for owner confirmation at any new policy attestation and immediately before final production submission.
+
+## Approval recommendation
+
+- **IOS: DO NOT APPROVE YET** — build 4 is Waiting for Review; public release is not verified.
+- **ANDROID: DO NOT APPROVE** — Play is in review with the older, non-parity artifact and an acknowledged Data Safety warning.

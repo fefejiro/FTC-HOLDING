@@ -5,7 +5,7 @@ This runbook separates an uploaded build from TestFlight, review, approval, and 
 ## Candidate
 
 - Version: `1.1.0`
-- Build: `3`
+- Build: `4`
 - Bundle: `com.ftcholding.justcheckingin`
 - Existing public `1.0.0` remains untouched during review.
 
@@ -27,7 +27,7 @@ The wrapper fails closed unless macOS, Unity `6000.4.5f1`, Xcode, the exact vers
 
 1. Confirm the uploaded build is `1.1.0 (4)` in App Store Connect.
 2. Complete truthful screenshots, metadata, privacy answers, age rating, review notes, and export compliance.
-3. Select automatic release and submit for App Review.
+3. Select automatic release and submit for App Review. Current portal status: **Waiting for Review**.
 4. Do not call the app public while it is only uploaded, in TestFlight, or Waiting for Review.
 5. After Apple approval and release, verify the public listing shows `1.1.0` and install it on a clean physical iPhone.
 
