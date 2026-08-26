@@ -45,6 +45,7 @@ jobs:
           API_PRIVATE_KEY: ${{ secrets.JCI_APPLE_API_PRIVATE_KEY }}
           SIGNING_CERTIFICATE: ${{ secrets.JOBAGENT_IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
           SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.JOBAGENT_IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          SIGNING_KEYCHAIN_PASSWORD: ${{ secrets.JOBAGENT_IOS_KEYCHAIN_PASSWORD }}
         run: |
           set -euo pipefail
           missing=()
@@ -57,7 +58,8 @@ jobs:
             JCI_APPLE_API_ISSUER_ID:"$API_ISSUER" \
             JCI_APPLE_API_PRIVATE_KEY:"$API_PRIVATE_KEY" \
             JCI_SIGNING_CERTIFICATE_BASE64:"$SIGNING_CERTIFICATE" \
-            JCI_SIGNING_CERTIFICATE_PASSWORD:"$SIGNING_CERTIFICATE_PASSWORD"; do
+            JCI_SIGNING_CERTIFICATE_PASSWORD:"$SIGNING_CERTIFICATE_PASSWORD" \
+            JCI_SIGNING_KEYCHAIN_PASSWORD:"$SIGNING_KEYCHAIN_PASSWORD"; do
             name="${pair%%:*}"
             value="${pair#*:}"
             [[ -n "$value" ]] || missing+=("$name")
@@ -104,6 +106,7 @@ jobs:
           JCI_APPLE_API_PRIVATE_KEY: ${{ secrets.JCI_APPLE_API_PRIVATE_KEY }}
           JCI_SIGNING_CERTIFICATE_BASE64: ${{ secrets.JOBAGENT_IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
           JCI_SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.JOBAGENT_IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          JCI_SIGNING_KEYCHAIN_PASSWORD: ${{ secrets.JOBAGENT_IOS_KEYCHAIN_PASSWORD }}
         working-directory: APPS/just-checking-in-game
         run: |
           set -euo pipefail

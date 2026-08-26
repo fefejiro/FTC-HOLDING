@@ -69,6 +69,7 @@ fi
 [[ -n "${JCI_APPLE_TEAM_ID:-}" ]] || fail "Missing required environment variable: JCI_APPLE_TEAM_ID"
 [[ -n "${JCI_SIGNING_CERTIFICATE_BASE64:-}" ]] || fail "Missing required environment variable: JCI_SIGNING_CERTIFICATE_BASE64"
 [[ -n "${JCI_SIGNING_CERTIFICATE_PASSWORD:-}" ]] || fail "Missing required environment variable: JCI_SIGNING_CERTIFICATE_PASSWORD"
+[[ -n "${JCI_SIGNING_KEYCHAIN_PASSWORD:-}" ]] || fail "Missing required environment variable: JCI_SIGNING_KEYCHAIN_PASSWORD"
 
 grep -q 'bundleVersion: 1.1.0' "${UNITY_PROJECT}/ProjectSettings/ProjectSettings.asset" || fail "ProjectSettings is not version 1.1.0"
 grep -q 'iPhone: 3' "${UNITY_PROJECT}/ProjectSettings/ProjectSettings.asset" || fail "ProjectSettings is not iOS build 3"
@@ -84,11 +85,11 @@ if ! printf '%s' "${JCI_SIGNING_CERTIFICATE_BASE64}" | base64 --decode > "${CERT
   printf '%s' "${JCI_SIGNING_CERTIFICATE_BASE64}" | base64 -D > "${CERTIFICATE_PATH}"
 fi
 KEYCHAIN_PATH="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/jci-signing.keychain-db"
-KEYCHAIN_PASSWORD="$(uuidgen)"
+KEYCHAIN_PASSWORD="${JCI_SIGNING_KEYCHAIN_PASSWORD}"
 security create-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_PATH}"
 security set-keychain-settings -lut 21600 "${KEYCHAIN_PATH}"
 security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_PATH}"
-security import "${CERTIFICATE_PATH}" -k "${KEYCHAIN_PATH}" -P "${JCI_SIGNING_CERTIFICATE_PASSWORD}" -T /usr/bin/codesign -T /usr/bin/security
+security import "${CERTIFICATE_PATH}" -P "${JCI_SIGNING_CERTIFICATE_PASSWORD}" -A -t cert -f pkcs12 -k "${KEYCHAIN_PATH}"
 security set-key-partition-list -S apple-tool:,apple: -s -k "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_PATH}"
 security list-keychains -d user -s "${KEYCHAIN_PATH}"
 security default-keychain -s "${KEYCHAIN_PATH}"
