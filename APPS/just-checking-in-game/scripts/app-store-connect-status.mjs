@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+// Read-only release evidence helper for the JCI app record.
 
 const required = ["JCI_APPLE_API_KEY_ID", "JCI_APPLE_API_ISSUER_ID", "JCI_APPLE_API_PRIVATE_KEY"];
 for (const name of required) {
