@@ -1,0 +1,146 @@
+name: PeacePad V2 Infrastructure Static Gates
+
+on:
+  pull_request:
+    paths:
+      - "APPS/peacepad-v2-platform/**"
+      - ".github/workflows/peacepad-v2-infra-static-gates.yml"
+      - ".github/workflows/peacepad-v2-supabase-staging-deploy.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "APPS/peacepad-v2-platform/**"
+      - ".github/workflows/peacepad-v2-infra-static-gates.yml"
+      - ".github/workflows/peacepad-v2-supabase-staging-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: peacepad-v2-infra-static-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-gates:
+    name: Format, validate, and mock-plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: peacepad_test
+          POSTGRES_DB: peacepad_v2_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.8
+
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Assert no AWS credentials are present
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "${AWS_ACCESS_KEY_ID:-}"
+          test -z "${AWS_SECRET_ACCESS_KEY:-}"
+          test -z "${AWS_SESSION_TOKEN:-}"
+
+      - name: Run static infrastructure gates
+        shell: pwsh
+        run: |
+          ./APPS/peacepad-v2-platform/scripts/validate-infra.ps1
+          ./APPS/peacepad-v2-platform/scripts/validate-production-cutover-contract.ps1
+
+      - name: Parse managed restoration verifier
+        shell: bash
+        run: bash -n APPS/peacepad-v2-platform/scripts/verify-managed-logical-restoration.sh
+
+      - name: Type-check Supabase Edge Function
+        shell: bash
+        run: |
+          deno check \
+            --config APPS/peacepad-v2-platform/deno.json \
+            APPS/peacepad-v2-platform/supabase/functions/peacepad-v2-api/index.ts
+          pwsh -File APPS/peacepad-v2-platform/scripts/validate-supabase-production-edge.ps1
+          pwsh -File APPS/peacepad-v2-platform/scripts/validate-legacy-cutover-source-inventory.ps1
+          deno test \
+            --config APPS/peacepad-v2-platform/deno.json \
+            APPS/peacepad-v2-platform/supabase/functions/peacepad-v2-api/signaling_test.ts
+          deno test \
+            --config APPS/peacepad-v2-platform/deno.json \
+            APPS/peacepad-v2-platform/supabase/functions/peacepad-v2-api/turn_test.ts
+
+      - name: Apply and verify Supabase transactions
+        shell: bash
+        env:
+          PGPASSWORD: peacepad_test
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d peacepad_v2_test <<'SQL'
+          create role anon;
+          create role authenticated;
+          create role service_role;
+          create schema auth;
+          create table auth.users (id uuid primary key);
+          create function auth.uid() returns uuid language sql stable as $$
+            select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
+          $$;
+          create schema realtime;
+          create table realtime.messages (extension text not null);
+          alter table realtime.messages enable row level security;
+          grant usage on schema auth, realtime to anon, authenticated;
+          grant select, insert on realtime.messages to anon, authenticated;
+          create function realtime.topic() returns text language sql stable as $$
+            select current_setting('realtime.topic', true)
+          $$;
+          SQL
+          for pass in 1 2; do
+            for migration in APPS/peacepad-v2-platform/supabase/migrations/*.sql; do
+              psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d peacepad_v2_test -f "$migration"
+            done
+          done
+          psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d peacepad_v2_test \
+            -f APPS/peacepad-v2-platform/scripts/verify-supabase-transactions.sql
+          psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d peacepad_v2_test \
+            -f APPS/peacepad-v2-platform/scripts/verify-audio-call-lifecycle.sql
+          psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d peacepad_v2_test \
+            -f APPS/peacepad-v2-platform/scripts/verify-audio-call-signaling.sql
+          psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d peacepad_v2_test \
+            -f APPS/peacepad-v2-platform/scripts/verify-audio-call-turn-authorization.sql
+          psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d peacepad_v2_test \
+            -f APPS/peacepad-v2-platform/scripts/verify-legacy-cutover-rehearsal.sql
+          psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d peacepad_v2_test \
+            -f APPS/peacepad-v2-platform/scripts/verify-device-push-registrations.sql
+          psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d peacepad_v2_test \
+            -f APPS/peacepad-v2-platform/scripts/verify-family-exit.sql
+          psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d peacepad_v2_test \
+            -f APPS/peacepad-v2-platform/scripts/verify-profile-updates.sql
+
+      - name: Confirm workflow cannot deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RniE --include='*.ps1' --include='*.sh' \
+            '(^|[;&|[:space:]])terraform[[:space:]]+apply([[:space:]]|$)' \
+            APPS/peacepad-v2-platform/infra APPS/peacepad-v2-platform/scripts; then
+            echo "Deployment capability is prohibited in the static Gate 1 workflow." >&2
+            exit 1
+          fi

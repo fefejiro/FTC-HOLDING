@@ -1,0 +1,301 @@
+import * as SecureStore from "expo-secure-store";
+import type { PeacePadCoordinationApi, SendMessageInput } from "../api/CoordinationApi";
+import { PeacePadApiError } from "../api/PeacePadApiClient";
+import type { WriteContext } from "../domain/v2";
+
+const INDEX_KEY = "peacepad.native.message-outbox.index.v1";
+const ENTRY_PREFIX = "peacepad.native.message-outbox.entry.v1.";
+export const MAX_OUTBOX_ENTRIES = 5;
+export const MAX_OUTBOX_BODY_LENGTH = 800;
+export const MAX_OUTBOX_ATTEMPTS = 5;
+export type QueuedMessageErrorKind = "authentication" | "conflict" | "rejected" | "exhausted" | "network";
+
+export type QueuedMessage = Readonly<{
+  id: string;
+  input: SendMessageInput;
+  originalBody: string;
+  context: WriteContext;
+  queuedAt: string;
+  nextAttemptAt: string;
+  attempts: number;
+  status: "waiting" | "needs-action";
+  lastErrorKind?: QueuedMessageErrorKind;
+}>;
+
+export type MessageOutboxScope = Readonly<{
+  actorIdentityId: string;
+  sessionId: string;
+  familyCircleId: string;
+  conversationId: string;
+  region: "ca" | "us";
+}>;
+
+export interface MessageOutboxStore {
+  list(): Promise<readonly QueuedMessage[]>;
+  enqueue(value: QueuedMessage): Promise<void>;
+  replace(value: QueuedMessage): Promise<void>;
+  remove(id: string): Promise<void>;
+  clear(): Promise<void>;
+}
+
+function validId(value: unknown): value is string {
+  return typeof value === "string" && /^[a-zA-Z0-9_-]{8,96}$/.test(value);
+}
+
+function validQueuedMessage(value: unknown): value is QueuedMessage {
+  if (!value || typeof value !== "object") return false;
+  const item = value as Partial<QueuedMessage>;
+  return validId(item.id)
+    && typeof item.input?.familyCircleId === "string"
+    && typeof item.input?.conversationId === "string"
+    && typeof item.input?.body === "string"
+    && item.input.body.trim().length > 0
+    && item.input.body.length <= MAX_OUTBOX_BODY_LENGTH
+    && typeof item.originalBody === "string"
+    && item.originalBody.trim().length > 0
+    && item.originalBody.length <= MAX_OUTBOX_BODY_LENGTH
+    && typeof item.context?.idempotencyKey === "string"
+    && item.context.idempotencyKey.trim().length > 0
+    && item.context.schemaVersion === "2.0"
+    && (item.context.region === "ca" || item.context.region === "us")
+    && typeof item.context.actor?.identityId === "string"
+    && typeof item.context.actor?.sessionId === "string"
+    && typeof item.queuedAt === "string"
+    && Number.isFinite(Date.parse(item.queuedAt))
+    && typeof item.nextAttemptAt === "string"
+    && Number.isFinite(Date.parse(item.nextAttemptAt))
+    && Number.isInteger(item.attempts)
+    && (item.attempts ?? -1) >= 0
+    && (item.attempts ?? MAX_OUTBOX_ATTEMPTS + 1) <= MAX_OUTBOX_ATTEMPTS
+    && (item.status === "waiting" || item.status === "needs-action")
+    && (item.lastErrorKind === undefined || ["authentication", "conflict", "rejected", "exhausted", "network"].includes(item.lastErrorKind));
+}
+
+async function readIndex(): Promise<string[]> {
+  const raw = await SecureStore.getItemAsync(INDEX_KEY);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (Array.isArray(parsed) && parsed.length <= MAX_OUTBOX_ENTRIES && parsed.every(validId)) return [...new Set(parsed)];
+  } catch {
+    // Invalid secure data is cleared below.
+  }
+  await SecureStore.deleteItemAsync(INDEX_KEY);
+  return [];
+}
+
+async function writeIndex(ids: readonly string[]) {
+  await SecureStore.setItemAsync(INDEX_KEY, JSON.stringify(ids), {
+    keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY
+  });
+}
+
+export const secureMessageOutboxStore: MessageOutboxStore = {
+  async list() {
+    const ids = await readIndex();
+    const result: QueuedMessage[] = [];
+    const retained: string[] = [];
+    for (const id of ids) {
+      const key = `${ENTRY_PREFIX}${id}`;
+      const raw = await SecureStore.getItemAsync(key);
+      try {
+        const parsed = raw ? JSON.parse(raw) as unknown : null;
+        if (validQueuedMessage(parsed)) {
+          result.push(parsed);
+          retained.push(id);
+          continue;
+        }
+      } catch {
+        // Invalid secure data is cleared below.
+      }
+      await SecureStore.deleteItemAsync(key);
+    }
+    if (retained.length !== ids.length) await writeIndex(retained);
+    return result;
+  },
+  async enqueue(value) {
+    if (!validQueuedMessage(value)) throw new Error("Refusing to queue an invalid PeacePad message.");
+    const ids = await readIndex();
+    if (ids.includes(value.id)) return;
+    if (ids.length >= MAX_OUTBOX_ENTRIES) throw new Error("The secure message outbox is full. Try again when connected.");
+    await SecureStore.setItemAsync(`${ENTRY_PREFIX}${value.id}`, JSON.stringify(value), {
+      keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY
+    });
+    try {
+      await writeIndex([...ids, value.id]);
+    } catch (error) {
+      await SecureStore.deleteItemAsync(`${ENTRY_PREFIX}${value.id}`);
+      throw error;
+    }
+  },
+  async replace(value) {
+    if (!validQueuedMessage(value)) throw new Error("Refusing to update an invalid PeacePad message.");
+    const ids = await readIndex();
+    if (!ids.includes(value.id)) throw new Error("Queued message not found.");
+    await SecureStore.setItemAsync(`${ENTRY_PREFIX}${value.id}`, JSON.stringify(value), {
+      keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY
+    });
+  },
+  async remove(id) {
+    if (!validId(id)) return;
+    const ids = await readIndex();
+    await SecureStore.deleteItemAsync(`${ENTRY_PREFIX}${id}`);
+    await writeIndex(ids.filter((value) => value !== id));
+  },
+  async clear() {
+    const ids = await readIndex();
+    await Promise.all(ids.map((id) => SecureStore.deleteItemAsync(`${ENTRY_PREFIX}${id}`)));
+    await SecureStore.deleteItemAsync(INDEX_KEY);
+  }
+};
+
+export function isTransientMessageError(error: unknown) {
+  return error instanceof PeacePadApiError && (error.kind === "network" || error.kind === "timeout");
+}
+
+export function isQueuedMessageInScope(value: QueuedMessage, scope: MessageOutboxScope) {
+  return value.context.actor.identityId === scope.actorIdentityId
+    && value.context.actor.sessionId === scope.sessionId
+    && value.context.region === scope.region
+    && value.input.familyCircleId === scope.familyCircleId
+    && value.input.conversationId === scope.conversationId;
+}
+
+export async function removeQueuedMessagesForFamily(
+  store: MessageOutboxStore,
+  scope: Pick<MessageOutboxScope, "actorIdentityId" | "familyCircleId" | "region">
+): Promise<number> {
+  let removed = 0;
+  for (const queued of await store.list()) {
+    if (
+      queued.context.actor.identityId === scope.actorIdentityId
+      && queued.context.region === scope.region
+      && queued.input.familyCircleId === scope.familyCircleId
+    ) {
+      await store.remove(queued.id);
+      removed += 1;
+    }
+  }
+  return removed;
+}
+
+export function earliestQueuedMessageRetryAt(
+  values: readonly QueuedMessage[],
+  scope: MessageOutboxScope
+): number | undefined {
+  let earliest: number | undefined;
+  for (const queued of values) {
+    if (queued.status !== "waiting" || !isQueuedMessageInScope(queued, scope)) continue;
+    const retryAt = Date.parse(queued.nextAttemptAt);
+    if (!Number.isFinite(retryAt)) continue;
+    earliest = earliest === undefined ? retryAt : Math.min(earliest, retryAt);
+  }
+  return earliest;
+}
+
+function isAuthenticationPause(error: unknown) {
+  return error instanceof PeacePadApiError && error.kind === "auth-required";
+}
+
+export async function retryQueuedMessages(
+  api: PeacePadCoordinationApi,
+  store: MessageOutboxStore,
+  scope: MessageOutboxScope,
+  now = () => new Date(),
+  shouldContinue = () => true
+) {
+  const summary = { sent: 0, retained: 0, needsAction: 0 };
+  for (const queued of await store.list()) {
+    if (!shouldContinue()) break;
+    if (!isQueuedMessageInScope(queued, scope)) {
+      summary.retained += 1;
+      continue;
+    }
+    if (queued.status === "needs-action") {
+      summary.needsAction += 1;
+      continue;
+    }
+    if (queued.attempts >= MAX_OUTBOX_ATTEMPTS) {
+      await store.replace({ ...queued, status: "needs-action", lastErrorKind: "exhausted" });
+      summary.needsAction += 1;
+      continue;
+    }
+    if (Date.parse(queued.nextAttemptAt) > now().getTime()) {
+      summary.retained += 1;
+      continue;
+    }
+    if (!shouldContinue()) break;
+    try {
+      await api.sendMessage(queued.input, queued.context);
+      await store.remove(queued.id);
+      summary.sent += 1;
+    } catch (error) {
+      if (isAuthenticationPause(error)) {
+        await store.replace({ ...queued, status: "needs-action", lastErrorKind: "authentication" });
+        summary.needsAction += 1;
+        continue;
+      }
+      if (!isTransientMessageError(error)) {
+        const lastErrorKind = error instanceof PeacePadApiError && error.status === 409 ? "conflict" : "rejected";
+        await store.replace({ ...queued, status: "needs-action", lastErrorKind });
+        summary.needsAction += 1;
+        continue;
+      }
+      const attempts = queued.attempts + 1;
+      if (attempts >= MAX_OUTBOX_ATTEMPTS) {
+        await store.replace({ ...queued, attempts, status: "needs-action", lastErrorKind: "exhausted" });
+        summary.needsAction += 1;
+        continue;
+      }
+      const retryDelaySeconds = Math.min(15 * (2 ** attempts), 300);
+      await store.replace({
+        ...queued,
+        attempts,
+        nextAttemptAt: new Date(now().getTime() + retryDelaySeconds * 1000).toISOString()
+      });
+      summary.retained += 1;
+    }
+  }
+  return summary;
+}
+
+export async function retryQueuedMessage(
+  api: PeacePadCoordinationApi,
+  store: MessageOutboxStore,
+  scope: MessageOutboxScope,
+  id: string
+): Promise<"sent" | "retained"> {
+  const queued = (await store.list()).find((item) => item.id === id);
+  if (!queued || !isQueuedMessageInScope(queued, scope) || queued.status !== "needs-action") return "retained";
+  try {
+    await api.sendMessage(queued.input, queued.context);
+    await store.remove(queued.id);
+    return "sent";
+  } catch (error) {
+    const lastErrorKind: QueuedMessageErrorKind = isAuthenticationPause(error)
+      ? "authentication"
+      : isTransientMessageError(error)
+        ? "network"
+        : error instanceof PeacePadApiError && error.status === 409
+          ? "conflict"
+          : "rejected";
+    await store.replace({
+      ...queued,
+      attempts: Math.min(MAX_OUTBOX_ATTEMPTS, queued.attempts + 1),
+      status: "needs-action",
+      lastErrorKind
+    });
+    return "retained";
+  }
+}
+
+export async function removeQueuedMessage(
+  store: MessageOutboxStore,
+  scope: MessageOutboxScope,
+  id: string
+): Promise<boolean> {
+  const queued = (await store.list()).find((item) => item.id === id);
+  if (!queued || !isQueuedMessageInScope(queued, scope) || queued.status !== "needs-action") return false;
+  await store.remove(queued.id);
+  return true;
+}

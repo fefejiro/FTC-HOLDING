@@ -1,0 +1,5 @@
+bucket       = "replace-with-canadian-terraform-state-bucket"
+key          = "peacepad-v2/staging/ca-central-1/terraform.tfstate"
+region       = "ca-central-1"
+encrypt      = true
+use_lockfile = true

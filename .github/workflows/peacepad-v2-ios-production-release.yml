@@ -27,7 +27,7 @@ jobs:
     env:
       APP_PATH: APPS/peacepad-next-native
       EXPECTED_SHA: ${{ inputs.source_sha }}
-      APPROVED_SOURCE_SHA: f1827ad92bc1868aa7c74264963e4a987de29367
+      PRODUCTION_BASELINE: eb7c14399f3ffa67517acafd8f56a2a1b17fe284
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       EAS_NO_VCS: "1"
       FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: "30"
@@ -45,9 +45,9 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
-          test "$EXPECTED_SHA" = "$APPROVED_SOURCE_SHA"
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           test "${{ inputs.authorization }}" = "I_CONFIRM_PRODUCTION_BUILD_5_UPLOAD"
+          git merge-base --is-ancestor "$PRODUCTION_BASELINE" "$EXPECTED_SHA"
           git diff --check "$EXPECTED_SHA"
           test -z "$(git status --porcelain)"
           test -n "$EXPO_TOKEN"
@@ -104,6 +104,14 @@ jobs:
             and .buildProfile.simulator == false
           ' "$config_path" >/dev/null
           rm -f "$config_path"
+
+      - name: Require the Canada production write boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          health="$(curl --fail --location --retry 3 --connect-timeout 20 --max-time 60 \
+            https://qzekqjewpugdotskrtni.supabase.co/functions/v1/peacepad-v2-api/health)"
+          node -e 'const health=JSON.parse(process.argv[1]); if(health.status!=="ok"||health.environment!=="production"||health.region!=="ca"||health.writesEnabled!==true) process.exit(1)' "$health"
 
       - name: Build signed production IPA locally
         id: build

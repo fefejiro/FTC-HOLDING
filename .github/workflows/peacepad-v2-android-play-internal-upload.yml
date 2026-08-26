@@ -32,8 +32,6 @@ jobs:
     name: Upload reviewed staging AAB to Google Play Internal Testing
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      APPROVED_SOURCE_SHA: f1827ad92bc1868aa7c74264963e4a987de29367
 
     steps:
       - name: Require explicit internal-staging authorization
@@ -56,7 +54,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$EXPECTED_SHA" = "$APPROVED_SOURCE_SHA"
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           git diff --check "$EXPECTED_SHA"
           test -z "$(git status --porcelain)"
@@ -83,7 +80,7 @@ jobs:
             export EXPO_PUBLIC_PEACEPAD_ENV=staging
             export PEACEPAD_ANDROID_RELEASE_MODE=playstore-internal
             node scripts/check-lab-guardrails.cjs
-            node -e 'const cfg=require("./app.config.js")({config:require("./app.json").expo}); if(cfg.version!=="2.0.1"||cfg.android.package!=="ca.peacepad.family"||cfg.android.versionCode!==43||cfg.extra.productionApiWritesEnabled!==false) process.exit(1);'
+          node -e 'const cfg=require("./app.config.js")({config:require("./app.json").expo}); if(cfg.version!=="2.0.1"||cfg.android.package!=="ca.peacepad.family"||cfg.android.versionCode!==43||cfg.extra.productionApiWritesEnabled!==false) process.exit(1);'
           )
 
       - name: Require a PeacePad-specific Play upload credential

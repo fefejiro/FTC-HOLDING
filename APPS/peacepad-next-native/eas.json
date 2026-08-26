@@ -1,0 +1,128 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "local",
+    "requireCommit": true
+  },
+  "build": {
+    "lab-simulator": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_PEACEPAD_ENV": "lab",
+        "EXPO_PUBLIC_PEACEPAD_API_BASE_URL": "http://127.0.0.1:8787",
+        "EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS": "false"
+      },
+      "ios": {
+        "simulator": true
+      }
+    },
+    "lab-device": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_PEACEPAD_ENV": "lab",
+        "EXPO_PUBLIC_PEACEPAD_API_BASE_URL": "http://127.0.0.1:8787",
+        "EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS": "false"
+      }
+    },
+    "staging-simulator-ca": {
+      "distribution": "internal",
+      "environment": "preview",
+      "ios": {
+        "simulator": true
+      }
+    },
+    "staging-simulator-us": {
+      "distribution": "internal",
+      "environment": "development",
+      "ios": {
+        "simulator": true
+      }
+    },
+    "staging-simulator-dual": {
+      "distribution": "internal",
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS": "false",
+        "EXPO_PUBLIC_PEACEPAD_ENV": "staging",
+        "PEACEPAD_IOS_RELEASE_MODE": "staging-simulator-dual"
+      },
+      "ios": {
+        "simulator": true
+      }
+    },
+    "staging-device-ca": {
+      "distribution": "internal",
+      "environment": "preview"
+    },
+    "staging-device-us": {
+      "distribution": "internal",
+      "environment": "development"
+    },
+    "testflight-internal": {
+      "distribution": "store",
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS": "false",
+        "EXPO_PUBLIC_PEACEPAD_ENV": "staging",
+        "PEACEPAD_IOS_RELEASE_MODE": "testflight-internal"
+      },
+      "ios": {
+        "simulator": false,
+        "image": "latest"
+      }
+    },
+    "appstore-production": {
+      "distribution": "store",
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS": "false",
+        "EXPO_PUBLIC_PEACEPAD_ENV": "production",
+        "EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED": "true",
+        "PEACEPAD_IOS_RELEASE_MODE": "appstore-production"
+      },
+      "ios": {
+        "simulator": false,
+        "image": "latest"
+      }
+    },
+    "playstore-internal": {
+      "distribution": "store",
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS": "false",
+        "EXPO_PUBLIC_PEACEPAD_ENV": "staging",
+        "PEACEPAD_ANDROID_RELEASE_MODE": "playstore-internal"
+      },
+      "android": {
+        "buildType": "app-bundle",
+        "credentialsSource": "local"
+      }
+    },
+    "playstore-production": {
+      "distribution": "store",
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS": "false",
+        "EXPO_PUBLIC_PEACEPAD_ENV": "production",
+        "EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED": "true",
+        "PEACEPAD_ANDROID_RELEASE_MODE": "playstore-production"
+      },
+      "android": {
+        "buildType": "app-bundle",
+        "credentialsSource": "local"
+      }
+    }
+  },
+  "submit": {
+    "testflight-internal": {
+      "ios": {
+        "ascAppId": "6793350735"
+      }
+    },
+    "appstore-production": {
+      "ios": {
+        "ascAppId": "6793350735"
+      }
+    }
+  }
+}

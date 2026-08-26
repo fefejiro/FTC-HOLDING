@@ -1,0 +1,113 @@
+{
+  "name": "@ftc/peacepad-next-native",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo run:ios",
+    "android": "expo run:android",
+    "web": "expo start --web",
+    "expo:config": "expo config --type public --json",
+    "verify:audio-config": "node scripts/verify-native-audio-config.cjs",
+    "export:ios": "expo export --platform ios",
+    "guardrails": "node scripts/check-lab-guardrails.cjs",
+    "release:ios:preflight": "node scripts/check-ios-testflight-readiness.cjs",
+    "release:ios:preflight:online": "node scripts/check-ios-testflight-readiness.cjs --online",
+    "release:ios:runtime:verify": "node scripts/check-ios-testflight-readiness.cjs --injected",
+    "release:ios:build:check": "node scripts/start-ios-testflight-build.cjs",
+    "release:ios:build:cloud": "node scripts/start-ios-testflight-build.cjs --start",
+    "release:ios:simulator:preflight": "node scripts/check-ios-dual-simulator-readiness.cjs",
+    "release:ios:simulator:preflight:online": "node scripts/check-ios-dual-simulator-readiness.cjs --online",
+    "release:ios:simulator:runtime:verify": "node scripts/check-ios-dual-simulator-readiness.cjs --injected",
+    "release:ios:simulator:build:check": "node scripts/start-ios-dual-simulator-build.cjs",
+    "release:ios:simulator:build:prepare": "node scripts/start-ios-dual-simulator-build.cjs --prepare-only",
+    "release:ios:simulator:build:cloud": "node scripts/start-ios-dual-simulator-build.cjs --start",
+    "secret-scan": "node scripts/check-secrets.cjs",
+    "test": "jest --runInBand",
+    "test:coverage": "jest --runInBand --coverage",
+    "typecheck": "tsc --noEmit",
+    "sim:prepare": "node scripts/prepare-ios-sim-workdir.cjs",
+    "sim:doctor": "node scripts/prepare-ios-sim-workdir.cjs --install --doctor",
+    "sim:ios": "node scripts/prepare-ios-sim-workdir.cjs --install --ios"
+  },
+  "dependencies": {
+    "@expo-google-fonts/playfair-display": "^0.4.2",
+    "@react-native-google-signin/google-signin": "16.1.4",
+    "@react-navigation/core": "7.21.10",
+    "@react-navigation/elements": "2.9.35",
+    "@react-navigation/native": "7.3.13",
+    "@react-navigation/native-stack": "7.18.5",
+    "@supabase/supabase-js": "^2.105.3",
+    "expo": "~54.0.37",
+    "expo-apple-authentication": "~8.0.8",
+    "expo-constants": "~18.0.14",
+    "expo-crypto": "~15.0.9",
+    "expo-dev-client": "6.0.21",
+    "expo-device": "~8.0.10",
+    "expo-document-picker": "~14.0.8",
+    "expo-file-system": "~19.0.24",
+    "expo-network": "8.0.8",
+    "expo-notifications": "~0.32.17",
+    "expo-secure-store": "~15.0.8",
+    "expo-status-bar": "~3.0.9",
+    "qrcode-generator": "^2.0.4",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.16.0",
+    "react-native-svg": "15.12.1",
+    "react-native-url-polyfill": "^4.0.0",
+    "react-native-webrtc": "124.0.6"
+  },
+  "devDependencies": {
+    "@testing-library/react-native": "^13.3.3",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.19.41",
+    "@types/pg": "^8.16.0",
+    "@types/react": "~19.1.0",
+    "jest": "^29.7.0",
+    "jest-expo": "~54.0.18",
+    "pg": "^8.17.2",
+    "react-test-renderer": "19.1.0",
+    "typescript": "~5.9.2"
+  },
+  "jest": {
+    "preset": "jest-expo",
+    "roots": [
+      "<rootDir>/src"
+    ],
+    "modulePathIgnorePatterns": [
+      "<rootDir>/.sim/"
+    ],
+    "setupFiles": [
+      "<rootDir>/src/test/jest.setup.ts"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 75,
+        "functions": 75,
+        "lines": 75,
+        "statements": 75
+      }
+    },
+    "moduleNameMapper": {
+      "^react$": "<rootDir>/node_modules/react",
+      "^react/(.*)$": "<rootDir>/node_modules/react/$1"
+    },
+    "transformIgnorePatterns": [
+      "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|expo-.*|expo-modules-core|@expo(nent)?/.*|@expo-google-fonts/.*|@react-navigation/.*|react-native-safe-area-context|react-native-screens)/)"
+    ]
+  },
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "enabled": true,
+        "exclude": [
+          "react-native-webrtc"
+        ],
+        "listUnknownPackages": true
+      }
+    }
+  }
+}
