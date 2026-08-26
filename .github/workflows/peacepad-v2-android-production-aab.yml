@@ -111,6 +111,7 @@ jobs:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EAS_NO_VCS: "1"
           EXPO_PUBLIC_PEACEPAD_ENV: production
+          EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED: "true"
           PEACEPAD_ANDROID_RELEASE_MODE: playstore-production
         run: |
           set -euo pipefail
