@@ -22,7 +22,7 @@ namespace Jci.Editor
         private const string AndroidOutputPath = "Builds/Android/JustCheckingIn.aab";
         private const string IosOutputPath = "Builds/iOS/JustCheckingIn";
         private const string BootScenePath = "Assets/_Game/Scenes/Boot.unity";
-        private const string AppIconPath = "Assets/_Game/Art/jci-icon-generated.png";
+        private const string AppIconPath = "Assets/_Game/Art/jci-icon.png";
 
         [MenuItem("JCI/Build Android AAB")]
         public static void BuildAndroid()

@@ -17,7 +17,7 @@ env:
 jobs:
   publish:
     name: Unity export, Xcode archive, and App Store upload
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 120
     steps:
       - name: Checkout release source
