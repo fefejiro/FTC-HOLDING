@@ -14,6 +14,7 @@ on:
   push:
     paths:
       - APPS/just-checking-in-game/scripts/app-store-connect-status.mjs
+      - APPS/just-checking-in-game/scripts/app-store-connect-prepare-release.mjs
 
 permissions:
   contents: read
