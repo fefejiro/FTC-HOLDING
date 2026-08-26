@@ -52,10 +52,23 @@ await request(`appStoreVersions/${version.id}/relationships/build`, {
   body: JSON.stringify({ data: { type: "builds", id: build.id } }),
 });
 console.log(`Attached build ${build.id} (3) to version ${version.id}`);
+await request(`builds/${build.id}`, {
+  method: "PATCH",
+  body: JSON.stringify({ data: { type: "builds", id: build.id, attributes: { usesNonExemptEncryption: false } } }),
+});
+console.log("Set build 3 export compliance: no exempt encryption");
 
 let detail;
 try { detail = await request(`appStoreVersions/${version.id}?include=appStoreVersionLocalizations`); } catch (error) { if (error.status !== 404) throw error; }
 const localizations = (detail?.included ?? []).filter((item) => item.type === "appStoreVersionLocalizations");
+const enUs = localizations.find((item) => item.attributes?.locale === "en-US");
+if (enUs) {
+  await request(`appStoreVersionLocalizations/${enUs.id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ data: { type: "appStoreVersionLocalizations", id: enUs.id, attributes: { whatsNew: "Meet Check In With Myself, local Connection Journeys, session summaries, and a smoother, more comfortable way to take turns." } } }),
+  });
+  console.log("Updated en-US What’s New text");
+}
 if (!localizations.some((item) => item.attributes?.locale === "en-US")) {
   await request("appStoreVersionLocalizations", {
     method: "POST",
