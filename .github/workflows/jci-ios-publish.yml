@@ -152,3 +152,19 @@ jobs:
           JCI_APPLE_API_ISSUER_ID: ${{ secrets.JCI_APPLE_API_ISSUER_ID }}
           JCI_APPLE_API_PRIVATE_KEY: ${{ secrets.JCI_APPLE_API_PRIVATE_KEY }}
         run: node APPS/just-checking-in-game/scripts/app-store-connect-status.mjs
+
+  asc-prepare:
+    if: github.event_name == 'push' && contains(github.event.head_commit.message, 'asc-prepare')
+    name: Prepare JCI 1.1.0 App Store version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@v4
+      - name: Create or update the JCI App Store version
+        env:
+          JCI_APPLE_API_KEY_ID: ${{ secrets.JCI_APPLE_API_KEY_ID }}
+          JCI_APPLE_API_ISSUER_ID: ${{ secrets.JCI_APPLE_API_ISSUER_ID }}
+          JCI_APPLE_API_PRIVATE_KEY: ${{ secrets.JCI_APPLE_API_PRIVATE_KEY }}
+        run: node APPS/just-checking-in-game/scripts/app-store-connect-prepare-release.mjs
