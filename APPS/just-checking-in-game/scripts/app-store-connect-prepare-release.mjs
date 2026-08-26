@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 // Idempotently prepares the JCI 1.1.0 candidate for review.
+// Build 3 must be VALID before any metadata mutation occurs.
 
 const required = ["JCI_APPLE_API_KEY_ID", "JCI_APPLE_API_ISSUER_ID", "JCI_APPLE_API_PRIVATE_KEY"];
 for (const name of required) if (!process.env[name]) throw new Error(`Missing ${name}`);
