@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 // Submit only the prepared JCI 1.1.0 version; the public 1.0.0 release is untouched.
+// Apple review remains the external approval boundary.
 
 const required = ["JCI_APPLE_API_KEY_ID", "JCI_APPLE_API_ISSUER_ID", "JCI_APPLE_API_PRIVATE_KEY"];
 for (const name of required) if (!process.env[name]) throw new Error(`Missing ${name}`);
