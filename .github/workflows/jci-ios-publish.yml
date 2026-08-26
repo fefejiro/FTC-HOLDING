@@ -11,6 +11,9 @@ on:
         options:
           - publish
           - asc-status
+  push:
+    paths:
+      - APPS/just-checking-in-game/scripts/app-store-connect-status.mjs
 
 permissions:
   contents: read
@@ -25,7 +28,7 @@ env:
 
 jobs:
   publish:
-    if: inputs.mode != 'asc-status'
+    if: github.event_name == 'workflow_dispatch' && inputs.mode != 'asc-status'
     name: Unity export, Xcode archive, and App Store upload
     runs-on: macos-26
     timeout-minutes: 120
@@ -135,7 +138,7 @@ jobs:
           retention-days: 30
 
   asc-status:
-    if: inputs.mode == 'asc-status'
+    if: github.event_name == 'push' || inputs.mode == 'asc-status'
     name: Read-only App Store Connect status
     runs-on: ubuntu-latest
     permissions:
