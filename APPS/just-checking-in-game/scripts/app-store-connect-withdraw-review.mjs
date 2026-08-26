@@ -36,10 +36,17 @@ const state = current.data?.attributes?.state ?? null;
 const alreadySubmitted = current.data?.attributes?.submitted === true;
 let withdrawn = current;
 if (alreadySubmitted) {
-  withdrawn = await request(`reviewSubmissions/${submissionId}`, {
-    method: "PATCH",
-    body: JSON.stringify({ data: { type: "reviewSubmissions", id: submissionId, attributes: { submitted: false } } }),
-  });
+  try {
+    withdrawn = await request(`reviewSubmissions/${submissionId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ data: { type: "reviewSubmissions", id: submissionId, attributes: { submitted: false } } }),
+    });
+  } catch (error) {
+    // Apple can briefly reject the submission-level toggle while its item is
+    // still marked submitted. Continue to the item-removal path below.
+    if (error.status !== 409) throw error;
+    console.log("Submission toggle reported a transient submitted-item conflict; continuing with item removal");
+  }
 }
 
 // A withdrawn submission can retain its app-version item while ASC continues
