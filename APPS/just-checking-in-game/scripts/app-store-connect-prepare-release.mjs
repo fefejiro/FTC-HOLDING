@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 // Idempotently prepares the JCI 1.1.0 candidate for review.
-// Build 3 must be VALID before any metadata mutation occurs.
+// Build 4 must be VALID before any metadata mutation occurs.
 // Re-running is safe: existing version/localization records are retained.
 // Required store-side attributes are reconciled on every prepare run.
 
@@ -33,8 +33,8 @@ const request = async (path, options = {}) => {
 
 const app = await request("apps/6799443182?fields[apps]=name,bundleId&include=appStoreVersions");
 const builds = await request("builds?filter[app]=6799443182&sort=-uploadedDate&limit=20&fields[builds]=version,processingState,uploadedDate");
-const build = (builds.data ?? []).find((item) => item.attributes?.version === "3" && item.attributes?.processingState === "VALID");
-if (!build) throw new Error("No VALID JCI build 3 is available in App Store Connect");
+const build = (builds.data ?? []).find((item) => item.attributes?.version === "4" && item.attributes?.processingState === "VALID");
+if (!build) throw new Error("No VALID JCI build 4 is available in App Store Connect");
 
 let version = (app.included ?? []).find((item) => item.type === "appStoreVersions" && item.attributes?.versionString === "1.1.0");
 if (!version) {
@@ -52,12 +52,12 @@ await request(`appStoreVersions/${version.id}/relationships/build`, {
   method: "PATCH",
   body: JSON.stringify({ data: { type: "builds", id: build.id } }),
 });
-console.log(`Attached build ${build.id} (3) to version ${version.id}`);
+console.log(`Attached build ${build.id} (4) to version ${version.id}`);
 await request(`builds/${build.id}`, {
   method: "PATCH",
   body: JSON.stringify({ data: { type: "builds", id: build.id, attributes: { usesNonExemptEncryption: false } } }),
 });
-console.log("Set build 3 export compliance: no exempt encryption");
+console.log("Set build 4 export compliance: no exempt encryption");
 
 let detail;
 try { detail = await request(`appStoreVersions/${version.id}?include=appStoreVersionLocalizations`); } catch (error) { if (error.status !== 404) throw error; }
@@ -88,4 +88,4 @@ if (!localizations.some((item) => item.attributes?.locale === "en-US")) {
   console.log("Existing en-US version localization retained");
 }
 
-console.log(JSON.stringify({ appId: "6799443182", bundleId: app.data?.attributes?.bundleId, versionId: version.id, version: "1.1.0", buildId: build.id, build: "3" }, null, 2));
+console.log(JSON.stringify({ appId: "6799443182", bundleId: app.data?.attributes?.bundleId, versionId: version.id, version: "1.1.0", buildId: build.id, build: "4" }, null, 2));

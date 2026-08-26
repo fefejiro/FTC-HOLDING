@@ -20,6 +20,7 @@ namespace Jci.Presentation
 
         private Canvas canvas;
         private RectTransform body;
+        private JciScreenMotion screenMotion;
         private InputField nameInput;
         private JciLocalStore store;
         private JciStoreDocument document;
@@ -78,9 +79,17 @@ namespace Jci.Presentation
             var safe = new GameObject("Safe Area", typeof(RectTransform), typeof(JciSafeArea));
             safe.transform.SetParent(go.transform, false);
             Stretch(safe.GetComponent<RectTransform>());
+            var glass = MakePanel(safe.transform, "Glass Surface", new Color(1f, 1f, 1f, 0.055f));
+            glass.offsetMin = new Vector2(14, 12);
+            glass.offsetMax = new Vector2(-14, -12);
+            var outline = glass.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(1f, 1f, 1f, 0.12f);
+            outline.effectDistance = new Vector2(1f, -1f);
+            glass.gameObject.AddComponent<JciGlassPulse>();
             body = MakePanel(safe.transform, "Body", new Color(0, 0, 0, 0));
             body.offsetMin = new Vector2(26, 24);
             body.offsetMax = new Vector2(-26, -24);
+            screenMotion = body.gameObject.AddComponent<JciScreenMotion>();
             var layout = body.gameObject.AddComponent<VerticalLayoutGroup>();
             layout.spacing = 12;
             layout.padding = new RectOffset(0, 0, 0, 0);
@@ -96,6 +105,7 @@ namespace Jci.Presentation
             AddText(body, "JUST CHECKING IN", 16, Parse(Gold), FontStyle.Bold, 32);
             var hero = AddText(body, "A little time to connect.", 30, Color.white, FontStyle.Bold, 72);
             hero.rectTransform.sizeDelta = new Vector2(0, 72);
+            screenMotion.Play(reducedMotion);
         }
 
         private void ShowHome()
@@ -346,6 +356,77 @@ namespace Jci.Presentation
         {
             last = Screen.safeArea; var min = last.position; var max = min + last.size;
             rect.anchorMin = new Vector2(min.x / Screen.width, min.y / Screen.height); rect.anchorMax = new Vector2(max.x / Screen.width, max.y / Screen.height); rect.offsetMin = rect.offsetMax = Vector2.zero;
+        }
+    }
+
+    /// <summary>Subtle screen fade/scale transition. It is disabled when reduced motion is enabled.</summary>
+    internal sealed class JciScreenMotion : MonoBehaviour
+    {
+        private CanvasGroup group;
+        private float elapsed;
+        private bool reduced;
+
+        private void Awake()
+        {
+            group = GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
+        }
+
+        public void Play(bool reducedMotion)
+        {
+            reduced = reducedMotion;
+            elapsed = 0f;
+            if (reduced)
+            {
+                group.alpha = 1f;
+                transform.localScale = Vector3.one;
+                enabled = false;
+                return;
+            }
+
+            group.alpha = 0f;
+            transform.localScale = Vector3.one * 0.985f;
+            enabled = true;
+        }
+
+        private void Update()
+        {
+            if (reduced) return;
+            elapsed += Time.unscaledDeltaTime;
+            var t = Mathf.Clamp01(elapsed / 0.24f);
+            var eased = 1f - Mathf.Pow(1f - t, 3f);
+            group.alpha = eased;
+            transform.localScale = Vector3.LerpUnclamped(Vector3.one * 0.985f, Vector3.one, eased);
+            if (t >= 1f) enabled = false;
+        }
+    }
+
+    /// <summary>Very low-amplitude glass highlight pulse, automatically respecting reduced motion.</summary>
+    internal sealed class JciGlassPulse : MonoBehaviour
+    {
+        private Image image;
+        private float elapsed;
+        private const float BaseAlpha = 0.055f;
+
+        private void Awake()
+        {
+            image = GetComponent<Image>();
+        }
+
+        private void Update()
+        {
+            if (image == null) return;
+            if (PlayerPrefs.GetInt("jci.reducedMotion", 0) == 1)
+            {
+                var reduced = image.color;
+                reduced.a = BaseAlpha;
+                image.color = reduced;
+                return;
+            }
+
+            elapsed += Time.unscaledDeltaTime;
+            var color = image.color;
+            color.a = BaseAlpha + Mathf.Sin(elapsed * 0.8f) * 0.012f;
+            image.color = color;
         }
     }
 }

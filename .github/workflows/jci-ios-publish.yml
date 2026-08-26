@@ -13,6 +13,7 @@ on:
           - asc-status
           - asc-prepare
           - asc-submit
+          - asc-withdraw
 
 permissions:
   contents: read
@@ -183,3 +184,20 @@ jobs:
           JCI_APPLE_API_ISSUER_ID: ${{ secrets.JCI_APPLE_API_ISSUER_ID }}
           JCI_APPLE_API_PRIVATE_KEY: ${{ secrets.JCI_APPLE_API_PRIVATE_KEY }}
         run: node APPS/just-checking-in-game/scripts/app-store-connect-submit-review.mjs
+
+  asc-withdraw:
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'asc-withdraw'
+    name: Withdraw current JCI review submission
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@v4
+      - name: Withdraw the current JCI App Store review submission
+        env:
+          JCI_APPLE_API_KEY_ID: ${{ secrets.JCI_APPLE_API_KEY_ID }}
+          JCI_APPLE_API_ISSUER_ID: ${{ secrets.JCI_APPLE_API_ISSUER_ID }}
+          JCI_APPLE_API_PRIVATE_KEY: ${{ secrets.JCI_APPLE_API_PRIVATE_KEY }}
+          JCI_REVIEW_SUBMISSION_ID: 2bb0ce51-a60e-484e-81a1-f9864e295e85
+        run: node APPS/just-checking-in-game/scripts/app-store-connect-withdraw-review.mjs
