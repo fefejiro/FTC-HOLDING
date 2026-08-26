@@ -16,6 +16,8 @@ API_KEY_PATH=""
 CERTIFICATE_PATH=""
 KEYCHAIN_PATH=""
 KEYCHAIN_PASSWORD=""
+PROVISIONING_PROFILE_PATH=""
+PROVISIONING_PROFILE_PLIST=""
 
 mkdir -p "${LOG_DIR}"
 exec > >(tee -a "${LOG_PATH}") 2>&1
@@ -35,6 +37,12 @@ cleanup_signing_material() {
   if [[ -n "${KEYCHAIN_PATH}" && -f "${KEYCHAIN_PATH}" ]]; then
     security delete-keychain "${KEYCHAIN_PATH}" >/dev/null 2>&1 || true
   fi
+  if [[ -n "${PROVISIONING_PROFILE_PATH}" && -f "${PROVISIONING_PROFILE_PATH}" ]]; then
+    rm -f "${PROVISIONING_PROFILE_PATH}"
+  fi
+  if [[ -n "${PROVISIONING_PROFILE_PLIST}" && -f "${PROVISIONING_PROFILE_PLIST}" ]]; then
+    rm -f "${PROVISIONING_PROFILE_PLIST}"
+  fi
 }
 trap 'cleanup_api_key; cleanup_signing_material' EXIT
 
@@ -44,6 +52,7 @@ echo "[JCI] iOS 1.1.0/build 3 publish run ${RUN_ID}"
 [[ -x "${UNITY_PATH}" ]] || fail "Unity ${UNITY_VERSION_EXPECTED} missing: ${UNITY_PATH}"
 need_cmd xcodebuild
 need_cmd xcrun
+need_cmd node
 
 XCODE_AUTH_ARGS=()
 HAS_API_KEY_AUTH=false
@@ -95,6 +104,23 @@ security list-keychains -d user -s "${KEYCHAIN_PATH}"
 security default-keychain -s "${KEYCHAIN_PATH}"
 security find-identity -v -p codesigning "${KEYCHAIN_PATH}" | grep -Eq 'Apple Distribution|iPhone Distribution' || fail "Existing distribution certificate was not imported"
 
+echo "[JCI] Downloading the existing active JCI App Store provisioning profile"
+PROVISIONING_PROFILE_PATH="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/jci-appstore.mobileprovision"
+export JCI_PROVISIONING_PROFILE_PATH="${PROVISIONING_PROFILE_PATH}"
+node "${ROOT_DIR}/scripts/download-existing-app-store-profile.mjs"
+[[ -s "${PROVISIONING_PROFILE_PATH}" ]] || fail "Existing JCI App Store provisioning profile was not downloaded"
+PROFILE_INSTALL_DIR="${HOME}/Library/MobileDevice/Provisioning Profiles"
+mkdir -p "${PROFILE_INSTALL_DIR}"
+PROVISIONING_PROFILE_PLIST="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/jci-appstore-profile.plist"
+security cms -D -i "${PROVISIONING_PROFILE_PATH}" > "${PROVISIONING_PROFILE_PLIST}"
+PROFILE_UUID="$(/usr/libexec/PlistBuddy -c 'Print :UUID' "${PROVISIONING_PROFILE_PLIST}")"
+PROFILE_NAME="$(/usr/libexec/PlistBuddy -c 'Print :Name' "${PROVISIONING_PROFILE_PLIST}")"
+PROFILE_APP_ID="$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "${PROVISIONING_PROFILE_PLIST}")"
+[[ "${PROFILE_APP_ID}" == "${JCI_APPLE_TEAM_ID}.com.ftcholding.justcheckingin" ]] || fail "Downloaded profile does not match the JCI bundle ID"
+[[ "${PROFILE_NAME}" == "Just Checking In App Store 2026 Release" ]] || fail "Downloaded profile name is not the approved existing JCI release profile"
+cp "${PROVISIONING_PROFILE_PATH}" "${PROFILE_INSTALL_DIR}/${PROFILE_UUID}.mobileprovision"
+echo "[JCI] Existing JCI App Store profile installed: ${PROFILE_NAME}"
+
 XCODE_PROJECT="${IOS_EXPORT}/Unity-iPhone.xcodeproj"
 if [[ "${JCI_SKIP_UNITY_EXPORT:-false}" == "true" ]]; then
   echo "[JCI] Stage 1/4: Unity iOS export (reusing verified GameCI export)"
@@ -125,8 +151,11 @@ cat > "${EXPORT_OPTIONS}" <<PLIST
 <plist version="1.0"><dict>
 <key>destination</key><string>export</string>
 <key>method</key><string>app-store-connect</string>
-<key>signingStyle</key><string>automatic</string>
+<key>signingStyle</key><string>manual</string>
 <key>teamID</key><string>${JCI_APPLE_TEAM_ID}</string>
+<key>provisioningProfiles</key><dict>
+<key>com.ftcholding.justcheckingin</key><string>${PROFILE_NAME}</string>
+</dict>
 <key>stripSwiftSymbols</key><true/>
 <key>compileBitcode</key><false/>
 </dict></plist>
@@ -134,7 +163,7 @@ PLIST
 
 echo "[JCI] Stage 3/4: export and validate IPA"
 xcodebuild -exportArchive -archivePath "${ARCHIVE_PATH}" -exportPath "${EXPORT_DIR}" \
-  -exportOptionsPlist "${EXPORT_OPTIONS}" "${XCODE_AUTH_ARGS[@]}" -allowProvisioningUpdates
+  -exportOptionsPlist "${EXPORT_OPTIONS}"
 [[ -f "${IPA_PATH}" ]] || { IPA_PATH="$(find "${EXPORT_DIR}" -maxdepth 1 -name '*.ipa' -print -quit)"; [[ -n "${IPA_PATH}" ]] || fail "IPA was not exported"; }
 if [[ "${HAS_API_KEY_AUTH}" == true ]]; then
   xcrun iTMSTransporter -m validate -assetFile "${IPA_PATH}" \
