@@ -82,3 +82,9 @@ Therefore Android is **not the same code** as the iOS 1.1 candidate and must not
 
 - **IOS: DO NOT APPROVE YET** — build 4 is Waiting for Review; public release is not verified.
 - **ANDROID: DO NOT APPROVE** — Play is in review with the older, non-parity artifact and an acknowledged Data Safety warning.
+
+## Handoff closure
+
+- Both stores are now pending platform approval; no further portal action is planned in this workstream.
+- The next-release architecture and effort estimate are saved in `NEXT-GAME-RELEASE-PLAN.md`.
+- Resume JCI only if Apple or Google reports a concrete review issue, or when public availability can be verified.
