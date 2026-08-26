@@ -2,6 +2,15 @@ name: Just Checking In iOS publish
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Publish the JCI iOS candidate or run a read-only App Store Connect status check
+        required: true
+        default: publish
+        type: choice
+        options:
+          - publish
+          - asc-status
 
 permissions:
   contents: read
@@ -16,6 +25,7 @@ env:
 
 jobs:
   publish:
+    if: inputs.mode != 'asc-status'
     name: Unity export, Xcode archive, and App Store upload
     runs-on: macos-26
     timeout-minutes: 120
@@ -123,3 +133,19 @@ jobs:
           path: APPS/just-checking-in-game/scripts/_ops-reports
           if-no-files-found: warn
           retention-days: 30
+
+  asc-status:
+    if: inputs.mode == 'asc-status'
+    name: Read-only App Store Connect status
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@v4
+      - name: Check JCI App Store Connect build and version state
+        env:
+          JCI_APPLE_API_KEY_ID: ${{ secrets.JCI_APPLE_API_KEY_ID }}
+          JCI_APPLE_API_ISSUER_ID: ${{ secrets.JCI_APPLE_API_ISSUER_ID }}
+          JCI_APPLE_API_PRIVATE_KEY: ${{ secrets.JCI_APPLE_API_PRIVATE_KEY }}
+        run: node APPS/just-checking-in-game/scripts/app-store-connect-status.mjs
