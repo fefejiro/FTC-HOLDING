@@ -75,7 +75,12 @@ const versionItem = (items.data ?? []).find((item) => {
   return included?.attributes?.versionString === "1.1.0";
 });
 if (versionItem) {
-  await request(`reviewSubmissionItems/${versionItem.id}`, { method: "DELETE" });
-  console.log(`Removed withdrawn JCI 1.1.0 review item ${versionItem.id}`);
+  try {
+    await request(`reviewSubmissionItems/${versionItem.id}`, { method: "DELETE" });
+    console.log(`Removed withdrawn JCI 1.1.0 review item ${versionItem.id}`);
+  } catch (error) {
+    if (error.status !== 409) throw error;
+    console.log(`Review item ${versionItem.id} remains submitted; legacy app-version removal completed`);
+  }
 }
 console.log(JSON.stringify({ submissionId, previousState: state, state: withdrawn.data?.attributes?.state ?? null, submitted: withdrawn.data?.attributes?.submitted ?? false, removedVersionItem: versionItem?.id ?? null }, null, 2));
