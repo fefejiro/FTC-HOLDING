@@ -155,7 +155,7 @@ jobs:
         run: node APPS/just-checking-in-game/scripts/app-store-connect-status.mjs
 
   asc-prepare:
-    if: github.event_name == 'push' && contains(github.event.head_commit.message, 'asc-prepare')
+    if: github.event_name == 'push' && (contains(github.event.head_commit.message, 'asc-prepare') || contains(github.event.head_commit.message, 'asc prepare'))
     name: Prepare JCI 1.1.0 App Store version
     runs-on: ubuntu-latest
     permissions:
