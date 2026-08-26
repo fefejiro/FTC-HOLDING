@@ -5,8 +5,9 @@ const PLAYSTORE_INTERNAL_MODE = "playstore-internal";
 const PLAYSTORE_PRODUCTION_MODE = "playstore-production";
 const TESTFLIGHT_VERSION = "2.0.1";
 const TESTFLIGHT_BUILD_NUMBER = "3";
-const APPSTORE_PRODUCTION_BUILD_NUMBER = "5";
+const APPSTORE_PRODUCTION_BUILD_NUMBER = "6";
 const PLAYSTORE_VERSION_CODE = 43;
+const PLAYSTORE_PRODUCTION_VERSION_CODE = 44;
 const PRODUCTION_BUNDLE_ID = "ca.peacepad.family";
 const APP_STORE_ID = "6793350735";
 const GOOGLE_SIGN_IN_PLUGIN = "@react-native-google-signin/google-signin";
@@ -75,7 +76,7 @@ module.exports = ({ config }) => {
           ])
         ],
         package: PRODUCTION_BUNDLE_ID,
-        versionCode: PLAYSTORE_VERSION_CODE
+        versionCode: isProduction ? PLAYSTORE_PRODUCTION_VERSION_CODE : PLAYSTORE_VERSION_CODE
       },
       extra: {
         ...config.extra,
@@ -109,6 +110,7 @@ module.exports = ({ config }) => {
     }
     return {
       ...config,
+      icon: "./assets/icon.png",
       scheme: "peacepad",
       version: TESTFLIGHT_VERSION,
       plugins: [
@@ -191,5 +193,5 @@ module.exports.androidPlayStoreProductionContract = {
   bundleIdentifier: PRODUCTION_BUNDLE_ID,
   mode: PLAYSTORE_PRODUCTION_MODE,
   version: TESTFLIGHT_VERSION,
-  versionCode: PLAYSTORE_VERSION_CODE
+  versionCode: PLAYSTORE_PRODUCTION_VERSION_CODE
 };
