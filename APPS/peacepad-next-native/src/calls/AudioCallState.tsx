@@ -46,7 +46,16 @@ function context(runtime: CoordinationRuntime, expectedVersion: number | null = 
 }
 
 export function AudioCallStateProvider({ api, children, mediaRuntime, runtime }: { api?: PeacePadCoordinationApi; children: ReactNode; mediaRuntime?: AudioCallMediaRuntime; runtime?: CoordinationRuntime }) {
-  const resolvedApi = useMemo(() => api ?? new SyntheticCoordinationApi(), [api]);
+  // Production/staging sessions always provide a verified network API. Keep
+  // the synthetic provider available for the explicit lab/demo surface, but
+  // fail closed instead of silently presenting a fake call when a runtime
+  // identity has been supplied without its API.
+  const resolvedApi = useMemo(() => {
+    if (runtime && (!api || api instanceof SyntheticCoordinationApi)) {
+      throw new Error("PeacePad runtime requires the network-backed call API.");
+    }
+    return api ?? new SyntheticCoordinationApi();
+  }, [api, runtime]);
   const activeRuntime = runtime ?? demoRuntime;
   const [call, setCall] = useState<AudioCallSession | null>(null);
   const shouldHydrate = Boolean(api && runtime);
