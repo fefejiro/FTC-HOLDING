@@ -50,6 +50,35 @@ cleanup_signing_material() {
 }
 trap 'cleanup_api_key; cleanup_signing_material' EXIT
 
+ensure_ios_app_icon() {
+  local icon_source="${UNITY_PROJECT}/Assets/_Game/Art/jci-icon.png"
+  local icon_set="$(find "${IOS_EXPORT}" -type d -name 'AppIcon.appiconset' -print -quit 2>/dev/null || true)"
+  [[ -f "${icon_source}" ]] || fail "Existing JCI app icon source is missing: ${icon_source}"
+  if [[ -z "${icon_set}" ]]; then
+    icon_set="${IOS_EXPORT}/Unity-iPhone/Images.xcassets/AppIcon.appiconset"
+    mkdir -p "${icon_set}"
+  fi
+  cp "${icon_source}" "${icon_set}/AppIcon-1024.png"
+  cat > "${icon_set}/Contents.json" <<'JSON'
+{
+  "images" : [
+    {
+      "filename" : "AppIcon-1024.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "size" : "1024x1024",
+      "scale" : "1x"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
+JSON
+  echo "[JCI] Existing 1024x1024 app icon installed in ${icon_set}"
+}
+
 echo "[JCI] iOS 1.1.0/build 3 publish run ${RUN_ID}"
 [[ "$(uname -s)" == "Darwin" ]] || fail "This wrapper must run on macOS with Xcode."
 [[ -d "${UNITY_PROJECT}" ]] || fail "Unity project missing: ${UNITY_PROJECT}"
@@ -139,6 +168,7 @@ else
   "${UNITY_PATH}" -batchmode -quit -projectPath "${UNITY_PROJECT}" -buildTarget iOS -executeMethod Jci.Editor.BuildScript.ExportiOS -logFile "${LOG_DIR}/unity-ios-${RUN_ID}.log"
   [[ -d "${XCODE_PROJECT}" ]] || fail "Unity export did not produce ${XCODE_PROJECT}"
 fi
+ensure_ios_app_icon
 rm -rf "${ARCHIVE_PATH}" "${EXPORT_DIR}"
 
 echo "[JCI] Stage 2/4: archive"
