@@ -24,8 +24,8 @@ const request = async (path) => {
 };
 
 const app = await request("apps/6799443182?fields[apps]=name,bundleId,sku&include=appStoreVersions");
-const builds = await request("builds?filter[app]=6799443182&sort=-uploadedDate&limit=20&fields[builds]=version,uploadedDate,processingState,buildAudience,expirationDate,usesNonExemptEncryption,preReleaseVersion");
-const versions = await request("appStoreVersions?filter[app]=6799443182&filter[platform]=IOS&sort=-createdDate&limit=10&fields[appStoreVersions]=versionString,appStoreState,releaseType,createdDate,platform,downloadable,build");
+const builds = await request("builds?filter[app]=6799443182&sort=-uploadedDate&limit=20&fields[builds]=version,uploadedDate,processingState,expirationDate,usesNonExemptEncryption,preReleaseVersion");
+const versions = await request("appStoreVersions?filter[app]=6799443182&filter[platform]=IOS&sort=-createdDate&limit=10&fields[appStoreVersions]=versionString,appStoreState,releaseType,createdDate,platform,downloadable");
 
 console.log(JSON.stringify({
   app: { id: app.data?.id, name: app.data?.attributes?.name, bundleId: app.data?.attributes?.bundleId, sku: app.data?.attributes?.sku },
