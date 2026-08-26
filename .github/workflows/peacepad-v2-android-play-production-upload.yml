@@ -15,6 +15,14 @@ on:
         description: Finished EAS Android AAB build ID from playstore-production
         required: true
         type: string
+      artifact_url:
+        description: Optional exact EAS artifact URL from a previously verified production AAB build
+        required: false
+        type: string
+      artifact_sha256:
+        description: Required SHA-256 when artifact_url is supplied
+        required: false
+        type: string
       release_authorization:
         description: Enter I_CONFIRM_CANADA_PRODUCTION_AAB_UPLOAD to upload only to Play Internal Testing
         required: true
@@ -101,6 +109,8 @@ jobs:
           node -e 'const health=JSON.parse(process.argv[1]); if(health.status!=="ok"||health.environment!=="production"||health.region!=="ca"||health.writesEnabled!==true) process.exit(1)' "$health"
 
       - name: Fetch and validate the exact finished EAS AAB
+        id: fetch_eas
+        if: ${{ inputs.artifact_url == '' }}
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EAS_BUILD_ID: ${{ inputs.eas_build_id }}
@@ -126,6 +136,27 @@ jobs:
           NODE
           curl --fail --location --retry 3 --retry-all-errors --connect-timeout 30 --max-time 600 "$(node -e 'const fs=require("fs");const b=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/peacepad-v2-android-production-build.json","utf8"));process.stdout.write(b.artifacts.buildUrl)')" -o "$RUNNER_TEMP/peacepad-v2-production-release.aab"
           test -s "$RUNNER_TEMP/peacepad-v2-production-release.aab"
+          keytool -printcert -jarfile "$RUNNER_TEMP/peacepad-v2-production-release.aab" > "$RUNNER_TEMP/peacepad-v2-production-release-certificate.txt"
+
+      - name: Fetch and validate previously verified exact AAB
+        if: ${{ inputs.artifact_url != '' }}
+        env:
+          ARTIFACT_URL: ${{ inputs.artifact_url }}
+          EXPECTED_SHA256: ${{ inputs.artifact_sha256 }}
+          EAS_BUILD_ID: ${{ inputs.eas_build_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$ARTIFACT_URL"
+          test -n "$EXPECTED_SHA256"
+          curl --fail --location --retry 3 --retry-all-errors --connect-timeout 30 --max-time 600 \
+            "$ARTIFACT_URL" -o "$RUNNER_TEMP/peacepad-v2-production-release.aab"
+          test -s "$RUNNER_TEMP/peacepad-v2-production-release.aab"
+          actual_sha256="$(sha256sum "$RUNNER_TEMP/peacepad-v2-production-release.aab" | awk '{print toupper($1)}')"
+          test "$actual_sha256" = "$(printf '%s' "$EXPECTED_SHA256" | tr '[:lower:]' '[:upper:]')"
+          cat > "$RUNNER_TEMP/peacepad-v2-android-production-build.json" <<EOF
+          {"id":"$EAS_BUILD_ID","status":"FINISHED","platform":"ANDROID","distribution":"STORE","buildProfile":"playstore-production","appVersion":"2.0.1","appBuildVersion":"43","artifact_sha256":"$actual_sha256","artifacts":{"buildUrl":"$ARTIFACT_URL"}}
+          EOF
           keytool -printcert -jarfile "$RUNNER_TEMP/peacepad-v2-production-release.aab" > "$RUNNER_TEMP/peacepad-v2-production-release-certificate.txt"
 
       - name: Upload only to Google Play Internal Testing
