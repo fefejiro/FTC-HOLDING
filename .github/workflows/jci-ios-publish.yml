@@ -15,6 +15,7 @@ on:
     paths:
       - APPS/just-checking-in-game/scripts/app-store-connect-status.mjs
       - APPS/just-checking-in-game/scripts/app-store-connect-prepare-release.mjs
+      - APPS/just-checking-in-game/scripts/app-store-connect-submit-review.mjs
 
 permissions:
   contents: read
@@ -169,3 +170,19 @@ jobs:
           JCI_APPLE_API_ISSUER_ID: ${{ secrets.JCI_APPLE_API_ISSUER_ID }}
           JCI_APPLE_API_PRIVATE_KEY: ${{ secrets.JCI_APPLE_API_PRIVATE_KEY }}
         run: node APPS/just-checking-in-game/scripts/app-store-connect-prepare-release.mjs
+
+  asc-submit:
+    if: github.event_name == 'push' && contains(github.event.head_commit.message, 'asc-submit')
+    name: Submit JCI 1.1.0 for App Review
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@v4
+      - name: Submit the prepared JCI version with automatic release
+        env:
+          JCI_APPLE_API_KEY_ID: ${{ secrets.JCI_APPLE_API_KEY_ID }}
+          JCI_APPLE_API_ISSUER_ID: ${{ secrets.JCI_APPLE_API_ISSUER_ID }}
+          JCI_APPLE_API_PRIVATE_KEY: ${{ secrets.JCI_APPLE_API_PRIVATE_KEY }}
+        run: node APPS/just-checking-in-game/scripts/app-store-connect-submit-review.mjs
