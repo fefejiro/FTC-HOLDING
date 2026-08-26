@@ -1,0 +1,199 @@
+# Native V2 staging progress
+
+> Historical staging progress record. The authoritative current dashboard and
+> release handover are [STATUS.md](STATUS.md). Android Internal Testing status
+> below is retained only as a concise handover pointer to exact owner evidence.
+
+Branch: `agent/peacepad-native-staging-clean`  
+Draft PR: [#172](https://github.com/fefejiro/FTC-HOLDING/pull/172)  
+Latest staging branch commit: `eb329c27`
+
+Current successor: `feat/peacepad-v2-supabase-free-staging`, draft PR
+[#177](https://github.com/fefejiro/FTC-HOLDING/pull/177). The authoritative
+current state is maintained in [STATUS.md](STATUS.md); the rows below retain the
+historical #172 baseline plus explicitly labelled successor evidence.
+
+## Current release note — 2026-08-12
+
+Apple signing is now configured for the existing PeacePad bundle
+`ca.peacepad.family`. The D:-backed TestFlight launcher verified the exact
+app-only Git tree, passed its online Apple/EAS configuration checks, and
+uploaded a 1.8 MB archive; EAS then refused its cloud build because the free
+iOS allocation is exhausted until 2026-09-01. The quota-free standard GitHub
+macOS control instead produced a signed 25,041,566-byte IPA from exact source
+`710697817aa2666b7ef7b13ef711aa563976da54` in
+[run `31642371405`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31642371405).
+The artifact SHA-256 is
+`b863d431e9e259b9b41129ca6598082148a44186e86ccf4bbe0b34179f7bd2ec`;
+its manifest records the `testflight-internal` profile and
+`submission_attempted=false`. It remains fictional staging with production
+writes disabled. No TestFlight, App Store, or production V2 release occurred.
+
+The replacement Xcode 26 control then produced a signed IPA from exact source
+`82fad8f87b440215d681f4e6820e205ca8abfe1b` in GitHub run
+[`31647572665`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31647572665),
+using Xcode 26.6 (17F113). The 25,118,188-byte artifact has SHA-256
+`28913054e9884fe74e2b1b6bb72aaec8b0348ca2f327c39b02ec5709dcbbdeca` and was
+accepted by EAS Submit as submission
+`644d93e8-224b-46f4-aa30-4c95b973dc15`, currently `IN_QUEUE`. No TestFlight
+processing, installation, App Store review, or public release is claimed.
+
+Apple subsequently reported ITMS-90683 for build 2 because the WebRTC binary
+references camera APIs without `NSCameraUsageDescription`. Source
+`660fefe9dfbb50a19e0cee7c9f9d0776dc73a874` now declares that purpose string
+while preserving microphone-only behavior and no Android camera permission.
+After the Xcode-settings timeout control merge `7db6bcf81900266393c168b21bc4c19be1e1aaad`,
+source `ec45198f1bdbd849121ab330cbdba0c53a95aeec` produced Version 2.0.0
+build 3 in [run `31719179006`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31719179006)
+with Xcode 26.6. The 25,118,313-byte signed IPA SHA-256 is
+`f0f2f2daccae40102dc914a4159c3234bd19d0289bff23161c6dd221cb1bdead`.
+Submission `ff512236-cab1-4407-a6df-c4e4fcf9db54` finished on 2026-08-13.
+App Store Connect processed Version 2.0.0 build 3 as `VALID` (build resource
+`4c4b3b9e-b7f5-4da9-ab80-66ad8d6e2091`) and assigned it to the existing
+2-person `PeacePad Internal` TestFlight group. No physical-device install,
+external beta review, App Store review, or public release is claimed.
+
+The existing public Android package now has a separate guarded Internal Testing
+candidate. Exact source `12f557c897bc14b1ce151c6f8f6136c44f72d691`
+produced EAS build `826ecda0-96c0-40e5-9570-0b64b60811e6` as Version 2.0.0 /
+version code 42 for `ca.peacepad.family`; build run `31732438486` and Play
+upload run `31736163352` passed. Android Publisher readback confirmed the
+completed `internal` release, and Play Console readback confirmed the existing
+8-person `Test List` is attached to the active track. The opt-in URL is
+`https://play.google.com/apps/internaltest/4700709307955525538`. It remains
+fictional staging with production writes disabled. This is not physical-device
+installation, public Production, real-family-data approval, or V2 cutover.
+
+Exact cutover-rehearsal commit `e35ec103e` passed Native run `31630730421` and
+Infrastructure rerun `31630730410`. It proves a rollback-only fictional
+legacy-to-V2 import in disposable PostgreSQL: verified Supabase Auth claims,
+reviewed consent evidence or re-consent, explicit conversation/event family
+scope, and text-only retained messages are required before mapping to V2.
+This is not a production source read, data migration, production project,
+production-write enablement, TestFlight, or App Store release.
+
+App Store Connect now also has a public iOS `2.0.0` version shell
+(`58d1ec3b-bcdb-44b4-8a8f-7979e5ae66de`) in `PREPARE_FOR_SUBMISSION` under
+manual release control. Its en-CA listing text, review-contact record, and
+existing iPhone/iPad screenshot sets are present, but no build is attached and
+no review or release was requested. The Canada production Supabase project is
+healthy, exposes the protected V2 RPC contract, and remains write-locked. Its
+legacy API keys were disabled after CLI disclosure; the newer key system
+remains active. This is production-boundary and listing preparation, not a V2
+production release.
+
+Exact commit `e7a03d38c` now adds a content-free, read-only legacy source
+inventory runner. It reports schema metadata, required-column gaps, aggregate
+counts, and a schema fingerprint only, cannot contact V2, and refuses to
+overwrite evidence. Native run `31634808106` and Infrastructure run
+`31634808261` passed its static boundary; a disposable PostgreSQL 18 fixture
+also completed the runner and preserved its source rows. An authenticated
+Railway read-only source inventory subsequently returned only aggregate
+metadata: 110 users, 54 partnerships/conversations, 108 memberships, 380
+messages, and 162 events; all required columns were present, the source
+fingerprint was `a7dd689913cba7031082eb5c4708c52c`, and it exposed no user
+content. Legacy events have no `partnership_id`, so their automatic import is
+blocked pending an explicit reviewed scope mapping. A second aggregate-only
+check found every event has exactly one creator partnership (none have zero or
+multiple candidates), which enables a future reviewed derived-scope mapping
+but does not approve one. This is not migration approval, data movement,
+production-write enablement, TestFlight, or release.
+
+An empty Canada production database baseline now exists separately at project
+`qzekqjewpugdotskrtni` (`ca-central-1`). Exact commit `d61f0cd4c` deployed its
+Canada-only Edge adapter with public health/readiness and an explicit global
+write lock: all state-changing methods return `503 PRODUCTION_WRITES_DISABLED`.
+Hosted Native run `31634029734` and Infrastructure run `31634029761` passed;
+the direct public health/readiness/write-lock contract was also observed. It
+has no native production runtime, legacy data, public users, TestFlight build,
+or App Store release. See [STATUS.md](STATUS.md) for its security/recovery
+limitations and remaining production gates.
+
+The current public legacy rollback product passed operator-path endpoint,
+ownership, and self-cleaning guest deletion checks on 2026-08-12. Hosted run
+`31633263453` was blocked at Cloudflare with 403 responses from the
+GitHub-hosted runner, before application handling; it is not V2 production
+evidence and must not be counted as a hosted pass.
+
+| Gate | Status |
+| --- | --- |
+| Staging environment rejects non-staging runtime | LOCAL VERIFIED |
+| Fictional family and actor configuration | LOCAL VERIFIED |
+| Constant-time hashed session authentication | LOCAL VERIFIED |
+| Strict staging-origin CORS | LOCAL VERIFIED |
+| Health and injectable readiness endpoints | LOCAL VERIFIED |
+| Authenticated `/api/v2/session` | LOCAL VERIFIED |
+| Idempotent staging schema contract | LOCAL VERIFIED |
+| Migration failure is surfaced fail-closed | LOCAL VERIFIED |
+| Runtime migrates before listen | LOCAL VERIFIED |
+| Runtime stops and closes database client | LOCAL VERIFIED |
+| Simulated restart verification routine | LOCAL VERIFIED |
+| Typed staging session client | LOCAL VERIFIED |
+| Two-fictional-account session registry | LOCAL VERIFIED |
+| Two-account HTTP session handshake | LOCAL VERIFIED |
+| Staging coordination client guard | LOCAL VERIFIED |
+| Explicit family/permission authorization guard | LOCAL VERIFIED |
+| PostgreSQL migration and restart persistence | HISTORICAL NOT STARTED - later POSTGRES VERIFIED; see STATUS.md |
+| Superseded Railway staging configuration | NOT STARTED |
+| AWS Canada/U.S. staging configuration | DEFERRED - funding unavailable |
+| Supabase Canada/U.S. free staging boundary | LOCAL VERIFIED |
+| Supabase Canadian regional project and boundary schema | DEPLOYED STAGING VERIFIED |
+| Supabase U.S. regional project and boundary schema | DEPLOYED STAGING VERIFIED |
+| Supabase regional API adapters | DEPLOYED STAGING VERIFIED with explicit Edge invocation pinning. Current protected deployments `31453587604` (Canada) and `31453722930` (U.S.) applied all 20 migrations and the same reviewed Edge digest; earlier managed fictional journeys pass in both regions |
+| Supabase atomic identity/consent/family/invitation transactions | MANAGED FICTIONAL TWO-ACCOUNT API VERIFIED independently in Canada and the U.S.; device proof pending |
+| Supabase persisted messaging, calendar, and Message Check transactions | MANAGED VERIFIED in both regions for send/deliver/view, replay/conflict, default-off Message Check with explicit opt-in/preview, and shared Calendar event visibility |
+| Authenticated Supabase native runtime and family onboarding | MANAGED API VERIFIED for Auth, bootstrap, wrong-region denial, invitation acceptance, and canonical conversation in both regions; native device journey pending |
+| Versioned account deletion and local session invalidation | MANAGED API VERIFIED for application deletion, Auth deletion, and old-token denial in both regions; device UI proof pending |
+| Decoupled Auth identity and durable cleanup outbox | DEPLOYED STAGING VERIFIED for backend surface; maintenance execution proof pending |
+| Deleted-account invitation and regional metadata minimization | DEPLOYED STAGING VERIFIED for backend surface; live deletion/minimization proof pending |
+| Connected-member invitation routing | MANAGED API VERIFIED for invitation acceptance and atomic canonical-conversation bootstrap in both regions; connected native routing/device UI proof pending |
+| Scheduled same-session message recovery | HOSTED VERIFIED at `5393be74c`: Expo Network suppresses hydration and scheduled sends while explicitly offline without consuming retry budget, then reconnect re-arms the same identity/session/region/family/conversation-scoped SecureStore queue with stored idempotency and bounded backoff. Native run `31436509279` and infrastructure run `31436509288` passed. No SQLite, background execution, Simulator, or device recovery proof is claimed |
+| Private Case Binder and metadata-only attachment preparation | POSTGRES VERIFIED at `95738a841`: migrations through `202608090013` applied twice and the complete fictional transaction proof passed; managed migration and file transport remain blocked/disabled |
+| Owner-private source-linked timeline | MANAGED + HOSTED + POSTGRES VERIFIED: both regions independently passed private binder isolation, disabled metadata-only attachment preparation, content-minimized message source linking, and deletion cleanup. No file bytes, arbitrary narrative, legal conclusion, or export capability was added |
+| Secure foreground audio-call lifecycle | MANAGED API + HOSTED + POSTGRES VERIFIED: both regions independently passed authenticated create/accept/end with two temporary fictional accounts. Earlier `2a8aac813` proof covers grants, idempotency, concurrency, expiry, cleanup, direct-role denial, and content-free audit. Media, TURN, native call UI, Simulator, and device proof remain absent |
+| Authenticated private call-signaling relay | HOSTED + POSTGRES VERIFIED at `cb92671b8`, included unchanged in descendant hosted head `d9e7dac47`: all 19 migrations applied twice on disposable PostgreSQL 18.3; complete transaction, lifecycle, and focused signaling proofs passed. Every server relay rechecks JWT-derived sender, exact region, live participant state and call version, derives the peer, and enforces strict offer/answer/ICE byte, rate, and TTL bounds. SDP/ICE is not persisted or audited. Existing Supabase private-channel authorization is cached for a connected subscription, so provider-forced disconnect is not claimed; versioned topics plus fresh relay denial ensure no post-revocation server relay. Managed Realtime deployment, media, TURN, native call UI, Simulator, and device proof remain absent |
+| Native foreground audio-call API contract | HOSTED VERIFIED at `766574da8`: typed current/create/accept/decline/end and exact-version offer/answer/ICE relay operations passed 37 native suites with 291 tests and 1 skipped, 83.32% statement and 76.01% branch coverage, guardrails, secret scan, Expo checks, and iOS export in native run `31432703309`; infrastructure run `31432703360` also passed. Synthetic lifecycle tests do not claim call UI, microphone, WebRTC media, TURN, Simulator, or device proof |
+| Accessible native foreground call controls | HOSTED VERIFIED at `82cb449e5`: an EN/FR/ES Calls route binds refresh/start/accept/decline/cancel/end to the authenticated runtime conversation, blocks pre-hydration and duplicate mutations, exposes semantic state, and explicitly reports media unavailable. Native run `31433573836` and infrastructure run `31433573512` passed after local typecheck, 39 suites / 294 tests / 1 skipped, 83.34% statement / 75.93% branch coverage, guardrails, and 103-file secret scan. No Realtime subscription, microphone permission, native WebRTC, TURN, audio media, Simulator, or device proof is claimed |
+| Native foreground audio media foundation | HOSTED VERIFIED at `ab4c28c8b`: Expo 54-compatible M124 WebRTC and Expo development-client dependencies are pinned; generated native config requests foreground microphone access without camera or iOS background modes; authenticated TURN is mandatory with relay-only ICE; current Supabase JWT auth joins only the exact private versioned call topic; and strict peer/target/version/TTL checks reject stale or misaddressed signals. Local typecheck, 42 suites / 312 tests / 1 skipped, 83.45% statement / 76.60% branch coverage, guardrails, 112-file secret scan, Expo Doctor 18/18 with an explicit WebRTC directory exception, microphone-only config introspection, iOS export, and diff checks passed. Exact-head native run `31435475768` and infrastructure run `31435475772` passed. No regional TURN issuer, adapter-to-screen wiring, managed Realtime delivery, Simulator, device audio, or New Architecture compatibility proof is claimed |
+| Short-lived regional TURN authorization contract | DEPLOYED STAGING + HOSTED + POSTGRES VERIFIED at target `9c423dc5a`: migration `202608100004` authorizes only an exact active-call participant/version after rechecking both grants and the canonical conversation; PostgreSQL returns content-free call metadata only. The regional Edge contract accepts bounded credential-free TURN URLs, requires a server-only 32+ character secret, and derives a five-minute pseudonymous Coturn HMAC credential. Protected deployments `31453587604` and `31453722930` applied all 20 migrations and the same Edge digest. No TURN provider URLs or shared secrets exist, so issuance remains fail-closed; no allocation, relay, or media proof is claimed |
+| Foreground audio media orchestration | HOSTED VERIFIED at `c2b8f7788` with its authorization route now deployed: an accepted exact-version call retrieves short-lived TURN authorization, joins the exact private Supabase Realtime topic with the current JWT, lazily starts relay-only microphone WebRTC, and serializes caller offer/callee answer/ICE. Early signals queue until peer creation, ringing state refreshes automatically, connection-state copy is EN/FR/ES and truthfully distinct from lifecycle acceptance, and media/subscriptions close on call/version/runtime change. Exact-head native run `31440933027` and infrastructure run `31440933075` passed. No TURN provider allocation, managed Realtime delivery, audible audio, Simulator/device, interruption/reconnect, background/CallKit, TestFlight, or production proof is claimed |
+| Guarded lab-only EAS build profiles | HOSTED VERIFIED at `14aa2f91a`: only internal `lab-simulator` and `lab-device` profiles exist, both pinned to the non-diagnostic local lab boundary; automated guards prohibit production/unknown profiles, submission, and production bundle use. Native run `31442428011` and infrastructure run `31442427987` passed after local TypeScript, 44 suites / 320 passed / 1 skipped, 82.74% statements / 75.94% branches, guardrails, 117-file scan, and microphone-only config. EAS configuration stopped because no project is linked; `official_fejiro` was reported as an available owner but was not selected. No EAS project, signing credential, build, artifact, credit, Simulator/device, TestFlight, or production action occurred |
+| Guarded EAS linkage and cloud iOS compile | CLOUD IOS BUILD VERIFIED at `5c0084e78`: exact EAS owner/slug/project ID, lab bundle, disabled production writes, and `ITSAppUsesNonExemptEncryption=false` are guarded. Native run `31454199981` and infrastructure run `31454199916` passed. EAS build `21f97870-d921-407c-ad18-e625055bf25f` produced a 26,646,969-byte Simulator archive with SHA-256 `EBA69109E56A968E28C6B1EDF23AD89C19F32ECA3EE79734B04B56537F8D3FA5`; inspection found WebRTC/Hermes frameworks, privacy manifest, and microphone disclosure. No installation, runtime, signing, device, TestFlight, or submission is claimed |
+| Current lab Simulator foundation journey | SIMULATOR VERIFIED at exact Native V2 source `ac354a878`: EAS build `1954a130-3433-40d4-b66a-7a0eaef2aa91` passed guarded SHA-256 verification, install, cold launch, welcome, and consent navigation on an isolated iOS 26.2 managed runner in [run `31459876677`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31459876677). Independent screenshot inspection confirms welcome and consent content stays below the system status area, required controls are visible, and optional AI is off. PR #197 fixed only the split-flow automation state boundary. No account/family data or production contact occurred; authenticated flows, assistive technology, audio, real device, signing, TestFlight, and production remain unverified |
+| Foundation maximum-text and dark-mode repair | LOCAL + HOSTED + SIMULATOR VERIFIED at exact Native V2 source `2370a1a61`: Foundation text has an explicit 200% app cap, scroll-safe wrapping, vertical button padding, wrapped legal links, and native header semantics. Local typecheck, 44 suites / 322 passed / 1 skipped, 82.58% statements / 75.87% branches, guardrails, 117-file secret scan, and diff checks passed; exact-source native `31463015240` and infrastructure `31463015285` passed. EAS build `3878a080-e584-4edd-b755-aa6e3ca7b8be` and main-controlled Simulator run [`31463447618`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31463447618) passed exact artifact hash/source binding, install, standard, maximum-system-accessibility-category, and dark welcome/consent navigation on iOS 26.2. Independent screenshot comparison confirms the predecessor's fragmented/clipped labels are now horizontally contained and required actions remain reachable by vertical scrolling. No VoiceOver, Switch Control, Reduce Motion, authenticated feature, device, signing, TestFlight, professional review, or production proof is claimed |
+| Dual-region staging sign-in and live Auth boundary | LOCAL + HOSTED + CA/U.S. SIMULATOR VERIFIED at exact Native V2 source `ed109707c` under hardened main control `b91afc212`. Local typecheck, 44 suites / 326 passed / 1 skipped, 82.61% statements / 76.07% branches, guardrails, 117-file scan, and diff checks passed; native run `31473683027` and infrastructure run `31473683087` passed. Canada EAS `83c67df2-3507-42cf-967c-6f30873dbf40` (26,647,798 bytes, SHA-256 `179602779AB400DB28D769D53875A3AEC469CDEE89AC90B55353E804CEBA3872`) passed [run `31475994805`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31475994805). U.S. EAS `8ef54e01-91bf-4edd-bffe-61074c95ea94` (26,647,758 bytes, SHA-256 `081EBBAEDF21941534B721AFB0CEA35FC97349B56384866200C6CA1051D8849D`) passed [run `31476831202`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31476831202). Both isolated iOS 26.2 runs verified exact regional project mapping/label, safety copy, keyboard-reachable sign-in, and the live fail-closed Supabase Auth response with fictional `@example.test` inputs; downloaded screenshots/manifests were independently inspected. No account was created, no app data was mutated, production was not contacted, and each Simulator was destroyed. This is not a successful authenticated session, coordination journey, assistive-technology, physical-device, signing, TestFlight, or production proof |
+| Dual-region authenticated native session hydration | LOCAL + HOSTED + CA/U.S. SIMULATOR VERIFIED at exact Native V2 source `82cfd5365` under protected main control `797740161`. Verified-session reads now carry the exact regional Edge invocation, PeacePad region, and schema headers. Local typecheck, 44 suites / 327 passed / 1 skipped, 82.61% statements / 76.05% branches, guardrails, 117-file scan, and diff checks passed; native run `31518294005` and infrastructure run `31518294008` passed. Canada EAS `25cf99f0-dafc-4a65-b7e7-d715ea7a82ab` (26,647,675 bytes, SHA-256 `EAB39471A4438C918BFA9A54BA16A08A19C76B23C84A3FCFC2DA6E1A55DD08F7`) passed [run `31525616385`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31525616385). U.S. EAS `51c8250c-426a-4763-a5f5-2414d327de68` (26,647,552 bytes, SHA-256 `0898FBA8A4C28ED5893B0E15F25C5CA8B0C78780671EE5430D20CB918043E3A7`) passed [run `31528365464`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31528365464). Each protected iOS 26.2 run created two temporary fictional `@example.test` accounts, prepared one shared family/conversation, verified both native sessions reached authenticated Home, removed both application identities and Auth users, destroyed both Simulators, retained no credential/private content, and never contacted production. Full native feature mutation, assistive technology, physical-device, signing, TestFlight, and production remain unverified |
+| Dual-region authenticated native message and Calendar coordination | CA/U.S. CROSS-ACCOUNT SIMULATOR VERIFIED at exact Native V2 source `82cfd5365`. Canada reused EAS `25cf99f0-dafc-4a65-b7e7-d715ea7a82ab` and exact SHA-256 `EAB39471A4438C918BFA9A54BA16A08A19C76B23C84A3FCFC2DA6E1A55DD08F7` in protected [run `31543957169`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31543957169). The U.S. reused EAS `51c8250c-426a-4763-a5f5-2414d327de68` and exact SHA-256 `0898FBA8A4C28ED5893B0E15F25C5CA8B0C78780671EE5430D20CB918043E3A7` in protected [run `31546225501`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31546225501). Each iOS 26.2 journey authenticated two temporary fictional accounts, sent/rendered a native message, created/rendered a shared Calendar event, proved the second account observed the coordination state, deleted both application/Auth identities, destroyed both Simulators, retained no credential/private content, and never contacted production. Failed U.S. predecessor `31545264571` stopped on an unnecessary cross-flow viewport assertion after message success; cleanup passed, and PR #221 removed only that orchestration dependency before the identical-artifact success. Invitation, Message Check, deletion, offline recovery, call media, assistive technology, physical-device, signing, TestFlight, and production remain unverified |
+| Dual-region runtime directory and pre-auth selection | HOSTED VERIFIED at exact source `89d579fd9`. The app now accepts either the existing exact single-region staging contract or a complete exact Canada/U.S. public configuration directory for one future binary. The accessible EN/FR/ES selector requires explicit confirmation before the Supabase client exists and persists only `ca` or `us` in device-only SecureStore. Partial/mixed/swapped/secret/legacy-JWT inputs fail closed. Local TypeScript, 45 suites / 335 passed / 1 skipped, 82.52% statements / 76.03% branches, guardrails, 119-file scan, and diff checks passed; [native run `31549069222`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31549069222) and [infrastructure run `31549069240`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31549069240) passed. Existing regional profiles remain unchanged. No EAS build, signing, device, TestFlight, submit, or production action occurred |
+| Guarded internal TestFlight pipeline | HOSTED + EAS CONFIG + FAIL-CLOSED CONTROL VERIFIED at exact source `8b1f3bf6b` and main control `e956b2012`. Dynamic app config and the reviewed store-distribution profile resolve to PeacePad `2.0.0` build `2`, existing bundle `ca.peacepad.family`, and Apple ID `6793350735`, while retaining fictional dual-region staging and disabled production writes/diagnostics. The six exact CA/U.S. public runtime variables are present and value-contract verified in EAS production. A fail-fast launcher moves Windows release scratch/cache to `D:\PeacePadRelease`; PR [#222](https://github.com/fefejiro/FTC-HOLDING/pull/222) adds an exact-source main control that waits for one EAS build, uploads evidence, and never auto-submits. Local TypeScript, 46 suites / 339 passed / 1 skipped, 82.68% statements / 76.10% branches, guardrails, 123-file scan, default lab config, and injected EAS runtime passed; exact-source native `31550923589`, infrastructure `31550923584`, and main static `31551672095` passed. Hosted boundary run [`31551715228`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31551715228) passed source isolation, then stopped before config/build because the repository `EXPO_TOKEN` is not authenticated as `official_fejiro`; local proof separately confirms the approved account has no linked Apple Developer team. The uploaded manifest contains no build ID/status and records `autoSubmitAttempted: false`. No EAS build, signing, device, TestFlight, submit, or production action occurred |
+| D:-backed one-artifact dual-region Simulator pipeline | HOSTED + CLOUD BUILD + CA/U.S. CROSS-ACCOUNT SIMULATOR VERIFIED at exact Native V2 source `2fe8ca82b`. The Windows launcher packages only the exact clean native app Git tree under `D:\PeacePadRelease`, reuses the existing dependency installation without copying it to C:, and uploaded about 1.7 MB rather than cloning the multi-gigabyte monorepo. Exact-source native `31554139237` and infrastructure `31554139216` passed. EAS build `b0ede52e-21db-4f93-8b74-018c6033b1ff` produced 26,653,811 bytes with SHA-256 `84155CB8AC234CD8442A17BDBB25DAEC74FFC7B10881E1BED56406B74209F970`. The same exact artifact passed protected Canada [run `31554747960`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31554747960) and U.S. [run `31557228680`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31557228680): each explicit region selection authenticated two temporary fictional accounts, sent/rendered a message, created/rendered a shared Calendar event, proved second-account visibility, removed both application/Auth accounts, and destroyed both Simulators. Manifests, cleanup records, and screenshots were independently inspected. Initial U.S. run `31555505066` was non-qualifying after a delayed iOS password-save sheet blocked Calendar navigation; cleanup passed and PR #225 hardened only the control before the same-artifact success. No physical device, signing, TestFlight, submit, or production proof is claimed |
+| Regional managed deployment | DEPLOYED STAGING VERIFIED with regional pinning at `df6ed38de`/`2c1c4a308` and current target `9c423dc5a`: current dry-runs `31442629622`/`31452023377` and deployments `31453587604` Canada / `31453722930` U.S. applied all 20 migrations, `peacepad-v2-api`, and public boundaries. The bounded managed two-account contract remains proven on the prior 19-migration feature surface. Fresh 20-migration application-schema logical restoration is verified separately below; provider Auth/platform snapshot or PITR recovery remains pending |
+| Managed dual-region fictional two-account contract | MANAGED FEATURE API JOURNEY VERIFIED at `172723a57` independently in Canada and the U.S.: Auth, bootstrap, wrong-region denial, replay/conflict, invitation acceptance, message delivery/view, Message Check, shared Calendar visibility, private Records isolation/minimization/deletion cleanup, call lifecycle, post-end signal denial, deletion, and old-token denial passed. Hosted native `31428931102` and infrastructure `31428931142` passed. Temporary accounts were removed; credentials, IDs, and private content were not logged. This is not restoration, file transport, media, Simulator, device, TestFlight, or production proof |
+| Managed dual-region application-schema logical restoration | MANAGED LOGICAL RESTORATION VERIFIED at `638a45e52` under protected main control `10cc5a6e`: Canada run `31455099468` restored 20 tables / 143 fictional rows in 21 seconds; U.S. run `31455203892` restored 20 tables / 82 fictional rows in 34 seconds. Each read-only managed source matched its isolated ephemeral PostgreSQL 17 restore fingerprint across all 20 migrations; dumps were destroyed, production was not contacted, and only non-secret JSON evidence was retained. The first 20-migration run stopped before database proof on a stale 19-migration assertion; PR #193 and `638a45e52` corrected the proof scripts. This is not Supabase Auth/platform, storage, Realtime, snapshot/PITR, residency, production, or real-family recovery proof |
+| Accessible EN/FR/ES localization foundation | LOCAL VERIFIED at `47874810c`: typed locale fallback, secure preference persistence, accessible radio selection, and translated primary navigation/supported More-screen content passed 31 suites with 253 tests and 1 skipped. Full screen translation, linguistic review, and VoiceOver/Dynamic Type device proof remain incomplete |
+| Expanded accessible localization foundations | LOCAL VERIFIED at `0800c0d72`: shared native header semantics, locale-aware Calendar and Records dates, and EN/FR/ES staging sign-out/account-deletion controls passed 34 suites with 263 tests and 1 skipped. Full feature translation, professional linguistic review, and VoiceOver/Dynamic Type device proof remain incomplete |
+| Localized family invitation journey | LOCAL VERIFIED at `e8b169853`: EN/FR/ES invitation creation, sharing, QR/code guidance, preview, safe known role/permission display labels, accept/decline, connected-family safety, and success passed 34 suites with 265 tests and 1 skipped. Backend identifiers remain unchanged; linguistic review and device accessibility proof remain incomplete |
+| Localized onboarding, consent, and staging authentication | LOCAL VERIFIED at `9b6221f21`: EN/FR/ES welcome, required consent, default-off AI consent, legal links, session restore/recovery, staging sign-in, family selection/create/join, and hydration passed 34 suites with 267 tests and 1 skipped. Server identifiers/errors remain unchanged; linguistic review and device accessibility proof remain incomplete |
+| Localized messaging and offline recovery | LOCAL VERIFIED at `a82da66be`: EN/FR/ES Messages, default-off Message Check, search/correction, original/suggested send actions, send-state, and explicit queued retry/removal passed 35 suites with 270 tests and 1 skipped. Drafts, backend errors, idempotency, and retry behavior remain unchanged; linguistic review and device accessibility proof remain incomplete |
+| Localized Calendar and Records workflows | LOCAL VERIFIED at `3035d316e`: EN/FR/ES calendar sharing/events and private binder/metadata/timeline/archive actions passed 36 suites with 273 tests and 1 skipped. Canonical layer names, backend enums, source IDs, media types, versions, and server errors remain unchanged; linguistic review and device accessibility proof remain incomplete |
+| Localized Home and shared recovery states | LOCAL VERIFIED at `c9f508fe8`: EN/FR/ES Home task actions, Today summaries, family connection state, session restore, authorization loading/unavailable states, and device-check guidance passed 37 suites with 276 tests and 1 skipped. Automated page/section heading semantics passed; professional linguistic review and VoiceOver/maximum Dynamic Type device proof remain incomplete |
+| Final code-level localization inventory | LOCAL VERIFIED at `070f524fe`: EN/FR/ES Foundation compose/preview/retry/reset, session and account recovery, conversation-empty invitation recovery, and duplicate deletion confirmation passed 37 suites with 282 tests and 1 skipped. Mechanical literal inventory found no additional release-critical catalogue gap; brand/user-authored/example/canonical/server-returned values and the pre-localization boot fallback remain intentional. Professional linguistic review and VoiceOver/Switch Control/Reduce Motion/maximum Dynamic Type device proof remain absent |
+| Hosted CI | PeacePad-scoped PASS on PR #177 at `4fa7ba672`: native run `31364518669`, infrastructure run `31364518719`. The separate Garden workflow remains outside PeacePad scope |
+| Hosted secure audio-call lifecycle CI | PeacePad-scoped PASS on PR #177 at `2a8aac813`: [native run `31419736905`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31419736905) and [infrastructure run `31419736829`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31419736829). The separate Garden workflow remains outside PeacePad scope |
+| Hosted authenticated private call-signaling CI | PeacePad-scoped PASS on PR #177 for code `cb92671b8`, included unchanged in descendant head `d9e7dac47`: [native run `31421433108`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31421433108) and [infrastructure run `31421433051`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31421433051). This is hosted static, Deno, native, and PostgreSQL proof; it is not managed deployment, media, TURN, UI, Simulator, or device proof. The separate Garden workflow remains outside PeacePad scope |
+| Hosted native foreground audio media foundation CI | PeacePad-scoped PASS on PR #177 at exact code `ab4c28c8b`: [native run `31435475768`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31435475768) and [infrastructure run `31435475772`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31435475772). This is dependency, generated-config, type, automated contract, iOS JavaScript export, static, Deno, and PostgreSQL proof; it is not TURN availability, native build, managed Realtime delivery, Simulator, device media, TestFlight, or production proof. The separate Garden workflow remains outside PeacePad scope |
+| Hosted connectivity-aware message recovery CI | PeacePad-scoped PASS on PR #177 at exact code `5393be74c`: [native run `31436509279`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31436509279) and [infrastructure run `31436509288`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31436509288). This proves the Expo Network dependency/config, exact-scope offline/reconnect behavior, full native automated suite, iOS JavaScript export, and unchanged platform proofs; it is not background, SQLite, Simulator, device, TestFlight, or production proof. The separate Garden workflow remains outside PeacePad scope |
+| Hosted short-lived TURN contract CI | PeacePad-scoped PASS on PR #177 at exact code `aca95d452`: [native run `31438165014`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31438165014) and [infrastructure run `31438165009`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31438165009). This proves the native request contract, pure issuer validation, Linux Terraform/static gates, all 20 migrations twice, and focused content-free authorization. It is not managed deployment, provider configuration, relay allocation, native media, Simulator, device, TestFlight, or production proof. The separate Garden workflow remains outside PeacePad scope |
+| Hosted foreground audio media orchestration CI | PeacePad-scoped PASS on PR #177 at exact code `c2b8f7788`: [native run `31440933027`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31440933027) and [infrastructure run `31440933075`](https://github.com/fefejiro/FTC-HOLDING/actions/runs/31440933075). This proves the automated native orchestration, full native suite, microphone-only config, iOS JavaScript export, and unchanged platform proofs; it is not managed deployment, TURN availability, managed Realtime delivery, Simulator, device audio, TestFlight, or production proof. The separate Garden workflow remains outside PeacePad scope |
+
+This is not a production release. The default native client remains a
+staging/lab build with `ca.peacepad.nextnative.lab` and production writes
+disabled. EAS plus protected GitHub macOS is the active compile and Simulator
+path, so the past-due MacinCloud account is an optional fallback rather than a
+release prerequisite. The guarded existing-bundle TestFlight variant is no
+longer configuration-only: build 3 was signed and accepted by App Store Connect
+as submission `ff512236-cab1-4407-a6df-c4e4fcf9db54`; App Store Connect later
+processed build 3 as `VALID` and assigned it to the existing internal group.
+Processing, internal installation, tester evidence, review, and public release
+remain unverified. Follow the current handover sequence in
+[STATUS.md](STATUS.md) before changing any release state.
