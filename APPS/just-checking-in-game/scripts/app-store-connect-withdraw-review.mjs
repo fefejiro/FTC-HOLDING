@@ -34,13 +34,26 @@ const request = async (path, options = {}) => {
 const current = await request(`reviewSubmissions/${submissionId}`);
 const state = current.data?.attributes?.state ?? null;
 const alreadySubmitted = current.data?.attributes?.submitted === true;
-if (!alreadySubmitted) {
-  console.log(JSON.stringify({ submissionId, state, submitted: false, action: "already-withdrawn" }, null, 2));
-  process.exit(0);
+let withdrawn = current;
+if (alreadySubmitted) {
+  withdrawn = await request(`reviewSubmissions/${submissionId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ data: { type: "reviewSubmissions", id: submissionId, attributes: { submitted: false } } }),
+  });
 }
 
-const withdrawn = await request(`reviewSubmissions/${submissionId}`, {
-  method: "PATCH",
-  body: JSON.stringify({ data: { type: "reviewSubmissions", id: submissionId, attributes: { submitted: false } } }),
+// A withdrawn submission can retain its app-version item while ASC continues
+// to report WAITING_FOR_REVIEW. Remove only the known JCI 1.1.0 item so the
+// version can accept the corrected build 4.
+const items = await request(`reviewSubmissions/${submissionId}/items?include=appStoreVersion`);
+const versionItem = (items.data ?? []).find((item) => {
+  const relatedVersionId = item.relationships?.appStoreVersion?.data?.id;
+  if (relatedVersionId === "b238fc00-0b34-4ba6-b04e-54fa7a9b4a0e") return true;
+  const included = (items.included ?? []).find((entry) => entry.type === "appStoreVersions" && entry.id === relatedVersionId);
+  return included?.attributes?.versionString === "1.1.0";
 });
-console.log(JSON.stringify({ submissionId, previousState: state, state: withdrawn.data?.attributes?.state ?? null, submitted: withdrawn.data?.attributes?.submitted ?? false }, null, 2));
+if (versionItem) {
+  await request(`reviewSubmissionItems/${versionItem.id}`, { method: "DELETE" });
+  console.log(`Removed withdrawn JCI 1.1.0 review item ${versionItem.id}`);
+}
+console.log(JSON.stringify({ submissionId, previousState: state, state: withdrawn.data?.attributes?.state ?? null, submitted: withdrawn.data?.attributes?.submitted ?? false, removedVersionItem: versionItem?.id ?? null }, null, 2));
