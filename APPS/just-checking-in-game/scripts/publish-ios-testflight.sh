@@ -13,6 +13,7 @@ LOG_DIR="${ROOT_DIR}/scripts/_ops-reports"
 RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)"
 LOG_PATH="${LOG_DIR}/publish-ios-${RUN_ID}.log"
 API_KEY_PATH=""
+API_KEY_INSTALL_PATH=""
 CERTIFICATE_PATH=""
 KEYCHAIN_PATH=""
 KEYCHAIN_PASSWORD=""
@@ -28,6 +29,9 @@ need_cmd() { command -v "$1" >/dev/null 2>&1 || fail "Missing command: $1"; }
 cleanup_api_key() {
   if [[ -n "${API_KEY_PATH}" && -f "${API_KEY_PATH}" ]]; then
     rm -f "${API_KEY_PATH}"
+  fi
+  if [[ -n "${API_KEY_INSTALL_PATH}" && -f "${API_KEY_INSTALL_PATH}" ]]; then
+    rm -f "${API_KEY_INSTALL_PATH}"
   fi
 }
 cleanup_signing_material() {
@@ -62,8 +66,11 @@ if [[ -n "${JCI_APPLE_API_KEY_ID:-}" || -n "${JCI_APPLE_API_ISSUER_ID:-}" || -n 
   done
   HAS_API_KEY_AUTH=true
   API_KEY_PATH="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/AuthKey_${JCI_APPLE_API_KEY_ID}.p8"
+  API_KEY_INSTALL_PATH="${HOME}/.appstoreconnect/private_keys/AuthKey_${JCI_APPLE_API_KEY_ID}.p8"
   umask 077
   printf '%s\n' "${JCI_APPLE_API_PRIVATE_KEY}" > "${API_KEY_PATH}"
+  mkdir -p "$(dirname "${API_KEY_INSTALL_PATH}")"
+  printf '%s\n' "${JCI_APPLE_API_PRIVATE_KEY}" > "${API_KEY_INSTALL_PATH}"
   XCODE_AUTH_ARGS=(
     -authenticationKeyPath "${API_KEY_PATH}"
     -authenticationKeyID "${JCI_APPLE_API_KEY_ID}"
@@ -166,8 +173,8 @@ xcodebuild -exportArchive -archivePath "${ARCHIVE_PATH}" -exportPath "${EXPORT_D
   -exportOptionsPlist "${EXPORT_OPTIONS}"
 [[ -f "${IPA_PATH}" ]] || { IPA_PATH="$(find "${EXPORT_DIR}" -maxdepth 1 -name '*.ipa' -print -quit)"; [[ -n "${IPA_PATH}" ]] || fail "IPA was not exported"; }
 if [[ "${HAS_API_KEY_AUTH}" == true ]]; then
-  xcrun iTMSTransporter -m validate -assetFile "${IPA_PATH}" \
-    -apiKey "${JCI_APPLE_API_KEY_ID}" -apiIssuer "${JCI_APPLE_API_ISSUER_ID}"
+  xcrun altool --validate-app --type ios --file "${IPA_PATH}" \
+    --apiKey "${JCI_APPLE_API_KEY_ID}" --apiIssuer "${JCI_APPLE_API_ISSUER_ID}"
 elif ! xcrun altool --validate-app -f "${IPA_PATH}" -t ios -u "${APPLE_ID}" -p "${APPLE_APP_SPECIFIC_PASSWORD}"; then
   echo "[JCI] altool validation unavailable; using iTMSTransporter validation"
   xcrun iTMSTransporter -m validate -assetFile "${IPA_PATH}" -u "${APPLE_ID}" -p "${APPLE_APP_SPECIFIC_PASSWORD}"
@@ -175,8 +182,8 @@ fi
 
 echo "[JCI] Stage 4/4: upload to App Store Connect"
 if [[ "${HAS_API_KEY_AUTH}" == true ]]; then
-  xcrun iTMSTransporter -m upload -assetFile "${IPA_PATH}" \
-    -apiKey "${JCI_APPLE_API_KEY_ID}" -apiIssuer "${JCI_APPLE_API_ISSUER_ID}"
+  xcrun altool --upload-app --type ios --file "${IPA_PATH}" \
+    --apiKey "${JCI_APPLE_API_KEY_ID}" --apiIssuer "${JCI_APPLE_API_ISSUER_ID}"
 elif ! xcrun altool --upload-app -f "${IPA_PATH}" -t ios -u "${APPLE_ID}" -p "${APPLE_APP_SPECIFIC_PASSWORD}"; then
   echo "[JCI] altool upload unavailable; using iTMSTransporter upload"
   xcrun iTMSTransporter -m upload -assetFile "${IPA_PATH}" -u "${APPLE_ID}" -p "${APPLE_APP_SPECIFIC_PASSWORD}"
