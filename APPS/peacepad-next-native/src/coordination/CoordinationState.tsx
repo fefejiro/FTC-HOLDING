@@ -256,8 +256,18 @@ export function CoordinationStateProvider({
   runtime?: CoordinationRuntime | null;
 }) {
   const { t } = useOptionalLocalization();
-  const resolvedApi = useMemo(() => api ?? createDefaultApi(), [api]);
-  const demoMode = !api || api instanceof SyntheticCoordinationApi;
+  // A runtime identity is only issued by the verified network-backed session.
+  // Never silently fall back to seeded synthetic data when a runtime is present:
+  // doing so would make a miswired production screen look healthy while
+  // writing nowhere. The lab path remains explicitly synthetic when neither
+  // api nor runtime is supplied.
+  const resolvedApi = useMemo(() => {
+    if (runtime && (!api || api instanceof SyntheticCoordinationApi)) {
+      throw new Error("PeacePad production runtime requires the network-backed coordination API.");
+    }
+    return api ?? createDefaultApi();
+  }, [api, runtime]);
+  const demoMode = !runtime && (!api || api instanceof SyntheticCoordinationApi);
   const activeRuntime = demoMode ? DEMO_RUNTIME : (isValidCoordinationRuntime(runtime) ? runtime : undefined);
   const [invitationCode, setInvitationCodeState] = useState("");
   const [createdInvitation, setCreatedInvitation] = useState<CreatedInvitation>();
