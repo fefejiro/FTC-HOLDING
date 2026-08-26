@@ -311,8 +311,21 @@ try {
     mediaType: "text/plain",
     byteLength: 128,
   }, "attachment-intent-create");
-  if (attachment.payload?.uploadTransport !== "disabled" || attachment.payload?.uploadUrl !== null) {
-    throw new Error("Metadata-only attachment boundary receipt was invalid.");
+  const attachmentObjectPath = attachment.payload?.objectPath;
+  const attachmentUploadUrl = attachment.payload?.uploadUrl;
+  const attachmentExpiry = Date.parse(attachment.payload?.expiresAt);
+  if (
+    attachment.payload?.uploadTransport !== "supabase-signed"
+    || attachment.payload?.status !== "awaiting-upload"
+    || typeof attachmentObjectPath !== "string"
+    || !attachmentObjectPath.startsWith(`ca/${accounts[0].id}/${binderId}/`)
+    || typeof attachmentUploadUrl !== "string"
+    || !attachmentUploadUrl.startsWith(`${origin}/storage/v1/object/upload/sign/peacepad-private-records/`)
+    || !Number.isFinite(attachmentExpiry)
+    || attachmentExpiry <= Date.now()
+    || attachmentExpiry > Date.now() + (15 * 60 * 1000)
+  ) {
+    throw new Error("Private signed-upload attachment boundary receipt was invalid.");
   }
   const timelineEntry = await write(accounts[0], "/api/v2/timeline-entries", {
     familyCircleId: familyId,
