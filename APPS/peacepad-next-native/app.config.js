@@ -7,7 +7,10 @@ const TESTFLIGHT_VERSION = "2.0.1";
 const TESTFLIGHT_BUILD_NUMBER = "3";
 const APPSTORE_PRODUCTION_BUILD_NUMBER = "6";
 const PLAYSTORE_VERSION_CODE = 43;
-const PLAYSTORE_PRODUCTION_VERSION_CODE = 44;
+// Play Store version code 44 is already present on the existing listing.
+// Keep the replacement production artifact monotonic at 45; the guarded
+// internal profile remains on its historical code 43.
+const PLAYSTORE_PRODUCTION_VERSION_CODE = 45;
 const PRODUCTION_BUNDLE_ID = "ca.peacepad.family";
 const APP_STORE_ID = "6793350735";
 const GOOGLE_SIGN_IN_PLUGIN = "@react-native-google-signin/google-signin";

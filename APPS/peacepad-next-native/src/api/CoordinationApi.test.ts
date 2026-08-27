@@ -28,6 +28,42 @@ function response(status: number, payload: unknown): Response {
 }
 
 describe("HttpPeacePadCoordinationApi", () => {
+  it("rejects an empty bootstrap display name before making a request", async () => {
+    const fetcher = jest.fn(async () => response(201, {}));
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
+
+    await expect(api.bootstrapIdentity("   ", "ca")).rejects.toMatchObject({ status: 400 });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("bootstraps a newly authenticated identity through the existing idempotent endpoint", async () => {
+    const fetcher = jest.fn(async () => response(201, {
+      identityId: context.actor.identityId,
+      region: "ca",
+      displayName: "New Parent"
+    }));
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
+
+    await expect(api.bootstrapIdentity("New Parent", "ca")).resolves.toEqual({
+      identityId: context.actor.identityId,
+      region: "ca",
+      displayName: "New Parent"
+    });
+    expect(fetcher).toHaveBeenCalledWith(
+      `${config.apiBaseUrl}/api/v2/session/bootstrap`,
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          Authorization: "Bearer " + "a".repeat(48),
+          "X-PeacePad-Region": "ca",
+          "X-PeacePad-Schema-Version": "2.0",
+          "Idempotency-Key": expect.stringMatching(/^identity-bootstrap-/)
+        }),
+        body: JSON.stringify({ displayName: "New Parent" })
+      })
+    );
+  });
+
   it.each([
     ["rohvkyuxbnqzglaromms", "ca-central-1"],
     ["spmpndalcvwmygznihec", "us-east-1"]

@@ -33,6 +33,21 @@ const supabase = {
   publishableKey: "sb_publishable_test",
   region: "ca" as const
 };
+const productionEnvironment = {
+  apiBaseUrl: "https://qzekqjewpugdotskrtni.supabase.co/functions/v1/peacepad-v2-api",
+  diagnosticsEnabled: false,
+  environment: "production" as const,
+  productionApiWritesEnabled: true as const,
+  requestTimeoutMs: 12_000
+};
+const productionSupabase = {
+  apiBaseUrl: productionEnvironment.apiBaseUrl,
+  environment: "production" as const,
+  projectRef: "qzekqjewpugdotskrtni",
+  projectUrl: "https://qzekqjewpugdotskrtni.supabase.co",
+  publishableKey: "sb_publishable_test",
+  region: "ca" as const
+};
 
 const authValue = (overrides: Record<string, unknown> = {}) => ({
   status: "ready",
@@ -836,5 +851,21 @@ describe("PeacePadStagingRuntime gates", () => {
     (useSupabaseSession as jest.Mock).mockReturnValue(authValue());
     view.rerender(<PeacePadStagingRuntime environment={environment} fetcher={sessionResponse({}, false)} supabase={supabase}>ready</PeacePadStagingRuntime>);
     await waitFor(() => expect(screen.getByText("PeacePad could not restore this regional staging session.")).toBeTruthy());
+  });
+
+  it("bootstraps an unbound production identity and retries session hydration", async () => {
+    const auth = authValue({ session: { user: { id: IDENTITY, email: "new-parent@example.test", user_metadata: { full_name: "New Parent" } } } });
+    (useSupabaseSession as jest.Mock).mockReturnValue(auth);
+    const fetcher = jest.fn()
+      .mockResolvedValueOnce({ ok: false, status: 409, json: async () => ({ error: { code: "IDENTITY_NOT_BOUND" } }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ...valid, memberships: [] }) });
+    const bootstrapIdentity = jest.fn(async () => ({ identityId: IDENTITY, region: "ca" as const, displayName: "New Parent" }));
+    (createStagingCoordinationClient as jest.Mock).mockReturnValue({ bootstrapIdentity, listConversations: jest.fn(async () => []) });
+
+    render(<PeacePadStagingRuntime environment={productionEnvironment} fetcher={fetcher as unknown as typeof fetch} supabase={productionSupabase}>ready</PeacePadStagingRuntime>);
+
+    await waitFor(() => expect(screen.getByText("Create or join a family")).toBeTruthy());
+    expect(bootstrapIdentity).toHaveBeenCalledWith("New Parent", "ca");
+    expect(fetcher).toHaveBeenCalledTimes(2);
   });
 });
