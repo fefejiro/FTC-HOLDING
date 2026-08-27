@@ -1,0 +1,94 @@
+import React, { useMemo, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { AccessibleHeading } from "../components/AccessibleHeading";
+import { LabButton } from "../components/LabButton";
+import { useOptionalLocalization } from "../localization/LocalizationProvider";
+import { colors, spacing, typography } from "../theme";
+import { activityCopy } from "./activityLocalization";
+import { filterActivitySuggestions, type ActivityWeather } from "./ActivitySuggestions";
+
+export function ActivitySuggestionsScreen({ onPlanActivity }: { onPlanActivity: (title: string) => void }) {
+  const { locale } = useOptionalLocalization();
+  const text = activityCopy(locale);
+  const [weather, setWeather] = useState<ActivityWeather>();
+  const [ageMonths, setAgeMonths] = useState<number>();
+  const suggestions = useMemo(() => filterActivitySuggestions({ ageMonths, weather }), [ageMonths, weather]);
+  const weatherChoices: readonly { value?: ActivityWeather; label: string }[] = [
+    { label: text.allWeather },
+    ...(["sunny", "cloudy", "rainy", "snowy", "hot", "cold"] as const).map((value) => ({ value, label: text.weatherChoices[value] }))
+  ];
+  const ageChoices: readonly { value?: number; label: string }[] = [
+    { label: text.allAges },
+    ...[18, 30, 54, 96, 156].map((value, index) => ({ value, label: text.ageChoices[index] }))
+  ];
+
+  return (
+    <View style={styles.stack}>
+      <AccessibleHeading style={styles.title}>{text.title}</AccessibleHeading>
+      <Text style={styles.body}>{text.body}</Text>
+
+      <View style={styles.card}>
+        <Text accessibilityRole="header" style={styles.heading}>{text.weather}</Text>
+        <View accessibilityLabel={text.weatherFilter} accessibilityRole="radiogroup" style={styles.chips}>
+          {weatherChoices.map((choice) => (
+            <Pressable
+              accessibilityLabel={choice.label}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: weather === choice.value }}
+              key={choice.label}
+              onPress={() => setWeather(choice.value)}
+              style={[styles.chip, weather === choice.value ? styles.chipActive : null]}
+            >
+              <Text style={[styles.chipText, weather === choice.value ? styles.chipTextActive : null]}>{choice.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+        <Text accessibilityRole="header" style={styles.heading}>{text.ageRange}</Text>
+        <View accessibilityLabel={text.ageFilter} accessibilityRole="radiogroup" style={styles.chips}>
+          {ageChoices.map((choice) => (
+            <Pressable
+              accessibilityLabel={choice.label}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: ageMonths === choice.value }}
+              key={choice.label}
+              onPress={() => setAgeMonths(choice.value)}
+              style={[styles.chip, ageMonths === choice.value ? styles.chipActive : null]}
+            >
+              <Text style={[styles.chipText, ageMonths === choice.value ? styles.chipTextActive : null]}>{choice.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      <Text accessibilityLabel="Activity result count" style={styles.caption}>{text.result(suggestions.length)}</Text>
+      {suggestions.map((suggestion) => (
+        <View key={suggestion.id} style={styles.card}>
+          <Text style={styles.suggestionTitle}>{suggestion.title}</Text>
+          <Text style={styles.caption}>{suggestion.activityType} · {suggestion.category} · {suggestion.duration}</Text>
+          <Text style={styles.body}>{suggestion.description}</Text>
+          <Text style={styles.materials}>{text.materials}: {suggestion.materials.join(", ")}</Text>
+          <LabButton label={text.plan(suggestion.title)} onPress={() => onPlanActivity(suggestion.title)} variant="secondary" />
+        </View>
+      ))}
+
+      {!suggestions.length ? <Text accessibilityRole="alert" style={styles.empty}>{text.empty}</Text> : null}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  stack: { gap: spacing.md },
+  title: { ...typography.title },
+  heading: { ...typography.heading, marginTop: spacing.xs },
+  body: { ...typography.body, color: colors.muted, lineHeight: 22 },
+  caption: { ...typography.caption, color: colors.muted },
+  card: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 16, borderWidth: 1, gap: spacing.sm, padding: spacing.md },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  chip: { borderColor: colors.border, borderRadius: 999, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  chipActive: { backgroundColor: colors.brand, borderColor: colors.brand },
+  chipText: { ...typography.caption, color: colors.text, fontWeight: "700" },
+  chipTextActive: { color: colors.surface },
+  suggestionTitle: { ...typography.heading },
+  materials: { ...typography.caption, color: colors.text, fontWeight: "700" },
+  empty: { ...typography.body, color: colors.muted, textAlign: "center" }
+});

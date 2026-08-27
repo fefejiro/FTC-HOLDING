@@ -6,7 +6,7 @@ import { InvitationQr } from "../components/InvitationQr";
 import { LabButton } from "../components/LabButton";
 import { AccessibleHeading } from "../components/AccessibleHeading";
 import { languageNames, supportedLocales, useLocalization, useOptionalLocalization } from "../localization/LocalizationProvider";
-import { calendarText, formatCalendarDate, formatCalendarDay } from "../localization/calendarLocalization";
+import { calendarNavigationText, calendarStatusText, calendarText, formatCalendarDate, formatCalendarDay } from "../localization/calendarLocalization";
 import { formatLocalizedDate } from "../localization/localizedDate";
 import { messageText } from "../localization/messageLocalization";
 import { workflowText } from "../localization/workflowLocalization";
@@ -20,8 +20,11 @@ import { useRecordsState } from "../records/RecordsState";
 import type { AttachmentMediaType } from "../domain/v2";
 import { useOptionalStagingAccountActions } from "../session/StagingAccountActions";
 import { useCoordinationState, type CalendarView } from "./CoordinationState";
+import { ActivitySuggestionsScreen } from "../activities/ActivitySuggestionsScreen";
+import { ParentingTasksScreen } from "../tasks/ParentingTasksScreen";
+import { taskCopy } from "../tasks/taskLocalization";
 
-export type CoordinationScreen = "home" | "messages" | "calendar" | "invite" | "records" | "calls" | "more";
+export type CoordinationScreen = "home" | "messages" | "calendar" | "activities" | "tasks" | "invite" | "records" | "calls" | "more";
 type Navigate = (screen: CoordinationScreen) => void;
 
 const layerColors: Record<string, string> = {
@@ -33,43 +36,88 @@ const layerColors: Record<string, string> = {
   green: "#62B44B"
 };
 
-const august2026Weekdays = [2, 3, 4, 5, 6, 7, 1] as const;
-const august2026Week = [1, 2, 3, 4, 5, 6, 7] as const;
+function atUtcDay(value: Date): Date {
+  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+}
 
-function eventDay(event: ReturnType<typeof useCoordinationState>["events"][number]): number {
-  return new Date(event.startsAt).getUTCDate();
+function addUtcDays(value: Date, amount: number): Date {
+  const next = atUtcDay(value);
+  next.setUTCDate(next.getUTCDate() + amount);
+  return next;
+}
+
+function addUtcMonths(value: Date, amount: number): Date {
+  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth() + amount, 1));
+}
+
+function sameUtcDay(left: Date, right: Date): boolean {
+  return left.getUTCFullYear() === right.getUTCFullYear()
+    && left.getUTCMonth() === right.getUTCMonth()
+    && left.getUTCDate() === right.getUTCDate();
+}
+
+function eventOccursOnDay(event: ReturnType<typeof useCoordinationState>["events"][number], date: Date): boolean {
+  return sameUtcDay(new Date(event.startsAt), date);
+}
+
+function calendarDateTimeInput(value: Date): string {
+  const local = new Date(value.getTime() - value.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16).replace("T", " ");
+}
+
+function parseCalendarDateTime(value: string): string | undefined {
+  const match = /^(\d{4})-(\d{2})-(\d{2})\s(\d{2}):(\d{2})$/.exec(value.trim());
+  if (!match) return undefined;
+  const [year, month, day, hour, minute] = match.slice(1).map(Number);
+  const parsed = new Date(year, month - 1, day, hour, minute);
+  return parsed.getFullYear() === year && parsed.getMonth() === month - 1 && parsed.getDate() === day
+    && parsed.getHours() === hour && parsed.getMinutes() === minute
+    ? parsed.toISOString()
+    : undefined;
+}
+
+function startOfUtcWeek(value: Date): Date {
+  const date = atUtcDay(value);
+  return addUtcDays(date, -((date.getUTCDay() + 6) % 7));
 }
 
 function CalendarViewPanel({
   calendarView,
   events,
   layers,
-  locale
+  locale,
+  anchorDate
 }: {
   calendarView: CalendarView;
   events: ReturnType<typeof useCoordinationState>["events"];
   layers: ReturnType<typeof useCoordinationState>["layers"];
   locale: ReturnType<typeof useLocalization>["locale"];
+  anchorDate: Date;
 }) {
   const layerName = (calendarLayerId: string) =>
     layers.find((layer) => layer.id === calendarLayerId)?.name ?? "Calendar";
 
   if (calendarView === "month") {
+    const firstOfMonth = new Date(Date.UTC(anchorDate.getUTCFullYear(), anchorDate.getUTCMonth(), 1));
+    const leadingBlankCount = (firstOfMonth.getUTCDay() + 6) % 7;
+    const daysInMonth = new Date(Date.UTC(anchorDate.getUTCFullYear(), anchorDate.getUTCMonth() + 1, 0)).getUTCDate();
+    const weekdays = Array.from({ length: 7 }, (_, index) => addUtcDays(firstOfMonth, index - leadingBlankCount));
     const cells: readonly { key: string; day?: number }[] = [
-      ...Array.from({ length: 6 }, (_, index) => ({ key: `blank-${index}` })),
-      ...Array.from({ length: 31 }, (_, index) => ({ key: `day-${index + 1}`, day: index + 1 }))
+      ...Array.from({ length: leadingBlankCount }, (_, index) => ({ key: `blank-${index}` })),
+      ...Array.from({ length: daysInMonth }, (_, index) => ({ key: `day-${index + 1}`, day: index + 1 }))
     ];
     return (
       <View accessibilityLabel={`${calendarText(locale, "month")} ${calendarText(locale, "title")}`.toLocaleLowerCase(locale)} style={styles.calendarCanvas}>
-        <Text style={styles.calendarMonth}>{formatCalendarDate(locale, "2026-08-01T00:00:00.000Z", { month: "long", year: "numeric" })}</Text>
+        <Text style={styles.calendarMonth}>{formatCalendarDate(locale, firstOfMonth, { month: "long", year: "numeric" })}</Text>
         <View style={styles.monthGrid}>
-          {august2026Weekdays.map((day) => (
-            <Text key={day} style={styles.weekday}>{formatCalendarDate(locale, new Date(Date.UTC(2026, 7, day)), { weekday: "short" })}</Text>
+          {weekdays.map((date) => (
+            <Text key={date.toISOString()} style={styles.weekday}>{formatCalendarDate(locale, date, { weekday: "short" })}</Text>
           ))}
           {cells.map((cell) => {
-            const dayEvents = cell.day ? events.filter((event) => eventDay(event) === cell.day) : [];
+            const date = cell.day ? new Date(Date.UTC(anchorDate.getUTCFullYear(), anchorDate.getUTCMonth(), cell.day)) : undefined;
+            const dayEvents = date ? events.filter((event) => eventOccursOnDay(event, date)) : [];
             return (
-              <View accessibilityLabel={cell.day ? formatCalendarDate(locale, new Date(Date.UTC(2026, 7, cell.day)), { month: "long", day: "numeric" }) : undefined} key={cell.key} style={styles.monthCell}>
+              <View accessibilityLabel={date ? formatCalendarDate(locale, date, { month: "long", day: "numeric" }) : undefined} key={cell.key} style={styles.monthCell}>
                 {cell.day ? <Text style={styles.dayNumber}>{cell.day}</Text> : null}
                 {dayEvents.slice(0, 1).map((event) => (
                   <Text key={event.id} numberOfLines={1} style={styles.monthEvent}>{event.title}</Text>
@@ -83,20 +131,22 @@ function CalendarViewPanel({
   }
 
   if (calendarView === "week") {
+    const firstDay = startOfUtcWeek(anchorDate);
+    const week = Array.from({ length: 7 }, (_, index) => addUtcDays(firstDay, index));
     return (
       <View accessibilityLabel={`${calendarText(locale, "week")} ${calendarText(locale, "title")}`.toLocaleLowerCase(locale)} style={styles.calendarCanvas}>
-        <Text style={styles.calendarMonth}>{formatCalendarDate(locale, "2026-08-01T00:00:00.000Z", { month: "short", day: "numeric" })}–7</Text>
+        <Text style={styles.calendarMonth}>{formatCalendarDate(locale, firstDay, { month: "short", day: "numeric" })}–{formatCalendarDate(locale, week[6], { day: "numeric" })}</Text>
         <View style={styles.scheduleList}>
-          {august2026Week.map((day) => {
-            const dayEvents = events.filter((event) => eventDay(event) === day);
+          {week.map((date) => {
+            const dayEvents = events.filter((event) => eventOccursOnDay(event, date));
             return (
-              <View key={day} style={styles.scheduleRow}>
-                <Text style={styles.scheduleDate}>{formatCalendarDay(locale, day)}</Text>
+              <View key={date.toISOString()} style={styles.scheduleRow}>
+                <Text style={styles.scheduleDate}>{formatCalendarDay(locale, date)}</Text>
                 <View style={styles.scheduleContent}>
                   {dayEvents.length ? dayEvents.map((event) => (
                     <View key={event.id} style={styles.scheduleEvent}>
                       <Text style={styles.actionTitle}>{event.title}</Text>
-                      <Text style={styles.caption}>{layerName(event.calendarLayerId)}</Text>
+                      <Text style={styles.caption}>{layerName(event.calendarLayerId)} - {calendarStatusText(locale, event.status)}</Text>
                     </View>
                   )) : <Text style={styles.caption}>{calendarText(locale, "noEvents")}</Text>}
                 </View>
@@ -108,15 +158,15 @@ function CalendarViewPanel({
     );
   }
 
-  const dayEvents = events.filter((event) => eventDay(event) === 1);
+  const dayEvents = events.filter((event) => eventOccursOnDay(event, anchorDate));
   return (
     <View accessibilityLabel={`${calendarText(locale, "day")} ${calendarText(locale, "title")}`.toLocaleLowerCase(locale)} style={styles.calendarCanvas}>
-      <Text style={styles.calendarMonth}>{formatCalendarDate(locale, "2026-08-01T00:00:00.000Z", { weekday: "long", month: "long", day: "numeric" })}</Text>
+      <Text style={styles.calendarMonth}>{formatCalendarDate(locale, anchorDate, { weekday: "long", month: "long", day: "numeric" })}</Text>
       <View style={styles.scheduleList}>
         {dayEvents.length ? dayEvents.map((event) => (
           <View key={event.id} style={styles.scheduleEvent}>
             <Text style={styles.actionTitle}>{event.title}</Text>
-            <Text style={styles.caption}>{layerName(event.calendarLayerId)}</Text>
+            <Text style={styles.caption}>{layerName(event.calendarLayerId)} - {calendarStatusText(locale, event.status)}</Text>
           </View>
         )) : <Text style={styles.calendarEmpty}>{calendarText(locale, "noEventsYet")}</Text>}
       </View>
@@ -128,14 +178,17 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
   const largeText = usesLargeTextLayout(useWindowDimensions().fontScale);
   const { locale } = useOptionalLocalization();
   const h = (key: Parameters<typeof homeText>[1]) => homeText(locale, key);
-  const { events, invitationGrant, sentMessages } = useCoordinationState();
+  const task = taskCopy(locale);
+  const { connected, events, invitationGrant, sentMessages } = useCoordinationState();
 
   const actions: readonly { label: string; detail: string; route: CoordinationScreen }[] = [
-    { label: h("send"), detail: h("sendBody"), route: "messages" },
+    ...(connected ? [{ label: h("send"), detail: h("sendBody"), route: "messages" as const }] : []),
     { label: h("event"), detail: h("eventBody"), route: "calendar" },
+    { label: task.title, detail: task.body, route: "tasks" },
+    { label: "Activity ideas", detail: "Find practical ideas for the time you have together.", route: "activities" },
     { label: h("invite"), detail: h("inviteBody"), route: "invite" },
     { label: h("record"), detail: h("recordBody"), route: "records" },
-    { label: callText(locale, "title"), detail: callText(locale, "body"), route: "calls" }
+    ...(connected ? [{ label: callText(locale, "title"), detail: callText(locale, "body"), route: "calls" as const }] : [])
   ];
 
   return (
@@ -173,6 +226,9 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
     </View>
   );
 }
+
+export { ActivitySuggestionsScreen };
+export { ParentingTasksScreen };
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
@@ -354,7 +410,7 @@ export function InvitationScreen({ initialCode }: { initialCode?: string }) {
   );
 }
 
-export function CalendarScreen() {
+export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: string }) {
   const largeText = usesLargeTextLayout(useWindowDimensions().fontScale);
   const { locale } = useOptionalLocalization();
   const w = (key: Parameters<typeof workflowText>[1], values?: Readonly<Record<string, string>>) => workflowText(locale, key, values);
@@ -367,15 +423,28 @@ export function CalendarScreen() {
     setCalendarView,
     setLayerShared,
     toggleLayerFilter,
-    visibleLayerIds
+    visibleLayerIds,
+    connected
   } = useCoordinationState();
   const [eventTitle, setEventTitle] = useState("");
   const [selectedLayerId, setSelectedLayerId] = useState(layers[0]?.id ?? "");
+  const [calendarAnchorDate, setCalendarAnchorDate] = useState(() => atUtcDay(new Date()));
+  const [eventStartsAt, setEventStartsAt] = useState(() => calendarDateTimeInput(new Date()));
+  const [eventEndsAt, setEventEndsAt] = useState(() => calendarDateTimeInput(new Date(Date.now() + 60 * 60 * 1000)));
+  const [eventTimeError, setEventTimeError] = useState(false);
   const [pendingShareLayerId, setPendingShareLayerId] = useState<string>();
   const [pendingDeleteEventId, setPendingDeleteEventId] = useState<string>();
+  const [eventType, setEventType] = useState<"parenting-time" | "appointment" | "change-request">("parenting-time");
 
   const visibleEvents = events.filter((event) => visibleLayerIds.includes(event.calendarLayerId));
   const views: readonly CalendarView[] = ["month", "week", "day"];
+  const moveCalendar = (amount: number) => setCalendarAnchorDate((current) => calendarView === "month"
+    ? addUtcMonths(current, amount)
+    : addUtcDays(current, amount * (calendarView === "week" ? 7 : 1)));
+
+  useEffect(() => {
+    if (initialEventTitle?.trim()) setEventTitle(initialEventTitle);
+  }, [initialEventTitle]);
 
   return (
     <View style={styles.stack}>
@@ -403,7 +472,13 @@ export function CalendarScreen() {
         ))}
       </View>
 
-      <CalendarViewPanel calendarView={calendarView} events={visibleEvents} layers={layers} locale={locale} />
+      <View style={styles.calendarNavigation}>
+        <LabButton label={calendarNavigationText(locale, "previous")} onPress={() => moveCalendar(-1)} variant="secondary" />
+        <LabButton label={calendarNavigationText(locale, "today")} onPress={() => setCalendarAnchorDate(atUtcDay(new Date()))} variant="secondary" />
+        <LabButton label={calendarNavigationText(locale, "next")} onPress={() => moveCalendar(1)} variant="secondary" />
+      </View>
+
+      <CalendarViewPanel anchorDate={calendarAnchorDate} calendarView={calendarView} events={visibleEvents} layers={layers} locale={locale} />
 
       <View style={styles.card}>
         <Text style={styles.heading}>{calendarText(locale, "calendars")}</Text>
@@ -453,6 +528,11 @@ export function CalendarScreen() {
       <View style={styles.card}>
         <Text style={styles.heading}>{w("addEvent")}</Text>
         <TextInput accessibilityLabel={w("eventTitle")} onChangeText={setEventTitle} placeholder={w("eventTitle")} style={styles.input} value={eventTitle} />
+        <Text style={styles.fieldLabel}>{calendarNavigationText(locale, "startsAt")}</Text>
+        <TextInput accessibilityLabel={calendarNavigationText(locale, "startsAt")} autoCapitalize="none" keyboardType="numbers-and-punctuation" onChangeText={setEventStartsAt} placeholder="YYYY-MM-DD HH:MM" style={styles.input} value={eventStartsAt} />
+        <Text style={styles.fieldLabel}>{calendarNavigationText(locale, "endsAt")}</Text>
+        <TextInput accessibilityLabel={calendarNavigationText(locale, "endsAt")} autoCapitalize="none" keyboardType="numbers-and-punctuation" onChangeText={setEventEndsAt} placeholder="YYYY-MM-DD HH:MM" style={styles.input} value={eventEndsAt} />
+        {eventTimeError ? <Text accessibilityRole="alert" style={styles.errorText}>{calendarNavigationText(locale, "invalidTime")}</Text> : null}
         <Text style={styles.fieldLabel}>{w("calendar")}</Text>
         <View style={styles.wrap}>
           {layers.map((layer) => (
@@ -468,12 +548,43 @@ export function CalendarScreen() {
             </Pressable>
           ))}
         </View>
+        <Text style={styles.fieldLabel}>{w("eventMode")}</Text>
+        <View accessibilityRole="tablist" style={styles.wrap}>
+          <Pressable
+            accessibilityLabel={w("planTime")}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: eventType === "parenting-time" }}
+            onPress={() => setEventType("parenting-time")}
+            style={[styles.chip, eventType === "parenting-time" ? styles.chipActive : null]}
+          >
+            <Text style={[styles.chipText, eventType === "parenting-time" ? styles.chipTextActive : null]}>{w("planTime")}</Text>
+          </Pressable>
+          {connected ? (
+            <Pressable
+              accessibilityLabel={w("requestChange")}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: eventType === "change-request" }}
+              onPress={() => setEventType("change-request")}
+              style={[styles.chip, eventType === "change-request" ? styles.chipActive : null]}
+            >
+              <Text style={[styles.chipText, eventType === "change-request" ? styles.chipTextActive : null]}>{w("requestChange")}</Text>
+            </Pressable>
+          ) : null}
+        </View>
         <LabButton label={w("saveEvent")} disabled={!eventTitle.trim()} onPress={() => {
+          const startsAt = parseCalendarDateTime(eventStartsAt);
+          const endsAt = parseCalendarDateTime(eventEndsAt);
+          if (!startsAt || !endsAt || new Date(endsAt).getTime() <= new Date(startsAt).getTime()) {
+            setEventTimeError(true);
+            return;
+          }
+          setEventTimeError(false);
           void addEvent({
             layerId: selectedLayerId,
             title: eventTitle,
-            startsAt: "2026-08-01T14:00:00.000Z",
-            endsAt: "2026-08-01T15:00:00.000Z"
+            startsAt,
+            endsAt,
+            eventType
           });
           setEventTitle("");
         }} />
@@ -482,7 +593,7 @@ export function CalendarScreen() {
       {visibleEvents.map((event) => (
         <View key={event.id} style={styles.card}>
           <Text style={styles.actionTitle}>{event.title}</Text>
-          <Text style={styles.caption}>{layers.find((layer) => layer.id === event.calendarLayerId)?.name}</Text>
+          <Text style={styles.caption}>{layers.find((layer) => layer.id === event.calendarLayerId)?.name} - {calendarStatusText(locale, event.status)}</Text>
           {pendingDeleteEventId === event.id ? (
             <View style={styles.stackTight}>
               <Text style={styles.body}>{w("deleteWarning")}</Text>
@@ -970,6 +1081,7 @@ const styles = StyleSheet.create({
   qrCard: { alignItems: "center", alignSelf: "center", backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: spacing.sm, padding: spacing.md },
   qrLabel: { ...typography.caption, color: colors.text, fontWeight: "800" },
   error: { ...typography.body, color: colors.dangerText, fontWeight: "700" },
+  errorText: { ...typography.caption, color: colors.dangerText, fontWeight: "700" },
   success: { ...typography.body, color: colors.successText, fontWeight: "700" },
   titleRow: { flexDirection: "row", justifyContent: "space-between" },
   segmented: { backgroundColor: colors.brandSoft, borderRadius: 18, flexDirection: "row", padding: spacing.xs },
@@ -977,6 +1089,7 @@ const styles = StyleSheet.create({
   segmentActive: { backgroundColor: colors.surface },
   segmentText: { ...typography.body, color: colors.muted, fontWeight: "700" },
   segmentTextActive: { color: colors.brand },
+  calendarNavigation: { flexDirection: "row", gap: spacing.sm, justifyContent: "space-between" },
   calendarCanvas: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: spacing.md, minHeight: 180, padding: spacing.lg },
   calendarMonth: { ...typography.heading, color: colors.text },
   calendarEmpty: { ...typography.body, color: colors.muted },

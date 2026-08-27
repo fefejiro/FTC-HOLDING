@@ -1,6 +1,6 @@
 import React from "react";
 import * as SecureStore from "expo-secure-store";
-import { Linking, Text } from "react-native";
+import { Linking, Share, Text } from "react-native";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { createStagingCoordinationClient } from "../staging/StagingCoordinationClient";
 import { useSupabaseSession } from "../session/SupabaseSessionProvider";
@@ -151,7 +151,7 @@ describe("PeacePadStagingRuntime gates", () => {
       </PeacePadStagingRuntime>
     );
 
-    await waitFor(() => expect(screen.getByText("Create or join a family")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Start with PeacePad")).toBeTruthy());
     expect(fetcher).toHaveBeenCalledWith(
       `${environment.apiBaseUrl}/api/v2/session`,
       expect.objectContaining({
@@ -222,11 +222,11 @@ describe("PeacePadStagingRuntime gates", () => {
     const view = render(
       <PeacePadStagingRuntime environment={environment} fetcher={sessionResponse({ ...valid, memberships: [] })} supabase={supabase}>ready</PeacePadStagingRuntime>
     );
-    await waitFor(() => expect(screen.getByText("Create or join a family")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Start with PeacePad")).toBeTruthy());
     expect(screen.queryByText("ready")).toBeNull();
 
     view.rerender(<PeacePadStagingRuntime environment={environment} fetcher={sessionResponse()} supabase={supabase}>ready</PeacePadStagingRuntime>);
-    await waitFor(() => expect(screen.getByText("Invite a co-parent")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Invite another parent")).toBeTruthy());
     expect(screen.queryByText("ready")).toBeNull();
   });
 
@@ -240,16 +240,16 @@ describe("PeacePadStagingRuntime gates", () => {
       </PeacePadStagingRuntime>
     );
 
-    await waitFor(() => expect(screen.getByText("Create or join a family")).toBeTruthy());
-    fireEvent.press(screen.getByRole("button", { name: "Continue without a co-parent" }));
+    await waitFor(() => expect(screen.getByText("Start with PeacePad")).toBeTruthy());
+    fireEvent.press(screen.getByRole("button", { name: "Start on my own" }));
     expect(await screen.findByTestId("solo-workspace")).toBeTruthy();
-    expect(screen.getByText(/You can explore PeacePad privately now/)).toBeTruthy();
+    expect(screen.getByText(/Use PeacePad privately now/)).toBeTruthy();
     expect(SecureStore.setItemAsync).toHaveBeenCalledWith(`peacepad_v2_solo_onboarding:${IDENTITY}`, "enabled");
   });
 
   it.each([
-    ["fr", "Inviter un coparent", "Vérifier la connexion"],
-    ["es", "Invitar a un copadre", "Comprobar conexión"]
+    ["fr", "Inviter l’autre parent", "Vérifier la connexion"],
+    ["es", "Invitar al otro progenitor", "Comprobar conexión"]
   ])("localizes the fail-closed conversation recovery state in %s", async (locale, title, recoveryAction) => {
     (useSupabaseSession as jest.Mock).mockReturnValue(authValue());
     (createStagingCoordinationClient as jest.Mock).mockReturnValue({ listConversations: jest.fn(async () => []) });
@@ -295,7 +295,7 @@ describe("PeacePadStagingRuntime gates", () => {
         <Text testID="selected-family-ready">ready</Text>
       </PeacePadStagingRuntime>
     );
-    await waitFor(() => expect(screen.getByText("Choose a family")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Choose a parenting space")).toBeTruthy());
     expect(listConversations).not.toHaveBeenCalled();
     fireEvent.press(screen.getByRole("button", { name: "Second Fictional Family - parent" }));
     await waitFor(() => expect(listConversations).toHaveBeenCalledWith(familyB));
@@ -335,7 +335,7 @@ describe("PeacePadStagingRuntime gates", () => {
         ready
       </PeacePadStagingRuntime>
     );
-    await waitFor(() => expect(screen.getByText("Create or join a family")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Start with PeacePad")).toBeTruthy());
     act(() => receiveUrl({ url: "peacepadnextlab://invite/LIVE22" }));
     await waitFor(() => expect(screen.getByLabelText("Invitation code").props.value).toBe("LIVE22"));
     await act(async () => resolveInitial("peacepadnextlab://invite/COLD11"));
@@ -378,7 +378,7 @@ describe("PeacePadStagingRuntime gates", () => {
         ready
       </PeacePadStagingRuntime>
     );
-    await waitFor(() => expect(screen.getByText("Create or join a family")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Start with PeacePad")).toBeTruthy());
     expect(screen.getByLabelText("Invitation code").props.value).toBe("");
   });
 
@@ -403,18 +403,18 @@ describe("PeacePadStagingRuntime gates", () => {
         ready
       </PeacePadStagingRuntime>
     );
-    await waitFor(() => expect(screen.getByText("Create or join a family")).toBeTruthy());
-    fireEvent.changeText(screen.getByLabelText("Family name"), "  Fictional Family  ");
-    fireEvent.press(screen.getByRole("button", { name: "Create family" }));
+    await waitFor(() => expect(screen.getByText("Start with PeacePad")).toBeTruthy());
+    expect(screen.queryByLabelText("Family name")).toBeNull();
+    fireEvent.press(screen.getByRole("button", { name: "Prepare a private invitation" }));
 
     await waitFor(() => expect(createFamily).toHaveBeenCalledTimes(1));
-    expect(createFamily).toHaveBeenCalledWith("  Fictional Family  ", expect.objectContaining({
+    expect(createFamily).toHaveBeenCalledWith("PeacePad parenting space", expect.objectContaining({
       actor: { identityId: IDENTITY, sessionId: SESSION },
       expectedVersion: null,
       region: "ca",
       schemaVersion: "2.0"
     }));
-    await waitFor(() => expect(screen.getByText("Invite a co-parent")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Invite another parent")).toBeTruthy());
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
@@ -473,7 +473,7 @@ describe("PeacePadStagingRuntime gates", () => {
         <Text testID="accepted-runtime">ready</Text>
       </PeacePadStagingRuntime>
     );
-    await waitFor(() => expect(screen.getByText("Create or join a family")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Start with PeacePad")).toBeTruthy());
     fireEvent.changeText(screen.getByLabelText("Invitation code"), "ab-12c3");
     fireEvent.press(screen.getByRole("button", { name: "Review invitation" }));
     await waitFor(() => expect(resolveInvitation).toHaveBeenCalledWith("AB12C3"));
@@ -506,7 +506,7 @@ describe("PeacePadStagingRuntime gates", () => {
         ready
       </PeacePadStagingRuntime>
     );
-    await waitFor(() => expect(screen.getByText("Create or join a family")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Start with PeacePad")).toBeTruthy());
     fireEvent.changeText(screen.getByLabelText("Invitation code"), "AB12C3");
     fireEvent.press(screen.getByRole("button", { name: "Review invitation" }));
     await waitFor(() => expect(screen.getByText("Fictional Family")).toBeTruthy());
@@ -520,6 +520,7 @@ describe("PeacePadStagingRuntime gates", () => {
   });
 
   it("creates and revokes a scoped single-use invitation for a family without a conversation", async () => {
+    const shareSpy = jest.spyOn(Share, "share").mockResolvedValue({ action: Share.sharedAction });
     (useSupabaseSession as jest.Mock).mockReturnValue(authValue());
     const invitationId = "99999999-9999-4999-8999-999999999999";
     const createInvitation = jest.fn(async () => ({
@@ -552,7 +553,7 @@ describe("PeacePadStagingRuntime gates", () => {
         ready
       </PeacePadStagingRuntime>
     );
-    await waitFor(() => expect(screen.getByText("Invite a co-parent")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Invite another parent")).toBeTruthy());
     fireEvent.press(screen.getByRole("button", { name: "Create invitation" }));
     await waitFor(() => expect(screen.getByText("PP2CA1")).toBeTruthy());
     expect(createInvitation).toHaveBeenCalledWith({
@@ -561,6 +562,10 @@ describe("PeacePadStagingRuntime gates", () => {
       invitedRole: "parent",
       permissions: ["messages", "calendar", "shared-records", "calls"]
     }, expect.objectContaining({ actor: { identityId: IDENTITY, sessionId: SESSION }, region: "ca" }));
+    fireEvent.press(screen.getByRole("button", { name: "Share invitation" }));
+    await waitFor(() => expect(shareSpy).toHaveBeenCalledWith({
+      message: expect.stringContaining("PP2CA1")
+    }));
     fireEvent.press(screen.getByRole("button", { name: "Cancel invitation" }));
     await waitFor(() => expect(revokeInvitation).toHaveBeenCalledWith(
       invitationId,
@@ -568,6 +573,7 @@ describe("PeacePadStagingRuntime gates", () => {
     ));
     expect(screen.queryByText("PP2CA1")).toBeNull();
     expect(screen.getByRole("button", { name: "Create invitation" })).toBeTruthy();
+    shareSpy.mockRestore();
   });
 
   it("injects the verified runtime only after an authorized conversation is discovered", async () => {
@@ -661,7 +667,7 @@ describe("PeacePadStagingRuntime gates", () => {
     }));
     (createStagingCoordinationClient as jest.Mock).mockReturnValue({ deleteAccount });
     render(<PeacePadStagingRuntime environment={environment} fetcher={sessionResponse({ ...valid, memberships: [] })} supabase={supabase}>ready</PeacePadStagingRuntime>);
-    await waitFor(() => expect(screen.getByText("Create or join a family")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Start with PeacePad")).toBeTruthy());
     fireEvent.press(screen.getByRole("button", { name: "Delete staging account" }));
     expect(deleteAccount).not.toHaveBeenCalled();
     fireEvent.press(screen.getByRole("button", { name: "Delete account permanently" }));
@@ -676,7 +682,7 @@ describe("PeacePadStagingRuntime gates", () => {
     (useSupabaseSession as jest.Mock).mockReturnValue(auth);
     (createStagingCoordinationClient as jest.Mock).mockReturnValue({});
     render(<PeacePadStagingRuntime environment={environment} fetcher={sessionResponse({ ...valid, memberships: [] })} supabase={supabase}>ready</PeacePadStagingRuntime>);
-    await waitFor(() => expect(screen.getByText("Create or join a family")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Start with PeacePad")).toBeTruthy());
 
     fireEvent.press(screen.getByRole("button", { name: "Sign out" }));
 
@@ -727,7 +733,7 @@ describe("PeacePadStagingRuntime gates", () => {
     const deleteAccount = jest.fn(async () => { throw new Error("PeacePad could not verify the account deletion receipt."); });
     (createStagingCoordinationClient as jest.Mock).mockReturnValue({ deleteAccount });
     render(<PeacePadStagingRuntime environment={environment} fetcher={sessionResponse({ ...valid, memberships: [] })} supabase={supabase}>ready</PeacePadStagingRuntime>);
-    await waitFor(() => expect(screen.getByText("Create or join a family")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Start with PeacePad")).toBeTruthy());
 
     fireEvent.press(screen.getByRole("button", { name: "Delete staging account" }));
     fireEvent.press(screen.getByRole("button", { name: "Delete account permanently" }));
@@ -854,7 +860,7 @@ describe("PeacePadStagingRuntime gates", () => {
       listConversations: jest.fn(async () => [])
     });
     render(<PeacePadStagingRuntime environment={environment} fetcher={sessionResponse()} supabase={supabase}>ready</PeacePadStagingRuntime>);
-    await waitFor(() => expect(screen.getByText("Invite a co-parent")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Invite another parent")).toBeTruthy());
     fireEvent.press(screen.getByRole("button", { name: "Delete staging account" }));
     fireEvent.press(screen.getByRole("button", { name: "Delete account permanently" }));
     await waitFor(() => expect(deleteAccount).toHaveBeenCalledTimes(1));
@@ -882,7 +888,7 @@ describe("PeacePadStagingRuntime gates", () => {
 
     render(<PeacePadStagingRuntime environment={productionEnvironment} fetcher={fetcher as unknown as typeof fetch} supabase={productionSupabase}>ready</PeacePadStagingRuntime>);
 
-    await waitFor(() => expect(screen.getByText("Create or join a family")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Start with PeacePad")).toBeTruthy());
     expect(bootstrapIdentity).toHaveBeenCalledWith("New Parent", "ca");
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
@@ -898,15 +904,44 @@ describe("PeacePadStagingRuntime gates", () => {
       </PeacePadStagingRuntime>
     );
 
-    await waitFor(() => expect(screen.getByRole("header", { name: "Invite a co-parent" })).toBeTruthy());
-    fireEvent.press(screen.getByRole("button", { name: "Continue without a co-parent" }));
+    await waitFor(() => expect(screen.getByRole("header", { name: "Invite another parent" })).toBeTruthy());
+    fireEvent.press(screen.getByRole("button", { name: "Start on my own" }));
 
     expect(await screen.findByTestId("solo-workspace")).toBeTruthy();
     expect(screen.getByRole("header", { name: "Your private PeacePad space" })).toBeTruthy();
-    expect(screen.getByText(/Nothing is shared with another parent yet/)).toBeTruthy();
+    expect(screen.getByText(/Nothing is shared with another parent/)).toBeTruthy();
     expect(SecureStore.setItemAsync).toHaveBeenCalledWith(
       `peacepad_v2_solo:${IDENTITY}:${FAMILY}`,
       "enabled"
     );
+  });
+
+  it("gives a sole parent the legacy Pause draft and shares only when they choose", async () => {
+    const shareSpy = jest.spyOn(Share, "share").mockResolvedValue({ action: Share.sharedAction });
+    (useSupabaseSession as jest.Mock).mockReturnValue(authValue());
+    (createStagingCoordinationClient as jest.Mock).mockReturnValue({ listConversations: jest.fn(async () => []) });
+
+    render(
+      <PeacePadStagingRuntime environment={environment} fetcher={sessionResponse()} supabase={supabase}>
+        ready
+      </PeacePadStagingRuntime>
+    );
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Start on my own" })).toBeTruthy());
+    fireEvent.press(screen.getByRole("button", { name: "Start on my own" }));
+    const draft = await screen.findByLabelText("Private draft");
+    await waitFor(() => expect(draft.props.editable).toBe(true));
+    fireEvent.changeText(draft, "I would like to talk about Saturday.");
+    expect(SecureStore.setItemAsync).toHaveBeenCalledWith(
+      `peacepad_v2_solo_draft:${IDENTITY}:${FAMILY}`,
+      "I would like to talk about Saturday.",
+      { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY }
+    );
+    fireEvent.press(screen.getByRole("button", { name: "Share draft" }));
+    await waitFor(() => expect(shareSpy).toHaveBeenCalledWith({
+      message: "I would like to talk about Saturday.",
+      title: "PeacePad"
+    }));
+    shareSpy.mockRestore();
   });
 });
