@@ -93,13 +93,20 @@ self-conversation or synthetic UUID.
 
 ## Continuous candidate loop
 
+The shared `assets/icon.png` was corrected in this release loop. The previous
+asset contained a large white canvas around the purple PeacePad mark; the new
+asset crops that canvas so the mark fills the launcher/store tile on both
+platforms. The replacement requires new signed artifacts and fresh device
+verification; the earlier code `46` / build `7` candidates are therefore
+non-qualifying for this visual fix.
+
 The next replacement candidate is intentionally monotonic and must be tested
 as one cross-platform source revision:
 
 | Candidate | Source | Runtime | Store identity |
 | --- | --- | --- | --- |
-| Android | `27c8df63d` | Canada production, writes enabled | `2.0.1` / code `46` |
-| iOS | `27c8df63d` | Canada production, writes enabled | `2.0.1` / build `7` |
+| Android | pending replacement commit | Canada production, writes enabled | `2.0.1` / code `47` |
+| iOS | pending replacement commit | Canada production, writes enabled | `2.0.1` / build `8` |
 
 Use this order for every change:
 
