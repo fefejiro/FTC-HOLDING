@@ -11,6 +11,7 @@ import type {
   LayerVisibility,
   MessageCheckPreference,
   MessageEvent,
+  ParentingTask,
   ParticipantGrant,
   PrivateAttachment,
   PrivateAttachmentDownload,
@@ -195,6 +196,14 @@ export type CreateScheduleEventInput = Readonly<
   >
 >;
 
+export type CreateParentingTaskInput = Readonly<{
+  familyCircleId: EntityId;
+  title: string;
+  dueAt: string | null;
+  assignedToIdentityId: EntityId | null;
+  visibility: LayerVisibility;
+}>;
+
 export type CreateConversationInput = Readonly<{
   familyCircleId: EntityId;
   participantIdentityIds: readonly EntityId[];
@@ -281,6 +290,10 @@ export interface PeacePadCoordinationApi {
   createScheduleEvent(input: CreateScheduleEventInput, context: WriteContext): Promise<ScheduleEvent>;
   updateScheduleEvent(event: ScheduleEvent, context: WriteContext): Promise<ScheduleEvent>;
   deleteScheduleEvent(eventId: EntityId, context: WriteContext): Promise<void>;
+  listParentingTasks(familyCircleId: EntityId): Promise<readonly ParentingTask[]>;
+  createParentingTask(input: CreateParentingTaskInput, context: WriteContext): Promise<ParentingTask>;
+  updateParentingTask(task: ParentingTask, context: WriteContext): Promise<ParentingTask>;
+  deleteParentingTask(taskId: EntityId, context: WriteContext): Promise<void>;
   listConversations(familyCircleId: EntityId): Promise<readonly Conversation[]>;
   createConversation(input: CreateConversationInput, context: WriteContext): Promise<Conversation>;
   listMessages(conversationId: EntityId): Promise<readonly MessageEvent[]>;
@@ -532,6 +545,22 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
 
   async deleteScheduleEvent(eventId: EntityId, context: WriteContext) {
     await this.write(`/api/v2/schedule-events/${encodeURIComponent(eventId)}`, "DELETE", undefined, context);
+  }
+
+  listParentingTasks(familyCircleId: EntityId) {
+    return this.request<readonly ParentingTask[]>(`/api/v2/parenting-tasks?familyCircleId=${encodeURIComponent(familyCircleId)}`);
+  }
+
+  createParentingTask(input: CreateParentingTaskInput, context: WriteContext) {
+    return this.write<ParentingTask>("/api/v2/parenting-tasks", "POST", input, context);
+  }
+
+  updateParentingTask(task: ParentingTask, context: WriteContext) {
+    return this.write<ParentingTask>(`/api/v2/parenting-tasks/${encodeURIComponent(task.id)}`, "PATCH", task, context);
+  }
+
+  async deleteParentingTask(taskId: EntityId, context: WriteContext) {
+    await this.write(`/api/v2/parenting-tasks/${encodeURIComponent(taskId)}`, "DELETE", undefined, context);
   }
 
   createAttachmentUploadIntent(input: CreateAttachmentUploadIntentInput, context: WriteContext) {

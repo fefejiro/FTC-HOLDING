@@ -70,6 +70,7 @@ function Probe() {
   return (
     <>
       <Text testID="hydrated">{String(state.messageCheckHydrated)}</Text>
+      <Text testID="connected">{String(state.connected)}</Text>
       <Text testID="enabled">{String(state.messageCheckEnabled)}</Text>
       <Button
         disabled={!state.messageCheckHydrated}
@@ -100,6 +101,23 @@ describe("persisted Message Check runtime", () => {
     expect(api.getMessageCheckPreference).toHaveBeenCalledTimes(1);
     expect(api.getMessageCheckPreference).toHaveBeenCalledWith(CONVERSATION_A);
     expect(JSON.stringify((api.getMessageCheckPreference as jest.Mock).mock.calls)).not.toMatch(/conversation-primary|identity-current|family-current/);
+  });
+
+  it("hydrates a private signed-in space without inventing a shared conversation", async () => {
+    const api = apiWithMessageCheck();
+    const privateRuntime: CoordinationRuntime = {
+      ...runtime(),
+      conversationId: undefined
+    };
+    renderProbe(api, privateRuntime);
+
+    await waitFor(() => expect(screen.getByTestId("hydrated")).toHaveTextContent("true"), { timeout: 10_000 });
+    expect(screen.getByTestId("connected")).toHaveTextContent("false");
+    expect(screen.getByTestId("enabled")).toHaveTextContent("false");
+    expect(api.listCalendarLayers).toHaveBeenCalledWith(FAMILY_A);
+    expect(api.listScheduleEvents).toHaveBeenCalledWith(FAMILY_A);
+    expect(api.listMessages).not.toHaveBeenCalled();
+    expect(api.getMessageCheckPreference).not.toHaveBeenCalled();
   });
 
   it("does not allow a toggle before hydration completes", async () => {

@@ -7,13 +7,15 @@ import { TaskNavigation, type PrimaryTaskScreen } from "./components/TaskNavigat
 import {
   CalendarScreen,
   CoordinationHomeScreen,
+  ActivitySuggestionsScreen,
   InvitationScreen,
   MessagesScreen,
   MoreScreen,
   RecordsHomeScreen,
+  ParentingTasksScreen,
   type CoordinationScreen
 } from "./coordination/CoordinationScreens";
-import { CoordinationStateProvider } from "./coordination/CoordinationState";
+import { CoordinationStateProvider, useCoordinationState } from "./coordination/CoordinationState";
 import { environmentConfig, resolveSupabaseRuntimeDirectory, type PeacePadSupabaseConfig } from "./config/environment";
 import { StagingRegionGate } from "./config/StagingRegionGate";
 import { FoundationScreen } from "./foundation/FoundationScreen";
@@ -26,7 +28,7 @@ import { AudioCallScreen } from "./calls/AudioCallScreen";
 import { AudioCallStateProvider } from "./calls/AudioCallState";
 
 export type AppScreen = "foundation" | CoordinationScreen;
-type RootStackParamList = Record<AppScreen, { code?: string } | undefined>;
+type RootStackParamList = Record<AppScreen, { activityTitle?: string; code?: string } | undefined>;
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export const peacePadLinking: LinkingOptions<RootStackParamList> = {
@@ -37,7 +39,7 @@ export const peacePadLinking: LinkingOptions<RootStackParamList> = {
 declare const process: { env?: Record<string, string | undefined> };
 
 export function resolveStartScreen(value?: string): AppScreen {
-  const supported = new Set<AppScreen>(["foundation", "home", "messages", "calendar", "invite", "records", "calls", "more"]);
+  const supported = new Set<AppScreen>(["foundation", "home", "messages", "calendar", "activities", "tasks", "invite", "records", "calls", "more"]);
   return value && supported.has(value as AppScreen) ? value as AppScreen : "foundation";
 }
 
@@ -46,9 +48,9 @@ export function PeacePadCoordinationApp({ startScreen, wrapLocalization = true, 
     <NavigationContainer linking={startScreen ? undefined : peacePadLinking}>
       <StatusBar barStyle="dark-content" />
       <Stack.Navigator initialRouteName={resolveStartScreen(startScreen ?? process.env?.EXPO_PUBLIC_PEACEPAD_LAB_START_SCREEN)} screenOptions={{ headerShown: false }}>
-        {(["foundation", "home", "messages", "calendar", "invite", "records", "calls", "more"] as const).map((name) => (
+        {(["foundation", "home", "messages", "calendar", "activities", "tasks", "invite", "records", "calls", "more"] as const).map((name) => (
           <Stack.Screen key={name} name={name}>
-            {({ route }) => <CoordinationRoute activeScreen={name} invitationCode={route.params?.code} />}
+            {({ route }) => <CoordinationRoute activeScreen={name} activityTitle={route.params?.activityTitle} invitationCode={route.params?.code} />}
           </Stack.Screen>
         ))}
       </Stack.Navigator>
@@ -138,7 +140,8 @@ function SelectedPeacePadStagingApp({ staging }: { staging: PeacePadSupabaseConf
   );
 }
 
-function CoordinationRoute({ activeScreen, invitationCode }: { activeScreen: AppScreen; invitationCode?: string }) {
+function CoordinationRoute({ activeScreen, activityTitle, invitationCode }: { activeScreen: AppScreen; activityTitle?: string; invitationCode?: string }) {
+  const { connected } = useCoordinationState();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const scrollRef = useRef<ScrollView>(null);
   const pendingScrollReset = useRef(false);
@@ -154,7 +157,7 @@ function CoordinationRoute({ activeScreen, invitationCode }: { activeScreen: App
     pendingScrollReset.current = false;
     scrollRef.current?.scrollTo({ animated: false, y: 0 });
   }, []);
-  const primary: PrimaryTaskScreen = activeScreen === "invite" || activeScreen === "foundation" || activeScreen === "calls" ? "home" : activeScreen;
+  const primary: PrimaryTaskScreen = activeScreen === "activities" || activeScreen === "tasks" || activeScreen === "invite" || activeScreen === "foundation" || activeScreen === "calls" || (!connected && activeScreen === "messages") ? "home" : activeScreen;
   return (
     <SafeAreaView style={styles.safe}>
       <PendingInvitationNavigation />
@@ -162,17 +165,27 @@ function CoordinationRoute({ activeScreen, invitationCode }: { activeScreen: App
         <ScrollView ref={scrollRef} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" onContentSizeChange={settleScrollReset}>
           {activeScreen === "foundation" ? <FoundationScreen onOpenLab={() => setScreen("home")} onPhaseChange={resetScroll} /> : null}
           {activeScreen === "home" ? <CoordinationHomeScreen setScreen={setScreen} /> : null}
-          {activeScreen === "messages" ? <MessagesScreen /> : null}
-          {activeScreen === "calendar" ? <CalendarScreen /> : null}
+          {activeScreen === "messages" ? connected ? <MessagesScreen /> : <ConnectionRequiredScreen setScreen={setScreen} /> : null}
+          {activeScreen === "calendar" ? <CalendarScreen initialEventTitle={activityTitle} /> : null}
+          {activeScreen === "activities" ? <ActivitySuggestionsScreen onPlanActivity={(title) => navigation.navigate("calendar", { activityTitle: title })} /> : null}
+          {activeScreen === "tasks" ? <ParentingTasksScreen /> : null}
           {activeScreen === "invite" ? <InvitationScreen initialCode={invitationCode} /> : null}
           {activeScreen === "records" ? <RecordsHomeScreen setScreen={setScreen} /> : null}
-          {activeScreen === "calls" ? <AudioCallScreen /> : null}
+          {activeScreen === "calls" ? connected ? <AudioCallScreen /> : <ConnectionRequiredScreen setScreen={setScreen} /> : null}
           {activeScreen === "more" ? <MoreScreen setScreen={setScreen} /> : null}
         </ScrollView>
-        {activeScreen !== "foundation" ? <TaskNavigation active={primary} onSelect={setScreen} /> : null}
+        {activeScreen !== "foundation" ? <TaskNavigation active={primary} available={connected ? undefined : ["home", "calendar", "records", "more"]} onSelect={setScreen} /> : null}
       </View>
     </SafeAreaView>
   );
+}
+
+function ConnectionRequiredScreen({ setScreen }: { setScreen: (screen: CoordinationScreen) => void }) {
+  return <View style={styles.connectionRequired}>
+    <Text accessibilityRole="header" style={styles.connectionRequiredTitle}>Connect another parent first</Text>
+    <Text style={styles.connectionRequiredBody}>Your private calendar and records are ready. Messages and calls become available after the other parent accepts an invitation.</Text>
+    <Text accessibilityRole="button" onPress={() => setScreen("invite")} style={styles.connectionRequiredLink}>Invite another parent</Text>
+  </View>;
 }
 
 const styles = StyleSheet.create({
@@ -181,5 +194,9 @@ const styles = StyleSheet.create({
   content: { flexGrow: 1, padding: spacing.lg },
   unavailable: { backgroundColor: colors.background, flex: 1, justifyContent: "center", padding: spacing.xl },
   unavailableTitle: { color: colors.text, fontSize: 28, fontWeight: "800", marginBottom: spacing.sm },
-  unavailableBody: { color: colors.muted, fontSize: 16 }
+  unavailableBody: { color: colors.muted, fontSize: 16 },
+  connectionRequired: { flex: 1, gap: spacing.md, justifyContent: "center", padding: spacing.xl },
+  connectionRequiredTitle: { color: colors.text, fontSize: 24, fontWeight: "800" },
+  connectionRequiredBody: { color: colors.muted, fontSize: 16, lineHeight: 24 },
+  connectionRequiredLink: { color: colors.brand, fontSize: 16, fontWeight: "800" }
 });

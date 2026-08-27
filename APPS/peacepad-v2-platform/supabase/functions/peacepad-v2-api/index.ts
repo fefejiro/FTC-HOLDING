@@ -250,6 +250,8 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     CONCURRENCY_CONFLICT: "CONCURRENCY_CONFLICT",
     IDEMPOTENCY_CONFLICT: "IDEMPOTENCY_CONFLICT",
     DEVICE_PUSH_ACCESS_DENIED: "DEVICE_PUSH_ACCESS_DENIED",
+    PARENTING_TASK_ACCESS_DENIED: "FAMILY_ACCESS_DENIED",
+    PARENTING_TASK_OWNER_REQUIRED: "FAMILY_ACCESS_DENIED",
   };
   const invalidRequestCodes = new Set([
     "CONSENT_TYPE_INVALID", "DISPLAY_NAME_INVALID", "EXPECTED_VERSION_INVALID",
@@ -261,7 +263,7 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     "CASE_BINDER_INVALID", "ATTACHMENT_INTENT_INVALID", "ATTACHMENT_INTENT_EXPIRED",
     "ATTACHMENT_OBJECT_MISMATCH", "ATTACHMENT_STATE_INVALID", "CASE_BINDER_ARCHIVED",
     "TIMELINE_REQUEST_INVALID", "TIMELINE_SOURCE_INVALID", "TIMELINE_SOURCE_ALREADY_LINKED",
-    "DEVICE_PUSH_INVALID", "DEVICE_PUSH_CONFIGURATION_INVALID",
+    "DEVICE_PUSH_INVALID", "DEVICE_PUSH_CONFIGURATION_INVALID", "PARENTING_TASK_INVALID", "PARENTING_TASK_ASSIGNEE_INVALID",
   ]);
   const safeCode = directCodes[message ?? ""] ?? (invalidRequestCodes.has(message ?? "") ? "INVALID_REQUEST" : "DATABASE_NOT_READY");
   const status = safeCode === "DATABASE_NOT_READY" ? 503
@@ -337,6 +339,9 @@ const writeOperation = (method: string, path: string, body: Record<string, unkno
   if (method === "POST" && path === "/api/v2/schedule-events") return "schedule_event.created";
   if (method === "PATCH" && /^\/api\/v2\/schedule-events\/[^/]+$/.test(path)) return "schedule_event.updated";
   if (method === "DELETE" && /^\/api\/v2\/schedule-events\/[^/]+$/.test(path)) return "schedule_event.deleted";
+  if (method === "POST" && path === "/api/v2/parenting-tasks") return "parenting_task.created";
+  if (method === "PATCH" && /^\/api\/v2\/parenting-tasks\/[^/]+$/.test(path)) return "parenting_task.updated";
+  if (method === "DELETE" && /^\/api\/v2\/parenting-tasks\/[^/]+$/.test(path)) return "parenting_task.deleted";
   if (method === "POST" && path === "/api/v2/case-binders") return "case_binder.created";
   if (method === "PATCH" && /^\/api\/v2\/case-binders\/[^/]+$/.test(path)) return "case_binder.archived";
   if (method === "POST" && path === "/api/v2/attachment-upload-intents") return "attachment_intent.prepared";
@@ -706,14 +711,16 @@ const handler = async (request: Request): Promise<Response> => {
     return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data ?? [], requestId, config);
   }
 
-  if (request.method === "GET" && ["/api/v2/calendar-layers", "/api/v2/schedule-events"].includes(path)) {
+  if (request.method === "GET" && ["/api/v2/calendar-layers", "/api/v2/schedule-events", "/api/v2/parenting-tasks"].includes(path)) {
     const authenticated = await authenticate(request, config);
     if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
     const familyId = new URL(request.url).searchParams.get("familyCircleId")?.trim() ?? "";
     if (!isUuid(familyId)) return failure(request, 400, "INVALID_REQUEST", "A valid family is required.", requestId, config);
     const rpcName = path === "/api/v2/calendar-layers"
       ? "peacepad_v2_list_calendar_layers"
-      : "peacepad_v2_list_schedule_events";
+      : path === "/api/v2/schedule-events"
+        ? "peacepad_v2_list_schedule_events"
+        : "peacepad_v2_list_parenting_tasks";
     const { data, error } = await authenticated.admin.rpc(rpcName, {
       p_identity_id: authenticated.user.id,
       p_region: config.region,
@@ -958,6 +965,8 @@ const handler = async (request: Request): Promise<Response> => {
   const calendarLayerMatch = path.match(/^\/api\/v2\/calendar-layers\/([^/]+)$/);
   const isScheduleEventCreation = path === "/api/v2/schedule-events";
   const scheduleEventMatch = path.match(/^\/api\/v2\/schedule-events\/([^/]+)$/);
+  const isParentingTaskCreation = path === "/api/v2/parenting-tasks";
+  const parentingTaskMatch = path.match(/^\/api\/v2\/parenting-tasks\/([^/]+)$/);
   const isMessageCheckUpdate = request.method === "PUT" && Boolean(conversationMessageCheckMatch);
   const isCaseBinderCreation = path === "/api/v2/case-binders";
   const caseBinderMatch = path.match(/^\/api\/v2\/case-binders\/([^/]+)$/);
@@ -975,10 +984,10 @@ const handler = async (request: Request): Promise<Response> => {
       "/api/v2/families",
       "/api/v2/invitations",
       "/api/v2/account/export",
-    ].includes(path) || isInvitationTransition || isConversationCreation || isMessageSend || isMessageLifecycle || isMessageCorrection || isCalendarLayerCreation || isScheduleEventCreation || isCaseBinderCreation || isAttachmentIntentCreation || attachmentCompletionMatch || isTimelineEntryCreation || isAudioCallCreation || audioCallTransition || isDevicePushRegistration)) ||
-    (request.method === "PATCH" && (isProfileUpdate || calendarLayerMatch || scheduleEventMatch || caseBinderMatch)) ||
+    ].includes(path) || isInvitationTransition || isConversationCreation || isMessageSend || isMessageLifecycle || isMessageCorrection || isCalendarLayerCreation || isScheduleEventCreation || isParentingTaskCreation || isCaseBinderCreation || isAttachmentIntentCreation || attachmentCompletionMatch || isTimelineEntryCreation || isAudioCallCreation || audioCallTransition || isDevicePushRegistration)) ||
+    (request.method === "PATCH" && (isProfileUpdate || calendarLayerMatch || scheduleEventMatch || parentingTaskMatch || caseBinderMatch)) ||
     isMessageCheckUpdate ||
-    (request.method === "DELETE" && (isInvitationRevocation || isAccountDeletion || familyExitMatch || calendarLayerMatch || scheduleEventMatch || devicePushRevocation))
+    (request.method === "DELETE" && (isInvitationRevocation || isAccountDeletion || familyExitMatch || calendarLayerMatch || scheduleEventMatch || parentingTaskMatch || devicePushRevocation))
   ) {
     const authenticated = await authenticate(request, config);
     if (!authenticated) {
@@ -1300,6 +1309,43 @@ const handler = async (request: Request): Promise<Response> => {
           p_calendar_layer_id: layerId, p_child_profile_ids: childProfileIds, p_event_type: eventType,
           p_title: title, p_description: description, p_starts_at: startsAt, p_ends_at: endsAt,
           p_status: status, p_recurrence: recurrence, p_visibility_override: visibilityOverride,
+        } : {}),
+      };
+      const { data, error } = await authenticated.admin.rpc(rpcName, rpcArguments);
+      return error ? rpcFailure(request, requestId, config, error.message)
+        : json(request, isCreate ? 201 : 200, data, requestId, config);
+    }
+
+    if (isParentingTaskCreation || parentingTaskMatch) {
+      const isCreate = request.method === "POST";
+      const familyId = typeof body.familyCircleId === "string" ? body.familyCircleId : "";
+      const taskId = parentingTaskMatch ? decodeURIComponent(parentingTaskMatch[1]) : "";
+      const title = typeof body.title === "string" ? body.title.trim() : "";
+      const dueAt = body.dueAt === null || typeof body.dueAt === "string" ? body.dueAt : null;
+      const assignedToIdentityId = body.assignedToIdentityId === null || typeof body.assignedToIdentityId === "string"
+        ? body.assignedToIdentityId : null;
+      const status = typeof body.status === "string" ? body.status : "open";
+      const visibility = body.visibility && typeof body.visibility === "object" && !Array.isArray(body.visibility)
+        ? body.visibility : null;
+      if ((isCreate && !isUuid(familyId)) || (!isCreate && !isUuid(taskId)) || (request.method !== "DELETE" && (
+        !title || title.length > 160 || (dueAt !== null && (typeof dueAt !== "string" || Number.isNaN(Date.parse(dueAt))))
+        || (assignedToIdentityId !== null && (typeof assignedToIdentityId !== "string" || !isUuid(assignedToIdentityId))) || !visibility
+      ))) return failure(request, 400, "INVALID_REQUEST", "Task details are invalid.", requestId, config);
+      const expectedVersionHeader = (request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? "";
+      const expectedVersion = Number(expectedVersionHeader);
+      if (!isCreate && (!Number.isInteger(expectedVersion) || expectedVersion < 1)) {
+        return failure(request, 400, "INVALID_REQUEST", "A valid expected version is required.", requestId, config);
+      }
+      const rpcName = isCreate ? "peacepad_v2_create_parenting_task"
+        : request.method === "PATCH" ? "peacepad_v2_update_parenting_task"
+        : "peacepad_v2_delete_parenting_task";
+      const rpcArguments: Record<string, unknown> = {
+        p_identity_id: authenticated.user.id, p_region: config.region,
+        p_idempotency_key: databaseWriteToken, p_schema_version: context.schemaVersion,
+        ...(isCreate ? { p_family_id: familyId } : { p_task_id: taskId, p_expected_version: expectedVersion }),
+        ...(request.method !== "DELETE" ? {
+          p_title: title, p_due_at: dueAt, p_assigned_to_identity_id: assignedToIdentityId,
+          ...(isCreate ? {} : { p_status: status }), p_visibility: visibility,
         } : {}),
       };
       const { data, error } = await authenticated.admin.rpc(rpcName, rpcArguments);

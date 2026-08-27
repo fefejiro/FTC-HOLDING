@@ -48,7 +48,7 @@ describe("PublicOnboardingAuth", () => {
 
   it("opens with a short, warm first-run introduction and no staging language", async () => {
     render(<LocalizationProvider initialLocale="en" production><PublicOnboardingAuth /></LocalizationProvider>);
-    expect(await screen.findByText("A calmer space for co-parenting")).toBeTruthy();
+    expect(await screen.findByText("A calmer way to coordinate parenting")).toBeTruthy();
     expect(screen.getByText("Communicate with care, even when the moment is difficult.")).toBeTruthy();
     expect(screen.queryByText(/staging|Canada|stored in/i)).toBeNull();
   });
@@ -124,8 +124,8 @@ describe("PublicOnboardingAuth", () => {
   });
 
   it.each([
-    ["fr", "Un espace plus calme pour la coparentalité"],
-    ["es", "Un espacio más tranquilo para la crianza compartida"]
+    ["fr", "Une façon plus calme de coordonner la parentalité"],
+    ["es", "Una forma más tranquila de coordinar la crianza"]
   ])("localizes the first public introduction in %s", async (locale, title) => {
     render(<LocalizationProvider initialLocale={locale} production><PublicOnboardingAuth /></LocalizationProvider>);
     expect(await screen.findByText(title)).toBeTruthy();

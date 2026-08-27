@@ -11,6 +11,7 @@ $invitationMigrationPath = Join-Path $platformRoot 'supabase/migrations/20260809
 $accountDeletionMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090003_v2_account_deletion.sql'
 $messagingMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090004_v2_persistent_messaging.sql'
 $calendarMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090005_v2_persistent_calendar.sql'
+$parentingTasksMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608270001_v2_parenting_tasks.sql'
 $messageCheckMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090006_v2_message_check.sql'
 $sessionMembershipMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090007_v2_session_memberships.sql'
 $sessionIdentityVersionMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090008_v2_session_identity_version.sql'
@@ -41,7 +42,7 @@ $authCleanupRunnerPath = Join-Path $platformRoot 'scripts/run-auth-cleanup.ps1'
 $deployRunnerPath = Join-Path $platformRoot 'scripts/deploy-supabase-free-staging.ps1'
 $configPath = Join-Path $platformRoot 'supabase/config.toml'
 
-foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $idempotencyReceiptMigrationPath, $privateRecordsMigrationPath, $privateAttachmentsMigrationPath, $devicePushMigrationPath, $devicePushProofPath, $familyExitMigrationPath, $familyExitProofPath, $profileUpdateMigrationPath, $profileUpdateProofPath, $privateTimelineMigrationPath, $audioCallMigrationPath, $audioCallProofPath, $audioCallSignalingMigrationPath, $audioCallSignalingProofPath, $audioCallSignalValidatorPath, $audioCallSignalTestPath, $audioCallTurnMigrationPath, $audioCallTurnProofPath, $audioCallTurnIssuerPath, $audioCallTurnTestPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
+foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $parentingTasksMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $idempotencyReceiptMigrationPath, $privateRecordsMigrationPath, $privateAttachmentsMigrationPath, $devicePushMigrationPath, $devicePushProofPath, $familyExitMigrationPath, $familyExitProofPath, $profileUpdateMigrationPath, $profileUpdateProofPath, $privateTimelineMigrationPath, $audioCallMigrationPath, $audioCallProofPath, $audioCallSignalingMigrationPath, $audioCallSignalingProofPath, $audioCallSignalValidatorPath, $audioCallSignalTestPath, $audioCallTurnMigrationPath, $audioCallTurnProofPath, $audioCallTurnIssuerPath, $audioCallTurnTestPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
     throw "Required Supabase staging file is missing: $path"
   }
@@ -55,6 +56,7 @@ $invitationMigration = Get-Content -LiteralPath $invitationMigrationPath -Raw
 $accountDeletionMigration = Get-Content -LiteralPath $accountDeletionMigrationPath -Raw
 $messagingMigration = Get-Content -LiteralPath $messagingMigrationPath -Raw
 $calendarMigration = Get-Content -LiteralPath $calendarMigrationPath -Raw
+$parentingTasksMigration = Get-Content -LiteralPath $parentingTasksMigrationPath -Raw
 $messageCheckMigration = Get-Content -LiteralPath $messageCheckMigrationPath -Raw
 $sessionMembershipMigration = Get-Content -LiteralPath $sessionMembershipMigrationPath -Raw
 $sessionIdentityVersionMigration = Get-Content -LiteralPath $sessionIdentityVersionMigrationPath -Raw
@@ -111,6 +113,7 @@ $requiredFunctionPatterns = @(
   'peacepad_v2_send_message',
   '/api/v2/calendar-layers',
   '/api/v2/schedule-events',
+  '/api/v2/parenting-tasks',
   'peacepad_v2_create_calendar_layer',
   'peacepad_v2_create_schedule_event',
   '/api/v2/message-previews',
@@ -220,6 +223,41 @@ foreach ($pattern in @(
 )) {
   if ($sessionIdentityVersionMigration -notmatch $pattern) {
     throw "Session identity-version migration is missing required boundary: $pattern"
+  }
+}
+foreach ($table in @('parenting_task')) {
+  if ($parentingTasksMigration -notmatch "create table if not exists peacepad_v2\.$table") {
+    throw "Parenting Tasks migration is missing table: $table"
+  }
+  if ($parentingTasksMigration -notmatch "alter table peacepad_v2\.$table enable row level security") {
+    throw "Parenting Tasks migration is missing fail-closed RLS: $table"
+  }
+}
+foreach ($rpc in @(
+  'peacepad_v2_list_parenting_tasks',
+  'peacepad_v2_create_parenting_task',
+  'peacepad_v2_update_parenting_task',
+  'peacepad_v2_delete_parenting_task'
+)) {
+  if ($parentingTasksMigration -notmatch "create or replace function public\.$rpc") {
+    throw "Parenting Tasks migration is missing RPC: $rpc"
+  }
+  if ($parentingTasksMigration -notmatch "revoke all on function public\.$rpc") {
+    throw "Parenting Tasks RPC is not revoked from mobile roles: $rpc"
+  }
+}
+foreach ($pattern in @(
+  'task_visibility_allows',
+  'visibility_valid',
+  'PARENTING_TASK_ACCESS_DENIED',
+  'PARENTING_TASK_OWNER_REQUIRED',
+  'CONCURRENCY_CONFLICT',
+  "'parenting_task.created'",
+  "'parenting_task.updated'",
+  "'parenting_task.deleted'"
+)) {
+  if ($parentingTasksMigration -notmatch $pattern) {
+    throw "Parenting Tasks migration is missing required boundary: $pattern"
   }
 }
 foreach ($pattern in @(
