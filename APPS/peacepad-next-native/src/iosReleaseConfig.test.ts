@@ -178,7 +178,7 @@ describe("PeacePad iOS release variant", () => {
       version: "2.0.1",
       android: {
         package: "ca.peacepad.family",
-        versionCode: 44
+        versionCode: 45
       },
       extra: {
         environment: "production",
