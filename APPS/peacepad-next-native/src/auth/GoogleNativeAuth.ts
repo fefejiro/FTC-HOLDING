@@ -37,6 +37,24 @@ export class GoogleIdentityError extends Error {
   }
 }
 
+/**
+ * Google Play Services reports a package/certificate registration failure as
+ * a provider error rather than a missing configuration value. Treat that
+ * specific failure as configuration so the UI can fail closed and release
+ * diagnostics can point at the OAuth client registration instead of retrying
+ * a broken identity flow.
+ */
+function isGoogleDeveloperConfigurationError(cause: unknown): boolean {
+  const candidate = cause as { code?: unknown; message?: unknown } | undefined;
+  const code = candidate?.code;
+  const message = typeof candidate?.message === "string" ? candidate.message : "";
+  return code === 10
+    || code === "10"
+    || code === "DEVELOPER_ERROR"
+    || code === "12500"
+    || /not registered to use OAuth2\.0|DEVELOPER_ERROR|12500/i.test(message);
+}
+
 function readBundledGoogleValues(): EnvironmentValues {
   // Expo replaces only direct EXPO_PUBLIC references in the application bundle.
   return {
@@ -79,7 +97,15 @@ export async function requestGoogleIdentityCredential(
   if (Platform.OS === "android" && !(await adapter.hasPlayServices())) {
     throw new GoogleIdentityError("provider-unavailable");
   }
-  const result = await adapter.signIn();
+  let result: GoogleIdentityResult;
+  try {
+    result = await adapter.signIn();
+  } catch (cause) {
+    if (isGoogleDeveloperConfigurationError(cause)) {
+      throw new GoogleIdentityError("configuration");
+    }
+    throw cause;
+  }
   if (result.type === "cancelled") return undefined;
   const tokens = await adapter.getTokens();
   const idToken = tokens.idToken || result.idToken;
