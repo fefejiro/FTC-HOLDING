@@ -105,8 +105,15 @@ as one cross-platform source revision:
 
 | Candidate | Source | Runtime | Store identity |
 | --- | --- | --- | --- |
-| Android | pending replacement commit | Canada production, writes enabled | `2.0.1` / code `47` |
-| iOS | pending replacement commit | Canada production, writes enabled | `2.0.1` / build `8` |
+| Android | `158a9350147c6f1b874d7f3c6a643e3f80c41391` | Canada production, writes enabled | `2.0.1` / code `47` |
+| iOS | `158a9350147c6f1b874d7f3c6a643e3f80c41391` | Canada production, writes enabled | `2.0.1` / build `8` |
+
+The iOS replacement workflow is uploading the signed build in run
+`33087801116`. The Android replacement workflow `33087798042` was cancelled
+while waiting for the remote EAS build (`06765820-663b-41b4-b8cd-9bcea08c36cf`);
+it produced no AAB and is non-qualifying. Neither result is public-store
+availability evidence until the exact artifact is processed, installed, and
+verified.
 
 Use this order for every change:
 
