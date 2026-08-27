@@ -1,4 +1,5 @@
 import React from "react";
+import * as SecureStore from "expo-secure-store";
 import { Linking, Text } from "react-native";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { createStagingCoordinationClient } from "../staging/StagingCoordinationClient";
@@ -227,6 +228,23 @@ describe("PeacePadStagingRuntime gates", () => {
     view.rerender(<PeacePadStagingRuntime environment={environment} fetcher={sessionResponse()} supabase={supabase}>ready</PeacePadStagingRuntime>);
     await waitFor(() => expect(screen.getByText("Invite a co-parent")).toBeTruthy());
     expect(screen.queryByText("ready")).toBeNull();
+  });
+
+  it("lets a new account continue privately before creating a family", async () => {
+    (useSupabaseSession as jest.Mock).mockReturnValue(authValue());
+    (createStagingCoordinationClient as jest.Mock).mockReturnValue({ listConversations: jest.fn(async () => []) });
+
+    render(
+      <PeacePadStagingRuntime environment={environment} fetcher={sessionResponse({ ...valid, memberships: [] })} supabase={supabase}>
+        ready
+      </PeacePadStagingRuntime>
+    );
+
+    await waitFor(() => expect(screen.getByText("Create or join a family")).toBeTruthy());
+    fireEvent.press(screen.getByRole("button", { name: "Continue without a co-parent" }));
+    expect(await screen.findByTestId("solo-workspace")).toBeTruthy();
+    expect(screen.getByText(/You can explore PeacePad privately now/)).toBeTruthy();
+    expect(SecureStore.setItemAsync).toHaveBeenCalledWith(`peacepad_v2_solo_onboarding:${IDENTITY}`, "enabled");
   });
 
   it.each([
@@ -867,5 +885,28 @@ describe("PeacePadStagingRuntime gates", () => {
     await waitFor(() => expect(screen.getByText("Create or join a family")).toBeTruthy());
     expect(bootstrapIdentity).toHaveBeenCalledWith("New Parent", "ca");
     expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it("lets a sole parent continue without an invitation and remembers that choice", async () => {
+    (useSupabaseSession as jest.Mock).mockReturnValue(authValue());
+    const fetcher = sessionResponse();
+    (createStagingCoordinationClient as jest.Mock).mockReturnValue({ listConversations: jest.fn(async () => []) });
+
+    render(
+      <PeacePadStagingRuntime environment={environment} fetcher={fetcher} supabase={supabase}>
+        ready
+      </PeacePadStagingRuntime>
+    );
+
+    await waitFor(() => expect(screen.getByRole("header", { name: "Invite a co-parent" })).toBeTruthy());
+    fireEvent.press(screen.getByRole("button", { name: "Continue without a co-parent" }));
+
+    expect(await screen.findByTestId("solo-workspace")).toBeTruthy();
+    expect(screen.getByRole("header", { name: "Your private PeacePad space" })).toBeTruthy();
+    expect(screen.getByText(/Nothing is shared with another parent yet/)).toBeTruthy();
+    expect(SecureStore.setItemAsync).toHaveBeenCalledWith(
+      `peacepad_v2_solo:${IDENTITY}:${FAMILY}`,
+      "enabled"
+    );
   });
 });

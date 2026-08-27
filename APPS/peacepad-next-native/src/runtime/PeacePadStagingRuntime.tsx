@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import * as SecureStore from "expo-secure-store";
 import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import type { CreatedInvitation, PeacePadCoordinationApi } from "../api/CoordinationApi";
 import { RecordsStateProvider } from "../records/RecordsState";
@@ -25,6 +26,8 @@ import {
 } from "../notifications/DevicePushRegistration";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const soloWorkspaceStorageKey = (identityId: string, familyCircleId: string) => `peacepad_v2_solo:${identityId}:${familyCircleId}`;
+const soloOnboardingStorageKey = (identityId: string) => `peacepad_v2_solo_onboarding:${identityId}`;
 export function invitationCodeFromStagingUrl(url?: string | null, expectedProtocol = "peacepadnextlab:"): string | undefined {
   if (!url || url.trim() !== url) return undefined;
   try {
@@ -74,6 +77,7 @@ type RuntimeState =
   | { status: "membership-empty"; api: PeacePadCoordinationApi; verified: VerifiedSessionContext }
   | { status: "membership-selection"; api: PeacePadCoordinationApi; memberships: readonly Membership[]; verified: VerifiedSessionContext }
   | { status: "conversation-empty"; api: PeacePadCoordinationApi; membership: Membership; verified: VerifiedSessionContext }
+  | { status: "solo"; api: PeacePadCoordinationApi; membership?: Membership; verified: VerifiedSessionContext }
   | { status: "ready"; api: PeacePadCoordinationApi; runtime: CoordinationRuntime; verified: VerifiedSessionContext }
   | { status: "error"; message: string };
 
@@ -251,6 +255,32 @@ export function PeacePadStagingRuntime({
     await auth.signOut();
   }, [auth.signOut, runtimeState]);
 
+  const enterSoloWorkspace = useCallback((api: PeacePadCoordinationApi, membership: Membership, verified: VerifiedSessionContext) => {
+    // This marker is scoped to the verified identity and family. It contains no
+    // family content and only remembers that this user chose to continue alone.
+    void SecureStore.setItemAsync(soloWorkspaceStorageKey(verified.actor.identityId, membership.familyCircleId), "enabled").catch(() => undefined);
+    setIncomingInvitationCode(undefined);
+    setRuntimeState({ status: "solo", api, membership, verified });
+  }, []);
+
+  const enterSoloOnboarding = useCallback((api: PeacePadCoordinationApi, verified: VerifiedSessionContext) => {
+    // This is an identity-scoped preference only. No family, conversation, or
+    // coordination record is created until the user chooses to create one.
+    void SecureStore.setItemAsync(soloOnboardingStorageKey(verified.actor.identityId), "enabled").catch(() => undefined);
+    setIncomingInvitationCode(undefined);
+    setRuntimeState({ status: "solo", api, verified });
+  }, []);
+
+  const leaveSoloWorkspace = useCallback(async (api: PeacePadCoordinationApi, membership: Membership | undefined, verified: VerifiedSessionContext) => {
+    if (membership) {
+      await SecureStore.deleteItemAsync(soloWorkspaceStorageKey(verified.actor.identityId, membership.familyCircleId)).catch(() => undefined);
+      setRuntimeState({ status: "conversation-empty", api, membership, verified });
+    } else {
+      await SecureStore.deleteItemAsync(soloOnboardingStorageKey(verified.actor.identityId)).catch(() => undefined);
+      setRuntimeState({ status: "membership-empty", api, verified });
+    }
+  }, []);
+
   const leaveVerifiedFamily = async (api: PeacePadCoordinationApi, runtime: CoordinationRuntime) => {
     if (leaveFamilyInFlight.current) return;
     leaveFamilyInFlight.current = true;
@@ -393,7 +423,11 @@ export function PeacePadStagingRuntime({
       const memberships = [...verified.memberships].sort((left, right) => left.familyName.localeCompare(right.familyName) || left.familyCircleId.localeCompare(right.familyCircleId));
       if (!memberships.length) {
         if (pendingActivation) throw new Error("The accepted family access is not present in the refreshed session.");
-        setRuntimeState({ status: "membership-empty", api, verified });
+        const soloChoice = await SecureStore.getItemAsync(soloOnboardingStorageKey(verified.actor.identityId)).catch(() => null);
+        if (currentGeneration !== generation.current) return;
+        setRuntimeState(soloChoice === "enabled"
+          ? { status: "solo", api, verified }
+          : { status: "membership-empty", api, verified });
         return;
       }
       const requestedFamilyId = pendingActivation?.familyCircleId ?? selectedFamilyCircleId;
@@ -414,7 +448,11 @@ export function PeacePadStagingRuntime({
         throw new Error("PeacePad could not verify the newly accepted family conversation.");
       }
       if (!conversation) {
-        setRuntimeState({ status: "conversation-empty", api, membership, verified });
+        const soloChoice = await SecureStore.getItemAsync(soloWorkspaceStorageKey(verified.actor.identityId, membership.familyCircleId)).catch(() => null);
+        if (currentGeneration !== generation.current) return;
+        setRuntimeState(soloChoice === "enabled"
+          ? { status: "solo", api, membership, verified }
+          : { status: "conversation-empty", api, membership, verified });
         return;
       }
       setRuntimeState({
@@ -507,9 +545,10 @@ export function PeacePadStagingRuntime({
     );
   }
   if (runtimeState.status === "loading") return <GateMessage busy title={t("runtime.opening")} body={t("runtime.loadingAuthorized")} />;
-  if (runtimeState.status === "membership-empty") return <FamilySetup accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} initialInvitationCode={incomingInvitationCode} onInvitationCodeConsumed={() => setIncomingInvitationCode(undefined)} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={signOutSafely} verified={runtimeState.verified} />;
+  if (runtimeState.status === "membership-empty") return <FamilySetup accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} initialInvitationCode={incomingInvitationCode} onContinueSolo={() => enterSoloOnboarding(runtimeState.api, runtimeState.verified)} onInvitationCodeConsumed={() => setIncomingInvitationCode(undefined)} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={signOutSafely} verified={runtimeState.verified} />;
   if (runtimeState.status === "membership-selection") return <FamilySelection accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} memberships={runtimeState.memberships} onSelect={(familyCircleId) => setSelectedFamilyCircleId(familyCircleId)} onSignOut={signOutSafely} />;
-  if (runtimeState.status === "conversation-empty") return <ConversationSetup accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} membership={runtimeState.membership} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={signOutSafely} verified={runtimeState.verified} />;
+  if (runtimeState.status === "conversation-empty") return <ConversationSetup accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} membership={runtimeState.membership} onContinueSolo={() => enterSoloWorkspace(runtimeState.api, runtimeState.membership, runtimeState.verified)} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={signOutSafely} verified={runtimeState.verified} />;
+  if (runtimeState.status === "solo") return <SoloWorkspace accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} familyName={runtimeState.membership?.familyName} onConnect={() => void leaveSoloWorkspace(runtimeState.api, runtimeState.membership, runtimeState.verified)} onSignOut={signOutSafely} />;
   if (runtimeState.status === "error") return <GateMessage title={t("runtime.unavailable")} body={runtimeState.message} />;
   const accountActions = {
     signOut: signOutSafely,
@@ -638,10 +677,11 @@ function FamilySelection({ accountDeletion, memberships, onSelect, onSignOut }: 
   );
 }
 
-function FamilySetup({ accountDeletion, api, initialInvitationCode, onInvitationCodeConsumed, onReload, onSignOut, verified }: {
+function FamilySetup({ accountDeletion, api, initialInvitationCode, onContinueSolo, onInvitationCodeConsumed, onReload, onSignOut, verified }: {
   accountDeletion: { deleteAccount: () => Promise<void>; deleting: boolean; error?: string };
   api: PeacePadCoordinationApi;
   initialInvitationCode?: string;
+  onContinueSolo: () => void;
   onInvitationCodeConsumed: () => void;
   onReload: () => void;
   onSignOut: () => Promise<void>;
@@ -702,16 +742,18 @@ function FamilySetup({ accountDeletion, api, initialInvitationCode, onInvitation
         onInvitationCodeConsumed();
       })} variant="secondary" />}
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
+      <LabButton disabled={busy} label={t("runtime.continueSolo")} onPress={onContinueSolo} variant="secondary" />
       <LabButton disabled={busy} label={t("account.signOut")} onPress={() => void onSignOut()} variant="secondary" />
       <AccountDeletionControls value={accountDeletion} />
     </View>
   );
 }
 
-function ConversationSetup({ accountDeletion, api, membership, onReload, onSignOut, verified }: {
+function ConversationSetup({ accountDeletion, api, membership, onContinueSolo, onReload, onSignOut, verified }: {
   accountDeletion: { deleteAccount: () => Promise<void>; deleting: boolean; error?: string };
   api: PeacePadCoordinationApi;
   membership: Membership;
+  onContinueSolo: () => void;
   onReload: () => void;
   onSignOut: () => Promise<void>;
   verified: VerifiedSessionContext;
@@ -751,9 +793,33 @@ function ConversationSetup({ accountDeletion, api, membership, onReload, onSignO
           setError(cause instanceof Error ? cause.message : t("runtime.requestError"));
         } finally { setBusy(false); }
       })()} variant="secondary" /> : <LabButton disabled={busy} label={t("invite.create")} onPress={() => void createInvitation()} />}
+      <LabButton disabled={busy} label={t("runtime.continueSolo")} onPress={onContinueSolo} variant="secondary" />
       <LabButton disabled={busy} label={t("runtime.checkConnection")} onPress={onReload} variant="secondary" />
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
       <LabButton disabled={busy} label={t("account.signOut")} onPress={() => void onSignOut()} variant="secondary" />
+      <AccountDeletionControls value={accountDeletion} />
+    </View>
+  );
+}
+
+function SoloWorkspace({ accountDeletion, familyName, onConnect, onSignOut }: {
+  accountDeletion: { deleteAccount: () => Promise<void>; deleting: boolean; error?: string };
+  familyName?: string;
+  onConnect: () => void;
+  onSignOut: () => Promise<void>;
+}) {
+  const { t } = useOptionalLocalization();
+  return (
+    <View style={styles.page} testID="solo-workspace">
+      <Brand />
+      <AccessibleHeading style={styles.title}>{t("runtime.soloTitle")}</AccessibleHeading>
+      <Text style={styles.body}>{familyName ? t("runtime.soloBody", { family: familyName }) : t("runtime.soloOnboardingBody")}</Text>
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>{t("runtime.soloPrivateTitle")}</Text>
+        <Text style={styles.body}>{t("runtime.soloPrivateBody")}</Text>
+      </View>
+      <LabButton label={familyName ? t("runtime.inviteLater") : t("runtime.createFamilyWhenReady")} onPress={onConnect} variant="secondary" />
+      <LabButton label={t("account.signOut")} onPress={() => void onSignOut()} variant="secondary" />
       <AccountDeletionControls value={accountDeletion} />
     </View>
   );
