@@ -67,4 +67,14 @@ describe("native Google identity", () => {
     expect(native.signIn).not.toHaveBeenCalled();
     Object.defineProperty(Platform, "OS", { configurable: true, value: previous });
   });
+
+  it("classifies an unregistered Android package or certificate as configuration", async () => {
+    const native = adapter({ type: "cancelled" });
+    (native.signIn as jest.Mock).mockRejectedValue({
+      code: 10,
+      message: "This android application is not registered to use OAuth2.0"
+    });
+    await expect(requestGoogleIdentityToken(native, configuration)).rejects
+      .toMatchObject({ code: "configuration" });
+  });
 });
