@@ -90,3 +90,36 @@ single parent. It is not a claim that shared coordination or audio calling is
 complete for a one-account session. A future full solo mode should add an
 explicit server-side personal workspace/data contract rather than using a
 self-conversation or synthetic UUID.
+
+## Continuous candidate loop
+
+The next replacement candidate is intentionally monotonic and must be tested
+as one cross-platform source revision:
+
+| Candidate | Source | Runtime | Store identity |
+| --- | --- | --- | --- |
+| Android | `27c8df63d` | Canada production, writes enabled | `2.0.1` / code `46` |
+| iOS | `27c8df63d` | Canada production, writes enabled | `2.0.1` / build `7` |
+
+Use this order for every change:
+
+1. Restore dependencies from `APPS/peacepad-next-native/package-lock.json` on
+   `D:`; do not reuse a partial `node_modules` tree.
+2. Run typecheck, Jest/coverage, Expo config, guardrails, secret scan, and
+   `git diff --check`.
+3. Build one exact Android and one exact iOS artifact from the same source
+   SHA. Record artifact IDs and checksums before installation.
+4. Run the same journey on the Pixel and iPhone: fresh install, onboarding,
+   private entry without an invite, email login, Google login, session
+   restore, family creation, invitation, messaging, offline retry, calendar,
+   records, audio call, sign-out, and deletion.
+5. Capture Android PID-filtered logcat and iOS device/TestFlight console logs
+   for each run. A fix is accepted only when the original failing scenario
+   and the full journey both pass.
+6. If a source fix is needed, add a regression test, increment only the
+   affected platform build number, and repeat the full loop. Do not promote an
+   older binary because a newer binary has not yet been proven.
+
+The Play-delivered code `45` and App Store build `6` evidence above remains
+historical evidence for the pre-fix binary. It must not be used to claim that
+the private-entry fix is already in either store listing.
