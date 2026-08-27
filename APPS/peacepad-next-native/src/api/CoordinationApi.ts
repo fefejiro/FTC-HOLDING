@@ -250,6 +250,7 @@ export type LinkTimelineSourceInput = Readonly<{
 }>;
 
 export interface PeacePadCoordinationApi {
+  bootstrapIdentity?(displayName: string, region: "ca" | "us"): Promise<{ identityId: EntityId; region: "ca" | "us"; displayName: string }>;
   registerDevicePush(input: RegisterDevicePushInput, context: WriteContext): Promise<DevicePushRegistration>;
   revokeDevicePush(registrationId: EntityId, context: WriteContext): Promise<RevokedDevicePushRegistration>;
   deleteAccount(context: WriteContext): Promise<DeletedAccount>;
@@ -332,6 +333,25 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
     private readonly fetcher: FetchLike = fetch,
     private readonly accessToken: AccessTokenProvider = async () => undefined
   ) {}
+
+  bootstrapIdentity(displayName: string, region: "ca" | "us") {
+    const normalized = displayName.trim();
+    if (!normalized || normalized.length > 120) {
+      return Promise.reject(new PeacePadApiError("Enter a valid profile name.", "http", 400));
+    }
+    return this.request<{ identityId: EntityId; region: "ca" | "us"; displayName: string }>(
+      "/api/v2/session/bootstrap",
+      {
+        method: "POST",
+        body: JSON.stringify({ displayName: normalized }),
+        headers: {
+          "Idempotency-Key": `identity-bootstrap-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+          "X-PeacePad-Region": region,
+          "X-PeacePad-Schema-Version": "2.0"
+        }
+      }
+    );
+  }
 
   registerDevicePush(input: RegisterDevicePushInput, context: WriteContext) {
     return this.write<DevicePushRegistration>("/api/v2/devices/push", "POST", input, context);
@@ -747,7 +767,13 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
       if (!response.ok) {
         const error = errorDetail((payload ?? null) as ErrorPayload | null);
         if (response.status === 401) {
-          throw new PeacePadApiError("Your staging session expired. Sign in again.", "auth-required", 401);
+          throw new PeacePadApiError(
+            this.config.environment === "production"
+              ? "Your PeacePad session expired. Sign in again."
+              : "Your staging session expired. Sign in again.",
+            "auth-required",
+            401
+          );
         }
         const invitationReason = error.code ? INVITATION_REASONS[error.code] : undefined;
         if (invitationReason) {

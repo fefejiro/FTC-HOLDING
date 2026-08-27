@@ -62,6 +62,13 @@ type VerifiedSessionContext = Readonly<{
   schemaVersion: "2.0";
 }>;
 
+class VerifiedSessionRequestError extends Error {
+  constructor(readonly status: number, readonly code: string | undefined, production: boolean) {
+    super(production ? "PeacePad could not restore your session. Please sign in again." : "PeacePad could not restore this regional staging session.");
+    this.name = "VerifiedSessionRequestError";
+  }
+}
+
 type RuntimeState =
   | { status: "loading" }
   | { status: "membership-empty"; api: PeacePadCoordinationApi; verified: VerifiedSessionContext }
@@ -163,7 +170,12 @@ async function fetchVerifiedSession(
       signal: controller.signal
     });
     const payload = await response.json().catch(() => null);
-    if (!response.ok) throw new Error("PeacePad could not restore this regional staging session.");
+    if (!response.ok) {
+      const errorCode = payload && typeof payload === "object" && "error" in payload
+        && payload.error && typeof payload.error === "object" && "code" in payload.error
+        && typeof payload.error.code === "string" ? payload.error.code : undefined;
+      throw new VerifiedSessionRequestError(response.status, errorCode, config.environment === "production");
+    }
     return validateVerifiedSessionContext(payload, expectedIdentityId, config.region);
   } finally {
     clearTimeout(timeout);
@@ -358,10 +370,26 @@ export function PeacePadStagingRuntime({
     }
     if (!pendingActivation) setRuntimeState({ status: "loading" });
     void auth.getAccessToken().then(async (token) => {
-      if (!token) throw new Error("The staging session expired.");
-      const verified = await fetchVerifiedSession(supabase, auth.session!.user.id, token, fetcher);
-      if (currentGeneration !== generation.current) return;
+      if (!token) throw new Error(supabase.environment === "production" ? "Your PeacePad session expired. Sign in again." : "The staging session expired.");
       const api = createStagingCoordinationClient(environment, auth.getAccessToken, fetcher);
+      let verified: VerifiedSessionContext;
+      try {
+        verified = await fetchVerifiedSession(supabase, auth.session!.user.id, token, fetcher);
+      } catch (error) {
+        if (supabase.environment === "production" && error instanceof VerifiedSessionRequestError
+          && error.status === 409 && error.code === "IDENTITY_NOT_BOUND") {
+          if (!api.bootstrapIdentity) throw error;
+          const metadata = auth.session!.user.user_metadata as Record<string, unknown> | undefined;
+          const displayName = typeof metadata?.full_name === "string" ? metadata.full_name
+            : typeof metadata?.name === "string" ? metadata.name
+            : auth.session!.user.email?.split("@")[0] ?? "PeacePad member";
+          await api.bootstrapIdentity(displayName, "ca");
+          verified = await fetchVerifiedSession(supabase, auth.session!.user.id, token, fetcher);
+        } else {
+          throw error;
+        }
+      }
+      if (currentGeneration !== generation.current) return;
       const memberships = [...verified.memberships].sort((left, right) => left.familyName.localeCompare(right.familyName) || left.familyCircleId.localeCompare(right.familyCircleId));
       if (!memberships.length) {
         if (pendingActivation) throw new Error("The accepted family access is not present in the refreshed session.");
