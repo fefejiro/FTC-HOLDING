@@ -5,12 +5,13 @@ const PLAYSTORE_INTERNAL_MODE = "playstore-internal";
 const PLAYSTORE_PRODUCTION_MODE = "playstore-production";
 const TESTFLIGHT_VERSION = "2.0.1";
 const TESTFLIGHT_BUILD_NUMBER = "3";
-const APPSTORE_PRODUCTION_BUILD_NUMBER = "6";
+const APPSTORE_PRODUCTION_BUILD_NUMBER = "7";
 const PLAYSTORE_VERSION_CODE = 43;
-// Play Store version code 44 is already present on the existing listing.
-// Keep the replacement production artifact monotonic at 45; the guarded
-// internal profile remains on its historical code 43.
-const PLAYSTORE_PRODUCTION_VERSION_CODE = 45;
+// Play Store version codes 44 and 45 are already present on the existing
+// listing. The private-entry UX fix is a replacement production artifact, so
+// keep the public candidate monotonic at 46; the guarded internal profile
+// remains on its historical code 43.
+const PLAYSTORE_PRODUCTION_VERSION_CODE = 46;
 const PRODUCTION_BUNDLE_ID = "ca.peacepad.family";
 const APP_STORE_ID = "6793350735";
 const GOOGLE_SIGN_IN_PLUGIN = "@react-native-google-signin/google-signin";

@@ -127,7 +127,7 @@ jobs:
             && build.distribution === 'STORE'
             && build.buildProfile === 'playstore-production'
             && build.appVersion === '2.0.1'
-            && String(build.appBuildVersion) === '45'
+            && String(build.appBuildVersion) === '46'
             && build.project?.ownerAccount?.name === 'official_fejiro'
             && build.project?.slug === 'peacepad-next-native-lab'
             && typeof build.artifacts?.buildUrl === 'string';
@@ -155,7 +155,7 @@ jobs:
           actual_sha256="$(sha256sum "$RUNNER_TEMP/peacepad-v2-production-release.aab" | awk '{print toupper($1)}')"
           test "$actual_sha256" = "$(printf '%s' "$EXPECTED_SHA256" | tr '[:lower:]' '[:upper:]')"
           cat > "$RUNNER_TEMP/peacepad-v2-android-production-build.json" <<EOF
-          {"id":"$EAS_BUILD_ID","status":"FINISHED","platform":"ANDROID","distribution":"STORE","buildProfile":"playstore-production","appVersion":"2.0.1","appBuildVersion":"45","artifact_sha256":"$actual_sha256","artifacts":{"buildUrl":"$ARTIFACT_URL"}}
+          {"id":"$EAS_BUILD_ID","status":"FINISHED","platform":"ANDROID","distribution":"STORE","buildProfile":"playstore-production","appVersion":"2.0.1","appBuildVersion":"46","artifact_sha256":"$actual_sha256","artifacts":{"buildUrl":"$ARTIFACT_URL"}}
           EOF
           keytool -printcert -jarfile "$RUNNER_TEMP/peacepad-v2-production-release.aab" > "$RUNNER_TEMP/peacepad-v2-production-release-certificate.txt"
 
@@ -183,7 +183,7 @@ jobs:
           eas_build_id=$EAS_BUILD_ID
           package=ca.peacepad.family
           version=2.0.1
-          version_code=45
+          version_code=46
           track=internal
           production_writes_enabled=true
           upload_outcome=$UPLOAD_OUTCOME
