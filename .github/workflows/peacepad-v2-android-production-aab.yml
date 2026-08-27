@@ -23,7 +23,10 @@ jobs:
   build-signed-production-aab:
     name: Build signed Android production AAB without Play publication
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # EAS can spend several minutes queued before the signed build starts.
+    # Keep the runner alive long enough to receive the artifact instead of
+    # leaving a remote build orphaned at the GitHub job timeout.
+    timeout-minutes: 90
 
     steps:
       - name: Checkout reviewed source
