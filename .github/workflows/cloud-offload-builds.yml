@@ -46,10 +46,18 @@ jobs:
       NPM_CONFIG_FUND: false
       NPM_CONFIG_AUDIT: false
     steps:
-      - name: Checkout exact requested source
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
+      # actions/checkout invokes `git submodule foreach` during credential
+      # cleanup. This repository contains a historical gitlink without a
+      # matching .gitmodules URL, so use a public, detached SHA checkout
+      # instead. Cloud lanes do not use submodules.
+      - name: Checkout exact requested source without submodules
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --depth=1 origin "${GITHUB_SHA}"
+          git checkout --detach FETCH_HEAD
 
       - name: Setup Node 20 with npm cache
         uses: actions/setup-node@v4
@@ -127,7 +135,7 @@ jobs:
           date --utc +%Y-%m-%dT%H:%M:%SZ > cloud-offload-report/completed_utc.txt
 
       - name: Upload non-secret report
-        if: ${{ always() && inputs.upload_reports }}
+        if: ${{ always() && inputs.upload_reports && hashFiles('cloud-offload-report/**') != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: cloud-offload-${{ inputs.workload }}-${{ github.run_id }}
