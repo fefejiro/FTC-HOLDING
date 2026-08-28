@@ -24,6 +24,9 @@ import { ActivitySuggestionsScreen } from "../activities/ActivitySuggestionsScre
 import { ParentingTasksScreen } from "../tasks/ParentingTasksScreen";
 import { taskCopy } from "../tasks/taskLocalization";
 import { PersonalityProfilePanel } from "../preferences/PersonalityProfilePanel";
+import { CustodySchedulePlanner } from "../calendar/CustodySchedulePlanner";
+import { custodyParentForDate, type CustodyBlock, type CustodySchedule } from "../calendar/custodySchedule";
+import { custodyScheduleText } from "../calendar/custodyScheduleLocalization";
 
 export type CoordinationScreen = "home" | "messages" | "calendar" | "activities" | "tasks" | "invite" | "records" | "calls" | "more";
 type Navigate = (screen: CoordinationScreen) => void;
@@ -87,13 +90,15 @@ function CalendarViewPanel({
   events,
   layers,
   locale,
-  anchorDate
+  anchorDate,
+  custodySchedule
 }: {
   calendarView: CalendarView;
   events: ReturnType<typeof useCoordinationState>["events"];
   layers: ReturnType<typeof useCoordinationState>["layers"];
   locale: ReturnType<typeof useLocalization>["locale"];
   anchorDate: Date;
+  custodySchedule?: CustodySchedule;
 }) {
   const layerName = (calendarLayerId: string) =>
     layers.find((layer) => layer.id === calendarLayerId)?.name ?? "Calendar";
@@ -117,9 +122,11 @@ function CalendarViewPanel({
           {cells.map((cell) => {
             const date = cell.day ? new Date(Date.UTC(anchorDate.getUTCFullYear(), anchorDate.getUTCMonth(), cell.day)) : undefined;
             const dayEvents = date ? events.filter((event) => eventOccursOnDay(event, date)) : [];
+            const custodyParent = date ? custodyParentForDate(date, custodySchedule) : null;
             return (
-              <View accessibilityLabel={date ? formatCalendarDate(locale, date, { month: "long", day: "numeric" }) : undefined} key={cell.key} style={styles.monthCell}>
+              <View accessibilityLabel={date ? `${formatCalendarDate(locale, date, { month: "long", day: "numeric" })}${custodyParent ? `, ${custodyScheduleText(locale, custodyParent === "you" ? "yourTime" : "otherTime")}` : ""}` : undefined} key={cell.key} style={[styles.monthCell, custodyParent === "you" ? styles.yourTimeCell : custodyParent === "other" ? styles.otherTimeCell : null]}>
                 {cell.day ? <Text style={styles.dayNumber}>{cell.day}</Text> : null}
+                {custodyParent ? <Text numberOfLines={1} style={styles.custodyCellLabel}>{custodyParent === "you" ? "You" : "Other"}</Text> : null}
                 {dayEvents.slice(0, 1).map((event) => (
                   <Text key={event.id} numberOfLines={1} style={styles.monthEvent}>{event.title}</Text>
                 ))}
@@ -140,10 +147,12 @@ function CalendarViewPanel({
         <View style={styles.scheduleList}>
           {week.map((date) => {
             const dayEvents = events.filter((event) => eventOccursOnDay(event, date));
+            const custodyParent = custodyParentForDate(date, custodySchedule);
             return (
               <View key={date.toISOString()} style={styles.scheduleRow}>
                 <Text style={styles.scheduleDate}>{formatCalendarDay(locale, date)}</Text>
                 <View style={styles.scheduleContent}>
+                  {custodyParent ? <Text style={[styles.custodyLabel, custodyParent === "you" ? styles.yourTimeText : styles.otherTimeText]}>{custodyScheduleText(locale, custodyParent === "you" ? "yourTime" : "otherTime")}</Text> : null}
                   {dayEvents.length ? dayEvents.map((event) => (
                     <View key={event.id} style={styles.scheduleEvent}>
                       <Text style={styles.actionTitle}>{event.title}</Text>
@@ -160,10 +169,12 @@ function CalendarViewPanel({
   }
 
   const dayEvents = events.filter((event) => eventOccursOnDay(event, anchorDate));
+  const custodyParent = custodyParentForDate(anchorDate, custodySchedule);
   return (
     <View accessibilityLabel={`${calendarText(locale, "day")} ${calendarText(locale, "title")}`.toLocaleLowerCase(locale)} style={styles.calendarCanvas}>
       <Text style={styles.calendarMonth}>{formatCalendarDate(locale, anchorDate, { weekday: "long", month: "long", day: "numeric" })}</Text>
       <View style={styles.scheduleList}>
+        {custodyParent ? <Text style={[styles.custodyLabel, custodyParent === "you" ? styles.yourTimeText : styles.otherTimeText]}>{custodyScheduleText(locale, custodyParent === "you" ? "yourTime" : "otherTime")}</Text> : null}
         {dayEvents.length ? dayEvents.map((event) => (
           <View key={event.id} style={styles.scheduleEvent}>
             <Text style={styles.actionTitle}>{event.title}</Text>
@@ -436,6 +447,7 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
   const [pendingShareLayerId, setPendingShareLayerId] = useState<string>();
   const [pendingDeleteEventId, setPendingDeleteEventId] = useState<string>();
   const [eventType, setEventType] = useState<"parenting-time" | "appointment" | "change-request">("parenting-time");
+  const [custodySchedule, setCustodySchedule] = useState<CustodySchedule>();
 
   const visibleEvents = events.filter((event) => visibleLayerIds.includes(event.calendarLayerId));
   const views: readonly CalendarView[] = ["month", "week", "day"];
@@ -479,7 +491,35 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
         <LabButton label={calendarNavigationText(locale, "next")} onPress={() => moveCalendar(1)} variant="secondary" />
       </View>
 
-      <CalendarViewPanel anchorDate={calendarAnchorDate} calendarView={calendarView} events={visibleEvents} layers={layers} locale={locale} />
+      <CalendarViewPanel anchorDate={calendarAnchorDate} calendarView={calendarView} custodySchedule={custodySchedule} events={visibleEvents} layers={layers} locale={locale} />
+
+      <CustodySchedulePlanner
+        locale={locale}
+        onAddBlocks={async (blocks: readonly CustodyBlock[]) => {
+          if (!selectedLayerId) return;
+          const existingKeys = new Set(events
+            .filter((event) => event.eventType === "parenting-time" && event.title.startsWith("Parenting time - "))
+            .map((event) => `${event.startsAt.slice(0, 10)}-${event.endsAt.slice(0, 10)}`));
+          for (const block of blocks) {
+            const parentLabel = block.parent === "you"
+              ? custodyScheduleText(locale, "yourTime")
+              : custodyScheduleText(locale, "otherTime");
+            const title = `Parenting time - ${parentLabel}`;
+            const key = `${block.startDate}-${block.endDate}`;
+            if (existingKeys.has(key)) continue;
+            await addEvent({
+              layerId: selectedLayerId,
+              title,
+              startsAt: `${block.startDate}T00:00:00.000Z`,
+              endsAt: `${block.endDate}T00:00:00.000Z`,
+              eventType: "parenting-time"
+            });
+            existingKeys.add(key);
+          }
+        }}
+        onScheduleChange={setCustodySchedule}
+        selectedLayerId={selectedLayerId}
+      />
 
       <View style={styles.card}>
         <Text style={styles.heading}>{calendarText(locale, "calendars")}</Text>
@@ -1098,12 +1138,18 @@ const styles = StyleSheet.create({
   monthGrid: { flexDirection: "row", flexWrap: "wrap" },
   weekday: { ...typography.caption, color: colors.muted, fontWeight: "800", textAlign: "center", width: "14.2857%" },
   monthCell: { borderTopColor: colors.border, borderTopWidth: 1, gap: 2, minHeight: 54, paddingHorizontal: 3, paddingTop: spacing.xs, width: "14.2857%" },
+  yourTimeCell: { backgroundColor: "rgba(139,92,246,0.10)" },
+  otherTimeCell: { backgroundColor: "rgba(98,180,75,0.10)" },
   dayNumber: { ...typography.caption, color: colors.text, fontWeight: "800" },
+  custodyCellLabel: { color: colors.brand, fontSize: 8, fontWeight: "800", overflow: "hidden" },
   monthEvent: { backgroundColor: colors.brandSoft, borderRadius: 6, color: colors.brand, fontSize: 9, fontWeight: "700", overflow: "hidden", paddingHorizontal: 3, paddingVertical: 2 },
   scheduleList: { gap: spacing.sm },
   scheduleRow: { borderTopColor: colors.border, borderTopWidth: 1, flexDirection: "row", gap: spacing.md, paddingTop: spacing.sm },
   scheduleDate: { ...typography.caption, color: colors.text, fontWeight: "800", width: 48 },
   scheduleContent: { flex: 1, gap: spacing.xs },
+  custodyLabel: { ...typography.caption, fontWeight: "800" },
+  yourTimeText: { color: colors.brand },
+  otherTimeText: { color: colors.successText },
   scheduleEvent: { backgroundColor: colors.brandSoft, borderLeftColor: colors.brand, borderLeftWidth: 3, borderRadius: 12, gap: 2, padding: spacing.sm },
   layerRow: { alignItems: "center", borderTopColor: colors.border, borderTopWidth: 1, flexDirection: "row", gap: spacing.sm, paddingTop: spacing.md },
   layerRowLargeText: { alignItems: "stretch", flexDirection: "column" },
