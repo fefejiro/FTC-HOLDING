@@ -6,7 +6,8 @@ import {
   clearStaleDeviceNotificationReceipt,
   currentDeviceNotificationState,
   disableDeviceNotifications,
-  enableDeviceNotifications
+  enableDeviceNotifications,
+  foregroundNotificationBehavior
 } from "./DevicePushRegistration";
 
 const identityId = "10000000-0000-4000-8000-000000000001";
@@ -28,6 +29,15 @@ describe("device push registration", () => {
     Object.defineProperty(Platform, "OS", { configurable: true, value: "ios" });
     (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({ status: "granted" });
     (Notifications.getExpoPushTokenAsync as jest.Mock).mockResolvedValue({ data: `ExpoPushToken[${"a".repeat(24)}]` });
+  });
+
+  it("allows the OS to apply call sound policy in the foreground", () => {
+    expect(foregroundNotificationBehavior()).toEqual({
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true
+    });
   });
 
   it("registers only the provider token and stores a content-free receipt", async () => {
@@ -107,7 +117,9 @@ describe("device push registration", () => {
     await expect(enableDeviceNotifications(api as never, runtime)).resolves.toBe("enabled");
     expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledWith("peacepad-calls", expect.objectContaining({
       importance: Notifications.AndroidImportance.MAX,
-      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PRIVATE
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PRIVATE,
+      sound: "default",
+      vibrationPattern: [0, 250, 150, 250]
     }));
     expect(api.registerDevicePush).toHaveBeenCalledWith(expect.objectContaining({ platform: "android" }), expect.anything());
   });
