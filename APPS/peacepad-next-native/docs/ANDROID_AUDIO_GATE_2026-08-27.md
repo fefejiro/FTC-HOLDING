@@ -106,3 +106,8 @@ binary on the Pixel and iPhone/TestFlight, with two existing authorized
 accounts in one family/conversation. It must be run only after production
 push dispatch and TURN credentials are configured. No production fixture or
 dummy account should be created to make this test pass.
+
+The native checkout also has no notification-response listener or cold-start
+response handoff into `AudioCallScreen`. Until that route is implemented and
+covered, a received notification can be displayed by the operating system but
+cannot be claimed to open the in-app incoming-call experience.
