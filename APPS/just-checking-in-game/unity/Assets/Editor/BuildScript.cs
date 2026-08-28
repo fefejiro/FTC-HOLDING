@@ -72,6 +72,52 @@ namespace Jci.Editor
             Debug.Log($"[JCI] Android build succeeded: {AndroidOutputPath}");
         }
 
+        [MenuItem("JCI/Build Android APK For Device")]
+        public static void BuildAndroidApkForDevice()
+        {
+            ConfigureCommonPlayerSettings();
+            ConfigureAndroidPlayerSettings();
+
+            string keystorePath = RequireEnv("KEYSTORE_PATH");
+            string keystorePass = RequireEnv("KEYSTORE_PASS");
+            string keyAlias = RequireEnv("KEY_ALIAS");
+            string keyPass = RequireEnv("KEY_PASS");
+
+            if (!File.Exists(keystorePath))
+            {
+                Fail($"KEYSTORE_PATH does not exist: {keystorePath}");
+                return;
+            }
+
+            PlayerSettings.Android.useCustomKeystore = true;
+            PlayerSettings.Android.keystoreName = keystorePath;
+            PlayerSettings.Android.keystorePass = keystorePass;
+            PlayerSettings.Android.keyaliasName = keyAlias;
+            PlayerSettings.Android.keyaliasPass = keyPass;
+
+            const string outputPath = "Builds/Android/JustCheckingIn-device.apk";
+            Directory.CreateDirectory("Builds/Android");
+            EditorUserBuildSettings.buildAppBundle = false;
+            EditorUserBuildSettings.androidBuildSystem = AndroidBuildSystem.Gradle;
+
+            BuildReport report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+            {
+                scenes = EnsureBuildScenes(),
+                locationPathName = outputPath,
+                target = BuildTarget.Android,
+                options = BuildOptions.None,
+                targetGroup = BuildTargetGroup.Android
+            });
+
+            if (report.summary.result != BuildResult.Succeeded)
+            {
+                Fail($"Android device APK build failed: {report.summary.result}");
+                return;
+            }
+
+            Debug.Log($"[JCI] Android device APK build succeeded: {outputPath}");
+        }
+
         [MenuItem("JCI/Export iOS Xcode")]
         public static void ExportiOS()
         {
