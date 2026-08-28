@@ -4,7 +4,8 @@
   "features": {
     "ghcr.io/devcontainers/features/git:1": {}
   },
-  "postCreateCommand": "npm ci",
+  "postCreateCommand": ".devcontainer/bootstrap-peacepad-cloud.sh",
+  "postStartCommand": ".devcontainer/cloud-session-ready.sh",
   "forwardPorts": [3000, 3001, 5173],
   "customizations": {
     "vscode": {
