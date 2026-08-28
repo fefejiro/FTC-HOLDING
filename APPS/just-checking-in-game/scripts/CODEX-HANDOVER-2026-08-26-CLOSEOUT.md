@@ -98,3 +98,10 @@ Therefore Android is **not the same code** as the iOS 1.1 candidate and must not
 - Evidence: `D:\FTC-HOLDING-releases\just-checking-in\android-2026-08-19\pixel7-jci-old-after10s.png` and `jci-stale-library-canonical3-20260828.log`.
 - Temporary source overlays were restored from `stale-source-backup-20260828`; no canonical gameplay files, PeacePad files, or store records were changed.
 - The next iteration must first establish a repeatable clean Unity package/Bee cache (preferably on the existing CI/Windows build host), then build and install the canonical 1.1 Android artifact before any Play resubmission.
+
+### Pixel 7 install readiness check (2026-08-28)
+
+- A second canonical Android build attempt was run with Unity 6000.4.5f1 after the repaired script/package cache compiled successfully.
+- Unity reached `BuildPlayer: start building target 13`, then stalled in the Android `Player` Bee backend without producing a new AAB. The exact logs are `D:\FTC-HOLDING-releases\just-checking-in\android-2026-08-19\jci-final-canonical-android-20260828.log` and `jci-final-canonical-android-20260828-retry.log`.
+- The attempt was terminated after the packaging stage made no progress; the prior 0.2.0/code-2 AAB remains the only artifact and was not relabeled or treated as 1.1.
+- The stale project source was restored byte-for-byte from `stale-source-backup-20260828`. The canonical worktree remains clean; no Pixel install of canonical 1.1.0/code 3 is claimed.
