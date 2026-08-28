@@ -1,6 +1,7 @@
 {
   "name": "FTC Holding Cloud Dev",
   "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+  "workspaceFolder": "/workspaces/FTC-HOLDING",
   "features": {
     "ghcr.io/devcontainers/features/git:1": {}
   },
