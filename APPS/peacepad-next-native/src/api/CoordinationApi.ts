@@ -147,6 +147,24 @@ export type UpdatedProfile = Readonly<{
   version: number;
 }>;
 
+export const PERSONALITY_TYPES = [
+  "INTJ", "INTP", "ENTJ", "ENTP",
+  "INFJ", "INFP", "ENFJ", "ENFP",
+  "ISTJ", "ISFJ", "ESTJ", "ESFJ",
+  "ISTP", "ISFP", "ESTP", "ESFP"
+] as const;
+
+export type PersonalityType = typeof PERSONALITY_TYPES[number];
+
+export type PersonalityPreference = Readonly<{
+  identityId: EntityId;
+  region: "ca" | "us";
+  personalityType: PersonalityType | null;
+  updatedAt: string | null;
+  version: number;
+  schemaVersion: "2.0";
+}>;
+
 export type DevicePushRegistration = Readonly<{
   registrationId: EntityId;
   platform: "ios" | "android";
@@ -265,6 +283,8 @@ export interface PeacePadCoordinationApi {
   deleteAccount(context: WriteContext): Promise<DeletedAccount>;
   prepareAccountExport(context: WriteContext): Promise<AccountExportManifest>;
   updateProfile(displayName: string, context: WriteContext): Promise<UpdatedProfile>;
+  getPersonalityPreference(): Promise<PersonalityPreference>;
+  setPersonalityPreference(personalityType: PersonalityType | null, context: WriteContext): Promise<PersonalityPreference>;
   createFamily(familyName: string, context: WriteContext): Promise<CreatedFamily>;
   leaveFamily(familyCircleId: EntityId, context: WriteContext): Promise<LeftFamily>;
   listCaseBinders(familyCircleId: EntityId): Promise<readonly CaseBinder[]>;
@@ -399,6 +419,51 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
       || result.version <= (context.expectedVersion ?? 0)
     ) {
       throw new PeacePadApiError("PeacePad could not verify the profile update.", "http", 502);
+    }
+    return result;
+  }
+
+  async getPersonalityPreference() {
+    const result = await this.request<PersonalityPreference>("/api/v2/account/personality-preference");
+    if (
+      !result
+      || typeof result.identityId !== "string"
+      || result.region !== "ca" && result.region !== "us"
+      || (result.personalityType !== null && !PERSONALITY_TYPES.includes(result.personalityType))
+      || (result.updatedAt !== null && (typeof result.updatedAt !== "string" || Number.isNaN(Date.parse(result.updatedAt))))
+      || !Number.isInteger(result.version)
+      || result.version < 0
+      || result.schemaVersion !== "2.0"
+    ) {
+      throw new PeacePadApiError("PeacePad could not verify your communication profile.", "http", 502);
+    }
+    return result;
+  }
+
+  async setPersonalityPreference(personalityType: PersonalityType | null, context: WriteContext) {
+    if (personalityType !== null && !PERSONALITY_TYPES.includes(personalityType)) {
+      throw new PeacePadApiError("Choose a valid communication profile.", "http", 400);
+    }
+    if (context.expectedVersion === null) {
+      throw new PeacePadApiError("A communication profile version is required.", "http", 400);
+    }
+    const result = await this.write<PersonalityPreference>(
+      "/api/v2/account/personality-preference",
+      "PUT",
+      { personalityType },
+      context
+    );
+    if (
+      !result
+      || result.identityId !== context.actor.identityId
+      || result.region !== context.region
+      || result.personalityType !== personalityType
+      || (result.updatedAt !== null && Number.isNaN(Date.parse(result.updatedAt)))
+      || !Number.isInteger(result.version)
+      || result.version <= context.expectedVersion
+      || result.schemaVersion !== "2.0"
+    ) {
+      throw new PeacePadApiError("PeacePad could not verify your communication profile.", "http", 502);
     }
     return result;
   }

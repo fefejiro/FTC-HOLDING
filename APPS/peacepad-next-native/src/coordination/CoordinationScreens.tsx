@@ -23,6 +23,7 @@ import { useCoordinationState, type CalendarView } from "./CoordinationState";
 import { ActivitySuggestionsScreen } from "../activities/ActivitySuggestionsScreen";
 import { ParentingTasksScreen } from "../tasks/ParentingTasksScreen";
 import { taskCopy } from "../tasks/taskLocalization";
+import { PersonalityProfilePanel } from "../preferences/PersonalityProfilePanel";
 
 export type CoordinationScreen = "home" | "messages" | "calendar" | "activities" | "tasks" | "invite" | "records" | "calls" | "more";
 type Navigate = (screen: CoordinationScreen) => void;
@@ -959,6 +960,7 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
         <Text style={styles.caption}>{t("more.introduction.body")}</Text>
       </Pressable>
       <LinkedSignInMethods />
+      <PersonalityProfilePanel />
       {accountActions?.updateProfile ? <View style={styles.actionCardLargeText}>
         <Text accessibilityRole="header" style={styles.actionTitle}>{t("profile.title")}</Text>
         <Text style={styles.caption}>{t("profile.body")}</Text>

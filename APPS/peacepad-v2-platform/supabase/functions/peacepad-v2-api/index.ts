@@ -68,6 +68,12 @@ type ErrorCode =
   | "TURN_CREDENTIALS_UNAVAILABLE";
 
 const PRIVATE_RECORDS_BUCKET = "peacepad-private-records";
+const PERSONALITY_TYPES = new Set([
+  "INTJ", "INTP", "ENTJ", "ENTP",
+  "INFJ", "INFP", "ENFJ", "ENFP",
+  "ISTJ", "ISFJ", "ESTJ", "ESFJ",
+  "ISTP", "ISFP", "ESTP", "ESFP",
+]);
 
 const env = (name: string): string => Deno.env.get(name)?.trim() ?? "";
 
@@ -270,6 +276,7 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     "CASE_BINDER_INVALID", "ATTACHMENT_INTENT_INVALID", "ATTACHMENT_INTENT_EXPIRED",
     "ATTACHMENT_OBJECT_MISMATCH", "ATTACHMENT_STATE_INVALID", "CASE_BINDER_ARCHIVED",
     "TIMELINE_REQUEST_INVALID", "TIMELINE_SOURCE_INVALID", "TIMELINE_SOURCE_ALREADY_LINKED",
+    "PERSONALITY_TYPE_INVALID",
     "DEVICE_PUSH_INVALID", "DEVICE_PUSH_CONFIGURATION_INVALID", "PARENTING_TASK_INVALID", "PARENTING_TASK_ASSIGNEE_INVALID",
   ]);
   const safeCode = directCodes[message] ?? (invalidRequestCodes.has(message) ? "INVALID_REQUEST" : "DATABASE_NOT_READY");
@@ -342,6 +349,7 @@ const writeOperation = (method: string, path: string, body: Record<string, unkno
   if (method === "POST" && path === "/api/v2/consents") return "consent.recorded";
   if (method === "POST" && path === "/api/v2/families") return "family.created";
   if (method === "PATCH" && path === "/api/v2/account/profile") return "profile.updated";
+  if (method === "PUT" && path === "/api/v2/account/personality-preference") return "personality.updated";
   if (method === "POST" && path === "/api/v2/account/export") return "account.exported";
   if (method === "DELETE" && /^\/api\/v2\/families\/[^/]+\/membership$/.test(path)) return "family.left";
   if (method === "POST" && path === "/api/v2/invitations") return "invitation.created";
@@ -645,6 +653,16 @@ const handler = async (request: Request): Promise<Response> => {
       return failure(request, status, errorCode, errorCode === "INVITATION_RATE_LIMITED" ? "Too many invitation attempts. Try again later." : "That invitation is not available.", requestId, config);
     }
     return json(request, 200, result, requestId, config);
+  }
+
+  if (request.method === "GET" && path === "/api/v2/account/personality-preference") {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
+    const { data, error } = await authenticated.admin.rpc("peacepad_v2_get_personality_preference", {
+      p_identity_id: authenticated.user.id,
+      p_region: config.region,
+    });
+    return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
   }
 
   const conversationMessagesMatch = path.match(/^\/api\/v2\/conversations\/([^/]+)\/messages$/);
@@ -974,6 +992,7 @@ const handler = async (request: Request): Promise<Response> => {
   const isAccountDeletion = path === "/api/v2/account";
   const isAccountExport = path === "/api/v2/account/export";
   const isProfileUpdate = path === "/api/v2/account/profile";
+  const isPersonalityPreferenceUpdate = request.method === "PUT" && path === "/api/v2/account/personality-preference";
   const familyExitMatch = path.match(/^\/api\/v2\/families\/([^/]+)\/membership$/);
   const isConversationCreation = path === "/api/v2/conversations";
   const isMessageSend = /^\/api\/v2\/conversations\/[^/]+\/messages$/.test(path);
@@ -1005,6 +1024,7 @@ const handler = async (request: Request): Promise<Response> => {
     ].includes(path) || isInvitationTransition || isConversationCreation || isMessageSend || isMessageLifecycle || isMessageCorrection || isCalendarLayerCreation || isScheduleEventCreation || isParentingTaskCreation || isCaseBinderCreation || isAttachmentIntentCreation || attachmentCompletionMatch || isTimelineEntryCreation || isAudioCallCreation || audioCallTransition || isDevicePushRegistration)) ||
     (request.method === "PATCH" && (isProfileUpdate || calendarLayerMatch || scheduleEventMatch || parentingTaskMatch || caseBinderMatch)) ||
     isMessageCheckUpdate ||
+    isPersonalityPreferenceUpdate ||
     (request.method === "DELETE" && (isInvitationRevocation || isAccountDeletion || familyExitMatch || calendarLayerMatch || scheduleEventMatch || parentingTaskMatch || devicePushRevocation))
   ) {
     const authenticated = await authenticate(request, config);
@@ -1169,6 +1189,31 @@ const handler = async (request: Request): Promise<Response> => {
         p_conversation_id: conversationId,
         p_enabled: body.enabled,
         p_ai_assistance_enabled: false,
+        p_expected_version: expectedVersion,
+        p_idempotency_key: databaseWriteToken,
+        p_schema_version: context.schemaVersion,
+      });
+      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
+    }
+
+    if (isPersonalityPreferenceUpdate) {
+      const expectedVersionHeader = (request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? "";
+      const expectedVersion = Number(expectedVersionHeader);
+      const personalityType = body.personalityType;
+      const validPersonalityType = personalityType === null
+        || (typeof personalityType === "string" && PERSONALITY_TYPES.has(personalityType));
+      if (
+        Object.keys(body).some((key) => key !== "personalityType")
+        || !validPersonalityType
+        || !Number.isInteger(expectedVersion)
+        || expectedVersion < 0
+      ) {
+        return failure(request, 400, "INVALID_REQUEST", "Communication profile details are invalid.", requestId, config);
+      }
+      const { data, error } = await authenticated.admin.rpc("peacepad_v2_set_personality_preference", {
+        p_identity_id: authenticated.user.id,
+        p_region: config.region,
+        p_personality_type: personalityType,
         p_expected_version: expectedVersion,
         p_idempotency_key: databaseWriteToken,
         p_schema_version: context.schemaVersion,
