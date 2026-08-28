@@ -23,6 +23,21 @@ or release state.
 
 ## Codespaces / Codex cloud environment
 
+These are two different entry points and should not be treated as one session:
+
+- **GitHub Codespaces** is the persistent VS Code shell. Open the active
+  Codespace from GitHub or with the `gh codespace code --web` command. The
+  workspace must show `FTC-HOLDING` at `/workspaces/FTC-HOLDING`, with ref
+  `main` (or the explicitly selected feature branch).
+- **Codex Cloud** runs an individual task in an isolated repository
+  environment. It is useful for preflight and bounded build/test work, but it
+  does not attach to the persistent Codespaces terminal or local Android/iOS
+  devices. Select the GitHub repository and branch for each task.
+
+If the VS Code “work in cloud” action spins or opens a blank folder, use the
+GitHub Codespace web entry point instead. Do not create another clone: the
+workspace folder and bootstrap below are already part of `main`.
+
 Create one environment from the existing `.devcontainer/devcontainer.json`:
 
 `FTC-HOLDING Cloud Dev`
