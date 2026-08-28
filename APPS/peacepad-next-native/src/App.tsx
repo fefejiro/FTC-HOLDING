@@ -26,6 +26,8 @@ import { createPeacePadSupabaseClient, SupabaseSessionProvider } from "./session
 import { colors, spacing } from "./theme";
 import { AudioCallScreen } from "./calls/AudioCallScreen";
 import { AudioCallStateProvider } from "./calls/AudioCallState";
+import * as Notifications from "expo-notifications";
+import { isIncomingCallNotificationResponse } from "./notifications/NotificationNavigation";
 
 export type AppScreen = "foundation" | CoordinationScreen;
 type RootStackParamList = Record<AppScreen, { activityTitle?: string; code?: string } | undefined>;
@@ -47,6 +49,7 @@ export function PeacePadCoordinationApp({ startScreen, wrapLocalization = true, 
   const content = (
     <NavigationContainer linking={startScreen ? undefined : peacePadLinking}>
       <StatusBar barStyle="dark-content" />
+      <NotificationNavigationBridge />
       <Stack.Navigator initialRouteName={resolveStartScreen(startScreen ?? process.env?.EXPO_PUBLIC_PEACEPAD_LAB_START_SCREEN)} screenOptions={{ headerShown: false }}>
         {(["foundation", "home", "messages", "calendar", "activities", "tasks", "invite", "records", "calls", "more"] as const).map((name) => (
           <Stack.Screen key={name} name={name}>
@@ -178,6 +181,33 @@ function CoordinationRoute({ activeScreen, activityTitle, invitationCode }: { ac
       </View>
     </SafeAreaView>
   );
+}
+
+/**
+ * Routes a tapped incoming-call notification into the authenticated calls
+ * screen. The calls runtime remains the authority for authorization and
+ * current-call state; this bridge never starts media by itself.
+ */
+function NotificationNavigationBridge() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const handleResponse = useCallback((response: Notifications.NotificationResponse | null | undefined) => {
+    if (isIncomingCallNotificationResponse(response)) navigation.navigate("calls");
+  }, [navigation]);
+
+  useEffect(() => {
+    let mounted = true;
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      if (mounted) handleResponse(response);
+    });
+    void Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (mounted) handleResponse(response);
+    });
+    return () => {
+      mounted = false;
+      subscription.remove();
+    };
+  }, [handleResponse]);
+  return null;
 }
 
 function ConnectionRequiredScreen({ setScreen }: { setScreen: (screen: CoordinationScreen) => void }) {

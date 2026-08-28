@@ -32,6 +32,8 @@ jest.mock("expo-notifications", () => ({
   AndroidImportance: { MAX: 5 },
   AndroidNotificationVisibility: { PRIVATE: 0 },
   getExpoPushTokenAsync: jest.fn(),
+  getLastNotificationResponseAsync: jest.fn(async () => null),
+  addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
   getPermissionsAsync: jest.fn(async () => ({ status: "undetermined" })),
   requestPermissionsAsync: jest.fn(async () => ({ status: "denied" })),
   setNotificationChannelAsync: jest.fn(async () => null),
