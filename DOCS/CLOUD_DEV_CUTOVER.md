@@ -27,7 +27,7 @@ Create one environment from the existing `.devcontainer/devcontainer.json`:
 
 `FTC-HOLDING Cloud Dev`
 
-The devcontainer uses Node 20, Git, and an existing `npm ci` post-create step.
+The devcontainer uses Node 22, Git, and an existing `npm ci` post-create step.
 Run the first preflight on the exact Git branch that will be worked on:
 
 ```bash
