@@ -129,3 +129,32 @@ This removes the OS volume/DND blocker. It does not prove delivery or media:
 the installed package is still code `48`, predates the sound and navigation
 fixes, and has no observed `peacepad-calls` channel or incoming push. A new
 artifact must be built and installed before repeating the device gate.
+
+## Current lab artifact and launch gate — 2026-08-28
+
+The notification-sound and notification-tap fixes were built from local source
+`22e61123c` in the separate lab profile. EAS build
+`3e65e15e-6e59-4163-8942-c431b71f5c2c` finished successfully and produced a
+149,022,684-byte APK with SHA-256
+`660A71BFF7758D4FA7C0D65B1C4122765C818E633BB5F2882D706C11CFB63CF0`.
+The package is `ca.peacepad.nextnative.lab`, version `0.0.1` / code `1`; it
+was installed alongside, and did not overwrite, production package
+`ca.peacepad.family` (version `2.0.1` / code `48`).
+
+The lab APK launched on the USB-connected Pixel 7 (`2B260DLH2000C8`) into the
+staging sign-in screen. Logcat showed WebRTC native loading at 48 kHz with
+hardware AEC/NS and no app `FATAL EXCEPTION`; the launch log, UI dump, and
+APK hash are retained under
+`D:\\PeacePadRelease\\evidence\\peacepad-android-build-20260828`.
+Notifications and microphone were granted only to this controlled lab package
+with ADB for device checks. An invalid staging sign-in remained on the
+expected `PeacePad staging sign-in is unavailable. Try again.` state with no
+app crash.
+
+The Canada staging hostname used by the lab directory currently does not
+resolve (`rohvkyuxbnqzglaromms.supabase.co`), while the production health
+endpoint is reachable. Therefore no staging account, invitation, push, or
+two-party call was attempted or claimed. Re-enable/restore that staging
+project, or use the same current production binary with two existing
+authorized accounts, before the qualifying audio gate. No production data or
+store listing was changed in this loop.
