@@ -137,3 +137,42 @@ Use this order for every change:
 The Play-delivered code `45` and App Store build `6` evidence above remains
 historical evidence for the pre-fix binary. It must not be used to claim that
 the private-entry fix is already in either store listing.
+
+## Production family-load repair — 2026-08-27
+
+The code `48` Play Internal Testing candidate was installed on the same
+physical Pixel 7 after the first authenticated launch returned a safe
+`DATABASE_NOT_READY` response from `GET /api/v2/parenting-tasks`. The Canada
+production project was missing the already-reviewed migration
+`202608270001_v2_parenting_tasks.sql`; this was a schema-only gap. The
+migration creates the parenting-task table and its guarded list/create/update/
+delete functions, with service-role-only execution. It does not insert,
+update, copy, or delete user records.
+
+The migration was applied through the linked production project with the
+Supabase CLI, then its remote migration ledger was repaired to
+`202608270001 / v2_parenting_tasks`. Read-only verification confirmed the
+table and all four public functions exist.
+
+| Item | Evidence |
+| --- | --- |
+| Android candidate | `2.0.1` / version code `48` |
+| EAS build | `5d349663-7e07-48d2-913d-7e91940ca6ed` |
+| AAB SHA-256 | `e0ed7a0e41992631f2b987739a5d41da5a0fe5668228a7f2a89a3a4286efe6d1` |
+| AAB bytes | `90,370,276` |
+| Play track | Internal Testing; not public production |
+| Production migration | `202608270001 / v2_parenting_tasks` |
+| Device evidence | `D:/PeacePadRelease/evidence/android-code48/` |
+
+After the repair, the same Pixel session reached the authenticated production
+Home screen. The captured UI exposes the PeacePad logo, Add an event, Tasks,
+Activity ideas, Invite co-parent, Add a record, and Home/Calendar/Records/More
+navigation. Calendar, Records, More, and the read-only Tasks screen each opened
+without an API error. The filtered post-fix logcat contains no
+`DATABASE_NOT_READY`, `FATAL EXCEPTION`, or PeacePad API failure.
+
+This proves the production family-load regression is fixed for the installed
+account and that the code `48` binary reaches the main native workflow. It is
+not yet proof of two-account invitation, message mutation, attachment upload,
+audio media, or public Production rollout. Those require a second controlled
+account and separate iOS physical-device evidence.
