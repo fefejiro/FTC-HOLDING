@@ -224,7 +224,14 @@ const readJsonObject = async (request: Request): Promise<Record<string, unknown>
   }
 };
 
-const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, message?: string) => {
+type RpcFailure = Readonly<{ message?: unknown; code?: unknown }>;
+
+const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, failureDetail?: string | RpcFailure) => {
+  const message = typeof failureDetail === "string"
+    ? failureDetail
+    : typeof failureDetail?.message === "string" ? failureDetail.message : "";
+  const databaseCode = typeof failureDetail === "object" && typeof failureDetail?.code === "string"
+    ? failureDetail.code : "";
   const directCodes: Partial<Record<string, ErrorCode>> = {
     REGION_MISMATCH: "REGION_MISMATCH",
     SCHEMA_MISMATCH: "SCHEMA_MISMATCH",
@@ -265,13 +272,28 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     "TIMELINE_REQUEST_INVALID", "TIMELINE_SOURCE_INVALID", "TIMELINE_SOURCE_ALREADY_LINKED",
     "DEVICE_PUSH_INVALID", "DEVICE_PUSH_CONFIGURATION_INVALID", "PARENTING_TASK_INVALID", "PARENTING_TASK_ASSIGNEE_INVALID",
   ]);
-  const safeCode = directCodes[message ?? ""] ?? (invalidRequestCodes.has(message ?? "") ? "INVALID_REQUEST" : "DATABASE_NOT_READY");
+  const safeCode = directCodes[message] ?? (invalidRequestCodes.has(message) ? "INVALID_REQUEST" : "DATABASE_NOT_READY");
+  // Keep provider/SQL details out of client responses while retaining a
+  // server-side correlation point for production diagnosis. No identity,
+  // family, message, or attachment content is logged here.
+  if (safeCode === "DATABASE_NOT_READY") {
+    console.error("PeacePad RPC failure", {
+      requestId,
+      environment: config.environment,
+      region: config.region,
+      postgresCode: databaseCode || undefined,
+      providerMessage: message || undefined,
+    });
+  }
   const status = safeCode === "DATABASE_NOT_READY" ? 503
     : safeCode === "SIGNAL_RATE_LIMITED" ? 429
     : ["REGION_MISMATCH", "CONCURRENCY_CONFLICT", "IDEMPOTENCY_CONFLICT", "CALL_ALREADY_ACTIVE", "CALL_STATE_INVALID"].includes(safeCode) ? 409
     : ["AI_CONSENT_REQUIRED", "INVITATION_SELF_ACCEPT_DENIED", "FAMILY_ACCESS_DENIED", "CONVERSATION_ACCESS_DENIED", "MESSAGE_ACCESS_DENIED", "MESSAGE_CHECK_DISABLED", "CALENDAR_ACCESS_DENIED", "CALL_ACCESS_DENIED", "DEVICE_PUSH_ACCESS_DENIED"].includes(safeCode) ? 403
     : 400;
-  return failure(request, status, safeCode as ErrorCode, safeCode === "DATABASE_NOT_READY" ? "The regional staging database is not ready." : "The request could not be completed.", requestId, config);
+  const databaseMessage = config.environment === "production"
+    ? "PeacePad could not load your family space right now. Please try again."
+    : "The regional staging database is not ready.";
+  return failure(request, status, safeCode as ErrorCode, safeCode === "DATABASE_NOT_READY" ? databaseMessage : "The request could not be completed.", requestId, config);
 };
 
 const hmacHex = async (secret: string, value: string): Promise<string> => {
@@ -573,9 +595,7 @@ const handler = async (request: Request): Promise<Response> => {
     const { data: bindings, error } = await authenticated.admin.rpc("peacepad_v2_get_session_binding", {
       p_identity_id: authenticated.user.id,
     });
-    if (error) {
-      return failure(request, 503, "DATABASE_NOT_READY", "The regional staging database is not ready.", requestId, config);
-    }
+    if (error) return rpcFailure(request, requestId, config, error);
     const binding = Array.isArray(bindings) ? bindings[0] : null;
     if (!binding) {
       return failure(request, 409, "IDENTITY_NOT_BOUND", "This fictional staging identity has not been assigned to a region.", requestId, config);
@@ -591,9 +611,7 @@ const handler = async (request: Request): Promise<Response> => {
       p_identity_id: authenticated.user.id,
       p_region: config.region,
     });
-    if (membershipError) {
-      return failure(request, 503, "DATABASE_NOT_READY", "The regional staging database is not ready.", requestId, config);
-    }
+    if (membershipError) return rpcFailure(request, requestId, config, membershipError);
     return json(request, 200, {
       actor: {
         identityId: authenticated.user.id,
@@ -683,7 +701,7 @@ const handler = async (request: Request): Promise<Response> => {
         p_region: config.region,
         p_family_id: familyId,
       });
-      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data ?? [], requestId, config);
+      return error ? rpcFailure(request, requestId, config, error) : json(request, 200, data ?? [], requestId, config);
     }
     const conversationId = decodeURIComponent((conversationMessagesMatch ?? conversationSearchMatch)![1]);
     if (!isUuid(conversationId)) return failure(request, 400, "INVALID_REQUEST", "A valid conversation is required.", requestId, config);

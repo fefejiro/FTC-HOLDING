@@ -795,6 +795,16 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
       const payload = (await response.json().catch(() => null)) as T | ErrorPayload | null;
       if (!response.ok) {
         const error = errorDetail((payload ?? null) as ErrorPayload | null);
+        // Keep production diagnostics useful without logging tokens, IDs, or
+        // user content. The request ID lets support correlate this event with
+        // the Edge function log when a family-space load fails.
+        console.warn("[PeacePad API] request failed", {
+          environment: this.config.environment,
+          path,
+          status: response.status,
+          code: error.code,
+          requestId: error.requestId ?? response.headers.get("x-request-id") ?? undefined
+        });
         if (response.status === 401) {
           throw new PeacePadApiError(
             this.config.environment === "production"
@@ -819,7 +829,12 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
       if (error instanceof Error && error.name === "AbortError") {
         throw new PeacePadApiError("PeacePad took too long to respond. Try again.", "timeout");
       }
-      throw new PeacePadApiError("PeacePad cannot reach the staging service right now.", "network");
+      throw new PeacePadApiError(
+        this.config.environment === "production"
+          ? "PeacePad cannot reach the service right now."
+          : "PeacePad cannot reach the staging service right now.",
+        "network"
+      );
     } finally {
       clearTimeout(timeout);
     }
