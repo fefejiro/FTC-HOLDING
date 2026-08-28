@@ -112,3 +112,10 @@ Therefore Android is **not the same code** as the iOS 1.1 candidate and must not
 - The canonical source now stretches both panels before applying safe-area offsets. Runtime labels also normalize the existing UTF-8 mojibake separators to readable `·` and `—` characters.
 - Added a PlayMode regression assertion that the runtime body width is greater than 100 points. Unity script compilation passed with this change.
 - Android packaging still stops in the Unity Player Bee backend before AAB generation; no Android upload or Pixel install of this fix is claimed.
+
+### Layout-fix Android rebuild attempt (2026-08-28)
+
+- Canonical commit containing the shared layout fix, label normalization, signed device-APK entry point, and Editor-only PlayMode test assembly is `3f9cd7b23`.
+- The source-side fix compiles successfully. The signed device build was retried with Unity `6000.4.5f1` using `Jci.Editor.BuildScript.BuildAndroidApkForDevice` and the existing JCI upload keystore.
+- Unity completed package registration and script compilation, then hung in `bee_backend.exe` while compiling `ScriptAssemblies`; no corrected APK or AAB was produced. Evidence: `D:\FTC-HOLDING-releases\just-checking-in\android-2026-08-19\jci-android-layoutfix-apk5-20260828.log`.
+- The temporary source overlay was restored byte-for-byte from `stale-source-backup-20260828`. Pixel 7 still has only the old `0.2.0` / code `2` install; no corrected Android install or Play submission is claimed.
