@@ -59,3 +59,50 @@ source until a new artifact is built and installed. The next qualifying audio
 gate is a signed/internal build from the approved source with two existing
 authorized test accounts, followed by a real Pixel-to-iPhone call and a
 separate TURN/background/termination check.
+
+## Notification and phone-audio policy audit — 2026-08-28
+
+The same Pixel was queried over the USB transport immediately before the
+notification policy fix:
+
+- `zen_mode=0` (Do Not Disturb off).
+- Ring and notification volume were both `5` on the device's scale.
+- Android reported `POST_NOTIFICATIONS: granted=false` for
+  `ca.peacepad.family` and package notification importance `NONE`.
+- The app's `peacepad-calls` channel was not observable because notification
+  permission had not been granted and the app had not completed registration.
+
+The source handler previously returned `shouldPlaySound: false`. That value
+overrides Android channel sound while the app is in the foreground, so it
+could suppress an incoming-call sound even with normal phone settings. The
+handler now returns `shouldPlaySound: true`; Android channel settings, the
+ringer/notification volume, Silent mode, and Do Not Disturb remain authoritative
+and can still suppress sound. The Android channel remains MAX importance with
+default sound, private lock-screen visibility, and a short vibration pattern.
+
+The notification regression suite now passes 10/10 tests, including the
+foreground presentation policy and channel sound/vibration assertions. This is
+source/test evidence only; code 48 on the phone predates this fix. No updated
+store artifact was built or uploaded in this audit.
+
+**Notification gate remains open:** grant notifications on the qualifying
+binary, enable the channel, deliver a real authenticated incoming-call push,
+and repeat in Normal, Silent, Do Not Disturb, background, and locked-screen
+states. The Native V2 repository currently contains device registration and
+revocation contracts but no production push-dispatch worker, so a delivered
+incoming-call notification cannot yet be claimed from this checkout.
+
+## Second-participant compatibility
+
+The legacy Capacitor/web client is not a valid second endpoint for a Native V2
+audio proof. Legacy calls use `/api/calls` and the legacy WebSocket signaling
+path; Native V2 uses `/api/v2/calls` and authenticated Supabase Realtime
+signaling. Their call records, authorization checks, and media handshakes are
+not interoperable. A Pixel plus the legacy iPhone/web client can be used for a
+separate legacy regression check, but it cannot prove a Native V2 call.
+
+The qualifying two-party gate is therefore the same Native V2 production
+binary on the Pixel and iPhone/TestFlight, with two existing authorized
+accounts in one family/conversation. It must be run only after production
+push dispatch and TURN credentials are configured. No production fixture or
+dummy account should be created to make this test pass.

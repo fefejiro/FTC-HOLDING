@@ -24,13 +24,24 @@ type StoredRegistration = Readonly<{
 }>;
 
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldPlaySound: false,
+  handleNotification: async () => foregroundNotificationBehavior(),
+});
+
+/**
+ * Foreground presentation deliberately delegates sound decisions to the
+ * operating system. Android's notification channel, ringer volume, Silent
+ * mode, and Do Not Disturb policy remain authoritative; setting this to false
+ * here would override the `peacepad-calls` channel and suppress call alerts
+ * even when the phone is configured to play them.
+ */
+export function foregroundNotificationBehavior(): Notifications.NotificationBehavior {
+  return {
+    shouldPlaySound: true,
     shouldSetBadge: false,
     shouldShowBanner: true,
     shouldShowList: true
-  })
-});
+  };
+}
 
 function parseStoredRegistration(raw: string | null): StoredRegistration | undefined {
   if (!raw) return undefined;
