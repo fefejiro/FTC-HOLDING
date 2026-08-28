@@ -80,6 +80,7 @@ namespace Jci.Presentation
             safe.transform.SetParent(go.transform, false);
             Stretch(safe.GetComponent<RectTransform>());
             var glass = MakePanel(safe.transform, "Glass Surface", new Color(1f, 1f, 1f, 0.055f));
+            Stretch(glass);
             glass.offsetMin = new Vector2(14, 12);
             glass.offsetMax = new Vector2(-14, -12);
             var outline = glass.gameObject.AddComponent<Outline>();
@@ -87,6 +88,7 @@ namespace Jci.Presentation
             outline.effectDistance = new Vector2(1f, -1f);
             glass.gameObject.AddComponent<JciGlassPulse>();
             body = MakePanel(safe.transform, "Body", new Color(0, 0, 0, 0));
+            Stretch(body);
             body.offsetMin = new Vector2(26, 24);
             body.offsetMax = new Vector2(-26, -24);
             screenMotion = body.gameObject.AddComponent<JciScreenMotion>();
@@ -289,6 +291,7 @@ namespace Jci.Presentation
 
         private static Text AddText(Transform parent, string value, int size, Color color, FontStyle style, float height, Color? background = null)
         {
+            value = NormalizeLabel(value);
             RectTransform layoutRect = null;
             if (background.HasValue)
             {
@@ -317,6 +320,14 @@ namespace Jci.Presentation
                 var layout = text.gameObject.AddComponent<LayoutElement>(); layout.preferredHeight = height; layout.flexibleWidth = 1;
             }
             return text;
+        }
+
+        // Keep labels readable if an older serialized/source string contains UTF-8 mojibake.
+        private static string NormalizeLabel(string value)
+        {
+            return (value ?? string.Empty)
+                .Replace("\u00C2\u00B7", "\u00B7")
+                .Replace("\u00E2\u20AC\u201D", "\u2014");
         }
 
         private static Button AddButton(Transform parent, string label, UnityEngine.Events.UnityAction action, Color background, Color? foreground = null)

@@ -39,6 +39,9 @@ namespace Jci.Tests.PlayMode
             Assert.That(canvas, Is.Not.Null);
             Assert.That(canvas.GetComponent<UnityEngine.UI.GraphicRaycaster>(), Is.Not.Null);
             yield return null;
+            var body = canvas.transform.Find("Safe Area/Body") as RectTransform;
+            Assert.That(body, Is.Not.Null);
+            Assert.That(body.rect.width, Is.GreaterThan(100f));
         }
 
         [UnityTest]
@@ -129,10 +132,17 @@ namespace Jci.Tests.PlayMode
             foreach (var button in Object.FindObjectsByType<Button>(FindObjectsSortMode.None))
             {
                 var text = button.GetComponentInChildren<Text>();
-                if (text != null && text.text == label) return button;
+                if (text != null && NormalizeLabel(text.text) == NormalizeLabel(label)) return button;
             }
 
             return null;
+        }
+
+        private static string NormalizeLabel(string value)
+        {
+            return (value ?? string.Empty)
+                .Replace("\u00C2\u00B7", "\u00B7")
+                .Replace("\u00E2\u20AC\u201D", "\u2014");
         }
 
         private static void DeleteLocalData()
