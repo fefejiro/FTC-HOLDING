@@ -171,6 +171,14 @@ navigation. Calendar, Records, More, and the read-only Tasks screen each opened
 without an API error. The filtered post-fix logcat contains no
 `DATABASE_NOT_READY`, `FATAL EXCEPTION`, or PeacePad API failure.
 
+The read-only Activity ideas route also opened from Home. Its captured UI shows
+the weather and age-range filters, 15 ideas, and Plan in calendar actions; the
+associated logcat contains no fatal exception or PeacePad API failure. Evidence
+is retained at `D:/PeacePadRelease/evidence/android-code48/` under
+`screen-activity-ideas.png`, `ui-activity-ideas.xml`, and
+`logcat-activity-ideas.txt`. No plan or calendar mutation was submitted during
+this check.
+
 This proves the production family-load regression is fixed for the installed
 account and that the code `48` binary reaches the main native workflow. It is
 not yet proof of two-account invitation, message mutation, attachment upload,
