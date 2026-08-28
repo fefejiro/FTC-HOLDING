@@ -9,9 +9,9 @@ const APPSTORE_PRODUCTION_BUILD_NUMBER = "8";
 const PLAYSTORE_VERSION_CODE = 43;
 // Play Store version codes 44 and 45 are already present on the existing
 // listing. The private-entry UX fix is a replacement production artifact, so
-// keep the public candidate monotonic at 47; the guarded internal profile
+// keep the public candidate monotonic at 48; the guarded internal profile
 // remains on its historical code 43.
-const PLAYSTORE_PRODUCTION_VERSION_CODE = 47;
+const PLAYSTORE_PRODUCTION_VERSION_CODE = 48;
 const PRODUCTION_BUNDLE_ID = "ca.peacepad.family";
 const APP_STORE_ID = "6793350735";
 const GOOGLE_SIGN_IN_PLUGIN = "@react-native-google-signin/google-signin";
