@@ -3,7 +3,7 @@
 Date: 2026-08-26  
 Owner account: Fejiro Play organization, developer account `9098950441049789979`  
 Canonical source branch: `codex/jci-ios-1.1-main2`  
-Canonical source commit: `bbb17c0009c9678521e56d6bd4a5606ca6851b8e`
+Canonical source commit: `3f9cd7b23` (layout fix and Android device-build entry point)
 
 ## Store status (verified live)
 
