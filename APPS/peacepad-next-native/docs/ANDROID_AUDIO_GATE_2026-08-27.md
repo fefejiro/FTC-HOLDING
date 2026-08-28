@@ -1,7 +1,7 @@
 # Android audio gate evidence
 
 Date: 2026-08-27  
-Native source reviewed: `2156908936e57476f8f7675bfbb82e5e16e474b8`  
+Native source reviewed: `08e599a01` (notification route) and prior audio source  
 Native worktree: `D:\PeacePadRelease\worktrees\peacepad-2.0.1-main-integration`  
 Installed package: `ca.peacepad.family`  
 
@@ -14,7 +14,9 @@ Installed package: `ca.peacepad.family`
 - The installed binary was already on the phone; it is not a build of source
   `2156908936e`. No store artifact was uploaded or replaced during this gate.
 - `RECORD_AUDIO` was initially denied. It was granted with `adb pm grant` for
-  this device-only permission check. `POST_NOTIFICATIONS` remains denied.
+  this device-only permission check. `POST_NOTIFICATIONS` was subsequently
+  granted with `adb pm grant` for the controlled device check; that does not
+  replace exercising the user prompt on a store build.
 
 ## Checks performed
 
@@ -107,7 +109,23 @@ accounts in one family/conversation. It must be run only after production
 push dispatch and TURN credentials are configured. No production fixture or
 dummy account should be created to make this test pass.
 
-The native checkout also has no notification-response listener or cold-start
-response handoff into `AudioCallScreen`. Until that route is implemented and
-covered, a received notification can be displayed by the operating system but
-cannot be claimed to open the in-app incoming-call experience.
+The native checkout now has a notification-response listener and a cold-start
+response handoff (`08e599a01`) that routes an `incoming-call` notification to
+the calls screen. The route only navigates; the authenticated runtime still
+re-checks family/call authorization before opening media. The route is covered
+by two focused tests. This remains source/test evidence only until a current
+binary receives a real push and is observed opening the call screen.
+
+## Loud/Normal device condition — 2026-08-28
+
+The Pixel was rechecked in the requested loud condition:
+
+- `zen_mode=0` / `ZEN_MODE_OFF`.
+- Ringer mode `NORMAL`; ring and notification streams are unmuted.
+- Ring and notification volume are both `5`.
+- `POST_NOTIFICATIONS` and `RECORD_AUDIO` are granted on the controlled device.
+
+This removes the OS volume/DND blocker. It does not prove delivery or media:
+the installed package is still code `48`, predates the sound and navigation
+fixes, and has no observed `peacepad-calls` channel or incoming push. A new
+artifact must be built and installed before repeating the device gate.
