@@ -88,3 +88,13 @@ Therefore Android is **not the same code** as the iOS 1.1 candidate and must not
 - Both stores are now pending platform approval; no further portal action is planned in this workstream.
 - The next-release architecture and effort estimate are saved in `NEXT-GAME-RELEASE-PLAN.md`.
 - Resume JCI only if Apple or Google reports a concrete review issue, or when public availability can be verified.
+
+## Android clean-build / Pixel 7 follow-up (2026-08-28)
+
+- Canonical repository remains clean at commit `58363d937973c4a013fd5c2ff1e1e73691d95796`.
+- A clean Unity 6000.4.5f1 build was attempted from an isolated D:-backed copy. The first copy was truncated during package transfer; a second attempt reached Unity package compilation but failed on generated Bee/API-updater metadata before producing an AAB.
+- The existing rejected AAB was converted with bundletool and installed on Pixel 7 (`2B260DLH2000C8`) only for a device-launch check. Installed metadata: package `com.ftcholding.justcheckingin`, version `0.2.0`, version code `2`, target SDK `36`, Unity `6000.4.5f1`.
+- The old artifact launches without an Android crash, but the rendered screen remains blank dark and therefore fails visual smoke. It must not be used as the 1.1 replacement or submitted to Play.
+- Evidence: `D:\FTC-HOLDING-releases\just-checking-in\android-2026-08-19\pixel7-jci-old-after10s.png` and `jci-stale-library-canonical3-20260828.log`.
+- Temporary source overlays were restored from `stale-source-backup-20260828`; no canonical gameplay files, PeacePad files, or store records were changed.
+- The next iteration must first establish a repeatable clean Unity package/Bee cache (preferably on the existing CI/Windows build host), then build and install the canonical 1.1 Android artifact before any Play resubmission.
