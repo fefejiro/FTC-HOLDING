@@ -21,6 +21,25 @@ Evidence is current only when it identifies the exact commit, command or
 scenario, environment/device, timestamp, result, and artifact. Older evidence
 is historical and cannot independently pass a release gate.
 
+### Current production verification — 2026-08-27
+
+The Canada production project was missing the already-reviewed parenting-task
+schema introduced by migration `202608270001_v2_parenting_tasks.sql`. The
+schema-only migration was applied through the linked Supabase project and its
+remote migration ledger was repaired to `202608270001 / v2_parenting_tasks`.
+Read-only checks confirm the table and guarded list/create/update/delete
+functions exist; no user records were created, copied, changed, or deleted.
+
+Android `2.0.1` code `48` (EAS build
+`5d349663-7e07-48d2-913d-7e91940ca6ed`, AAB SHA-256
+`e0ed7a0e41992631f2b987739a5d41da5a0fe5668228a7f2a89a3a4286efe6d1`) is
+installed from Google Play Internal Testing on the physical Pixel 7. After
+the migration, the authenticated production family space loads and the Home,
+Calendar, Records, More, and read-only Tasks screens open without API or fatal
+errors. This is Internal Testing evidence only; it is not public Play
+Production availability. Two-account mutation, real-device iOS evidence, and
+public store rollout remain open.
+
 ## Release verdict
 
 ### App Store review submission -- 2026-08-18
