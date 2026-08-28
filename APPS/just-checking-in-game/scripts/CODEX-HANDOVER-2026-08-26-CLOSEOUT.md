@@ -119,3 +119,9 @@ Therefore Android is **not the same code** as the iOS 1.1 candidate and must not
 - The source-side fix compiles successfully. The signed device build was retried with Unity `6000.4.5f1` using `Jci.Editor.BuildScript.BuildAndroidApkForDevice` and the existing JCI upload keystore.
 - Unity completed package registration and script compilation, then hung in `bee_backend.exe` while compiling `ScriptAssemblies`; no corrected APK or AAB was produced. Evidence: `D:\FTC-HOLDING-releases\just-checking-in\android-2026-08-19\jci-android-layoutfix-apk5-20260828.log`.
 - The temporary source overlay was restored byte-for-byte from `stale-source-backup-20260828`. Pixel 7 still has only the old `0.2.0` / code `2` install; no corrected Android install or Play submission is claimed.
+
+### Fresh D:-backed build-host recovery (2026-08-28)
+
+- A disposable copy at `D:\FTC-GAMES\jci-j1.1-device-build-20260828` was created from the canonical Unity project without a `Library` cache.
+- Unity `6000.4.5f1` initialized and reached `Application.AssetDatabase Initial Refresh`, but package import did not complete in the available run. Seeding the disposable copy from the old cache also stalled while copying Unity package data, so no APK was generated.
+- This confirms the remaining blocker is the local Unity/package/Bee build environment, not the layout-fix source. Use a healthy CI/Windows Unity runner with a warm package cache for the next build; do not resubmit the old code-2 AAB.
