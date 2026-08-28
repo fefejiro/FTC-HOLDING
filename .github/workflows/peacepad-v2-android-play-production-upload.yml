@@ -183,7 +183,7 @@ jobs:
           eas_build_id=$EAS_BUILD_ID
           package=ca.peacepad.family
           version=2.0.1
-          version_code=47
+          version_code=48
           track=internal
           production_writes_enabled=true
           upload_outcome=$UPLOAD_OUTCOME
