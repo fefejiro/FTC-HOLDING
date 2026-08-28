@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import * as SecureStore from "expo-secure-store";
 import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, Share, StyleSheet, Text, TextInput, View } from "react-native";
-import type { CreatedInvitation, PeacePadCoordinationApi } from "../api/CoordinationApi";
+import type { CreatedInvitation, PeacePadCoordinationApi, PersonalityPreference, PersonalityType } from "../api/CoordinationApi";
 import { RecordsStateProvider } from "../records/RecordsState";
 import { createStagingCoordinationClient } from "../staging/StagingCoordinationClient";
 import type { CoordinationRuntime } from "../coordination/CoordinationState";
@@ -229,6 +229,9 @@ export function PeacePadStagingRuntime({
   const [leaveFamilyError, setLeaveFamilyError] = useState<string>();
   const [profileBusy, setProfileBusy] = useState(false);
   const [profileError, setProfileError] = useState<string>();
+  const [personalityPreference, setPersonalityPreference] = useState<PersonalityPreference>();
+  const [personalityBusy, setPersonalityBusy] = useState(false);
+  const [personalityError, setPersonalityError] = useState<string>();
   const [notificationStatus, setNotificationStatus] = useState<DeviceNotificationState | "busy">("not-enabled");
 
   const submitSignIn = useCallback(() => {
@@ -343,6 +346,34 @@ export function PeacePadStagingRuntime({
       .catch(() => { if (active) setNotificationStatus("unavailable"); });
     return () => { active = false; };
   }, [runtimeState]);
+
+  useEffect(() => {
+    if (runtimeState.status !== "ready") {
+      setPersonalityPreference(undefined);
+      setPersonalityError(undefined);
+      setPersonalityBusy(false);
+      return;
+    }
+    // Keep the runtime compatible with older/mocked coordination clients while
+    // the personality preference contract rolls out. A missing optional method
+    // must not tear down an otherwise verified session.
+    if (typeof runtimeState.api.getPersonalityPreference !== "function") {
+      setPersonalityPreference(undefined);
+      setPersonalityError(undefined);
+      setPersonalityBusy(false);
+      return;
+    }
+    let active = true;
+    setPersonalityBusy(true);
+    setPersonalityError(undefined);
+    void runtimeState.api.getPersonalityPreference()
+      .then((preference) => { if (active) setPersonalityPreference(preference); })
+      .catch((cause) => {
+        if (active) setPersonalityError(cause instanceof Error ? cause.message : t("personality.error"));
+      })
+      .finally(() => { if (active) setPersonalityBusy(false); });
+    return () => { active = false; };
+  }, [runtimeState, t]);
 
   useEffect(() => {
     let mounted = true;
@@ -602,6 +633,26 @@ export function PeacePadStagingRuntime({
         throw cause;
       } finally {
         setProfileBusy(false);
+      }
+    },
+    personalityPreference,
+    updatingPersonality: personalityBusy,
+    personalityError,
+    updatePersonality: async (personalityType: PersonalityType | null) => {
+      setPersonalityBusy(true);
+      setPersonalityError(undefined);
+      try {
+        const updated = await runtimeState.api.setPersonalityPreference(
+          personalityType,
+          runtimeWriteContext(runtimeState.verified, personalityPreference?.version ?? 0)
+        );
+        setPersonalityPreference(updated);
+      } catch (cause) {
+        const message = cause instanceof Error ? cause.message : t("personality.error");
+        setPersonalityError(message);
+        throw cause;
+      } finally {
+        setPersonalityBusy(false);
       }
     },
     leaveFamily: () => leaveVerifiedFamily(runtimeState.api, runtimeState.runtime),

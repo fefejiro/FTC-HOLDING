@@ -23,6 +23,8 @@ import {
   type MessageSearchResult,
   type LinkTimelineSourceInput,
   type SendMessageInput,
+  type PersonalityPreference,
+  type PersonalityType,
   type PeacePadCoordinationApi
 } from "./CoordinationApi";
 import {
@@ -137,6 +139,14 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
   private attachmentIntents = new Map<string, AttachmentUploadIntent>();
   private audioCall: AudioCallSession | null = null;
   private devicePushRegistration: DevicePushRegistration | null = null;
+  private personalityPreference: PersonalityPreference = {
+    identityId: actor.identityId,
+    region: "ca",
+    personalityType: null,
+    updatedAt: null,
+    version: 0,
+    schemaVersion: "2.0"
+  };
 
   constructor(seedInvitations: readonly SeedInvitation[] = []) {
     seedInvitations.forEach((seed) => {
@@ -782,6 +792,26 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
       region: context.region,
       version: (context.expectedVersion ?? 0) + 1
     } as const;
+  }
+
+  async getPersonalityPreference(): Promise<PersonalityPreference> {
+    return this.personalityPreference;
+  }
+
+  async setPersonalityPreference(personalityType: PersonalityType | null, context: WriteContext): Promise<PersonalityPreference> {
+    if (context.actor.identityId !== this.personalityPreference.identityId || context.region !== this.personalityPreference.region) {
+      throw new PeacePadApiError("You do not have access to this communication profile.", "http", 403);
+    }
+    if (context.expectedVersion !== this.personalityPreference.version) {
+      throw new PeacePadApiError("The communication profile changed. Review it again before continuing.", "http", 409);
+    }
+    this.personalityPreference = {
+      ...this.personalityPreference,
+      personalityType,
+      updatedAt: new Date().toISOString(),
+      version: this.personalityPreference.version + 1
+    };
+    return this.personalityPreference;
   }
 
   private assertInvitationVersion(invitationId: EntityId, expectedVersion: number | null) {

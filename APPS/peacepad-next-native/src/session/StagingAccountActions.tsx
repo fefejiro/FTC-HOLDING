@@ -1,4 +1,5 @@
 import React, { createContext, useContext, type ReactNode } from "react";
+import type { PersonalityPreference, PersonalityType } from "../api/CoordinationApi";
 
 export type StagingAccountActionsValue = Readonly<{
   signOut: () => Promise<void>;
@@ -9,6 +10,10 @@ export type StagingAccountActionsValue = Readonly<{
   updateProfile?: (displayName: string) => Promise<void>;
   updatingProfile?: boolean;
   profileError?: string;
+  personalityPreference?: PersonalityPreference;
+  updatePersonality?: (personalityType: PersonalityType | null) => Promise<void>;
+  updatingPersonality?: boolean;
+  personalityError?: string;
   leaveFamily?: () => Promise<void>;
   leavingFamily?: boolean;
   leaveFamilyError?: string;
