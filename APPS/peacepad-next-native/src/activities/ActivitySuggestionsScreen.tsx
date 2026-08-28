@@ -1,17 +1,23 @@
 import React, { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { AccessibleHeading } from "../components/AccessibleHeading";
 import { LabButton } from "../components/LabButton";
 import { useOptionalLocalization } from "../localization/LocalizationProvider";
 import { colors, spacing, typography } from "../theme";
 import { activityCopy } from "./activityLocalization";
 import { filterActivitySuggestions, type ActivityWeather } from "./ActivitySuggestions";
+import { fetchCurrentWeather, findWeatherPlace, type WeatherSnapshot } from "./weather";
 
 export function ActivitySuggestionsScreen({ onPlanActivity }: { onPlanActivity: (title: string) => void }) {
   const { locale } = useOptionalLocalization();
   const text = activityCopy(locale);
   const [weather, setWeather] = useState<ActivityWeather>();
   const [ageMonths, setAgeMonths] = useState<number>();
+  const [place, setPlace] = useState("");
+  const [weatherSnapshot, setWeatherSnapshot] = useState<WeatherSnapshot>();
+  const [weatherPlace, setWeatherPlace] = useState("");
+  const [weatherBusy, setWeatherBusy] = useState(false);
+  const [weatherError, setWeatherError] = useState<string>();
   const suggestions = useMemo(() => filterActivitySuggestions({ ageMonths, weather }), [ageMonths, weather]);
   const weatherChoices: readonly { value?: ActivityWeather; label: string }[] = [
     { label: text.allWeather },
@@ -21,11 +27,44 @@ export function ActivitySuggestionsScreen({ onPlanActivity }: { onPlanActivity: 
     { label: text.allAges },
     ...[18, 30, 54, 96, 156].map((value, index) => ({ value, label: text.ageChoices[index] }))
   ];
+  const checkWeather = async () => {
+    setWeatherBusy(true);
+    setWeatherError(undefined);
+    try {
+      const resolved = await findWeatherPlace(place);
+      const snapshot = await fetchCurrentWeather(resolved.latitude, resolved.longitude);
+      setWeatherPlace(resolved.country ? `${resolved.name}, ${resolved.country}` : resolved.name);
+      setWeatherSnapshot(snapshot);
+      setWeather(snapshot.condition);
+    } catch (cause) {
+      setWeatherError(cause instanceof Error ? cause.message : text.weatherUnavailable);
+    } finally {
+      setWeatherBusy(false);
+    }
+  };
 
   return (
     <View style={styles.stack}>
       <AccessibleHeading style={styles.title}>{text.title}</AccessibleHeading>
       <Text style={styles.body}>{text.body}</Text>
+
+      <View style={styles.card}>
+        <Text accessibilityRole="header" style={styles.heading}>{text.weatherPlace}</Text>
+        <TextInput
+          accessibilityLabel={text.weatherPlace}
+          autoCapitalize="words"
+          autoCorrect={false}
+          onChangeText={setPlace}
+          onSubmitEditing={() => void checkWeather()}
+          placeholder={text.weatherPlacePlaceholder}
+          returnKeyType="search"
+          style={styles.input}
+          value={place}
+        />
+        <LabButton disabled={weatherBusy || place.trim().length < 2} label={weatherBusy ? text.loadingWeather : text.useCurrentWeather} onPress={() => void checkWeather()} variant="secondary" />
+        {weatherSnapshot && weatherPlace ? <Text accessibilityLiveRegion="polite" style={styles.weatherSummary}>{text.currentWeather(weatherPlace, text.weatherChoices[weatherSnapshot.condition], weatherSnapshot.temperatureC.toFixed(1))}</Text> : null}
+        {weatherError ? <Text accessibilityRole="alert" style={styles.error}>{weatherError}</Text> : null}
+      </View>
 
       <View style={styles.card}>
         <Text accessibilityRole="header" style={styles.heading}>{text.weather}</Text>
@@ -81,6 +120,9 @@ const styles = StyleSheet.create({
   title: { ...typography.title },
   heading: { ...typography.heading, marginTop: spacing.xs },
   body: { ...typography.body, color: colors.muted, lineHeight: 22 },
+  input: { ...typography.body, backgroundColor: colors.background, borderColor: colors.border, borderRadius: 12, borderWidth: 1, color: colors.text, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  weatherSummary: { ...typography.caption, color: colors.text, fontWeight: "700" },
+  error: { ...typography.caption, color: colors.dangerText },
   caption: { ...typography.caption, color: colors.muted },
   card: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 16, borderWidth: 1, gap: spacing.sm, padding: spacing.md },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },

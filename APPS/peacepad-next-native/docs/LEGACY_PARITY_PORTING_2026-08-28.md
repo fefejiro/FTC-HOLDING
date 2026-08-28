@@ -39,6 +39,28 @@ preview length.
 No event is created when the planner is merely opened or previewed. Repeated
 adds skip exact generated blocks already present in the loaded calendar.
 
+## Legacy parity slice: weather-aware activity ideas
+
+The next port reuses the maintained web activity journey from
+`C:\FTC HOLDING\APPS\peacepad\client\src\pages\weather-activities.tsx`.
+The legacy behavior resolves a place, asks Open-Meteo for the current
+temperature and weather code, maps that response to the existing activity
+catalogue conditions, and filters suitable ideas.
+
+Native V2 keeps the existing `ActivitySuggestions` catalog and adds:
+
+- `src/activities/weather.ts` for the pure Open-Meteo mapping, bounded place
+  lookup, response validation, and provider error handling;
+- an explicit typed city/region lookup on `ActivitySuggestionsScreen` that
+  applies the returned weather condition to the existing filter;
+- concise localized weather labels and summaries in EN/FR/ES.
+
+This port does not request device location, run a background lookup, create
+an account, persist location, or write application data. Weather lookup is
+user-triggered and provider failures remain visible so the app never invents
+conditions. The mapping preserves the legacy rain, snow, cloud, hot (>28 C),
+and cold (<5 C) rules.
+
 ## Deliberate boundaries
 
 The existing native V2 contract does not yet persist a partnership-level
@@ -59,6 +81,20 @@ local or production dummy data.
 
 The tests cover all three legacy patterns, invalid and pre-start dates,
 disabled plans, unsafe preview lengths, and all-day block compression.
+
+The weather slice adds:
+
+- `node node_modules/jest/bin/jest.js src/activities/weather.test.ts src/activities/ActivitySuggestions.test.ts src/activities/activityLocalization.test.ts --runInBand --verbose --forceExit`
+  - validates the legacy condition mapping, temperature overrides, typed place
+    validation, minimal current-weather request, and malformed/unavailable
+    provider responses.
+
+The exact pass counts for the weather slice are recorded only after this
+source is run through the focused test, typecheck, guardrail, secret-scan, and
+diff checks. On 2026-08-28, the focused run passed 3 suites and 9 tests;
+TypeScript, native guardrails, the 165-file secret scan, and `git diff --check`
+also passed. The Jest run took 53.9 seconds on the Windows worktree after a
+cold cache.
 
 ## Next parity slice
 
