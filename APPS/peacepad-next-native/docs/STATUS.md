@@ -50,6 +50,19 @@ Xcode `26.6 (17F113)`. App Store Connect submission
 is upload evidence only; Apple processing, physical-iPhone verification,
 review submission, approval, and public availability remain unverified.
 
+The same Android code `48` candidate was force-stopped and relaunched on the
+physical Pixel 7 without clearing data or submitting a write. The existing
+authenticated session restored directly to the Canada production Home screen.
+The captured screenshot/UI dump show the PeacePad logo, Home, Calendar,
+Records, More, Add an event, Tasks, Activity ideas, Invite co-parent, and Add a
+record. Filtered relaunch logcat contains no `FATAL EXCEPTION`,
+`DATABASE_NOT_READY`, PeacePad API failure, or `ReactNativeJS` error. Evidence
+is retained under `D:/PeacePadRelease/evidence/android-code48/` as
+`screen-session-restore.png`, `ui-session-restore.xml`, and
+`logcat-session-restore.txt`. This remains read-only session-restoration proof;
+it does not establish two-account mutation, audio media, Google clean-account
+sign-in, iOS physical-device proof, or public store rollout.
+
 ## Release verdict
 
 ### App Store review submission -- 2026-08-18
