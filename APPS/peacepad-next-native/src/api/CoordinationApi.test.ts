@@ -22,6 +22,7 @@ const accessToken = async () => "a".repeat(48);
 function response(status: number, payload: unknown): Response {
   return {
     json: jest.fn(async () => payload),
+    headers: { get: jest.fn(() => undefined) },
     ok: status >= 200 && status < 300,
     status
   } as unknown as Response;
