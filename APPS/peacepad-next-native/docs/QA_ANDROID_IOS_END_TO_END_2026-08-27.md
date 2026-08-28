@@ -200,3 +200,27 @@ The build is not yet App Review or public-store evidence: Apple processing,
 physical-iPhone verification, review submission, and public availability still
 need independent confirmation. The non-secret receipt files are retained at
 `D:/PeacePadRelease/evidence/ios-build8-run33087801116/`.
+
+## Android session-restore check — 2026-08-27
+
+The installed Android `2.0.1` / version code `48` candidate was force-stopped
+and relaunched on the same physical Pixel 7 without clearing app data or
+submitting a write. The existing authenticated session restored directly to
+the Canada production Home screen.
+
+| Item | Evidence |
+| --- | --- |
+| Device | Physical Pixel 7, Android 17, ADB `2B260DLH2000C8` |
+| Package | `ca.peacepad.family` |
+| Candidate | `2.0.1` / version code `48` |
+| Screenshot | `D:/PeacePadRelease/evidence/android-code48/screen-session-restore.png` |
+| UI dump | `D:/PeacePadRelease/evidence/android-code48/ui-session-restore.xml` |
+| Logcat | `D:/PeacePadRelease/evidence/android-code48/logcat-session-restore.txt` |
+
+The screenshot and UI dump show the PeacePad logo, Home, Calendar, Records,
+More, Add an event, Tasks, Activity ideas, Invite co-parent, and Add a record.
+The filtered relaunch log contains no `FATAL EXCEPTION`, `DATABASE_NOT_READY`,
+PeacePad API failure, or `ReactNativeJS` error. This is a session-restoration
+and read-only navigation check only; it does not prove a second-account
+journey, message/calendar/record mutation, audio media, Google clean-account
+sign-in, or public store rollout.
