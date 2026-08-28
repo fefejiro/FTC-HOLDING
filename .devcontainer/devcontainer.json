@@ -3,7 +3,10 @@
   "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
   "workspaceFolder": "/workspaces/FTC-HOLDING",
   "features": {
-    "ghcr.io/devcontainers/features/git:1": {}
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/sshd:1": {
+      "version": "latest"
+    }
   },
   "postCreateCommand": ".devcontainer/bootstrap-peacepad-cloud.sh",
   "postStartCommand": ".devcontainer/cloud-session-ready.sh",
