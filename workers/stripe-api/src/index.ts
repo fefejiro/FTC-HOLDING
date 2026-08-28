@@ -20,6 +20,7 @@ export interface Env {
   SUPABASE_ANON_KEY?: string;
   SUPABASE_SERVICE_ROLE_KEY?: string;
   OPENAI_API_KEY?: string;
+  AI_USAGE_USD_CAD_RATE?: string;
   ATEAM_KEY?: string;
   UNALABS_PROJECT_PIPELINE_MODE?: string;
   AUTOCOLLECT_REMINDER_INTERVAL_DAYS?: string;
@@ -331,6 +332,70 @@ type MailDeliveryResult = {
 
 function logEvent(event: string, details: Record<string, unknown>): void {
   console.log(JSON.stringify({ event, ...details }));
+}
+
+const OPENAI_PRICING_USD_PER_MILLION: Record<string, { input: number; cachedInput: number; output: number }> = {
+  // OpenAI API pricing in effect when this slice was added; keep this map centralized.
+  'gpt-4o-mini': { input: 0.15, cachedInput: 0.075, output: 0.6 },
+};
+
+async function recordOpenAIUsage(env: Env, usage: {
+  requestId?: string;
+  model: string;
+  operation: string;
+  projectId?: string | null;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+    prompt_tokens_details?: { cached_tokens?: number };
+  };
+}): Promise<void> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY || !usage.requestId || !usage.usage) return;
+
+  const inputTokens = Number(usage.usage.prompt_tokens ?? 0);
+  const outputTokens = Number(usage.usage.completion_tokens ?? 0);
+  const cachedTokens = Number(usage.usage.prompt_tokens_details?.cached_tokens ?? 0);
+  const totalTokens = Number(usage.usage.total_tokens ?? inputTokens + outputTokens);
+  const pricing = OPENAI_PRICING_USD_PER_MILLION[usage.model];
+  if (!pricing) return;
+
+  const costUsd = ((Math.max(0, inputTokens - cachedTokens) * pricing.input)
+    + (cachedTokens * pricing.cachedInput)
+    + (outputTokens * pricing.output)) / 1_000_000;
+  const usdCadRate = Number(env.AI_USAGE_USD_CAD_RATE ?? '1.38');
+  const costCad = costUsd * (Number.isFinite(usdCadRate) ? usdCadRate : 1.38);
+  const projectId = usage.projectId && /^[0-9a-f-]{36}$/i.test(usage.projectId) ? usage.projectId : null;
+
+  try {
+    await fetch(`${cleanSecret(env.SUPABASE_URL)}/rest/v1/ai_usage_events?on_conflict=provider_request_id`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=ignore-duplicates',
+        'apikey': cleanSecret(env.SUPABASE_SERVICE_ROLE_KEY),
+        'Authorization': `Bearer ${cleanSecret(env.SUPABASE_SERVICE_ROLE_KEY)}`,
+      },
+      body: JSON.stringify({
+        provider: 'openai',
+        model: usage.model,
+        operation: usage.operation,
+        project_id: projectId,
+        provider_request_id: usage.requestId,
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        cached_tokens: cachedTokens,
+        total_tokens: totalTokens,
+        cost_usd: costUsd,
+        usd_cad_rate: usdCadRate,
+        cost_cad: costCad,
+        attribution_status: projectId ? 'attributed' : 'unattributed',
+        metadata: { pricing: { input: pricing.input, cachedInput: pricing.cachedInput, output: pricing.output } },
+      }),
+    });
+  } catch (error) {
+    logEvent('ai_usage_record_error', { requestId: usage.requestId, error: error instanceof Error ? error.message : 'unknown' });
+  }
 }
 
 async function sendIntakeNotification(env: Env, activation: {
@@ -727,8 +792,11 @@ async function generateScopeDraftFromIntake(
     }
 
     const openaiData = (await openaiResponse.json()) as {
+      id?: string;
       choices?: Array<{ message?: { content?: string } }>;
+      usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number; prompt_tokens_details?: { cached_tokens?: number } };
     };
+    await recordOpenAIUsage(env, { requestId: openaiData.id, model: 'gpt-4o-mini', operation: 'scope_draft', projectId: null, usage: openaiData.usage });
     const content = openaiData.choices?.[0]?.message?.content ?? '';
     let jsonStr = content;
     const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -1410,7 +1478,12 @@ async function handleAdminReprice(req: Request, env: Env, origin: string | null)
 
   if (!openaiResponse.ok) return json({ error: 'AI pricing request failed.' }, 502, origin);
 
-  const openaiData = (await openaiResponse.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  const openaiData = (await openaiResponse.json()) as {
+    id?: string;
+    choices?: Array<{ message?: { content?: string } }>;
+    usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number; prompt_tokens_details?: { cached_tokens?: number } };
+  };
+  await recordOpenAIUsage(env, { requestId: openaiData.id, model: 'gpt-4o-mini', operation: 'autopricing', projectId: id, usage: openaiData.usage });
   const content = openaiData.choices?.[0]?.message?.content ?? '';
   let jsonStr = content;
   const match = content.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -2926,8 +2999,11 @@ No markdown fences. No prose. Be specific and actionable.`;
       }
 
       const openaiData = (await openaiResponse.json()) as {
+        id?: string;
         choices?: Array<{ message?: { content?: string } }>;
+        usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number; prompt_tokens_details?: { cached_tokens?: number } };
       };
+      await recordOpenAIUsage(env, { requestId: openaiData.id, model: 'gpt-4o-mini', operation: 'generate_scope', projectId, usage: openaiData.usage });
       const content = openaiData.choices?.[0]?.message?.content ?? '';
 
       // Parse JSON from content (may be wrapped in markdown code blocks)
@@ -5078,9 +5154,11 @@ async function handleSparkChat(req: Request, env: Env, origin: string | null): P
     }
 
     const aiData = await aiRes.json() as {
+      id?: string;
       choices?: Array<{ message?: { content?: string } }>;
-      usage?: { total_tokens?: number };
+      usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number; prompt_tokens_details?: { cached_tokens?: number } };
     };
+    await recordOpenAIUsage(env, { requestId: aiData.id, model: 'gpt-4o-mini', operation: 'spark_chat', usage: aiData.usage });
 
     const reply = aiData.choices?.[0]?.message?.content?.trim() ?? '';
     if (!reply) {
@@ -5379,6 +5457,10 @@ export default {
 
     if (req.method === 'GET' && url.pathname === '/api/project-home') {
       return handleProjectHome(req, env, origin);
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/status') {
+      return json(await getPublicStatusSummary(req, env), 200, origin);
     }
 
     if (req.method === 'GET' && url.pathname === '/api/admin/autocollect') {

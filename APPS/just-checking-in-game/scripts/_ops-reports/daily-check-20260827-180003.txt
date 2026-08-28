@@ -1,0 +1,11 @@
+﻿Just Checking In Daily Ops Check
+Timestamp: 2026-08-27 18:00:03
+WorkspaceRoot: C:\FTC HOLDING\APPS\just-checking-in-game
+HandoverPath: C:\FTC HOLDING\APPS\just-checking-in-game\scripts\CODEX-HANDOVER.md
+PromptPath: C:\FTC HOLDING\APPS\just-checking-in-game\scripts\prompts\JCI-DAILY-OPS-PROMPT.md
+
+Handover status: MISSING
+
+Daily prompt status: MISSING
+
+Next action: Open prompt file and run an ops pass in your active coding agent.

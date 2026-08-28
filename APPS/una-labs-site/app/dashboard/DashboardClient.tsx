@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { getAteamEndpoint, isProjectAdminEmail, normalizeProjectStatus } from '@/lib/projects';
 import { getStripeApiUrl } from '@/lib/stripe-config';
+import { loadLiveInfraMonitor } from '@/lib/live-infra-status';
 import { getCommercialBillingLabel, getCommercialLabel, isActivationCommercial } from '@/lib/service-engagement';
 
 type ProjectRecord = {
@@ -788,7 +789,7 @@ export function DashboardClient() {
         ]);
 
         const client = createBrowserClient();
-        const authSubscription = client.auth.onAuthStateChange(async (event, authSession) => {
+        const authSubscription = client.auth.onAuthStateChange(async (event: unknown, authSession: Parameters<typeof loadForSession>[0] | null) => {
           if (cancelled) return;
 
           if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && authSession?.user) {
@@ -809,7 +810,10 @@ export function DashboardClient() {
         const session = await getSession();
         if (session?.user) {
           await loadForSession(session);
-          if (!cancelled) setState({ phase: 'unauthenticated' });
+          // loadForSession establishes the ready state. Do not overwrite a
+          // valid restored Google session with the signed-out view.
+        } else if (!cancelled) {
+          setState({ phase: 'unauthenticated' });
         }
       } catch (error) {
         if (!cancelled) {
@@ -873,11 +877,9 @@ export function DashboardClient() {
 
     const loadInfraMonitor = async () => {
       try {
-        const response = await fetch(`/ops/infra-live-status.json?t=${Date.now()}`, { cache: 'no-store' });
-        if (!response.ok) throw new Error(`Infra monitor unavailable (${response.status})`);
-        const payload = await response.json() as InfraMonitor;
+        const payload = await loadLiveInfraMonitor();
         if (!active) return;
-        setInfraMonitor(payload);
+        setInfraMonitor(payload as InfraMonitor);
         setInfraMonitorError('');
       } catch (error) {
         if (!active) return;
@@ -1271,7 +1273,7 @@ export function DashboardClient() {
                   <p className="mt-1 text-body-sm text-tx-secondary">This is the same monitoring feed used by Una Labs admin and dashboard views.</p>
                 </div>
                 <a
-                  href="/ops/infra-live-status.json"
+                  href={getStripeApiUrl('/api/status')}
                   target="_blank"
                   rel="noreferrer"
                   className="rounded-lg border border-border px-3 py-2 text-body-sm font-semibold text-tx-heading hover:bg-white"

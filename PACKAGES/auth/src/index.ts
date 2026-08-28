@@ -3,18 +3,18 @@ import { createBrowserClient, SupabaseClient } from '@ftc/supabase';
 import type { AuthSession as Session, AuthUser as User } from '@supabase/supabase-js';
 
 type AuthSurface = {
-  resetPasswordForEmail(email: string, options?: { redirectTo?: string }): Promise<unknown>;
-  updateUser(attributes: { password?: string }): Promise<unknown>;
+  resetPasswordForEmail(email: string, options?: { redirectTo?: string }): Promise<{ data?: unknown; error?: Error | null }>;
+  updateUser(attributes: { password?: string }): Promise<{ data?: unknown; error?: Error | null }>;
   getUser(): Promise<{ data: { user: User | null } }>;
-  signInWithPassword(credentials: { email: string; password: string }): Promise<unknown>;
+  signInWithPassword(credentials: { email: string; password: string }): Promise<{ data?: unknown; error?: Error | null }>;
   signInWithOAuth(options: {
     provider: 'google';
     options?: {
       redirectTo?: string;
       queryParams?: Record<string, string>;
     };
-  }): Promise<unknown>;
-  signOut(): Promise<unknown>;
+  }): Promise<{ data?: { url?: string }; error?: Error | null }>;
+  signOut(): Promise<{ data?: unknown; error?: Error | null }>;
   getSession(): Promise<{ data: { session: Session | null } }>;
   onAuthStateChange(handler: (event: string, session: Session | null) => void): unknown;
 };

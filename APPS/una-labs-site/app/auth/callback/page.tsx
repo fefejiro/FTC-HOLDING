@@ -41,7 +41,7 @@ function AuthCallbackClient() {
         } else if (tokenHash) {
           const { error: verifyError } = await client.auth.verifyOtp({
             token_hash: tokenHash,
-            type: typeParam as Parameters<typeof client.auth.verifyOtp>[0]['type'],
+            type: typeParam as never,
           });
           if (verifyError) throw verifyError;
         } else {

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
 import { isProjectAdminEmail } from '@/lib/projects';
 
 interface ProjectRecord {
@@ -41,9 +40,18 @@ interface InvoiceRecord {
   created_at: string;
 }
 
+interface AiUsageRecord {
+  project_id: string | null;
+  total_tokens: number;
+  cost_cad: number | null;
+  occurred_at: string;
+}
+
 type AnalyticsState = 'loading' | 'unauthenticated' | 'forbidden' | 'ready' | 'error';
 
 interface AnalyticsData {
+  aiSpend: { today: number; week: number; month: number; allTime: number; tokens: number };
+  aiByProject: Array<{ id: string | null; name: string; costCad: number; tokens: number; lastActivity: string | null }>;
   totalRevenue: number;
   mrrProjection: number;
   activeProjects: number;
@@ -68,8 +76,13 @@ export function AnalyticsClient() {
   const [state, setState] = useState<AnalyticsState>('loading');
   const [email, setEmail] = useState('');
   const [data, setData] = useState<AnalyticsData | null>(null);
+  const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
 
   useEffect(() => {
+    let active = true;
+    const refreshTimer = window.setInterval(() => void loadAnalytics(), 30_000);
+    let realtimeChannel: { unsubscribe: () => void } | undefined;
+
     async function loadAnalytics() {
       try {
         const [{ getSession }, { createBrowserClient }] = await Promise.all([
@@ -101,10 +114,13 @@ export function AnalyticsClient() {
           .select('*');
 
         if (projectsError) throw projectsError;
+        if (active) setLastCheckedAt(new Date().toISOString());
 
         if (!projects || projects.length === 0) {
           setState('ready');
           setData({
+            aiSpend: { today: 0, week: 0, month: 0, allTime: 0, tokens: 0 },
+            aiByProject: [],
             totalRevenue: 0,
             mrrProjection: 0,
             activeProjects: 0,
@@ -120,7 +136,7 @@ export function AnalyticsClient() {
         const projectIds = (projects as ProjectRecord[]).map(p => p.id);
 
         // Fetch invoices and milestones in parallel
-        const [{ data: invoices, error: invoicesError }, { data: milestones, error: milestonesError }] = await Promise.all([
+        const [{ data: invoices, error: invoicesError }, { data: milestones, error: milestonesError }, { data: aiUsage, error: aiUsageError }] = await Promise.all([
           supabase
             .from('invoices')
             .select('*')
@@ -129,15 +145,47 @@ export function AnalyticsClient() {
             .from('milestones')
             .select('*')
             .in('project_id', projectIds),
+          supabase
+            .from('ai_usage_events')
+            .select('project_id,total_tokens,cost_cad,occurred_at')
+            .order('occurred_at', { ascending: false }),
         ]);
 
         if (invoicesError) throw invoicesError;
         if (milestonesError) throw milestonesError;
+        if (aiUsageError) throw aiUsageError;
 
         // Calculate analytics
         const typedProjects = projects as ProjectRecord[];
         const typedInvoices = (invoices || []) as InvoiceRecord[];
         const typedMilestones = (milestones || []) as MilestoneRecord[];
+        const typedAiUsage = (aiUsage || []) as AiUsageRecord[];
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const startOfWeek = new Date(startOfToday);
+        startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+        const startOfMonth = new Date(startOfToday.getFullYear(), startOfToday.getMonth(), 1);
+        const aiCost = (event: AiUsageRecord) => Number(event.cost_cad || 0);
+        const aiSpend = {
+          today: typedAiUsage.filter(e => new Date(e.occurred_at) >= startOfToday).reduce((s, e) => s + aiCost(e), 0),
+          week: typedAiUsage.filter(e => new Date(e.occurred_at) >= startOfWeek).reduce((s, e) => s + aiCost(e), 0),
+          month: typedAiUsage.filter(e => new Date(e.occurred_at) >= startOfMonth).reduce((s, e) => s + aiCost(e), 0),
+          allTime: typedAiUsage.reduce((s, e) => s + aiCost(e), 0),
+          tokens: typedAiUsage.reduce((s, e) => s + Number(e.total_tokens || 0), 0),
+        };
+        const projectNames = new Map(typedProjects.map(p => [p.id, p.project_name]));
+        const aiProjectMap = new Map<string, { costCad: number; tokens: number; lastActivity: string | null }>();
+        typedAiUsage.forEach(event => {
+          const key = event.project_id || 'unattributed';
+          const current = aiProjectMap.get(key) || { costCad: 0, tokens: 0, lastActivity: null };
+          current.costCad += aiCost(event);
+          current.tokens += Number(event.total_tokens || 0);
+          if (!current.lastActivity || event.occurred_at > current.lastActivity) current.lastActivity = event.occurred_at;
+          aiProjectMap.set(key, current);
+        });
+        const aiByProject = Array.from(aiProjectMap.entries())
+          .map(([id, value]) => ({ id: id === 'unattributed' ? null : id, name: id === 'unattributed' ? 'Unattributed' : (projectNames.get(id) || 'Unknown project'), ...value }))
+          .sort((a, b) => b.costCad - a.costCad);
 
         // Revenue metrics
         const activeProjects = typedProjects.filter(p => p.status === 'active').length;
@@ -180,7 +228,11 @@ export function AnalyticsClient() {
         const onTimePercent = totalInvoices > 0 ? Math.round((paidOnTime / totalInvoices) * 100) : 0;
         const overduePercent = totalInvoices > 0 ? Math.round((overdue / totalInvoices) * 100) : 0;
 
+        if (!active) return;
+
         setData({
+          aiSpend,
+          aiByProject,
           totalRevenue,
           mrrProjection,
           activeProjects,
@@ -194,11 +246,31 @@ export function AnalyticsClient() {
         setState('ready');
       } catch (err) {
         console.error('Analytics error:', err);
-        setState('error');
+        if (active) setState('error');
       }
     };
 
     void loadAnalytics();
+
+    // Polling is the reliable fallback; Realtime makes normal row changes
+    // appear immediately when the Supabase stream is available.
+    void import('@ftc/supabase').then(({ createBrowserClient }) => {
+      if (!active) return;
+      const supabase = createBrowserClient();
+      realtimeChannel = supabase
+        .channel('una-labs-analytics-live')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => void loadAnalytics())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'milestones' }, () => void loadAnalytics())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, () => void loadAnalytics())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'ai_usage_events' }, () => void loadAnalytics())
+        .subscribe();
+    });
+
+    return () => {
+      active = false;
+      if (refreshTimer) window.clearInterval(refreshTimer);
+      realtimeChannel?.unsubscribe();
+    };
   }, []);
 
   if (state === 'loading') {
@@ -212,7 +284,11 @@ export function AnalyticsClient() {
   if (state === 'unauthenticated') {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-tx-secondary">Please sign in to view analytics.</div>
+        <div className="max-w-md rounded-xl border border-border bg-white p-6 text-center shadow-sm">
+          <p className="font-semibold text-tx-heading">Sign-in required</p>
+          <p className="mt-2 text-tx-secondary">Use the Una Labs owner Google account to view internal analytics.</p>
+          <a className="mt-4 inline-block font-semibold text-brand-teal hover:underline" href="/login/?redirect=/dashboard/analytics">Log in</a>
+        </div>
       </div>
     );
   }
@@ -220,7 +296,11 @@ export function AnalyticsClient() {
   if (state === 'forbidden') {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-tx-secondary">You don't have permission to view analytics.</div>
+        <div className="max-w-md rounded-xl border border-border bg-white p-6 text-center shadow-sm">
+          <p className="font-semibold text-tx-heading">Analytics is restricted</p>
+          <p className="mt-2 text-tx-secondary">You are signed in as {email}. This internal cost and revenue view is available only to Una Labs owner accounts.</p>
+          <a className="mt-4 inline-block font-semibold text-brand-teal hover:underline" href="/dashboard/">Open your project dashboard</a>
+        </div>
       </div>
     );
   }
@@ -244,6 +324,48 @@ export function AnalyticsClient() {
         <h1 className="text-4xl font-bold tx-heading">Business Intelligence Dashboard</h1>
         <p className="text-tx-secondary mt-2">Real-time metrics and financial insights</p>
       </div>
+
+      {/* AI cost visibility */}
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-2xl font-bold tx-heading">AI Spend</h2>
+          <p className="text-tx-secondary mt-1">Measured OpenAI usage recorded by the existing worker. Claude remains dormant.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            ['Today', data.aiSpend.today],
+            ['This week', data.aiSpend.week],
+            ['This month', data.aiSpend.month],
+            ['All time', data.aiSpend.allTime],
+          ].map(([label, value]) => (
+            <div key={String(label)} className="bg-white rounded-lg border border-border-default p-5 shadow-sm">
+              <p className="text-tx-secondary text-sm font-semibold">{label}</p>
+              <p className="text-3xl font-bold tx-heading mt-2">CA${Number(value).toFixed(2)}</p>
+            </div>
+          ))}
+        </div>
+        <div className="bg-white rounded-lg border border-border-default p-6 shadow-sm">
+          <div className="flex items-baseline justify-between gap-4 mb-4">
+            <h3 className="text-lg font-bold tx-heading">AI cost by project</h3>
+            <span className="text-sm text-tx-secondary">{data.aiSpend.tokens.toLocaleString()} tokens</span>
+          </div>
+          {data.aiByProject.length > 0 ? (
+            <div className="space-y-3">
+              {data.aiByProject.map(project => (
+                <div key={project.id || 'unattributed'} className="flex items-center justify-between border-b border-border-default pb-3 last:border-0 last:pb-0">
+                  <div>
+                    <p className="font-semibold tx-heading">{project.name}</p>
+                    <p className="text-xs text-tx-secondary">{project.tokens.toLocaleString()} tokens{project.lastActivity ? ` · ${new Date(project.lastActivity).toLocaleDateString()}` : ''}</p>
+                  </div>
+                  <p className="font-bold text-brand-teal">CA${project.costCad.toFixed(2)}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-tx-secondary italic">No persisted AI usage yet. New measured OpenAI calls will appear after the usage migration is applied.</p>
+          )}
+        </div>
+      </section>
 
       {/* Key Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -452,7 +574,7 @@ export function AnalyticsClient() {
 
       {/* Footer Info */}
       <div className="bg-bg-offwhite rounded-lg border border-border-default p-4 text-sm text-tx-secondary">
-        <p>📊 Metrics are updated in real-time from your projects, invoices, and milestones. Last refresh: {new Date().toLocaleTimeString()}</p>
+        <p>Live sync is enabled for projects, invoices, milestones, and AI usage. {lastCheckedAt ? `Last checked: ${new Date(lastCheckedAt).toLocaleTimeString()}` : 'Connecting...'}</p>
       </div>
     </div>
   );

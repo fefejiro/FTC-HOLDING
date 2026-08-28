@@ -20,6 +20,10 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://unalabs.cloud';
+const publicSupabaseConfig = {
+  url: process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
+  key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+};
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 const defaultTitle = 'Una Labs — AI Launchpad for Founders';
@@ -106,6 +110,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__FTC_PUBLIC_SUPABASE_ENV__=${JSON.stringify(publicSupabaseConfig).replace(/</g, '\\u003c')};`,
+          }}
+        />
         <Header />
         <main>{children}</main>
         <Footer />

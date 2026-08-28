@@ -1,11 +1,14 @@
-export const PROJECT_ADMIN_EMAIL = 'mike.fejiro@gmail.com';
+export const PROJECT_ADMIN_EMAILS = [
+  'mike.fejiro@gmail.com',
+  'fejiro.efiuvwere@gmail.com',
+] as const;
 
 export const PROJECT_STATUSES = ['scoping', 'building', 'live', 'paused'] as const;
 
 export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
 
 export function isProjectAdminEmail(email?: string | null) {
-  return String(email || '').trim().toLowerCase() === PROJECT_ADMIN_EMAIL;
+  return PROJECT_ADMIN_EMAILS.includes(String(email || '').trim().toLowerCase() as (typeof PROJECT_ADMIN_EMAILS)[number]);
 }
 
 export function getAteamBaseUrl() {

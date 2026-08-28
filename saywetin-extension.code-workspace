@@ -1,0 +1,23 @@
+{
+	"folders": [
+		{
+			"path": "APPS/saywetin-extension"
+		},
+		{
+			"path": "."
+		},
+		{
+			"path": "../FTC HOLDING MERGE"
+		},
+		{
+			"path": "../FTC%20HOLDING"
+		}
+	],
+	"settings": {
+		"chat.agent.maxRequests": 200,
+		"gradle.autoDetect": "off",
+		"gradle.nestedProjects": false,
+		"java.import.gradle.java.home": "C:\\Program Files\\Eclipse Adoptium\\jdk-17.0.17.10-hotspot",
+		"powershell.cwd": "FTC HOLDING"
+	}
+}

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { getStripeApiUrl } from '@/lib/stripe-config';
+import { loadLiveInfraMonitor } from '@/lib/live-infra-status';
 import { ACTIVATION_BANDS, getCommercialBillingLabel, getCommercialLabel, isActivationCommercial } from '@/lib/service-engagement';
 import { hasAdminAccess } from '@/lib/auth-guards';
 
@@ -370,9 +371,7 @@ export function AdminClient() {
 
   async function loadInfraMonitor() {
     try {
-      const response = await fetch(`/ops/infra-live-status.json?t=${Date.now()}`, { cache: 'no-store' });
-      if (!response.ok) throw new Error(`Infra monitor unavailable (${response.status})`);
-      const payload = await response.json() as InfraMonitor;
+      const payload = await loadLiveInfraMonitor();
       setInfraMonitor(payload);
       setInfraMonitorError(null);
     } catch (error) {
@@ -1082,7 +1081,7 @@ export function AdminClient() {
                 <p className="mt-1 text-body-sm text-tx-secondary">Live alert context for lively, splendid, enchanting, Cloudflare, and Supabase.</p>
               </div>
               <a
-                href="/ops/infra-live-status.json"
+                  href={getStripeApiUrl('/api/status')}
                 target="_blank"
                 rel="noreferrer"
                 className="rounded-lg border border-border px-3 py-2 text-body-sm font-semibold text-tx-heading hover:bg-white"
