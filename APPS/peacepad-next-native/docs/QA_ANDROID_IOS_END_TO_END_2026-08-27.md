@@ -184,3 +184,19 @@ account and that the code `48` binary reaches the main native workflow. It is
 not yet proof of two-account invitation, message mutation, attachment upload,
 audio media, or public Production rollout. Those require a second controlled
 account and separate iOS physical-device evidence.
+
+## iOS production upload evidence — 2026-08-27
+
+The exact icon-corrected source `158a9350147c6f1b874d7f3c6a643e3f80c41391`
+completed the signed iOS production workflow `33087801116`. The workflow
+validated the Canada production runtime, `ca.peacepad.family`, version
+`2.0.1`, build `8`, Google sign-in configuration, and production writes before
+building and submitting the IPA. The submission receipt is
+`3f269288-26a7-4025-a7a7-53f04e09df17`; App Store Connect accepted the upload
+for processing. Xcode was `26.6 (17F113)` and the IPA SHA-256 was
+`1c389181aadc1025fec6573f3af70ec19556254a4a00a3b18603d85b29ce57e2`.
+
+The build is not yet App Review or public-store evidence: Apple processing,
+physical-iPhone verification, review submission, and public availability still
+need independent confirmation. The non-secret receipt files are retained at
+`D:/PeacePadRelease/evidence/ios-build8-run33087801116/`.

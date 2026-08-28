@@ -40,6 +40,16 @@ errors. This is Internal Testing evidence only; it is not public Play
 Production availability. Two-account mutation, real-device iOS evidence, and
 public store rollout remain open.
 
+The icon-corrected iOS source `158a9350147c6f1b874d7f3c6a643e3f80c41391`
+completed signed production workflow `33087801116` for version `2.0.1`
+build `8`, bundle `ca.peacepad.family`, and the Canada production runtime.
+The exact IPA SHA-256 is
+`1c389181aadc1025fec6573f3af70ec19556254a4a00a3b18603d85b29ce57e2`, with
+Xcode `26.6 (17F113)`. App Store Connect submission
+`3f269288-26a7-4025-a7a7-53f04e09df17` accepted the IPA for processing. This
+is upload evidence only; Apple processing, physical-iPhone verification,
+review submission, approval, and public availability remain unverified.
+
 ## Release verdict
 
 ### App Store review submission -- 2026-08-18
