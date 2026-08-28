@@ -27,15 +27,17 @@ Create one environment from the existing `.devcontainer/devcontainer.json`:
 
 `FTC-HOLDING Cloud Dev`
 
-The devcontainer uses Node 22, Git, and an existing `npm ci` post-create step.
-Run the first preflight on the exact Git branch that will be worked on:
+The devcontainer uses Node 22 and Git. Its post-create bootstrap installs only
+the pinned PeacePad Native dependency tree, then runs its guardrail and
+secret-scan gates. This makes PeacePad the immediate ready-to-work surface
+without cloning local caches or attempting a store action. Run the remaining
+preflight on the exact Git branch that will be worked on:
 
 ```bash
 node --version
 npm --version
-npm ci
-npm run doctor
-npm run audit:secrets
+npm --prefix APPS/peacepad-next-native run typecheck
+npm --prefix APPS/peacepad-next-native test -- --runInBand
 ```
 
 Record missing tools instead of installing production tooling ad hoc. Android
