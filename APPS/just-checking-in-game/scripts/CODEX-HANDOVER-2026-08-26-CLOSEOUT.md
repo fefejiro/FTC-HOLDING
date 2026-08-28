@@ -105,3 +105,10 @@ Therefore Android is **not the same code** as the iOS 1.1 candidate and must not
 - Unity reached `BuildPlayer: start building target 13`, then stalled in the Android `Player` Bee backend without producing a new AAB. The exact logs are `D:\FTC-HOLDING-releases\just-checking-in\android-2026-08-19\jci-final-canonical-android-20260828.log` and `jci-final-canonical-android-20260828-retry.log`.
 - The attempt was terminated after the packaging stage made no progress; the prior 0.2.0/code-2 AAB remains the only artifact and was not relabeled or treated as 1.1.
 - The stale project source was restored byte-for-byte from `stale-source-backup-20260828`. The canonical worktree remains clean; no Pixel install of canonical 1.1.0/code 3 is claimed.
+
+### TestFlight layout feedback fix (2026-08-28)
+
+- The iOS TestFlight screenshot exposed a shared Unity layout defect: `Glass Surface` and `Body` were created with bottom-left anchors, then given edge offsets, collapsing the content width on mobile.
+- The canonical source now stretches both panels before applying safe-area offsets. Runtime labels also normalize the existing UTF-8 mojibake separators to readable `·` and `—` characters.
+- Added a PlayMode regression assertion that the runtime body width is greater than 100 points. Unity script compilation passed with this change.
+- Android packaging still stops in the Unity Player Bee backend before AAB generation; no Android upload or Pixel install of this fix is claimed.
