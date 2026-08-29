@@ -113,7 +113,7 @@ module.exports = ({ config }) => {
     }
     return {
       ...config,
-      icon: "./assets/icon.png",
+      icon: "./assets/icon-fullbleed.png",
       scheme: "peacepad",
       version: TESTFLIGHT_VERSION,
       plugins: [

@@ -10,7 +10,7 @@ const expected = {
   easOwner: "official_fejiro",
   easProjectId: "a4ecee72-ebae-483d-8553-035847ebb3d3",
   mode: "testflight-internal",
-  version: "2.0.0",
+  version: "2.0.1",
   buildNumber: "3"
 };
 const requiredRegionalNames = [
