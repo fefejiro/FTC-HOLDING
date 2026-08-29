@@ -21,6 +21,7 @@ import type { AttachmentMediaType } from "../domain/v2";
 import { useOptionalStagingAccountActions } from "../session/StagingAccountActions";
 import { useCoordinationState, type CalendarView } from "./CoordinationState";
 import { WeatherActivityIdeas } from "../legacy/WeatherActivityIdeas";
+import { PrepChatAssistant } from "../legacy/PrepChatAssistant";
 
 export type CoordinationScreen = "home" | "messages" | "calendar" | "invite" | "records" | "calls" | "more";
 type Navigate = (screen: CoordinationScreen) => void;
@@ -543,6 +544,8 @@ export function MessagesScreen() {
     <View style={styles.stack}>
       <AccessibleHeading style={styles.title}>{m("title")}</AccessibleHeading>
       <Text style={styles.body}>{m("body")}</Text>
+
+      <PrepChatAssistant onUseDraft={setMessageDraft} />
 
       <View style={styles.card}>
         <Text style={styles.heading}>{m("find")}</Text>
