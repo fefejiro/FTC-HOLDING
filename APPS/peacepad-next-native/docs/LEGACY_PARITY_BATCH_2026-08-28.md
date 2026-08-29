@@ -65,6 +65,22 @@ helper behind the same review boundary without changing the user flow.
 
 Focused helper coverage is in `src/legacy/prepChat.test.ts`.
 
+## Third delivered vertical slice: guest-first Prep Chat entry
+
+The same Prep Chat journey is now available from the device-only foundation
+compose flow, before a family connection or account sign-in:
+
+- Guest users can open Prep Chat after the existing required-consent step.
+- The generated draft is handed back to the existing guest message composer;
+  it is never sent automatically.
+- The composer remains the only boundary that can call the existing preview
+  API, so this batch adds no production write or legacy endpoint dependency.
+- `FoundationScreen.test.tsx` covers creating and applying a calm draft while
+  proving that no preview request occurs as a side effect.
+
+This closes the most important legacy solo-entry gap without changing the
+current session, consent, or production routing contracts.
+
 ## Safety boundary
 
 - Native V2 contracts remain the only production API authority.
