@@ -144,3 +144,14 @@ Therefore Android is **not the same code** as the iOS 1.1 candidate and must not
 - Unity SDK/NDK/JDK paths were verified as present and registered (`Android SDK`, NDK `27.2.12479018`, JDK `17.0.17.10`).
 - A disposable IL2CPP build was retried with Burst compilation disabled. Unity completed package import and shader processing, then stalled again in the Android Player Bee backend; no APK was produced. Evidence: `D:\FTC-HOLDING-releases\just-checking-in\android-2026-08-19\jci-device-noburst-20260828.log`.
 - This rules out missing Android modules and leaves the local Unity 6000.4.5f1 Player/Bee environment as the blocker. The next build should run on a separate healthy Windows CI runner.
+
+### GitHub Actions Android runner follow-up (2026-08-29)
+
+- A scoped workflow was added at `.github/workflows/jci-android-device-build.yml` and dispatched against the canonical branch `codex/jci-ios-1.1-main2`.
+- The existing JCI upload keystore was configured as repository secrets using the previously verified local keystore (`jci-upload`, SHA-256 certificate fingerprint `3F:57:EA:45:40:55:24:C9:CF:9A:38:CE:07:74:E7:DC:56:B8:0C:F3:48:16:96:AD:C0:45:77:B7:7C:68:25:B3`). Secret values are not recorded here.
+- Run `33223912125` reached Unity but failed because GameCI does not expose custom `KEYSTORE_*` variables inside its container. The workflow was corrected to use GameCI's Android keystore inputs.
+- Run `33224327228` reached Unity and failed on a source-side namespace collision in the path resolver; this was corrected in commit `c8a9d11e5`.
+- Run `33224622941` then stalled in Unity's Android Player/Bee stage without producing an APK and was cancelled after 8m56s.
+- Run `33225064251` repeated the build with `-burst-disable-compilation`; it again stalled in the Android Player/Bee stage and was cancelled after no artifact progress.
+- No corrected APK/AAB was emitted by any runner. Pixel 7 therefore remains on the old `0.2.0` / version-code-2 install; no corrected Android install or Play submission is claimed.
+- The canonical source changes for GameCI signing fallback are committed on `codex/jci-ios-1.1-main2`; the remaining blocker is Unity 6000.4.5f1 Player/Bee packaging on both the local and GitHub Linux runners. A real Windows Unity 6000.4.5f1 runner or a Unity-version/toolchain change is required before device installation.
