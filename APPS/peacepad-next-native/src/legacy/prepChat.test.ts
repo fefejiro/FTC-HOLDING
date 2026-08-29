@@ -13,8 +13,13 @@ describe("legacy Prep Chat drafting", () => {
     );
   });
 
+  it("preserves the received-message entry point from the legacy journey", () => {
+    expect(buildCalmDraft("Saturday pickup", "anxious", "received")).toBe(
+      "I received a message about Saturday pickup. I am feeling anxious, so I would like us to keep this conversation calm. Could we agree on a clear next step?"
+    );
+  });
+
   it("returns an empty draft for an empty topic", () => {
     expect(buildCalmDraft("   ")).toBe("");
   });
 });
-
