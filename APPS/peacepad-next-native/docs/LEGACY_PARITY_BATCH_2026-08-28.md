@@ -50,8 +50,9 @@ the legacy `/api/weather-activities` endpoint must not be called by Native V2.
 The native Messages screen now includes the useful solo-entry part of the
 legacy Prep Chat journey:
 
-- A concise, optional "Prepare a calm message" card that can be opened without
-  a family or invitation.
+- A concise, optional "Prepare a calm message" card in the authenticated
+  composer; the same journey is also exposed in the device-only foundation
+  flow, so drafting does not require an invitation.
 - Topic and feeling inputs with accessible radio semantics and EN/FR/ES copy.
 - Deterministic calm-draft generation using the existing native composer as
   the review/send boundary.
