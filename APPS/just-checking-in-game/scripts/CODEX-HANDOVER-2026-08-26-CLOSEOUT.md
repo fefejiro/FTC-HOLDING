@@ -173,3 +173,11 @@ Therefore Android is **not the same code** as the iOS 1.1 candidate and must not
 - The activity launches and remains foreground. Unity logcat reports normal startup (`Starting Game Loop`, `Fully drawn`, Unity `6000.4.5f1`) with no `FATAL EXCEPTION`, crash, or permission prompt.
 - A fresh screenshot after launch is uniformly dark with no visible game UI: `D:\FTC-HOLDING-releases\just-checking-in\android-2026-08-19\pixel7-jci-current.png`.
 - This is direct evidence that the installed rejected artifact is not a usable parity candidate. No source-side surgical patch can make that installed binary become the canonical 1.1 build; a new signed build is still required.
+
+### Physical-project and clean-Library recovery attempts (2026-08-29)
+
+- To rule out the stale Hub entry and project-junction layout as causes, a normal-directory copy was created at `D:\FTC-GAMES\jci-build-physical-cache-20260829` with the canonical source hash preserved. Its `Library\PackageCache` was mapped only to the known Unity package cache.
+- Unity `6000.4.5f1` initialized, resolved the assigned Unity Personal entitlement, reloaded assemblies, and reached `Application.AssetDatabase Initial Refresh Start`; CPU/log progress then stopped. No `Builds\Android\JustCheckingIn-device.apk` was emitted. Evidence: `D:\FTC-HOLDING-releases\just-checking-in\android-2026-08-19\jci-physical-root-nolock-20260829.log`.
+- A second clean copy at `D:\FTC-GAMES\jci-build-clean-no-library-20260829` was created without any prior `Library` database and with only the package-cache junction. It reproduced the same AssetDatabase refresh stall before the build method ran. Evidence: `D:\FTC-HOLDING-releases\just-checking-in\android-2026-08-19\jci-clean-no-library-20260829.log`.
+- Unity and copy processes were stopped after bounded no-progress windows. The canonical worktree remains clean at commit `1baec133d7a1b723039627ce50e12add72dfe13b`; the old rejected Android binary was not relabeled, uploaded, or reinstalled.
+- Current actionable blocker: a healthy Windows Unity `6000.4.5f1` build host (or a documented Unity/toolchain change) is required to produce and install the canonical Android 1.1 artifact. The Pixel 7 therefore remains on the old `0.2.0` / code `2` install and is not ready for parity QA.
