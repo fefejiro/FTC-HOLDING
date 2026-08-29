@@ -507,7 +507,7 @@ export function PeacePadStagingRuntime({
     );
   }
   if (runtimeState.status === "loading") return <GateMessage busy title={t("runtime.opening")} body={t("runtime.loadingAuthorized")} />;
-  if (runtimeState.status === "membership-empty") return <FamilySetup accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} initialInvitationCode={incomingInvitationCode} onInvitationCodeConsumed={() => setIncomingInvitationCode(undefined)} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={signOutSafely} verified={runtimeState.verified} />;
+  if (runtimeState.status === "membership-empty") return <FamilySetup accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} initialInvitationCode={incomingInvitationCode} onInvitationCodeConsumed={() => setIncomingInvitationCode(undefined)} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={signOutSafely} production={supabase.environment === "production"} verified={runtimeState.verified} />;
   if (runtimeState.status === "membership-selection") return <FamilySelection accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} memberships={runtimeState.memberships} onSelect={(familyCircleId) => setSelectedFamilyCircleId(familyCircleId)} onSignOut={signOutSafely} />;
   if (runtimeState.status === "conversation-empty") return <ConversationSetup accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} membership={runtimeState.membership} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={signOutSafely} verified={runtimeState.verified} />;
   if (runtimeState.status === "error") return <GateMessage title={t("runtime.unavailable")} body={runtimeState.message} />;
@@ -638,13 +638,14 @@ function FamilySelection({ accountDeletion, memberships, onSelect, onSignOut }: 
   );
 }
 
-function FamilySetup({ accountDeletion, api, initialInvitationCode, onInvitationCodeConsumed, onReload, onSignOut, verified }: {
+function FamilySetup({ accountDeletion, api, initialInvitationCode, onInvitationCodeConsumed, onReload, onSignOut, production, verified }: {
   accountDeletion: { deleteAccount: () => Promise<void>; deleting: boolean; error?: string };
   api: PeacePadCoordinationApi;
   initialInvitationCode?: string;
   onInvitationCodeConsumed: () => void;
   onReload: () => void;
   onSignOut: () => Promise<void>;
+  production: boolean;
   verified: VerifiedSessionContext;
 }) {
   const { t } = useOptionalLocalization();
@@ -671,13 +672,15 @@ function FamilySetup({ accountDeletion, api, initialInvitationCode, onInvitation
       <Brand />
       <AccessibleHeading style={styles.title}>{t("runtime.createJoin")}</AccessibleHeading>
       <Text style={styles.body}>{t("runtime.createJoinBody")}</Text>
-      <Text style={styles.sectionTitle}>{t("runtime.createFamilyTitle")}</Text>
-      <TextInput accessibilityLabel={t("runtime.familyName")} maxLength={120} onChangeText={setFamilyName} placeholder={t("runtime.familyName")} style={styles.input} value={familyName} />
-      <LabButton disabled={busy || !familyName.trim()} label={t("runtime.createFamily")} onPress={() => void run(async () => {
-        await api.createFamily(familyName, runtimeWriteContext(verified));
+      {production ? null : <>
+        <Text style={styles.sectionTitle}>{t("runtime.createFamilyTitle")}</Text>
+        <TextInput accessibilityLabel={t("runtime.familyName")} maxLength={120} onChangeText={setFamilyName} placeholder={t("runtime.familyName")} style={styles.input} value={familyName} />
+      </>}
+      <LabButton disabled={busy || (!production && !familyName.trim())} label={t(production ? "production.startPrivate" : "runtime.createFamily")} onPress={() => void run(async () => {
+        await api.createFamily(production ? "Private PeacePad" : familyName, runtimeWriteContext(verified));
         onReload();
       })} />
-      <Text style={styles.sectionTitle}>{t("runtime.enterInvite")}</Text>
+      <Text style={styles.sectionTitle}>{t(production ? "production.connectInvitation" : "runtime.enterInvite")}</Text>
       <TextInput accessibilityLabel={t("invite.code")} autoCapitalize="characters" maxLength={6} onChangeText={(value) => {
         setInvitationCode(value.replace(/[^a-z0-9]/gi, "").toUpperCase());
         setPreview(undefined);

@@ -400,6 +400,44 @@ describe("PeacePadStagingRuntime gates", () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
+  it("lets a production account start privately without inventing a family name", async () => {
+    (useSupabaseSession as jest.Mock).mockReturnValue(authValue());
+    const fetcher = jest.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ...valid, memberships: [] }) })
+      .mockResolvedValue({ ok: true, json: async () => valid }) as unknown as typeof fetch;
+    const createFamily = jest.fn(async () => ({
+      familyId: FAMILY,
+      participantGrantId: GRANT,
+      familyName: "Private PeacePad",
+      region: "ca"
+    }));
+    (createStagingCoordinationClient as jest.Mock).mockReturnValue({
+      createFamily,
+      listConversations: jest.fn(async () => [])
+    });
+
+    render(
+      <LocalizationProvider initialLocale="en" production>
+        <PeacePadStagingRuntime environment={productionEnvironment} fetcher={fetcher} supabase={productionSupabase}>
+          ready
+        </PeacePadStagingRuntime>
+      </LocalizationProvider>
+    );
+
+    await waitFor(() => expect(screen.getByText("Get started with PeacePad")).toBeTruthy());
+    expect(screen.queryByLabelText("Family name")).toBeNull();
+    fireEvent.press(screen.getByRole("button", { name: "Start privately" }));
+
+    await waitFor(() => expect(createFamily).toHaveBeenCalledTimes(1));
+    expect(createFamily).toHaveBeenCalledWith("Private PeacePad", expect.objectContaining({
+      actor: { identityId: IDENTITY, sessionId: SESSION },
+      expectedVersion: null,
+      region: "ca",
+      schemaVersion: "2.0"
+    }));
+    await waitFor(() => expect(screen.getByText("Invite a co-parent")).toBeTruthy());
+  });
+
   it("resolves and explicitly accepts an invitation with its atomic conversation", async () => {
     (useSupabaseSession as jest.Mock).mockReturnValue(authValue());
     const fetcher = jest.fn()
