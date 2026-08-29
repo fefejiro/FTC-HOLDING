@@ -23,6 +23,23 @@ namespace Jci.Tests.EditMode
         }
 
         [Test]
+        public void ContentUsesReadableConversationalText()
+        {
+            foreach (var affirmation in JciContent.Affirmations)
+            {
+                Assert.That(affirmation.Text, Does.Not.Contain("\u00C2"));
+                Assert.That(affirmation.Text, Does.Not.Contain("\u00E2"));
+            }
+
+            foreach (var prompt in JciContent.Prompts)
+            {
+                Assert.That(prompt.Text, Does.Not.Contain("\u00C2"));
+                Assert.That(prompt.Text, Does.Not.Contain("\u00E2"));
+                Assert.That(prompt.Text, Does.EndWith("?"));
+            }
+        }
+
+        [Test]
         public void AffirmationSelectionIsStableAcrossCalls()
         {
             foreach (var mood in JciContent.Moods)

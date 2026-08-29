@@ -162,27 +162,27 @@ namespace Jci.Domain
 
         public static readonly AffirmationOption[] Affirmations =
         {
-            new AffirmationOption("room", "I can give myself room to figure things out."),
-            new AffirmationOption("steady", "Small, steady steps are still movement."),
-            new AffirmationOption("present", "I can be present without having every answer."),
-            new AffirmationOption("worthy", "My needs deserve kindness and attention."),
-            new AffirmationOption("begin", "I can begin again from where I am."),
+            new AffirmationOption("room", "I can give myself room to figure this out."),
+            new AffirmationOption("steady", "Small, steady steps still count."),
+            new AffirmationOption("present", "I can be here without having every answer."),
+            new AffirmationOption("worthy", "What I need deserves kindness and attention."),
+            new AffirmationOption("begin", "I can begin again from right where I am."),
         };
 
         public static readonly PromptCard[] Prompts =
         {
-            new PromptCard("today", "Today", "What is one word that describes how you feel right now?"),
-            new PromptCard("small-win", "Small win", "What is something you did well this week?"),
-            new PromptCard("connection", "Connection", "Who helped you recently, and how did it make a difference?"),
-            new PromptCard("kindness", "Kindness", "What is one kind thing you could do for someone today?"),
-            new PromptCard("energy", "Energy", "What gives you energy when your day feels busy?"),
-            new PromptCard("gratitude", "Gratitude", "What is one ordinary thing you are grateful for?"),
-            new PromptCard("listen", "Listen", "What would you like someone to understand about you today?"),
-            new PromptCard("hope", "Hope", "What is one thing you are looking forward to?"),
-            new PromptCard("support", "Support", "When do you feel most supported by other people?"),
-            new PromptCard("pause", "Pause", "What would make the rest of today feel a little better?"),
-            new PromptCard("memory", "Memory", "Share a moment that made you smile recently."),
-            new PromptCard("brave", "Brave", "What is something new you would like to try?"),
+            new PromptCard("today", "Today", "What is one word for how you are feeling right now?"),
+            new PromptCard("small-win", "Small win", "What is something you are quietly proud of this week?"),
+            new PromptCard("connection", "Connection", "Who helped you recently, and what did that mean to you?"),
+            new PromptCard("kindness", "Kindness", "What is one kind thing you could offer someone today?"),
+            new PromptCard("energy", "Energy", "What gives you a little energy when the day feels full?"),
+            new PromptCard("gratitude", "Gratitude", "What ordinary thing are you glad to have today?"),
+            new PromptCard("listen", "Listen", "What would you like someone close to you to understand today?"),
+            new PromptCard("hope", "Hope", "What is one small thing you are looking forward to?"),
+            new PromptCard("support", "Support", "When do you feel most cared for by other people?"),
+            new PromptCard("pause", "Pause", "What would make the rest of today feel a little kinder?"),
+            new PromptCard("memory", "Memory", "What is a recent moment that made you smile?"),
+            new PromptCard("brave", "Brave", "What is something new you would be curious to try?"),
         };
 
         public static AffirmationOption FindAffirmation(string moodId)

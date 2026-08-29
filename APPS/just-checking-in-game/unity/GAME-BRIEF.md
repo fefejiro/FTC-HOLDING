@@ -4,12 +4,14 @@
 - Working title: Just Checking In
 - Positioning: A premium conversation and personal check-in app for meaningful moments, alone or together.
 - Audience: Solo reflection, couples, friends, and family.
-- Core loop: Open app -> choose self or shared check-in -> draw affirmation/card prompt -> reflect/respond/pass -> save highlights -> close with summary/intention.
+- Core loop: Open app -> choose a solo or shared check-in -> receive an affirmation or conversation card -> reflect/respond/pass -> close with a small summary/intention.
+- Solo promise: Check in with yourself first. The app should feel like a calm companion that helps you notice what is here, not a questionnaire or a competitive game.
+- Together promise: Use the same gentle cards to help couples, friends, and family learn something real about each other through short, private turns.
 - Local play flow: Together Here pass-and-play with privacy curtain, turn handoff, optional follow-up, save card locally.
 - Remote play flow: Host creates private two-player room -> share join code/link/QR -> guest joins -> synchronized turn-based session with host-authoritative state.
-- Engine: Unity 6.3 LTS (latest patch) with URP and mobile-first UX.
+- Engine: Unity `6000.4.5f1` with URP and mobile-first UX.
 - Engine justification: One stack for polished 2.5D presentation, deterministic domain logic, and reusable FTC GameCore package.
-- Presentation target: Premium 2.5D room, tactile card animations, calm lighting themes by deck, strong readability and accessibility.
+- Presentation target: Premium 2.5D room, translucent glass-like card surfaces, tactile but calm card/button animations, calm lighting themes by deck, strong readability and accessibility.
 - Monetization direction: Generous free core; premium deck/theme expansion and optional subscription only after core retention validation.
 - Minimum device targets: Android ARM64 API 24+; iPhone devices supported by current Unity 6.3 iOS export.
 - Privacy posture: No recording/transcribing of spoken answers; remote sync sends compact action/state metadata only.

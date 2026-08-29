@@ -65,3 +65,55 @@ and store metadata.
 
 Expected total: 2–4 working days when no SDK stripping is required; 4–7 days
 if identifier-related SDK paths require removal and another full QA cycle.
+
+## Next experience iteration: warmer check-ins (2026-08-29)
+
+### Product intent
+
+Just Checking In is a gentle way to notice each other, not a dating or matching
+product. Solo mode is a complete first-class experience: a person names how
+they are arriving, receives a useful affirmation, and leaves with a small,
+kind next step. Together mode turns the same idea into a private, pass-and-play
+conversation for couples, friends, or family.
+
+### Agreed experience direction
+
+- Use human, invitational language: ask, welcome, and reflect; avoid clinical,
+  competitive, or swipe-like language.
+- Make the active prompt feel like a physical card: a soft translucent surface,
+  a short entrance transition, a barely perceptible breathing motion, and a
+  tactile press response on actions.
+- Keep motion calm and purposeful. The existing reduced-motion control must
+  disable card breathing, screen transitions, and press scaling.
+- Keep the privacy promise visible and truthful: local storage only, no
+  recording, no microphone/camera/location access, and no answer text saved.
+- Preserve the same domain/content source for Android and iOS; only packaging,
+  signing, and platform build settings may differ.
+
+### Implemented in the current source iteration
+
+- Home, solo, together, and journey copy now uses warmer conversational phrasing.
+- Prompt and affirmation copy was tightened to sound like an invitation between
+  people rather than a questionnaire.
+- Prompt/affirmation surfaces now receive a low-amplitude glass-card pulse and
+  buttons receive a small touch press response.
+- Added a content regression test for readable text and question punctuation.
+
+### Test gates before the next store candidate
+
+1. Run EditMode tests, including the readability/content test.
+2. Build Android and iOS from one frozen commit and record both artifact hashes.
+3. On Pixel 7 and a physical iPhone, verify fresh install, upgrade, solo flow,
+   together flow, repeated prompt transitions, background/resume, relaunch,
+   reset/delete, offline mode, and reduced motion.
+4. Capture screenshots at small and large phone layouts and confirm no clipping,
+   overlap, or technical/placeholder text.
+5. Only then prepare a new Play AAB and iOS archive; keep public-release claims
+   separate from upload, review, and approval states.
+
+### Non-goals for this iteration
+
+- No remote multiplayer, accounts, analytics, voice/video, or new monetization.
+- No changes to privacy declarations unless runtime behavior changes and the
+  declarations are re-evaluated from the actual binary.
+- No store submission of an untested or platform-divergent artifact.

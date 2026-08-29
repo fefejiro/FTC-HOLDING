@@ -191,3 +191,28 @@ Therefore Android is **not the same code** as the iOS 1.1 candidate and must not
 - Direct tap smoke passed: home -> Self -> mood -> affirmation -> finish; Together local name -> active prompt -> answer -> end summary; local connection persistence; force-quit/relaunch resumes active session. Evidence screenshots in the same release folder: `pixel7-jci-clean-home-ready.png`, `pixel7-jci-eventfix-self.png`, `pixel7-jci-eventfix-affirmation.png`, `pixel7-jci-eventfix-self-complete.png`, `pixel7-jci-together-active.png`, `pixel7-jci-together-summary.png`, `pixel7-jci-resume-after-relaunch.png`.
 - The final Pixel state is a fresh install at the home screen. No Play upload/public-production claim is made from this device build.
 - Remaining release step: submit the corrected same-source Android artifact through the authenticated PeacePad/Fejiro Play profile only after reviewing Google rejection details and required listing/owner declarations; do not relabel the old code-2 artifact.
+
+### Warm check-in experience iteration (2026-08-29)
+
+- The canonical brief and next-release plan now explicitly describe Solo as a
+  first-class self check-in and Together as a private conversation for couples,
+  friends, and family. Dating, matching, competitive, and remote-service scope
+  remain out of this iteration.
+- Runtime copy was updated to warmer, invitational language across home, Solo,
+  Together, summaries, and the local connection journey. Prompt and affirmation
+  text was tightened to sound conversational while preserving the same IDs and
+  local-only privacy posture.
+- Prompt/affirmation surfaces now have a low-amplitude glass-card breathing
+  effect and buttons have a small touch press response. Both respect the
+  existing reduced-motion preference. Readability/content regression coverage
+  was added to `JciDomainTests`.
+- A Unity `6000.4.5f1` EditMode run was attempted against the canonical project
+  after these changes. Unity reloaded assemblies but stalled at
+  `Application.AssetDatabase Initial Refresh Start`; no test-results XML was
+  emitted. Evidence: `D:\FTC-HOLDING-releases\just-checking-in\android-2026-08-19\jci-editmode-warm-20260829.log`.
+- The installed Pixel 7 APK remains the previously verified event-system-fix
+  build. The warm-copy changes have not yet been rebuilt or installed; do not
+  present the earlier Pixel screenshots as evidence for this new UI iteration.
+- Next gate: recover a healthy Unity test/build host, run the full EditMode and
+  PlayMode suite, then build Android and iOS from one frozen commit before any
+  store upload or public-release claim.
