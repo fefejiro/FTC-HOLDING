@@ -8,6 +8,10 @@ const localeStorageKey = "peacepad_v2_locale";
 
 const messages = {
   en: {
+    "account.exportTitle": "Export your PeacePad data", "account.exportBody": "Prepare a private summary of the data linked to this account. PeacePad will not show message text or files here.",
+    "account.exportAction": "Prepare export summary", "account.exporting": "Preparing export summary...", "account.exportReady": "Export summary ready.",
+    "account.exportCounts": "{families} families · {conversations} conversations · {messageEvents} messages · {calendarEvents} calendar events · {privateRecords} records · {privateAttachments} attachments",
+    "account.exportMetadataOnly": "This first step is a metadata summary. No message text, file content, or credentials are included.", "account.exportError": "PeacePad could not prepare your export summary.",
     "navigation.primary": "Primary navigation", "navigation.home": "Home", "navigation.messages": "Messages",
     "navigation.calendar": "Calendar", "navigation.records": "Records", "navigation.more": "More",
     "more.title": "More", "more.family.title": "Family connection", "more.family.body": "Review or enter an invitation.",
@@ -89,6 +93,10 @@ const messages = {
     "production.deleteTitle": "Delete this account?", "production.deleteWarning": "This permanently deletes your PeacePad identity and revokes its family access. This cannot be undone."
   },
   fr: {
+    "account.exportTitle": "Exporter vos donnees PeacePad", "account.exportBody": "Preparez un resume prive des donnees liees a ce compte. PeacePad n'affichera pas le texte des messages ni les fichiers ici.",
+    "account.exportAction": "Preparer le resume", "account.exporting": "Preparation du resume...", "account.exportReady": "Resume d'export pret.",
+    "account.exportCounts": "{families} familles · {conversations} conversations · {messageEvents} messages · {calendarEvents} evenements du calendrier · {privateRecords} dossiers · {privateAttachments} pieces jointes",
+    "account.exportMetadataOnly": "Cette premiere etape est un resume des metadonnees. Aucun texte de message, contenu de fichier ou identifiant n'est inclus.", "account.exportError": "PeacePad n'a pas pu preparer votre resume d'export.",
     "navigation.primary": "Navigation principale", "navigation.home": "Accueil", "navigation.messages": "Messages",
     "navigation.calendar": "Calendrier", "navigation.records": "Dossiers", "navigation.more": "Plus",
     "more.title": "Plus", "more.family.title": "Lien familial", "more.family.body": "Consultez ou saisissez une invitation.",
@@ -170,6 +178,10 @@ const messages = {
     "production.deleteTitle": "Supprimer ce compte?", "production.deleteWarning": "Cette action supprime définitivement votre identité PeacePad et révoque son accès familial. Cette action est irréversible."
   },
   es: {
+    "account.exportTitle": "Exportar tus datos de PeacePad", "account.exportBody": "Prepara un resumen privado de los datos vinculados a esta cuenta. PeacePad no mostrara aqui el texto de los mensajes ni los archivos.",
+    "account.exportAction": "Preparar resumen", "account.exporting": "Preparando resumen...", "account.exportReady": "Resumen de exportacion listo.",
+    "account.exportCounts": "{families} familias · {conversations} conversaciones · {messageEvents} mensajes · {calendarEvents} eventos del calendario · {privateRecords} registros · {privateAttachments} archivos adjuntos",
+    "account.exportMetadataOnly": "Este primer paso es un resumen de metadatos. No incluye texto de mensajes, contenido de archivos ni credenciales.", "account.exportError": "PeacePad no pudo preparar tu resumen de exportacion.",
     "navigation.primary": "Navegación principal", "navigation.home": "Inicio", "navigation.messages": "Mensajes",
     "navigation.calendar": "Calendario", "navigation.records": "Registros", "navigation.more": "Más",
     "more.title": "Más", "more.family.title": "Conexión familiar", "more.family.body": "Revisa o introduce una invitación.",

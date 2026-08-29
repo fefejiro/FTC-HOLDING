@@ -233,6 +233,8 @@ export function PeacePadStagingRuntime({
   const [personalityBusy, setPersonalityBusy] = useState(false);
   const [personalityError, setPersonalityError] = useState<string>();
   const [notificationStatus, setNotificationStatus] = useState<DeviceNotificationState | "busy">("not-enabled");
+  const [exportBusy, setExportBusy] = useState(false);
+  const [exportError, setExportError] = useState<string>();
 
   const submitSignIn = useCallback(() => {
     const normalizedEmail = email.trim();
@@ -673,6 +675,20 @@ export function PeacePadStagingRuntime({
         setNotificationStatus(await disableDeviceNotifications(runtimeState.api, runtimeState.runtime));
       } catch {
         setNotificationStatus("unavailable");
+      }
+    },
+    exporting: exportBusy,
+    exportError,
+    exportAccount: async () => {
+      setExportBusy(true);
+      setExportError(undefined);
+      try {
+        return await runtimeState.api.prepareAccountExport(runtimeWriteContext(runtimeState.verified, runtimeState.runtime.identityVersion));
+      } catch (cause) {
+        setExportError(cause instanceof Error ? cause.message : t("account.exportError"));
+        throw cause;
+      } finally {
+        setExportBusy(false);
       }
     }
   };
