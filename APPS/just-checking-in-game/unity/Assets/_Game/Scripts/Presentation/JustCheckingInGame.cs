@@ -34,6 +34,21 @@ namespace Jci.Presentation
         private Sprite cardFront;
         private Sprite cardBack;
 
+        private enum JciScreen
+        {
+            Home,
+            SelfIntro,
+            SelfMood,
+            SelfAffirmation,
+            SelfSummary,
+            TogetherPicker,
+            TogetherActive,
+            TogetherSummary,
+            Journey
+        }
+
+        private JciScreen currentScreen = JciScreen.Home;
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Create()
         {
@@ -47,6 +62,12 @@ namespace Jci.Presentation
         {
             UnityEngine.Application.targetFrameRate = 60;
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
+#if UNITY_ANDROID && !UNITY_EDITOR
+            // Keep Android's status/navigation bars available so notification shade,
+            // gesture navigation, and system back remain usable alongside JCI.
+            Screen.fullScreenMode = FullScreenMode.Windowed;
+            Screen.fullScreen = false;
+#endif
             reducedMotion = PlayerPrefs.GetInt("jci.reducedMotion", 0) == 1;
             store = new JciLocalStore(Path.Combine(UnityEngine.Application.persistentDataPath, "jci-local-v1.json"));
             document = store.Load();
@@ -56,6 +77,44 @@ namespace Jci.Presentation
             cardBack = LoadSprite("JciCardBack");
             BuildCanvas();
             ShowHome();
+        }
+
+        private void Update()
+        {
+            if (Input.GetKeyDown(KeyCode.Escape)) HandleBack();
+        }
+
+        private void HandleBack()
+        {
+            switch (currentScreen)
+            {
+                case JciScreen.Home:
+                    UnityEngine.Application.Quit();
+                    break;
+                case JciScreen.SelfIntro:
+                case JciScreen.TogetherPicker:
+                case JciScreen.Journey:
+                    ShowHome();
+                    break;
+                case JciScreen.SelfMood:
+                    ShowSelfIntro();
+                    break;
+                case JciScreen.SelfAffirmation:
+                    ShowSelf();
+                    break;
+                case JciScreen.SelfSummary:
+                case JciScreen.TogetherSummary:
+                    ShowHome();
+                    break;
+                case JciScreen.TogetherActive:
+                    if (together != null && together.Phase == SessionPhase.Active)
+                    {
+                        document.ActiveSession = together.Snapshot();
+                        store.Save(document);
+                    }
+                    ShowHome();
+                    break;
+            }
         }
 
         private void OnApplicationPause(bool paused)
@@ -139,6 +198,7 @@ namespace Jci.Presentation
 
         private void ShowHome()
         {
+            currentScreen = JciScreen.Home;
             ClearBody();
             AddText(body, "How would you like to arrive?", 18, Parse(Ink), FontStyle.Normal, 43);
             if (document.ActiveSession != null) AddButton(body, "Resume your check-in", ResumeTogether, Parse(Coral));
@@ -149,31 +209,34 @@ namespace Jci.Presentation
 
         private void ShowSelfIntro()
         {
+            currentScreen = JciScreen.SelfIntro;
             selectedMood = null;
             ClearBody();
             AddText(body, "Solo check-in", 24, Parse(Ink), FontStyle.Bold, 52);
             AddText(body, "Take a moment for you.", 18, Parse(Ink), FontStyle.Normal, 42);
-            AddText(body, "Draw one card and notice what arrives.", 24, Parse(Ink), FontStyle.Bold, 170, Parse(Card));
+            AddCardText(body, "Draw one card and notice what arrives.", 24, 170, Parse(Teal));
             AddButton(body, "Draw a card", ShowSelf, Parse(Teal));
             AddButton(body, "Back to the start", ShowHome, Parse(Card), Parse(Ink));
         }
 
         private void ShowSelf()
         {
+            currentScreen = JciScreen.SelfMood;
             selectedMood = null;
             ClearBody();
-            AddText(body, "Before anything else, how are you arriving today?", 22, Parse(Ink), FontStyle.Bold, 68);
+            AddCardText(body, "Before anything else, how are you arriving today?", 22, 112, Parse(Teal));
             foreach (var mood in JciContent.Moods) AddButton(body, mood.Label, () => SelectMood(mood), Parse(Teal));
             AddButton(body, "Back to the start", ShowHome, Parse(Card), Parse(Ink));
         }
 
         private void SelectMood(MoodOption mood)
         {
+            currentScreen = JciScreen.SelfAffirmation;
             selectedMood = mood;
             ClearBody();
-            AddText(body, "Here is something to carry with you", 21, Parse(Ink), FontStyle.Bold, 58);
+            AddCardText(body, "Here is something to carry with you", 21, 96, Parse(Gold));
             var affirmation = JciContent.FindAffirmation(mood.Id);
-            AddText(body, affirmation.Text, 25, Parse(Ink), FontStyle.Bold, 150, Parse(Card));
+            AddCardText(body, affirmation.Text, 25, 150, Parse(Teal));
             AddButton(body, "That feels true - finish", FinishSelf, Parse(Coral));
             AddButton(body, "Try another feeling", ShowSelf, Parse(Card), Parse(Ink));
         }
@@ -185,16 +248,18 @@ namespace Jci.Presentation
             document.SelfCheckIns.Add(new SelfCheckInRecord(Guid.NewGuid().ToString("N"), selectedMood.Id, affirmation.Id, DateTime.UtcNow.Ticks));
             store.Save(document);
             Haptic();
+            currentScreen = JciScreen.SelfSummary;
             ClearBody();
             AddText(body, "You made a little space for yourself.", 25, Parse(Ink), FontStyle.Bold, 70);
-            AddText(body, affirmation.Text, 19, Parse(Ink), FontStyle.Normal, 110);
+            AddCardText(body, affirmation.Text, 19, 110, Parse(Teal));
             AddButton(body, "Keep going", ShowHome, Parse(Teal));
         }
 
         private void ShowTogetherPicker()
         {
+            currentScreen = JciScreen.TogetherPicker;
             ClearBody();
-            AddText(body, "Who would you like to check in with?", 21, Parse(Ink), FontStyle.Bold, 64);
+            AddCardText(body, "Who would you like to check in with?", 21, 104, Parse(Coral));
             foreach (var connection in document.Connections)
             {
                 var local = connection;
@@ -233,10 +298,11 @@ namespace Jci.Presentation
 
         private void ShowTogether()
         {
+            currentScreen = JciScreen.TogetherActive;
             ClearBody();
             if (together == null || together.CurrentPrompt == null) { ShowHome(); return; }
             AddText(body, "TOGETHER - YOUR TURN " + together.TurnNumber.ToString("00"), 15, Parse(Gold), FontStyle.Bold, 42);
-            AddText(body, together.CurrentPrompt.Text, 23, Parse(Ink), FontStyle.Bold, 205, Parse(Card));
+            AddCardText(body, together.CurrentPrompt.Text, 23, 205, Parse(Coral));
             AddButton(body, "I am ready - next prompt", CompleteTurn, Parse(Coral));
             AddButton(body, "Not today", PassTurn, Parse(Teal));
             AddButton(body, "Close this check-in", EndTogether, Parse(Card), Parse(Ink));
@@ -260,16 +326,18 @@ namespace Jci.Presentation
             document.ActiveSession = null;
             store.Save(document);
             Haptic();
+            currentScreen = JciScreen.TogetherSummary;
             ClearBody();
             AddText(body, "That was a good pause.", 26, Parse(Ink), FontStyle.Bold, 70);
-            AddText(body, summary.QuestionsCompleted + " shared - " + summary.QuestionsPassed + " skipped", 19, Parse(Ink), FontStyle.Normal, 66);
+            AddCardText(body, summary.QuestionsCompleted + " shared - " + summary.QuestionsPassed + " skipped", 19, 92, Parse(Gold));
             AddButton(body, "Keep going", ShowHome, Parse(Teal));
         }
 
         private void ShowJourney()
         {
+            currentScreen = JciScreen.Journey;
             ClearBody();
-            AddText(body, "Your local connection journey", 22, Parse(Ink), FontStyle.Bold, 65);
+            AddCardText(body, "Your local connection journey", 22, 112, Parse(Gold));
             foreach (var connection in document.Connections)
             {
                 var local = connection;
@@ -427,6 +495,31 @@ namespace Jci.Presentation
             return text;
         }
 
+        private Text AddCardText(Transform parent, string value, int size, float height, Color accent)
+        {
+            var go = new GameObject("Physical prompt card", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+            go.transform.SetParent(parent, false);
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0, 1); rect.anchorMax = new Vector2(1, 1); rect.pivot = new Vector2(.5f, 1); rect.sizeDelta = new Vector2(0, height);
+            var layout = go.GetComponent<LayoutElement>(); layout.preferredHeight = height; layout.minHeight = height; layout.flexibleWidth = 1;
+            var image = go.GetComponent<Image>();
+            image.sprite = cardFront;
+            image.preserveAspect = false;
+            image.color = Color.Lerp(Color.white, accent, .08f);
+            var outline = go.AddComponent<Outline>(); outline.effectColor = new Color(1f, 1f, 1f, .55f); outline.effectDistance = new Vector2(1f, -1f);
+            var shadow = go.AddComponent<Shadow>(); shadow.effectColor = new Color(.08f, .12f, .16f, .22f); shadow.effectDistance = new Vector2(0f, -5f);
+            go.AddComponent<JciCardMotion>();
+            var accentLine = new GameObject("Card accent", typeof(RectTransform), typeof(Image));
+            accentLine.transform.SetParent(go.transform, false);
+            var accentRect = accentLine.GetComponent<RectTransform>(); accentRect.anchorMin = new Vector2(.5f, 1); accentRect.anchorMax = new Vector2(.5f, 1); accentRect.pivot = new Vector2(.5f, 1); accentRect.anchoredPosition = new Vector2(0, -18); accentRect.sizeDelta = new Vector2(46, 5);
+            accentLine.GetComponent<Image>().color = accent; accentLine.GetComponent<Image>().raycastTarget = false;
+            var text = AddText(go.transform, value, size, Parse(Ink), FontStyle.Bold, height);
+            text.alignment = TextAnchor.MiddleCenter;
+            text.rectTransform.anchorMin = Vector2.zero; text.rectTransform.anchorMax = Vector2.one;
+            text.rectTransform.offsetMin = new Vector2(20, 18); text.rectTransform.offsetMax = new Vector2(-20, -18);
+            return text;
+        }
+
         // Keep labels readable if an older serialized/source string contains UTF-8 mojibake.
         private static string NormalizeLabel(string value)
         {
@@ -456,7 +549,7 @@ namespace Jci.Presentation
             return button;
         }
 
-        private static Button AddPhysicalModeCard(Transform parent, string title, string subtitle, UnityEngine.Events.UnityAction action, Color accent)
+        private Button AddPhysicalModeCard(Transform parent, string title, string subtitle, UnityEngine.Events.UnityAction action, Color accent)
         {
             var go = new GameObject(title, typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
             go.transform.SetParent(parent, false);
@@ -467,7 +560,7 @@ namespace Jci.Presentation
             layout.preferredWidth = 103; layout.minWidth = 103; layout.preferredHeight = 178; layout.minHeight = 178; layout.flexibleWidth = 0;
 
             var image = go.GetComponent<Image>();
-            image.sprite = Resources.Load<Texture2D>("JciCardFront") == null ? null : LoadSprite("JciCardFront");
+            image.sprite = cardFront;
             image.preserveAspect = true;
             image.color = Color.Lerp(Color.white, accent, .10f);
             var outline = go.AddComponent<Outline>();
@@ -600,20 +693,33 @@ namespace Jci.Presentation
         private RectTransform rect;
         private float elapsed;
         private bool reduced;
+        private Vector3 restingScale;
 
         private void Awake()
         {
             rect = GetComponent<RectTransform>();
+            restingScale = rect == null ? Vector3.one : rect.localScale;
             reduced = PlayerPrefs.GetInt("jci.reducedMotion", 0) == 1;
-            if (reduced) enabled = false;
+            if (reduced)
+            {
+                enabled = false;
+                return;
+            }
+
+            // A short card deal-in makes the tactile card metaphor readable,
+            // then settles into a barely perceptible breathing motion.
+            rect.localScale = restingScale * .92f;
         }
 
         private void Update()
         {
             if (rect == null || reduced) return;
             elapsed += Time.unscaledDeltaTime;
-            var scale = 1f + Mathf.Sin(elapsed * 0.75f) * 0.004f;
-            rect.localScale = new Vector3(scale, scale, 1f);
+            var entrance = Mathf.Clamp01(elapsed / .28f);
+            var easedEntrance = 1f - Mathf.Pow(1f - entrance, 3f);
+            var breathe = 1f + Mathf.Sin(Mathf.Max(0f, elapsed - .28f) * .75f) * .006f;
+            var scale = Mathf.Lerp(.92f, 1f, easedEntrance) * breathe;
+            rect.localScale = restingScale * scale;
         }
     }
 

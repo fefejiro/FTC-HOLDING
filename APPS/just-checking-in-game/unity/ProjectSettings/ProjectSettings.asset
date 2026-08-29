@@ -66,8 +66,8 @@ PlayerSettings:
   use32BitDisplayBuffer: 1
   preserveFramebufferAlpha: 0
   disableDepthAndStencilBuffers: 0
-  androidStartInFullscreen: 1
-  androidRenderOutsideSafeArea: 1
+  androidStartInFullscreen: 0
+  androidRenderOutsideSafeArea: 0
   androidUseSwappy: 0
   androidDisplayOptions: 1
   androidBlitType: 0
@@ -76,7 +76,7 @@ PlayerSettings:
   androidDefaultWindowHeight: 1080
   androidMinimumWindowWidth: 400
   androidMinimumWindowHeight: 300
-  androidFullscreenMode: 1
+  androidFullscreenMode: 0
   androidAutoRotationBehavior: 1
   androidPredictiveBackSupport: 1
   androidApplicationEntry: 2
@@ -270,7 +270,7 @@ PlayerSettings:
   AndroidSplashScreenScale: 0
   androidSplashScreen: {fileID: 0}
   AndroidKeystoreName: D:/FTC-HOLDING-releases/just-checking-in/android-2026-08-19/jci-upload-release-v2.jks
-  AndroidKeyaliasName: your_alias
+  AndroidKeyaliasName: jci-upload
   AndroidEnableArmv9SecurityFeatures: 0
   AndroidEnableArm64MTE: 0
   AndroidBuildApkPerCpuArchitecture: 0
@@ -458,7 +458,7 @@ PlayerSettings:
       m_Kind: 1
       m_SubKind: 
     - m_Textures:
-      - {fileID: 2800000, guid: 0057444b951e2534cadbace1808148e5, type: 3}
+      - {fileID: 2800000, guid: 0893f182a0cf88341a7765cb197e2595, type: 3}
       m_Width: 192
       m_Height: 192
       m_Kind: 0

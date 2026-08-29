@@ -102,6 +102,11 @@ conversation for couples, friends, or family.
   people rather than a questionnaire.
 - Prompt/affirmation surfaces now receive a low-amplitude glass-card pulse and
   buttons receive a small touch press response.
+- Prompt and affirmation text is rendered on the same equal-size physical-card
+  surface used by the home chooser, with a calm deal-in animation.
+- Android keeps the status/navigation bars available in Windowed mode; system
+  Back/predictive-back unwinds the JCI screen stack instead of trapping the user
+  in the game.
 - The home privacy fine print was removed from the mode chooser; operational
   local-storage wording remains only where it helps explain a journey action.
 - Added a content regression test for readable text and question punctuation.
