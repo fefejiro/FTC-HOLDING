@@ -209,7 +209,7 @@ direction without inventing data or changing the coordination contracts:
 - The summary is visually softened rather than presented as an office-style
   dashboard, and the logo remains the existing full-bleed asset.
 
-Source `859855ec6` passed TypeScript, guardrails, secret scan, and diff checks.
+Source `4f89229be` passed TypeScript, guardrails, secret scan, and diff checks.
 The existing Pixel 7 development client is installed and visible over ADB, but
 the fresh native debug build is still blocked by the local Expo/Kotlin Gradle
 toolchain (the first JBR path was missing; JDK 17 is now selected). No store

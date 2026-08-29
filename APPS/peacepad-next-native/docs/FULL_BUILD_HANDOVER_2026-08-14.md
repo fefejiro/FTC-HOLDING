@@ -216,10 +216,12 @@ physical-device proof are still required before release work resumes.
 
 ## 2026-08-29 parity batch: warm Today visual refresh
 
-Source `859855ec6` updates the existing Native V2 home surface for the approved
+Source `4f89229be` updates the existing Native V2 home surface for the approved
 calm-plus-playful visual direction. It uses only real coordination state, keeps
 the existing routes and localization keys, adds coral/sun/aqua/cream accents
 around the purple brand, and retains the full-bleed PeacePad logo asset.
+The call entry remains available from Today and routes to the existing native
+audio-call surface.
 TypeScript, guardrails, secret scan, and diff checks pass. The Pixel 7 is ADB
 connected and has the existing development client installed; a new native debug
 build could not complete because the local Expo/Kotlin Gradle compilation did

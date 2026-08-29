@@ -234,7 +234,7 @@ the next real event when available and otherwise offers an honest calendar
 empty-state action; no sample children, weather, events, or production records
 were added.
 
-Exact source `859855ec6` passed TypeScript, guardrails, the 150-file secret scan,
+Exact source `4f89229be` passed TypeScript, guardrails, the 150-file secret scan,
 and diff checks. The connected Pixel 7 is visible over ADB, but native debug
 installation remains pending because Expo/Kotlin Gradle compilation did not
 finish on this Windows host after correcting the stale Android Studio JBR path.
