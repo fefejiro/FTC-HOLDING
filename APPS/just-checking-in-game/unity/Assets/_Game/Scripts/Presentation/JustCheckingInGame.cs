@@ -29,6 +29,10 @@ namespace Jci.Presentation
         private JciTogetherSession together;
         private MoodOption selectedMood;
         private bool reducedMotion;
+        private Sprite sunLogo;
+        private Sprite warmBackdrop;
+        private Sprite cardFront;
+        private Sprite cardBack;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Create()
@@ -46,6 +50,10 @@ namespace Jci.Presentation
             reducedMotion = PlayerPrefs.GetInt("jci.reducedMotion", 0) == 1;
             store = new JciLocalStore(Path.Combine(UnityEngine.Application.persistentDataPath, "jci-local-v1.json"));
             document = store.Load();
+            sunLogo = LoadSprite("JciSunLogo");
+            warmBackdrop = LoadSprite("JciWarmBackdrop");
+            cardFront = LoadSprite("JciCardFront");
+            cardBack = LoadSprite("JciCardBack");
             BuildCanvas();
             ShowHome();
         }
@@ -87,11 +95,18 @@ namespace Jci.Presentation
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
             scaler.matchWidthOrHeight = 0.5f;
             var background = MakePanel(go.transform, "Background", Parse(Background));
+            var backgroundImage = background.GetComponent<Image>();
+            if (warmBackdrop != null)
+            {
+                backgroundImage.sprite = warmBackdrop;
+                backgroundImage.preserveAspect = false;
+                backgroundImage.color = new Color(1f, 1f, 1f, 0.94f);
+            }
             Stretch(background);
             var safe = new GameObject("Safe Area", typeof(RectTransform), typeof(JciSafeArea));
             safe.transform.SetParent(go.transform, false);
             Stretch(safe.GetComponent<RectTransform>());
-            var glass = MakePanel(safe.transform, "Glass Surface", new Color(1f, 1f, 1f, 0.055f));
+            var glass = MakePanel(safe.transform, "Glass Surface", new Color(1f, 1f, 1f, 0.10f));
             Stretch(glass);
             glass.offsetMin = new Vector2(14, 12);
             glass.offsetMax = new Vector2(-14, -12);
@@ -105,7 +120,7 @@ namespace Jci.Presentation
             body.offsetMax = new Vector2(-26, -24);
             screenMotion = body.gameObject.AddComponent<JciScreenMotion>();
             var layout = body.gameObject.AddComponent<VerticalLayoutGroup>();
-            layout.spacing = 12;
+            layout.spacing = 9;
             layout.padding = new RectOffset(0, 0, 0, 0);
             layout.childControlWidth = true;
             layout.childControlHeight = false;
@@ -116,21 +131,20 @@ namespace Jci.Presentation
         private void ClearBody()
         {
             for (var i = body.childCount - 1; i >= 0; i--) Destroy(body.GetChild(i).gameObject);
-            AddText(body, "JUST CHECKING IN", 16, Parse(Ink), FontStyle.Bold, 32);
-            var hero = AddText(body, "A little time to connect.", 30, Parse(Ink), FontStyle.Bold, 72);
-            hero.rectTransform.sizeDelta = new Vector2(0, 72);
+            AddBrandHeader(body);
+            var hero = AddText(body, "A little time to connect.", 31, Parse(Ink), FontStyle.Bold, 74);
+            hero.rectTransform.sizeDelta = new Vector2(0, 74);
             screenMotion.Play(reducedMotion);
         }
 
         private void ShowHome()
         {
             ClearBody();
-            AddText(body, "How would you like to arrive?", 18, Parse(Ink), FontStyle.Normal, 50);
+            AddText(body, "How would you like to arrive?", 18, Parse(Ink), FontStyle.Normal, 43);
             if (document.ActiveSession != null) AddButton(body, "Resume your check-in", ResumeTogether, Parse(Coral));
-            AddModeCard(body, "Solo check-in", "Take a moment for you.", ShowSelfIntro, Parse(Teal));
-            AddModeCard(body, "Check in together", "Share this moment with someone you trust.", ShowTogetherPicker, Parse(Coral));
-            AddModeCard(body, "Your connection journey", "Small moments. Lasting connection.", ShowJourney, Parse(Gold), Parse(Ink));
-            AddButton(body, "Reduced motion: " + (reducedMotion ? "On" : "Off"), ToggleReducedMotion, Parse(Card), Parse(Ink));
+            AddPhysicalDeck(body);
+            AddButton(body, "Draw a card for myself", ShowSelfIntro, Parse(Teal));
+            AddButton(body, "Reduced motion: " + (reducedMotion ? "On" : "Off"), ToggleReducedMotion, new Color(1f, 1f, 1f, .72f), Parse(Ink));
         }
 
         private void ShowSelfIntro()
@@ -311,6 +325,68 @@ namespace Jci.Presentation
             rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one; rect.offsetMin = Vector2.zero; rect.offsetMax = Vector2.zero;
         }
 
+        private static Sprite LoadSprite(string resourceName)
+        {
+            var texture = Resources.Load<Texture2D>(resourceName);
+            if (texture == null) return null;
+            return Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(.5f, .5f), 100f);
+        }
+
+        private static void AddBrandHeader(Transform parent)
+        {
+            var go = new GameObject("Brand header", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+            go.transform.SetParent(parent, false);
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0, 1); rect.anchorMax = new Vector2(1, 1); rect.pivot = new Vector2(.5f, 1); rect.sizeDelta = new Vector2(0, 44);
+            var layoutElement = go.GetComponent<LayoutElement>(); layoutElement.preferredHeight = 44; layoutElement.flexibleWidth = 1;
+            var layout = go.GetComponent<HorizontalLayoutGroup>();
+            layout.spacing = 10; layout.childAlignment = TextAnchor.MiddleLeft; layout.childControlWidth = false; layout.childControlHeight = false; layout.childForceExpandWidth = false; layout.childForceExpandHeight = false;
+
+            var logoGo = new GameObject("Sunrise mark", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+            logoGo.transform.SetParent(go.transform, false);
+            var logoRect = logoGo.GetComponent<RectTransform>(); logoRect.sizeDelta = new Vector2(44, 44);
+            var logoImage = logoGo.GetComponent<Image>(); logoImage.sprite = LoadSprite("JciSunLogo"); logoImage.preserveAspect = true; logoImage.raycastTarget = false;
+            var logoLayout = logoGo.GetComponent<LayoutElement>(); logoLayout.preferredWidth = 44; logoLayout.preferredHeight = 44;
+            var label = AddText(go.transform, "JUST CHECKING IN", 15, Parse(Ink), FontStyle.Bold, 44);
+            label.rectTransform.sizeDelta = new Vector2(190, 44);
+            var labelLayout = label.GetComponent<LayoutElement>(); if (labelLayout != null) labelLayout.preferredWidth = 190;
+        }
+
+        private void AddPhysicalDeck(Transform parent)
+        {
+            var area = new GameObject("Physical card deck", typeof(RectTransform), typeof(LayoutElement));
+            area.transform.SetParent(parent, false);
+            var areaRect = area.GetComponent<RectTransform>();
+            areaRect.anchorMin = new Vector2(0, 1); areaRect.anchorMax = new Vector2(1, 1); areaRect.pivot = new Vector2(.5f, 1); areaRect.sizeDelta = new Vector2(0, 218);
+            var areaLayout = area.GetComponent<LayoutElement>(); areaLayout.preferredHeight = 218; areaLayout.minHeight = 218; areaLayout.flexibleWidth = 1;
+
+            // A quiet stack behind the choices makes the interaction read as a
+            // real card game while remaining fully decorative and non-blocking.
+            AddDeckImage(area.transform, cardBack, new Vector2(-58, 19), new Vector2(116, 174), -9f, .72f);
+            AddDeckImage(area.transform, cardBack, new Vector2(58, 22), new Vector2(116, 174), 9f, .58f);
+
+            var row = new GameObject("Card choices", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            row.transform.SetParent(area.transform, false);
+            var rowRect = row.GetComponent<RectTransform>();
+            rowRect.anchorMin = new Vector2(0, 0); rowRect.anchorMax = new Vector2(1, 0); rowRect.pivot = new Vector2(.5f, 0); rowRect.anchoredPosition = new Vector2(0, 6); rowRect.sizeDelta = new Vector2(0, 184);
+            var rowLayout = row.GetComponent<HorizontalLayoutGroup>();
+            rowLayout.spacing = 7; rowLayout.padding = new RectOffset(0, 0, 0, 0); rowLayout.childAlignment = TextAnchor.MiddleCenter; rowLayout.childControlWidth = false; rowLayout.childControlHeight = false; rowLayout.childForceExpandWidth = false; rowLayout.childForceExpandHeight = false;
+
+            AddPhysicalModeCard(row.transform, "Check in\nwith myself", "A moment for you.", ShowSelfIntro, Parse(Teal));
+            AddPhysicalModeCard(row.transform, "Check in\ntogether", "Share the moment.", ShowTogetherPicker, Parse(Coral));
+            AddPhysicalModeCard(row.transform, "Your connection\njourney", "Small moments.", ShowJourney, Parse(Gold));
+        }
+
+        private static void AddDeckImage(Transform parent, Sprite sprite, Vector2 position, Vector2 size, float angle, float alpha)
+        {
+            if (sprite == null) return;
+            var go = new GameObject("Card deck layer", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            var rect = go.GetComponent<RectTransform>(); rect.anchorMin = new Vector2(.5f, .5f); rect.anchorMax = new Vector2(.5f, .5f); rect.pivot = new Vector2(.5f, .5f); rect.anchoredPosition = position; rect.sizeDelta = size; rect.localRotation = Quaternion.Euler(0, 0, angle);
+            var image = go.GetComponent<Image>(); image.sprite = sprite; image.preserveAspect = true; image.raycastTarget = false; image.color = new Color(1f, 1f, 1f, alpha);
+            var shadow = go.AddComponent<Shadow>(); shadow.effectColor = new Color(.08f, .12f, .16f, .18f); shadow.effectDistance = new Vector2(0, -4);
+        }
+
         private static Text AddText(Transform parent, string value, int size, Color color, FontStyle style, float height, Color? background = null)
         {
             value = NormalizeLabel(value);
@@ -380,61 +456,42 @@ namespace Jci.Presentation
             return button;
         }
 
-        /// <summary>
-        /// Home mode cards deliberately share one physical-card footprint. The
-        /// mode name chooses the route; the next screen owns the action (for
-        /// example, "Draw a card"), so the home screen does not duplicate it.
-        /// </summary>
-        private static Button AddModeCard(Transform parent, string title, string subtitle, UnityEngine.Events.UnityAction action, Color background, Color? foreground = null)
+        private static Button AddPhysicalModeCard(Transform parent, string title, string subtitle, UnityEngine.Events.UnityAction action, Color accent)
         {
             var go = new GameObject(title, typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
             go.transform.SetParent(parent, false);
             var rect = go.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0, 1);
-            rect.anchorMax = new Vector2(1, 1);
-            rect.pivot = new Vector2(.5f, 1);
-            rect.sizeDelta = new Vector2(0, 112);
+            rect.anchorMin = new Vector2(.5f, .5f); rect.anchorMax = new Vector2(.5f, .5f); rect.pivot = new Vector2(.5f, .5f); rect.sizeDelta = new Vector2(103, 178);
 
             var layout = go.GetComponent<LayoutElement>();
-            layout.preferredHeight = 112;
-            layout.minHeight = 112;
-            layout.flexibleWidth = 1;
+            layout.preferredWidth = 103; layout.minWidth = 103; layout.preferredHeight = 178; layout.minHeight = 178; layout.flexibleWidth = 0;
 
             var image = go.GetComponent<Image>();
-            image.color = background;
+            image.sprite = Resources.Load<Texture2D>("JciCardFront") == null ? null : LoadSprite("JciCardFront");
+            image.preserveAspect = true;
+            image.color = Color.Lerp(Color.white, accent, .10f);
             var outline = go.AddComponent<Outline>();
-            outline.effectColor = new Color(1f, 1f, 1f, 0.20f);
-            outline.effectDistance = new Vector2(1f, -1f);
+            outline.effectColor = new Color(1f, 1f, 1f, 0.40f); outline.effectDistance = new Vector2(1f, -1f);
             var shadow = go.AddComponent<Shadow>();
-            shadow.effectColor = new Color(0.08f, 0.12f, 0.16f, 0.18f);
-            shadow.effectDistance = new Vector2(0f, -5f);
+            shadow.effectColor = new Color(0.08f, 0.12f, 0.16f, 0.25f); shadow.effectDistance = new Vector2(0f, -5f);
 
             var button = go.GetComponent<Button>();
             button.onClick.AddListener(action);
             button.transition = Selectable.Transition.ColorTint;
             var colors = button.colors;
-            colors.normalColor = background;
-            colors.highlightedColor = Color.Lerp(background, Color.white, 0.10f);
-            colors.pressedColor = Color.Lerp(background, Color.black, 0.08f);
+            var normal = Color.Lerp(Color.white, accent, .10f);
+            colors.normalColor = normal; colors.highlightedColor = Color.Lerp(normal, Color.white, 0.12f); colors.pressedColor = Color.Lerp(normal, Color.black, 0.08f);
             colors.selectedColor = colors.highlightedColor;
-            colors.disabledColor = new Color(background.r, background.g, background.b, 0.45f);
+            colors.disabledColor = new Color(normal.r, normal.g, normal.b, 0.45f);
             button.colors = colors;
             go.AddComponent<JciButtonMotion>();
 
-            var textColor = foreground ?? Color.white;
-            var titleText = AddText(go.transform, title, 20, textColor, FontStyle.Bold, 48);
-            titleText.alignment = TextAnchor.MiddleLeft;
-            titleText.rectTransform.anchorMin = new Vector2(0, 0.42f);
-            titleText.rectTransform.anchorMax = new Vector2(1, 0.92f);
-            titleText.rectTransform.offsetMin = new Vector2(28, 0);
-            titleText.rectTransform.offsetMax = new Vector2(-28, 0);
-
-            var subtitleText = AddText(go.transform, subtitle, 15, new Color(textColor.r, textColor.g, textColor.b, 0.82f), FontStyle.Normal, 38);
-            subtitleText.alignment = TextAnchor.MiddleLeft;
-            subtitleText.rectTransform.anchorMin = new Vector2(0, 0.08f);
-            subtitleText.rectTransform.anchorMax = new Vector2(1, 0.45f);
-            subtitleText.rectTransform.offsetMin = new Vector2(28, 0);
-            subtitleText.rectTransform.offsetMax = new Vector2(-28, 0);
+            var badge = new GameObject("Card accent", typeof(RectTransform), typeof(Image));
+            badge.transform.SetParent(go.transform, false);
+            var badgeRect = badge.GetComponent<RectTransform>(); badgeRect.anchorMin = new Vector2(.5f, 1); badgeRect.anchorMax = new Vector2(.5f, 1); badgeRect.pivot = new Vector2(.5f, 1); badgeRect.anchoredPosition = new Vector2(0, -24); badgeRect.sizeDelta = new Vector2(38, 5);
+            badge.GetComponent<Image>().color = accent; badge.GetComponent<Image>().raycastTarget = false;
+            var titleText = AddText(go.transform, title, 16, Parse(Ink), FontStyle.Bold, 78); titleText.alignment = TextAnchor.MiddleCenter; titleText.rectTransform.anchorMin = new Vector2(0, .30f); titleText.rectTransform.anchorMax = new Vector2(1, .78f); titleText.rectTransform.offsetMin = new Vector2(9, 0); titleText.rectTransform.offsetMax = new Vector2(-9, 0);
+            var subtitleText = AddText(go.transform, subtitle, 11, new Color(Parse(Ink).r, Parse(Ink).g, Parse(Ink).b, .72f), FontStyle.Normal, 42); subtitleText.alignment = TextAnchor.MiddleCenter; subtitleText.rectTransform.anchorMin = new Vector2(0, .08f); subtitleText.rectTransform.anchorMax = new Vector2(1, .31f); subtitleText.rectTransform.offsetMin = new Vector2(8, 0); subtitleText.rectTransform.offsetMax = new Vector2(-8, 0);
             return button;
         }
 
