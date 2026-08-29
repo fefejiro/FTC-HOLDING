@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'Una Labs — AI Launchpad for Founders',
     short_name: 'Una Labs',
     description:
-      'AI-powered professional service platform for founders. Structured intake, clear proposals, governed delivery, and measurable proof.',
+      'FTC\'s product lab for turning unclear problems into useful digital products.',
     start_url: '/',
     display: 'standalone',
     background_color: '#FFFFFF',

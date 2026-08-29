@@ -118,7 +118,9 @@ export interface ShippedProduct {
   slug: string;
   name: string;
   icon: string;
+  category: 'Care and connection' | 'Work and coordination' | 'Opportunity and agency' | 'Experiments and play';
   description: string;
+  /** Internal operating metadata. Keep maturity and platform states off public marketing surfaces. */
   maturity: 'Live' | 'Available' | 'Improving' | 'Preview' | 'Store submission pending';
   web?: PlatformStatus;
   ios?: PlatformStatus;
@@ -133,7 +135,7 @@ export interface ShippedProduct {
 /** Public product registry. Store states are intentionally conservative and evidence-led. */
 export const shippedProducts: ShippedProduct[] = [
   {
-    slug: 'peacepad', name: 'PeacePad', icon: '◌',
+    slug: 'peacepad', name: 'PeacePad', icon: '◌', category: 'Care and connection',
     description: 'Calmer co-parenting tools for messages, shared plans, and family coordination.',
     maturity: 'Improving',
     web: { platform: 'Web', status: 'Live', detail: 'Open the current public product.', href: 'https://peacepad.ca' },
@@ -142,7 +144,7 @@ export const shippedProducts: ShippedProduct[] = [
     liveUrl: 'https://peacepad.ca', playStoreUrl: 'https://play.google.com/store/apps/details?id=ca.peacepad.family', caseStudyUrl: '/products/peacepad',
   },
   {
-    slug: 'just-checking-in-game', name: 'Just Checking In', icon: '♥',
+    slug: 'just-checking-in-game', name: 'Just Checking In', icon: '♥', category: 'Experiments and play',
     description: 'A small, warm check-in game designed for quick moments of connection.',
     maturity: 'Store submission pending',
     ios: { platform: 'iOS', status: 'Release track', detail: 'The iOS store workflow is maintained through App Store Connect.' },
@@ -150,21 +152,21 @@ export const shippedProducts: ShippedProduct[] = [
     caseStudyUrl: '/products/just-checking-in-game',
   },
   {
-    slug: 'dispatch', name: 'Dispatch', icon: '↗',
+    slug: 'dispatch', name: 'Dispatch', icon: '↗', category: 'Work and coordination',
     description: 'Real-time roadside service coordination from request to resolution.',
     maturity: 'Live',
     web: { platform: 'Web', status: 'Live', detail: 'Open the operational product.', href: 'https://dispatch.unalabs.cloud' },
     liveUrl: 'https://dispatch.unalabs.cloud', caseStudyUrl: '/products/dispatch',
   },
   {
-    slug: 'saywetin', name: 'SayWetin', icon: '◎',
+    slug: 'saywetin', name: 'SayWetin', icon: '◎', category: 'Care and connection',
     description: 'Culture-aware language and voice tools that make AI feel more local.',
     maturity: 'Available',
     web: { platform: 'Web', status: 'Live', detail: 'Explore the current product surface.', href: 'https://saywetin.app' },
     liveUrl: 'https://saywetin.app', caseStudyUrl: '/products/saywetin',
   },
   {
-    slug: 'unascout', name: 'UnaScout', icon: '⌕',
+    slug: 'unascout', name: 'UnaScout', icon: '⌕', category: 'Opportunity and agency',
     description: 'An evidence-led job search workflow for discovery, tailoring, and approval.',
     maturity: 'Improving',
     ios: { platform: 'iOS', status: 'Release track', detail: 'The iOS listing and review workflow are managed in App Store Connect.' },
@@ -172,7 +174,7 @@ export const shippedProducts: ShippedProduct[] = [
     caseStudyUrl: '/products/unascout',
   },
   {
-    slug: 'jobagent', name: 'JobAgent', icon: '✦',
+    slug: 'jobagent', name: 'JobAgent', icon: '✦', category: 'Opportunity and agency',
     description: 'A controlled application workspace that keeps discovery, drafting, and proof together.',
     maturity: 'Preview',
     web: { platform: 'Web', status: 'Preview', detail: 'Available for qualified workflow reviews.' },
@@ -1234,8 +1236,8 @@ export const caseStudies: Record<string, CaseStudyContent> = {
     title: 'Just Checking In Game',
     metaTitle: 'Just Checking In Game | Una Labs',
     metaDescription:
-      'A focused mobile game product from Una Labs, with a repeatable release track across Android and iOS.',
-    eyebrow: 'Product release',
+      'A focused mobile game product from Una Labs, shaped around a clear interaction loop and thoughtful delivery.',
+    eyebrow: 'Selected work',
     headline: 'Just Checking In Game turns a small idea into a shippable mobile product',
     subheadline:
       'A compact game release built for fast, repeatable iteration: clear identity, mobile-first interaction, and a release process that keeps the signed artifact and store record aligned.',
@@ -1256,7 +1258,7 @@ export const caseStudies: Record<string, CaseStudyContent> = {
     ],
     heroStats: [
       { value: 'Mobile', label: 'Product surface', detail: 'Designed around short sessions and clear touch interaction.' },
-      { value: 'Repeatable', label: 'Release path', detail: 'Build, sign, upload, and store verification are treated as one workflow.' },
+      { value: 'Repeatable', label: 'Delivery discipline', detail: 'The work is shaped so the next iteration has a clear, reusable path.' },
       { value: 'Focused', label: 'Game scope', detail: 'A small, understandable product is easier to polish and maintain.' },
     ],
     heroVisual: 'delivery',
@@ -1297,8 +1299,8 @@ export const caseStudies: Record<string, CaseStudyContent> = {
     title: 'UnaScout',
     metaTitle: 'UnaScout | Una Labs',
     metaDescription:
-      'UnaScout is Una Labs’ AI-assisted job-search product, with a mobile release track and a controlled application workflow.',
-    eyebrow: 'Product release',
+      'UnaScout is Una Labs’ AI-assisted job-search product, built around a controlled application workflow.',
+    eyebrow: 'Selected work',
     headline: 'UnaScout brings a clearer operating layer to the job search',
     subheadline:
       'UnaScout helps job seekers organize discovery, tailoring, approvals, and application evidence without turning automation into an opaque promise.',
@@ -1320,7 +1322,7 @@ export const caseStudies: Record<string, CaseStudyContent> = {
     heroStats: [
       { value: 'AI-assisted', label: 'Job search', detail: 'Matching and drafting support without hiding the user’s decisions.' },
       { value: 'Evidence-led', label: 'Applications', detail: 'Submission state is only counted when it is actually verified.' },
-      { value: 'Mobile', label: 'Release path', detail: 'The iOS track is maintained alongside the operational web product.' },
+      { value: 'Mobile', label: 'Product surface', detail: 'The experience is shaped alongside an operational web product.' },
     ],
     heroVisual: 'dashboard',
     challenge: {

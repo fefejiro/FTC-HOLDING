@@ -6,9 +6,9 @@ import { caseStudies, productPages } from '@/lib/site-content';
 import { buildPageMetadata } from '@/lib/metadata';
 
 export const metadata: Metadata = buildPageMetadata({
-  title: 'Platform Overview — Una Labs',
+  title: 'Selected Work — Una Labs',
   description:
-    'Explore the full Una Labs system across intake, dashboard, client portal, reporting, and approval surfaces.',
+    'Explore products and delivery systems Una Labs has shaped as FTC\'s product lab.',
   path: '/product',
 });
 
@@ -21,13 +21,13 @@ export default function ProductOverviewPage() {
       <section className="bg-white">
         <div className="max-w-content mx-auto px-6 pt-16 pb-20">
           <div className="max-w-3xl">
-            <Badge variant="teal">Platform overview</Badge>
+            <Badge variant="teal">Selected work</Badge>
             <h1 className="mt-4 text-display text-tx-heading">
-              The Una Labs platform is built around the full delivery path
+              Products built from questions worth asking
             </h1>
             <p className="mt-6 text-body-lg leading-relaxed text-tx-secondary">
-              Intake, scope, visibility, client communication, reporting, and final sign-off should
-              feel like one product system. This page maps the surfaces that make that possible.
+              Una Labs is FTC\'s product lab. We explore real problems, build useful systems, and share
+              the work so you can see how we think.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
               <Button href="/start" variant="primary" size="lg">
@@ -56,8 +56,8 @@ export default function ProductOverviewPage() {
                   {product.subheadline}
                 </p>
                 <div className="mt-6">
-                  <Button href={`/product/${product.slug}`} variant="ghost" size="md">
-                    Open surface →
+                <Button href={`/product/${product.slug}`} variant="ghost" size="md">
+                    Explore the capability →
                   </Button>
                 </div>
               </div>
@@ -69,11 +69,10 @@ export default function ProductOverviewPage() {
       <section className="bg-bg-subtle py-20">
         <div className="max-w-content mx-auto px-6">
           <div className="max-w-3xl">
-            <Badge variant="teal">Real proof</Badge>
-            <h2 className="mt-4 text-h2 text-tx-heading">These surfaces are backed by shipped products</h2>
+            <Badge variant="teal">A portfolio of useful bets</Badge>
+            <h2 className="mt-4 text-h2 text-tx-heading">The work is the proof</h2>
             <p className="mt-4 text-body-lg leading-relaxed text-tx-secondary">
-              Una Labs is not presenting a theory of delivery. The brand is backed by live products
-              and real operational software already in market.
+              These products show how we move from a human problem to a product people can use.
             </p>
           </div>
 

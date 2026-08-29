@@ -123,8 +123,8 @@ export function CapabilityPage({ page }: { page: CapabilityContent }) {
       <section className="bg-white py-20">
         <div className="max-w-content mx-auto px-6">
           <div className="max-w-2xl">
-            <Badge variant="teal">What this surface gives you</Badge>
-            <h2 className="mt-4 text-h2 text-tx-heading">Built to support the real delivery path</h2>
+            <Badge variant="teal">How this capability helps</Badge>
+            <h2 className="mt-4 text-h2 text-tx-heading">Built around the people doing the work</h2>
             <p className="mt-4 text-body-lg leading-relaxed text-tx-secondary">
               {page.featureIntro}
             </p>
@@ -151,8 +151,8 @@ export function CapabilityPage({ page }: { page: CapabilityContent }) {
       <section className="bg-bg-subtle py-20">
         <div className="max-w-content mx-auto px-6">
           <div className="max-w-2xl">
-            <Badge variant="teal">Where it connects</Badge>
-            <h2 className="mt-4 text-h2 text-tx-heading">Use it as part of the wider Una Labs system</h2>
+            <Badge variant="teal">How it fits</Badge>
+            <h2 className="mt-4 text-h2 text-tx-heading">Bring the right capability to the next decision</h2>
             <p className="mt-4 text-body-lg leading-relaxed text-tx-secondary">
               {page.relatedIntro}
             </p>

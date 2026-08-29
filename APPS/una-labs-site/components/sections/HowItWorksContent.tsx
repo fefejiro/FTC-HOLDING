@@ -17,29 +17,29 @@ const TABS = ['All', 'Professional Services', 'Agencies', 'SaaS Teams', 'Account
 
 const TAB_CONTEXT: Record<string, { headline: string; sub: string; example: string }> = {
   All: {
-    headline: 'How a request becomes delivery',
-    sub: 'Four governed stages. Fixed pricing. Full visibility at every step.',
+    headline: 'How a rough problem becomes a useful product',
+    sub: 'Four practical stages: clarity, direction, delivery, and the care that keeps the work useful.',
     example: '',
   },
   'Professional Services': {
-    headline: 'Structured delivery for professional teams',
-    sub: 'From client intake through documented handoff - every engagement scoped, priced, and tracked.',
-    example: 'e.g. consulting firms, law practices, financial advisors',
+    headline: 'For teams with a messy operating problem',
+    sub: 'We help turn a fuzzy need into a clear scope, a useful system, and a handoff your team can live with.',
+    example: 'e.g. consulting firms, service teams, operational leaders',
   },
   Agencies: {
-    headline: 'How agencies deliver without scope creep',
-    sub: 'Fixed-fee projects, approval gates at every stage. Clients see everything. No more status emails.',
+    headline: 'For teams shaping a client-facing experience',
+    sub: 'We make the decision points visible, keep the scope honest, and build around the people who will actually use the work.',
     example: 'e.g. creative agencies, digital studios, dev shops',
   },
   'SaaS Teams': {
-    headline: 'Ship features with governed delivery',
-    sub: 'Structured intake turns vague feature requests into scoped, priced work items with clear sign-off.',
+    headline: 'For teams deciding what to build next',
+    sub: 'We help separate the promising idea from the distracting one, then shape a first version worth testing.',
     example: 'e.g. product teams, internal delivery squads',
   },
   Accounting: {
-    headline: 'Client delivery built for accounting firms',
-    sub: 'Scope engagements, collect deposits, and deliver documented work - without chasing invoices.',
-    example: 'e.g. CPA firms, bookkeepers, tax practices',
+    headline: 'For careful, trust-sensitive work',
+    sub: 'We bring structure to the journey so the experience feels clear for the people giving and receiving the service.',
+    example: 'e.g. accounting firms, advisors, community services',
   },
 };
 
@@ -47,7 +47,7 @@ const STEPS = [
   {
     number: '01',
     label: 'Submit a request',
-    tag: 'Free · No account needed',
+    tag: 'Start with context',
     headline: 'Describe what you need. Rough is fine.',
     body: "Fill out a simple form - no polished brief required. Write it like you'd explain it to a colleague. We take it from there.",
     bullets: ['Takes 2-5 minutes', 'No templates. No jargon.', 'Zero commitment at this stage'],
@@ -56,25 +56,25 @@ const STEPS = [
   {
     number: '02',
     label: 'Get a scoped brief',
-    tag: 'Response within 48 hours',
-    headline: 'We turn your input into a structured scope.',
-    body: 'Una Labs structures your request into a defined brief - deliverables, timeline, and format. You review and approve before anything moves forward.',
-    bullets: ['AI-assisted scoping in minutes', 'Deliverables clearly listed', 'Request changes freely - no pressure'],
+    tag: 'Clarity phase',
+    headline: 'We find the signal inside the request.',
+    body: 'We turn your context into a defined problem, a possible direction, and a practical scope. You get something useful to make a decision with.',
+    bullets: ['Problem framed clearly', 'Useful direction identified', 'Next step made visible'],
     Mockup: StepScopeMockup,
   },
   {
     number: '03',
-    label: 'Accept the proposal',
-    tag: 'Fixed fee · No surprises',
-    headline: 'One clear offer. One decision.',
-    body: 'You receive a fixed-fee proposal in CAD. No negotiation theatre. Pay a 50% deposit to confirm - the rest on delivery.',
-    bullets: ['Transparent CAD pricing', 'Pay only after you agree on scope', '50% deposit secures the engagement'],
+    label: 'Choose the next move',
+    tag: 'Scope before momentum',
+    headline: 'Decide whether to pilot, build, or pause.',
+    body: 'Once the opportunity is clear, we recommend the smallest sensible next step. That may be a pilot build, production delivery, ongoing care, or a confident pause.',
+    bullets: ['Clear commercial proposal', 'Scope matched to the decision', 'No pressure to build prematurely'],
     Mockup: StepProposalMockup,
   },
   {
     number: '04',
     label: 'Governed delivery',
-    tag: 'Tracked · Documented · Signed off',
+    tag: 'Build and improve',
     headline: 'Every step visible. Every output documented.',
     body: 'Work proceeds against a milestone tracker visible to you at all times. Approval gates ensure nothing advances without your sign-off. Delivery ends with a handoff package.',
     bullets: ['Real-time milestone tracking', 'Client approval gates at every stage', 'Handoff-ready documentation on completion'],
@@ -89,35 +89,35 @@ const FEATURES = [
     icon: '📋',
     color: 'bg-blue-50',
     label: 'Intake & Scoping',
-    description: 'Turn rough requests into structured briefs in under 48 hours. AI-assisted, human-reviewed.',
+    description: 'Turn rough requests into structured briefs through a human-reviewed process.',
     href: '/how-it-works',
   },
   {
     icon: '📊',
     color: 'bg-teal-50',
     label: 'Real-Time Dashboard',
-    description: 'Every project visible - status, milestones, risks. Shared with clients. No login required.',
+    description: 'Make milestones, risks, and decisions visible to the people involved in the work.',
     href: '/how-it-works',
   },
   {
     icon: '📄',
     color: 'bg-orange-50',
     label: 'Proposals & Pricing',
-    description: 'Fixed-fee CAD proposals sent within 24 hours of brief approval. One clear offer.',
+    description: 'Scope the next step clearly before work begins, with commercial terms everyone understands.',
     href: '/pricing',
   },
   {
     icon: '✅',
     color: 'bg-green-50',
     label: 'Approval Gates',
-    description: 'Clients sign off before money or work advances. No surprises. No scope drift.',
+    description: 'Use clear decision points so work advances with shared understanding and fewer surprises.',
     href: '/how-it-works',
   },
   {
     icon: '💳',
     color: 'bg-purple-50',
     label: 'Payments via Stripe',
-    description: 'Deposit collected on acceptance. Balance on delivery. No chasing invoices. Fully automated.',
+    description: 'Connect payments and billing when the engagement needs them, with the details kept clear.',
     href: '/pricing',
   },
   {
@@ -131,7 +131,7 @@ const FEATURES = [
     icon: '🤖',
     color: 'bg-indigo-50',
     label: 'AI Automation',
-    description: 'Brief generation, notifications, and reporting - automated. Your team focuses on delivery.',
+    description: 'Use automation where it reduces admin, while judgement stays with the people doing the work.',
     href: '/how-it-works',
   },
   {
@@ -179,9 +179,9 @@ function toModuleSlug(value: string): string {
 }
 
 const MODULE_DEMOS_BASE: ModuleDemoItem[] = [
-  { label: 'Forms & Intake', slug: 'intake-scoping', icon: '📋', bg: 'bg-blue-50', duration: '2 min', live: true, description: 'Submit your project request. We structure it into a scoped brief in under 48 hours.', href: '/start', walkthroughHref: '/demo/intake' },
-  { label: 'Proposals', slug: 'proposals', icon: '📄', bg: 'bg-orange-50', duration: '3 min', live: true, description: 'Start a request to receive a fixed-fee CAD proposal. One clear offer per engagement.', href: '/start', walkthroughHref: '/demo/dispatch' },
-  { label: 'Billing & Payments', slug: 'live-payments', icon: '💳', bg: 'bg-green-50', duration: '3 min', live: true, description: 'Stripe-powered checkout. 50% deposit on project acceptance, balance on delivery.', href: '/start', walkthroughHref: '/demo/peacepad' },
+  { label: 'Forms & Intake', slug: 'intake-scoping', icon: '📋', bg: 'bg-blue-50', duration: '2 min', live: true, description: 'Share the problem in plain language. We turn the context into a useful starting point.', href: '/start', walkthroughHref: '/demo/intake' },
+  { label: 'Proposals', slug: 'proposals', icon: '📄', bg: 'bg-orange-50', duration: '3 min', live: true, description: 'Receive a clear recommendation and commercial scope for the next sensible step.', href: '/start', walkthroughHref: '/demo/dispatch' },
+  { label: 'Billing & Payments', slug: 'live-payments', icon: '💳', bg: 'bg-green-50', duration: '3 min', live: true, description: 'Connect payments and billing when the engagement needs them, with terms kept clear.', href: '/start', walkthroughHref: '/demo/peacepad' },
   { label: 'Contracts & E-sign', slug: 'contracts-e-sign', icon: '✏️', bg: 'bg-purple-50', duration: '2 min', live: true, description: 'Engagement letter generated per project. Client reviews scope, types their name, and signs directly in the portal - no third-party tool required.', href: '/dashboard/contract' },
   { label: 'Instant Bill', slug: 'instant-bill', icon: '⚡', bg: 'bg-yellow-50', duration: '2 min', live: true, description: 'One-off payment links for ad hoc or out-of-scope work. No re-intake required.', href: '/dashboard/instant-bill' },
   { label: 'AutoCollect', slug: 'autocollect', icon: '🔄', bg: 'bg-teal-50', duration: '3 min', live: true, description: 'Automated invoice reminders and payment collection. Zero manual follow-up.', href: '/dashboard/autocollect' },
@@ -204,21 +204,21 @@ const WALKTHROUGH_PLAYER_ITEMS: WalkthroughPlayerItem[] = [
     label: 'Intake walkthrough',
     url: '/start',
     external: false,
-    note: 'Live intake flow in production',
+    note: 'A guided look at the intake flow',
   },
   {
     id: 'dispatch',
     label: 'Dispatch walkthrough',
     url: 'https://dispatch.unalabs.cloud',
     external: true,
-    note: 'Live Dispatch workflow in production',
+    note: 'A guided look at a coordination workflow',
   },
   {
     id: 'peacepad',
     label: 'Peacepad walkthrough',
     url: 'https://peacepad.ca',
     external: true,
-    note: 'Live Peacepad workflow in production',
+    note: 'A guided look at a trust-sensitive product surface',
   },
 ];
 
@@ -228,15 +228,15 @@ const FAQ = [  {
   },
   {
     q: 'How fast do I get a response?',
-    a: 'You receive a scoped brief within 48 hours of submission. Most arrive faster - often same day for straightforward requests.',
+    a: 'We respond after reviewing the context and will clarify the next step with you. Timing depends on the question and the shape of the work.',
   },
   {
     q: "What if I don't like the proposal?",
-    a: "You don't pay anything. We only collect a deposit after you've reviewed and accepted the scope. If it's not right, we revise or part ways - no obligation.",
+    a: 'The Clarity Sprint is a defined piece of work. It can stand alone, or become the foundation for a pilot or production engagement if the direction is right.',
   },
   {
     q: 'Is this a freelancer marketplace?',
-    a: "No. It's a governed delivery system. Every engagement has defined scope, fixed pricing in CAD, approval gates, and documented output. You're buying a professional outcome, not a person.",
+    a: "No. It's a governed delivery system. Every engagement has a clear scope, agreed commercial terms, approval gates, and documented output. You're buying a professional outcome, not a person.",
   },
   {
     q: 'What kinds of work do you handle?',
@@ -249,13 +249,6 @@ const FAQ = [  {
 ];
 
 function ModuleCard({ mod, highlighted }: { mod: ModuleDemoItem; highlighted: boolean }) {
-  const statusLabel = mod.walkthroughHref ? 'Walkthrough live' : mod.live ? 'Product live' : 'Coming soon';
-  const statusClasses = mod.walkthroughHref
-    ? 'bg-teal-100 text-teal-700'
-    : mod.live
-      ? 'bg-green-100 text-green-700'
-      : 'bg-amber-100 text-amber-700';
-
   return (
     <div
       id={`module-${mod.slug}`}
@@ -267,7 +260,6 @@ function ModuleCard({ mod, highlighted }: { mod: ModuleDemoItem; highlighted: bo
       <div className={`h-36 flex items-center justify-center ${mod.bg} relative`}>
         <span className="text-4xl">{mod.icon}</span>
         <span className="absolute top-3 right-3 text-[10px] font-semibold uppercase tracking-wider text-tx-muted bg-white/80 rounded-full px-2 py-0.5">{mod.duration}</span>
-        <span className={`absolute bottom-3 left-3 text-[10px] font-semibold uppercase tracking-wider rounded-full px-2 py-0.5 ${statusClasses}`}>{statusLabel}</span>
       </div>
       <div className="p-5">
         <p className="text-body font-semibold text-tx-heading group-hover:text-brand-teal transition-colors">{mod.label}</p>
@@ -356,10 +348,10 @@ export function HowItWorksContent() {
               <Badge variant="teal">How it works</Badge>
             </div>
             <h1 className="text-display text-tx-heading mb-4">
-              From rough request to documented delivery
+              From rough problem to useful product
             </h1>
             <p className="text-body-lg text-tx-secondary leading-relaxed">
-              Every step governed. Every output professional. Every price in CAD - fixed, upfront, no surprises.
+              We start with clarity, choose the right first version, then build and improve around real constraints.
             </p>
           </div>
 
@@ -486,9 +478,9 @@ export function HowItWorksContent() {
             <div className="mb-3 flex justify-center">
               <Badge variant="teal">Everything included</Badge>
             </div>
-            <h2 className="text-h2 text-tx-heading mb-3">Every tool you need to deliver</h2>
+            <h2 className="text-h2 text-tx-heading mb-3">What we can bring to the work</h2>
             <p className="text-body-lg text-tx-secondary max-w-xl mx-auto">
-              No bolt-on add-ons. No per-seat surprises. The full system - intake through to handoff.
+              Product thinking, design, engineering, workflow structure, and the operational care that helps a useful idea hold up in the real world.
             </p>
           </div>
 
@@ -521,10 +513,10 @@ export function HowItWorksContent() {
       <section className="bg-white border-y border-border py-16">
         <div className="max-w-content mx-auto px-6">
           <div className="text-center mb-8">
-            <Badge variant="teal">Walkthrough video</Badge>
-            <h2 className="mt-4 text-h2 text-tx-heading">Watch a real product walkthrough</h2>
+            <Badge variant="teal">See the work in context</Badge>
+            <h2 className="mt-4 text-h2 text-tx-heading">Explore a guided product walkthrough</h2>
             <p className="mt-3 text-body text-tx-secondary max-w-2xl mx-auto">
-              Play a live walkthrough below. This is a production workflow, not a static image.
+              See how a product surface carries a real question from first interaction toward something useful.
             </p>
           </div>
 
@@ -584,9 +576,9 @@ export function HowItWorksContent() {
       <section className="bg-white py-20">
         <div className="max-w-content mx-auto px-6">
           <div className="text-center mb-12">
-            <h2 className="text-h2 text-tx-heading mb-3">Real products behind the workflow</h2>
+            <h2 className="text-h2 text-tx-heading mb-3">Selected work behind the thinking</h2>
             <p className="text-body-lg text-tx-secondary">
-              The request-to-delivery model on this page is already reflected in shipped systems.
+              These products show how we move from a human problem to a product people can use.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -654,7 +646,7 @@ export function HowItWorksContent() {
             <Button href="/start" variant="primary" size="lg">
               Start Your Project
             </Button>
-            <p className="mt-3 text-caption text-tx-muted">No account needed. No credit card. Response within 48h.</p>
+            <p className="mt-3 text-caption text-tx-muted">A rough request is enough to begin.</p>
           </div>
         </div>
       </section>
@@ -663,12 +655,12 @@ export function HowItWorksContent() {
       <section className="bg-bg-subtle border-t border-border py-20">
         <div className="max-w-content mx-auto px-6">
           <div className="text-center mb-12">
-            <Badge variant="teal">Platform modules</Badge>
-            <h2 className="mt-4 text-h2 text-tx-heading">See every feature in action</h2>
+            <Badge variant="teal">Delivery capabilities</Badge>
+            <h2 className="mt-4 text-h2 text-tx-heading">Explore the capabilities we bring</h2>
             <p className="mt-3 text-body-lg text-tx-secondary max-w-xl mx-auto">
               {walkthroughCount > 0
-                ? `${walkthroughCount} walkthrough${walkthroughCount > 1 ? 's are' : ' is'} live now. Everything from lead capture to payment and handoff in one governed flow.`
-                : 'Eight live modules. One platform. Everything from lead capture to automated payment collection.'}
+                ? `${walkthroughCount} guided example${walkthroughCount > 1 ? 's are' : ' is'} available above, alongside the capabilities we bring to delivery.`
+                : 'Explore the capabilities we bring from first question through delivery and improvement.'}
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
@@ -677,8 +669,8 @@ export function HowItWorksContent() {
             ))}
           </div>
           <p className="mt-8 text-center text-body-sm text-tx-muted">
-            Live walkthrough links are shown above.{' '}
-            <Link href="/start" className="text-brand-teal hover:underline">Start Your Project</Link> to see it live.
+            Guided examples are shown above.{' '}
+            <Link href="/start" className="text-brand-teal hover:underline">Bring us your problem</Link> to explore the right next step.
           </p>
         </div>
       </section>

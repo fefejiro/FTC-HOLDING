@@ -32,7 +32,7 @@ A live product answers questions that no project management tool can:
 - Did it handle edge cases that only appear in production?
 - Is it still maintained, or was it abandoned after handoff?
 
-Una Labs ships and maintains Dispatch, PeacePad, SayWetin, Just Checking In Game, and UnaScout across different product categories and technical stacks. Their release tracks are documented here without confusing a portfolio listing with public store availability.
+Una Labs ships and maintains products across care, connection, coordination, and opportunity. Their stories focus on the problem, the solution, and what the work taught us.
 
 ## The intake flow is the demo
 

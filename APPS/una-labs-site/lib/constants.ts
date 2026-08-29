@@ -5,31 +5,14 @@ const solutionLinks = Object.values(solutionPages);
 
 export const NAV = {
   main: [
-    {
-      label: 'Product',
-      children: [
-        { label: 'Platform Overview', href: '/product', description: 'See the full Una Labs system' },
-        ...productLinks.map((page) => ({
-          label: page.navLabel,
-          href: `/product/${page.slug}`,
-          description: page.navDescription,
-        })),
-      ],
-    },
-    {
-      label: 'Solutions',
-      children: solutionLinks.map((page) => ({
-        label: page.title,
-        href: `/solutions/${page.slug}`,
-        description: page.description,
-      })),
-    },
+    { label: 'What we do', href: '/how-it-works' },
+    { label: 'Selected work', href: '/product' },
+    { label: 'About', href: '/about' },
     {
       label: 'Resources',
       children: [
-        { label: 'Blog', href: '/blog', description: 'Field notes from shipped products and live delivery systems' },
-        { label: 'Help Center', href: '/help', description: 'Orientation for the intake, pricing, and support path' },
-        { label: 'Live Status', href: '/status', description: 'Ignition parity and SDLC signal in one live board' },
+        { label: 'Blog', href: '/blog', description: 'Field notes from product work and delivery' },
+        { label: 'Help Center', href: '/help', description: 'Answers about starting and working with Una Labs' },
         { label: 'Spark AI', href: '/spark', description: 'Ask Spark anything about Una Labs' },
       ],
     },
@@ -101,47 +84,42 @@ export const PROBLEM_SOLUTIONS = [
   },
 ];
 
-export const PRICING_TIERS = [
+export const ENGAGEMENT_PATHS = [
   {
-    name: 'Free',
-    monthlyPrice: 0,
-    description: 'For solo operators testing the full request-to-proposal flow',
-    features: ['1 user', '1 active project', 'Intake forms', 'Proposal draft export', 'Email support'],
-    recommended: false,
-    cta: 'Get Started Free',
+    name: 'Clarity Sprint',
+    eyebrow: 'Start here',
+    description: 'Turn a messy problem into a clear opportunity, first version, and next step.',
+    priceLabel: 'Fixed fee, scoped upfront',
+    features: ['Problem framing', 'Solution direction', 'Practical scope', 'Initial recommendation'],
+    cta: 'Start with clarity',
+    href: '/start',
   },
   {
-    name: 'Solo',
-    monthlyPrice: 39,
-    description: 'For freelancers and independent consultants running paid delivery',
-    features: ['1 user', '10 active projects', 'Contracts and e-sign', 'Payments and invoicing', 'Basic reporting'],
-    recommended: false,
-    cta: 'Start Solo Plan',
+    name: 'Pilot Build',
+    eyebrow: 'Prove the useful version',
+    description: 'Design and build the smallest version worth putting in real hands.',
+    priceLabel: 'Fixed scope and milestones',
+    features: ['Product design', 'Working first version', 'Review checkpoints', 'Handoff context'],
+    cta: 'Discuss a pilot',
+    href: '/start',
   },
   {
-    name: 'Studio',
-    monthlyPrice: 99,
-    description: 'For small teams replacing disconnected ops tools',
-    features: ['5 users', 'Unlimited projects', 'Deals pipeline', 'Scheduling and approval gates', 'Analytics dashboard', 'Priority support'],
-    recommended: true,
-    cta: 'Start Studio Plan',
+    name: 'Production Delivery',
+    eyebrow: 'Build for reality',
+    description: 'Carry a validated idea through integrations, deployment, and the details that make it dependable.',
+    priceLabel: 'Quoted after clarity',
+    features: ['Technical delivery', 'Real integrations', 'Launch planning', 'Documentation'],
+    cta: 'Plan delivery',
+    href: '/start',
   },
   {
-    name: 'Agency',
-    monthlyPrice: 229,
-    description: 'For delivery teams that need scale, white-labeling, and automation',
-    features: ['15 users', 'Unlimited projects', 'Client portal', 'White-label reporting', 'Workflow automation', 'Dedicated support'],
-    recommended: false,
-    cta: 'Start Agency Plan',
-  },
-  {
-    name: 'Enterprise',
-    monthlyPrice: 0,
-    description: 'For large organizations with complex needs',
-    features: ['Unlimited users', 'Custom integrations', 'SLA guarantee', 'Security review support', 'Onboarding program', 'Account manager'],
-    recommended: false,
-    customPricing: true,
-    cta: 'Contact Sales',
+    name: 'Care and Improvement',
+    eyebrow: 'Keep it useful',
+    description: 'Stay close after launch with focused iteration, support, and evidence-led improvement.',
+    priceLabel: 'Monthly support plan',
+    features: ['Prioritised improvements', 'Support and review', 'Product reporting', 'Ongoing guidance'],
+    cta: 'Plan ongoing care',
+    href: '/contact',
   },
 ];
 
@@ -149,7 +127,7 @@ export const FOOTER_LINKS = [
   {
     heading: 'Product',
     links: [
-      { label: 'Platform Overview', href: '/product' },
+      { label: 'Delivery capabilities', href: '/product' },
       ...productLinks.map((page) => ({ label: page.navLabel, href: `/product/${page.slug}` })),
     ],
   },

@@ -5,7 +5,7 @@ import { buildPageMetadata } from '@/lib/metadata';
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'About - Una Labs',
-  description: 'Una Labs is a professional service delivery platform built for teams who deliver with confidence.',
+  description: 'Una Labs is FTC\'s product lab, helping turn unclear problems into useful digital products.',
   path: '/about',
 });
 
@@ -17,7 +17,7 @@ export default function AboutPage() {
           <Badge variant="teal">Our story</Badge>
         </div>
         <h1 className="text-display-sm text-tx-heading text-center mb-6">
-          Built for teams who deliver
+          A product lab for work worth making
         </h1>
         <div className="flex flex-col gap-6 text-body-lg text-tx-secondary leading-relaxed">
           <p>
@@ -26,16 +26,16 @@ export default function AboutPage() {
             and money.
           </p>
           <p>
-            The platform closes that gap with structured intake, scoped proposals, governed
-            delivery, and documented proof. Everything your team needs to deliver with confidence,
-            from first request to final sign-off.
+            Una Labs closes that gap by helping people decide what should be made, shape a useful
+            first version, and carry the work through design, build, launch, and improvement.
           </p>
           <p>
             Every part of the experience is designed to keep projects clear, accountable, and easy
             to move forward without endless back-and-forth.
           </p>
           <p>
-            No retainers. No ambiguity. Just clear scope, agreed terms, and handoff-ready output.
+            AI can help make something. We bring the judgement, product thinking, and delivery
+            discipline that helps make it useful.
           </p>
         </div>
         <div className="mt-12 flex flex-wrap justify-center gap-4">

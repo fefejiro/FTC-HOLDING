@@ -8,9 +8,9 @@ import { FinalCTASection } from '@/components/sections/FinalCTASection';
 import { buildPageMetadata } from '@/lib/metadata';
 
 export const metadata: Metadata = buildPageMetadata({
-  title: 'Una Labs - AI Launchpad for Founders',
+  title: 'Una Labs — FTC Product Lab',
   description:
-    'Una Labs is a concierge custom-project operating system for founders. Structured intake, scoped plans, governed delivery, and measurable proof from first conversation to delivered work.',
+    'Una Labs is FTC\'s product lab. We help turn unclear problems into useful digital products through clarity, delivery, and thoughtful improvement.',
   path: '/',
 });
 

@@ -24,7 +24,7 @@ const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 const defaultTitle = 'Una Labs — AI Launchpad for Founders';
 const defaultDescription =
-  'Una Labs is an AI-powered professional service platform for founders. Structured intake, clear proposals, governed delivery, and measurable proof — from client request to delivered project.';
+  'Una Labs is FTC\'s product lab. We turn unclear problems into useful digital products through clarity, delivery, and thoughtful improvement.';
 
 export const metadata: Metadata = {
   title: {

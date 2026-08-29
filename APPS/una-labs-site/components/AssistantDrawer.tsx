@@ -26,28 +26,28 @@ const GUIDE_NODES: Record<string, GuideNode> = {
     title: 'How can I help?',
     intro: 'Choose a path and I will guide you to the right page.',
     options: [
-      { id: 'tour', label: 'Show me around the platform', nextId: 'tour' },
+      { id: 'tour', label: 'How does Una Labs work?', nextId: 'tour' },
       { id: 'features', label: 'What does Una Labs do?', nextId: 'features' },
-      { id: 'pricing', label: 'Pricing and plans', nextId: 'pricing' },
+      { id: 'pricing', label: 'How are engagements priced?', nextId: 'pricing' },
       { id: 'start', label: 'I am ready to start', answer: 'Great. Start with a rough request. No account or credit card is required to submit intake.', ctaHref: '/start', ctaLabel: 'Start your project' },
       { id: 'help', label: 'I need help or support', nextId: 'help' },
     ],
   },
   tour: {
     id: 'tour',
-    title: 'Platform Tour',
-    intro: 'Pick where you want to go next.',
+    title: 'How Una Labs works',
+    intro: 'Choose a way to understand the work.',
     options: [
       { id: 'tour-hiw', label: 'See how delivery works end-to-end', ctaHref: '/how-it-works', ctaLabel: 'Open How It Works' },
-      { id: 'tour-pricing', label: 'Compare plans and pricing', ctaHref: '/pricing', ctaLabel: 'Open Pricing' },
-      { id: 'tour-product', label: 'Explore product modules', ctaHref: '/product', ctaLabel: 'Open Product Overview' },
+      { id: 'tour-pricing', label: 'Understand the engagement paths', ctaHref: '/pricing', ctaLabel: 'Open Engagement Guide' },
+      { id: 'tour-product', label: 'See selected work', ctaHref: '/product', ctaLabel: 'Open Selected Work' },
       { id: 'tour-contact', label: 'Talk to us directly', ctaHref: '/contact', ctaLabel: 'Contact Una Labs' },
     ],
   },
   features: {
     id: 'features',
-    title: 'Feature Guide',
-    intro: 'Each module links to a live workflow page.',
+    title: 'What we help with',
+    intro: 'We turn unclear problems into useful products and delivery systems.',
     options: [
       { id: 'feat-intake', label: 'Intake and scoping', answer: 'We turn rough client requests into structured scoped briefs in under 48 hours.', ctaHref: '/how-it-works?module=intake-scoping', ctaLabel: 'View intake flow' },
       { id: 'feat-dashboard', label: 'Real-time dashboard', answer: 'Track milestones, blockers, approvals, and progress in one governed workspace.', ctaHref: '/how-it-works?module=reporting', ctaLabel: 'View dashboard flow' },
@@ -58,13 +58,13 @@ const GUIDE_NODES: Record<string, GuideNode> = {
   },
   pricing: {
     id: 'pricing',
-    title: 'Pricing Guide',
-    intro: 'Tell me your team shape and I will direct you.',
+    title: 'Engagement Guide',
+    intro: 'Start with the shape of work that fits your next decision.',
     options: [
-      { id: 'plan-freelancer', label: 'I am solo / freelancer', answer: 'Start with Solo. It is priced for independent operators and includes contracts + payments.', ctaHref: '/pricing', ctaLabel: 'See Solo plan' },
-      { id: 'plan-team', label: 'I run a small team', answer: 'Studio is built for small teams and is the recommended plan for most agencies.', ctaHref: '/pricing', ctaLabel: 'See Studio plan' },
-      { id: 'plan-large', label: 'I run a larger agency', answer: 'Agency or Enterprise fits best depending on required integrations and SLA needs.', ctaHref: '/pricing', ctaLabel: 'See Agency and Enterprise' },
-      { id: 'plan-service', label: 'I want Una Labs to execute for me', answer: 'Use our service model. We scope, price, and deliver under governed milestones.', ctaHref: '/start', ctaLabel: 'Start managed delivery' },
+      { id: 'plan-clarity', label: 'I need help making the problem clearer', answer: 'Start with a Clarity Sprint. We frame the problem, shape a useful direction, and recommend what should happen next.', ctaHref: '/start', ctaLabel: 'Start with clarity' },
+      { id: 'plan-pilot', label: 'I want to test a first version', answer: 'A Pilot Build turns a promising direction into the smallest useful version worth putting in real hands.', ctaHref: '/start', ctaLabel: 'Discuss a pilot' },
+      { id: 'plan-production', label: 'I need a production system', answer: 'Production Delivery carries a validated idea through integrations, deployment, and the details that make it dependable.', ctaHref: '/start', ctaLabel: 'Plan delivery' },
+      { id: 'plan-care', label: 'I need ongoing improvement', answer: 'Care and Improvement keeps the product useful after launch through focused iteration, support, and review.', ctaHref: '/contact', ctaLabel: 'Plan ongoing care' },
     ],
   },
   help: {
@@ -98,8 +98,8 @@ const PAGE_CONTEXT: Record<string, string> = {
 };
 
 const PAGE_HINTS: Record<string, string> = {
-  '/pricing': 'Need help choosing a plan? Open Pricing and plans.',
-  '/how-it-works': 'Need a walkthrough? Open What does Una Labs do?.',
+  '/pricing': 'Need help choosing a path? Open How are engagements priced?.',
+  '/how-it-works': 'Need a walkthrough? Open How does Una Labs work?.',
   '/start': 'Need help with intake? Open I am ready to start.',
   '/contact': 'Need direct support? Open I need help or support.',
 };

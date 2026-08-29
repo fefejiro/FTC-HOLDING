@@ -3,9 +3,9 @@ import { PricingContent } from '@/components/sections/PricingContent';
 import { buildPageMetadata } from '@/lib/metadata';
 
 export const metadata: Metadata = buildPageMetadata({
-  title: 'Pricing — Una Labs',
+  title: 'Pricing and engagements — Una Labs',
   description:
-    'Concierge delivery plans for founders and teams. Start your project with structured intake, scoped activation, and a clear path to shipped outcomes.',
+    'Understand how Una Labs scopes clarity, pilot builds, production delivery, and ongoing product improvement.',
   path: '/pricing',
 });
 

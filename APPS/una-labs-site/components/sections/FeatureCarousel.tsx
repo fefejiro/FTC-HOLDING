@@ -40,10 +40,10 @@ export function FeatureCarousel() {
 
         <div className="text-center mb-12">
           <div className="mb-3 flex justify-center">
-            <Badge variant="teal">What gets handled</Badge>
+            <Badge variant="teal">What we help make clear</Badge>
           </div>
           <h2 className="text-h2 text-tx-heading">
-            The useful parts of building something new
+            The work between an idea and something useful
           </h2>
         </div>
 
