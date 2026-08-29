@@ -266,7 +266,7 @@ namespace Jci.Editor
                 return configuredPath;
             }
 
-            string projectRoot = Path.GetDirectoryName(Application.dataPath) ?? Directory.GetCurrentDirectory();
+            string projectRoot = Path.GetDirectoryName(UnityEngine.Application.dataPath) ?? Directory.GetCurrentDirectory();
             string projectRelativePath = Path.Combine(projectRoot, configuredPath);
             return File.Exists(projectRelativePath) ? projectRelativePath : configuredPath;
         }
