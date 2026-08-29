@@ -30,10 +30,10 @@ namespace Jci.Editor
             ConfigureCommonPlayerSettings();
             ConfigureAndroidPlayerSettings();
 
-            string keystorePath = RequireEnv("KEYSTORE_PATH");
-            string keystorePass = RequireEnv("KEYSTORE_PASS");
-            string keyAlias = RequireEnv("KEY_ALIAS");
-            string keyPass = RequireEnv("KEY_PASS");
+            string keystorePath = ResolveKeystorePath(RequireEnvAny("KEYSTORE_PATH", "ANDROID_KEYSTORE_NAME"));
+            string keystorePass = RequireEnvAny("KEYSTORE_PASS", "ANDROID_KEYSTORE_PASS");
+            string keyAlias = RequireEnvAny("KEY_ALIAS", "ANDROID_KEYALIAS_NAME");
+            string keyPass = RequireEnvAny("KEY_PASS", "ANDROID_KEYALIAS_PASS");
 
             if (!File.Exists(keystorePath))
             {
@@ -78,10 +78,10 @@ namespace Jci.Editor
             ConfigureCommonPlayerSettings();
             ConfigureAndroidPlayerSettings();
 
-            string keystorePath = RequireEnv("KEYSTORE_PATH");
-            string keystorePass = RequireEnv("KEYSTORE_PASS");
-            string keyAlias = RequireEnv("KEY_ALIAS");
-            string keyPass = RequireEnv("KEY_PASS");
+            string keystorePath = ResolveKeystorePath(RequireEnvAny("KEYSTORE_PATH", "ANDROID_KEYSTORE_NAME"));
+            string keystorePass = RequireEnvAny("KEYSTORE_PASS", "ANDROID_KEYSTORE_PASS");
+            string keyAlias = RequireEnvAny("KEY_ALIAS", "ANDROID_KEYALIAS_NAME");
+            string keyPass = RequireEnvAny("KEY_PASS", "ANDROID_KEYALIAS_PASS");
 
             if (!File.Exists(keystorePath))
             {
@@ -236,6 +236,39 @@ namespace Jci.Editor
 
             Fail($"Missing required environment variable: {name}");
             return string.Empty;
+        }
+
+        private static string RequireEnvAny(string name, params string[] aliases)
+        {
+            string value = Environment.GetEnvironmentVariable(name);
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+
+            foreach (string alias in aliases)
+            {
+                value = Environment.GetEnvironmentVariable(alias);
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    return value;
+                }
+            }
+
+            Fail($"Missing required environment variable: {name}");
+            return string.Empty;
+        }
+
+        private static string ResolveKeystorePath(string configuredPath)
+        {
+            if (Path.IsPathRooted(configuredPath) || File.Exists(configuredPath))
+            {
+                return configuredPath;
+            }
+
+            string projectRoot = Path.GetDirectoryName(Application.dataPath) ?? Directory.GetCurrentDirectory();
+            string projectRelativePath = Path.Combine(projectRoot, configuredPath);
+            return File.Exists(projectRelativePath) ? projectRelativePath : configuredPath;
         }
 
         private static void Fail(string message)

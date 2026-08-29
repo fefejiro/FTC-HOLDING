@@ -63,26 +63,12 @@ jobs:
             exit 1
           fi
 
-      - name: Materialize ephemeral Android signing key
-        shell: bash
-        env:
-          KEYSTORE_BASE64: ${{ secrets.JCI_ANDROID_KEYSTORE_BASE64 }}
-        run: |
-          set -euo pipefail
-          mkdir -p .ci
-          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > .ci/jci-upload.keystore
-          chmod 600 .ci/jci-upload.keystore
-
       - name: Build signed Android APK with Unity 6000.4.5f1
         uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.JCI_UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.JCI_UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.JCI_UNITY_PASSWORD }}
-          KEYSTORE_PATH: /github/workspace/.ci/jci-upload.keystore
-          KEYSTORE_PASS: ${{ secrets.JCI_ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.JCI_ANDROID_KEY_ALIAS }}
-          KEY_PASS: ${{ secrets.JCI_ANDROID_KEY_PASSWORD }}
         with:
           projectPath: ${{ env.JCI_PROJECT }}
           unityVersion: ${{ env.JCI_UNITY_VERSION }}
@@ -90,6 +76,11 @@ jobs:
           buildMethod: Jci.Editor.BuildScript.BuildAndroidApkForDevice
           allowDirtyBuild: true
           customParameters: -nographics
+          androidKeystoreName: jci-upload.keystore
+          androidKeystoreBase64: ${{ secrets.JCI_ANDROID_KEYSTORE_BASE64 }}
+          androidKeystorePass: ${{ secrets.JCI_ANDROID_KEYSTORE_PASSWORD }}
+          androidKeyaliasName: ${{ secrets.JCI_ANDROID_KEY_ALIAS }}
+          androidKeyaliasPass: ${{ secrets.JCI_ANDROID_KEY_PASSWORD }}
 
       - name: Verify APK and publish device artifact
         shell: bash
@@ -115,4 +106,4 @@ jobs:
       - name: Remove ephemeral signing key
         if: always()
         shell: bash
-        run: rm -f .ci/jci-upload.keystore
+        run: rm -f "$JCI_PROJECT/jci-upload.keystore" .ci/jci-upload.keystore
