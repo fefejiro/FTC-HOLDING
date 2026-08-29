@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, Share, StyleSheet, Text, TextInput, View } from "react-native";
 import type { CreatedInvitation, PeacePadCoordinationApi } from "../api/CoordinationApi";
 import { RecordsStateProvider } from "../records/RecordsState";
 import { createStagingCoordinationClient } from "../staging/StagingCoordinationClient";
@@ -739,6 +739,7 @@ function ConversationSetup({ accountDeletion, api, membership, onReload, onSignO
   const [busy, setBusy] = useState(false);
   const [createdInvitation, setCreatedInvitation] = useState<CreatedInvitation>();
   const [error, setError] = useState<string>();
+  const [shareError, setShareError] = useState<string>();
   const createInvitation = async () => {
     setBusy(true);
     setError(undefined);
@@ -754,12 +755,24 @@ function ConversationSetup({ accountDeletion, api, membership, onReload, onSignO
       setError(cause instanceof Error ? cause.message : t("runtime.requestError"));
     } finally { setBusy(false); }
   };
+  const shareCreatedInvitation = async () => {
+    if (!createdInvitation) return;
+    setShareError(undefined);
+    try {
+      await Share.share({
+        message: [t("invite.shareTitle"), t("invite.shareReview"), t("invite.shareCode", { code: createdInvitation.code }), createdInvitation.deepLink].join("\n")
+      });
+    } catch {
+      setShareError(t("invite.shareUnavailable"));
+    }
+  };
   return (
     <View style={styles.page}>
       <Brand />
       <AccessibleHeading style={styles.title}>{t("invite.createTitle")}</AccessibleHeading>
       <Text style={styles.body}>{t("runtime.connectionReady", { family: membership.familyName })}</Text>
       {createdInvitation ? <View style={styles.codeCard}><Text accessibilityLabel={t("invite.code")} selectable style={styles.code}>{createdInvitation.code}</Text><Text style={styles.body}>{t("runtime.inviteExpiry")}</Text></View> : null}
+      {createdInvitation ? <LabButton disabled={busy} label={t("invite.share")} onPress={() => void shareCreatedInvitation()} /> : null}
       {createdInvitation ? <LabButton disabled={busy} label={t("invite.cancel")} onPress={() => void (async () => {
         setBusy(true);
         setError(undefined);
@@ -771,6 +784,7 @@ function ConversationSetup({ accountDeletion, api, membership, onReload, onSignO
         } finally { setBusy(false); }
       })()} variant="secondary" /> : <LabButton disabled={busy} label={t("invite.create")} onPress={() => void createInvitation()} />}
       <LabButton disabled={busy} label={t("runtime.checkConnection")} onPress={onReload} variant="secondary" />
+      {shareError ? <Text accessibilityRole="alert" style={styles.error}>{shareError}</Text> : null}
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
       <LabButton disabled={busy} label={t("account.signOut")} onPress={() => void onSignOut()} variant="secondary" />
       <AccountDeletionControls value={accountDeletion} />

@@ -103,6 +103,24 @@ legacy Prep Chat route, create an AI session, or send a message without the
 existing composer review action. Focused coverage verifies the received
 context helper and the guest UI controls.
 
+## Fifth delivered vertical slice: bootstrap invitation sharing (2026-08-29)
+
+The first invitation shown immediately after a parent starts a private
+PeacePad space can now be shared from the same native share sheet used by the
+full Invitation screen:
+
+- The existing scoped, single-use invitation remains the source of truth.
+- Share text contains the review guidance, six-character code, and deep link;
+  it does not expose tokens, credentials, or private family content.
+- Sharing is optional. The code remains visible and selectable, and a failed
+  share reports a concise fallback instead of blocking the invitation flow.
+- The action is localized through the existing EN/FR/ES invitation catalogue
+  and remains accessible to screen readers.
+
+This closes the legacy invite-by-text/share journey at the point where a new
+private space is first created, without creating a second invitation API or
+auto-connecting the other parent.
+
 ## Safety boundary
 
 - Native V2 contracts remain the only production API authority.
@@ -160,3 +178,19 @@ above are not a substitute for those hosted/device proofs.
 Each batch should add a focused test, update this note or a successor handover,
 run hosted gates on its exact source, and remain separate from store upload or
 production cutover until the complete end-to-end journey is proven.
+
+## Verification for the fifth slice
+
+Exact source `437e0d61ba5d3d02d64d889e9c55a5d8694c5233` passed:
+
+- `npm run typecheck`
+- `npm test -- --no-watchman --forceExit` (55 suites / 428 passed / 1 skipped)
+- focused `src/runtime/PeacePadStagingRuntime.test.tsx` (49 passed)
+- `npm run guardrails`
+- `npm run secret-scan` (150 files checked)
+- `npm run expo:config` (lab bundle, full-bleed icon, writes disabled)
+- `npm run verify:audio-config`
+- `git diff --check`
+
+No EAS artifact, device run, store upload, or production write was made by
+this batch. A clean hosted install remains a separate release gate.

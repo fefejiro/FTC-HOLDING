@@ -208,3 +208,20 @@ profile contract test and EN/FR/ES localization. Unsupported legacy-only
 settings (call preferences, AI-coach tuning, personality concepts, tasks,
 child updates, and expenses) were intentionally left unchanged rather than
 faked without a production contract.
+
+## 2026-08-29 native parity batch: bootstrap invitation sharing
+
+The conversation-empty state shown after starting a private PeacePad space now
+offers the existing native share sheet for its scoped single-use invitation.
+The shared payload contains only review guidance, the six-character code, and
+the deep link. The selectable code and cancel action remain available if the
+share sheet is unavailable. EN/FR/ES labels and the alert fallback are
+accessible and use the existing invitation contract; no new backend, session,
+or production behavior was added.
+
+Exact source `437e0d61ba5d3d02d64d889e9c55a5d8694c5233` passed local typecheck,
+55-suite Jest (428 passed / 1 skipped), focused runtime coverage (49 passed),
+guardrails, 150-file secret scan, Expo config, microphone-only audio config,
+and diff checks. This remains local parity proof only; clean hosted install,
+physical-device testing, signed artifacts, store submission, and production
+cutover remain open.

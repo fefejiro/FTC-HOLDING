@@ -1,5 +1,5 @@
 import React from "react";
-import { Linking, Text } from "react-native";
+import { Linking, Share, Text } from "react-native";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { createStagingCoordinationClient } from "../staging/StagingCoordinationClient";
 import { useSupabaseSession } from "../session/SupabaseSessionProvider";
@@ -541,6 +541,7 @@ describe("PeacePadStagingRuntime gates", () => {
 
   it("creates and revokes a scoped single-use invitation for a family without a conversation", async () => {
     (useSupabaseSession as jest.Mock).mockReturnValue(authValue());
+    const shareSpy = jest.spyOn(Share, "share").mockResolvedValue({ action: Share.sharedAction });
     const invitationId = "99999999-9999-4999-8999-999999999999";
     const createInvitation = jest.fn(async () => ({
       code: "PP2CA1",
@@ -581,6 +582,10 @@ describe("PeacePadStagingRuntime gates", () => {
       invitedRole: "parent",
       permissions: ["messages", "calendar", "shared-records", "calls"]
     }, expect.objectContaining({ actor: { identityId: IDENTITY, sessionId: SESSION }, region: "ca" }));
+    fireEvent.press(screen.getByRole("button", { name: "Share invitation" }));
+    await waitFor(() => expect(shareSpy).toHaveBeenCalledWith({
+      message: expect.stringContaining("Code: PP2CA1")
+    }));
     fireEvent.press(screen.getByRole("button", { name: "Cancel invitation" }));
     await waitFor(() => expect(revokeInvitation).toHaveBeenCalledWith(
       invitationId,
@@ -588,6 +593,7 @@ describe("PeacePadStagingRuntime gates", () => {
     ));
     expect(screen.queryByText("PP2CA1")).toBeNull();
     expect(screen.getByRole("button", { name: "Create invitation" })).toBeTruthy();
+    shareSpy.mockRestore();
   });
 
   it("injects the verified runtime only after an authorized conversation is discovered", async () => {

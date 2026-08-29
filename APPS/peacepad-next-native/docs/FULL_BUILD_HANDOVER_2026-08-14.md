@@ -199,3 +199,17 @@ AI-coach tuning, or a personality test because Native V2 has no matching
 production contract for those concepts. Tasks, child updates, and expenses
 also remain unported until their data contracts are reviewed. Continue from
 the current branch and preserve the existing client/API boundary.
+
+## 2026-08-29 parity batch: bootstrap invitation sharing
+
+The post-solo setup screen now exposes the same native share sheet as the
+full invitation screen. It shares only the review message, six-character
+invitation code, and deep link from the existing scoped invitation contract;
+the selectable code and cancellation path remain available as a fallback.
+The slice is EN/FR/ES localized, accessible, and covered by the runtime test.
+
+Source `437e0d61ba5d3d02d64d889e9c55a5d8694c5233` passed local typecheck, the
+55-suite Jest run (428 passed / 1 skipped), guardrails, secret scan, Expo and
+audio configuration checks, and diff checks. No hosted/device/store or
+production action was performed. A clean hosted dependency install and
+physical-device proof are still required before release work resumes.
