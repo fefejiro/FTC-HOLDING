@@ -213,6 +213,11 @@ Therefore Android is **not the same code** as the iOS 1.1 candidate and must not
 - The installed Pixel 7 APK remains the previously verified event-system-fix
   build. The warm-copy changes have not yet been rebuilt or installed; do not
   present the earlier Pixel screenshots as evidence for this new UI iteration.
+- A disposable D:-backed Android rebuild copied the latest presentation/domain
+  source, compiled the updated `Jci.Runtime` assembly, and entered IL2CPP. The
+  Unity Player/Bee handoff stopped producing output after Burst `bcl.exe`
+  completed (45,211 ms); no APK was emitted. Evidence:
+  `D:\FTC-HOLDING-releases\just-checking-in\android-2026-08-19\jci-ux-iteration-apk-20260829.log`.
 - Next gate: recover a healthy Unity test/build host, run the full EditMode and
   PlayMode suite, then build Android and iOS from one frozen commit before any
   store upload or public-release claim.
