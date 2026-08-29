@@ -11,6 +11,7 @@ import { formatLocalizedDate } from "../localization/localizedDate";
 import { messageText } from "../localization/messageLocalization";
 import { workflowText } from "../localization/workflowLocalization";
 import { homeText } from "../localization/homeLocalization";
+import { callText } from "../localization/callLocalization";
 import { PublicOnboardingSlides } from "../auth/PublicOnboardingAuth";
 import { LinkedSignInMethods } from "../auth/LinkedSignInMethods";
 import { SupportPanel } from "../support/SupportPanel";
@@ -249,6 +250,11 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
       <Pressable accessibilityRole="button" accessibilityLabel={h("send")} onPress={() => setScreen("messages")} style={({ pressed }) => [styles.messageCta, pressed ? styles.pressed : null]}>
         <Text style={styles.messageCtaTitle}>{h("send")}</Text>
         <Text style={styles.messageCtaBody}>{h("sendBody")}</Text>
+      </Pressable>
+
+      <Pressable accessibilityLabel={callText(locale, "title")} accessibilityRole="button" onPress={() => setScreen("calls")} style={({ pressed }) => [styles.callCard, pressed ? styles.pressed : null]}>
+        <Text style={styles.callTitle}>{callText(locale, "title")}</Text>
+        <Text style={styles.caption}>{callText(locale, "body")}</Text>
       </Pressable>
 
       <Pressable accessibilityLabel={h("invite")} accessibilityRole="button" onPress={() => setScreen("invite")} style={({ pressed }) => [styles.inviteCard, pressed ? styles.pressed : null]}>
@@ -1186,6 +1192,8 @@ const styles = StyleSheet.create({
   messageCta: { backgroundColor: colors.brand, borderRadius: 24, gap: spacing.xs, padding: spacing.lg },
   messageCtaTitle: { ...typography.heading, color: colors.onBrand },
   messageCtaBody: { ...typography.body, color: colors.onBrand },
+  callCard: { backgroundColor: colors.brandSoft, borderColor: colors.aqua, borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg },
+  callTitle: { ...typography.subheading, color: colors.aqua },
   inviteCard: { backgroundColor: colors.successSurface, borderColor: colors.successBorder, borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg },
   inviteTitle: { ...typography.subheading, color: colors.successText },
   summaryCard: { backgroundColor: colors.subtleSurface, borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: spacing.sm, padding: spacing.lg },
