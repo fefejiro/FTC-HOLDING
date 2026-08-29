@@ -95,21 +95,23 @@ current session, consent, or production routing contracts.
 
 ## Verification
 
-Passed on the implementation worktree:
+Passed on the implementation worktree at current source `5aa64d9ee`:
 
 - `npm run guardrails`
 - `npm run secret-scan` (150 files checked)
 - `npm run typecheck`
 - `git diff --check`
+- `npm test -- --no-watchman --forceExit` (55 suites / 427 passed / 1 skipped)
+- `npm run test:coverage -- --no-watchman --forceExit` (80.6% statements /
+  75.47% branches overall; `src/legacy` 84.48% statements / 86.66% branches)
 
-The focused Jest launcher was attempted but remains unreliable in this
-checkout because `node_modules` is a junction to the older `peacepad-2.0.1`
-worktree; it stayed silent beyond three bounded waits and was stopped. No Jest
-pass is claimed locally. TypeScript, guardrails, secret scan, and diff checks
-passed locally. The previous hosted baseline run `33229229484` (53 suites /
-420 passed / 1 skipped) predates both parity batches and is not evidence for
-the new files. Run the normal hosted native workflow against the exact
-implementation commit before any release artifact is considered.
+The worktree's original `node_modules` junction was preserved and restored
+after a bounded clean-install attempt. An independent `npm ci` from this
+worktree's lockfile was not completed because large Expo/WebRTC registry
+downloads stalled; the local suite therefore ran against the restored shared
+dependency tree. The hosted native workflow must still run against this exact
+source with a clean dependency install before any release artifact is
+considered.
 
 ## Next larger batches
 
