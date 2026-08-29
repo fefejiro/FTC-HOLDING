@@ -17,6 +17,7 @@ already been ported.
 - Weather implementation commit: `6373611a7e506a72beeb37859df7424b0b84d1ae`
 - Prep Chat implementation commit: `cd87cd580d07e3cac27e7698d280172f07dcf58d`
 - Native baseline before these batches: `11fd91f63`
+- Current parity extension commit: `79337f8972d0c022b1a6b5e72675ea31b1e1a54f`
 - Legacy source reviewed: `C:\FTC HOLDING\APPS\peacepad`
 - Legacy files reviewed:
   - `client/src/pages/weather-activities.tsx`
@@ -82,6 +83,26 @@ compose flow, before a family connection or account sign-in:
 This closes the most important legacy solo-entry gap without changing the
 current session, consent, or production routing contracts.
 
+## Fourth delivered vertical slice: message-context Prep Chat entry (2026-08-29)
+
+The guest and authenticated Prep Chat cards now preserve the legacy choice of
+starting from an incoming message or composing a new one:
+
+- Accessible entry-mode radios distinguish "I received a message" from
+  "I need to send something".
+- Four concise starter prompts cover schedule changes, boundaries, upsetting
+  messages, and calm pickups; selecting one fills the topic for review.
+- Received-message drafts use the context-preserving opening "I received a
+  message about ..." while sending drafts retain the existing "I would like to
+  talk about ..." wording.
+- EN/FR/ES labels are included, and Start over clears the selected context as
+  well as the draft.
+
+The feature remains deterministic and local-only. It does not contact the
+legacy Prep Chat route, create an AI session, or send a message without the
+existing composer review action. Focused coverage verifies the received
+context helper and the guest UI controls.
+
 ## Safety boundary
 
 - Native V2 contracts remain the only production API authority.
@@ -95,8 +116,7 @@ current session, consent, or production routing contracts.
 
 ## Verification
 
-Passed on the implementation worktree at current source `21df783e2` (the
-documentation-only descendant of the tested implementation tree):
+Passed on the implementation worktree at current source `79337f897`:
 
 - `npm run guardrails`
 - `npm run secret-scan` (150 files checked)
@@ -105,9 +125,9 @@ documentation-only descendant of the tested implementation tree):
   configuration resolved)
 - `npm run verify:audio-config` (microphone-only native audio configuration)
 - `git diff --check`
-- `npm test -- --no-watchman --forceExit` (55 suites / 427 passed / 1 skipped)
-- `npm run test:coverage -- --no-watchman --forceExit` (80.6% statements /
-  75.47% branches overall; `src/legacy` 84.48% statements / 86.66% branches)
+- `npm test -- --no-watchman --forceExit` (55 suites / 428 passed / 1 skipped)
+- `npm run test:coverage -- --no-watchman --forceExit` (80.62% statements /
+  75.52% branches overall; `src/legacy` 85.07% statements / 88.23% branches)
 
 The worktree's original `node_modules` junction was preserved and restored
 after a bounded clean-install attempt. An independent `npm ci` from this
