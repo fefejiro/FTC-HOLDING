@@ -22,6 +22,7 @@ import { useOptionalStagingAccountActions } from "../session/StagingAccountActio
 import { useCoordinationState, type CalendarView } from "./CoordinationState";
 import { WeatherActivityIdeas } from "../legacy/WeatherActivityIdeas";
 import { PrepChatAssistant } from "../legacy/PrepChatAssistant";
+import type { AccountExportManifest } from "../api/CoordinationApi";
 
 export type CoordinationScreen = "home" | "messages" | "calendar" | "invite" | "records" | "calls" | "more";
 type Navigate = (screen: CoordinationScreen) => void;
@@ -829,6 +830,7 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
   const [showSupport, setShowSupport] = useState(false);
   const [profileName, setProfileName] = useState(accountActions?.displayName ?? "");
   const [profileSaved, setProfileSaved] = useState(false);
+  const [exportManifest, setExportManifest] = useState<AccountExportManifest>();
   useEffect(() => setProfileName(accountActions?.displayName ?? ""), [accountActions?.displayName]);
   if (replayIntroduction) {
     return <PublicOnboardingSlides compact onComplete={() => setReplayIntroduction(false)} />;
@@ -875,6 +877,33 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
         />
         {profileSaved ? <Text accessibilityLiveRegion="polite" style={styles.success}>{t("profile.saved")}</Text> : null}
         {accountActions.profileError ? <Text accessibilityRole="alert" style={styles.error}>{accountActions.profileError}</Text> : null}
+      </View> : null}
+      {accountActions?.exportAccount ? <View style={styles.actionCardLargeText}>
+        <Text accessibilityRole="header" style={styles.actionTitle}>{t("account.exportTitle")}</Text>
+        <Text style={styles.caption}>{t("account.exportBody")}</Text>
+        <LabButton
+          disabled={accountActions.exporting}
+          label={accountActions.exporting ? t("account.exporting") : t("account.exportAction")}
+          onPress={() => {
+            setExportManifest(undefined);
+            void accountActions.exportAccount!()
+              .then(setExportManifest)
+              .catch(() => setExportManifest(undefined));
+          }}
+        />
+        {exportManifest ? <View accessibilityLiveRegion="polite" style={styles.successCard}>
+          <Text style={styles.success}>{t("account.exportReady")}</Text>
+          <Text style={styles.caption}>{t("account.exportCounts", {
+            families: String(exportManifest.counts.families),
+            conversations: String(exportManifest.counts.conversations),
+            messageEvents: String(exportManifest.counts.messageEvents),
+            calendarEvents: String(exportManifest.counts.calendarEvents),
+            privateRecords: String(exportManifest.counts.privateRecords),
+            privateAttachments: String(exportManifest.counts.privateAttachments)
+          })}</Text>
+          <Text style={styles.caption}>{t("account.exportMetadataOnly")}</Text>
+        </View> : null}
+        {accountActions.exportError ? <Text accessibilityRole="alert" style={styles.error}>{accountActions.exportError}</Text> : null}
       </View> : null}
       {accountActions?.enableNotifications ? <Pressable
         accessibilityRole="button"

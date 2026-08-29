@@ -1,4 +1,5 @@
 import React, { createContext, useContext, type ReactNode } from "react";
+import type { AccountExportManifest } from "../api/CoordinationApi";
 
 export type StagingAccountActionsValue = Readonly<{
   signOut: () => Promise<void>;
@@ -15,6 +16,9 @@ export type StagingAccountActionsValue = Readonly<{
   notificationStatus?: "enabled" | "denied" | "unavailable" | "not-enabled" | "busy";
   enableNotifications?: () => Promise<void>;
   disableNotifications?: () => Promise<void>;
+  exporting?: boolean;
+  exportError?: string;
+  exportAccount?: () => Promise<AccountExportManifest>;
 }>;
 
 const StagingAccountActionsContext = createContext<StagingAccountActionsValue | undefined>(undefined);

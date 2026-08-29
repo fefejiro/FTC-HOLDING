@@ -764,8 +764,18 @@ describe("PeacePadStagingRuntime gates", () => {
       region: "ca",
       version: 4
     }));
+    const prepareAccountExport = jest.fn(async () => ({
+      identityId: IDENTITY,
+      region: "ca" as const,
+      schemaVersion: "2.0" as const,
+      generatedAt: "2026-08-29T12:00:00.000Z",
+      contentIncluded: false as const,
+      status: "manifest-ready" as const,
+      counts: { families: 1, conversations: 1, messageEvents: 0, calendarEvents: 0, privateRecords: 0, privateAttachments: 0, legacyTasks: 0, legacyExpenses: 0 }
+    }));
     (createStagingCoordinationClient as jest.Mock).mockReturnValue({
       updateProfile,
+      prepareAccountExport,
       listConversations: jest.fn(async () => [{ id: CONVERSATION, status: "active" }]),
       listCalendarLayers: jest.fn(async () => []),
       listScheduleEvents: jest.fn(async () => []),
@@ -785,7 +795,10 @@ describe("PeacePadStagingRuntime gates", () => {
 
     function ProfileProbe() {
       const actions = useOptionalStagingAccountActions();
-      return <Text accessibilityRole="button" onPress={() => void actions?.updateProfile?.("Calm Parent")}>update profile</Text>;
+      return <>
+        <Text accessibilityRole="button" onPress={() => void actions?.updateProfile?.("Calm Parent")}>update profile</Text>
+        <Text accessibilityRole="button" onPress={() => void actions?.exportAccount?.()}>prepare export</Text>
+      </>;
     }
 
     const fetcher = sessionResponse();
@@ -800,6 +813,14 @@ describe("PeacePadStagingRuntime gates", () => {
       schemaVersion: "2.0"
     })));
     await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
+
+    fireEvent.press(screen.getByText("prepare export"));
+    await waitFor(() => expect(prepareAccountExport).toHaveBeenCalledWith(expect.objectContaining({
+      actor: { identityId: IDENTITY, sessionId: SESSION },
+      expectedVersion: 3,
+      region: "ca",
+      schemaVersion: "2.0"
+    })));
   });
 
   it("leaves only the verified family grant with optimistic concurrency", async () => {

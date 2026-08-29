@@ -197,3 +197,14 @@ processed build 3 as `VALID` and assigned it to the existing internal group.
 Processing, internal installation, tester evidence, review, and public release
 remain unverified. Follow the current handover sequence in
 [STATUS.md](STATUS.md) before changing any release state.
+
+## 2026-08-29 native parity batch
+
+The existing Native V2 shell now includes a privacy-safe account export
+summary in More/Profile. It calls the existing `prepareAccountExport` API,
+renders metadata counts only, and keeps message text, files, credentials, and
+other private content out of the UI. The action is covered by the runtime
+profile contract test and EN/FR/ES localization. Unsupported legacy-only
+settings (call preferences, AI-coach tuning, personality concepts, tasks,
+child updates, and expenses) were intentionally left unchanged rather than
+faked without a production contract.
