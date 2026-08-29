@@ -249,6 +249,10 @@ Therefore Android is **not the same code** as the iOS 1.1 candidate and must not
   `pixel7-jci-warm-ux-together-turn2.png`, `pixel7-jci-warm-ux-together-summary.png`,
   `pixel7-jci-warm-ux-journey.png`, `pixel7-jci-warm-ux-journey-empty.png`,
   `pixel7-jci-warm-ux-resume.png`, and `pixel7-jci-warm-ux-relaunch-ready.png`.
+- The reduced-motion control was toggled on and back off on-device with visual
+  evidence in `pixel7-jci-warm-ux-reduced-motion-on.png` and
+  `pixel7-jci-warm-ux-reduced-motion-off.png`. Final `dumpsys activity` shows
+  `UnityPlayerGameActivity` resumed in the foreground.
 - The full Unity EditMode/PlayMode suite still has no host-produced results XML;
   the earlier EditMode invocation stalled during AssetDatabase refresh. This
   Pixel pass is direct runtime evidence only. No Play upload, iOS rebuild, or
