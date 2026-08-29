@@ -75,7 +75,7 @@ jobs:
           targetPlatform: Android
           buildMethod: Jci.Editor.BuildScript.BuildAndroidApkForDevice
           allowDirtyBuild: true
-          customParameters: -nographics
+          customParameters: -nographics -burst-disable-compilation
           androidKeystoreName: jci-upload.keystore
           androidKeystoreBase64: ${{ secrets.JCI_ANDROID_KEYSTORE_BASE64 }}
           androidKeystorePass: ${{ secrets.JCI_ANDROID_KEYSTORE_PASSWORD }}
