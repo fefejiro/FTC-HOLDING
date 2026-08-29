@@ -181,7 +181,7 @@ production cutover until the complete end-to-end journey is proven.
 
 ## Verification for the fifth slice
 
-Exact source `437e0d61ba5d3d02d64d889e9c55a5d8694c5233` passed:
+Exact source `4e630b9ed` passed:
 
 - `npm run typecheck`
 - `npm test -- --no-watchman --forceExit` (55 suites / 428 passed / 1 skipped)
@@ -194,3 +194,23 @@ Exact source `437e0d61ba5d3d02d64d889e9c55a5d8694c5233` passed:
 
 No EAS artifact, device run, store upload, or production write was made by
 this batch. A clean hosted install remains a separate release gate.
+
+## Sixth delivered vertical slice: warm Today visual refresh (2026-08-29)
+
+The existing Native V2 home surface now follows the approved calm-plus-playful
+direction without inventing data or changing the coordination contracts:
+
+- Real upcoming events are shown first when present; an empty calendar stays an
+  honest add-plan path.
+- Purple remains the PeacePad anchor, balanced with coral, sun yellow, aqua,
+  and warm cream accents.
+- Message, records, calendar, and invitation actions remain on their existing
+  routes and localization keys.
+- The summary is visually softened rather than presented as an office-style
+  dashboard, and the logo remains the existing full-bleed asset.
+
+Source `859855ec6` passed TypeScript, guardrails, secret scan, and diff checks.
+The existing Pixel 7 development client is installed and visible over ADB, but
+the fresh native debug build is still blocked by the local Expo/Kotlin Gradle
+toolchain (the first JBR path was missing; JDK 17 is now selected). No store
+artifact or production configuration was changed.

@@ -219,9 +219,23 @@ share sheet is unavailable. EN/FR/ES labels and the alert fallback are
 accessible and use the existing invitation contract; no new backend, session,
 or production behavior was added.
 
-Exact source `437e0d61ba5d3d02d64d889e9c55a5d8694c5233` passed local typecheck,
+Exact source `4e630b9ed` passed local typecheck,
 55-suite Jest (428 passed / 1 skipped), focused runtime coverage (49 passed),
 guardrails, 150-file secret scan, Expo config, microphone-only audio config,
 and diff checks. This remains local parity proof only; clean hosted install,
 physical-device testing, signed artifacts, store submission, and production
 cutover remain open.
+
+## 2026-08-29 native parity batch: warm Today visual refresh
+
+The Native V2 home screen now uses the approved calm-plus-playful palette while
+keeping the existing PeacePad routes, logo asset, and localization. It surfaces
+the next real event when available and otherwise offers an honest calendar
+empty-state action; no sample children, weather, events, or production records
+were added.
+
+Exact source `859855ec6` passed TypeScript, guardrails, the 150-file secret scan,
+and diff checks. The connected Pixel 7 is visible over ADB, but native debug
+installation remains pending because Expo/Kotlin Gradle compilation did not
+finish on this Windows host after correcting the stale Android Studio JBR path.
+No signed artifact, store upload, or production write occurred.

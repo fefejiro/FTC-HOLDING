@@ -208,8 +208,21 @@ invitation code, and deep link from the existing scoped invitation contract;
 the selectable code and cancellation path remain available as a fallback.
 The slice is EN/FR/ES localized, accessible, and covered by the runtime test.
 
-Source `437e0d61ba5d3d02d64d889e9c55a5d8694c5233` passed local typecheck, the
+Source `4e630b9ed` passed local typecheck, the
 55-suite Jest run (428 passed / 1 skipped), guardrails, secret scan, Expo and
 audio configuration checks, and diff checks. No hosted/device/store or
 production action was performed. A clean hosted dependency install and
 physical-device proof are still required before release work resumes.
+
+## 2026-08-29 parity batch: warm Today visual refresh
+
+Source `859855ec6` updates the existing Native V2 home surface for the approved
+calm-plus-playful visual direction. It uses only real coordination state, keeps
+the existing routes and localization keys, adds coral/sun/aqua/cream accents
+around the purple brand, and retains the full-bleed PeacePad logo asset.
+TypeScript, guardrails, secret scan, and diff checks pass. The Pixel 7 is ADB
+connected and has the existing development client installed; a new native debug
+build could not complete because the local Expo/Kotlin Gradle compilation did
+not finish after the JDK path was corrected. No EAS, store, or production action
+was performed. Retry the native build from the same worktree with JDK 17 and
+`D:\Android\Sdk` before claiming device UI proof.
