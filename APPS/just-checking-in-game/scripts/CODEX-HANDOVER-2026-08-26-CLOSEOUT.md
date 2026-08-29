@@ -155,3 +155,10 @@ Therefore Android is **not the same code** as the iOS 1.1 candidate and must not
 - Run `33225064251` repeated the build with `-burst-disable-compilation`; it again stalled in the Android Player/Bee stage and was cancelled after no artifact progress.
 - No corrected APK/AAB was emitted by any runner. Pixel 7 therefore remains on the old `0.2.0` / version-code-2 install; no corrected Android install or Play submission is claimed.
 - The canonical source changes for GameCI signing fallback are committed on `codex/jci-ios-1.1-main2`; the remaining blocker is Unity 6000.4.5f1 Player/Bee packaging on both the local and GitHub Linux runners. A real Windows Unity 6000.4.5f1 runner or a Unity-version/toolchain change is required before device installation.
+
+### Stale Hub entry and D:-backed retry (2026-08-29)
+
+- Unity Hub was confirmed to show a stale `C:\FTC HOLDING\APPS\just-checking-in\just-checking-in-game` entry marked “Project not found”. The canonical source remains `D:\FTC-GAMES\worktrees\jci-ios-1.1-main2\APPS\just-checking-in-game\unity` at Unity `6000.4.5f1`; no source files were changed by the Hub registration.
+- A disposable project copy was created at `D:\FTC-GAMES\jci-jci-build-scratch-20260829` from the canonical source. Unity package registration and C# compilation completed, but the editor hung at `Application.AssetDatabase Initial Refresh` before invoking the build. A second run using the known-good `PackageCache` and a copied `Library` reproduced the same stall; no APK was produced.
+- The exact local logs are `D:\FTC-HOLDING-releases\just-checking-in\android-2026-08-19\jci-local-scratch-20260829.log` and `jci-local-cachecopy-20260829.log`. The temporary cache backup was removed from the worktree after the attempt; the canonical worktree is clean.
+- Pixel 7 (`2B260DLH2000C8`) still has only package `com.ftcholding.justcheckingin` version `0.2.0`, version code `2`, target SDK `36`. No corrected 1.1 install or Play submission is claimed.
