@@ -11,7 +11,6 @@ import { formatLocalizedDate } from "../localization/localizedDate";
 import { messageText } from "../localization/messageLocalization";
 import { workflowText } from "../localization/workflowLocalization";
 import { homeText } from "../localization/homeLocalization";
-import { callText } from "../localization/callLocalization";
 import { PublicOnboardingSlides } from "../auth/PublicOnboardingAuth";
 import { LinkedSignInMethods } from "../auth/LinkedSignInMethods";
 import { SupportPanel } from "../support/SupportPanel";
@@ -128,18 +127,16 @@ function CalendarViewPanel({
 }
 
 export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
-  const largeText = usesLargeTextLayout(useWindowDimensions().fontScale);
   const { locale } = useOptionalLocalization();
   const h = (key: Parameters<typeof homeText>[1]) => homeText(locale, key);
   const { events, invitationGrant, sentMessages } = useCoordinationState();
-
-  const actions: readonly { label: string; detail: string; route: CoordinationScreen }[] = [
-    { label: h("send"), detail: h("sendBody"), route: "messages" },
-    { label: h("event"), detail: h("eventBody"), route: "calendar" },
-    { label: h("invite"), detail: h("inviteBody"), route: "invite" },
-    { label: h("record"), detail: h("recordBody"), route: "records" },
-    { label: callText(locale, "title"), detail: callText(locale, "body"), route: "calls" }
-  ];
+  const nextEvent = [...events].sort((left, right) => left.startsAt.localeCompare(right.startsAt))[0];
+  const nextEventDate = nextEvent
+    ? formatLocalizedDate(locale, nextEvent.startsAt, { weekday: "short", month: "short", day: "numeric" })
+    : undefined;
+  const nextEventTime = nextEvent
+    ? formatLocalizedDate(locale, nextEvent.startsAt, { hour: "numeric", minute: "2-digit" })
+    : undefined;
 
   return (
     <View style={styles.stack}>
@@ -151,20 +148,51 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
         </View>
       </View>
 
-      <View style={[styles.actionGrid, largeText ? styles.stack : null]}>
-        {actions.map((action) => (
-          <Pressable
-            accessibilityLabel={action.label}
-            accessibilityRole="button"
-            key={action.label}
-            onPress={() => setScreen(action.route)}
-            style={({ pressed }) => [styles.actionCard, largeText ? styles.actionCardLargeText : null, pressed ? styles.pressed : null]}
-          >
-            <Text style={styles.actionTitle}>{action.label}</Text>
-            <Text style={styles.caption}>{action.detail}</Text>
-          </Pressable>
-        ))}
+      <View style={styles.datePill}>
+        <Text style={styles.datePillText}>{formatLocalizedDate(locale, new Date(), { weekday: "long", month: "long", day: "numeric" })}</Text>
       </View>
+
+      {nextEvent ? (
+        <View accessibilityLabel={h("upcoming")} style={styles.planCard}>
+          <View style={styles.planAccent} />
+          <View style={styles.planCopy}>
+            <Text style={styles.planEyebrow}>{h("upcoming")}</Text>
+            <Text style={styles.planTitle}>{nextEvent.title}</Text>
+            <Text style={styles.body}>{[nextEventDate, nextEventTime].filter(Boolean).join(" • ")}</Text>
+            <Text style={styles.caption}>{h("event")}</Text>
+          </View>
+        </View>
+      ) : (
+        <Pressable accessibilityLabel={h("event")} accessibilityRole="button" onPress={() => setScreen("calendar")} style={({ pressed }) => [styles.planCard, styles.planCardEmpty, pressed ? styles.pressed : null]}>
+          <View style={[styles.planAccent, styles.planAccentSun]} />
+          <View style={styles.planCopy}>
+            <Text style={styles.planEyebrow}>{h("upcoming")}</Text>
+            <Text style={styles.planTitle}>{h("event")}</Text>
+            <Text style={styles.body}>{h("eventBody")}</Text>
+          </View>
+        </Pressable>
+      )}
+
+      <View style={styles.activityCard}>
+        <View style={styles.activityDot}><Text accessible={false} style={styles.activityDotText}>✦</Text></View>
+        <View style={styles.activityCopy}>
+          <Text style={styles.activityTitle}>{h("record")}</Text>
+          <Text style={styles.caption}>{h("recordBody")}</Text>
+        </View>
+        <Pressable accessibilityRole="button" accessibilityLabel={h("record")} onPress={() => setScreen("records")} style={styles.smallButton}>
+          <Text style={styles.smallButtonText}>{h("record")}</Text>
+        </Pressable>
+      </View>
+
+      <Pressable accessibilityRole="button" accessibilityLabel={h("send")} onPress={() => setScreen("messages")} style={({ pressed }) => [styles.messageCta, pressed ? styles.pressed : null]}>
+        <Text style={styles.messageCtaTitle}>{h("send")}</Text>
+        <Text style={styles.messageCtaBody}>{h("sendBody")}</Text>
+      </Pressable>
+
+      <Pressable accessibilityLabel={h("invite")} accessibilityRole="button" onPress={() => setScreen("invite")} style={({ pressed }) => [styles.inviteCard, pressed ? styles.pressed : null]}>
+        <Text style={styles.inviteTitle}>{h("invite")}</Text>
+        <Text style={styles.caption}>{h("inviteBody")}</Text>
+      </Pressable>
 
       <View style={styles.summaryCard}>
         <Text accessibilityRole="header" style={styles.heading}>{h("today")}</Text>
@@ -993,9 +1021,28 @@ const styles = StyleSheet.create({
   languageOption: { borderColor: colors.border, borderRadius: 14, borderWidth: 1, justifyContent: "center", minHeight: 48, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   languageOptionSelected: { backgroundColor: colors.brandSoft, borderColor: colors.brand },
   pressed: { opacity: 0.72 },
-  summaryCard: { backgroundColor: colors.brand, borderRadius: 24, gap: spacing.sm, padding: spacing.lg },
-  summaryRow: { alignItems: "center", borderTopColor: "rgba(255,255,255,0.16)", borderTopWidth: 1, flexDirection: "row", justifyContent: "space-between", paddingTop: spacing.sm },
-  summaryValue: { ...typography.body, color: colors.onBrand, fontWeight: "800" },
+  datePill: { alignSelf: "flex-start", backgroundColor: colors.cream, borderColor: colors.border, borderRadius: 999, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  datePillText: { ...typography.body, color: colors.text, fontWeight: "700" },
+  planCard: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 24, borderWidth: 1, flexDirection: "row", gap: spacing.md, minHeight: 132, overflow: "hidden", paddingRight: spacing.lg, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 1 },
+  planCardEmpty: { minHeight: 112 },
+  planAccent: { backgroundColor: colors.coral, width: 10 },
+  planAccentSun: { backgroundColor: colors.sun },
+  planCopy: { flex: 1, gap: spacing.xs, justifyContent: "center", paddingVertical: spacing.lg },
+  planEyebrow: { ...typography.caption, color: colors.coral, fontWeight: "800", textTransform: "uppercase" },
+  planTitle: { ...typography.heading, color: colors.text },
+  activityCard: { alignItems: "center", backgroundColor: colors.warningSurface, borderColor: colors.warningBorder, borderRadius: 22, borderWidth: 1, flexDirection: "row", gap: spacing.md, padding: spacing.md },
+  activityDot: { alignItems: "center", backgroundColor: colors.sun, borderRadius: 999, height: 44, justifyContent: "center", width: 44 },
+  activityDotText: { color: colors.text, fontSize: 24, fontWeight: "800" },
+  activityCopy: { flex: 1, gap: spacing.xs },
+  activityTitle: { ...typography.body, color: colors.text, fontWeight: "800" },
+  messageCta: { backgroundColor: colors.brand, borderRadius: 24, gap: spacing.xs, padding: spacing.lg },
+  messageCtaTitle: { ...typography.heading, color: colors.onBrand },
+  messageCtaBody: { ...typography.body, color: colors.onBrand },
+  inviteCard: { backgroundColor: colors.successSurface, borderColor: colors.successBorder, borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg },
+  inviteTitle: { ...typography.subheading, color: colors.successText },
+  summaryCard: { backgroundColor: colors.subtleSurface, borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: spacing.sm, padding: spacing.lg },
+  summaryRow: { alignItems: "center", borderTopColor: colors.border, borderTopWidth: 1, flexDirection: "row", justifyContent: "space-between", paddingTop: spacing.sm },
+  summaryValue: { ...typography.body, color: colors.brand, fontWeight: "800" },
   card: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 22, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
   successCard: { backgroundColor: colors.successSurface, borderColor: colors.successBorder, borderRadius: 22, borderWidth: 1, gap: spacing.sm, padding: spacing.lg },
   confirmCard: { backgroundColor: colors.warningSurface, borderColor: colors.warningBorder, borderRadius: 22, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
