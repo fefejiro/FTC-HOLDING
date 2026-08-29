@@ -217,6 +217,12 @@ describe("PeacePad native foundation", () => {
     await screen.findByText("Check your message before sending");
 
     fireEvent.press(screen.getByText("Open Prep Chat"));
+    fireEvent.press(screen.getByText("I received a message"));
+    fireEvent.press(screen.getByText("Plan a calm pickup"));
+    expect(screen.getByLabelText("What do you need to talk about?")).toHaveProp(
+      "value",
+      "Plan a calm pickup"
+    );
     fireEvent.changeText(
       screen.getByLabelText("What do you need to talk about?"),
       "Saturday pickup"
@@ -227,7 +233,7 @@ describe("PeacePad native foundation", () => {
 
     expect(screen.getByLabelText("Message draft")).toHaveProp(
       "value",
-      "I would like to talk about Saturday pickup. I would like us to keep this conversation calm and practical. Could we agree on a clear next step?"
+      "I received a message about Saturday pickup. I would like us to keep this conversation calm and practical. Could we agree on a clear next step?"
     );
     expect(api.previewMessage).not.toHaveBeenCalled();
   });
