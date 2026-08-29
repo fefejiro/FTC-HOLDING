@@ -138,3 +138,9 @@ Therefore Android is **not the same code** as the iOS 1.1 candidate and must not
 - To isolate IL2CPP/Bee from device smoke testing, the disposable copy was temporarily switched to Unity's Mono Android backend; the canonical source and release settings were not changed.
 - Unity failed before player generation with `UnityException: Target architecture not specified` during Android SDK target resolution. Evidence: `D:\FTC-HOLDING-releases\just-checking-in\android-2026-08-19\jci-device-mono-20260828.log`.
 - No APK was produced. The Pixel remains on the old rejected build, and the temporary backend change was not copied back to the canonical worktree.
+
+### IL2CPP no-Burst retry (2026-08-28)
+
+- Unity SDK/NDK/JDK paths were verified as present and registered (`Android SDK`, NDK `27.2.12479018`, JDK `17.0.17.10`).
+- A disposable IL2CPP build was retried with Burst compilation disabled. Unity completed package import and shader processing, then stalled again in the Android Player Bee backend; no APK was produced. Evidence: `D:\FTC-HOLDING-releases\just-checking-in\android-2026-08-19\jci-device-noburst-20260828.log`.
+- This rules out missing Android modules and leaves the local Unity 6000.4.5f1 Player/Bee environment as the blocker. The next build should run on a separate healthy Windows CI runner.
