@@ -95,11 +95,15 @@ current session, consent, or production routing contracts.
 
 ## Verification
 
-Passed on the implementation worktree at current source `5aa64d9ee`:
+Passed on the implementation worktree at current source `21df783e2` (the
+documentation-only descendant of the tested implementation tree):
 
 - `npm run guardrails`
 - `npm run secret-scan` (150 files checked)
 - `npm run typecheck`
+- `npm run expo:config` (lab bundle, full-bleed icon, and writes-disabled
+  configuration resolved)
+- `npm run verify:audio-config` (microphone-only native audio configuration)
 - `git diff --check`
 - `npm test -- --no-watchman --forceExit` (55 suites / 427 passed / 1 skipped)
 - `npm run test:coverage -- --no-watchman --forceExit` (80.6% statements /
@@ -112,6 +116,11 @@ downloads stalled; the local suite therefore ran against the restored shared
 dependency tree. The hosted native workflow must still run against this exact
 source with a clean dependency install before any release artifact is
 considered.
+
+This batch produced no EAS artifact, TestFlight upload, Play upload, or
+production write. Physical-device audio, notification delivery, and
+authenticated cross-account journeys remain release gates; the local checks
+above are not a substitute for those hosted/device proofs.
 
 ## Next larger batches
 
