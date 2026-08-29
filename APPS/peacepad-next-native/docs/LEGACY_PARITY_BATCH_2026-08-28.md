@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This note records the first larger end-to-end parity batch for the existing
+This note records the larger end-to-end parity batches for the existing
 Native V2 shell. The goal is to reuse the working legacy PeacePad experience
 inside the native product without routing the native app through the legacy
 server or weakening the V2 production boundary.
@@ -14,14 +14,16 @@ already been ported.
 
 - Native worktree: `D:\PeacePadRelease\worktrees\peacepad-port-current\APPS\peacepad-next-native`
 - Branch: `work/peacepad-port-current-20260828`
-- Implementation commit: `6373611a7e506a72beeb37859df7424b0b84d1ae`
-- Native baseline before this batch: `11fd91f63`
+- Weather implementation commit: `6373611a7e506a72beeb37859df7424b0b84d1ae`
+- Prep Chat implementation commit: `cd87cd580d07e3cac27e7698d280172f07dcf58d`
+- Native baseline before these batches: `11fd91f63`
 - Legacy source reviewed: `C:\FTC HOLDING\APPS\peacepad`
 - Legacy files reviewed:
   - `client/src/pages/weather-activities.tsx`
   - `server/contentFallbacks.ts`
   - `server/seedWeatherActivities.ts`
   - the server weather-activities route
+  - `client/src/pages/prep-chat.tsx`
 
 ## Delivered vertical slice
 
@@ -43,6 +45,26 @@ invent live weather, or mutate a calendar event. A later weather adapter must
 use an approved V2 endpoint or an explicitly reviewed native weather provider;
 the legacy `/api/weather-activities` endpoint must not be called by Native V2.
 
+## Second delivered vertical slice: solo Prep Chat
+
+The native Messages screen now includes the useful solo-entry part of the
+legacy Prep Chat journey:
+
+- A concise, optional "Prepare a calm message" card that can be opened without
+  a family or invitation.
+- Topic and feeling inputs with accessible radio semantics and EN/FR/ES copy.
+- Deterministic calm-draft generation using the existing native composer as
+  the review/send boundary.
+- Start-over and local-only disclosure so a draft is never sent implicitly.
+
+This intentionally ports the legacy user journey and writing guidance without
+copying legacy cookies, sessions, or the `/api/prep-chat` routes. The current
+V2 backend has no approved Prep Chat session contract, so no server or AI call
+is made by this slice. A future V2-backed assistant can replace the pure draft
+helper behind the same review boundary without changing the user flow.
+
+Focused helper coverage is in `src/legacy/prepChat.test.ts`.
+
 ## Safety boundary
 
 - Native V2 contracts remain the only production API authority.
@@ -59,33 +81,31 @@ the legacy `/api/weather-activities` endpoint must not be called by Native V2.
 Passed on the implementation worktree:
 
 - `npm run guardrails`
-- `npm run secret-scan` (145 files checked)
+- `npm run secret-scan` (150 files checked)
+- `npm run typecheck`
 - `git diff --check`
 
-The local Jest and TypeScript launchers were attempted but are not reliable in
-this checkout because `node_modules` is a junction to the older
-`peacepad-2.0.1` worktree. The processes can remain alive without output, so
-no local Jest or TypeScript pass is claimed for this batch. The previous hosted
-baseline run `33229229484` (53 suites / 420 passed / 1 skipped) predates this
-change and is not evidence for the new files. Run the normal hosted native
-workflow against commit `6373611a7e506a72beeb37859df7424b0b84d1ae` before any
-release artifact is considered.
+The focused Jest launcher was attempted but remains unreliable in this
+checkout because `node_modules` is a junction to the older `peacepad-2.0.1`
+worktree; it stayed silent beyond three bounded waits and was stopped. No Jest
+pass is claimed locally. TypeScript, guardrails, secret scan, and diff checks
+passed locally. The previous hosted baseline run `33229229484` (53 suites /
+420 passed / 1 skipped) predates both parity batches and is not evidence for
+the new files. Run the normal hosted native workflow against the exact
+implementation commit before any release artifact is considered.
 
 ## Next larger batches
 
-1. **Solo Prep Chat / calm drafting** - first define a V2-backed session,
-   message, and draft contract. Reuse the legacy journey and copy style, but
-   do not call legacy `/api/prep-chat` routes from the native app.
-2. **Settings and personality** - map the useful legacy preferences and
+1. **Settings and personality** - map the useful legacy preferences and
    personality test to the existing native More/profile/auth contracts. Only
    persist fields with an approved V2 API and deletion/export behavior.
-3. **Coordination parity** - deepen the existing V2 messages, invitations,
+2. **Coordination parity** - deepen the existing V2 messages, invitations,
    calendar, records, and support screens using their current contracts rather
    than creating parallel legacy state.
-4. **Audio** - keep the Native V2 authenticated call/TURN/signaling contracts
+3. **Audio** - keep the Native V2 authenticated call/TURN/signaling contracts
    as authority. Port the legacy user journey and state presentation, not its
    incompatible WebRTC transport.
-5. **Video and Conch** - separate production contracts, consent, cost limits,
+4. **Video and Conch** - separate production contracts, consent, cost limits,
    and physical-device gates are required. Neither should be enabled by this
    parity batch or by remote configuration alone.
 
