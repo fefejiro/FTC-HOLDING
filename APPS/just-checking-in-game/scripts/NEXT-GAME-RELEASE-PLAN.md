@@ -93,10 +93,17 @@ conversation for couples, friends, or family.
 ### Implemented in the current source iteration
 
 - Home, solo, together, and journey copy now uses warmer conversational phrasing.
+- The home screen now presents three equal-size physical-style mode cards:
+  **Solo check-in**, **Check in together**, and **Your connection journey**.
+- Solo mode has a clear two-step hierarchy: choose **Solo check-in**, then tap
+  **Draw a card** before choosing the feeling that fits. This keeps the mode
+  name and the card action distinct instead of repeating "myself" twice.
 - Prompt and affirmation copy was tightened to sound like an invitation between
   people rather than a questionnaire.
 - Prompt/affirmation surfaces now receive a low-amplitude glass-card pulse and
   buttons receive a small touch press response.
+- The home privacy fine print was removed from the mode chooser; operational
+  local-storage wording remains only where it helps explain a journey action.
 - Added a content regression test for readable text and question punctuation.
 
 ### Test gates before the next store candidate

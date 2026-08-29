@@ -47,9 +47,10 @@ namespace Jci.Tests.PlayMode
         [UnityTest]
         public IEnumerator SelfFlowCompletesAndStoresOnlyIds()
         {
-            Click("Check in with myself");
+            Click("Solo check-in");
+            Click("Draw a card");
             Click("Drained");
-            Click("Finish this check-in");
+            Click("That feels true - finish");
             yield return null;
             var path = Path.Combine(UnityEngine.Application.persistentDataPath, "jci-local-v1.json");
             Assert.That(File.Exists(path), Is.True);
@@ -62,23 +63,40 @@ namespace Jci.Tests.PlayMode
         [UnityTest]
         public IEnumerator TogetherFlowEndsAndPausePersistsRecovery()
         {
-            Click("Together here");
+            Click("Check in together");
             var input = Object.FindAnyObjectByType<InputField>();
             Assert.That(input, Is.Not.Null);
             input.text = "Test connection";
-            Click("Save name and start");
-            Click("Answered — next prompt");
+            Click("Start together");
+            Click("I am ready - next prompt");
             game.SendMessage("OnApplicationPause", true);
             yield return null;
             Assert.That(File.ReadAllText(Path.Combine(UnityEngine.Application.persistentDataPath, "jci-local-v1.json")), Does.Contain("ActiveSession"));
-            Click("End check-in");
-            Assert.That(FindButton("Back home"), Is.Not.Null);
+            Click("Close this check-in");
+            Assert.That(FindButton("Keep going"), Is.Not.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator HomeModeCardsUseOneSharedPhysicalFootprint()
+        {
+            var solo = FindButton("Solo check-in");
+            var together = FindButton("Check in together");
+            var journey = FindButton("Your connection journey");
+            Assert.That(solo, Is.Not.Null);
+            Assert.That(together, Is.Not.Null);
+            Assert.That(journey, Is.Not.Null);
+
+            var soloHeight = solo.GetComponent<RectTransform>().rect.height;
+            Assert.That(together.GetComponent<RectTransform>().rect.height, Is.EqualTo(soloHeight).Within(0.1f));
+            Assert.That(journey.GetComponent<RectTransform>().rect.height, Is.EqualTo(soloHeight).Within(0.1f));
+            Assert.That(soloHeight, Is.GreaterThanOrEqualTo(112f));
+            yield return null;
         }
 
         [UnityTest]
         public IEnumerator RapidTapsDoNotCreateDuplicateCanvases()
         {
-            var button = FindButton("Check in with myself");
+            var button = FindButton("Solo check-in");
             Assert.That(button, Is.Not.Null);
             for (var i = 0; i < 10; i++) button.onClick.Invoke();
             yield return null;
@@ -88,11 +106,11 @@ namespace Jci.Tests.PlayMode
         [UnityTest]
         public IEnumerator ActiveSessionRestoresAfterRelaunch()
         {
-            Click("Together here");
+            Click("Check in together");
             var input = Object.FindAnyObjectByType<InputField>();
             input.text = "Relaunch connection";
-            Click("Save name and start");
-            Click("Answered — next prompt");
+            Click("Start together");
+            Click("I am ready - next prompt");
             game.SendMessage("OnApplicationPause", true);
             Object.Destroy(game);
             yield return null;
@@ -102,7 +120,7 @@ namespace Jci.Tests.PlayMode
             yield return null;
             Assert.That(FindButton("Resume your check-in"), Is.Not.Null);
             Click("Resume your check-in");
-            Assert.That(FindButton("End check-in"), Is.Not.Null);
+            Assert.That(FindButton("Close this check-in"), Is.Not.Null);
         }
 
         [UnityTest]

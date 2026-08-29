@@ -13,12 +13,12 @@ namespace Jci.Presentation
     /// <summary>Offline-first uGUI shell. Only documented local IDs and metrics are persisted.</summary>
     public sealed class JustCheckingInGame : MonoBehaviour
     {
-        private const string Background = "#102A43";
-        private const string Card = "#F7F1E5";
-        private const string Ink = "#102A43";
-        private const string Coral = "#E76F51";
-        private const string Teal = "#2A9D8F";
-        private const string Gold = "#E9C46A";
+        private const string Background = "#F3E8D5";
+        private const string Card = "#FFF9F0";
+        private const string Ink = "#15354D";
+        private const string Coral = "#E49A73";
+        private const string Teal = "#78B7AD";
+        private const string Gold = "#D1A84F";
 
         private Canvas canvas;
         private RectTransform body;
@@ -116,8 +116,8 @@ namespace Jci.Presentation
         private void ClearBody()
         {
             for (var i = body.childCount - 1; i >= 0; i--) Destroy(body.GetChild(i).gameObject);
-            AddText(body, "JUST CHECKING IN", 16, Parse(Gold), FontStyle.Bold, 32);
-            var hero = AddText(body, "A little time to connect.", 30, Color.white, FontStyle.Bold, 72);
+            AddText(body, "JUST CHECKING IN", 16, Parse(Ink), FontStyle.Bold, 32);
+            var hero = AddText(body, "A little time to connect.", 30, Parse(Ink), FontStyle.Bold, 72);
             hero.rectTransform.sizeDelta = new Vector2(0, 72);
             screenMotion.Play(reducedMotion);
         }
@@ -125,20 +125,30 @@ namespace Jci.Presentation
         private void ShowHome()
         {
             ClearBody();
-            AddText(body, "How would you like to arrive?", 18, Color.white, FontStyle.Normal, 50);
+            AddText(body, "How would you like to arrive?", 18, Parse(Ink), FontStyle.Normal, 50);
             if (document.ActiveSession != null) AddButton(body, "Resume your check-in", ResumeTogether, Parse(Coral));
-            AddButton(body, "Check in with myself", ShowSelf, Parse(Teal));
-            AddButton(body, "Check in together", ShowTogetherPicker, Parse(Coral));
-            AddButton(body, "Your connection journey", ShowJourney, Parse(Gold), Parse(Ink));
+            AddModeCard(body, "Solo check-in", "Take a moment for you.", ShowSelfIntro, Parse(Teal));
+            AddModeCard(body, "Check in together", "Share this moment with someone you trust.", ShowTogetherPicker, Parse(Coral));
+            AddModeCard(body, "Your connection journey", "Small moments. Lasting connection.", ShowJourney, Parse(Gold), Parse(Ink));
             AddButton(body, "Reduced motion: " + (reducedMotion ? "On" : "Off"), ToggleReducedMotion, Parse(Card), Parse(Ink));
-            AddText(body, "Your words stay here. No recording, no sharing.", 13, new Color(1, 1, 1, .75f), FontStyle.Normal, 58);
+        }
+
+        private void ShowSelfIntro()
+        {
+            selectedMood = null;
+            ClearBody();
+            AddText(body, "Solo check-in", 24, Parse(Ink), FontStyle.Bold, 52);
+            AddText(body, "Take a moment for you.", 18, Parse(Ink), FontStyle.Normal, 42);
+            AddText(body, "Draw one card and notice what arrives.", 24, Parse(Ink), FontStyle.Bold, 170, Parse(Card));
+            AddButton(body, "Draw a card", ShowSelf, Parse(Teal));
+            AddButton(body, "Back to the start", ShowHome, Parse(Card), Parse(Ink));
         }
 
         private void ShowSelf()
         {
             selectedMood = null;
             ClearBody();
-            AddText(body, "Before anything else, how are you arriving today?", 22, Color.white, FontStyle.Bold, 68);
+            AddText(body, "Before anything else, how are you arriving today?", 22, Parse(Ink), FontStyle.Bold, 68);
             foreach (var mood in JciContent.Moods) AddButton(body, mood.Label, () => SelectMood(mood), Parse(Teal));
             AddButton(body, "Back to the start", ShowHome, Parse(Card), Parse(Ink));
         }
@@ -147,7 +157,7 @@ namespace Jci.Presentation
         {
             selectedMood = mood;
             ClearBody();
-            AddText(body, "Here is something to carry with you", 21, Color.white, FontStyle.Bold, 58);
+            AddText(body, "Here is something to carry with you", 21, Parse(Ink), FontStyle.Bold, 58);
             var affirmation = JciContent.FindAffirmation(mood.Id);
             AddText(body, affirmation.Text, 25, Parse(Ink), FontStyle.Bold, 150, Parse(Card));
             AddButton(body, "That feels true - finish", FinishSelf, Parse(Coral));
@@ -162,15 +172,15 @@ namespace Jci.Presentation
             store.Save(document);
             Haptic();
             ClearBody();
-            AddText(body, "You made a little space for yourself.", 25, Color.white, FontStyle.Bold, 70);
-            AddText(body, affirmation.Text, 19, Parse(Card), FontStyle.Normal, 110);
+            AddText(body, "You made a little space for yourself.", 25, Parse(Ink), FontStyle.Bold, 70);
+            AddText(body, affirmation.Text, 19, Parse(Ink), FontStyle.Normal, 110);
             AddButton(body, "Keep going", ShowHome, Parse(Teal));
         }
 
         private void ShowTogetherPicker()
         {
             ClearBody();
-            AddText(body, "Who would you like to check in with?", 21, Color.white, FontStyle.Bold, 64);
+            AddText(body, "Who would you like to check in with?", 21, Parse(Ink), FontStyle.Bold, 64);
             foreach (var connection in document.Connections)
             {
                 var local = connection;
@@ -237,22 +247,22 @@ namespace Jci.Presentation
             store.Save(document);
             Haptic();
             ClearBody();
-            AddText(body, "That was a good pause.", 26, Color.white, FontStyle.Bold, 70);
-            AddText(body, summary.QuestionsCompleted + " shared - " + summary.QuestionsPassed + " skipped", 19, Parse(Card), FontStyle.Normal, 66);
+            AddText(body, "That was a good pause.", 26, Parse(Ink), FontStyle.Bold, 70);
+            AddText(body, summary.QuestionsCompleted + " shared - " + summary.QuestionsPassed + " skipped", 19, Parse(Ink), FontStyle.Normal, 66);
             AddButton(body, "Keep going", ShowHome, Parse(Teal));
         }
 
         private void ShowJourney()
         {
             ClearBody();
-            AddText(body, "Your local connection journey", 22, Color.white, FontStyle.Bold, 65);
+            AddText(body, "Your local connection journey", 22, Parse(Ink), FontStyle.Bold, 65);
             foreach (var connection in document.Connections)
             {
                 var local = connection;
                 var count = document.TogetherSessions.FindAll(s => s.ConnectionId == local.Id).Count;
                 AddButton(body, local.DisplayName + " - " + count + " check-ins", () => DeleteConnection(local), Parse(Teal));
             }
-            AddText(body, "Tap a name to remove its local label. Nothing leaves this device.", 13, new Color(1, 1, 1, .75f), FontStyle.Normal, 58);
+            AddText(body, "Tap a name to remove its local label. Nothing leaves this device.", 13, new Color(0.08f, 0.16f, 0.24f, .72f), FontStyle.Normal, 58);
             AddButton(body, "Add someone", ShowTogetherPicker, Parse(Coral));
             AddButton(body, "Reset all local data", ResetLocalData, Parse(Coral));
             AddButton(body, "Back to the start", ShowHome, Parse(Card), Parse(Ink));
@@ -313,6 +323,9 @@ namespace Jci.Presentation
                 var outline = card.AddComponent<Outline>();
                 outline.effectColor = new Color(1f, 1f, 1f, 0.16f);
                 outline.effectDistance = new Vector2(1f, -1f);
+                var shadow = card.AddComponent<Shadow>();
+                shadow.effectColor = new Color(0.08f, 0.12f, 0.16f, 0.16f);
+                shadow.effectDistance = new Vector2(0f, -4f);
                 card.AddComponent<JciCardMotion>();
                 layoutRect = card.GetComponent<RectTransform>();
                 layoutRect.anchorMin = new Vector2(0, 1); layoutRect.anchorMax = new Vector2(1, 1); layoutRect.pivot = new Vector2(0, 1); layoutRect.sizeDelta = new Vector2(0, height);
@@ -364,6 +377,64 @@ namespace Jci.Presentation
             button.colors = colors;
             go.AddComponent<JciButtonMotion>();
             var text = AddText(go.transform, label, 17, foreground ?? Color.white, FontStyle.Bold, 58); text.alignment = TextAnchor.MiddleCenter; text.rectTransform.anchorMin = Vector2.zero; text.rectTransform.anchorMax = Vector2.one; text.rectTransform.offsetMin = new Vector2(12, 0); text.rectTransform.offsetMax = new Vector2(-12, 0);
+            return button;
+        }
+
+        /// <summary>
+        /// Home mode cards deliberately share one physical-card footprint. The
+        /// mode name chooses the route; the next screen owns the action (for
+        /// example, "Draw a card"), so the home screen does not duplicate it.
+        /// </summary>
+        private static Button AddModeCard(Transform parent, string title, string subtitle, UnityEngine.Events.UnityAction action, Color background, Color? foreground = null)
+        {
+            var go = new GameObject(title, typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
+            go.transform.SetParent(parent, false);
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0, 1);
+            rect.anchorMax = new Vector2(1, 1);
+            rect.pivot = new Vector2(.5f, 1);
+            rect.sizeDelta = new Vector2(0, 112);
+
+            var layout = go.GetComponent<LayoutElement>();
+            layout.preferredHeight = 112;
+            layout.minHeight = 112;
+            layout.flexibleWidth = 1;
+
+            var image = go.GetComponent<Image>();
+            image.color = background;
+            var outline = go.AddComponent<Outline>();
+            outline.effectColor = new Color(1f, 1f, 1f, 0.20f);
+            outline.effectDistance = new Vector2(1f, -1f);
+            var shadow = go.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0.08f, 0.12f, 0.16f, 0.18f);
+            shadow.effectDistance = new Vector2(0f, -5f);
+
+            var button = go.GetComponent<Button>();
+            button.onClick.AddListener(action);
+            button.transition = Selectable.Transition.ColorTint;
+            var colors = button.colors;
+            colors.normalColor = background;
+            colors.highlightedColor = Color.Lerp(background, Color.white, 0.10f);
+            colors.pressedColor = Color.Lerp(background, Color.black, 0.08f);
+            colors.selectedColor = colors.highlightedColor;
+            colors.disabledColor = new Color(background.r, background.g, background.b, 0.45f);
+            button.colors = colors;
+            go.AddComponent<JciButtonMotion>();
+
+            var textColor = foreground ?? Color.white;
+            var titleText = AddText(go.transform, title, 20, textColor, FontStyle.Bold, 48);
+            titleText.alignment = TextAnchor.MiddleLeft;
+            titleText.rectTransform.anchorMin = new Vector2(0, 0.42f);
+            titleText.rectTransform.anchorMax = new Vector2(1, 0.92f);
+            titleText.rectTransform.offsetMin = new Vector2(28, 0);
+            titleText.rectTransform.offsetMax = new Vector2(-28, 0);
+
+            var subtitleText = AddText(go.transform, subtitle, 15, new Color(textColor.r, textColor.g, textColor.b, 0.82f), FontStyle.Normal, 38);
+            subtitleText.alignment = TextAnchor.MiddleLeft;
+            subtitleText.rectTransform.anchorMin = new Vector2(0, 0.08f);
+            subtitleText.rectTransform.anchorMax = new Vector2(1, 0.45f);
+            subtitleText.rectTransform.offsetMin = new Vector2(28, 0);
+            subtitleText.rectTransform.offsetMax = new Vector2(-28, 0);
             return button;
         }
 
