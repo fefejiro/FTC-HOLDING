@@ -221,3 +221,35 @@ Therefore Android is **not the same code** as the iOS 1.1 candidate and must not
 - Next gate: recover a healthy Unity test/build host, run the full EditMode and
   PlayMode suite, then build Android and iOS from one frozen commit before any
   store upload or public-release claim.
+
+### Warm UX Android parity candidate and Pixel 7 smoke (2026-08-29)
+
+- The warm UX source at canonical commit `6f2ba9562` was copied into a
+  disposable D:-backed Unity `6000.4.5f1` build project. The no-Burst retry
+  completed IL2CPP, Bee, and Gradle packaging and emitted:
+  `D:\FTC-HOLDING-releases\just-checking-in\android-2026-08-19\JustCheckingIn-1.1.0-code3-warm-ux.apk`.
+- Artifact evidence: 31,848,391 bytes; SHA-256
+  `67AD3C34D2BA20617CCBF65B1A3E934E39C7D4B010DB6F7550EF651AFAB737B`; package
+  `com.ftcholding.justcheckingin`; version `1.1.0`; version code `3`; min SDK
+  `25`; compile/target SDK `36`; IL2CPP ARM64; Android APK Signature Scheme
+  v2; signer certificate SHA-256
+  `3f57ea45405524c9cf9a38ce0774e7dc56b80cf3481696adc04577b77c6825b3`.
+- Pixel 7 serial `2B260DLH2000C8` was uninstalled and clean-installed from
+  this exact artifact. `dumpsys package` reports version code 3, version name
+  1.1.0, and target SDK 36. `aapt dump badging` reports only INTERNET plus the
+  Unity dynamic receiver permission; no microphone, camera, location, or
+  recording permission is present.
+- Direct device smoke passed with no `FATAL EXCEPTION` or `AndroidRuntime`
+  errors: home; Solo mood -> affirmation -> completion; Together name entry
+  (`Maya`) -> turn 01 -> turn 02 -> explicit end summary; local connection
+  journey persistence; reset/delete; background/resume; force-quit/relaunch.
+  Evidence screenshots are in the same release folder: `pixel7-jci-warm-ux-home.png`,
+  `pixel7-jci-warm-ux-self.png`, `pixel7-jci-warm-ux-affirmation.png`,
+  `pixel7-jci-warm-ux-self-complete.png`, `pixel7-jci-warm-ux-together-active-maya2.png`,
+  `pixel7-jci-warm-ux-together-turn2.png`, `pixel7-jci-warm-ux-together-summary.png`,
+  `pixel7-jci-warm-ux-journey.png`, `pixel7-jci-warm-ux-journey-empty.png`,
+  `pixel7-jci-warm-ux-resume.png`, and `pixel7-jci-warm-ux-relaunch-ready.png`.
+- The full Unity EditMode/PlayMode suite still has no host-produced results XML;
+  the earlier EditMode invocation stalled during AssetDatabase refresh. This
+  Pixel pass is direct runtime evidence only. No Play upload, iOS rebuild, or
+  public-release claim is made from this candidate.
