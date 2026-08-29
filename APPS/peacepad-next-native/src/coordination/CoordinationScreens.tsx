@@ -27,6 +27,7 @@ import { PersonalityProfilePanel } from "../preferences/PersonalityProfilePanel"
 import { CustodySchedulePlanner } from "../calendar/CustodySchedulePlanner";
 import { custodyParentForDate, type CustodyBlock, type CustodySchedule } from "../calendar/custodySchedule";
 import { custodyScheduleText } from "../calendar/custodyScheduleLocalization";
+import { PrepChatAssistant } from "../legacy/PrepChatAssistant";
 
 export type CoordinationScreen = "home" | "messages" | "calendar" | "activities" | "tasks" | "invite" | "records" | "calls" | "more";
 type Navigate = (screen: CoordinationScreen) => void;
@@ -692,6 +693,8 @@ export function MessagesScreen() {
     <View style={styles.stack}>
       <AccessibleHeading style={styles.title}>{m("title")}</AccessibleHeading>
       <Text style={styles.body}>{m("body")}</Text>
+
+      <PrepChatAssistant onUseDraft={setMessageDraft} />
 
       <View style={styles.card}>
         <Text style={styles.heading}>{m("find")}</Text>
