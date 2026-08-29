@@ -1,7 +1,7 @@
 {
   "name": "Jci.Runtime",
   "rootNamespace": "Jci",
-  "references": ["UnityEngine.UI"],
+  "references": ["UnityEngine.UI", "Unity.InputSystem"],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,

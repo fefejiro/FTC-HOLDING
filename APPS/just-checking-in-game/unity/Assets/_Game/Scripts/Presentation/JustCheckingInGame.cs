@@ -4,6 +4,8 @@ using Jci.Application;
 using Jci.Domain;
 using Jci.Infrastructure;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 namespace Jci.Presentation
@@ -64,6 +66,16 @@ namespace Jci.Presentation
 
         private void BuildCanvas()
         {
+            // The runtime UI is created entirely in code, so create the event
+            // system explicitly; without it, buttons render but never receive
+            // touch/pointer input on Android or iOS.
+            if (FindAnyObjectByType<EventSystem>() == null)
+            {
+                var eventSystem = new GameObject("JCI EventSystem", typeof(EventSystem));
+                eventSystem.transform.SetParent(transform, false);
+                eventSystem.AddComponent<InputSystemUIInputModule>();
+            }
+
             var go = new GameObject("JCI Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             go.transform.SetParent(transform, false);
             canvas = go.GetComponent<Canvas>();
