@@ -132,3 +132,9 @@ Therefore Android is **not the same code** as the iOS 1.1 candidate and must not
 - This run completed Unity package registration, C# compilation, package import, shader processing, and entered the Android Player build.
 - It then stalled in the Player Bee backend after Burst `bcl.exe` reported `Starting 1 library requests` and `Done`; no Gradle root project or APK was emitted. Evidence: `D:\FTC-HOLDING-releases\just-checking-in\android-2026-08-19\jci-fresh-junction-apk-20260828.log`.
 - Pixel 7 remains on version `0.2.0` / code `2`. The old build was not reinstalled or presented as the corrected source.
+
+### Disposable Mono device-build check (2026-08-28)
+
+- To isolate IL2CPP/Bee from device smoke testing, the disposable copy was temporarily switched to Unity's Mono Android backend; the canonical source and release settings were not changed.
+- Unity failed before player generation with `UnityException: Target architecture not specified` during Android SDK target resolution. Evidence: `D:\FTC-HOLDING-releases\just-checking-in\android-2026-08-19\jci-device-mono-20260828.log`.
+- No APK was produced. The Pixel remains on the old rejected build, and the temporary backend change was not copied back to the canonical worktree.
