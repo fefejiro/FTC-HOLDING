@@ -164,3 +164,4 @@ Therefore Android is **not the same code** as the iOS 1.1 candidate and must not
 - Pixel 7 (`2B260DLH2000C8`) still has only package `com.ftcholding.justcheckingin` version `0.2.0`, version code `2`, target SDK `36`. No corrected 1.1 install or Play submission is claimed.
 - The stale Unity Hub C: project entry was repaired with a directory junction at `C:\FTC HOLDING\APPS\just-checking-in-game\just-checking-in-game` targeting the canonical D: project. This preserves one source of truth; no new Unity project was created.
 - A correctly quoted Unity invocation through that repaired Hub path read the canonical project and Unity version, then reproduced the `Application.AssetDatabase Initial Refresh Start` stall. The process was stopped after no build output; no APK was generated.
+- A final invocation without `-disable-assembly-updater` reproduced the same stall (`jci-final-no-updater-20260829.log`); this is not a command-line flag or Hub-path issue.
