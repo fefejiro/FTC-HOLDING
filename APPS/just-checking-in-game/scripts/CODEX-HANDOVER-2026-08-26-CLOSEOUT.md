@@ -125,3 +125,10 @@ Therefore Android is **not the same code** as the iOS 1.1 candidate and must not
 - A disposable copy at `D:\FTC-GAMES\jci-j1.1-device-build-20260828` was created from the canonical Unity project without a `Library` cache.
 - Unity `6000.4.5f1` initialized and reached `Application.AssetDatabase Initial Refresh`, but package import did not complete in the available run. Seeding the disposable copy from the old cache also stalled while copying Unity package data, so no APK was generated.
 - This confirms the remaining blocker is the local Unity/package/Bee build environment, not the layout-fix source. Use a healthy CI/Windows Unity runner with a warm package cache for the next build; do not resubmit the old code-2 AAB.
+
+### Package-cache junction recovery (2026-08-28)
+
+- The disposable project was given a junction to the known-good local Unity `PackageCache`, avoiding the blocked package-download and full-cache-copy paths.
+- This run completed Unity package registration, C# compilation, package import, shader processing, and entered the Android Player build.
+- It then stalled in the Player Bee backend after Burst `bcl.exe` reported `Starting 1 library requests` and `Done`; no Gradle root project or APK was emitted. Evidence: `D:\FTC-HOLDING-releases\just-checking-in\android-2026-08-19\jci-fresh-junction-apk-20260828.log`.
+- Pixel 7 remains on version `0.2.0` / code `2`. The old build was not reinstalled or presented as the corrected source.
