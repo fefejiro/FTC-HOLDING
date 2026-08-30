@@ -351,3 +351,17 @@ Therefore Android is **not the same code** as the iOS 1.1 candidate and must not
   candidate and has not been uploaded. No Play review, production, or public
   availability claim is made. The complete Unity EditMode/PlayMode suite still
   lacks host-produced XML because of the known AssetDatabase import stall.
+
+### JCI repository closeout housekeeping (2026-08-30)
+
+- `gh pr list --state open` shows no open Just Checking In pull requests. The
+  five PRs associated with `codex/jci-ios-1.1-main2` are already merged.
+- The scoped branch is pushed at `45bb4b3e7` (`docs(jci): record signed Android
+  Play candidate`). The only remaining change in this worktree is the
+  pre-existing user edit to `scripts/NEXT-GAME-RELEASE-PLAN.md`; it was not
+  staged or altered.
+- No unrelated parent-checkout files were staged, committed, deleted, or
+  cleaned. The locked `jci-ios-1.1-license-fix` worktree contains unrelated
+  deletion changes and was intentionally left untouched. Other clean legacy
+  JCI worktrees remain available for recovery; they were not removed without
+  explicit owner confirmation that they are unused.
