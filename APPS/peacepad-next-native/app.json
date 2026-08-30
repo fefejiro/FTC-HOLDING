@@ -3,7 +3,7 @@
     "name": "PeacePad",
     "slug": "peacepad-next-native-lab",
     "version": "0.0.1",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/icon-production.png",
     "orientation": "portrait",
     "scheme": "peacepadnextlab",
     "userInterfaceStyle": "automatic",
@@ -18,7 +18,11 @@
       }
     },
     "android": {
-      "package": "ca.peacepad.nextnative.lab"
+      "package": "ca.peacepad.nextnative.lab",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon-production.png",
+        "backgroundColor": "#7226B4"
+      }
     },
     "extra": {
       "environment": "lab",

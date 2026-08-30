@@ -1057,7 +1057,7 @@ function AccountDeletionControls({ value }: {
 
 function Brand() {
   const { t } = useOptionalLocalization();
-  return <View style={styles.brand}><Image accessibilityLabel={t("runtime.logo")} source={require("../foundation/peacepad-conch.png")} style={styles.logo} /><Text style={styles.brandName}>PeacePad</Text></View>;
+  return <View style={styles.brand}><Image accessibilityLabel={t("runtime.logo")} source={require("../../assets/icon-production.png")} style={styles.logo} /><Text style={styles.brandName}>PeacePad</Text></View>;
 }
 
 function GateMessage({ busy = false, body, onSignOut, title }: { busy?: boolean; body: string; onSignOut?: () => Promise<void>; title: string }) {
@@ -1070,7 +1070,7 @@ const styles = StyleSheet.create({
   signInKeyboard: { backgroundColor: colors.background, flex: 1 },
   signInContent: { flexGrow: 1, gap: spacing.md, justifyContent: "center", padding: spacing.xl },
   brand: { alignItems: "center", flexDirection: "row", gap: spacing.sm },
-  logo: { height: 52, width: 52 },
+  logo: { borderRadius: 17, height: 52, width: 52 },
   brandName: { color: colors.text, fontSize: 24, fontWeight: "800" },
   title: { color: colors.text, fontSize: 32, fontWeight: "700" },
   regionLabel: { color: colors.brand, fontSize: 16, fontWeight: "700" },

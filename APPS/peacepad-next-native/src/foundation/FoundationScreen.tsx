@@ -196,7 +196,7 @@ export function FoundationScreen({
       <View style={styles.brandRow}>
         <Image
           accessibilityLabel={t("foundation.logo")}
-          source={require("./peacepad-conch.png")}
+          source={require("../../assets/icon-production.png")}
           style={styles.conchMark}
         />
         <View style={styles.brandCopy}>

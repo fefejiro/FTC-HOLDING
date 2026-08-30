@@ -114,7 +114,7 @@ module.exports = ({ config }) => {
     }
     return {
       ...config,
-      icon: "./assets/icon.png",
+      icon: "./assets/icon-production.png",
       scheme: "peacepad",
       version: TESTFLIGHT_VERSION,
       plugins: [
