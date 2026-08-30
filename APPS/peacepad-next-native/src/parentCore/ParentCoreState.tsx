@@ -73,6 +73,7 @@ type ParentCoreStateValue = Readonly<{
   cancelScheduledCall: (call: ScheduledCall) => Promise<void>;
   createConch: (mediaType: "audio" | "video") => Promise<void>;
   acceptConch: () => Promise<void>;
+  declineConch: () => Promise<void>;
   setConchSummaryConsent: (consent: boolean) => Promise<void>;
   saveConchSummary: (body: string) => Promise<void>;
   reactToConch: (reaction: ConchReaction) => Promise<void>;
@@ -308,6 +309,12 @@ export function ParentCoreStateProvider({
       const accepted = await resolvedApi.respondToConchSession(conchSession.id, "accept", context(activeRuntime, conchSession.version));
       setConchSession(accepted);
       setConchTurn(await resolvedApi.getCurrentConchTurn(accepted.id));
+    }),
+    declineConch: () => run(async () => {
+      if (!conchSession) return;
+      setConchSession(await resolvedApi.respondToConchSession(conchSession.id, "decline", context(activeRuntime, conchSession.version)));
+      setConchTurn(null);
+      setConchSummary(null);
     }),
     setConchSummaryConsent: (consent) => run(async () => {
       if (!conchSession) return;

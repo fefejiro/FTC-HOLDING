@@ -29,6 +29,9 @@ WebView or a legacy-island bridge.
 - Conch now supports one deliberately written shared takeaway only after every
   participant consents. It never derives the takeaway from call media or a
   transcript, and withdrawing consent removes the stored takeaway.
+- Conch invitations now expose distinct accept, decline and sender-cancel
+  actions; the safe-end action appears only after the session is active, and
+  the paired native media call follows the same decision.
 - Incoming call push target selection and Expo delivery attempt after call
   creation. Locked-screen delivery remains a physical-device verification item.
 - Receipts now have their own private object path and authorization model:
