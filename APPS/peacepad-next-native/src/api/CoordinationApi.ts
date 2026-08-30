@@ -32,6 +32,7 @@ import type {
   ChildUpdateKind,
   ConchReaction,
   ConchSession,
+  ConchSummary,
   ConchTurn,
   ExpenseSettlement,
   FamilyBalance,
@@ -478,6 +479,8 @@ export interface PeacePadCoordinationApi {
   getCurrentConchTurn(sessionId: EntityId): Promise<ConchTurn | null>;
   respondToConchSession(sessionId: EntityId, response: "accept" | "decline", context: WriteContext): Promise<ConchSession>;
   consentToConchSession(sessionId: EntityId, summaryConsent: boolean, context: WriteContext): Promise<ConchSession>;
+  getConchSummary(sessionId: EntityId): Promise<ConchSummary | null>;
+  saveConchSummary(sessionId: EntityId, body: string, context: WriteContext): Promise<ConchSummary>;
   passConchTurn(sessionId: EntityId, context: WriteContext): Promise<Readonly<{ session: ConchSession; turn: ConchTurn }>>;
   reactToConchTurn(sessionId: EntityId, turnId: EntityId, reaction: ConchReaction, context: WriteContext): Promise<ConchTurn>;
   endConchSession(sessionId: EntityId, context: WriteContext): Promise<ConchSession>;
@@ -1141,6 +1144,18 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
 
   consentToConchSession(sessionId: EntityId, summaryConsent: boolean, context: WriteContext) {
     return this.write<ConchSession>(`/api/v2/conch-sessions/${encodeURIComponent(sessionId)}/consent`, "POST", { summaryConsent }, context);
+  }
+
+  getConchSummary(sessionId: EntityId) {
+    return this.request<ConchSummary | null>(`/api/v2/conch-sessions/${encodeURIComponent(sessionId)}/summary`);
+  }
+
+  saveConchSummary(sessionId: EntityId, body: string, context: WriteContext) {
+    const normalized = body.trim();
+    if (!normalized || normalized.length > 1000) {
+      return Promise.reject(new PeacePadApiError("Keep the agreed Conch summary between 1 and 1,000 characters.", "http", 400));
+    }
+    return this.write<ConchSummary>(`/api/v2/conch-sessions/${encodeURIComponent(sessionId)}/summary`, "PUT", { body: normalized }, context);
   }
 
   passConchTurn(sessionId: EntityId, context: WriteContext) {

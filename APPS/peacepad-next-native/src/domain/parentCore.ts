@@ -142,6 +142,16 @@ export type ConchTurn = VersionedEntity & Readonly<{
   reactions: readonly Readonly<{ identityId: EntityId; reaction: ConchReaction; reactedAt: IsoUtcTimestamp }>[];
 }>;
 
+export type ConchSummary = VersionedEntity & Readonly<{
+  conchSessionId: EntityId;
+  familyCircleId: EntityId;
+  body: string;
+  createdByIdentityId: EntityId;
+  updatedByIdentityId: EntityId;
+  createdAt: IsoUtcTimestamp;
+  updatedAt: IsoUtcTimestamp;
+}>;
+
 export type CommunicationAssessmentAnswer = Readonly<{
   questionId: "pace" | "detail" | "conflict" | "planning" | "emotion" | "decisions";
   score: 1 | 2 | 3 | 4 | 5;

@@ -39,6 +39,7 @@ type ErrorCode =
   | "CALL_STATE_INVALID"
   | "CONFIGURATION_ERROR"
   | "CONVERSATION_ACCESS_DENIED"
+  | "CONCH_SUMMARY_CONSENT_REQUIRED"
   | "DATABASE_NOT_READY"
   | "DEVICE_PUSH_ACCESS_DENIED"
   | "FAMILY_ACCESS_DENIED"
@@ -255,6 +256,7 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     IDENTITY_NOT_BOUND: "IDENTITY_NOT_BOUND",
     FAMILY_ACCESS_DENIED: "FAMILY_ACCESS_DENIED",
     CONVERSATION_ACCESS_DENIED: "CONVERSATION_ACCESS_DENIED",
+    CONCH_SUMMARY_CONSENT_REQUIRED: "CONCH_SUMMARY_CONSENT_REQUIRED",
     CALENDAR_ACCESS_DENIED: "CALENDAR_ACCESS_DENIED",
     CALL_ACCESS_DENIED: "CALL_ACCESS_DENIED",
     CALL_ALREADY_ACTIVE: "CALL_ALREADY_ACTIVE",
@@ -297,7 +299,7 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
   const status = safeCode === "DATABASE_NOT_READY" ? 503
     : safeCode === "SIGNAL_RATE_LIMITED" ? 429
     : ["REGION_MISMATCH", "CONCURRENCY_CONFLICT", "IDEMPOTENCY_CONFLICT", "CALL_ALREADY_ACTIVE", "CALL_STATE_INVALID"].includes(safeCode) ? 409
-    : ["AI_CONSENT_REQUIRED", "INVITATION_SELF_ACCEPT_DENIED", "FAMILY_ACCESS_DENIED", "CONVERSATION_ACCESS_DENIED", "MESSAGE_ACCESS_DENIED", "MESSAGE_CHECK_DISABLED", "CALENDAR_ACCESS_DENIED", "CALL_ACCESS_DENIED", "DEVICE_PUSH_ACCESS_DENIED"].includes(safeCode) ? 403
+    : ["AI_CONSENT_REQUIRED", "CONCH_SUMMARY_CONSENT_REQUIRED", "INVITATION_SELF_ACCEPT_DENIED", "FAMILY_ACCESS_DENIED", "CONVERSATION_ACCESS_DENIED", "MESSAGE_ACCESS_DENIED", "MESSAGE_CHECK_DISABLED", "CALENDAR_ACCESS_DENIED", "CALL_ACCESS_DENIED", "DEVICE_PUSH_ACCESS_DENIED"].includes(safeCode) ? 403
     : 400;
   const databaseMessage = config.environment === "production"
     ? "PeacePad could not load your family space right now. Please try again."
@@ -1128,6 +1130,41 @@ const handler = async (request: Request): Promise<Response> => {
       p_conch_session_id: sessionId,
     });
     return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
+  }
+
+  const conchSummaryMatch = path.match(/^\/api\/v2\/conch-sessions\/([^/]+)\/summary$/);
+  if ((request.method === "GET" || request.method === "PUT") && conchSummaryMatch) {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
+    const sessionId = decodeURIComponent(conchSummaryMatch[1]);
+    if (!isUuid(sessionId)) return failure(request, 400, "INVALID_REQUEST", "A valid Conch session is required.", requestId, config);
+    if (request.method === "GET") {
+      const { data, error } = await authenticated.admin.rpc("peacepad_v2_get_conch_summary", {
+        p_identity_id: authenticated.user.id, p_region: config.region, p_conch_session_id: sessionId,
+      });
+      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
+    }
+    const writeContext = writeHeaders(request, config, requestId);
+    if (!writeContext.ok) return writeContext.error;
+    const body = await readJsonObject(request);
+    const summaryBody = typeof body?.body === "string" ? body.body.trim() : "";
+    if (!body || Object.keys(body).some((key) => key !== "body") || !summaryBody || summaryBody.length > 1000) {
+      return failure(request, 400, "INVALID_REQUEST", "Keep the agreed Conch summary between 1 and 1,000 characters.", requestId, config);
+    }
+    const expectedVersionHeader = (request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? "";
+    const expectedVersion = expectedVersionHeader ? Number(expectedVersionHeader) : null;
+    if (expectedVersion !== null && (!Number.isInteger(expectedVersion) || expectedVersion < 1)) {
+      return failure(request, 400, "INVALID_REQUEST", "A valid Conch summary version is required.", requestId, config);
+    }
+    const databaseWriteToken = await databaseIdempotencyToken(config, authenticated.user.id, writeContext.idempotencyKey, "conch.summary_saved", {
+      identityId: authenticated.user.id, region: config.region, sessionId, expectedVersion, body: summaryBody,
+    });
+    const { data, error } = await authenticated.admin.rpc("peacepad_v2_save_conch_summary", {
+      p_identity_id: authenticated.user.id, p_region: config.region, p_conch_session_id: sessionId,
+      p_body: summaryBody, p_expected_version: expectedVersion, p_idempotency_key: databaseWriteToken,
+      p_schema_version: writeContext.schemaVersion,
+    });
+    return error ? rpcFailure(request, requestId, config, error.message) : json(request, expectedVersion === null ? 201 : 200, data, requestId, config);
   }
 
   if (request.method === "GET" && path === "/api/v2/support/search") {

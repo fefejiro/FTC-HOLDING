@@ -472,6 +472,25 @@ describe("SyntheticCoordinationApi safety behavior", () => {
     await expect(api.getExpenseReceiptDownload(receipt.id)).resolves.toMatchObject({ attachment: { linkedExpenseId: expense.id } });
   });
 
+  it("reveals a Conch summary only after both parents consent and deletes it on withdrawal", async () => {
+    const api = new SyntheticCoordinationApi();
+    const conch = await api.createConchSession({
+      familyCircleId: "family-current",
+      conversationId: "conversation-primary",
+      mediaType: "audio",
+      turnDurationSeconds: 120
+    }, context);
+    const currentConsent = await api.consentToConchSession(conch.id, true, { ...context, expectedVersion: conch.version });
+    await expect(api.getConchSummary(conch.id)).resolves.toBeNull();
+    const otherContext = { ...context, actor: { ...context.actor, identityId: "identity-coparent" }, expectedVersion: currentConsent.version };
+    const bothConsent = await api.consentToConchSession(conch.id, true, otherContext);
+    const summary = await api.saveConchSummary(conch.id, " We agreed to confirm Sunday pickup by Friday evening. ", { ...context, expectedVersion: null });
+    expect(summary).toMatchObject({ body: "We agreed to confirm Sunday pickup by Friday evening.", version: 1 });
+    await expect(api.getConchSummary(conch.id)).resolves.toEqual(summary);
+    await api.consentToConchSession(conch.id, false, { ...otherContext, expectedVersion: bothConsent.version });
+    await expect(api.getConchSummary(conch.id)).resolves.toBeNull();
+  });
+
   it("persists one shared parenting plan and versioned change requests", async () => {
     const api = new SyntheticCoordinationApi();
     const plan = await api.saveParentingSchedulePlan({

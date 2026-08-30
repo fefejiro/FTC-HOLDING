@@ -71,6 +71,7 @@ import type {
   ChildUpdate,
   ConchReaction,
   ConchSession,
+  ConchSummary,
   ConchTurn,
   ExpenseSettlement,
   FamilyBalance,
@@ -193,6 +194,7 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
   private scheduledCalls: ScheduledCall[] = [];
   private videoCall: MediaCallSession | null = null;
   private conchSession: ConchSession | null = null;
+  private conchSummary: ConchSummary | null = null;
   private conchTurns: ConchTurn[] = [];
 
   constructor(seedInvitations: readonly SeedInvitation[] = []) {
@@ -1187,7 +1189,38 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
     const session = this.requireConch(sessionId, context.expectedVersion);
     const summaryConsentIdentityIds = summaryConsent ? [...new Set([...session.summaryConsentIdentityIds, context.actor.identityId])] : session.summaryConsentIdentityIds.filter((id) => id !== context.actor.identityId);
     this.conchSession = { ...session, summaryConsentIdentityIds, version: session.version + 1 };
+    if (!summaryConsent) this.conchSummary = null;
     return this.conchSession;
+  }
+
+  async getConchSummary(sessionId: EntityId): Promise<ConchSummary | null> {
+    const session = this.requireConch(sessionId, null);
+    const allConsented = session.participantIdentityIds.every((identityId) => session.summaryConsentIdentityIds.includes(identityId));
+    return allConsented && this.conchSummary?.conchSessionId === sessionId ? this.conchSummary : null;
+  }
+
+  async saveConchSummary(sessionId: EntityId, body: string, context: WriteContext): Promise<ConchSummary> {
+    const session = this.requireConch(sessionId, null);
+    if (!session.participantIdentityIds.every((identityId) => session.summaryConsentIdentityIds.includes(identityId))) {
+      throw new PeacePadApiError("Both parents must consent before saving a Conch summary.", "http", 403);
+    }
+    const normalized = body.trim();
+    if (!normalized || normalized.length > 1000) throw new PeacePadApiError("Keep the agreed Conch summary between 1 and 1,000 characters.", "http", 400);
+    const now = new Date().toISOString();
+    const previous = this.conchSummary;
+    if (previous && context.expectedVersion !== previous.version) throw new PeacePadApiError("This Conch summary changed. Review it again.", "http", 409);
+    this.conchSummary = {
+      ...versioned(previous?.id ?? `conch-summary-${Date.now().toString(36)}`),
+      conchSessionId: session.id,
+      familyCircleId: session.familyCircleId,
+      body: normalized,
+      createdByIdentityId: previous?.createdByIdentityId ?? context.actor.identityId,
+      updatedByIdentityId: context.actor.identityId,
+      createdAt: previous?.createdAt ?? now,
+      updatedAt: now,
+      version: (previous?.version ?? 0) + 1
+    };
+    return this.conchSummary;
   }
 
   async passConchTurn(sessionId: EntityId, context: WriteContext): Promise<Readonly<{ session: ConchSession; turn: ConchTurn }>> {

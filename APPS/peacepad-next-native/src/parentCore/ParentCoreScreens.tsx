@@ -185,6 +185,8 @@ function ConchPanel() {
   const state = useParentCoreState();
   const media = useAudioCallState();
   const session = state.conchSession;
+  const [summaryDraft, setSummaryDraft] = useState("");
+  useEffect(() => setSummaryDraft(state.conchSummary?.body ?? ""), [state.conchSummary?.body]);
   const startConch = async (mediaType: "audio" | "video") => {
     await state.createConch(mediaType);
     await media.start(mediaType);
@@ -207,6 +209,12 @@ function ConchPanel() {
       <View style={styles.chips}>{([['heard', 'I hear you'], ['agree', 'Agreed'], ['pause', 'Pause'], ['needs-clarification', 'Clarify']] as const).map(([reaction, label]) => <Pressable accessibilityRole="button" disabled={state.busy || !state.conchTurn} key={reaction} onPress={() => void state.reactToConch(reaction).catch(() => undefined)} style={styles.chip}><Text style={styles.chipText}>{label}</Text></Pressable>)}</View>
       <LabButton disabled={state.busy} label={session.summaryConsentIdentityIds.includes(state.actorIdentityId) ? "Withdraw summary consent" : "Consent to a private summary"} onPress={() => void state.setConchSummaryConsent(!session.summaryConsentIdentityIds.includes(state.actorIdentityId)).catch(() => undefined)} variant="secondary" />
       <Text style={styles.caption}>{session.summaryConsentIdentityIds.length}/2 parents have consented. A summary remains unavailable until both choose yes.</Text>
+      {session.participantIdentityIds.every((identityId) => session.summaryConsentIdentityIds.includes(identityId)) ? <View accessibilityLabel="Agreed Conch summary" style={styles.summaryCard}>
+        <Text style={styles.cardTitle}>Shared takeaway</Text>
+        <Text style={styles.caption}>Write only the practical agreement you both want to keep. No call audio or transcript is used.</Text>
+        <TextInput accessibilityLabel="Conch summary wording" maxLength={1000} multiline onChangeText={setSummaryDraft} placeholder="Example: We agreed to confirm Sunday pickup by Friday evening." style={[styles.input, styles.multiline]} value={summaryDraft} />
+        <LabButton disabled={state.busy || !summaryDraft.trim() || summaryDraft.trim() === state.conchSummary?.body} label={state.conchSummary ? "Update shared takeaway" : "Save shared takeaway"} onPress={() => void state.saveConchSummary(summaryDraft).catch(() => undefined)} />
+      </View> : null}
     </View> : null}
     <View style={styles.privacyNote}><PeacePadIcon color={colors.aqua} name="shield-checkmark-outline" /><Text style={styles.caption}>A summary can only be created after both participants deliberately consent. PeacePad never diagnoses either parent.</Text></View>
   </View>;
@@ -270,6 +278,7 @@ const styles = StyleSheet.create({
   inlineActions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   urgent: { ...typography.caption, color: colors.dangerText, fontWeight: "900" },
   conchCard: { backgroundColor: "#DDF6F0", borderColor: "#76CCBE", borderRadius: 28, borderWidth: 1, gap: spacing.md, padding: spacing.xl },
+  summaryCard: { backgroundColor: "#FFFDF8", borderColor: colors.warningBorder, borderRadius: 20, borderWidth: 1, gap: spacing.md, padding: spacing.md },
   privacyNote: { alignItems: "center", backgroundColor: colors.cream, borderRadius: 20, flexDirection: "row", gap: spacing.md, padding: spacing.md },
   pressed: { opacity: 0.75 }
 });

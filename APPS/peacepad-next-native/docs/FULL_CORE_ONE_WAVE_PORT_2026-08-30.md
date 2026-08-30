@@ -26,6 +26,9 @@ WebView or a legacy-island bridge.
   private/shared attachment boundaries.
 - Native audio/video call state, signaling/TURN contract handling, scheduled
   calls, and consent-gated Conch turns/reactions/timer.
+- Conch now supports one deliberately written shared takeaway only after every
+  participant consents. It never derives the takeaway from call media or a
+  transcript, and withdrawing consent removes the stored takeaway.
 - Incoming call push target selection and Expo delivery attempt after call
   creation. Locked-screen delivery remains a physical-device verification item.
 - Receipts now have their own private object path and authorization model:
@@ -80,7 +83,7 @@ APPS/peacepad-v2-platform/scripts/validate-supabase-edge-function.ps1
 git diff --check
 ```
 
-The current full Native suite is 66 passing suites and 474 passing tests with
+The current full Native suite is 66 passing suites and 476 passing tests with
 one intentionally skipped test. A direct Deno check reaches four pre-existing
 generated Supabase typing errors in incoming-call push code; it reports no new
 parenting-schedule error. The missing root `scripts/audit-secrets.cjs` command

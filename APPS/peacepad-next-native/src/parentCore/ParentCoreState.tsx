@@ -9,6 +9,7 @@ import { createWriteContext, type ChildProfile, type EntityId } from "../domain/
 import type {
   ChildUpdate,
   ConchSession,
+  ConchSummary,
   ConchReaction,
   ConchTurn,
   ExpenseSettlement,
@@ -58,6 +59,7 @@ type ParentCoreStateValue = Readonly<{
   otherParentIdentityId?: EntityId;
   conchSession: ConchSession | null;
   conchTurn: ConchTurn | null;
+  conchSummary: ConchSummary | null;
   turnSecondsRemaining: number;
   reload: () => Promise<void>;
   createChild: (displayName: string) => Promise<void>;
@@ -72,6 +74,7 @@ type ParentCoreStateValue = Readonly<{
   createConch: (mediaType: "audio" | "video") => Promise<void>;
   acceptConch: () => Promise<void>;
   setConchSummaryConsent: (consent: boolean) => Promise<void>;
+  saveConchSummary: (body: string) => Promise<void>;
   reactToConch: (reaction: ConchReaction) => Promise<void>;
   passConch: () => Promise<void>;
   endConch: () => Promise<void>;
@@ -117,6 +120,7 @@ export function ParentCoreStateProvider({
   const [otherParentIdentityId, setOtherParentIdentityId] = useState<EntityId>();
   const [conchSession, setConchSession] = useState<ConchSession | null>(null);
   const [conchTurn, setConchTurn] = useState<ConchTurn | null>(null);
+  const [conchSummary, setConchSummary] = useState<ConchSummary | null>(null);
   const [turnSecondsRemaining, setTurnSecondsRemaining] = useState(0);
 
   const reload = useCallback(async () => {
@@ -140,6 +144,9 @@ export function ParentCoreStateProvider({
     setScheduledCalls(nextCalls);
     setOtherParentIdentityId(conversations.flatMap((item) => item.participantIdentityIds).find((id) => id !== activeRuntime.actorIdentityId));
     setConchSession(nextConch);
+    setConchSummary(nextConch && nextConch.participantIdentityIds.every((identityId) => nextConch.summaryConsentIdentityIds.includes(identityId))
+      ? await resolvedApi.getConchSummary(nextConch.id)
+      : null);
     setConchTurn(nextConch?.status === "active" ? await resolvedApi.getCurrentConchTurn(nextConch.id) : null);
   }, [activeRuntime.actorIdentityId, activeRuntime.conversationId, activeRuntime.familyCircleId, resolvedApi]);
 
@@ -183,6 +190,7 @@ export function ParentCoreStateProvider({
     otherParentIdentityId,
     conchSession,
     conchTurn,
+    conchSummary,
     turnSecondsRemaining,
     reload: async () => {
       try {
@@ -303,7 +311,15 @@ export function ParentCoreStateProvider({
     }),
     setConchSummaryConsent: (consent) => run(async () => {
       if (!conchSession) return;
-      setConchSession(await resolvedApi.consentToConchSession(conchSession.id, consent, context(activeRuntime, conchSession.version)));
+      const updated = await resolvedApi.consentToConchSession(conchSession.id, consent, context(activeRuntime, conchSession.version));
+      setConchSession(updated);
+      setConchSummary(consent && updated.participantIdentityIds.every((identityId) => updated.summaryConsentIdentityIds.includes(identityId))
+        ? await resolvedApi.getConchSummary(updated.id)
+        : null);
+    }),
+    saveConchSummary: (body) => run(async () => {
+      if (!conchSession) return;
+      setConchSummary(await resolvedApi.saveConchSummary(conchSession.id, body, context(activeRuntime, conchSummary?.version ?? null)));
     }),
     reactToConch: (reaction) => run(async () => {
       if (!conchSession || !conchTurn) throw new Error("The current Conch turn is not ready yet.");
@@ -320,7 +336,7 @@ export function ParentCoreStateProvider({
       setConchSession(await resolvedApi.endConchSession(conchSession.id, context(activeRuntime, conchSession.version)));
       setConchTurn(null);
     })
-  }), [activeRuntime, balance, busy, childrenState, conchSession, conchTurn, error, expenses, hydrated, otherParentIdentityId, reload, resolvedApi, run, scheduledCalls, settlements, supportQuery, supportResources, turnSecondsRemaining, updates]);
+  }), [activeRuntime, balance, busy, childrenState, conchSession, conchSummary, conchTurn, error, expenses, hydrated, otherParentIdentityId, reload, resolvedApi, run, scheduledCalls, settlements, supportQuery, supportResources, turnSecondsRemaining, updates]);
 
   return <ParentCoreStateContext.Provider value={value}>{children}</ParentCoreStateContext.Provider>;
 }
