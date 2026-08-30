@@ -68,6 +68,12 @@ type ErrorCode =
   | "TURN_CREDENTIALS_UNAVAILABLE";
 
 const PRIVATE_RECORDS_BUCKET = "peacepad-private-records";
+const PERSONALITY_TYPES = new Set([
+  "INTJ", "INTP", "ENTJ", "ENTP",
+  "INFJ", "INFP", "ENFJ", "ENFP",
+  "ISTJ", "ISFJ", "ESTJ", "ESFJ",
+  "ISTP", "ISFP", "ESTP", "ESFP",
+]);
 
 const env = (name: string): string => Deno.env.get(name)?.trim() ?? "";
 
@@ -224,7 +230,12 @@ const readJsonObject = async (request: Request): Promise<Record<string, unknown>
   }
 };
 
-const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, message?: string) => {
+type RpcFailure = Readonly<{ message?: unknown; code?: unknown }>;
+
+const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, failureDetail?: string | RpcFailure) => {
+  const message = typeof failureDetail === "string"
+    ? failureDetail
+    : typeof failureDetail?.message === "string" ? failureDetail.message : "";
   const directCodes: Partial<Record<string, ErrorCode>> = {
     REGION_MISMATCH: "REGION_MISMATCH",
     SCHEMA_MISMATCH: "SCHEMA_MISMATCH",
@@ -250,6 +261,8 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     CONCURRENCY_CONFLICT: "CONCURRENCY_CONFLICT",
     IDEMPOTENCY_CONFLICT: "IDEMPOTENCY_CONFLICT",
     DEVICE_PUSH_ACCESS_DENIED: "DEVICE_PUSH_ACCESS_DENIED",
+    PARENTING_TASK_ACCESS_DENIED: "FAMILY_ACCESS_DENIED",
+    PARENTING_TASK_OWNER_REQUIRED: "FAMILY_ACCESS_DENIED",
   };
   const invalidRequestCodes = new Set([
     "CONSENT_TYPE_INVALID", "DISPLAY_NAME_INVALID", "EXPECTED_VERSION_INVALID",
@@ -261,15 +274,22 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     "CASE_BINDER_INVALID", "ATTACHMENT_INTENT_INVALID", "ATTACHMENT_INTENT_EXPIRED",
     "ATTACHMENT_OBJECT_MISMATCH", "ATTACHMENT_STATE_INVALID", "CASE_BINDER_ARCHIVED",
     "TIMELINE_REQUEST_INVALID", "TIMELINE_SOURCE_INVALID", "TIMELINE_SOURCE_ALREADY_LINKED",
-    "DEVICE_PUSH_INVALID", "DEVICE_PUSH_CONFIGURATION_INVALID",
+    "PERSONALITY_TYPE_INVALID",
+    "DEVICE_PUSH_INVALID", "DEVICE_PUSH_CONFIGURATION_INVALID", "PARENTING_TASK_INVALID", "PARENTING_TASK_ASSIGNEE_INVALID",
   ]);
-  const safeCode = directCodes[message ?? ""] ?? (invalidRequestCodes.has(message ?? "") ? "INVALID_REQUEST" : "DATABASE_NOT_READY");
+  const safeCode = directCodes[message] ?? (invalidRequestCodes.has(message) ? "INVALID_REQUEST" : "DATABASE_NOT_READY");
+  // Provider/SQL details are deliberately neither returned nor logged here.
+  // The request id remains in the generic response envelope for a user to
+  // share with support without exposing identity, family, or message data.
   const status = safeCode === "DATABASE_NOT_READY" ? 503
     : safeCode === "SIGNAL_RATE_LIMITED" ? 429
     : ["REGION_MISMATCH", "CONCURRENCY_CONFLICT", "IDEMPOTENCY_CONFLICT", "CALL_ALREADY_ACTIVE", "CALL_STATE_INVALID"].includes(safeCode) ? 409
     : ["AI_CONSENT_REQUIRED", "INVITATION_SELF_ACCEPT_DENIED", "FAMILY_ACCESS_DENIED", "CONVERSATION_ACCESS_DENIED", "MESSAGE_ACCESS_DENIED", "MESSAGE_CHECK_DISABLED", "CALENDAR_ACCESS_DENIED", "CALL_ACCESS_DENIED", "DEVICE_PUSH_ACCESS_DENIED"].includes(safeCode) ? 403
     : 400;
-  return failure(request, status, safeCode as ErrorCode, safeCode === "DATABASE_NOT_READY" ? "The regional staging database is not ready." : "The request could not be completed.", requestId, config);
+  const databaseMessage = config.environment === "production"
+    ? "PeacePad could not load your family space right now. Please try again."
+    : "The regional staging database is not ready.";
+  return failure(request, status, safeCode as ErrorCode, safeCode === "DATABASE_NOT_READY" ? databaseMessage : "The request could not be completed.", requestId, config);
 };
 
 const hmacHex = async (secret: string, value: string): Promise<string> => {
@@ -318,6 +338,7 @@ const writeOperation = (method: string, path: string, body: Record<string, unkno
   if (method === "POST" && path === "/api/v2/consents") return "consent.recorded";
   if (method === "POST" && path === "/api/v2/families") return "family.created";
   if (method === "PATCH" && path === "/api/v2/account/profile") return "profile.updated";
+  if (method === "PUT" && path === "/api/v2/account/personality-preference") return "personality.updated";
   if (method === "POST" && path === "/api/v2/account/export") return "account.exported";
   if (method === "DELETE" && /^\/api\/v2\/families\/[^/]+\/membership$/.test(path)) return "family.left";
   if (method === "POST" && path === "/api/v2/invitations") return "invitation.created";
@@ -337,6 +358,9 @@ const writeOperation = (method: string, path: string, body: Record<string, unkno
   if (method === "POST" && path === "/api/v2/schedule-events") return "schedule_event.created";
   if (method === "PATCH" && /^\/api\/v2\/schedule-events\/[^/]+$/.test(path)) return "schedule_event.updated";
   if (method === "DELETE" && /^\/api\/v2\/schedule-events\/[^/]+$/.test(path)) return "schedule_event.deleted";
+  if (method === "POST" && path === "/api/v2/parenting-tasks") return "parenting_task.created";
+  if (method === "PATCH" && /^\/api\/v2\/parenting-tasks\/[^/]+$/.test(path)) return "parenting_task.updated";
+  if (method === "DELETE" && /^\/api\/v2\/parenting-tasks\/[^/]+$/.test(path)) return "parenting_task.deleted";
   if (method === "POST" && path === "/api/v2/case-binders") return "case_binder.created";
   if (method === "PATCH" && /^\/api\/v2\/case-binders\/[^/]+$/.test(path)) return "case_binder.archived";
   if (method === "POST" && path === "/api/v2/attachment-upload-intents") return "attachment_intent.prepared";
@@ -568,9 +592,7 @@ const handler = async (request: Request): Promise<Response> => {
     const { data: bindings, error } = await authenticated.admin.rpc("peacepad_v2_get_session_binding", {
       p_identity_id: authenticated.user.id,
     });
-    if (error) {
-      return failure(request, 503, "DATABASE_NOT_READY", "The regional staging database is not ready.", requestId, config);
-    }
+    if (error) return rpcFailure(request, requestId, config, error);
     const binding = Array.isArray(bindings) ? bindings[0] : null;
     if (!binding) {
       return failure(request, 409, "IDENTITY_NOT_BOUND", "This fictional staging identity has not been assigned to a region.", requestId, config);
@@ -586,9 +608,7 @@ const handler = async (request: Request): Promise<Response> => {
       p_identity_id: authenticated.user.id,
       p_region: config.region,
     });
-    if (membershipError) {
-      return failure(request, 503, "DATABASE_NOT_READY", "The regional staging database is not ready.", requestId, config);
-    }
+    if (membershipError) return rpcFailure(request, requestId, config, membershipError);
     return json(request, 200, {
       actor: {
         identityId: authenticated.user.id,
@@ -622,6 +642,16 @@ const handler = async (request: Request): Promise<Response> => {
       return failure(request, status, errorCode, errorCode === "INVITATION_RATE_LIMITED" ? "Too many invitation attempts. Try again later." : "That invitation is not available.", requestId, config);
     }
     return json(request, 200, result, requestId, config);
+  }
+
+  if (request.method === "GET" && path === "/api/v2/account/personality-preference") {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
+    const { data, error } = await authenticated.admin.rpc("peacepad_v2_get_personality_preference", {
+      p_identity_id: authenticated.user.id,
+      p_region: config.region,
+    });
+    return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
   }
 
   const conversationMessagesMatch = path.match(/^\/api\/v2\/conversations\/([^/]+)\/messages$/);
@@ -678,7 +708,7 @@ const handler = async (request: Request): Promise<Response> => {
         p_region: config.region,
         p_family_id: familyId,
       });
-      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data ?? [], requestId, config);
+      return error ? rpcFailure(request, requestId, config, error) : json(request, 200, data ?? [], requestId, config);
     }
     const conversationId = decodeURIComponent((conversationMessagesMatch ?? conversationSearchMatch)![1]);
     if (!isUuid(conversationId)) return failure(request, 400, "INVALID_REQUEST", "A valid conversation is required.", requestId, config);
@@ -706,14 +736,16 @@ const handler = async (request: Request): Promise<Response> => {
     return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data ?? [], requestId, config);
   }
 
-  if (request.method === "GET" && ["/api/v2/calendar-layers", "/api/v2/schedule-events"].includes(path)) {
+  if (request.method === "GET" && ["/api/v2/calendar-layers", "/api/v2/schedule-events", "/api/v2/parenting-tasks"].includes(path)) {
     const authenticated = await authenticate(request, config);
     if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
     const familyId = new URL(request.url).searchParams.get("familyCircleId")?.trim() ?? "";
     if (!isUuid(familyId)) return failure(request, 400, "INVALID_REQUEST", "A valid family is required.", requestId, config);
     const rpcName = path === "/api/v2/calendar-layers"
       ? "peacepad_v2_list_calendar_layers"
-      : "peacepad_v2_list_schedule_events";
+      : path === "/api/v2/schedule-events"
+        ? "peacepad_v2_list_schedule_events"
+        : "peacepad_v2_list_parenting_tasks";
     const { data, error } = await authenticated.admin.rpc(rpcName, {
       p_identity_id: authenticated.user.id,
       p_region: config.region,
@@ -949,6 +981,7 @@ const handler = async (request: Request): Promise<Response> => {
   const isAccountDeletion = path === "/api/v2/account";
   const isAccountExport = path === "/api/v2/account/export";
   const isProfileUpdate = path === "/api/v2/account/profile";
+  const isPersonalityPreferenceUpdate = request.method === "PUT" && path === "/api/v2/account/personality-preference";
   const familyExitMatch = path.match(/^\/api\/v2\/families\/([^/]+)\/membership$/);
   const isConversationCreation = path === "/api/v2/conversations";
   const isMessageSend = /^\/api\/v2\/conversations\/[^/]+\/messages$/.test(path);
@@ -958,6 +991,8 @@ const handler = async (request: Request): Promise<Response> => {
   const calendarLayerMatch = path.match(/^\/api\/v2\/calendar-layers\/([^/]+)$/);
   const isScheduleEventCreation = path === "/api/v2/schedule-events";
   const scheduleEventMatch = path.match(/^\/api\/v2\/schedule-events\/([^/]+)$/);
+  const isParentingTaskCreation = path === "/api/v2/parenting-tasks";
+  const parentingTaskMatch = path.match(/^\/api\/v2\/parenting-tasks\/([^/]+)$/);
   const isMessageCheckUpdate = request.method === "PUT" && Boolean(conversationMessageCheckMatch);
   const isCaseBinderCreation = path === "/api/v2/case-binders";
   const caseBinderMatch = path.match(/^\/api\/v2\/case-binders\/([^/]+)$/);
@@ -975,10 +1010,11 @@ const handler = async (request: Request): Promise<Response> => {
       "/api/v2/families",
       "/api/v2/invitations",
       "/api/v2/account/export",
-    ].includes(path) || isInvitationTransition || isConversationCreation || isMessageSend || isMessageLifecycle || isMessageCorrection || isCalendarLayerCreation || isScheduleEventCreation || isCaseBinderCreation || isAttachmentIntentCreation || attachmentCompletionMatch || isTimelineEntryCreation || isAudioCallCreation || audioCallTransition || isDevicePushRegistration)) ||
-    (request.method === "PATCH" && (isProfileUpdate || calendarLayerMatch || scheduleEventMatch || caseBinderMatch)) ||
+    ].includes(path) || isInvitationTransition || isConversationCreation || isMessageSend || isMessageLifecycle || isMessageCorrection || isCalendarLayerCreation || isScheduleEventCreation || isParentingTaskCreation || isCaseBinderCreation || isAttachmentIntentCreation || attachmentCompletionMatch || isTimelineEntryCreation || isAudioCallCreation || audioCallTransition || isDevicePushRegistration)) ||
+    (request.method === "PATCH" && (isProfileUpdate || calendarLayerMatch || scheduleEventMatch || parentingTaskMatch || caseBinderMatch)) ||
     isMessageCheckUpdate ||
-    (request.method === "DELETE" && (isInvitationRevocation || isAccountDeletion || familyExitMatch || calendarLayerMatch || scheduleEventMatch || devicePushRevocation))
+    isPersonalityPreferenceUpdate ||
+    (request.method === "DELETE" && (isInvitationRevocation || isAccountDeletion || familyExitMatch || calendarLayerMatch || scheduleEventMatch || parentingTaskMatch || devicePushRevocation))
   ) {
     const authenticated = await authenticate(request, config);
     if (!authenticated) {
@@ -1149,6 +1185,31 @@ const handler = async (request: Request): Promise<Response> => {
       return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
     }
 
+    if (isPersonalityPreferenceUpdate) {
+      const expectedVersionHeader = (request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? "";
+      const expectedVersion = Number(expectedVersionHeader);
+      const personalityType = body.personalityType;
+      const validPersonalityType = personalityType === null
+        || (typeof personalityType === "string" && PERSONALITY_TYPES.has(personalityType));
+      if (
+        Object.keys(body).some((key) => key !== "personalityType")
+        || !validPersonalityType
+        || !Number.isInteger(expectedVersion)
+        || expectedVersion < 0
+      ) {
+        return failure(request, 400, "INVALID_REQUEST", "Communication profile details are invalid.", requestId, config);
+      }
+      const { data, error } = await authenticated.admin.rpc("peacepad_v2_set_personality_preference", {
+        p_identity_id: authenticated.user.id,
+        p_region: config.region,
+        p_personality_type: personalityType,
+        p_expected_version: expectedVersion,
+        p_idempotency_key: databaseWriteToken,
+        p_schema_version: context.schemaVersion,
+      });
+      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
+    }
+
     if (path === "/api/v2/consents") {
       const requestedConsentType = typeof body.consentType === "string" ? body.consentType : "";
       const consentType = requestedConsentType === "ai-message-assistance" ? "third_party_ai" : requestedConsentType;
@@ -1300,6 +1361,43 @@ const handler = async (request: Request): Promise<Response> => {
           p_calendar_layer_id: layerId, p_child_profile_ids: childProfileIds, p_event_type: eventType,
           p_title: title, p_description: description, p_starts_at: startsAt, p_ends_at: endsAt,
           p_status: status, p_recurrence: recurrence, p_visibility_override: visibilityOverride,
+        } : {}),
+      };
+      const { data, error } = await authenticated.admin.rpc(rpcName, rpcArguments);
+      return error ? rpcFailure(request, requestId, config, error.message)
+        : json(request, isCreate ? 201 : 200, data, requestId, config);
+    }
+
+    if (isParentingTaskCreation || parentingTaskMatch) {
+      const isCreate = request.method === "POST";
+      const familyId = typeof body.familyCircleId === "string" ? body.familyCircleId : "";
+      const taskId = parentingTaskMatch ? decodeURIComponent(parentingTaskMatch[1]) : "";
+      const title = typeof body.title === "string" ? body.title.trim() : "";
+      const dueAt = body.dueAt === null || typeof body.dueAt === "string" ? body.dueAt : null;
+      const assignedToIdentityId = body.assignedToIdentityId === null || typeof body.assignedToIdentityId === "string"
+        ? body.assignedToIdentityId : null;
+      const status = typeof body.status === "string" ? body.status : "open";
+      const visibility = body.visibility && typeof body.visibility === "object" && !Array.isArray(body.visibility)
+        ? body.visibility : null;
+      if ((isCreate && !isUuid(familyId)) || (!isCreate && !isUuid(taskId)) || (request.method !== "DELETE" && (
+        !title || title.length > 160 || (dueAt !== null && (typeof dueAt !== "string" || Number.isNaN(Date.parse(dueAt))))
+        || (assignedToIdentityId !== null && (typeof assignedToIdentityId !== "string" || !isUuid(assignedToIdentityId))) || !visibility
+      ))) return failure(request, 400, "INVALID_REQUEST", "Task details are invalid.", requestId, config);
+      const expectedVersionHeader = (request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? "";
+      const expectedVersion = Number(expectedVersionHeader);
+      if (!isCreate && (!Number.isInteger(expectedVersion) || expectedVersion < 1)) {
+        return failure(request, 400, "INVALID_REQUEST", "A valid expected version is required.", requestId, config);
+      }
+      const rpcName = isCreate ? "peacepad_v2_create_parenting_task"
+        : request.method === "PATCH" ? "peacepad_v2_update_parenting_task"
+        : "peacepad_v2_delete_parenting_task";
+      const rpcArguments: Record<string, unknown> = {
+        p_identity_id: authenticated.user.id, p_region: config.region,
+        p_idempotency_key: databaseWriteToken, p_schema_version: context.schemaVersion,
+        ...(isCreate ? { p_family_id: familyId } : { p_task_id: taskId, p_expected_version: expectedVersion }),
+        ...(request.method !== "DELETE" ? {
+          p_title: title, p_due_at: dueAt, p_assigned_to_identity_id: assignedToIdentityId,
+          ...(isCreate ? {} : { p_status: status }), p_visibility: visibility,
         } : {}),
       };
       const { data, error } = await authenticated.admin.rpc(rpcName, rpcArguments);

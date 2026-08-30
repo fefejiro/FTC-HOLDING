@@ -20,6 +20,8 @@ describe("resolveEnvironmentConfig", () => {
 
       expect(resolveEnvironmentConfig()).toMatchObject({ environment: "staging" });
       expect(resolveSupabaseStagingConfig()).toMatchObject({ region: "ca", projectRef: "rohvkyuxbnqzglaromms" });
+      expect(resolveSupabaseStagingDirectory()).toEqual([expect.objectContaining({ region: "ca" })]);
+      expect(resolveSupabaseRuntimeDirectory()).toEqual([expect.objectContaining({ region: "ca" })]);
     } finally {
       for (const [key, value] of Object.entries({
         EXPO_PUBLIC_PEACEPAD_ENV: previous.environment,
@@ -75,6 +77,17 @@ describe("resolveEnvironmentConfig", () => {
     ).toThrow("Staging requires EXPO_PUBLIC_PEACEPAD_API_BASE_URL.");
   });
 
+  it("requires the exact authorized production URL", () => {
+    expect(() => resolveEnvironmentConfig({
+      EXPO_PUBLIC_PEACEPAD_ENV: "production"
+    })).toThrow("Production requires EXPO_PUBLIC_PEACEPAD_PRODUCTION_API_BASE_URL.");
+    expect(() => resolveEnvironmentConfig({
+      EXPO_PUBLIC_PEACEPAD_ENV: "production",
+      EXPO_PUBLIC_PEACEPAD_PRODUCTION_API_BASE_URL: "https://example.invalid/functions/v1/peacepad-v2-api",
+      EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED: "true"
+    })).toThrow("exact approved Canada Supabase API");
+  });
+
   it("rejects malformed and production API URLs", () => {
     expect(() =>
       resolveEnvironmentConfig({
@@ -124,7 +137,24 @@ describe("resolveSupabaseProductionConfig", () => {
     ]);
   });
 
+  it("reads a complete production configuration from bundled public variables", () => {
+    const previous = Object.fromEntries(Object.keys(production).map((key) => [key, process.env[key]]));
+    try {
+      Object.assign(process.env, production);
+      expect(resolveSupabaseProductionConfig()).toMatchObject({ environment: "production", region: "ca" });
+    } finally {
+      for (const [key, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
+  });
+
   it("fails closed on a swapped project, missing write authorization, and private key material", () => {
+    expect(() => resolveSupabaseProductionConfig({
+      ...production,
+      EXPO_PUBLIC_PEACEPAD_ENV: "staging"
+    })).toThrow("requires the production runtime");
     expect(() => resolveSupabaseProductionConfig({
       ...production,
       EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_URL: "https://rohvkyuxbnqzglaromms.supabase.co"
@@ -141,6 +171,14 @@ describe("resolveSupabaseProductionConfig", () => {
       ...production,
       EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY: "ey.a.b"
     })).toThrow("secret and legacy JWT keys are prohibited");
+    expect(() => resolveSupabaseProductionConfig({
+      ...production,
+      EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY: ""
+    })).toThrow("requires an sb_publishable_ Supabase key");
+    expect(() => resolveSupabaseProductionConfig({
+      ...production,
+      EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED: "false"
+    })).toThrow("explicit production-write authorization");
     expect(() => resolveEnvironmentConfig({
       EXPO_PUBLIC_PEACEPAD_ENV: "staging",
       EXPO_PUBLIC_PEACEPAD_API_BASE_URL: "https://staging-api.peacepad.test",
@@ -175,10 +213,16 @@ describe("resolveSupabaseStagingConfig", () => {
   });
 
   it("rejects project swapping, non-staging use, and service-role material", () => {
+    expect(() => resolveSupabaseStagingConfig({ ...ca, EXPO_PUBLIC_PEACEPAD_REGION: "eu" })).toThrow("REGION=ca or us");
     expect(() => resolveSupabaseStagingConfig({ ...ca, EXPO_PUBLIC_PEACEPAD_REGION: "us" })).toThrow("exact approved Supabase project");
     expect(() => resolveSupabaseStagingConfig({ ...ca, EXPO_PUBLIC_PEACEPAD_ENV: "lab" })).toThrow("only in staging");
     expect(() => resolveSupabaseStagingConfig({ ...ca, EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY: "service_role_secret" })).toThrow("secret and legacy JWT keys are prohibited");
     expect(() => resolveSupabaseStagingConfig({ ...ca, EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY: "ey.a.b" })).toThrow("legacy JWT keys are prohibited");
+    expect(() => resolveSupabaseStagingConfig({ ...ca, EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY: "" })).toThrow("requires an sb_publishable_ Supabase key");
+    expect(() => resolveSupabaseStagingConfig({
+      EXPO_PUBLIC_PEACEPAD_ENV: "staging",
+      EXPO_PUBLIC_PEACEPAD_REGION: "ca"
+    })).toThrow("exact approved Supabase project");
   });
 
   it("rejects the paused historical project refs", () => {
@@ -231,11 +275,27 @@ describe("resolveSupabaseStagingDirectory", () => {
   it("fails closed on partial, mixed, swapped, secret, and legacy regional configuration", () => {
     expect(() => resolveSupabaseStagingDirectory({
       ...dualRegion,
+      EXPO_PUBLIC_PEACEPAD_ENV: "lab"
+    })).toThrow("only in staging");
+    expect(() => resolveSupabaseStagingDirectory({
+      ...dualRegion,
       EXPO_PUBLIC_PEACEPAD_US_SUPABASE_PUBLISHABLE_KEY: undefined
     })).toThrow("US regional configuration is incomplete");
     expect(() => resolveSupabaseStagingDirectory({
       ...dualRegion,
       EXPO_PUBLIC_PEACEPAD_REGION: "ca"
+    })).toThrow("must not be mixed");
+    expect(() => resolveSupabaseStagingDirectory({
+      ...dualRegion,
+      EXPO_PUBLIC_PEACEPAD_SUPABASE_URL: "https://rohvkyuxbnqzglaromms.supabase.co"
+    })).toThrow("must not be mixed");
+    expect(() => resolveSupabaseStagingDirectory({
+      ...dualRegion,
+      EXPO_PUBLIC_PEACEPAD_API_BASE_URL: "https://rohvkyuxbnqzglaromms.supabase.co/functions/v1/peacepad-v2-api"
+    })).toThrow("must not be mixed");
+    expect(() => resolveSupabaseStagingDirectory({
+      ...dualRegion,
+      EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_single"
     })).toThrow("must not be mixed");
     expect(() => resolveSupabaseStagingDirectory({
       ...dualRegion,

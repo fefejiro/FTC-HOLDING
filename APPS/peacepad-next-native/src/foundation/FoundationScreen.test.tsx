@@ -205,4 +205,36 @@ describe("PeacePad native foundation", () => {
     );
     expect(await screen.findByText("The message is factual.")).toBeOnTheScreen();
   });
+
+  it("keeps the legacy solo Prep Chat journey available before sending", async () => {
+    const { api, sessionStore } = createHarness();
+    render(<FoundationScreen api={api} sessionStore={sessionStore} />);
+
+    fireEvent.press(await screen.findByText("Try PeacePad"));
+    fireEvent.press(screen.getByLabelText("I agree to the Terms"));
+    fireEvent.press(screen.getByLabelText("I acknowledge the Privacy Policy"));
+    fireEvent.press(screen.getByText("Continue as guest"));
+    await screen.findByText("Check your message before sending");
+
+    fireEvent.press(screen.getByText("Open Prep Chat"));
+    fireEvent.press(screen.getByText("I received a message"));
+    fireEvent.press(screen.getByText("Plan a calm pickup"));
+    expect(screen.getByLabelText("What do you need to talk about?")).toHaveProp(
+      "value",
+      "Plan a calm pickup"
+    );
+    fireEvent.changeText(
+      screen.getByLabelText("What do you need to talk about?"),
+      "Saturday pickup"
+    );
+    fireEvent.press(screen.getByText("Create a draft"));
+    expect(await screen.findByText("Draft to review")).toBeOnTheScreen();
+    fireEvent.press(screen.getByText("Use in message"));
+
+    expect(screen.getByLabelText("Message draft")).toHaveProp(
+      "value",
+      "I received a message about Saturday pickup. I would like us to keep this conversation calm and practical. Could we agree on a clear next step?"
+    );
+    expect(api.previewMessage).not.toHaveBeenCalled();
+  });
 });

@@ -11,6 +11,7 @@ import type {
   LayerVisibility,
   MessageCheckPreference,
   MessageEvent,
+  ParentingTask,
   ParticipantGrant,
   PrivateAttachment,
   PrivateAttachmentDownload,
@@ -146,6 +147,24 @@ export type UpdatedProfile = Readonly<{
   version: number;
 }>;
 
+export const PERSONALITY_TYPES = [
+  "INTJ", "INTP", "ENTJ", "ENTP",
+  "INFJ", "INFP", "ENFJ", "ENFP",
+  "ISTJ", "ISFJ", "ESTJ", "ESFJ",
+  "ISTP", "ISFP", "ESTP", "ESFP"
+] as const;
+
+export type PersonalityType = typeof PERSONALITY_TYPES[number];
+
+export type PersonalityPreference = Readonly<{
+  identityId: EntityId;
+  region: "ca" | "us";
+  personalityType: PersonalityType | null;
+  updatedAt: string | null;
+  version: number;
+  schemaVersion: "2.0";
+}>;
+
 export type DevicePushRegistration = Readonly<{
   registrationId: EntityId;
   platform: "ios" | "android";
@@ -194,6 +213,14 @@ export type CreateScheduleEventInput = Readonly<
     | "visibilityOverride"
   >
 >;
+
+export type CreateParentingTaskInput = Readonly<{
+  familyCircleId: EntityId;
+  title: string;
+  dueAt: string | null;
+  assignedToIdentityId: EntityId | null;
+  visibility: LayerVisibility;
+}>;
 
 export type CreateConversationInput = Readonly<{
   familyCircleId: EntityId;
@@ -256,6 +283,8 @@ export interface PeacePadCoordinationApi {
   deleteAccount(context: WriteContext): Promise<DeletedAccount>;
   prepareAccountExport(context: WriteContext): Promise<AccountExportManifest>;
   updateProfile(displayName: string, context: WriteContext): Promise<UpdatedProfile>;
+  getPersonalityPreference(): Promise<PersonalityPreference>;
+  setPersonalityPreference(personalityType: PersonalityType | null, context: WriteContext): Promise<PersonalityPreference>;
   createFamily(familyName: string, context: WriteContext): Promise<CreatedFamily>;
   leaveFamily(familyCircleId: EntityId, context: WriteContext): Promise<LeftFamily>;
   listCaseBinders(familyCircleId: EntityId): Promise<readonly CaseBinder[]>;
@@ -281,6 +310,10 @@ export interface PeacePadCoordinationApi {
   createScheduleEvent(input: CreateScheduleEventInput, context: WriteContext): Promise<ScheduleEvent>;
   updateScheduleEvent(event: ScheduleEvent, context: WriteContext): Promise<ScheduleEvent>;
   deleteScheduleEvent(eventId: EntityId, context: WriteContext): Promise<void>;
+  listParentingTasks(familyCircleId: EntityId): Promise<readonly ParentingTask[]>;
+  createParentingTask(input: CreateParentingTaskInput, context: WriteContext): Promise<ParentingTask>;
+  updateParentingTask(task: ParentingTask, context: WriteContext): Promise<ParentingTask>;
+  deleteParentingTask(taskId: EntityId, context: WriteContext): Promise<void>;
   listConversations(familyCircleId: EntityId): Promise<readonly Conversation[]>;
   createConversation(input: CreateConversationInput, context: WriteContext): Promise<Conversation>;
   listMessages(conversationId: EntityId): Promise<readonly MessageEvent[]>;
@@ -386,6 +419,51 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
       || result.version <= (context.expectedVersion ?? 0)
     ) {
       throw new PeacePadApiError("PeacePad could not verify the profile update.", "http", 502);
+    }
+    return result;
+  }
+
+  async getPersonalityPreference() {
+    const result = await this.request<PersonalityPreference>("/api/v2/account/personality-preference");
+    if (
+      !result
+      || typeof result.identityId !== "string"
+      || result.region !== "ca" && result.region !== "us"
+      || (result.personalityType !== null && !PERSONALITY_TYPES.includes(result.personalityType))
+      || (result.updatedAt !== null && (typeof result.updatedAt !== "string" || Number.isNaN(Date.parse(result.updatedAt))))
+      || !Number.isInteger(result.version)
+      || result.version < 0
+      || result.schemaVersion !== "2.0"
+    ) {
+      throw new PeacePadApiError("PeacePad could not verify your communication profile.", "http", 502);
+    }
+    return result;
+  }
+
+  async setPersonalityPreference(personalityType: PersonalityType | null, context: WriteContext) {
+    if (personalityType !== null && !PERSONALITY_TYPES.includes(personalityType)) {
+      throw new PeacePadApiError("Choose a valid communication profile.", "http", 400);
+    }
+    if (context.expectedVersion === null) {
+      throw new PeacePadApiError("A communication profile version is required.", "http", 400);
+    }
+    const result = await this.write<PersonalityPreference>(
+      "/api/v2/account/personality-preference",
+      "PUT",
+      { personalityType },
+      context
+    );
+    if (
+      !result
+      || result.identityId !== context.actor.identityId
+      || result.region !== context.region
+      || result.personalityType !== personalityType
+      || (result.updatedAt !== null && Number.isNaN(Date.parse(result.updatedAt)))
+      || !Number.isInteger(result.version)
+      || result.version <= context.expectedVersion
+      || result.schemaVersion !== "2.0"
+    ) {
+      throw new PeacePadApiError("PeacePad could not verify your communication profile.", "http", 502);
     }
     return result;
   }
@@ -532,6 +610,22 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
 
   async deleteScheduleEvent(eventId: EntityId, context: WriteContext) {
     await this.write(`/api/v2/schedule-events/${encodeURIComponent(eventId)}`, "DELETE", undefined, context);
+  }
+
+  listParentingTasks(familyCircleId: EntityId) {
+    return this.request<readonly ParentingTask[]>(`/api/v2/parenting-tasks?familyCircleId=${encodeURIComponent(familyCircleId)}`);
+  }
+
+  createParentingTask(input: CreateParentingTaskInput, context: WriteContext) {
+    return this.write<ParentingTask>("/api/v2/parenting-tasks", "POST", input, context);
+  }
+
+  updateParentingTask(task: ParentingTask, context: WriteContext) {
+    return this.write<ParentingTask>(`/api/v2/parenting-tasks/${encodeURIComponent(task.id)}`, "PATCH", task, context);
+  }
+
+  async deleteParentingTask(taskId: EntityId, context: WriteContext) {
+    await this.write(`/api/v2/parenting-tasks/${encodeURIComponent(taskId)}`, "DELETE", undefined, context);
   }
 
   createAttachmentUploadIntent(input: CreateAttachmentUploadIntentInput, context: WriteContext) {
@@ -766,6 +860,16 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
       const payload = (await response.json().catch(() => null)) as T | ErrorPayload | null;
       if (!response.ok) {
         const error = errorDetail((payload ?? null) as ErrorPayload | null);
+        // Keep production diagnostics useful without logging tokens, IDs, or
+        // user content. The request ID lets support correlate this event with
+        // the Edge function log when a family-space load fails.
+        console.warn("[PeacePad API] request failed", {
+          environment: this.config.environment,
+          path,
+          status: response.status,
+          code: error.code,
+          requestId: error.requestId ?? response.headers.get("x-request-id") ?? undefined
+        });
         if (response.status === 401) {
           throw new PeacePadApiError(
             this.config.environment === "production"
@@ -790,7 +894,12 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
       if (error instanceof Error && error.name === "AbortError") {
         throw new PeacePadApiError("PeacePad took too long to respond. Try again.", "timeout");
       }
-      throw new PeacePadApiError("PeacePad cannot reach the staging service right now.", "network");
+      throw new PeacePadApiError(
+        this.config.environment === "production"
+          ? "PeacePad cannot reach the service right now."
+          : "PeacePad cannot reach the staging service right now.",
+        "network"
+      );
     } finally {
       clearTimeout(timeout);
     }

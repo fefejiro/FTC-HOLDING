@@ -98,6 +98,22 @@ describe("SyntheticCoordinationApi safety behavior", () => {
     });
   });
 
+  it("stores only the current parent's optional communication profile with version checks", async () => {
+    const api = new SyntheticCoordinationApi();
+    await expect(api.getPersonalityPreference()).resolves.toMatchObject({
+      identityId: "identity-current",
+      region: "ca",
+      personalityType: null,
+      version: 0
+    });
+    const saved = await api.setPersonalityPreference("INFP", { ...context, expectedVersion: 0 });
+    expect(saved).toMatchObject({ personalityType: "INFP", version: 1 });
+    await expect(api.setPersonalityPreference("INTP", { ...context, expectedVersion: 0 }))
+      .rejects.toMatchObject({ status: 409 });
+    await expect(api.setPersonalityPreference(null, { ...context, expectedVersion: 1 }))
+      .resolves.toMatchObject({ personalityType: null, version: 2 });
+  });
+
   it("keeps originals immutable while search returns the latest correction", async () => {
     const api = new SyntheticCoordinationApi();
     const original = await api.sendMessage({ familyCircleId: "family-current", conversationId: "conversation-1", body: "Pickup at five." }, context);

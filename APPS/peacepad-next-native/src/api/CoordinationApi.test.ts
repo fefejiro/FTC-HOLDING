@@ -22,6 +22,7 @@ const accessToken = async () => "a".repeat(48);
 function response(status: number, payload: unknown): Response {
   return {
     json: jest.fn(async () => payload),
+    headers: { get: jest.fn(() => undefined) },
     ok: status >= 200 && status < 300,
     status
   } as unknown as Response;
@@ -99,6 +100,13 @@ describe("HttpPeacePadCoordinationApi", () => {
         displayName: "Calm Parent",
         region: context.region,
         version: 5
+      } : input.endsWith("/api/v2/account/personality-preference") ? {
+        identityId: context.actor.identityId,
+        region: context.region,
+        personalityType: "INTP",
+        updatedAt: "2026-08-27T12:00:00.000Z",
+        version: 5,
+        schemaVersion: "2.0"
       } : input.endsWith("/api/v2/account/export") ? {
         identityId: context.actor.identityId,
         region: context.region,
@@ -172,6 +180,8 @@ describe("HttpPeacePadCoordinationApi", () => {
 
     await api.createFamily("Fictional Family", context);
     await api.updateProfile(" Calm Parent ", context);
+    await api.getPersonalityPreference();
+    await api.setPersonalityPreference("INTP", context);
     await api.leaveFamily("family-current", context);
     await api.deleteAccount(context);
     await api.listCaseBinders("family-current");
@@ -437,6 +447,30 @@ describe("HttpPeacePadCoordinationApi", () => {
     );
     const request = fetcher.mock.calls[0]?.[1] as RequestInit;
     expect(JSON.parse(request.body as string)).toEqual({ displayName: "Calm Parent" });
+    expect(request.headers).toMatchObject({ "If-Match": "4" });
+  });
+
+  it("reads and updates the optional communication profile with optimistic concurrency", async () => {
+    const preference = {
+      identityId: context.actor.identityId,
+      region: context.region,
+      personalityType: "INTP" as const,
+      updatedAt: "2026-08-27T12:00:00.000Z",
+      version: 5,
+      schemaVersion: "2.0" as const
+    };
+    const fetcher = jest.fn(async (_input: string, _init?: RequestInit) => response(200, preference));
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
+
+    await expect(api.getPersonalityPreference()).resolves.toEqual(preference);
+    await expect(api.setPersonalityPreference("INTP", context)).resolves.toEqual(preference);
+
+    expect(fetcher.mock.calls[0]?.[0]).toBe(
+      "https://staging-api.peacepad.test/api/v2/account/personality-preference"
+    );
+    expect(fetcher.mock.calls[1]?.[1]).toEqual(expect.objectContaining({ method: "PUT" }));
+    const request = fetcher.mock.calls[1]?.[1] as RequestInit;
+    expect(JSON.parse(request.body as string)).toEqual({ personalityType: "INTP" });
     expect(request.headers).toMatchObject({ "If-Match": "4" });
   });
 

@@ -12,6 +12,7 @@ import {
   type CreateAttachmentUploadIntentInput,
   type CreateCaseBinderInput,
   type CreateCalendarLayerInput,
+  type CreateParentingTaskInput,
   type CreateConversationInput,
   type CreateInvitationInput,
   type CreatedInvitation,
@@ -22,6 +23,8 @@ import {
   type MessageSearchResult,
   type LinkTimelineSourceInput,
   type SendMessageInput,
+  type PersonalityPreference,
+  type PersonalityType,
   type PeacePadCoordinationApi
 } from "./CoordinationApi";
 import {
@@ -41,6 +44,7 @@ import {
   type PrivateAttachment,
   type PrivateAttachmentDownload,
   type PrivateTimelineEntry,
+  type ParentingTask,
   type RecordProvenance,
   type ScheduleEvent,
   type VersionedEntity,
@@ -80,6 +84,17 @@ function normalizeCode(code: string): string {
   return code.replace(/\s+/g, "").toUpperCase();
 }
 
+// The synthetic API keeps older fixture ids stable for focused unit tests,
+// while the app's demo runtime deliberately uses UUID-shaped values.
+const demoFamilyCircleId = "33333333-3333-4333-8333-333333333333";
+const demoConversationId = "55555555-5555-4555-8555-555555555555";
+const demoActorIdentityId = "11111111-1111-4111-8111-111111111111";
+
+function matchesSyntheticFamily(storedFamilyCircleId: EntityId, requestedFamilyCircleId: EntityId): boolean {
+  return storedFamilyCircleId === requestedFamilyCircleId
+    || (storedFamilyCircleId === "family-current" && requestedFamilyCircleId === demoFamilyCircleId);
+}
+
 export const defaultCalendarLayers: readonly CalendarLayer[] = [
   ["layer-parenting", "Parenting Time", "parenting-time", "clock", "teal"],
   ["layer-expenses", "Expenses & Requests", "expenses-requests", "receipt", "green"],
@@ -103,6 +118,7 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
   private createdInvitationCount = 0;
   private layers = [...defaultCalendarLayers];
   private events: ScheduleEvent[] = [];
+  private tasks: ParentingTask[] = [];
   private conversations: Conversation[] = [{
     ...versioned("conversation-primary"),
     familyCircleId: "family-current",
@@ -123,6 +139,14 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
   private attachmentIntents = new Map<string, AttachmentUploadIntent>();
   private audioCall: AudioCallSession | null = null;
   private devicePushRegistration: DevicePushRegistration | null = null;
+  private personalityPreference: PersonalityPreference = {
+    identityId: actor.identityId,
+    region: "ca",
+    personalityType: null,
+    updatedAt: null,
+    version: 0,
+    schemaVersion: "2.0"
+  };
 
   constructor(seedInvitations: readonly SeedInvitation[] = []) {
     seedInvitations.forEach((seed) => {
@@ -508,7 +532,7 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
   }
 
   async listCalendarLayers(familyCircleId: EntityId): Promise<readonly CalendarLayer[]> {
-    return this.layers.filter((layer) => layer.familyCircleId === familyCircleId);
+    return this.layers.filter((layer) => matchesSyntheticFamily(layer.familyCircleId, familyCircleId));
   }
 
   async createCalendarLayer(input: CreateCalendarLayerInput, _context: WriteContext): Promise<CalendarLayer> {
@@ -534,12 +558,12 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
   }
 
   async listScheduleEvents(familyCircleId: EntityId): Promise<readonly ScheduleEvent[]> {
-    return this.events.filter((event) => event.familyCircleId === familyCircleId);
+    return this.events.filter((event) => matchesSyntheticFamily(event.familyCircleId, familyCircleId));
   }
 
   async createScheduleEvent(input: CreateScheduleEventInput, _context: WriteContext): Promise<ScheduleEvent> {
     this.assertCurrentFamily(input.familyCircleId);
-    if (!this.layers.some((layer) => layer.id === input.calendarLayerId && layer.familyCircleId === input.familyCircleId)) {
+    if (!this.layers.some((layer) => layer.id === input.calendarLayerId && matchesSyntheticFamily(layer.familyCircleId, input.familyCircleId))) {
       throw new PeacePadApiError("Calendar not found.", "http", 404);
     }
     const event: ScheduleEvent = { ...versioned(`event-${Date.now().toString(36)}`), ...input };
@@ -549,7 +573,7 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
 
   async updateScheduleEvent(event: ScheduleEvent, _context: WriteContext): Promise<ScheduleEvent> {
     this.assertCurrentFamily(event.familyCircleId);
-    if (!this.events.some((item) => item.id === event.id && item.familyCircleId === event.familyCircleId)) {
+    if (!this.events.some((item) => item.id === event.id && matchesSyntheticFamily(item.familyCircleId, event.familyCircleId))) {
       throw new PeacePadApiError("Event not found.", "http", 404);
     }
     const updated = { ...event, version: event.version + 1 };
@@ -561,8 +585,50 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
     this.events = this.events.filter((event) => event.id !== eventId);
   }
 
+  async listParentingTasks(familyCircleId: EntityId): Promise<readonly ParentingTask[]> {
+    return this.tasks.filter((task) => matchesSyntheticFamily(task.familyCircleId, familyCircleId));
+  }
+
+  async createParentingTask(input: CreateParentingTaskInput, context: WriteContext): Promise<ParentingTask> {
+    this.assertCurrentFamily(input.familyCircleId);
+    if (!input.title.trim() || input.title.trim().length > 160) {
+      throw new PeacePadApiError("Enter a task of up to 160 characters.", "http", 400);
+    }
+    const task: ParentingTask = {
+      ...versioned(`task-${Date.now().toString(36)}`),
+      ...input,
+      title: input.title.trim(),
+      createdByIdentityId: context.actor.identityId,
+      status: "open",
+      completedAt: null,
+      completedByIdentityId: null
+    };
+    this.tasks = [...this.tasks, task];
+    return task;
+  }
+
+  async updateParentingTask(task: ParentingTask, context: WriteContext): Promise<ParentingTask> {
+    this.assertCurrentFamily(task.familyCircleId);
+    if (!this.tasks.some((item) => item.id === task.id && item.familyCircleId === task.familyCircleId)) {
+      throw new PeacePadApiError("Task not found.", "http", 404);
+    }
+    const completed = task.status === "completed";
+    const updated: ParentingTask = {
+      ...task,
+      version: task.version + 1,
+      completedAt: completed ? (task.completedAt ?? new Date().toISOString()) : null,
+      completedByIdentityId: completed ? (task.completedByIdentityId ?? context.actor.identityId) : null
+    };
+    this.tasks = this.tasks.map((item) => item.id === task.id ? updated : item);
+    return updated;
+  }
+
+  async deleteParentingTask(taskId: EntityId, _context: WriteContext): Promise<void> {
+    this.tasks = this.tasks.filter((task) => task.id !== taskId);
+  }
+
   async listConversations(familyCircleId: EntityId): Promise<readonly Conversation[]> {
-    return this.conversations.filter((conversation) => conversation.familyCircleId === familyCircleId);
+    return this.conversations.filter((conversation) => matchesSyntheticFamily(conversation.familyCircleId, familyCircleId));
   }
 
   async createConversation(input: CreateConversationInput, _context: WriteContext): Promise<Conversation> {
@@ -588,7 +654,7 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
 
   async sendMessage(input: SendMessageInput, _context: WriteContext): Promise<MessageEvent> {
     const conversation = this.assertConversation(input.conversationId);
-    if (conversation.familyCircleId !== input.familyCircleId || !input.body.trim()) {
+    if (!matchesSyntheticFamily(conversation.familyCircleId, input.familyCircleId) || !input.body.trim()) {
       throw new PeacePadApiError("Enter a message for this conversation.", "http", 400);
     }
     const message: MessageEvent = {
@@ -607,7 +673,7 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
   async recordMessageLifecycle(input: RecordMessageLifecycleInput, _context: WriteContext): Promise<MessageEvent> {
     const conversation = this.assertConversation(input.conversationId);
     const original = this.messages.find((message) => message.id === input.originalMessageEventId && message.eventType === "sent");
-    if (!original || original.familyCircleId !== input.familyCircleId || conversation.familyCircleId !== input.familyCircleId) {
+    if (!original || !matchesSyntheticFamily(original.familyCircleId, input.familyCircleId) || !matchesSyntheticFamily(conversation.familyCircleId, input.familyCircleId)) {
       throw new PeacePadApiError("Message not found.", "http", 404);
     }
     const existing = this.messages.find((message) => message.eventType === input.eventType && message.originalMessageEventId === original.id);
@@ -629,7 +695,7 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
     const conversation = this.assertConversation(input.conversationId);
     const body = input.body.trim();
     const original = this.messages.find((message) => message.id === input.originalMessageEventId && message.eventType === "sent");
-    if (!original || original.familyCircleId !== input.familyCircleId || conversation.familyCircleId !== input.familyCircleId) {
+    if (!original || !matchesSyntheticFamily(original.familyCircleId, input.familyCircleId) || !matchesSyntheticFamily(conversation.familyCircleId, input.familyCircleId)) {
       throw new PeacePadApiError("Message not found.", "http", 404);
     }
     if (original.provenance.createdBy.identityId !== "identity-current") {
@@ -728,6 +794,26 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
     } as const;
   }
 
+  async getPersonalityPreference(): Promise<PersonalityPreference> {
+    return this.personalityPreference;
+  }
+
+  async setPersonalityPreference(personalityType: PersonalityType | null, context: WriteContext): Promise<PersonalityPreference> {
+    if (context.actor.identityId !== this.personalityPreference.identityId || context.region !== this.personalityPreference.region) {
+      throw new PeacePadApiError("You do not have access to this communication profile.", "http", 403);
+    }
+    if (context.expectedVersion !== this.personalityPreference.version) {
+      throw new PeacePadApiError("The communication profile changed. Review it again before continuing.", "http", 409);
+    }
+    this.personalityPreference = {
+      ...this.personalityPreference,
+      personalityType,
+      updatedAt: new Date().toISOString(),
+      version: this.personalityPreference.version + 1
+    };
+    return this.personalityPreference;
+  }
+
   private assertInvitationVersion(invitationId: EntityId, expectedVersion: number | null) {
     const seed = this.invitationsById.get(invitationId);
     if (seed && expectedVersion !== seed.preview.version) {
@@ -736,15 +822,16 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
   }
 
   private assertCurrentFamily(familyCircleId: EntityId) {
-    if (familyCircleId !== "family-current") {
+    if (familyCircleId !== "family-current" && familyCircleId !== demoFamilyCircleId) {
       throw new PeacePadApiError("You do not have access to that family.", "http", 403);
     }
   }
 
 
   private assertConversation(conversationId: EntityId) {
-    const conversation = this.conversations.find((item) => item.id === conversationId);
-    if (!conversation || !conversation.participantIdentityIds.includes("identity-current")) {
+    const canonicalConversationId = conversationId === demoConversationId ? "conversation-primary" : conversationId;
+    const conversation = this.conversations.find((item) => item.id === canonicalConversationId);
+    if (!conversation || (!conversation.participantIdentityIds.includes("identity-current") && !conversation.participantIdentityIds.includes(demoActorIdentityId))) {
       throw new PeacePadApiError("Conversation not found.", "http", 404);
     }
     return conversation;

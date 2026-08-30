@@ -1,17 +1,21 @@
 import { DynamicColorIOS, Platform, type ColorValue } from "react-native";
 
 export const lightColors = {
-  background: "#F8F5FF",
+  background: "#FFF8F2",
   surface: "#FFFFFF",
-  brand: "#6E28D9",
-  brandSoft: "#EEE4FF",
-  accent: "#087A64",
-  text: "#211336",
-  muted: "#62566F",
-  border: "#E5DAF4",
+  brand: "#6B4A86",
+  brandSoft: "#F3E7F1",
+  coral: "#F26B5E",
+  sun: "#F7C948",
+  aqua: "#2E9D91",
+  cream: "#FFF1DF",
+  accent: "#257A70",
+  text: "#2B2038",
+  muted: "#6E6374",
+  border: "#E9D8D6",
   warning: "#8A4D00",
   onBrand: "#FFFFFF",
-  subtleSurface: "#F3EEF9",
+  subtleSurface: "#FFF0E9",
   successSurface: "#E9F9F4",
   successBorder: "#B8E8D9",
   successText: "#087A64",
@@ -20,7 +24,7 @@ export const lightColors = {
   dangerSurface: "#FFF3F3",
   dangerBorder: "#E7A9A9",
   dangerText: "#8B2323",
-  shadow: "#2D0C66"
+  shadow: "#4A304F"
 } as const;
 
 type Palette = { [Token in keyof typeof lightColors]: string };
@@ -30,6 +34,10 @@ export const darkColors: Palette = {
   surface: "#1E162A",
   brand: "#7B43C7",
   brandSoft: "#35244E",
+  coral: "#FF8B7F",
+  sun: "#F6D36A",
+  aqua: "#63D6C8",
+  cream: "#2A211D",
   accent: "#63D6BE",
   text: "#F8F3FF",
   muted: "#C8BCD4",

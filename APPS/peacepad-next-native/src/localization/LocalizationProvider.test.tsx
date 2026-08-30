@@ -48,7 +48,7 @@ describe("localization foundation", () => {
     const { store } = createStore();
     render(<LocalizationProvider initialLocale="en" production store={store}><ProductionHarness /></LocalizationProvider>);
     expect(screen.getByText("Sign in to PeacePad")).toBeOnTheScreen();
-    expect(screen.getByText("Use your PeacePad account. Your family information is stored in Canada.")).toBeOnTheScreen();
+    expect(screen.getByText("Use your PeacePad account.")).toBeOnTheScreen();
     expect(screen.getByText("Delete account")).toBeOnTheScreen();
   });
 });

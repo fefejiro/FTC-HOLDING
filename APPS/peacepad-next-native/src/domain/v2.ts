@@ -194,6 +194,23 @@ export type ScheduleEvent = VersionedEntity &
     visibilityOverride: LayerVisibility | null;
   }>;
 
+/**
+ * A practical item a parent can keep private or explicitly share.  This is a
+ * native V2 record, not a client-side checklist or a migrated legacy shell.
+ */
+export type ParentingTask = VersionedEntity &
+  Readonly<{
+    familyCircleId: EntityId;
+    createdByIdentityId: EntityId;
+    assignedToIdentityId: EntityId | null;
+    title: string;
+    dueAt: IsoUtcTimestamp | null;
+    status: "open" | "completed";
+    visibility: LayerVisibility;
+    completedAt: IsoUtcTimestamp | null;
+    completedByIdentityId: EntityId | null;
+  }>;
+
 export type CaseBinder = VersionedEntity &
   Readonly<{
     familyCircleId: EntityId;

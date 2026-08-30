@@ -28,6 +28,7 @@ import {
 } from "../session/secureGuestSession";
 import { colors, spacing, typography } from "../theme";
 import { useOptionalLocalization } from "../localization/LocalizationProvider";
+import { PrepChatAssistant } from "../legacy/PrepChatAssistant";
 
 type FoundationPhase = "welcome" | "account" | "consent" | "compose";
 type AsyncState = "idle" | "loading" | "ready";
@@ -283,6 +284,7 @@ export function FoundationScreen({
         <View style={styles.card}>
           <AccessibleHeading maxFontSizeMultiplier={maximumFoundationFontScale} style={styles.heading}>{t("foundation.composeTitle")}</AccessibleHeading>
           <FoundationText style={styles.body}>{t("foundation.composeBody")}</FoundationText>
+          <PrepChatAssistant onUseDraft={setDraft} />
           <TextInput
             accessibilityLabel={t("foundation.draftLabel")}
             multiline

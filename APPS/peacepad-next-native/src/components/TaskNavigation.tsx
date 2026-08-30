@@ -13,12 +13,12 @@ const tasks: readonly { id: PrimaryTaskScreen; labelKey: MessageKey; symbol: str
   { id: "more", labelKey: "navigation.more", symbol: "•••" }
 ];
 
-export function TaskNavigation({ active, onSelect }: { active: PrimaryTaskScreen; onSelect: (screen: PrimaryTaskScreen) => void }) {
+export function TaskNavigation({ active, available = tasks.map((task) => task.id), onSelect }: { active: PrimaryTaskScreen; available?: readonly PrimaryTaskScreen[]; onSelect: (screen: PrimaryTaskScreen) => void }) {
   const largeText = usesLargeTextLayout(useWindowDimensions().fontScale);
   const { t } = useLocalization();
   return (
     <View accessibilityLabel={t("navigation.primary")} accessibilityRole="tablist" style={[styles.bar, largeText ? styles.barLargeText : null]}>
-      {tasks.map((task) => {
+      {tasks.filter((task) => available.includes(task.id)).map((task) => {
         const selected = task.id === active;
         const label = t(task.labelKey);
         return (

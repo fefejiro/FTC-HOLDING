@@ -182,3 +182,20 @@ npx deno test supabase\functions\peacepad-v2-api\*_test.ts
 
 For historical evidence and store identifiers, see [STATUS.md](STATUS.md). For
 the old staging chronology, see [STAGING_PROGRESS.md](STAGING_PROGRESS.md).
+
+## 2026-08-29 parity batch: privacy-safe export summary
+
+The Native V2 More screen now exposes the existing `prepareAccountExport`
+contract as a customer-facing export-summary action. It uses the same
+actor-bound, region-bound, versioned API request already used by the runtime,
+shows only reconciled metadata counts, and explicitly tells the user that
+message text, file contents, credentials, and private payloads are not shown.
+Loading, success, and error states are localized in EN/FR/ES and announced to
+assistive technology. This is a metadata preparation step, not a downloadable
+archive; the signed archive worker and device/store gates remain separate work.
+
+The batch deliberately did not invent settings for legacy call preferences,
+AI-coach tuning, or a personality test because Native V2 has no matching
+production contract for those concepts. Tasks, child updates, and expenses
+also remain unported until their data contracts are reviewed. Continue from
+the current branch and preserve the existing client/API boundary.

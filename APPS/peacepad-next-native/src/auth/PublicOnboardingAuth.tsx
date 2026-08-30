@@ -33,9 +33,9 @@ const slideImages = [
 const copy = {
   en: {
     slides: [
-      { title: "A calmer space for co-parenting", body: "Communicate with care, even when the moment is difficult." },
+      { title: "A calmer way to coordinate parenting", body: "Communicate with care, even when the moment is difficult." },
       { title: "Pause before you send", body: "Check your words and choose a clearer way forward." },
-      { title: "Keep family plans together", body: "Messages, calendars and shared records stay in one private place." }
+      { title: "Keep parenting plans organized", body: "Messages, schedules and important records stay in one secure place." }
     ],
     next: "Next", skip: "Skip", start: "Get started", create: "Create account", signIn: "Sign in", or: "or",
     createTitle: "Create your PeacePad account", signInTitle: "Welcome back", email: "Email", password: "Password",
@@ -51,9 +51,9 @@ const copy = {
   },
   fr: {
     slides: [
-      { title: "Un espace plus calme pour la coparentalité", body: "Communiquez avec soin, même dans les moments difficiles." },
+      { title: "Une façon plus calme de coordonner la parentalité", body: "Communiquez avec soin, même dans les moments difficiles." },
       { title: "Faites une pause avant d’envoyer", body: "Relisez vos mots et choisissez une voie plus claire." },
-      { title: "Gardez les projets familiaux ensemble", body: "Messages, calendriers et dossiers partagés restent dans un espace privé." }
+      { title: "Organisez les plans parentaux", body: "Messages, horaires et dossiers importants restent dans un espace sécurisé." }
     ],
     next: "Suivant", skip: "Passer", start: "Commencer", create: "Créer un compte", signIn: "Se connecter", or: "ou",
     createTitle: "Créez votre compte PeacePad", signInTitle: "Bon retour", email: "Courriel", password: "Mot de passe",
@@ -69,9 +69,9 @@ const copy = {
   },
   es: {
     slides: [
-      { title: "Un espacio más tranquilo para la crianza compartida", body: "Comunícate con cuidado, incluso en momentos difíciles." },
+      { title: "Una forma más tranquila de coordinar la crianza", body: "Comunícate con cuidado, incluso en momentos difíciles." },
       { title: "Haz una pausa antes de enviar", body: "Revisa tus palabras y elige una forma más clara de avanzar." },
-      { title: "Mantén unidos los planes familiares", body: "Mensajes, calendarios y registros compartidos permanecen en un espacio privado." }
+      { title: "Organiza los planes de crianza", body: "Mensajes, horarios y registros importantes permanecen en un espacio seguro." }
     ],
     next: "Siguiente", skip: "Omitir", start: "Empezar", create: "Crear cuenta", signIn: "Iniciar sesión", or: "o",
     createTitle: "Crea tu cuenta de PeacePad", signInTitle: "Te damos la bienvenida", email: "Correo", password: "Contraseña",

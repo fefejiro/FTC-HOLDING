@@ -21,6 +21,48 @@ Evidence is current only when it identifies the exact commit, command or
 scenario, environment/device, timestamp, result, and artifact. Older evidence
 is historical and cannot independently pass a release gate.
 
+### Current production verification — 2026-08-27
+
+The Canada production project was missing the already-reviewed parenting-task
+schema introduced by migration `202608270001_v2_parenting_tasks.sql`. The
+schema-only migration was applied through the linked Supabase project and its
+remote migration ledger was repaired to `202608270001 / v2_parenting_tasks`.
+Read-only checks confirm the table and guarded list/create/update/delete
+functions exist; no user records were created, copied, changed, or deleted.
+
+Android `2.0.1` code `48` (EAS build
+`5d349663-7e07-48d2-913d-7e91940ca6ed`, AAB SHA-256
+`e0ed7a0e41992631f2b987739a5d41da5a0fe5668228a7f2a89a3a4286efe6d1`) is
+installed from Google Play Internal Testing on the physical Pixel 7. After
+the migration, the authenticated production family space loads and the Home,
+Calendar, Records, More, and read-only Tasks screens open without API or fatal
+errors. This is Internal Testing evidence only; it is not public Play
+Production availability. Two-account mutation, real-device iOS evidence, and
+public store rollout remain open.
+
+The icon-corrected iOS source `158a9350147c6f1b874d7f3c6a643e3f80c41391`
+completed signed production workflow `33087801116` for version `2.0.1`
+build `8`, bundle `ca.peacepad.family`, and the Canada production runtime.
+The exact IPA SHA-256 is
+`1c389181aadc1025fec6573f3af70ec19556254a4a00a3b18603d85b29ce57e2`, with
+Xcode `26.6 (17F113)`. App Store Connect submission
+`3f269288-26a7-4025-a7a7-53f04e09df17` accepted the IPA for processing. This
+is upload evidence only; Apple processing, physical-iPhone verification,
+review submission, approval, and public availability remain unverified.
+
+The same Android code `48` candidate was force-stopped and relaunched on the
+physical Pixel 7 without clearing data or submitting a write. The existing
+authenticated session restored directly to the Canada production Home screen.
+The captured screenshot/UI dump show the PeacePad logo, Home, Calendar,
+Records, More, Add an event, Tasks, Activity ideas, Invite co-parent, and Add a
+record. Filtered relaunch logcat contains no `FATAL EXCEPTION`,
+`DATABASE_NOT_READY`, PeacePad API failure, or `ReactNativeJS` error. Evidence
+is retained under `D:/PeacePadRelease/evidence/android-code48/` as
+`screen-session-restore.png`, `ui-session-restore.xml`, and
+`logcat-session-restore.txt`. This remains read-only session-restoration proof;
+it does not establish two-account mutation, audio media, Google clean-account
+sign-in, iOS physical-device proof, or public store rollout.
+
 ## Release verdict
 
 ### App Store review submission -- 2026-08-18

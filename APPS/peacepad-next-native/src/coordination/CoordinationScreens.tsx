@@ -6,7 +6,7 @@ import { InvitationQr } from "../components/InvitationQr";
 import { LabButton } from "../components/LabButton";
 import { AccessibleHeading } from "../components/AccessibleHeading";
 import { languageNames, supportedLocales, useLocalization, useOptionalLocalization } from "../localization/LocalizationProvider";
-import { calendarText, formatCalendarDate, formatCalendarDay } from "../localization/calendarLocalization";
+import { calendarNavigationText, calendarStatusText, calendarText, formatCalendarDate, formatCalendarDay } from "../localization/calendarLocalization";
 import { formatLocalizedDate } from "../localization/localizedDate";
 import { messageText } from "../localization/messageLocalization";
 import { workflowText } from "../localization/workflowLocalization";
@@ -20,8 +20,17 @@ import { useRecordsState } from "../records/RecordsState";
 import type { AttachmentMediaType } from "../domain/v2";
 import { useOptionalStagingAccountActions } from "../session/StagingAccountActions";
 import { useCoordinationState, type CalendarView } from "./CoordinationState";
+import { ActivitySuggestionsScreen } from "../activities/ActivitySuggestionsScreen";
+import { ParentingTasksScreen } from "../tasks/ParentingTasksScreen";
+import { taskCopy } from "../tasks/taskLocalization";
+import { PersonalityProfilePanel } from "../preferences/PersonalityProfilePanel";
+import { CustodySchedulePlanner } from "../calendar/CustodySchedulePlanner";
+import { custodyParentForDate, type CustodyBlock, type CustodySchedule } from "../calendar/custodySchedule";
+import { custodyScheduleText } from "../calendar/custodyScheduleLocalization";
+import { PrepChatAssistant } from "../legacy/PrepChatAssistant";
+import type { AccountExportManifest } from "../api/CoordinationApi";
 
-export type CoordinationScreen = "home" | "messages" | "calendar" | "invite" | "records" | "calls" | "more";
+export type CoordinationScreen = "home" | "messages" | "calendar" | "activities" | "tasks" | "invite" | "records" | "calls" | "more";
 type Navigate = (screen: CoordinationScreen) => void;
 
 const layerColors: Record<string, string> = {
@@ -33,44 +42,93 @@ const layerColors: Record<string, string> = {
   green: "#62B44B"
 };
 
-const august2026Weekdays = [2, 3, 4, 5, 6, 7, 1] as const;
-const august2026Week = [1, 2, 3, 4, 5, 6, 7] as const;
+function atUtcDay(value: Date): Date {
+  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+}
 
-function eventDay(event: ReturnType<typeof useCoordinationState>["events"][number]): number {
-  return new Date(event.startsAt).getUTCDate();
+function addUtcDays(value: Date, amount: number): Date {
+  const next = atUtcDay(value);
+  next.setUTCDate(next.getUTCDate() + amount);
+  return next;
+}
+
+function addUtcMonths(value: Date, amount: number): Date {
+  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth() + amount, 1));
+}
+
+function sameUtcDay(left: Date, right: Date): boolean {
+  return left.getUTCFullYear() === right.getUTCFullYear()
+    && left.getUTCMonth() === right.getUTCMonth()
+    && left.getUTCDate() === right.getUTCDate();
+}
+
+function eventOccursOnDay(event: ReturnType<typeof useCoordinationState>["events"][number], date: Date): boolean {
+  return sameUtcDay(new Date(event.startsAt), date);
+}
+
+function calendarDateTimeInput(value: Date): string {
+  const local = new Date(value.getTime() - value.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16).replace("T", " ");
+}
+
+function parseCalendarDateTime(value: string): string | undefined {
+  const match = /^(\d{4})-(\d{2})-(\d{2})\s(\d{2}):(\d{2})$/.exec(value.trim());
+  if (!match) return undefined;
+  const [year, month, day, hour, minute] = match.slice(1).map(Number);
+  const parsed = new Date(year, month - 1, day, hour, minute);
+  return parsed.getFullYear() === year && parsed.getMonth() === month - 1 && parsed.getDate() === day
+    && parsed.getHours() === hour && parsed.getMinutes() === minute
+    ? parsed.toISOString()
+    : undefined;
+}
+
+function startOfUtcWeek(value: Date): Date {
+  const date = atUtcDay(value);
+  return addUtcDays(date, -((date.getUTCDay() + 6) % 7));
 }
 
 function CalendarViewPanel({
   calendarView,
   events,
   layers,
-  locale
+  locale,
+  anchorDate,
+  custodySchedule
 }: {
   calendarView: CalendarView;
   events: ReturnType<typeof useCoordinationState>["events"];
   layers: ReturnType<typeof useCoordinationState>["layers"];
   locale: ReturnType<typeof useLocalization>["locale"];
+  anchorDate: Date;
+  custodySchedule?: CustodySchedule;
 }) {
   const layerName = (calendarLayerId: string) =>
     layers.find((layer) => layer.id === calendarLayerId)?.name ?? "Calendar";
 
   if (calendarView === "month") {
+    const firstOfMonth = new Date(Date.UTC(anchorDate.getUTCFullYear(), anchorDate.getUTCMonth(), 1));
+    const leadingBlankCount = (firstOfMonth.getUTCDay() + 6) % 7;
+    const daysInMonth = new Date(Date.UTC(anchorDate.getUTCFullYear(), anchorDate.getUTCMonth() + 1, 0)).getUTCDate();
+    const weekdays = Array.from({ length: 7 }, (_, index) => addUtcDays(firstOfMonth, index - leadingBlankCount));
     const cells: readonly { key: string; day?: number }[] = [
-      ...Array.from({ length: 6 }, (_, index) => ({ key: `blank-${index}` })),
-      ...Array.from({ length: 31 }, (_, index) => ({ key: `day-${index + 1}`, day: index + 1 }))
+      ...Array.from({ length: leadingBlankCount }, (_, index) => ({ key: `blank-${index}` })),
+      ...Array.from({ length: daysInMonth }, (_, index) => ({ key: `day-${index + 1}`, day: index + 1 }))
     ];
     return (
       <View accessibilityLabel={`${calendarText(locale, "month")} ${calendarText(locale, "title")}`.toLocaleLowerCase(locale)} style={styles.calendarCanvas}>
-        <Text style={styles.calendarMonth}>{formatCalendarDate(locale, "2026-08-01T00:00:00.000Z", { month: "long", year: "numeric" })}</Text>
+        <Text style={styles.calendarMonth}>{formatCalendarDate(locale, firstOfMonth, { month: "long", year: "numeric" })}</Text>
         <View style={styles.monthGrid}>
-          {august2026Weekdays.map((day) => (
-            <Text key={day} style={styles.weekday}>{formatCalendarDate(locale, new Date(Date.UTC(2026, 7, day)), { weekday: "short" })}</Text>
+          {weekdays.map((date) => (
+            <Text key={date.toISOString()} style={styles.weekday}>{formatCalendarDate(locale, date, { weekday: "short" })}</Text>
           ))}
           {cells.map((cell) => {
-            const dayEvents = cell.day ? events.filter((event) => eventDay(event) === cell.day) : [];
+            const date = cell.day ? new Date(Date.UTC(anchorDate.getUTCFullYear(), anchorDate.getUTCMonth(), cell.day)) : undefined;
+            const dayEvents = date ? events.filter((event) => eventOccursOnDay(event, date)) : [];
+            const custodyParent = date ? custodyParentForDate(date, custodySchedule) : null;
             return (
-              <View accessibilityLabel={cell.day ? formatCalendarDate(locale, new Date(Date.UTC(2026, 7, cell.day)), { month: "long", day: "numeric" }) : undefined} key={cell.key} style={styles.monthCell}>
+              <View accessibilityLabel={date ? `${formatCalendarDate(locale, date, { month: "long", day: "numeric" })}${custodyParent ? `, ${custodyScheduleText(locale, custodyParent === "you" ? "yourTime" : "otherTime")}` : ""}` : undefined} key={cell.key} style={[styles.monthCell, custodyParent === "you" ? styles.yourTimeCell : custodyParent === "other" ? styles.otherTimeCell : null]}>
                 {cell.day ? <Text style={styles.dayNumber}>{cell.day}</Text> : null}
+                {custodyParent ? <Text numberOfLines={1} style={styles.custodyCellLabel}>{custodyParent === "you" ? "You" : "Other"}</Text> : null}
                 {dayEvents.slice(0, 1).map((event) => (
                   <Text key={event.id} numberOfLines={1} style={styles.monthEvent}>{event.title}</Text>
                 ))}
@@ -83,20 +141,24 @@ function CalendarViewPanel({
   }
 
   if (calendarView === "week") {
+    const firstDay = startOfUtcWeek(anchorDate);
+    const week = Array.from({ length: 7 }, (_, index) => addUtcDays(firstDay, index));
     return (
       <View accessibilityLabel={`${calendarText(locale, "week")} ${calendarText(locale, "title")}`.toLocaleLowerCase(locale)} style={styles.calendarCanvas}>
-        <Text style={styles.calendarMonth}>{formatCalendarDate(locale, "2026-08-01T00:00:00.000Z", { month: "short", day: "numeric" })}–7</Text>
+        <Text style={styles.calendarMonth}>{formatCalendarDate(locale, firstDay, { month: "short", day: "numeric" })}–{formatCalendarDate(locale, week[6], { day: "numeric" })}</Text>
         <View style={styles.scheduleList}>
-          {august2026Week.map((day) => {
-            const dayEvents = events.filter((event) => eventDay(event) === day);
+          {week.map((date) => {
+            const dayEvents = events.filter((event) => eventOccursOnDay(event, date));
+            const custodyParent = custodyParentForDate(date, custodySchedule);
             return (
-              <View key={day} style={styles.scheduleRow}>
-                <Text style={styles.scheduleDate}>{formatCalendarDay(locale, day)}</Text>
+              <View key={date.toISOString()} style={styles.scheduleRow}>
+                <Text style={styles.scheduleDate}>{formatCalendarDay(locale, date)}</Text>
                 <View style={styles.scheduleContent}>
+                  {custodyParent ? <Text style={[styles.custodyLabel, custodyParent === "you" ? styles.yourTimeText : styles.otherTimeText]}>{custodyScheduleText(locale, custodyParent === "you" ? "yourTime" : "otherTime")}</Text> : null}
                   {dayEvents.length ? dayEvents.map((event) => (
                     <View key={event.id} style={styles.scheduleEvent}>
                       <Text style={styles.actionTitle}>{event.title}</Text>
-                      <Text style={styles.caption}>{layerName(event.calendarLayerId)}</Text>
+                      <Text style={styles.caption}>{layerName(event.calendarLayerId)} - {calendarStatusText(locale, event.status)}</Text>
                     </View>
                   )) : <Text style={styles.caption}>{calendarText(locale, "noEvents")}</Text>}
                 </View>
@@ -108,15 +170,17 @@ function CalendarViewPanel({
     );
   }
 
-  const dayEvents = events.filter((event) => eventDay(event) === 1);
+  const dayEvents = events.filter((event) => eventOccursOnDay(event, anchorDate));
+  const custodyParent = custodyParentForDate(anchorDate, custodySchedule);
   return (
     <View accessibilityLabel={`${calendarText(locale, "day")} ${calendarText(locale, "title")}`.toLocaleLowerCase(locale)} style={styles.calendarCanvas}>
-      <Text style={styles.calendarMonth}>{formatCalendarDate(locale, "2026-08-01T00:00:00.000Z", { weekday: "long", month: "long", day: "numeric" })}</Text>
+      <Text style={styles.calendarMonth}>{formatCalendarDate(locale, anchorDate, { weekday: "long", month: "long", day: "numeric" })}</Text>
       <View style={styles.scheduleList}>
+        {custodyParent ? <Text style={[styles.custodyLabel, custodyParent === "you" ? styles.yourTimeText : styles.otherTimeText]}>{custodyScheduleText(locale, custodyParent === "you" ? "yourTime" : "otherTime")}</Text> : null}
         {dayEvents.length ? dayEvents.map((event) => (
           <View key={event.id} style={styles.scheduleEvent}>
             <Text style={styles.actionTitle}>{event.title}</Text>
-            <Text style={styles.caption}>{layerName(event.calendarLayerId)}</Text>
+            <Text style={styles.caption}>{layerName(event.calendarLayerId)} - {calendarStatusText(locale, event.status)}</Text>
           </View>
         )) : <Text style={styles.calendarEmpty}>{calendarText(locale, "noEventsYet")}</Text>}
       </View>
@@ -125,18 +189,17 @@ function CalendarViewPanel({
 }
 
 export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
-  const largeText = usesLargeTextLayout(useWindowDimensions().fontScale);
   const { locale } = useOptionalLocalization();
   const h = (key: Parameters<typeof homeText>[1]) => homeText(locale, key);
-  const { events, invitationGrant, sentMessages } = useCoordinationState();
-
-  const actions: readonly { label: string; detail: string; route: CoordinationScreen }[] = [
-    { label: h("send"), detail: h("sendBody"), route: "messages" },
-    { label: h("event"), detail: h("eventBody"), route: "calendar" },
-    { label: h("invite"), detail: h("inviteBody"), route: "invite" },
-    { label: h("record"), detail: h("recordBody"), route: "records" },
-    { label: callText(locale, "title"), detail: callText(locale, "body"), route: "calls" }
-  ];
+  const task = taskCopy(locale);
+  const { connected, events, invitationGrant } = useCoordinationState();
+  const nextEvent = [...events].sort((left, right) => left.startsAt.localeCompare(right.startsAt))[0];
+  const nextEventDate = nextEvent
+    ? formatLocalizedDate(locale, nextEvent.startsAt, { weekday: "short", month: "short", day: "numeric" })
+    : undefined;
+  const nextEventTime = nextEvent
+    ? formatLocalizedDate(locale, nextEvent.startsAt, { hour: "numeric", minute: "2-digit" })
+    : undefined;
 
   return (
     <View style={styles.stack}>
@@ -148,40 +211,75 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
         </View>
       </View>
 
-      <View style={[styles.actionGrid, largeText ? styles.stack : null]}>
-        {actions.map((action) => (
-          <Pressable
-            accessibilityLabel={action.label}
-            accessibilityRole="button"
-            key={action.label}
-            onPress={() => setScreen(action.route)}
-            style={({ pressed }) => [styles.actionCard, largeText ? styles.actionCardLargeText : null, pressed ? styles.pressed : null]}
-          >
-            <Text style={styles.actionTitle}>{action.label}</Text>
-            <Text style={styles.caption}>{action.detail}</Text>
-          </Pressable>
-        ))}
+      <View style={styles.datePill}>
+        <Text style={styles.datePillText}>{formatLocalizedDate(locale, new Date(), { weekday: "long", month: "long", day: "numeric" })}</Text>
       </View>
 
-      <View style={styles.summaryCard}>
+      <View style={styles.todayLine}>
         <Text accessibilityRole="header" style={styles.heading}>{h("today")}</Text>
-        <SummaryRow label={h("upcoming")} value={String(events.length)} />
-        <SummaryRow label={h("saved")} value="0" />
-        <SummaryRow label={h("sent")} value={String(sentMessages.length)} />
-        <SummaryRow label={h("family")} value={h(invitationGrant ? "connected" : "notConnected")} />
+        <Text style={styles.connectionStatus}>{h(invitationGrant ? "connected" : "notConnected")}</Text>
       </View>
+
+      {nextEvent ? (
+        <View accessibilityLabel={h("upcoming")} style={styles.planCard}>
+          <View style={styles.planAccent} />
+          <View style={styles.planCopy}>
+            <Text style={styles.planEyebrow}>{h("upcoming")}</Text>
+            <Text style={styles.planTitle}>{nextEvent.title}</Text>
+            <Text style={styles.body}>{[nextEventDate, nextEventTime].filter(Boolean).join(" • ")}</Text>
+            <Text style={styles.caption}>{h("event")}</Text>
+          </View>
+        </View>
+      ) : (
+        <Pressable accessibilityLabel={h("event")} accessibilityRole="button" onPress={() => setScreen("calendar")} style={({ pressed }) => [styles.planCard, styles.planCardEmpty, pressed ? styles.pressed : null]}>
+          <View style={[styles.planAccent, styles.planAccentSun]} />
+          <View style={styles.planCopy}>
+            <Text style={styles.planEyebrow}>{h("upcoming")}</Text>
+            <Text style={styles.planTitle}>{h("event")}</Text>
+            <Text style={styles.body}>{h("eventBody")}</Text>
+          </View>
+        </Pressable>
+      )}
+
+      <Pressable accessibilityRole="button" accessibilityLabel="Activity ideas" onPress={() => setScreen("activities")} style={({ pressed }) => [styles.activityCard, pressed ? styles.pressed : null]}>
+        <View style={styles.activityDot}><Text accessible={false} style={styles.activityDotText}>☀</Text></View>
+        <View style={styles.activityCopy}>
+          <Text style={styles.activityTitle}>Activity ideas</Text>
+          <Text style={styles.caption}>Find weather-aware ideas for the time you have together.</Text>
+        </View>
+      </Pressable>
+
+      <Pressable accessibilityRole="button" accessibilityLabel={task.title} onPress={() => setScreen("tasks")} style={({ pressed }) => [styles.taskCard, pressed ? styles.pressed : null]}>
+        <Text style={styles.taskTitle}>{task.title}</Text>
+        <Text style={styles.caption}>{task.body}</Text>
+      </Pressable>
+
+      <Pressable accessibilityRole="button" accessibilityLabel={h("record")} onPress={() => setScreen("records")} style={({ pressed }) => [styles.recordCard, pressed ? styles.pressed : null]}>
+        <Text style={styles.recordTitle}>{h("record")}</Text>
+        <Text style={styles.caption}>{h("recordBody")}</Text>
+      </Pressable>
+
+      <Pressable accessibilityRole="button" accessibilityLabel={h("send")} onPress={() => setScreen("messages")} style={({ pressed }) => [styles.messageCta, pressed ? styles.pressed : null]}>
+        <Text style={styles.messageCtaTitle}>{h("send")}</Text>
+        <Text style={styles.messageCtaBody}>{h("sendBody")}</Text>
+      </Pressable>
+
+      {connected ? <Pressable accessibilityLabel={callText(locale, "title")} accessibilityRole="button" onPress={() => setScreen("calls")} style={({ pressed }) => [styles.callCard, pressed ? styles.pressed : null]}>
+        <Text style={styles.callTitle}>{callText(locale, "title")}</Text>
+        <Text style={styles.caption}>{callText(locale, "body")}</Text>
+      </Pressable> : null}
+
+      <Pressable accessibilityLabel={h("invite")} accessibilityRole="button" onPress={() => setScreen("invite")} style={({ pressed }) => [styles.inviteCard, pressed ? styles.pressed : null]}>
+        <Text style={styles.inviteTitle}>{h("invite")}</Text>
+        <Text style={styles.caption}>{h("inviteBody")}</Text>
+      </Pressable>
+
     </View>
   );
 }
 
-function SummaryRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.summaryRow}>
-      <Text style={styles.body}>{label}</Text>
-      <Text style={styles.summaryValue}>{value}</Text>
-    </View>
-  );
-}
+export { ActivitySuggestionsScreen };
+export { ParentingTasksScreen };
 
 export function InvitationScreen({ initialCode }: { initialCode?: string }) {
   const { t } = useLocalization();
@@ -354,7 +452,7 @@ export function InvitationScreen({ initialCode }: { initialCode?: string }) {
   );
 }
 
-export function CalendarScreen() {
+export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: string }) {
   const largeText = usesLargeTextLayout(useWindowDimensions().fontScale);
   const { locale } = useOptionalLocalization();
   const w = (key: Parameters<typeof workflowText>[1], values?: Readonly<Record<string, string>>) => workflowText(locale, key, values);
@@ -367,15 +465,29 @@ export function CalendarScreen() {
     setCalendarView,
     setLayerShared,
     toggleLayerFilter,
-    visibleLayerIds
+    visibleLayerIds,
+    connected
   } = useCoordinationState();
   const [eventTitle, setEventTitle] = useState("");
   const [selectedLayerId, setSelectedLayerId] = useState(layers[0]?.id ?? "");
+  const [calendarAnchorDate, setCalendarAnchorDate] = useState(() => atUtcDay(new Date()));
+  const [eventStartsAt, setEventStartsAt] = useState(() => calendarDateTimeInput(new Date()));
+  const [eventEndsAt, setEventEndsAt] = useState(() => calendarDateTimeInput(new Date(Date.now() + 60 * 60 * 1000)));
+  const [eventTimeError, setEventTimeError] = useState(false);
   const [pendingShareLayerId, setPendingShareLayerId] = useState<string>();
   const [pendingDeleteEventId, setPendingDeleteEventId] = useState<string>();
+  const [eventType, setEventType] = useState<"parenting-time" | "appointment" | "change-request">("parenting-time");
+  const [custodySchedule, setCustodySchedule] = useState<CustodySchedule>();
 
   const visibleEvents = events.filter((event) => visibleLayerIds.includes(event.calendarLayerId));
   const views: readonly CalendarView[] = ["month", "week", "day"];
+  const moveCalendar = (amount: number) => setCalendarAnchorDate((current) => calendarView === "month"
+    ? addUtcMonths(current, amount)
+    : addUtcDays(current, amount * (calendarView === "week" ? 7 : 1)));
+
+  useEffect(() => {
+    if (initialEventTitle?.trim()) setEventTitle(initialEventTitle);
+  }, [initialEventTitle]);
 
   return (
     <View style={styles.stack}>
@@ -403,7 +515,41 @@ export function CalendarScreen() {
         ))}
       </View>
 
-      <CalendarViewPanel calendarView={calendarView} events={visibleEvents} layers={layers} locale={locale} />
+      <View style={styles.calendarNavigation}>
+        <LabButton label={calendarNavigationText(locale, "previous")} onPress={() => moveCalendar(-1)} variant="secondary" />
+        <LabButton label={calendarNavigationText(locale, "today")} onPress={() => setCalendarAnchorDate(atUtcDay(new Date()))} variant="secondary" />
+        <LabButton label={calendarNavigationText(locale, "next")} onPress={() => moveCalendar(1)} variant="secondary" />
+      </View>
+
+      <CalendarViewPanel anchorDate={calendarAnchorDate} calendarView={calendarView} custodySchedule={custodySchedule} events={visibleEvents} layers={layers} locale={locale} />
+
+      <CustodySchedulePlanner
+        locale={locale}
+        onAddBlocks={async (blocks: readonly CustodyBlock[]) => {
+          if (!selectedLayerId) return;
+          const existingKeys = new Set(events
+            .filter((event) => event.eventType === "parenting-time" && event.title.startsWith("Parenting time - "))
+            .map((event) => `${event.startsAt.slice(0, 10)}-${event.endsAt.slice(0, 10)}`));
+          for (const block of blocks) {
+            const parentLabel = block.parent === "you"
+              ? custodyScheduleText(locale, "yourTime")
+              : custodyScheduleText(locale, "otherTime");
+            const title = `Parenting time - ${parentLabel}`;
+            const key = `${block.startDate}-${block.endDate}`;
+            if (existingKeys.has(key)) continue;
+            await addEvent({
+              layerId: selectedLayerId,
+              title,
+              startsAt: `${block.startDate}T00:00:00.000Z`,
+              endsAt: `${block.endDate}T00:00:00.000Z`,
+              eventType: "parenting-time"
+            });
+            existingKeys.add(key);
+          }
+        }}
+        onScheduleChange={setCustodySchedule}
+        selectedLayerId={selectedLayerId}
+      />
 
       <View style={styles.card}>
         <Text style={styles.heading}>{calendarText(locale, "calendars")}</Text>
@@ -453,6 +599,11 @@ export function CalendarScreen() {
       <View style={styles.card}>
         <Text style={styles.heading}>{w("addEvent")}</Text>
         <TextInput accessibilityLabel={w("eventTitle")} onChangeText={setEventTitle} placeholder={w("eventTitle")} style={styles.input} value={eventTitle} />
+        <Text style={styles.fieldLabel}>{calendarNavigationText(locale, "startsAt")}</Text>
+        <TextInput accessibilityLabel={calendarNavigationText(locale, "startsAt")} autoCapitalize="none" keyboardType="numbers-and-punctuation" onChangeText={setEventStartsAt} placeholder="YYYY-MM-DD HH:MM" style={styles.input} value={eventStartsAt} />
+        <Text style={styles.fieldLabel}>{calendarNavigationText(locale, "endsAt")}</Text>
+        <TextInput accessibilityLabel={calendarNavigationText(locale, "endsAt")} autoCapitalize="none" keyboardType="numbers-and-punctuation" onChangeText={setEventEndsAt} placeholder="YYYY-MM-DD HH:MM" style={styles.input} value={eventEndsAt} />
+        {eventTimeError ? <Text accessibilityRole="alert" style={styles.errorText}>{calendarNavigationText(locale, "invalidTime")}</Text> : null}
         <Text style={styles.fieldLabel}>{w("calendar")}</Text>
         <View style={styles.wrap}>
           {layers.map((layer) => (
@@ -468,12 +619,43 @@ export function CalendarScreen() {
             </Pressable>
           ))}
         </View>
+        <Text style={styles.fieldLabel}>{w("eventMode")}</Text>
+        <View accessibilityRole="tablist" style={styles.wrap}>
+          <Pressable
+            accessibilityLabel={w("planTime")}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: eventType === "parenting-time" }}
+            onPress={() => setEventType("parenting-time")}
+            style={[styles.chip, eventType === "parenting-time" ? styles.chipActive : null]}
+          >
+            <Text style={[styles.chipText, eventType === "parenting-time" ? styles.chipTextActive : null]}>{w("planTime")}</Text>
+          </Pressable>
+          {connected ? (
+            <Pressable
+              accessibilityLabel={w("requestChange")}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: eventType === "change-request" }}
+              onPress={() => setEventType("change-request")}
+              style={[styles.chip, eventType === "change-request" ? styles.chipActive : null]}
+            >
+              <Text style={[styles.chipText, eventType === "change-request" ? styles.chipTextActive : null]}>{w("requestChange")}</Text>
+            </Pressable>
+          ) : null}
+        </View>
         <LabButton label={w("saveEvent")} disabled={!eventTitle.trim()} onPress={() => {
+          const startsAt = parseCalendarDateTime(eventStartsAt);
+          const endsAt = parseCalendarDateTime(eventEndsAt);
+          if (!startsAt || !endsAt || new Date(endsAt).getTime() <= new Date(startsAt).getTime()) {
+            setEventTimeError(true);
+            return;
+          }
+          setEventTimeError(false);
           void addEvent({
             layerId: selectedLayerId,
             title: eventTitle,
-            startsAt: "2026-08-01T14:00:00.000Z",
-            endsAt: "2026-08-01T15:00:00.000Z"
+            startsAt,
+            endsAt,
+            eventType
           });
           setEventTitle("");
         }} />
@@ -482,7 +664,7 @@ export function CalendarScreen() {
       {visibleEvents.map((event) => (
         <View key={event.id} style={styles.card}>
           <Text style={styles.actionTitle}>{event.title}</Text>
-          <Text style={styles.caption}>{layers.find((layer) => layer.id === event.calendarLayerId)?.name}</Text>
+          <Text style={styles.caption}>{layers.find((layer) => layer.id === event.calendarLayerId)?.name} - {calendarStatusText(locale, event.status)}</Text>
           {pendingDeleteEventId === event.id ? (
             <View style={styles.stackTight}>
               <Text style={styles.body}>{w("deleteWarning")}</Text>
@@ -540,6 +722,8 @@ export function MessagesScreen() {
     <View style={styles.stack}>
       <AccessibleHeading style={styles.title}>{m("title")}</AccessibleHeading>
       <Text style={styles.body}>{m("body")}</Text>
+
+      <PrepChatAssistant onUseDraft={setMessageDraft} />
 
       <View style={styles.card}>
         <Text style={styles.heading}>{m("find")}</Text>
@@ -823,6 +1007,7 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
   const [showSupport, setShowSupport] = useState(false);
   const [profileName, setProfileName] = useState(accountActions?.displayName ?? "");
   const [profileSaved, setProfileSaved] = useState(false);
+  const [exportManifest, setExportManifest] = useState<AccountExportManifest>();
   useEffect(() => setProfileName(accountActions?.displayName ?? ""), [accountActions?.displayName]);
   if (replayIntroduction) {
     return <PublicOnboardingSlides compact onComplete={() => setReplayIntroduction(false)} />;
@@ -848,6 +1033,7 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
         <Text style={styles.caption}>{t("more.introduction.body")}</Text>
       </Pressable>
       <LinkedSignInMethods />
+      <PersonalityProfilePanel />
       {accountActions?.updateProfile ? <View style={styles.actionCardLargeText}>
         <Text accessibilityRole="header" style={styles.actionTitle}>{t("profile.title")}</Text>
         <Text style={styles.caption}>{t("profile.body")}</Text>
@@ -869,6 +1055,33 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
         />
         {profileSaved ? <Text accessibilityLiveRegion="polite" style={styles.success}>{t("profile.saved")}</Text> : null}
         {accountActions.profileError ? <Text accessibilityRole="alert" style={styles.error}>{accountActions.profileError}</Text> : null}
+      </View> : null}
+      {accountActions?.exportAccount ? <View style={styles.actionCardLargeText}>
+        <Text accessibilityRole="header" style={styles.actionTitle}>{t("account.exportTitle")}</Text>
+        <Text style={styles.caption}>{t("account.exportBody")}</Text>
+        <LabButton
+          disabled={accountActions.exporting}
+          label={accountActions.exporting ? t("account.exporting") : t("account.exportAction")}
+          onPress={() => {
+            setExportManifest(undefined);
+            void accountActions.exportAccount!()
+              .then(setExportManifest)
+              .catch(() => setExportManifest(undefined));
+          }}
+        />
+        {exportManifest ? <View accessibilityLiveRegion="polite" style={styles.successCard}>
+          <Text style={styles.success}>{t("account.exportReady")}</Text>
+          <Text style={styles.caption}>{t("account.exportCounts", {
+            families: String(exportManifest.counts.families),
+            conversations: String(exportManifest.counts.conversations),
+            messageEvents: String(exportManifest.counts.messageEvents),
+            calendarEvents: String(exportManifest.counts.calendarEvents),
+            privateRecords: String(exportManifest.counts.privateRecords),
+            privateAttachments: String(exportManifest.counts.privateAttachments)
+          })}</Text>
+          <Text style={styles.caption}>{t("account.exportMetadataOnly")}</Text>
+        </View> : null}
+        {accountActions.exportError ? <Text accessibilityRole="alert" style={styles.error}>{accountActions.exportError}</Text> : null}
       </View> : null}
       {accountActions?.enableNotifications ? <Pressable
         accessibilityRole="button"
@@ -958,9 +1171,33 @@ const styles = StyleSheet.create({
   languageOption: { borderColor: colors.border, borderRadius: 14, borderWidth: 1, justifyContent: "center", minHeight: 48, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   languageOptionSelected: { backgroundColor: colors.brandSoft, borderColor: colors.brand },
   pressed: { opacity: 0.72 },
-  summaryCard: { backgroundColor: colors.brand, borderRadius: 24, gap: spacing.sm, padding: spacing.lg },
-  summaryRow: { alignItems: "center", borderTopColor: "rgba(255,255,255,0.16)", borderTopWidth: 1, flexDirection: "row", justifyContent: "space-between", paddingTop: spacing.sm },
-  summaryValue: { ...typography.body, color: colors.onBrand, fontWeight: "800" },
+  datePill: { alignSelf: "flex-start", backgroundColor: colors.cream, borderColor: colors.border, borderRadius: 999, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  datePillText: { ...typography.body, color: colors.text, fontWeight: "700" },
+  todayLine: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
+  connectionStatus: { ...typography.caption, color: colors.muted, fontWeight: "700" },
+  planCard: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 24, borderWidth: 1, flexDirection: "row", gap: spacing.md, minHeight: 132, overflow: "hidden", paddingRight: spacing.lg, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 1 },
+  planCardEmpty: { minHeight: 112 },
+  planAccent: { backgroundColor: colors.coral, width: 10 },
+  planAccentSun: { backgroundColor: colors.sun },
+  planCopy: { flex: 1, gap: spacing.xs, justifyContent: "center", paddingVertical: spacing.lg },
+  planEyebrow: { ...typography.caption, color: colors.coral, fontWeight: "800", textTransform: "uppercase" },
+  planTitle: { ...typography.heading, color: colors.text },
+  activityCard: { alignItems: "center", backgroundColor: colors.warningSurface, borderColor: colors.warningBorder, borderRadius: 22, borderWidth: 1, flexDirection: "row", gap: spacing.md, padding: spacing.md },
+  activityDot: { alignItems: "center", backgroundColor: colors.sun, borderRadius: 999, height: 44, justifyContent: "center", width: 44 },
+  activityDotText: { color: colors.text, fontSize: 24, fontWeight: "800" },
+  activityCopy: { flex: 1, gap: spacing.xs },
+  activityTitle: { ...typography.body, color: colors.text, fontWeight: "800" },
+  taskCard: { backgroundColor: colors.cream, borderColor: colors.sun, borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg },
+  taskTitle: { ...typography.subheading, color: colors.warning },
+  recordCard: { backgroundColor: colors.successSurface, borderColor: colors.aqua, borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg },
+  recordTitle: { ...typography.subheading, color: colors.accent },
+  messageCta: { backgroundColor: colors.brand, borderRadius: 24, gap: spacing.xs, padding: spacing.lg },
+  messageCtaTitle: { ...typography.heading, color: colors.onBrand },
+  messageCtaBody: { ...typography.body, color: colors.onBrand },
+  callCard: { backgroundColor: colors.brandSoft, borderColor: colors.aqua, borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg },
+  callTitle: { ...typography.subheading, color: colors.aqua },
+  inviteCard: { backgroundColor: colors.successSurface, borderColor: colors.successBorder, borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg },
+  inviteTitle: { ...typography.subheading, color: colors.successText },
   card: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 22, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
   successCard: { backgroundColor: colors.successSurface, borderColor: colors.successBorder, borderRadius: 22, borderWidth: 1, gap: spacing.sm, padding: spacing.lg },
   confirmCard: { backgroundColor: colors.warningSurface, borderColor: colors.warningBorder, borderRadius: 22, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
@@ -970,6 +1207,7 @@ const styles = StyleSheet.create({
   qrCard: { alignItems: "center", alignSelf: "center", backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: spacing.sm, padding: spacing.md },
   qrLabel: { ...typography.caption, color: colors.text, fontWeight: "800" },
   error: { ...typography.body, color: colors.dangerText, fontWeight: "700" },
+  errorText: { ...typography.caption, color: colors.dangerText, fontWeight: "700" },
   success: { ...typography.body, color: colors.successText, fontWeight: "700" },
   titleRow: { flexDirection: "row", justifyContent: "space-between" },
   segmented: { backgroundColor: colors.brandSoft, borderRadius: 18, flexDirection: "row", padding: spacing.xs },
@@ -977,18 +1215,25 @@ const styles = StyleSheet.create({
   segmentActive: { backgroundColor: colors.surface },
   segmentText: { ...typography.body, color: colors.muted, fontWeight: "700" },
   segmentTextActive: { color: colors.brand },
+  calendarNavigation: { flexDirection: "row", gap: spacing.sm, justifyContent: "space-between" },
   calendarCanvas: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: spacing.md, minHeight: 180, padding: spacing.lg },
   calendarMonth: { ...typography.heading, color: colors.text },
   calendarEmpty: { ...typography.body, color: colors.muted },
   monthGrid: { flexDirection: "row", flexWrap: "wrap" },
   weekday: { ...typography.caption, color: colors.muted, fontWeight: "800", textAlign: "center", width: "14.2857%" },
   monthCell: { borderTopColor: colors.border, borderTopWidth: 1, gap: 2, minHeight: 54, paddingHorizontal: 3, paddingTop: spacing.xs, width: "14.2857%" },
+  yourTimeCell: { backgroundColor: "rgba(139,92,246,0.10)" },
+  otherTimeCell: { backgroundColor: "rgba(98,180,75,0.10)" },
   dayNumber: { ...typography.caption, color: colors.text, fontWeight: "800" },
+  custodyCellLabel: { color: colors.brand, fontSize: 8, fontWeight: "800", overflow: "hidden" },
   monthEvent: { backgroundColor: colors.brandSoft, borderRadius: 6, color: colors.brand, fontSize: 9, fontWeight: "700", overflow: "hidden", paddingHorizontal: 3, paddingVertical: 2 },
   scheduleList: { gap: spacing.sm },
   scheduleRow: { borderTopColor: colors.border, borderTopWidth: 1, flexDirection: "row", gap: spacing.md, paddingTop: spacing.sm },
   scheduleDate: { ...typography.caption, color: colors.text, fontWeight: "800", width: 48 },
   scheduleContent: { flex: 1, gap: spacing.xs },
+  custodyLabel: { ...typography.caption, fontWeight: "800" },
+  yourTimeText: { color: colors.brand },
+  otherTimeText: { color: colors.successText },
   scheduleEvent: { backgroundColor: colors.brandSoft, borderLeftColor: colors.brand, borderLeftWidth: 3, borderRadius: 12, gap: 2, padding: spacing.sm },
   layerRow: { alignItems: "center", borderTopColor: colors.border, borderTopWidth: 1, flexDirection: "row", gap: spacing.sm, paddingTop: spacing.md },
   layerRowLargeText: { alignItems: "stretch", flexDirection: "column" },

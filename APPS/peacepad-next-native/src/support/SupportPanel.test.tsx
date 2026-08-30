@@ -1,9 +1,18 @@
 import React from "react";
+import { Linking } from "react-native";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { LocalizationProvider } from "../localization/LocalizationProvider";
 import { SupportPanel } from "./SupportPanel";
 
 describe("SupportPanel", () => {
+  it("uses the native link handler when no override is supplied", async () => {
+    const openUrl = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
+    render(<LocalizationProvider initialLocale="en"><SupportPanel /></LocalizationProvider>);
+    fireEvent.press(screen.getByText("Help center"));
+    await waitFor(() => expect(openUrl).toHaveBeenCalledWith("https://peacepad.ca/support"));
+    openUrl.mockRestore();
+  });
+
   it.each([
     ["en", "Contact support", "Diagnostic ID: PP-100000000000"],
     ["fr", "Contacter le soutien", "Identifiant de diagnostic : PP-100000000000"],

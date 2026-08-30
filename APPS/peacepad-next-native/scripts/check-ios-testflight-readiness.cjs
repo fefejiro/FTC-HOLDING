@@ -4,14 +4,16 @@ const { spawnSync } = require("child_process");
 
 const root = path.resolve(__dirname, "..");
 const readJson = (name) => JSON.parse(fs.readFileSync(path.join(root, name), "utf8"));
+const appConfigModule = require(path.join(root, "app.config.js"));
+const releaseContract = appConfigModule.releaseContract;
 const expected = {
   appStoreId: "6793350735",
   bundleIdentifier: "ca.peacepad.family",
   easOwner: "official_fejiro",
   easProjectId: "a4ecee72-ebae-483d-8553-035847ebb3d3",
-  mode: "testflight-internal",
-  version: "2.0.0",
-  buildNumber: "3"
+  mode: releaseContract.mode,
+  version: releaseContract.version,
+  buildNumber: releaseContract.buildNumber
 };
 const requiredRegionalNames = [
   "EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_URL",
