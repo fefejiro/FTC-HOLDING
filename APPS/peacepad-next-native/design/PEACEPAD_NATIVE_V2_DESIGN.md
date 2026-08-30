@@ -1,12 +1,18 @@
 # PeacePad Native V2 — family-first design direction
 
-Status: design direction locked for implementation
+Status: design direction locked and implemented in the Native V2 shell
 
 Figma working file: [PeacePad Native V2](https://www.figma.com/design/yCX2cRek5AIiZcY2NvlyQc/Untitled)
 
 The Figma file contains the verified Native V2 board with five mobile screen
 directions, the colour rhythm, reusable action patterns, and the experience
 rules that must stay true on Android and iOS.
+
+The first implementation pass is now applied to the shared React Native
+screens and verified on the connected Pixel: Home, Messages, Calendar,
+Records, More, and the call header use the shared icon/header language. The
+same source feeds Android and iOS; no store artifact was uploaded in this
+design pass.
 
 ## What is changing
 
@@ -61,6 +67,15 @@ current-day marker; it is not an error colour by default.
 5. Re-run the same Android/iOS visual and interaction matrix before any store
    build. This board is the visual source of truth for both platforms because
    they share the React Native source.
+
+## Verification record
+
+- Pixel visual pass: Home, Messages, Calendar, Records, and More captured from
+  the native dev client on 2026-08-30.
+- `npm run typecheck --workspace APPS/peacepad-next-native`: passed.
+- `npm test --workspace APPS/peacepad-next-native -- --runInBand`: 62 suites,
+  465 passed, 1 skipped.
+- Lab guardrails, secret scan, and microphone-only audio configuration: passed.
 
 ## Guardrails
 

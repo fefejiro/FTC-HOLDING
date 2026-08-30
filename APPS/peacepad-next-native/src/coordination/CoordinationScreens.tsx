@@ -3,6 +3,8 @@ import { Image, Linking, Pressable, Share, StyleSheet, Text, TextInput, useWindo
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import { InvitationQr } from "../components/InvitationQr";
+import { PeacePadIcon } from "../components/PeacePadIcon";
+import { ScreenHeader } from "../components/ScreenHeader";
 import { LabButton } from "../components/LabButton";
 import { AccessibleHeading } from "../components/AccessibleHeading";
 import { languageNames, supportedLocales, useLocalization, useOptionalLocalization } from "../localization/LocalizationProvider";
@@ -245,7 +247,7 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
       )}
 
       <Pressable accessibilityRole="button" accessibilityLabel="Activity ideas" onPress={() => setScreen("activities")} style={({ pressed }) => [styles.activityCard, pressed ? styles.pressed : null]}>
-        <View style={styles.activityDot}><Text accessible={false} style={styles.activityDotText}>☀️</Text></View>
+        <View style={styles.activityDot}><PeacePadIcon name="sunny-outline" size={23} color={colors.text} /></View>
         <View style={styles.activityCopy}>
           <Text style={styles.activityTitle}>Activity ideas</Text>
           <Text style={styles.caption}>Find weather-aware ideas for the time you have together.</Text>
@@ -253,12 +255,12 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
       </Pressable>
 
       <Pressable accessibilityRole="button" accessibilityLabel={task.title} onPress={() => setScreen("tasks")} style={({ pressed }) => [styles.taskCard, pressed ? styles.pressed : null]}>
-        <View style={styles.cardHeadingRow}><Text accessible={false} style={styles.cardEmoji}>✅</Text><Text style={styles.taskTitle}>{task.title}</Text></View>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="checkmark-circle-outline" size={23} color={colors.warning} /><Text style={styles.taskTitle}>{task.title}</Text></View>
         <Text style={styles.caption}>{task.body}</Text>
       </Pressable>
 
       <Pressable accessibilityRole="button" accessibilityLabel={h("record")} onPress={() => setScreen("records")} style={({ pressed }) => [styles.recordCard, pressed ? styles.pressed : null]}>
-        <View style={styles.cardHeadingRow}><Text accessible={false} style={styles.cardEmoji}>📎</Text><Text style={styles.recordTitle}>{h("record")}</Text></View>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="attach-outline" size={23} color={colors.accent} /><Text style={styles.recordTitle}>{h("record")}</Text></View>
         <Text style={styles.caption}>{h("recordBody")}</Text>
       </Pressable>
 
@@ -267,16 +269,16 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
           <Text style={styles.messageCtaTitle}>{h("send")}</Text>
           <Text style={styles.messageCtaBody}>{h("sendBody")}</Text>
         </View>
-        <View style={styles.messageCtaIcon}><Text accessible={false} style={styles.messageCtaEmoji}>💬</Text></View>
+        <View style={styles.messageCtaIcon}><PeacePadIcon name="chatbubble-ellipses-outline" size={27} color={colors.onBrand} /></View>
       </Pressable>
 
       {connected ? <Pressable accessibilityLabel={callText(locale, "title")} accessibilityRole="button" onPress={() => setScreen("calls")} style={({ pressed }) => [styles.callCard, pressed ? styles.pressed : null]}>
-        <View style={styles.cardHeadingRow}><Text accessible={false} style={styles.cardEmoji}>📞</Text><Text style={styles.callTitle}>{callText(locale, "title")}</Text></View>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="call-outline" size={23} color={colors.brand} /><Text style={styles.callTitle}>{callText(locale, "title")}</Text></View>
         <Text style={styles.caption}>{callText(locale, "body")}</Text>
       </Pressable> : null}
 
       <Pressable accessibilityLabel={h("invite")} accessibilityRole="button" onPress={() => setScreen("invite")} style={({ pressed }) => [styles.inviteCard, pressed ? styles.pressed : null]}>
-        <View style={styles.cardHeadingRow}><Text accessible={false} style={styles.cardEmoji}>🤝</Text><Text style={styles.inviteTitle}>{h("invite")}</Text></View>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="people-outline" size={23} color={colors.successText} /><Text style={styles.inviteTitle}>{h("invite")}</Text></View>
         <Text style={styles.caption}>{h("inviteBody")}</Text>
       </Pressable>
 
@@ -497,12 +499,14 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
 
   return (
     <View style={styles.stack}>
-      <View style={styles.titleRow}>
-        <View>
-          <AccessibleHeading style={styles.title}>{calendarText(locale, "title")}</AccessibleHeading>
-          <Text style={styles.body}>{calendarText(locale, "body")}</Text>
-        </View>
-      </View>
+      <ScreenHeader
+        accent={colors.coral}
+        icon="calendar-outline"
+        kicker="Shared plans"
+        softBackground={colors.cream}
+        subtitle={calendarText(locale, "body")}
+        title={calendarText(locale, "title")}
+      />
 
       <View accessibilityLabel={calendarText(locale, "view")} accessibilityRole="tablist" style={styles.segmented}>
         {views.map((view) => (
@@ -726,8 +730,14 @@ export function MessagesScreen() {
 
   return (
     <View style={styles.stack}>
-      <AccessibleHeading style={styles.title}>{m("title")}</AccessibleHeading>
-      <Text style={styles.body}>{m("body")}</Text>
+      <ScreenHeader
+        accent={colors.aqua}
+        icon="chatbubble-ellipses-outline"
+        kicker="Communication"
+        softBackground={colors.successSurface}
+        subtitle={m("body")}
+        title={m("title")}
+      />
 
       <PrepChatAssistant onUseDraft={setMessageDraft} />
 
@@ -738,6 +748,7 @@ export function MessagesScreen() {
           autoCapitalize="none"
           onChangeText={setMessageSearchQuery}
           placeholder={m("searchPlaceholder")}
+          placeholderTextColor={colors.muted}
           returnKeyType="search"
           onSubmitEditing={() => void searchMessages()}
           style={styles.input}
@@ -950,7 +961,14 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
   const eventCandidate = events.find((event) => !linkedSourceIds.has(event.id));
   return (
     <View style={styles.stack}>
-      <AccessibleHeading style={styles.title}>{w("records")}</AccessibleHeading>
+      <ScreenHeader
+        accent={colors.accent}
+        icon="document-text-outline"
+        kicker="Private by default"
+        softBackground={colors.successSurface}
+        subtitle={w("binderBody")}
+        title={w("records")}
+      />
       {loading ? <View style={styles.card}><Text style={styles.heading}>{w("opening")}</Text><Text style={styles.body}>{w("loading")}</Text></View> : null}
       {!loading && binders.length > 1 ? <View style={styles.card}>
         <Text style={styles.heading}>{w("binders")}</Text>
@@ -964,7 +982,9 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
       {!loading && !binder ? <View style={styles.card}>
         <Text style={styles.heading}>{w("createBinder")}</Text>
         <Text style={styles.body}>{w("binderBody")}</Text>
+        <Text style={styles.fieldLabel}>{w("binderName")}</Text>
         <TextInput accessibilityLabel={w("binderName")} onChangeText={setBinderName} placeholder={w("binderName")} style={styles.input} value={binderName} />
+        <Text style={styles.fieldLabel}>{w("childLabel")}</Text>
         <TextInput accessibilityLabel={w("childLabel")} onChangeText={setChildLabel} placeholder={w("childLabel")} style={styles.input} value={childLabel} />
         <LabButton disabled={busy} label={busy ? w("creating") : w("create")} onPress={() => void saveBinder()} />
       </View> : !loading && binder ? <View style={styles.card}>
@@ -1020,22 +1040,29 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
   }
   return (
     <View style={styles.stack}>
-      <AccessibleHeading style={styles.title}>{t("more.title")}</AccessibleHeading>
+      <ScreenHeader
+        accent={colors.brand}
+        icon="sparkles-outline"
+        kicker="Your PeacePad"
+        softBackground={colors.brandSoft}
+        subtitle={t("more.support.body")}
+        title={t("more.title")}
+      />
       <Pressable accessibilityRole="button" onPress={() => setScreen("invite")} style={[styles.actionCard, styles.moreFamilyCard]}>
-        <View style={styles.cardHeadingRow}><Text accessible={false} style={styles.cardEmoji}>🤝</Text><Text style={styles.actionTitle}>{t("more.family.title")}</Text></View>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="people-outline" size={23} color={colors.successText} /><Text style={styles.actionTitle}>{t("more.family.title")}</Text></View>
         <Text style={styles.caption}>{t("more.family.body")}</Text>
       </Pressable>
       <View style={[styles.actionCard, styles.morePrivacyCard]}>
-        <View style={styles.cardHeadingRow}><Text accessible={false} style={styles.cardEmoji}>🛡️</Text><Text style={styles.actionTitle}>{t("more.privacy.title")}</Text></View>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="shield-checkmark-outline" size={23} color={colors.accent} /><Text style={styles.actionTitle}>{t("more.privacy.title")}</Text></View>
         <Text style={styles.caption}>{t("more.privacy.body")}</Text>
       </View>
       <Pressable accessibilityRole="button" onPress={() => setShowSupport((current) => !current)} style={[styles.actionCard, styles.moreSupportCard]}>
-        <View style={styles.cardHeadingRow}><Text accessible={false} style={styles.cardEmoji}>💛</Text><Text style={styles.actionTitle}>{t("more.support.title")}</Text></View>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="heart-outline" size={23} color={colors.coral} /><Text style={styles.actionTitle}>{t("more.support.title")}</Text></View>
         <Text style={styles.caption}>{t("more.support.body")}</Text>
       </Pressable>
       {showSupport ? <View style={styles.actionCardLargeText}><SupportPanel /></View> : null}
       <Pressable accessibilityRole="button" onPress={() => setReplayIntroduction(true)} style={[styles.actionCard, styles.moreIntroCard]}>
-        <View style={styles.cardHeadingRow}><Text accessible={false} style={styles.cardEmoji}>✨</Text><Text style={styles.actionTitle}>{t("more.introduction.title")}</Text></View>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="sparkles-outline" size={23} color={colors.brand} /><Text style={styles.actionTitle}>{t("more.introduction.title")}</Text></View>
         <Text style={styles.caption}>{t("more.introduction.body")}</Text>
       </Pressable>
       <LinkedSignInMethods />
@@ -1159,21 +1186,21 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
 }
 
 const styles = StyleSheet.create({
-  stack: { gap: spacing.lg },
+  stack: { gap: spacing.md },
   stackTight: { gap: spacing.sm },
   title: { ...typography.title, color: colors.text },
   heading: { ...typography.subheading, color: colors.text },
   body: { ...typography.body, color: colors.muted },
   caption: { ...typography.caption, color: colors.muted },
   fieldLabel: { ...typography.caption, color: colors.text, fontWeight: "800", marginTop: spacing.sm, textTransform: "uppercase" },
-  brandHero: { alignItems: "center", backgroundColor: "#FFE4D6", borderRadius: 30, flexDirection: "row", gap: spacing.md, minHeight: 154, overflow: "hidden", padding: spacing.lg, position: "relative" },
+  brandHero: { alignItems: "center", backgroundColor: "#FFE4D6", borderRadius: 26, flexDirection: "row", gap: spacing.md, minHeight: 132, overflow: "hidden", padding: spacing.md, position: "relative" },
   brandHeroCopy: { flex: 1, gap: spacing.xs, zIndex: 2 },
   heroEyebrow: { ...typography.caption, color: colors.coral, fontWeight: "900", letterSpacing: 1.1 },
   heroSun: { backgroundColor: "#F7C948", borderRadius: 999, height: 92, opacity: 0.42, position: "absolute", right: -20, top: -24, width: 92 },
   heroBubble: { backgroundColor: "#72D7C9", borderRadius: 999, bottom: -35, height: 92, opacity: 0.38, position: "absolute", right: 54, width: 92 },
-  logo: { borderRadius: 23, height: 72, width: 72, zIndex: 2 },
+  logo: { borderRadius: 18, height: 56, width: 56, zIndex: 2 },
   actionGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
-  actionCard: { backgroundColor: "#FFF1DF", borderColor: "#F2C8B5", borderRadius: 24, borderWidth: 1, gap: spacing.sm, justifyContent: "center", minHeight: 88, minWidth: "46%", padding: spacing.lg, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 1 },
+  actionCard: { backgroundColor: "#FFF1DF", borderColor: "#F2C8B5", borderRadius: 22, borderWidth: 1, gap: spacing.sm, justifyContent: "center", minHeight: 76, minWidth: "46%", padding: spacing.md, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 1 },
   moreFamilyCard: { backgroundColor: "#EAF6CF", borderColor: "#BBD781" },
   morePrivacyCard: { backgroundColor: "#DDF6F0", borderColor: "#76CCBE" },
   moreSupportCard: { backgroundColor: "#FFF1B8", borderColor: "#F0C940" },
@@ -1188,28 +1215,25 @@ const styles = StyleSheet.create({
   datePillText: { ...typography.body, color: colors.text, fontWeight: "700" },
   todayLine: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
   connectionStatus: { ...typography.caption, color: colors.muted, fontWeight: "700" },
-  planCard: { backgroundColor: "#FFFDF8", borderColor: "#F2C8B5", borderRadius: 24, borderWidth: 1, flexDirection: "row", gap: spacing.md, minHeight: 132, overflow: "hidden", paddingRight: spacing.lg, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 1 },
+  planCard: { backgroundColor: "#FFFDF8", borderColor: "#F2C8B5", borderRadius: 22, borderWidth: 1, flexDirection: "row", gap: spacing.md, minHeight: 116, overflow: "hidden", paddingRight: spacing.md, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 1 },
   planCardEmpty: { minHeight: 112 },
   planAccent: { backgroundColor: colors.coral, width: 10 },
   planAccentSun: { backgroundColor: colors.sun },
-  planCopy: { flex: 1, gap: spacing.xs, justifyContent: "center", paddingVertical: spacing.lg },
+  planCopy: { flex: 1, gap: spacing.xs, justifyContent: "center", paddingVertical: spacing.md },
   planEyebrow: { ...typography.caption, color: colors.coral, fontWeight: "800", textTransform: "uppercase" },
   planTitle: { ...typography.heading, color: colors.text },
   activityCard: { alignItems: "center", backgroundColor: colors.warningSurface, borderColor: colors.warningBorder, borderRadius: 22, borderWidth: 1, flexDirection: "row", gap: spacing.md, padding: spacing.md },
   activityDot: { alignItems: "center", backgroundColor: colors.sun, borderRadius: 999, height: 44, justifyContent: "center", width: 44 },
-  activityDotText: { color: colors.text, fontSize: 24, fontWeight: "800" },
   activityCopy: { flex: 1, gap: spacing.xs },
   activityTitle: { ...typography.body, color: colors.text, fontWeight: "800" },
   cardHeadingRow: { alignItems: "center", flexDirection: "row", gap: spacing.sm },
-  cardEmoji: { fontSize: 23, lineHeight: 29 },
-  taskCard: { backgroundColor: "#FFF1B8", borderColor: "#F0C940", borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg, transform: [{ rotate: "-0.35deg" }] },
+  taskCard: { backgroundColor: "#FFF1B8", borderColor: "#F0C940", borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.md },
   taskTitle: { ...typography.subheading, color: colors.warning },
-  recordCard: { backgroundColor: "#DDF6F0", borderColor: "#76CCBE", borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg, transform: [{ rotate: "0.35deg" }] },
+  recordCard: { backgroundColor: "#DDF6F0", borderColor: "#76CCBE", borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.md },
   recordTitle: { ...typography.subheading, color: colors.accent },
   messageCta: { alignItems: "center", backgroundColor: colors.coral, borderRadius: 26, flexDirection: "row", gap: spacing.md, justifyContent: "space-between", padding: spacing.lg },
   messageCtaCopy: { flex: 1, gap: spacing.xs },
   messageCtaIcon: { alignItems: "center", backgroundColor: "rgba(255,255,255,0.22)", borderRadius: 999, height: 54, justifyContent: "center", width: 54 },
-  messageCtaEmoji: { fontSize: 27 },
   messageCtaTitle: { ...typography.heading, color: colors.onBrand },
   messageCtaBody: { ...typography.body, color: colors.onBrand },
   callCard: { backgroundColor: "#E8E0FA", borderColor: "#B8A4E4", borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg },
@@ -1227,7 +1251,6 @@ const styles = StyleSheet.create({
   error: { ...typography.body, color: colors.dangerText, fontWeight: "700" },
   errorText: { ...typography.caption, color: colors.dangerText, fontWeight: "700" },
   success: { ...typography.body, color: colors.successText, fontWeight: "700" },
-  titleRow: { flexDirection: "row", justifyContent: "space-between" },
   segmented: { backgroundColor: colors.cream, borderRadius: 18, flexDirection: "row", padding: spacing.xs },
   segment: { alignItems: "center", borderRadius: 14, flex: 1, justifyContent: "center", minHeight: 48, paddingVertical: spacing.md },
   segmentActive: { backgroundColor: colors.surface },

@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { AccessibleHeading } from "../components/AccessibleHeading";
 import { LabButton } from "../components/LabButton";
+import { ScreenHeader } from "../components/ScreenHeader";
 import { useOptionalLocalization } from "../localization/LocalizationProvider";
 import { callText } from "../localization/callLocalization";
 import { colors, spacing, typography } from "../theme";
@@ -21,13 +21,14 @@ export function AudioCallScreen() {
   const duration = `${Math.floor(state.durationSeconds / 60).toString().padStart(2, "0")}:${(state.durationSeconds % 60).toString().padStart(2, "0")}`;
 
   return <View style={styles.page}>
-    <View style={styles.hero}>
-      <View style={styles.callIcon}><Text accessible={false} style={styles.callEmoji}>📞</Text></View>
-      <View style={styles.heroCopy}>
-        <AccessibleHeading style={styles.title}>{text("title")}</AccessibleHeading>
-        <Text style={styles.body}>{text("body")}</Text>
-      </View>
-    </View>
+    <ScreenHeader
+      accent={colors.coral}
+      icon="call-outline"
+      kicker="Calls"
+      softBackground={colors.cream}
+      subtitle={text("body")}
+      title={text("title")}
+    />
     <View accessibilityLiveRegion="polite" style={styles.callCard}>
       <Text accessibilityRole="header" style={styles.heading}>{title}</Text>
       <Text style={styles.body}>{statusBody}</Text>
@@ -50,15 +51,10 @@ export function AudioCallScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { gap: spacing.lg },
-  hero: { alignItems: "center", backgroundColor: "#E8E0FA", borderColor: "#B8A4E4", borderRadius: 28, borderWidth: 1, flexDirection: "row", gap: spacing.md, padding: spacing.lg },
-  callIcon: { alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 999, height: 62, justifyContent: "center", width: 62 },
-  callEmoji: { fontSize: 30 },
-  heroCopy: { flex: 1, gap: spacing.xs },
-  title: { ...typography.title, color: colors.text },
+  page: { gap: spacing.md },
   heading: { ...typography.subheading, color: colors.text },
   body: { ...typography.body, color: colors.muted },
-  callCard: { backgroundColor: "#DDF6F0", borderColor: "#76CCBE", borderRadius: 26, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
+  callCard: { backgroundColor: colors.successSurface, borderColor: colors.successBorder, borderRadius: 24, borderWidth: 1, gap: spacing.md, padding: spacing.md },
   duration: { ...typography.title, color: colors.accent, fontVariant: ["tabular-nums"], textAlign: "center" },
   error: { ...typography.body, color: colors.dangerText }
 });
