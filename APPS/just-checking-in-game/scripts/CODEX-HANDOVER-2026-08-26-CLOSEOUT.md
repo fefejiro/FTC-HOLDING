@@ -257,3 +257,33 @@ Therefore Android is **not the same code** as the iOS 1.1 candidate and must not
   the earlier EditMode invocation stalled during AssetDatabase refresh. This
   Pixel pass is direct runtime evidence only. No Play upload, iOS rebuild, or
   public-release claim is made from this candidate.
+
+### Corrected Android version-code-4 candidate (2026-08-30)
+
+- Canonical JCI source is on branch `codex/jci-ios-1.1-main2`, commit
+  `2874aa543` (`JCI: correct Android version and mobile navigation`). The
+  unrelated edit to `scripts/NEXT-GAME-RELEASE-PLAN.md` remains unstaged.
+- The build script's release constant and `ProjectSettings.asset` now both set
+  Android version code `4` for marketing version `1.1.0`. This fixes the prior
+  code-3 packaging mismatch; the old code-3 artifact was not relabeled.
+- Unity `6000.4.5f1` produced a signed IL2CPP ARM64 APK on the D:-backed build
+  host using the existing JCI upload keystore. Artifact:
+  `D:\FTC-HOLDING-releases\just-checking-in\android-2026-08-19\JustCheckingIn-1.1.0-code4-home-turn-resume-20260830.apk`.
+- Artifact evidence: 28,271,811 bytes; SHA-256
+  `675A53C9B76D16456DDC401653752EA41EFB17D26CD8E30684E2F78E640693F0`;
+  package `com.ftcholding.justcheckingin`; version `1.1.0`; version code `4`;
+  min SDK `25`; compile/target SDK `36`; native code `arm64-v8a`; signer
+  certificate SHA-256
+  `3f57ea45405524c9cf9a38ce0774e7dc56b80cf3481696adc04577b77c6825b3`.
+- Pixel 7 serial `2B260DLH2000C8` installed this exact APK successfully.
+  `dumpsys package` reports `versionCode=4`, `versionName=1.1.0`,
+  `targetSdk=36`. The app launched in 438 ms with no `FATAL EXCEPTION`,
+  `AndroidRuntime`, or JCI exception; the native Android back callback
+  registered. Evidence screenshots:
+  `D:\FTC-HOLDING-releases\just-checking-in\android-2026-08-19\evidence\pixel7-jci-1.1.0-code4-launch-20260830.png` and
+  `pixel7-jci-1.1.0-code4-back-20260830.png` (the latter proves system Back
+  returns to the device home and does not trap system navigation).
+- This is an installed, runtime-verified candidate only. No Google Play upload,
+  iOS/TestFlight upload, review approval, or public-release claim is made from
+  this build. The full Unity test suite still has no results XML because of the
+  known host AssetDatabase import stall.
