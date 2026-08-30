@@ -47,6 +47,7 @@ export function ActivitySuggestionsScreen({ onPlanActivity }: { onPlanActivity: 
     <View style={styles.stack}>
       <AccessibleHeading style={styles.title}>{text.title}</AccessibleHeading>
       <Text style={styles.body}>{text.body}</Text>
+      <Text style={styles.privacyNote}>{text.locationPrivacy}</Text>
 
       <View style={styles.card}>
         <Text accessibilityRole="header" style={styles.heading}>{text.weatherPlace}</Text>
@@ -120,6 +121,7 @@ const styles = StyleSheet.create({
   title: { ...typography.title },
   heading: { ...typography.heading, marginTop: spacing.xs },
   body: { ...typography.body, color: colors.muted, lineHeight: 22 },
+  privacyNote: { ...typography.caption, backgroundColor: colors.successSurface, borderColor: colors.successBorder, borderRadius: 14, borderWidth: 1, color: colors.successText, padding: spacing.md },
   input: { ...typography.body, backgroundColor: colors.background, borderColor: colors.border, borderRadius: 12, borderWidth: 1, color: colors.text, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   weatherSummary: { ...typography.caption, color: colors.text, fontWeight: "700" },
   error: { ...typography.caption, color: colors.dangerText },

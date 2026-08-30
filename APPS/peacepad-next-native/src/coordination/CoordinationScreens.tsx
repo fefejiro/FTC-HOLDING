@@ -192,7 +192,7 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
   const { locale } = useOptionalLocalization();
   const h = (key: Parameters<typeof homeText>[1]) => homeText(locale, key);
   const task = taskCopy(locale);
-  const { connected, events, invitationGrant, sentMessages } = useCoordinationState();
+  const { connected, events, invitationGrant } = useCoordinationState();
   const nextEvent = [...events].sort((left, right) => left.startsAt.localeCompare(right.startsAt))[0];
   const nextEventDate = nextEvent
     ? formatLocalizedDate(locale, nextEvent.startsAt, { weekday: "short", month: "short", day: "numeric" })
@@ -213,6 +213,11 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
 
       <View style={styles.datePill}>
         <Text style={styles.datePillText}>{formatLocalizedDate(locale, new Date(), { weekday: "long", month: "long", day: "numeric" })}</Text>
+      </View>
+
+      <View style={styles.todayLine}>
+        <Text accessibilityRole="header" style={styles.heading}>{h("today")}</Text>
+        <Text style={styles.connectionStatus}>{h(invitationGrant ? "connected" : "notConnected")}</Text>
       </View>
 
       {nextEvent ? (
@@ -236,54 +241,45 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
         </Pressable>
       )}
 
-      <View style={styles.activityCard}>
-        <View style={styles.activityDot}><Text accessible={false} style={styles.activityDotText}>✦</Text></View>
+      <Pressable accessibilityRole="button" accessibilityLabel="Activity ideas" onPress={() => setScreen("activities")} style={({ pressed }) => [styles.activityCard, pressed ? styles.pressed : null]}>
+        <View style={styles.activityDot}><Text accessible={false} style={styles.activityDotText}>☀</Text></View>
         <View style={styles.activityCopy}>
-          <Text style={styles.activityTitle}>{h("record")}</Text>
-          <Text style={styles.caption}>{h("recordBody")}</Text>
+          <Text style={styles.activityTitle}>Activity ideas</Text>
+          <Text style={styles.caption}>Find weather-aware ideas for the time you have together.</Text>
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel={h("record")} onPress={() => setScreen("records")} style={styles.smallButton}>
-          <Text style={styles.smallButtonText}>{h("record")}</Text>
-        </Pressable>
-      </View>
+      </Pressable>
+
+      <Pressable accessibilityRole="button" accessibilityLabel={task.title} onPress={() => setScreen("tasks")} style={({ pressed }) => [styles.taskCard, pressed ? styles.pressed : null]}>
+        <Text style={styles.taskTitle}>{task.title}</Text>
+        <Text style={styles.caption}>{task.body}</Text>
+      </Pressable>
+
+      <Pressable accessibilityRole="button" accessibilityLabel={h("record")} onPress={() => setScreen("records")} style={({ pressed }) => [styles.recordCard, pressed ? styles.pressed : null]}>
+        <Text style={styles.recordTitle}>{h("record")}</Text>
+        <Text style={styles.caption}>{h("recordBody")}</Text>
+      </Pressable>
 
       <Pressable accessibilityRole="button" accessibilityLabel={h("send")} onPress={() => setScreen("messages")} style={({ pressed }) => [styles.messageCta, pressed ? styles.pressed : null]}>
         <Text style={styles.messageCtaTitle}>{h("send")}</Text>
         <Text style={styles.messageCtaBody}>{h("sendBody")}</Text>
       </Pressable>
 
-      <Pressable accessibilityLabel={callText(locale, "title")} accessibilityRole="button" onPress={() => setScreen("calls")} style={({ pressed }) => [styles.callCard, pressed ? styles.pressed : null]}>
+      {connected ? <Pressable accessibilityLabel={callText(locale, "title")} accessibilityRole="button" onPress={() => setScreen("calls")} style={({ pressed }) => [styles.callCard, pressed ? styles.pressed : null]}>
         <Text style={styles.callTitle}>{callText(locale, "title")}</Text>
         <Text style={styles.caption}>{callText(locale, "body")}</Text>
-      </Pressable>
+      </Pressable> : null}
 
       <Pressable accessibilityLabel={h("invite")} accessibilityRole="button" onPress={() => setScreen("invite")} style={({ pressed }) => [styles.inviteCard, pressed ? styles.pressed : null]}>
         <Text style={styles.inviteTitle}>{h("invite")}</Text>
         <Text style={styles.caption}>{h("inviteBody")}</Text>
       </Pressable>
 
-      <View style={styles.summaryCard}>
-        <Text accessibilityRole="header" style={styles.heading}>{h("today")}</Text>
-        <SummaryRow label={h("upcoming")} value={String(events.length)} />
-        <SummaryRow label={h("saved")} value="0" />
-        <SummaryRow label={h("sent")} value={String(sentMessages.length)} />
-        <SummaryRow label={h("family")} value={h(invitationGrant ? "connected" : "notConnected")} />
-      </View>
     </View>
   );
 }
 
 export { ActivitySuggestionsScreen };
 export { ParentingTasksScreen };
-
-function SummaryRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.summaryRow}>
-      <Text style={styles.body}>{label}</Text>
-      <Text style={styles.summaryValue}>{value}</Text>
-    </View>
-  );
-}
 
 export function InvitationScreen({ initialCode }: { initialCode?: string }) {
   const { t } = useLocalization();
@@ -1177,6 +1173,8 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.72 },
   datePill: { alignSelf: "flex-start", backgroundColor: colors.cream, borderColor: colors.border, borderRadius: 999, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   datePillText: { ...typography.body, color: colors.text, fontWeight: "700" },
+  todayLine: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
+  connectionStatus: { ...typography.caption, color: colors.muted, fontWeight: "700" },
   planCard: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 24, borderWidth: 1, flexDirection: "row", gap: spacing.md, minHeight: 132, overflow: "hidden", paddingRight: spacing.lg, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 1 },
   planCardEmpty: { minHeight: 112 },
   planAccent: { backgroundColor: colors.coral, width: 10 },
@@ -1189,6 +1187,10 @@ const styles = StyleSheet.create({
   activityDotText: { color: colors.text, fontSize: 24, fontWeight: "800" },
   activityCopy: { flex: 1, gap: spacing.xs },
   activityTitle: { ...typography.body, color: colors.text, fontWeight: "800" },
+  taskCard: { backgroundColor: colors.cream, borderColor: colors.sun, borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg },
+  taskTitle: { ...typography.subheading, color: colors.warning },
+  recordCard: { backgroundColor: colors.successSurface, borderColor: colors.aqua, borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg },
+  recordTitle: { ...typography.subheading, color: colors.accent },
   messageCta: { backgroundColor: colors.brand, borderRadius: 24, gap: spacing.xs, padding: spacing.lg },
   messageCtaTitle: { ...typography.heading, color: colors.onBrand },
   messageCtaBody: { ...typography.body, color: colors.onBrand },
@@ -1196,9 +1198,6 @@ const styles = StyleSheet.create({
   callTitle: { ...typography.subheading, color: colors.aqua },
   inviteCard: { backgroundColor: colors.successSurface, borderColor: colors.successBorder, borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg },
   inviteTitle: { ...typography.subheading, color: colors.successText },
-  summaryCard: { backgroundColor: colors.subtleSurface, borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: spacing.sm, padding: spacing.lg },
-  summaryRow: { alignItems: "center", borderTopColor: colors.border, borderTopWidth: 1, flexDirection: "row", justifyContent: "space-between", paddingTop: spacing.sm },
-  summaryValue: { ...typography.body, color: colors.brand, fontWeight: "800" },
   card: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 22, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
   successCard: { backgroundColor: colors.successSurface, borderColor: colors.successBorder, borderRadius: 22, borderWidth: 1, gap: spacing.sm, padding: spacing.lg },
   confirmCard: { backgroundColor: colors.warningSurface, borderColor: colors.warningBorder, borderRadius: 22, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
