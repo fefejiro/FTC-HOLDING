@@ -71,6 +71,7 @@ begin
  if v_family_id is null and p_operation='exception.resolve' then select r.family_id into v_family_id from peacepad_v2.parenting_schedule_exception r where r.parenting_schedule_exception_id=(p_payload->>'id')::uuid; end if;
  if v_family_id is null or not peacepad_v2.parent_core_access(p_identity_id,v_family_id,p_region) then raise exception using errcode='42501',message='FAMILY_ACCESS_DENIED'; end if;
  if p_operation='schedule.save' then
+  if not exists(select 1 from peacepad_v2.calendar_layer l where l.calendar_layer_id=(p_payload->>'calendarLayerId')::uuid and l.family_id=v_family_id and l.region=p_region) then raise exception using errcode='22023',message='PARENTING_SCHEDULE_INVALID'; end if;
   if not peacepad_v2.parent_core_access((p_payload->>'primaryParentIdentityId')::uuid,v_family_id,p_region) or
     (nullif(p_payload->>'secondaryParentIdentityId','') is not null and not peacepad_v2.parent_core_access((p_payload->>'secondaryParentIdentityId')::uuid,v_family_id,p_region)) then raise exception using errcode='22023',message='PARENTING_SCHEDULE_INVALID'; end if;
   insert into peacepad_v2.parenting_schedule_plan(family_id,calendar_layer_id,region,created_by,pattern,start_date,primary_parent_identity_id,secondary_parent_identity_id,timezone,status)
@@ -79,6 +80,8 @@ begin
    where p_expected_version is null or peacepad_v2.parenting_schedule_plan.version=p_expected_version returning * into plan_r;
   if not found then raise exception using errcode='40001',message='CONCURRENCY_CONFLICT'; end if; response:=peacepad_v2.parenting_schedule_plan_json(plan_r);
  elsif p_operation='exception.create' then
+  if not exists(select 1 from peacepad_v2.parenting_schedule_plan p where p.parenting_schedule_plan_id=(p_payload->>'parentingSchedulePlanId')::uuid and p.family_id=v_family_id and p.region=p_region)
+    or not peacepad_v2.parent_core_access((p_payload->>'assignedParentIdentityId')::uuid,v_family_id,p_region) then raise exception using errcode='22023',message='PARENTING_SCHEDULE_INVALID'; end if;
   insert into peacepad_v2.parenting_schedule_exception(family_id,parenting_schedule_plan_id,region,requested_by,assigned_parent_identity_id,kind,start_date,end_date,note)
    values(v_family_id,(p_payload->>'parentingSchedulePlanId')::uuid,p_region,p_identity_id,(p_payload->>'assignedParentIdentityId')::uuid,p_payload->>'kind',(p_payload->>'startDate')::date,(p_payload->>'endDate')::date,nullif(trim(p_payload->>'note'),'')) returning * into exception_r;
   response:=peacepad_v2.parenting_schedule_exception_json(exception_r);

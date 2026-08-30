@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { AudioModule, RecordingPresets, setAudioModeAsync, useAudioRecorder, useAudioRecorderState } from "expo-audio";
 import { File } from "expo-file-system";
+import * as Speech from "expo-speech";
 import { LabButton } from "../components/LabButton";
 import { colors, spacing, typography } from "../theme";
 import { buildCalmDraft, type PrepEntryMode, type PrepFeeling } from "../legacy/prepChat";
@@ -23,6 +24,7 @@ export function CoachConversation({ onTranscribe, onUseDraft }: CoachConversatio
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [speaking, setSpeaking] = useState(false);
 
   const startRecording = async () => {
     setError("");
@@ -63,6 +65,27 @@ export function CoachConversation({ onTranscribe, onUseDraft }: CoachConversatio
     setDraft(result);
   };
 
+  const toggleDraftSpeech = async () => {
+    if (speaking) {
+      await Speech.stop();
+      setSpeaking(false);
+      return;
+    }
+    if (!draft.trim()) return;
+    setSpeaking(true);
+    Speech.speak(draft.trim(), {
+      language: "en-CA",
+      pitch: 1,
+      rate: 0.92,
+      onDone: () => setSpeaking(false),
+      onError: () => {
+        setSpeaking(false);
+        setError("Coach could not read this draft aloud. You can still review and use the text.");
+      },
+      onStopped: () => setSpeaking(false)
+    });
+  };
+
   return (
     <View accessibilityLabel="PeacePad Coach" style={styles.card}>
       <View style={styles.heroRow}>
@@ -94,6 +117,7 @@ export function CoachConversation({ onTranscribe, onUseDraft }: CoachConversatio
           <Text style={styles.heading}>Your editable draft</Text>
           <TextInput accessibilityLabel="Edit Coach draft" multiline onChangeText={setDraft} style={styles.input} value={draft} />
           <Text style={styles.caption}>Review it yourself. Coach does not diagnose either parent and does not send anything automatically.</Text>
+          <LabButton label={speaking ? "Stop listening" : "Listen to draft"} onPress={() => void toggleDraftSpeech()} variant="secondary" />
           <LabButton disabled={!draft.trim()} label="Use in message" onPress={() => onUseDraft(draft.trim())} />
           <LabButton label="Start over" onPress={() => { setConversation(""); setDraft(""); setError(""); }} variant="secondary" />
         </View> : null}

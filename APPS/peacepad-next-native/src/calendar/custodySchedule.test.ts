@@ -53,4 +53,11 @@ describe("legacy parenting-time schedule parity", () => {
       { startDate: "2026-08-10", endDate: "2026-08-17", parent: "other" }
     ]);
   });
+
+  it("applies an accepted date override without changing the recurring rule", () => {
+    const schedule: CustodySchedule = { enabled: true, pattern: "week_on_off", startDate: start, primaryParent: "you" };
+    expect(custodyParentForDate("2026-08-04", schedule)).toBe("you");
+    expect(custodyParentForDate("2026-08-04", schedule, [{ startDate: "2026-08-04", endDate: "2026-08-05", parent: "other" }])).toBe("other");
+    expect(custodyParentForDate("2026-08-06", schedule, [{ startDate: "2026-08-04", endDate: "2026-08-05", parent: "other" }])).toBe("you");
+  });
 });

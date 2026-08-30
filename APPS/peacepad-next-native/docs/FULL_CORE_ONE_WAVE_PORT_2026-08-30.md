@@ -36,6 +36,14 @@ WebView or a legacy-island bridge.
   parents, calendar layer and timezone. Authorized parents can propose and
   accept/decline one-off holidays, swaps and other date exceptions without
   silently rewriting the recurring plan.
+- Calendar sharing now produces an RFC 5545 feed locally from the persisted
+  plan, visible calendar events and accepted exceptions. Private family and
+  identity identifiers are not included. Accepted exceptions also override
+  the recurring plan in Native month/week/day views.
+- Coach drafts can now be read aloud by the device using the native Expo speech
+  adapter, can be stopped by the parent, and remain editable and deliberately
+  shared. Typed and transcribed input continue to work when speech playback is
+  unavailable.
 - The approved family-first visual system is used across the added native
   screens: purple anchor with coral, sun, aqua, cream, warm copy and no emoji
   product icons.

@@ -688,6 +688,7 @@ export function CoordinationStateProvider({
     },
     saveParentingSchedulePlan: async (input) => {
       if (!activeRuntime) throw new Error("Sign in to save a parenting schedule.");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(input.startDate) || Number.isNaN(Date.parse(`${input.startDate}T00:00:00.000Z`))) throw new Error("Enter a valid schedule start date.");
       const conversations = await resolvedApi.listConversations(activeRuntime.familyCircleId);
       const participants = conversations.find((item) => item.id === activeRuntime.conversationId)?.participantIdentityIds ?? [];
       const otherIdentityId = participants.find((identityId) => identityId !== activeRuntime.actorIdentityId) ?? null;
@@ -709,6 +710,9 @@ export function CoordinationStateProvider({
     },
     createParentingScheduleException: async (input) => {
       if (!activeRuntime || !parentingSchedulePlan) throw new Error("Save the shared parenting plan before adding an exception.");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(input.startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(input.endDate)
+        || Number.isNaN(Date.parse(`${input.startDate}T00:00:00.000Z`)) || Number.isNaN(Date.parse(`${input.endDate}T00:00:00.000Z`))
+        || input.endDate < input.startDate) throw new Error("Enter a valid date range for this change.");
       const conversations = await resolvedApi.listConversations(activeRuntime.familyCircleId);
       const participants = conversations.find((item) => item.id === activeRuntime.conversationId)?.participantIdentityIds ?? [];
       const otherIdentityId = participants.find((identityId) => identityId !== activeRuntime.actorIdentityId) ?? null;

@@ -27,8 +27,9 @@ import { ParentingTasksScreen } from "../tasks/ParentingTasksScreen";
 import { taskCopy } from "../tasks/taskLocalization";
 import { PersonalityProfilePanel } from "../preferences/PersonalityProfilePanel";
 import { CustodySchedulePlanner } from "../calendar/CustodySchedulePlanner";
-import { custodyParentForDate, type CustodyBlock, type CustodySchedule } from "../calendar/custodySchedule";
+import { custodyParentForDate, type CustodyBlock, type CustodyOverride, type CustodySchedule } from "../calendar/custodySchedule";
 import { custodyScheduleText } from "../calendar/custodyScheduleLocalization";
+import { buildPeacePadCalendar } from "../calendar/calendarExport";
 import { CoachConversation } from "../coach/CoachConversation";
 import { ConversationVoiceNote } from "../messages/ConversationVoiceNote";
 import type { AccountExportManifest } from "../api/CoordinationApi";
@@ -96,7 +97,8 @@ function CalendarViewPanel({
   layers,
   locale,
   anchorDate,
-  custodySchedule
+  custodySchedule,
+  custodyOverrides
 }: {
   calendarView: CalendarView;
   events: ReturnType<typeof useCoordinationState>["events"];
@@ -104,6 +106,7 @@ function CalendarViewPanel({
   locale: ReturnType<typeof useLocalization>["locale"];
   anchorDate: Date;
   custodySchedule?: CustodySchedule;
+  custodyOverrides?: readonly CustodyOverride[];
 }) {
   const layerName = (calendarLayerId: string) =>
     layers.find((layer) => layer.id === calendarLayerId)?.name ?? "Calendar";
@@ -127,7 +130,7 @@ function CalendarViewPanel({
           {cells.map((cell) => {
             const date = cell.day ? new Date(Date.UTC(anchorDate.getUTCFullYear(), anchorDate.getUTCMonth(), cell.day)) : undefined;
             const dayEvents = date ? events.filter((event) => eventOccursOnDay(event, date)) : [];
-            const custodyParent = date ? custodyParentForDate(date, custodySchedule) : null;
+            const custodyParent = date ? custodyParentForDate(date, custodySchedule, custodyOverrides) : null;
             return (
               <View accessibilityLabel={date ? `${formatCalendarDate(locale, date, { month: "long", day: "numeric" })}${custodyParent ? `, ${custodyScheduleText(locale, custodyParent === "you" ? "yourTime" : "otherTime")}` : ""}` : undefined} key={cell.key} style={[styles.monthCell, custodyParent === "you" ? styles.yourTimeCell : custodyParent === "other" ? styles.otherTimeCell : null]}>
                 {cell.day ? <Text style={styles.dayNumber}>{cell.day}</Text> : null}
@@ -152,7 +155,7 @@ function CalendarViewPanel({
         <View style={styles.scheduleList}>
           {week.map((date) => {
             const dayEvents = events.filter((event) => eventOccursOnDay(event, date));
-            const custodyParent = custodyParentForDate(date, custodySchedule);
+            const custodyParent = custodyParentForDate(date, custodySchedule, custodyOverrides);
             return (
               <View key={date.toISOString()} style={styles.scheduleRow}>
                 <Text style={styles.scheduleDate}>{formatCalendarDay(locale, date)}</Text>
@@ -174,7 +177,7 @@ function CalendarViewPanel({
   }
 
   const dayEvents = events.filter((event) => eventOccursOnDay(event, anchorDate));
-  const custodyParent = custodyParentForDate(anchorDate, custodySchedule);
+  const custodyParent = custodyParentForDate(anchorDate, custodySchedule, custodyOverrides);
   return (
     <View accessibilityLabel={`${calendarText(locale, "day")} ${calendarText(locale, "title")}`.toLocaleLowerCase(locale)} style={styles.calendarCanvas}>
       <Text style={styles.calendarMonth}>{formatCalendarDate(locale, anchorDate, { weekday: "long", month: "long", day: "numeric" })}</Text>
@@ -504,10 +507,15 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
   const [exceptionStartDate, setExceptionStartDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [exceptionEndDate, setExceptionEndDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [exceptionNote, setExceptionNote] = useState("");
+  const [exceptionKind, setExceptionKind] = useState<"holiday" | "vacation" | "swap" | "other">("swap");
+  const [exceptionAssignedParent, setExceptionAssignedParent] = useState<"you" | "other">("you");
   const [exceptionBusy, setExceptionBusy] = useState(false);
   const [exceptionError, setExceptionError] = useState<string>();
 
   const visibleEvents = events.filter((event) => visibleLayerIds.includes(event.calendarLayerId));
+  const custodyOverrides: readonly CustodyOverride[] = parentingScheduleExceptions
+    .filter((item) => item.status === "accepted")
+    .map((item) => ({ startDate: item.startDate, endDate: item.endDate, parent: item.assignedParentIdentityId === actorIdentityId ? "you" : "other" }));
   const views: readonly CalendarView[] = ["month", "week", "day"];
   const moveCalendar = (amount: number) => setCalendarAnchorDate((current) => calendarView === "month"
     ? addUtcMonths(current, amount)
@@ -551,7 +559,7 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
         <LabButton label={calendarNavigationText(locale, "next")} onPress={() => moveCalendar(1)} variant="secondary" />
       </View>
 
-      <CalendarViewPanel anchorDate={calendarAnchorDate} calendarView={calendarView} custodySchedule={custodySchedule} events={visibleEvents} layers={layers} locale={locale} />
+      <CalendarViewPanel anchorDate={calendarAnchorDate} calendarView={calendarView} custodyOverrides={custodyOverrides} custodySchedule={custodySchedule} events={visibleEvents} layers={layers} locale={locale} />
 
       <CustodySchedulePlanner
         initialSchedule={parentingSchedulePlan ? {
@@ -595,9 +603,20 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
         selectedLayerId={selectedLayerId}
       />
 
+      <LabButton label="Share calendar" onPress={() => void Share.share({
+        title: "PeacePad parenting calendar",
+        message: buildPeacePadCalendar({ schedule: custodySchedule, scheduleEvents: visibleEvents, exceptions: parentingScheduleExceptions, actorIdentityId })
+      })} variant="secondary" />
+
       <View style={styles.card}>
         <Text style={styles.heading}>Changes, holidays and swaps</Text>
         <Text style={styles.body}>Propose a one-off change without rewriting the regular parenting plan. Both parents can see and respond to it.</Text>
+        <View accessibilityRole="radiogroup" style={styles.rowWrap}>
+          {(["holiday", "vacation", "swap", "other"] as const).map((kind) => <Pressable accessibilityRole="radio" accessibilityState={{ selected: exceptionKind === kind }} key={kind} onPress={() => setExceptionKind(kind)} style={[styles.chip, exceptionKind === kind ? styles.chipActive : null]}><Text style={[styles.chipText, exceptionKind === kind ? styles.chipTextActive : null]}>{kind}</Text></Pressable>)}
+        </View>
+        <View accessibilityRole="radiogroup" style={styles.rowWrap}>
+          {(["you", "other"] as const).map((parent) => <Pressable accessibilityRole="radio" accessibilityState={{ selected: exceptionAssignedParent === parent }} key={parent} onPress={() => setExceptionAssignedParent(parent)} style={[styles.chip, exceptionAssignedParent === parent ? styles.chipActive : null]}><Text style={[styles.chipText, exceptionAssignedParent === parent ? styles.chipTextActive : null]}>{parent === "you" ? "Your time" : "Other parent's time"}</Text></Pressable>)}
+        </View>
         <TextInput accessibilityLabel="Change start date" onChangeText={setExceptionStartDate} placeholder="YYYY-MM-DD" style={styles.input} value={exceptionStartDate} />
         <TextInput accessibilityLabel="Change end date" onChangeText={setExceptionEndDate} placeholder="YYYY-MM-DD" style={styles.input} value={exceptionEndDate} />
         <TextInput accessibilityLabel="Change note" maxLength={500} multiline onChangeText={setExceptionNote} placeholder="Holiday, school closure, travel, or swap details" style={[styles.input, styles.multilineInput]} value={exceptionNote} />
@@ -605,7 +624,7 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
         <LabButton disabled={!parentingSchedulePlan || exceptionBusy} label={exceptionBusy ? "Sending proposal..." : "Propose change"} onPress={() => {
           setExceptionBusy(true);
           setExceptionError(undefined);
-          void createParentingScheduleException({ assignedParent: "you", kind: "other", startDate: exceptionStartDate, endDate: exceptionEndDate, note: exceptionNote.trim() || null })
+          void createParentingScheduleException({ assignedParent: exceptionAssignedParent, kind: exceptionKind, startDate: exceptionStartDate, endDate: exceptionEndDate, note: exceptionNote.trim() || null })
             .then(() => setExceptionNote(""))
             .catch((error) => setExceptionError(error instanceof Error ? error.message : "PeacePad could not save that change."))
             .finally(() => setExceptionBusy(false));

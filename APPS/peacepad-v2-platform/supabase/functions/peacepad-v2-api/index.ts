@@ -284,6 +284,7 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     "TIMELINE_REQUEST_INVALID", "TIMELINE_SOURCE_INVALID", "TIMELINE_SOURCE_ALREADY_LINKED",
     "PERSONALITY_TYPE_INVALID",
     "DEVICE_PUSH_INVALID", "DEVICE_PUSH_CONFIGURATION_INVALID", "PARENTING_TASK_INVALID", "PARENTING_TASK_ASSIGNEE_INVALID",
+    "PARENTING_SCHEDULE_INVALID",
   ]);
   const safeCode = directCodes[message] ?? (invalidRequestCodes.has(message) ? "INVALID_REQUEST" : "DATABASE_NOT_READY");
   // Provider/SQL details are deliberately neither returned nor logged here.

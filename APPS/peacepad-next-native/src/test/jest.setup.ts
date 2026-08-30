@@ -29,6 +29,11 @@ jest.mock("expo-audio", () => ({
   useAudioRecorderState: jest.fn(() => ({ canRecord: true, durationMillis: 0, isRecording: false, url: null }))
 }));
 
+jest.mock("expo-speech", () => ({
+  speak: jest.fn((_text: string, options?: { onDone?: () => void }) => options?.onDone?.()),
+  stop: jest.fn(async () => undefined)
+}));
+
 jest.mock("expo-constants", () => ({
   __esModule: true,
   default: {
