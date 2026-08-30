@@ -204,8 +204,11 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
   return (
     <View style={styles.stack}>
       <View style={styles.brandHero}>
+        <View style={styles.heroSun} />
+        <View style={styles.heroBubble} />
         <Image accessibilityLabel={h("logo")} source={require("../../assets/icon-production.png")} style={styles.logo} />
         <View style={styles.brandHeroCopy}>
+          <Text style={styles.heroEyebrow}>YOUR FAMILY, YOUR PACE</Text>
           <AccessibleHeading style={styles.title}>{h("title")}</AccessibleHeading>
           <Text style={styles.body}>{h("body")}</Text>
         </View>
@@ -242,7 +245,7 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
       )}
 
       <Pressable accessibilityRole="button" accessibilityLabel="Activity ideas" onPress={() => setScreen("activities")} style={({ pressed }) => [styles.activityCard, pressed ? styles.pressed : null]}>
-        <View style={styles.activityDot}><Text accessible={false} style={styles.activityDotText}>☀</Text></View>
+        <View style={styles.activityDot}><Text accessible={false} style={styles.activityDotText}>☀️</Text></View>
         <View style={styles.activityCopy}>
           <Text style={styles.activityTitle}>Activity ideas</Text>
           <Text style={styles.caption}>Find weather-aware ideas for the time you have together.</Text>
@@ -250,27 +253,30 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
       </Pressable>
 
       <Pressable accessibilityRole="button" accessibilityLabel={task.title} onPress={() => setScreen("tasks")} style={({ pressed }) => [styles.taskCard, pressed ? styles.pressed : null]}>
-        <Text style={styles.taskTitle}>{task.title}</Text>
+        <View style={styles.cardHeadingRow}><Text accessible={false} style={styles.cardEmoji}>✅</Text><Text style={styles.taskTitle}>{task.title}</Text></View>
         <Text style={styles.caption}>{task.body}</Text>
       </Pressable>
 
       <Pressable accessibilityRole="button" accessibilityLabel={h("record")} onPress={() => setScreen("records")} style={({ pressed }) => [styles.recordCard, pressed ? styles.pressed : null]}>
-        <Text style={styles.recordTitle}>{h("record")}</Text>
+        <View style={styles.cardHeadingRow}><Text accessible={false} style={styles.cardEmoji}>📎</Text><Text style={styles.recordTitle}>{h("record")}</Text></View>
         <Text style={styles.caption}>{h("recordBody")}</Text>
       </Pressable>
 
       <Pressable accessibilityRole="button" accessibilityLabel={h("send")} onPress={() => setScreen("messages")} style={({ pressed }) => [styles.messageCta, pressed ? styles.pressed : null]}>
-        <Text style={styles.messageCtaTitle}>{h("send")}</Text>
-        <Text style={styles.messageCtaBody}>{h("sendBody")}</Text>
+        <View style={styles.messageCtaCopy}>
+          <Text style={styles.messageCtaTitle}>{h("send")}</Text>
+          <Text style={styles.messageCtaBody}>{h("sendBody")}</Text>
+        </View>
+        <View style={styles.messageCtaIcon}><Text accessible={false} style={styles.messageCtaEmoji}>💬</Text></View>
       </Pressable>
 
       {connected ? <Pressable accessibilityLabel={callText(locale, "title")} accessibilityRole="button" onPress={() => setScreen("calls")} style={({ pressed }) => [styles.callCard, pressed ? styles.pressed : null]}>
-        <Text style={styles.callTitle}>{callText(locale, "title")}</Text>
+        <View style={styles.cardHeadingRow}><Text accessible={false} style={styles.cardEmoji}>📞</Text><Text style={styles.callTitle}>{callText(locale, "title")}</Text></View>
         <Text style={styles.caption}>{callText(locale, "body")}</Text>
       </Pressable> : null}
 
       <Pressable accessibilityLabel={h("invite")} accessibilityRole="button" onPress={() => setScreen("invite")} style={({ pressed }) => [styles.inviteCard, pressed ? styles.pressed : null]}>
-        <Text style={styles.inviteTitle}>{h("invite")}</Text>
+        <View style={styles.cardHeadingRow}><Text accessible={false} style={styles.cardEmoji}>🤝</Text><Text style={styles.inviteTitle}>{h("invite")}</Text></View>
         <Text style={styles.caption}>{h("inviteBody")}</Text>
       </Pressable>
 
@@ -1160,9 +1166,12 @@ const styles = StyleSheet.create({
   body: { ...typography.body, color: colors.muted },
   caption: { ...typography.caption, color: colors.muted },
   fieldLabel: { ...typography.caption, color: colors.text, fontWeight: "800", marginTop: spacing.sm, textTransform: "uppercase" },
-  brandHero: { alignItems: "center", flexDirection: "row", gap: spacing.md, paddingVertical: spacing.sm },
-  brandHeroCopy: { flex: 1, gap: spacing.xs },
-  logo: { borderRadius: 20, height: 64, width: 64 },
+  brandHero: { alignItems: "center", backgroundColor: "#FFE4D6", borderRadius: 30, flexDirection: "row", gap: spacing.md, minHeight: 154, overflow: "hidden", padding: spacing.lg, position: "relative" },
+  brandHeroCopy: { flex: 1, gap: spacing.xs, zIndex: 2 },
+  heroEyebrow: { ...typography.caption, color: colors.coral, fontWeight: "900", letterSpacing: 1.1 },
+  heroSun: { backgroundColor: "#F7C948", borderRadius: 999, height: 92, opacity: 0.42, position: "absolute", right: -20, top: -24, width: 92 },
+  heroBubble: { backgroundColor: "#72D7C9", borderRadius: 999, bottom: -35, height: 92, opacity: 0.38, position: "absolute", right: 54, width: 92 },
+  logo: { borderRadius: 23, height: 72, width: 72, zIndex: 2 },
   actionGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
   actionCard: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 22, borderWidth: 1, gap: spacing.sm, justifyContent: "center", minHeight: 88, minWidth: "46%", padding: spacing.lg, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 1 },
   actionCardLargeText: { minWidth: "100%", width: "100%" },
@@ -1175,7 +1184,7 @@ const styles = StyleSheet.create({
   datePillText: { ...typography.body, color: colors.text, fontWeight: "700" },
   todayLine: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
   connectionStatus: { ...typography.caption, color: colors.muted, fontWeight: "700" },
-  planCard: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 24, borderWidth: 1, flexDirection: "row", gap: spacing.md, minHeight: 132, overflow: "hidden", paddingRight: spacing.lg, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 1 },
+  planCard: { backgroundColor: "#FFFDF8", borderColor: "#F2C8B5", borderRadius: 24, borderWidth: 1, flexDirection: "row", gap: spacing.md, minHeight: 132, overflow: "hidden", paddingRight: spacing.lg, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 1 },
   planCardEmpty: { minHeight: 112 },
   planAccent: { backgroundColor: colors.coral, width: 10 },
   planAccentSun: { backgroundColor: colors.sun },
@@ -1187,16 +1196,21 @@ const styles = StyleSheet.create({
   activityDotText: { color: colors.text, fontSize: 24, fontWeight: "800" },
   activityCopy: { flex: 1, gap: spacing.xs },
   activityTitle: { ...typography.body, color: colors.text, fontWeight: "800" },
-  taskCard: { backgroundColor: colors.cream, borderColor: colors.sun, borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg },
+  cardHeadingRow: { alignItems: "center", flexDirection: "row", gap: spacing.sm },
+  cardEmoji: { fontSize: 23, lineHeight: 29 },
+  taskCard: { backgroundColor: "#FFF1B8", borderColor: "#F0C940", borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg, transform: [{ rotate: "-0.35deg" }] },
   taskTitle: { ...typography.subheading, color: colors.warning },
-  recordCard: { backgroundColor: colors.successSurface, borderColor: colors.aqua, borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg },
+  recordCard: { backgroundColor: "#DDF6F0", borderColor: "#76CCBE", borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg, transform: [{ rotate: "0.35deg" }] },
   recordTitle: { ...typography.subheading, color: colors.accent },
-  messageCta: { backgroundColor: colors.brand, borderRadius: 24, gap: spacing.xs, padding: spacing.lg },
+  messageCta: { alignItems: "center", backgroundColor: colors.coral, borderRadius: 26, flexDirection: "row", gap: spacing.md, justifyContent: "space-between", padding: spacing.lg },
+  messageCtaCopy: { flex: 1, gap: spacing.xs },
+  messageCtaIcon: { alignItems: "center", backgroundColor: "rgba(255,255,255,0.22)", borderRadius: 999, height: 54, justifyContent: "center", width: 54 },
+  messageCtaEmoji: { fontSize: 27 },
   messageCtaTitle: { ...typography.heading, color: colors.onBrand },
   messageCtaBody: { ...typography.body, color: colors.onBrand },
-  callCard: { backgroundColor: colors.brandSoft, borderColor: colors.aqua, borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg },
-  callTitle: { ...typography.subheading, color: colors.aqua },
-  inviteCard: { backgroundColor: colors.successSurface, borderColor: colors.successBorder, borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg },
+  callCard: { backgroundColor: "#E8E0FA", borderColor: "#B8A4E4", borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg },
+  callTitle: { ...typography.subheading, color: colors.brand },
+  inviteCard: { backgroundColor: "#EAF6CF", borderColor: "#BBD781", borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg },
   inviteTitle: { ...typography.subheading, color: colors.successText },
   card: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 22, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
   successCard: { backgroundColor: colors.successSurface, borderColor: colors.successBorder, borderRadius: 22, borderWidth: 1, gap: spacing.sm, padding: spacing.lg },
