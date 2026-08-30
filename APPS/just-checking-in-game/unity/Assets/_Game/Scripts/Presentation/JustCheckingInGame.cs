@@ -5,7 +5,6 @@ using Jci.Domain;
 using Jci.Infrastructure;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 namespace Jci.Presentation
@@ -22,7 +21,6 @@ namespace Jci.Presentation
 
         private Canvas canvas;
         private RectTransform body;
-        private JciScreenMotion screenMotion;
         private InputField nameInput;
         private JciLocalStore store;
         private JciStoreDocument document;
@@ -222,7 +220,7 @@ namespace Jci.Presentation
             {
                 var eventSystem = new GameObject("JCI EventSystem", typeof(EventSystem));
                 eventSystem.transform.SetParent(transform, false);
-                eventSystem.AddComponent<InputSystemUIInputModule>();
+                eventSystem.AddComponent<StandaloneInputModule>();
             }
 
             var go = new GameObject("JCI Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
@@ -254,12 +252,10 @@ namespace Jci.Presentation
             var outline = glass.gameObject.AddComponent<Outline>();
             outline.effectColor = new Color(1f, 1f, 1f, 0.12f);
             outline.effectDistance = new Vector2(1f, -1f);
-            glass.gameObject.AddComponent<JciGlassPulse>();
             body = MakePanel(safe.transform, "Body", new Color(0, 0, 0, 0));
             Stretch(body);
             body.offsetMin = new Vector2(26, 24);
             body.offsetMax = new Vector2(-26, -24);
-            screenMotion = body.gameObject.AddComponent<JciScreenMotion>();
             var layout = body.gameObject.AddComponent<VerticalLayoutGroup>();
             layout.spacing = 9;
             layout.padding = new RectOffset(0, 0, 0, 0);
@@ -275,7 +271,6 @@ namespace Jci.Presentation
             AddBrandHeader(body);
             var hero = AddText(body, "A little time to connect.", 31, Parse(Ink), FontStyle.Bold, 74);
             hero.rectTransform.sizeDelta = new Vector2(0, 74);
-            screenMotion.Play();
         }
 
         private void ShowHome()
@@ -585,7 +580,6 @@ namespace Jci.Presentation
                 var shadow = card.AddComponent<Shadow>();
                 shadow.effectColor = new Color(0.08f, 0.12f, 0.16f, 0.16f);
                 shadow.effectDistance = new Vector2(0f, -4f);
-                card.AddComponent<JciCardMotion>();
                 layoutRect = card.GetComponent<RectTransform>();
                 layoutRect.anchorMin = new Vector2(0, 1); layoutRect.anchorMax = new Vector2(1, 1); layoutRect.pivot = new Vector2(0, 1); layoutRect.sizeDelta = new Vector2(0, height);
                 var cardLayout = card.GetComponent<LayoutElement>(); cardLayout.preferredHeight = height; cardLayout.flexibleWidth = 1;
@@ -623,7 +617,6 @@ namespace Jci.Presentation
             image.color = Color.Lerp(Color.white, accent, .08f);
             var outline = go.AddComponent<Outline>(); outline.effectColor = new Color(1f, 1f, 1f, .55f); outline.effectDistance = new Vector2(1f, -1f);
             var shadow = go.AddComponent<Shadow>(); shadow.effectColor = new Color(.08f, .12f, .16f, .22f); shadow.effectDistance = new Vector2(0f, -5f);
-            go.AddComponent<JciCardMotion>();
             var accentLine = new GameObject("Card accent", typeof(RectTransform), typeof(Image));
             accentLine.transform.SetParent(go.transform, false);
             var accentRect = accentLine.GetComponent<RectTransform>(); accentRect.anchorMin = new Vector2(.5f, 1); accentRect.anchorMax = new Vector2(.5f, 1); accentRect.pivot = new Vector2(.5f, 1); accentRect.anchoredPosition = new Vector2(0, -18); accentRect.sizeDelta = new Vector2(46, 5);
@@ -659,7 +652,6 @@ namespace Jci.Presentation
             colors.selectedColor = colors.highlightedColor;
             colors.disabledColor = new Color(background.r, background.g, background.b, 0.45f);
             button.colors = colors;
-            go.AddComponent<JciButtonMotion>();
             var text = AddText(go.transform, label, 17, foreground ?? Color.white, FontStyle.Bold, 58); text.alignment = TextAnchor.MiddleCenter; text.rectTransform.anchorMin = Vector2.zero; text.rectTransform.anchorMax = Vector2.one; text.rectTransform.offsetMin = new Vector2(12, 0); text.rectTransform.offsetMax = new Vector2(-12, 0);
             return button;
         }
@@ -692,14 +684,13 @@ namespace Jci.Presentation
             colors.selectedColor = colors.highlightedColor;
             colors.disabledColor = new Color(normal.r, normal.g, normal.b, 0.45f);
             button.colors = colors;
-            go.AddComponent<JciButtonMotion>();
 
             var badge = new GameObject("Card accent", typeof(RectTransform), typeof(Image));
             badge.transform.SetParent(go.transform, false);
             var badgeRect = badge.GetComponent<RectTransform>(); badgeRect.anchorMin = new Vector2(.5f, 1); badgeRect.anchorMax = new Vector2(.5f, 1); badgeRect.pivot = new Vector2(.5f, 1); badgeRect.anchoredPosition = new Vector2(0, -24); badgeRect.sizeDelta = new Vector2(38, 5);
             badge.GetComponent<Image>().color = accent; badge.GetComponent<Image>().raycastTarget = false;
             var titleText = AddText(go.transform, title, 16, Parse(Ink), FontStyle.Bold, 78); titleText.alignment = TextAnchor.MiddleCenter; titleText.rectTransform.anchorMin = new Vector2(0, .30f); titleText.rectTransform.anchorMax = new Vector2(1, .78f); titleText.rectTransform.offsetMin = new Vector2(9, 0); titleText.rectTransform.offsetMax = new Vector2(-9, 0);
-            var subtitleText = AddText(go.transform, subtitle, 11, new Color(Parse(Ink).r, Parse(Ink).g, Parse(Ink).b, .72f), FontStyle.Normal, 42); subtitleText.alignment = TextAnchor.MiddleCenter; subtitleText.rectTransform.anchorMin = new Vector2(0, .08f); subtitleText.rectTransform.anchorMax = new Vector2(1, .31f); subtitleText.rectTransform.offsetMin = new Vector2(8, 0); subtitleText.rectTransform.offsetMax = new Vector2(-8, 0);
+            var subtitleText = AddText(go.transform, subtitle, 10, new Color(Parse(Ink).r, Parse(Ink).g, Parse(Ink).b, .82f), FontStyle.Normal, 42); subtitleText.alignment = TextAnchor.MiddleCenter; subtitleText.horizontalOverflow = HorizontalWrapMode.Overflow; subtitleText.verticalOverflow = VerticalWrapMode.Overflow; subtitleText.rectTransform.anchorMin = new Vector2(0, .06f); subtitleText.rectTransform.anchorMax = new Vector2(1, .31f); subtitleText.rectTransform.offsetMin = new Vector2(7, 1); subtitleText.rectTransform.offsetMax = new Vector2(-7, -1);
             return button;
         }
 
@@ -762,6 +753,7 @@ namespace Jci.Presentation
     }
 
     /// <summary>Very low-amplitude glass highlight pulse.</summary>
+    [UnityEngine.Scripting.Preserve]
     internal sealed class JciGlassPulse : MonoBehaviour
     {
         private Image image;
@@ -784,6 +776,7 @@ namespace Jci.Presentation
     }
 
     /// <summary>A sequenced card-deal entrance with a gentle settled float.</summary>
+    [UnityEngine.Scripting.Preserve]
     internal sealed class JciCardMotion : MonoBehaviour
     {
         private RectTransform rect;
@@ -818,6 +811,7 @@ namespace Jci.Presentation
     }
 
     /// <summary>Small tactile press response for touch buttons.</summary>
+    [UnityEngine.Scripting.Preserve]
     internal sealed class JciButtonMotion : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
     {
         private RectTransform rect;

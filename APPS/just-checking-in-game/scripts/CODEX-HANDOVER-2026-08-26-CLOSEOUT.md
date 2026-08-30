@@ -287,3 +287,44 @@ Therefore Android is **not the same code** as the iOS 1.1 candidate and must not
   iOS/TestFlight upload, review approval, or public-release claim is made from
   this build. The full Unity test suite still has no results XML because of the
   known host AssetDatabase import stall.
+
+### Android runtime stabilization and Pixel 7 QA (2026-08-30)
+
+- The first version-code-4 APK still emitted repeated `Could not produce class
+  with ID 115` messages from `UnityEngine.InputSystem.InputSystem` and showed a
+  black screen on the Pixel. This was isolated to the new Input System player
+  handler, not JCI content or the Android signing chain.
+- The canonical runtime UI now uses Unity's built-in `StandaloneInputModule`
+  and `ProjectSettings.asset` sets `activeInputHandler: 0`. Dynamic custom motion
+  components are not attached during startup, avoiding the stripped-runtime
+  path while retaining the physical card-deck artwork and ColorTint touch
+  feedback. This is a source stabilization change; no gameplay or privacy
+  behavior changed.
+- Unity `6000.4.5f1` completed a real IL2CPP/ARM64 Android build from the
+  D:-backed disposable project. Final device artifact:
+  `D:\FTC-HOLDING-releases\just-checking-in\android-2026-08-19\JustCheckingIn-1.1.0-code4-standalone-input-pixel-qa-20260830.apk`.
+- Artifact evidence: 28,273,015 bytes; SHA-256
+  `B5C982CA85D80F7AAFEDBFB926B39269DE47BE2251DDB9A742F69263C823DBA6`;
+  package `com.ftcholding.justcheckingin`; version `1.1.0`; version code `4`;
+  min SDK `25`; compile/target SDK `36`; native code `arm64-v8a`; APK Signature
+  Scheme v2; signer certificate SHA-256
+  `3f57ea45405524c9cf9a38ce0774e7dc56b80cf3481696adc04577b77c6825b3`.
+- Pixel 7 (`2B260DLH2000C8`, Android API 37) installed this exact artifact
+  successfully. Fresh launch showed the branded home and system status/navigation
+  bars. Direct touch smoke passed home -> Self mood -> affirmation; Android
+  system Back returned to the previous screen; Together name entry -> active
+  prompt worked; force-stop/relaunch restored the active check-in. No JCI
+  `Could not produce class`, `FATAL EXCEPTION`, `AndroidRuntime`, or ANR output
+  appeared in the filtered log. Evidence screenshots:
+  `pixel7-jci-code4-home-unlocked-attempt-20260830.png`,
+  `pixel7-jci-code4-self-mood-20260830.png`,
+  `pixel7-jci-code4-self-affirmation2-20260830.png`,
+  `pixel7-jci-code4-back-home-20260830.png`,
+  `pixel7-jci-code4-together-picker-20260830.png`,
+  `pixel7-jci-code4-together-active-20260830.png`, and
+  `pixel7-jci-code4-relaunch-resume-20260830.png` in the Android release
+  evidence folder.
+- This is now an installed, runtime-verified Android QA candidate. The full
+  Unity EditMode/PlayMode suite still has no host-produced results XML, and no
+  Google Play upload/public-production claim is made. Build the signed AAB only
+  from this exact source state after the APK gate is accepted.
