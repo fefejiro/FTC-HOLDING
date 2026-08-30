@@ -30,6 +30,8 @@ import {
   type CreateConchSessionInput,
   type RecordMessageLifecycleInput,
   type MessageSearchResult,
+  type CoachConversationTurnInput,
+  type CoachConversationTurn,
   type LinkTimelineSourceInput,
   type SendMessageInput,
   type PersonalityPreference,
@@ -78,6 +80,11 @@ import type {
   SupportResource
 } from "../domain/parentCore";
 import type { ChildProfile } from "../domain/v2";
+import { buildCalmDraft, type PrepEntryMode, type PrepFeeling } from "../legacy/prepChat";
+
+function buildLocalCoachDraft(topic: string, feeling: PrepFeeling, entryMode: PrepEntryMode): string {
+  return buildCalmDraft(topic, feeling, entryMode);
+}
 
 type SeedInvitation = Readonly<{
   code: string;
@@ -946,6 +953,18 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
   async transcribeCoachAudio(bytes: ArrayBuffer, mediaType: "audio/m4a" | "audio/mp4" | "audio/webm") {
     if (bytes.byteLength < 1 || !mediaType.startsWith("audio/")) throw new PeacePadApiError("Voice recording is empty.", "http", 400);
     return { transcript: "Please confirm the pickup time when you can." } as const;
+  }
+
+  async coachConversationTurn(input: CoachConversationTurnInput): Promise<CoachConversationTurn> {
+    const topic = input.topic.trim();
+    if (!topic || topic.length > 4000) throw new PeacePadApiError("Tell Coach what is happening in fewer than 4,000 characters.", "http", 400);
+    const draft = buildLocalCoachDraft(topic, input.feeling, input.entryMode);
+    return {
+      reply: "Let us keep this focused on the child and one clear next step. What outcome would feel workable for everyone?",
+      draft,
+      note: "This is the local demo Coach. A configured provider is required for production coaching.",
+      provider: "local-fallback"
+    };
   }
 
   async listChildProfiles(familyCircleId: EntityId): Promise<readonly ChildProfile[]> {

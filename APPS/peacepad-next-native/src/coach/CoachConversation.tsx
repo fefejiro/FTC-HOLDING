@@ -6,15 +6,17 @@ import * as Speech from "expo-speech";
 import { LabButton } from "../components/LabButton";
 import { colors, spacing, typography } from "../theme";
 import { buildCalmDraft, type PrepEntryMode, type PrepFeeling } from "../legacy/prepChat";
+import type { CoachConversationMessage, CoachConversationTurn } from "../api/CoordinationApi";
 
 const feelings: readonly PrepFeeling[] = ["calm", "anxious", "frustrated", "overwhelmed", "sad", "angry"];
 
 type CoachConversationProps = Readonly<{
   onTranscribe: (bytes: ArrayBuffer, mediaType: "audio/m4a") => Promise<string>;
+  onConversationTurn?: (input: { topic: string; feeling: PrepFeeling; entryMode: PrepEntryMode; messages: readonly CoachConversationMessage[] }) => Promise<CoachConversationTurn>;
   onUseDraft: (draft: string) => void;
 }>;
 
-export function CoachConversation({ onTranscribe, onUseDraft }: CoachConversationProps) {
+export function CoachConversation({ onTranscribe, onConversationTurn, onUseDraft }: CoachConversationProps) {
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder, 250);
   const [open, setOpen] = useState(false);
@@ -25,6 +27,8 @@ export function CoachConversation({ onTranscribe, onUseDraft }: CoachConversatio
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [speaking, setSpeaking] = useState(false);
+  const [turns, setTurns] = useState<readonly CoachConversationMessage[]>([]);
+  const [turnBusy, setTurnBusy] = useState(false);
 
   const startRecording = async () => {
     setError("");
@@ -63,6 +67,24 @@ export function CoachConversation({ onTranscribe, onUseDraft }: CoachConversatio
     }
     setError("");
     setDraft(result);
+  };
+
+  const askCoach = async () => {
+    const topic = conversation.trim();
+    if (!topic) return;
+    setTurnBusy(true);
+    setError("");
+    try {
+      const result = onConversationTurn
+        ? await onConversationTurn({ topic, feeling, entryMode, messages: [...turns, { role: "parent", content: topic }] })
+        : { reply: "Let us keep this focused on the child and one clear next step.", draft: buildCalmDraft(topic, feeling, entryMode) || null, note: null, provider: "local-fallback" as const };
+      setTurns((current) => [...current, { role: "parent", content: topic }, { role: "coach", content: result.reply }]);
+      if (result.draft) setDraft(result.draft);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Coach is unavailable right now. You can still prepare a draft locally.");
+    } finally {
+      setTurnBusy(false);
+    }
   };
 
   const toggleDraftSpeech = async () => {
@@ -112,6 +134,11 @@ export function CoachConversation({ onTranscribe, onUseDraft }: CoachConversatio
           <LabButton disabled={busy} label={recorderState.isRecording ? "Stop and transcribe" : busy ? "Transcribing..." : "Speak to Coach"} onPress={() => void (recorderState.isRecording ? stopAndTranscribe() : startRecording())} />
         </View>
         <LabButton disabled={busy || !conversation.trim()} label="Prepare calm wording" onPress={prepare} />
+        <LabButton disabled={busy || turnBusy || !conversation.trim()} label={turnBusy ? "Coach is thinking..." : "Ask Coach"} onPress={() => void askCoach()} variant="secondary" />
+        {turns.length ? <View accessibilityLabel="Coach conversation history" style={styles.turnsCard}>
+          <Text style={styles.heading}>Coach conversation</Text>
+          {turns.map((turn, index) => <View key={`${turn.role}-${index}`} style={[styles.turn, turn.role === "coach" ? styles.coachTurn : styles.parentTurn]}><Text style={styles.turnLabel}>{turn.role === "coach" ? "Coach" : "You"}</Text><Text style={styles.body}>{turn.content}</Text></View>)}
+        </View> : null}
         {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
         {draft ? <View accessibilityLabel="Coach draft" style={styles.draftCard}>
           <Text style={styles.heading}>Your editable draft</Text>
@@ -119,7 +146,7 @@ export function CoachConversation({ onTranscribe, onUseDraft }: CoachConversatio
           <Text style={styles.caption}>Review it yourself. Coach does not diagnose either parent and does not send anything automatically.</Text>
           <LabButton label={speaking ? "Stop listening" : "Listen to draft"} onPress={() => void toggleDraftSpeech()} variant="secondary" />
           <LabButton disabled={!draft.trim()} label="Use in message" onPress={() => onUseDraft(draft.trim())} />
-          <LabButton label="Start over" onPress={() => { setConversation(""); setDraft(""); setError(""); }} variant="secondary" />
+          <LabButton label="Start over" onPress={() => { setConversation(""); setDraft(""); setTurns([]); setError(""); }} variant="secondary" />
         </View> : null}
       </View> : null}
     </View>
@@ -148,5 +175,10 @@ const styles = StyleSheet.create({
   voiceCard: { backgroundColor: colors.successSurface, borderColor: colors.successBorder, borderRadius: 18, borderWidth: 1, gap: spacing.sm, padding: spacing.md },
   voiceTitle: { ...typography.body, color: colors.successText, fontWeight: "800" },
   draftCard: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 18, borderWidth: 1, gap: spacing.md, padding: spacing.md },
+  turnsCard: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 18, borderWidth: 1, gap: spacing.sm, padding: spacing.md },
+  turn: { borderRadius: 14, gap: spacing.xs, padding: spacing.sm },
+  parentTurn: { backgroundColor: colors.cream },
+  coachTurn: { backgroundColor: colors.successSurface },
+  turnLabel: { ...typography.caption, color: colors.muted, fontWeight: "800" },
   error: { ...typography.body, color: colors.dangerText }
 });

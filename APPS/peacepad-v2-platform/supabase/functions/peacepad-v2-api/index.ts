@@ -21,6 +21,8 @@ type RuntimeConfig = Readonly<{
   supportDiscoveryToken: string;
   coachTranscriptionUrl: string;
   coachTranscriptionToken: string;
+  coachConversationUrl: string;
+  coachConversationToken: string;
   environment: DeploymentEnvironment;
   productionWritesEnabled: boolean;
 }>;
@@ -104,6 +106,8 @@ const readConfig = (): RuntimeConfig => {
     supportDiscoveryToken: env("PEACEPAD_SUPPORT_DISCOVERY_TOKEN"),
     coachTranscriptionUrl: env("PEACEPAD_COACH_TRANSCRIPTION_URL"),
     coachTranscriptionToken: env("PEACEPAD_COACH_TRANSCRIPTION_TOKEN"),
+    coachConversationUrl: env("PEACEPAD_COACH_CONVERSATION_URL"),
+    coachConversationToken: env("PEACEPAD_COACH_CONVERSATION_TOKEN"),
     environment: environment as DeploymentEnvironment,
     // Production starts fail-closed. It can only accept writes after an explicit,
     // separately reviewed enablement change.
@@ -1015,6 +1019,45 @@ const handler = async (request: Request): Promise<Response> => {
       return json(request, 200, { transcript }, requestId, config);
     } catch {
       return failure(request, 503, "CONFIGURATION_ERROR", "Coach voice is temporarily unavailable. You can still type to Coach.", requestId, config);
+    }
+  }
+
+  if (request.method === "POST" && path === "/api/v2/coach/conversation") {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
+    if (!config.coachConversationUrl || !config.coachConversationToken) {
+      return failure(request, 503, "CONFIGURATION_ERROR", "Coach conversation is temporarily unavailable. You can still prepare a draft.", requestId, config);
+    }
+    const body = await readJsonObject(request);
+    const conversationId = typeof body?.conversationId === "string" ? body.conversationId : "";
+    const topic = typeof body?.topic === "string" ? body.topic.trim() : "";
+    const feeling = typeof body?.feeling === "string" ? body.feeling : "";
+    const entryMode = typeof body?.entryMode === "string" ? body.entryMode : "";
+    const messages = Array.isArray(body?.messages) ? body.messages : [];
+    if (!isUuid(conversationId) || !topic || topic.length > 4000 || !["calm", "anxious", "frustrated", "overwhelmed", "sad", "angry"].includes(feeling) || !["sending", "received"].includes(entryMode) || messages.length > 12 || messages.some((item) => !item || !["parent", "coach"].includes(item.role) || typeof item.content !== "string" || !item.content.trim() || item.content.length > 4000)) {
+      return failure(request, 400, "INVALID_REQUEST", "Coach conversation details are invalid.", requestId, config);
+    }
+    const { data: authorized, error } = await authenticated.admin.rpc("peacepad_v2_authorize_coach_conversation", {
+      p_identity_id: authenticated.user.id, p_region: config.region, p_conversation_id: conversationId,
+    });
+    if (error) return rpcFailure(request, requestId, config, error.message);
+    if (authorized !== true) return failure(request, 403, "CONVERSATION_ACCESS_DENIED", "You do not have access to this conversation.", requestId, config);
+    try {
+      const upstream = await fetch(config.coachConversationUrl, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${config.coachConversationToken}`, "Content-Type": "application/json", "X-PeacePad-Region": config.region, "X-PeacePad-Purpose": "coach-conversation" },
+        body: JSON.stringify({ topic, feeling, entryMode, messages: messages.slice(-8).map((item) => ({ role: item.role, content: item.content.trim() })) }),
+      });
+      const payload = await upstream.json().catch(() => null) as { reply?: unknown; draft?: unknown; note?: unknown } | null;
+      const reply = typeof payload?.reply === "string" ? payload.reply.trim() : "";
+      const draft = payload?.draft === null || typeof payload?.draft === "undefined" ? null : typeof payload.draft === "string" ? payload.draft.trim() : "invalid";
+      const note = payload?.note === null || typeof payload?.note === "undefined" ? null : typeof payload.note === "string" ? payload.note.trim() : "invalid";
+      if (!upstream.ok || !reply || reply.length > 4000 || draft === "invalid" || note === "invalid" || (typeof draft === "string" && draft.length > 4000) || (typeof note === "string" && note.length > 1000)) {
+        return failure(request, 502, "INVALID_UPSTREAM_RESPONSE", "Coach could not prepare a response. You can still prepare a draft.", requestId, config);
+      }
+      return json(request, 200, { reply, draft, note, provider: "configured" }, requestId, config);
+    } catch {
+      return failure(request, 503, "CONFIGURATION_ERROR", "Coach conversation is temporarily unavailable. You can still prepare a draft.", requestId, config);
     }
   }
 

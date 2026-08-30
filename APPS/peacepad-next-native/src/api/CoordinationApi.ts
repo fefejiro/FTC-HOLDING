@@ -176,6 +176,26 @@ export type CreateConchSessionInput = Readonly<{
   turnDurationSeconds: number;
 }>;
 
+export type CoachConversationMessage = Readonly<{
+  role: "parent" | "coach";
+  content: string;
+}>;
+
+export type CoachConversationTurnInput = Readonly<{
+  conversationId: EntityId;
+  topic: string;
+  feeling: "calm" | "anxious" | "frustrated" | "overwhelmed" | "sad" | "angry";
+  entryMode: "sending" | "received";
+  messages: readonly CoachConversationMessage[];
+}>;
+
+export type CoachConversationTurn = Readonly<{
+  reply: string;
+  draft: string | null;
+  note: string | null;
+  provider: "configured" | "local-fallback";
+}>;
+
 export type AudioCallSignal = Readonly<
   | { kind: "offer"; payload: Readonly<{ sdp: string }> }
   | { kind: "answer"; payload: Readonly<{ sdp: string }> }
@@ -443,6 +463,7 @@ export interface PeacePadCoordinationApi {
   ): Promise<MessageCheckPreference>;
   previewMessage(conversationId: EntityId, content: string): Promise<MessagePreviewResponse>;
   transcribeCoachAudio(bytes: ArrayBuffer, mediaType: "audio/m4a" | "audio/mp4" | "audio/webm"): Promise<Readonly<{ transcript: string }>>;
+  coachConversationTurn(input: CoachConversationTurnInput): Promise<CoachConversationTurn>;
   getCurrentAudioCall(conversationId: EntityId): Promise<AudioCallSession | null>;
   createAudioCall(conversationId: EntityId, context: WriteContext): Promise<AudioCallSession>;
   acceptAudioCall(callId: EntityId, context: WriteContext): Promise<AudioCallSession>;
@@ -1028,6 +1049,29 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
       throw new PeacePadApiError("PeacePad could not verify the Coach transcript.", "http", 502);
     }
     return { transcript: result.transcript.trim() };
+  }
+
+  coachConversationTurn(input: CoachConversationTurnInput) {
+    const topic = input.topic.trim();
+    if (!topic || topic.length > 4000 || input.messages.length > 12) {
+      return Promise.reject(new PeacePadApiError("Tell Coach what is happening in fewer than 4,000 characters.", "http", 400));
+    }
+    const messages = input.messages.map((message) => ({ role: message.role, content: message.content.trim() }));
+    if (messages.some((message) => !message.content || message.content.length > 4000)) {
+      return Promise.reject(new PeacePadApiError("Coach could not read one of those messages.", "http", 400));
+    }
+    return this.request<CoachConversationTurn>("/api/v2/coach/conversation", {
+      method: "POST",
+      body: JSON.stringify({ topic, feeling: input.feeling, entryMode: input.entryMode, messages })
+    }).then((result) => {
+      if (!result || typeof result.reply !== "string" || !result.reply.trim() || result.reply.length > 4000 ||
+        (result.draft !== null && typeof result.draft !== "string") ||
+        (result.note !== null && typeof result.note !== "string") ||
+        result.provider !== "configured") {
+        throw new PeacePadApiError("PeacePad could not verify the Coach response.", "http", 502);
+      }
+      return { ...result, reply: result.reply.trim(), draft: result.draft?.trim() || null, note: result.note?.trim() || null };
+    });
   }
 
   createMediaCall(conversationId: EntityId, mediaType: "audio" | "video", context: WriteContext) {

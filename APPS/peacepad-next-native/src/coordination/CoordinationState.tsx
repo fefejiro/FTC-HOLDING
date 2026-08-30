@@ -6,6 +6,8 @@ import {
   InvitationError,
   type CreatedInvitation,
   type MessageSearchResult,
+  type CoachConversationTurn,
+  type CoachConversationTurnInput,
   type PeacePadCoordinationApi
 } from "../api/CoordinationApi";
 import { defaultCalendarLayers, SyntheticCoordinationApi } from "../api/SyntheticCoordinationApi";
@@ -147,6 +149,7 @@ type CoordinationStateValue = {
   uploadMessageAttachment: (input: Readonly<{ originalFileName: string; mediaType: AttachmentMediaType; bytes: ArrayBuffer }>) => Promise<void>;
   openMessageAttachment: (attachmentId: string) => Promise<string>;
   transcribeCoachAudio: (bytes: ArrayBuffer, mediaType: "audio/m4a" | "audio/mp4" | "audio/webm") => Promise<string>;
+  coachConversationTurn: (input: Omit<CoachConversationTurnInput, "conversationId">) => Promise<CoachConversationTurn>;
   setMessageCheckEnabled: (enabled: boolean) => Promise<void>;
   checkMessage: () => Promise<void>;
   sendMessage: (useSuggestion: boolean) => Promise<void>;
@@ -831,6 +834,10 @@ export function CoordinationStateProvider({
     transcribeCoachAudio: async (bytes, mediaType) => {
       const result = await resolvedApi.transcribeCoachAudio(bytes, mediaType);
       return result.transcript;
+    },
+    coachConversationTurn: async (input) => {
+      if (!hasConnectedConversation(activeRuntime)) throw new Error("Connect another parent before using shared Coach context.");
+      return resolvedApi.coachConversationTurn({ ...input, conversationId: activeRuntime.conversationId });
     },
     setMessageCheckEnabled: async (enabled) => {
       if (!hasConnectedConversation(activeRuntime) || (!demoMode && !messageCheckHydrated)) return;

@@ -19,4 +19,24 @@ describe("CoachConversation", () => {
     fireEvent.press(view.getByText("Use in message"));
     await waitFor(() => expect(onUseDraft).toHaveBeenCalledWith(expect.stringContaining("Saturday pickup")));
   });
+
+  it("keeps a provider-backed Coach turn private until the parent chooses the draft", async () => {
+    const onUseDraft = jest.fn();
+    const onConversationTurn = jest.fn(async () => ({
+      reply: "A clear pickup time would help. What time works for you?",
+      draft: "Could we confirm the pickup time for Saturday?",
+      note: null,
+      provider: "configured" as const
+    }));
+    const view = render(<CoachConversation onConversationTurn={onConversationTurn} onTranscribe={jest.fn()} onUseDraft={onUseDraft} />);
+
+    fireEvent.press(view.getByText("Open Coach"));
+    fireEvent.changeText(view.getByLabelText("Coach conversation"), "Saturday pickup");
+    fireEvent.press(view.getByText("Ask Coach"));
+
+    await waitFor(() => expect(onConversationTurn).toHaveBeenCalledWith(expect.objectContaining({ topic: "Saturday pickup" })));
+    expect(view.getByLabelText("Coach conversation history")).toBeTruthy();
+    expect(view.getByText("A clear pickup time would help. What time works for you?")).toBeTruthy();
+    expect(onUseDraft).not.toHaveBeenCalled();
+  });
 });

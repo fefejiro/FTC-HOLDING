@@ -44,6 +44,13 @@ WebView or a legacy-island bridge.
   adapter, can be stopped by the parent, and remain editable and deliberately
   shared. Typed and transcribed input continue to work when speech playback is
   unavailable.
+- Coach now has a private multi-turn native conversation surface. It sends only
+  the bounded parent/Coach exchange, feeling and intended action to the
+  protected V2 provider contract; it never sends automatically, stores no
+  transcript, and keeps the returned draft editable. The provider is
+  deliberately fail-closed until `PEACEPAD_COACH_CONVERSATION_URL` and its
+  scoped token are configured. The local synthetic adapter exists only for the
+  lab/test runtime and declares itself as such.
 - The approved family-first visual system is used across the added native
   screens: purple anchor with coral, sun, aqua, cream, warm copy and no emoji
   product icons.
@@ -73,7 +80,7 @@ APPS/peacepad-v2-platform/scripts/validate-supabase-edge-function.ps1
 git diff --check
 ```
 
-The current full Native suite is 65 passing suites and 471 passing tests with
+The current full Native suite is 66 passing suites and 474 passing tests with
 one intentionally skipped test. A direct Deno check reaches four pre-existing
 generated Supabase typing errors in incoming-call push code; it reports no new
 parenting-schedule error. The missing root `scripts/audit-secrets.cjs` command

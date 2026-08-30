@@ -810,6 +810,7 @@ export function MessagesScreen() {
     uploadMessageAttachment,
     openMessageAttachment,
     transcribeCoachAudio,
+    coachConversationTurn,
     setMessageSearchQuery,
     startCorrection
   } = useCoordinationState();
@@ -827,7 +828,7 @@ export function MessagesScreen() {
         title={m("title")}
       />
 
-      <CoachConversation onTranscribe={transcribeCoachAudio} onUseDraft={setMessageDraft} />
+      <CoachConversation onTranscribe={transcribeCoachAudio} onConversationTurn={coachConversationTurn} onUseDraft={setMessageDraft} />
 
       <View style={[styles.card, { backgroundColor: colors.successSurface, borderColor: colors.successBorder }]}>
         <Text style={styles.heading}>Photos, files, and voice notes</Text>
