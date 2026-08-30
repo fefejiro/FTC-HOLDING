@@ -225,8 +225,8 @@ const styles = StyleSheet.create({
   unavailable: { backgroundColor: colors.background, flex: 1, justifyContent: "center", padding: spacing.xl },
   unavailableTitle: { color: colors.text, fontSize: 28, fontWeight: "800", marginBottom: spacing.sm },
   unavailableBody: { color: colors.muted, fontSize: 16 },
-  connectionRequired: { flex: 1, gap: spacing.md, justifyContent: "center", padding: spacing.xl },
+  connectionRequired: { backgroundColor: "#FFE4D6", borderColor: "#F2A791", borderRadius: 28, borderWidth: 1, flex: 1, gap: spacing.md, justifyContent: "center", margin: spacing.lg, padding: spacing.xl },
   connectionRequiredTitle: { color: colors.text, fontSize: 24, fontWeight: "800" },
   connectionRequiredBody: { color: colors.muted, fontSize: 16, lineHeight: 24 },
-  connectionRequiredLink: { color: colors.brand, fontSize: 16, fontWeight: "800" }
+  connectionRequiredLink: { color: colors.coral, fontSize: 16, fontWeight: "900" }
 });

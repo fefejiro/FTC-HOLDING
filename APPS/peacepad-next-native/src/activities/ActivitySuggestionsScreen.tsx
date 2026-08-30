@@ -101,8 +101,8 @@ export function ActivitySuggestionsScreen({ onPlanActivity }: { onPlanActivity: 
       </View>
 
       <Text accessibilityLabel="Activity result count" style={styles.caption}>{text.result(suggestions.length)}</Text>
-      {suggestions.map((suggestion) => (
-        <View key={suggestion.id} style={styles.card}>
+      {suggestions.map((suggestion, index) => (
+        <View key={suggestion.id} style={[styles.card, index % 3 === 0 ? styles.cardSun : index % 3 === 1 ? styles.cardAqua : styles.cardCoral]}>
           <Text style={styles.suggestionTitle}>{suggestion.title}</Text>
           <Text style={styles.caption}>{suggestion.activityType} · {suggestion.category} · {suggestion.duration}</Text>
           <Text style={styles.body}>{suggestion.description}</Text>
@@ -121,15 +121,18 @@ const styles = StyleSheet.create({
   title: { ...typography.title },
   heading: { ...typography.heading, marginTop: spacing.xs },
   body: { ...typography.body, color: colors.muted, lineHeight: 22 },
-  privacyNote: { ...typography.caption, backgroundColor: colors.successSurface, borderColor: colors.successBorder, borderRadius: 14, borderWidth: 1, color: colors.successText, padding: spacing.md },
-  input: { ...typography.body, backgroundColor: colors.background, borderColor: colors.border, borderRadius: 12, borderWidth: 1, color: colors.text, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  privacyNote: { ...typography.caption, backgroundColor: "#DDF6F0", borderColor: "#76CCBE", borderRadius: 18, borderWidth: 1, color: colors.successText, padding: spacing.md },
+  input: { ...typography.body, backgroundColor: colors.surface, borderColor: "#E7C8BD", borderRadius: 18, borderWidth: 1, color: colors.text, paddingHorizontal: spacing.md, paddingVertical: spacing.md },
   weatherSummary: { ...typography.caption, color: colors.text, fontWeight: "700" },
   error: { ...typography.caption, color: colors.dangerText },
   caption: { ...typography.caption, color: colors.muted },
-  card: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 16, borderWidth: 1, gap: spacing.sm, padding: spacing.md },
+  card: { borderRadius: 22, borderWidth: 1, gap: spacing.sm, padding: spacing.lg },
+  cardSun: { backgroundColor: "#FFF1B8", borderColor: "#F0C940" },
+  cardAqua: { backgroundColor: "#DDF6F0", borderColor: "#76CCBE" },
+  cardCoral: { backgroundColor: "#FFE4D6", borderColor: "#F2A791" },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   chip: { borderColor: colors.border, borderRadius: 999, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  chipActive: { backgroundColor: colors.brand, borderColor: colors.brand },
+  chipActive: { backgroundColor: colors.coral, borderColor: colors.coral },
   chipText: { ...typography.caption, color: colors.text, fontWeight: "700" },
   chipTextActive: { color: colors.surface },
   suggestionTitle: { ...typography.heading },

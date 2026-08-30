@@ -40,10 +40,17 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md
   },
   primary: {
-    backgroundColor: colors.brand
+    backgroundColor: colors.coral,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 2
   },
   secondary: {
-    backgroundColor: colors.brandSoft
+    backgroundColor: colors.cream,
+    borderColor: colors.border,
+    borderWidth: 1
   },
   pressed: {
     opacity: 0.78
@@ -57,6 +64,6 @@ const styles = StyleSheet.create({
   },
   secondaryText: {
     ...typography.subheading,
-    color: colors.brand
+    color: colors.text
   }
 });

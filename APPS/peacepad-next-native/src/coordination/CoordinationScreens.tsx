@@ -1021,21 +1021,21 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
   return (
     <View style={styles.stack}>
       <AccessibleHeading style={styles.title}>{t("more.title")}</AccessibleHeading>
-      <Pressable accessibilityRole="button" onPress={() => setScreen("invite")} style={styles.actionCard}>
-        <Text style={styles.actionTitle}>{t("more.family.title")}</Text>
+      <Pressable accessibilityRole="button" onPress={() => setScreen("invite")} style={[styles.actionCard, styles.moreFamilyCard]}>
+        <View style={styles.cardHeadingRow}><Text accessible={false} style={styles.cardEmoji}>🤝</Text><Text style={styles.actionTitle}>{t("more.family.title")}</Text></View>
         <Text style={styles.caption}>{t("more.family.body")}</Text>
       </Pressable>
-      <View style={styles.actionCard}>
-        <Text style={styles.actionTitle}>{t("more.privacy.title")}</Text>
+      <View style={[styles.actionCard, styles.morePrivacyCard]}>
+        <View style={styles.cardHeadingRow}><Text accessible={false} style={styles.cardEmoji}>🛡️</Text><Text style={styles.actionTitle}>{t("more.privacy.title")}</Text></View>
         <Text style={styles.caption}>{t("more.privacy.body")}</Text>
       </View>
-      <Pressable accessibilityRole="button" onPress={() => setShowSupport((current) => !current)} style={styles.actionCard}>
-        <Text style={styles.actionTitle}>{t("more.support.title")}</Text>
+      <Pressable accessibilityRole="button" onPress={() => setShowSupport((current) => !current)} style={[styles.actionCard, styles.moreSupportCard]}>
+        <View style={styles.cardHeadingRow}><Text accessible={false} style={styles.cardEmoji}>💛</Text><Text style={styles.actionTitle}>{t("more.support.title")}</Text></View>
         <Text style={styles.caption}>{t("more.support.body")}</Text>
       </Pressable>
       {showSupport ? <View style={styles.actionCardLargeText}><SupportPanel /></View> : null}
-      <Pressable accessibilityRole="button" onPress={() => setReplayIntroduction(true)} style={styles.actionCard}>
-        <Text style={styles.actionTitle}>{t("more.introduction.title")}</Text>
+      <Pressable accessibilityRole="button" onPress={() => setReplayIntroduction(true)} style={[styles.actionCard, styles.moreIntroCard]}>
+        <View style={styles.cardHeadingRow}><Text accessible={false} style={styles.cardEmoji}>✨</Text><Text style={styles.actionTitle}>{t("more.introduction.title")}</Text></View>
         <Text style={styles.caption}>{t("more.introduction.body")}</Text>
       </Pressable>
       <LinkedSignInMethods />
@@ -1173,7 +1173,11 @@ const styles = StyleSheet.create({
   heroBubble: { backgroundColor: "#72D7C9", borderRadius: 999, bottom: -35, height: 92, opacity: 0.38, position: "absolute", right: 54, width: 92 },
   logo: { borderRadius: 23, height: 72, width: 72, zIndex: 2 },
   actionGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
-  actionCard: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 22, borderWidth: 1, gap: spacing.sm, justifyContent: "center", minHeight: 88, minWidth: "46%", padding: spacing.lg, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 1 },
+  actionCard: { backgroundColor: "#FFF1DF", borderColor: "#F2C8B5", borderRadius: 24, borderWidth: 1, gap: spacing.sm, justifyContent: "center", minHeight: 88, minWidth: "46%", padding: spacing.lg, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 1 },
+  moreFamilyCard: { backgroundColor: "#EAF6CF", borderColor: "#BBD781" },
+  morePrivacyCard: { backgroundColor: "#DDF6F0", borderColor: "#76CCBE" },
+  moreSupportCard: { backgroundColor: "#FFF1B8", borderColor: "#F0C940" },
+  moreIntroCard: { backgroundColor: "#FFE4D6", borderColor: "#F2A791" },
   actionCardLargeText: { minWidth: "100%", width: "100%" },
   actionTitle: { ...typography.subheading, color: colors.text },
   languageOptions: { gap: spacing.sm, marginTop: spacing.sm },
@@ -1212,11 +1216,11 @@ const styles = StyleSheet.create({
   callTitle: { ...typography.subheading, color: colors.brand },
   inviteCard: { backgroundColor: "#EAF6CF", borderColor: "#BBD781", borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg },
   inviteTitle: { ...typography.subheading, color: colors.successText },
-  card: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 22, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
+  card: { backgroundColor: "#FFFDF8", borderColor: "#E7C8BD", borderRadius: 24, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
   successCard: { backgroundColor: colors.successSurface, borderColor: colors.successBorder, borderRadius: 22, borderWidth: 1, gap: spacing.sm, padding: spacing.lg },
   confirmCard: { backgroundColor: colors.warningSurface, borderColor: colors.warningBorder, borderRadius: 22, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
-  assistCard: { backgroundColor: colors.brandSoft, borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
-  codeInput: { ...typography.title, backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 20, borderWidth: 1, color: colors.text, letterSpacing: 12, padding: spacing.lg, textAlign: "center" },
+  assistCard: { backgroundColor: "#FFE4D6", borderColor: "#F2A791", borderRadius: 24, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
+  codeInput: { ...typography.title, backgroundColor: colors.surface, borderColor: "#76CCBE", borderRadius: 22, borderWidth: 2, color: colors.text, letterSpacing: 12, padding: spacing.lg, textAlign: "center" },
   invitationCode: { ...typography.heading, color: colors.brand, letterSpacing: 8, textAlign: "center" },
   qrCard: { alignItems: "center", alignSelf: "center", backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: spacing.sm, padding: spacing.md },
   qrLabel: { ...typography.caption, color: colors.text, fontWeight: "800" },
@@ -1224,13 +1228,13 @@ const styles = StyleSheet.create({
   errorText: { ...typography.caption, color: colors.dangerText, fontWeight: "700" },
   success: { ...typography.body, color: colors.successText, fontWeight: "700" },
   titleRow: { flexDirection: "row", justifyContent: "space-between" },
-  segmented: { backgroundColor: colors.brandSoft, borderRadius: 18, flexDirection: "row", padding: spacing.xs },
+  segmented: { backgroundColor: colors.cream, borderRadius: 18, flexDirection: "row", padding: spacing.xs },
   segment: { alignItems: "center", borderRadius: 14, flex: 1, justifyContent: "center", minHeight: 48, paddingVertical: spacing.md },
   segmentActive: { backgroundColor: colors.surface },
   segmentText: { ...typography.body, color: colors.muted, fontWeight: "700" },
   segmentTextActive: { color: colors.brand },
   calendarNavigation: { flexDirection: "row", gap: spacing.sm, justifyContent: "space-between" },
-  calendarCanvas: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: spacing.md, minHeight: 180, padding: spacing.lg },
+  calendarCanvas: { backgroundColor: "#FFFDF8", borderColor: "#F0C940", borderRadius: 24, borderWidth: 1, gap: spacing.md, minHeight: 180, padding: spacing.lg },
   calendarMonth: { ...typography.heading, color: colors.text },
   calendarEmpty: { ...typography.body, color: colors.muted },
   monthGrid: { flexDirection: "row", flexWrap: "wrap" },
@@ -1256,7 +1260,7 @@ const styles = StyleSheet.create({
   layerDot: { borderRadius: 999, height: 16, width: 16 },
   smallButton: { alignItems: "center", backgroundColor: colors.brandSoft, borderRadius: 999, justifyContent: "center", minHeight: 44, minWidth: 64, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   smallButtonText: { ...typography.caption, color: colors.brand, fontWeight: "800" },
-  input: { ...typography.body, backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 18, borderWidth: 1, color: colors.text, minHeight: 52, padding: spacing.md },
+  input: { ...typography.body, backgroundColor: colors.surface, borderColor: "#E7C8BD", borderRadius: 18, borderWidth: 1, color: colors.text, minHeight: 52, padding: spacing.md },
   messageInput: { minHeight: 120, textAlignVertical: "top" },
   wrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   chip: { alignItems: "center", backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 999, borderWidth: 1, justifyContent: "center", minHeight: 44, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },

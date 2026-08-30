@@ -8,7 +8,7 @@ export type PrimaryTaskScreen = "home" | "messages" | "calendar" | "records" | "
 const tasks: readonly { id: PrimaryTaskScreen; labelKey: MessageKey; symbol: string }[] = [
   { id: "home", labelKey: "navigation.home", symbol: "⌂" },
   { id: "messages", labelKey: "navigation.messages", symbol: "✉" },
-  { id: "calendar", labelKey: "navigation.calendar", symbol: "□" },
+  { id: "calendar", labelKey: "navigation.calendar", symbol: "▣" },
   { id: "records", labelKey: "navigation.records", symbol: "▤" },
   { id: "more", labelKey: "navigation.more", symbol: "•••" }
 ];
@@ -28,7 +28,7 @@ export function TaskNavigation({ active, available = tasks.map((task) => task.id
             accessibilityState={{ selected }}
             key={task.id}
             onPress={() => onSelect(task.id)}
-            style={({ pressed }) => [styles.item, largeText ? styles.itemLargeText : null, pressed ? styles.pressed : null]}
+            style={({ pressed }) => [styles.item, selected ? styles.itemSelected : null, largeText ? styles.itemLargeText : null, pressed ? styles.pressed : null]}
           >
             <Text accessible={false} style={[styles.symbol, selected ? styles.selected : null]}>{task.symbol}</Text>
             <Text accessible={false} style={[styles.label, selected ? styles.selected : null]} numberOfLines={largeText ? 2 : 1}>{label}</Text>
@@ -40,9 +40,10 @@ export function TaskNavigation({ active, available = tasks.map((task) => task.id
 }
 
 const styles = StyleSheet.create({
-  bar: { alignItems: "center", backgroundColor: colors.surface, borderTopColor: colors.border, borderTopWidth: 1, flexDirection: "row", justifyContent: "space-around", paddingBottom: spacing.sm, paddingHorizontal: spacing.xs, paddingTop: spacing.sm },
+  bar: { alignItems: "center", backgroundColor: "#FFFDF8", borderTopColor: colors.border, borderTopWidth: 1, flexDirection: "row", justifyContent: "space-around", paddingBottom: spacing.sm, paddingHorizontal: spacing.sm, paddingTop: spacing.sm },
   barLargeText: { paddingTop: spacing.md },
   item: { alignItems: "center", flex: 1, gap: 2, minHeight: 48, justifyContent: "center" },
+  itemSelected: { backgroundColor: colors.brandSoft, borderRadius: 16 },
   itemLargeText: { minHeight: 68 },
   pressed: { opacity: 0.65 },
   symbol: { color: colors.muted, fontSize: 20, fontWeight: "800" },
