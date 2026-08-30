@@ -3,6 +3,7 @@ import * as SecureStore from "expo-secure-store";
 import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, Share, StyleSheet, Text, TextInput, View } from "react-native";
 import type { CreatedInvitation, PeacePadCoordinationApi, PersonalityPreference, PersonalityType } from "../api/CoordinationApi";
 import { RecordsStateProvider } from "../records/RecordsState";
+import { ParentCoreStateProvider } from "../parentCore/ParentCoreState";
 import { createStagingCoordinationClient } from "../staging/StagingCoordinationClient";
 import type { CoordinationRuntime } from "../coordination/CoordinationState";
 import { CoordinationStateProvider } from "../coordination/CoordinationState";
@@ -212,9 +213,9 @@ export function PeacePadStagingRuntime({
   const audioMediaRuntime = useMemo<AudioCallMediaRuntime | undefined>(() => auth.realtimeClient ? {
     getAccessToken: auth.getAccessToken,
     realtimeClient: auth.realtimeClient,
-    createMedia: async (iceServers, callbacks) => {
+    createMedia: async (iceServers, callbacks, mediaType) => {
       const { NativeAudioMediaSession } = await import("../calls/NativeAudioMedia");
-      return NativeAudioMediaSession.create(iceServers, callbacks);
+      return NativeAudioMediaSession.create(iceServers, callbacks, mediaType);
     }
   } : undefined, [auth.getAccessToken, auth.realtimeClient]);
   const [email, setEmail] = useState("");
@@ -711,9 +712,11 @@ export function PeacePadStagingRuntime({
           setIncomingInvitationCode(undefined);
         }} runtime={runtimeState.runtime}>
           <AudioCallStateProvider api={runtimeState.api} mediaRuntime={audioMediaRuntime} runtime={runtimeState.runtime}>
-            <RecordsStateProvider api={runtimeState.api} runtime={runtimeState.runtime}>
-              {children}
-            </RecordsStateProvider>
+            <ParentCoreStateProvider api={runtimeState.api} runtime={runtimeState.runtime}>
+              <RecordsStateProvider api={runtimeState.api} runtime={runtimeState.runtime}>
+                {children}
+              </RecordsStateProvider>
+            </ParentCoreStateProvider>
           </AudioCallStateProvider>
         </CoordinationStateProvider>
       </StagingAccountActionsProvider>
@@ -790,9 +793,11 @@ function PrivateCoordinationWorkspace({
           assertAcceptedInvitation(result, privateRuntime.actorIdentityId, privateRuntime.region);
           onInvitationAccepted();
         }} runtime={privateRuntime}>
-          <RecordsStateProvider api={api} runtime={privateRuntime}>
-            {children}
-          </RecordsStateProvider>
+          <ParentCoreStateProvider api={api} runtime={privateRuntime}>
+            <RecordsStateProvider api={api} runtime={privateRuntime}>
+              {children}
+            </RecordsStateProvider>
+          </ParentCoreStateProvider>
         </CoordinationStateProvider>
       </StagingAccountActionsProvider>
     </PendingStagingInvitationProvider>

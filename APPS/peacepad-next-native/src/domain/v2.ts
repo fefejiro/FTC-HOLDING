@@ -242,10 +242,14 @@ export type AttachmentMediaType =
   | "image/jpeg"
   | "image/png"
   | "application/pdf"
-  | "text/plain";
+  | "text/plain"
+  | "audio/m4a"
+  | "audio/mp4"
+  | "audio/webm";
 
 export type AttachmentTarget =
   | Readonly<{ kind: "conversation"; conversationId: EntityId }>
+  | Readonly<{ kind: "expense-receipt" }>
   | Readonly<{ kind: "private-binder"; binderId: EntityId }>;
 
 export type AttachmentUploadIntent = VersionedEntity &
@@ -276,6 +280,40 @@ export type PrivateAttachment = VersionedEntity &
 
 export type PrivateAttachmentDownload = Readonly<{
   attachment: PrivateAttachment;
+  downloadUrl: string;
+  expiresAt: IsoUtcTimestamp;
+}>;
+
+export type ConversationAttachment = VersionedEntity & Readonly<{
+  familyCircleId: EntityId;
+  ownerIdentityId: EntityId;
+  target: Readonly<{ kind: "conversation"; conversationId: EntityId }>;
+  originalFileName: string;
+  mediaType: AttachmentMediaType;
+  byteLength: number;
+  status: "available";
+  occurredAt: IsoUtcTimestamp;
+}>;
+
+export type ExpenseReceiptAttachment = VersionedEntity & Readonly<{
+  familyCircleId: EntityId;
+  ownerIdentityId: EntityId;
+  target: Readonly<{ kind: "expense-receipt" }>;
+  originalFileName: string;
+  mediaType: "image/jpeg" | "image/png" | "application/pdf";
+  byteLength: number;
+  status: "available";
+  linkedExpenseId: EntityId | null;
+}>;
+
+export type ExpenseReceiptDownload = Readonly<{
+  attachment: ExpenseReceiptAttachment;
+  downloadUrl: string;
+  expiresAt: IsoUtcTimestamp;
+}>;
+
+export type ConversationAttachmentDownload = Readonly<{
+  attachment: ConversationAttachment;
   downloadUrl: string;
   expiresAt: IsoUtcTimestamp;
 }>;

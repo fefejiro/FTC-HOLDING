@@ -16,6 +16,19 @@ jest.mock("expo-network", () => ({
 
 jest.mock("expo-device", () => ({ isDevice: true }));
 
+jest.mock("expo-audio", () => ({
+  AudioModule: { requestRecordingPermissionsAsync: jest.fn(async () => ({ granted: true })) },
+  RecordingPresets: { HIGH_QUALITY: {} },
+  setAudioModeAsync: jest.fn(async () => undefined),
+  useAudioRecorder: jest.fn(() => ({
+    prepareToRecordAsync: jest.fn(async () => undefined),
+    record: jest.fn(),
+    stop: jest.fn(async () => undefined),
+    uri: "file:///coach.m4a"
+  })),
+  useAudioRecorderState: jest.fn(() => ({ canRecord: true, durationMillis: 0, isRecording: false, url: null }))
+}));
+
 jest.mock("expo-constants", () => ({
   __esModule: true,
   default: {

@@ -19,6 +19,13 @@ import {
   type CreatedFamily,
   type AccountExportManifest,
   type CreateScheduleEventInput,
+  type CreateChildProfileInput,
+  type CreateChildUpdateInput,
+  type CreateExpenseInput,
+  type CreateSettlementInput,
+  type SupportSearchInput,
+  type CreateScheduledCallInput,
+  type CreateConchSessionInput,
   type RecordMessageLifecycleInput,
   type MessageSearchResult,
   type LinkTimelineSourceInput,
@@ -35,6 +42,10 @@ import {
   type ActorReference,
   type CalendarLayer,
   type Conversation,
+  type ConversationAttachment,
+  type ConversationAttachmentDownload,
+  type ExpenseReceiptAttachment,
+  type ExpenseReceiptDownload,
   type EntityId,
   type FamilyInvitation,
   type InvitationPreview,
@@ -50,6 +61,19 @@ import {
   type VersionedEntity,
   type WriteContext
 } from "../domain/v2";
+import type {
+  ChildUpdate,
+  ConchReaction,
+  ConchSession,
+  ConchTurn,
+  ExpenseSettlement,
+  FamilyBalance,
+  FamilyExpense,
+  MediaCallSession,
+  ScheduledCall,
+  SupportResource
+} from "../domain/parentCore";
+import type { ChildProfile } from "../domain/v2";
 
 type SeedInvitation = Readonly<{
   code: string;
@@ -136,6 +160,8 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
   private binders: CaseBinder[] = [];
   private timelineEntries: PrivateTimelineEntry[] = [];
   private attachments: PrivateAttachment[] = [];
+  private conversationAttachments: ConversationAttachment[] = [];
+  private expenseReceipts: ExpenseReceiptAttachment[] = [];
   private attachmentIntents = new Map<string, AttachmentUploadIntent>();
   private audioCall: AudioCallSession | null = null;
   private devicePushRegistration: DevicePushRegistration | null = null;
@@ -147,6 +173,14 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
     version: 0,
     schemaVersion: "2.0"
   };
+  private childProfiles: ChildProfile[] = [];
+  private childUpdates: ChildUpdate[] = [];
+  private expenses: FamilyExpense[] = [];
+  private settlements: ExpenseSettlement[] = [];
+  private scheduledCalls: ScheduledCall[] = [];
+  private videoCall: MediaCallSession | null = null;
+  private conchSession: ConchSession | null = null;
+  private conchTurns: ConchTurn[] = [];
 
   constructor(seedInvitations: readonly SeedInvitation[] = []) {
     seedInvitations.forEach((seed) => {
@@ -292,7 +326,11 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
       status: "awaiting-upload",
       uploadTransport: "supabase-signed",
       uploadUrl: "https://storage.peacepad.test/upload/fictional",
-      objectPath: `ca/identity-current/${input.target.kind === "private-binder" ? input.target.binderId : "unsupported"}/fictional`
+      objectPath: input.target.kind === "private-binder"
+        ? `ca/identity-current/${input.target.binderId}/fictional`
+        : input.target.kind === "conversation"
+          ? `ca/conversations/${input.target.conversationId}/fictional`
+          : "ca/expense-receipts/identity-current/fictional"
     };
     this.attachmentIntents.set(intent.id, intent);
     return intent;
@@ -355,6 +393,47 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
       downloadUrl: "https://storage.peacepad.test/download/fictional",
       expiresAt: new Date(Date.now() + 60_000).toISOString()
     };
+  }
+
+  async completeConversationAttachment(attachmentId: EntityId, _context: WriteContext): Promise<ConversationAttachment> {
+    const intent = this.attachmentIntents.get(attachmentId);
+    if (!intent || intent.target.kind !== "conversation") throw new PeacePadApiError("Conversation attachment not found.", "http", 404);
+    const attachment: ConversationAttachment = {
+      ...versioned(intent.id), familyCircleId: intent.familyCircleId, ownerIdentityId: intent.ownerIdentityId,
+      target: intent.target, originalFileName: intent.originalFileName, mediaType: intent.mediaType,
+      byteLength: intent.byteLength, status: "available", occurredAt: new Date().toISOString()
+    };
+    this.conversationAttachments = [attachment, ...this.conversationAttachments.filter((item) => item.id !== attachment.id)];
+    return attachment;
+  }
+
+  async listConversationAttachments(conversationId: EntityId): Promise<readonly ConversationAttachment[]> {
+    return this.conversationAttachments.filter((attachment) => attachment.target.conversationId === conversationId);
+  }
+
+  async getConversationAttachmentDownload(attachmentId: EntityId): Promise<ConversationAttachmentDownload> {
+    const attachment = this.conversationAttachments.find((item) => item.id === attachmentId);
+    if (!attachment) throw new PeacePadApiError("Conversation attachment not found.", "http", 404);
+    return { attachment, downloadUrl: "https://storage.peacepad.test/download/conversation-fictional", expiresAt: new Date(Date.now() + 60_000).toISOString() };
+  }
+
+  async completeExpenseReceipt(attachmentId: EntityId, _context: WriteContext): Promise<ExpenseReceiptAttachment> {
+    const intent = this.attachmentIntents.get(attachmentId);
+    if (!intent || intent.target.kind !== "expense-receipt" || !["image/jpeg", "image/png", "application/pdf"].includes(intent.mediaType)) throw new PeacePadApiError("Expense receipt not found.", "http", 404);
+    const attachment: ExpenseReceiptAttachment = {
+      ...versioned(intent.id), familyCircleId: intent.familyCircleId, ownerIdentityId: intent.ownerIdentityId,
+      target: intent.target, originalFileName: intent.originalFileName,
+      mediaType: intent.mediaType as ExpenseReceiptAttachment["mediaType"], byteLength: intent.byteLength,
+      status: "available", linkedExpenseId: null
+    };
+    this.expenseReceipts = [attachment, ...this.expenseReceipts.filter((item) => item.id !== attachment.id)];
+    return attachment;
+  }
+
+  async getExpenseReceiptDownload(attachmentId: EntityId): Promise<ExpenseReceiptDownload> {
+    const attachment = this.expenseReceipts.find((item) => item.id === attachmentId);
+    if (!attachment) throw new PeacePadApiError("Expense receipt not found.", "http", 404);
+    return { attachment, downloadUrl: "https://storage.peacepad.test/download/receipt-fictional", expiresAt: new Date(Date.now() + 60_000).toISOString() };
   }
 
   async resolveInvitation(code: string): Promise<InvitationPreview> {
@@ -812,6 +891,269 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
       version: this.personalityPreference.version + 1
     };
     return this.personalityPreference;
+  }
+
+  async transcribeCoachAudio(bytes: ArrayBuffer, mediaType: "audio/m4a" | "audio/mp4" | "audio/webm") {
+    if (bytes.byteLength < 1 || !mediaType.startsWith("audio/")) throw new PeacePadApiError("Voice recording is empty.", "http", 400);
+    return { transcript: "Please confirm the pickup time when you can." } as const;
+  }
+
+  async listChildProfiles(familyCircleId: EntityId): Promise<readonly ChildProfile[]> {
+    this.assertCurrentFamily(familyCircleId);
+    return this.childProfiles.filter((profile) => matchesSyntheticFamily(profile.familyCircleId, familyCircleId));
+  }
+
+  async createChildProfile(input: CreateChildProfileInput, context: WriteContext): Promise<ChildProfile> {
+    this.assertCurrentFamily(input.familyCircleId);
+    const displayName = input.displayName.trim();
+    if (displayName.length < 2 || displayName.length > 80) throw new PeacePadApiError("Enter a valid child name or label.", "http", 400);
+    const profile: ChildProfile = {
+      ...versioned(`child-${Date.now().toString(36)}`),
+      familyCircleId: input.familyCircleId,
+      displayName,
+      managedByAdultIdentityIds: [context.actor.identityId],
+      directLoginEnabled: false
+    };
+    this.childProfiles = [...this.childProfiles, profile];
+    return profile;
+  }
+
+  async updateChildProfile(profile: ChildProfile, context: WriteContext): Promise<ChildProfile> {
+    const existing = this.childProfiles.find((item) => item.id === profile.id);
+    if (!existing || !existing.managedByAdultIdentityIds.includes(context.actor.identityId)) throw new PeacePadApiError("Child profile not found.", "http", 404);
+    if (context.expectedVersion !== existing.version) throw new PeacePadApiError("This child profile changed. Review it again.", "http", 409);
+    const updated = { ...profile, displayName: profile.displayName.trim(), version: existing.version + 1 };
+    this.childProfiles = this.childProfiles.map((item) => item.id === updated.id ? updated : item);
+    return updated;
+  }
+
+  async listChildUpdates(familyCircleId: EntityId, childProfileId?: EntityId): Promise<readonly ChildUpdate[]> {
+    this.assertCurrentFamily(familyCircleId);
+    return this.childUpdates.filter((item) => matchesSyntheticFamily(item.familyCircleId, familyCircleId) && (!childProfileId || item.childProfileId === childProfileId));
+  }
+
+  async createChildUpdate(input: CreateChildUpdateInput, context: WriteContext): Promise<ChildUpdate> {
+    this.assertCurrentFamily(input.familyCircleId);
+    if (!this.childProfiles.some((profile) => profile.id === input.childProfileId)) throw new PeacePadApiError("Choose a child profile first.", "http", 400);
+    const update: ChildUpdate = {
+      ...versioned(`child-update-${Date.now().toString(36)}`),
+      ...input,
+      title: input.title.trim(),
+      body: input.body.trim(),
+      authorIdentityId: context.actor.identityId
+    };
+    this.childUpdates = [update, ...this.childUpdates];
+    return update;
+  }
+
+  async listExpenses(familyCircleId: EntityId): Promise<readonly FamilyExpense[]> {
+    this.assertCurrentFamily(familyCircleId);
+    return this.expenses.filter((expense) => matchesSyntheticFamily(expense.familyCircleId, familyCircleId));
+  }
+
+  async createExpense(input: CreateExpenseInput, context: WriteContext): Promise<FamilyExpense> {
+    this.assertCurrentFamily(input.familyCircleId);
+    if (!Number.isSafeInteger(input.amountMinor) || input.amountMinor <= 0) throw new PeacePadApiError("Enter a valid expense amount.", "http", 400);
+    const receipt = input.receiptAttachmentId
+      ? this.expenseReceipts.find((item) => item.id === input.receiptAttachmentId && item.familyCircleId === input.familyCircleId && item.linkedExpenseId === null)
+      : undefined;
+    if (input.receiptAttachmentId && !receipt) throw new PeacePadApiError("That receipt is not available for this expense.", "http", 400);
+    const expense: FamilyExpense = {
+      ...versioned(`expense-${Date.now().toString(36)}`),
+      ...input,
+      title: input.title.trim(),
+      description: input.description?.trim() || null,
+      createdByIdentityId: context.actor.identityId,
+      status: "open"
+    };
+    this.expenses = [expense, ...this.expenses];
+    if (receipt) {
+      this.expenseReceipts = this.expenseReceipts.map((item) => item.id === receipt.id ? { ...item, linkedExpenseId: expense.id, version: item.version + 1 } : item);
+    }
+    return expense;
+  }
+
+  async updateExpense(expense: FamilyExpense, context: WriteContext): Promise<FamilyExpense> {
+    const existing = this.expenses.find((item) => item.id === expense.id);
+    if (!existing) throw new PeacePadApiError("Expense not found.", "http", 404);
+    if (context.expectedVersion !== existing.version) throw new PeacePadApiError("This expense changed. Review it again.", "http", 409);
+    const updated = { ...expense, version: existing.version + 1 };
+    this.expenses = this.expenses.map((item) => item.id === updated.id ? updated : item);
+    return updated;
+  }
+
+  async listSettlements(familyCircleId: EntityId): Promise<readonly ExpenseSettlement[]> {
+    this.assertCurrentFamily(familyCircleId);
+    return this.settlements.filter((settlement) => matchesSyntheticFamily(settlement.familyCircleId, familyCircleId));
+  }
+
+  async requestSettlement(input: CreateSettlementInput, context: WriteContext): Promise<ExpenseSettlement> {
+    const expense = this.expenses.find((item) => item.id === input.expenseId && matchesSyntheticFamily(item.familyCircleId, input.familyCircleId));
+    if (!expense) throw new PeacePadApiError("Expense not found.", "http", 404);
+    const now = new Date().toISOString();
+    const settlement: ExpenseSettlement = {
+      ...versioned(`settlement-${Date.now().toString(36)}`),
+      ...input,
+      requestedByIdentityId: context.actor.identityId,
+      status: "pending",
+      requestedAt: now,
+      resolvedAt: null
+    };
+    this.settlements = [settlement, ...this.settlements];
+    this.expenses = this.expenses.map((item) => item.id === expense.id ? { ...item, status: "settlement-requested", version: item.version + 1 } : item);
+    return settlement;
+  }
+
+  async resolveSettlement(settlementId: EntityId, resolution: "confirmed" | "disputed" | "cancelled", context: WriteContext): Promise<ExpenseSettlement> {
+    const existing = this.settlements.find((item) => item.id === settlementId);
+    if (!existing) throw new PeacePadApiError("Settlement request not found.", "http", 404);
+    if (context.expectedVersion !== existing.version) throw new PeacePadApiError("This settlement changed. Review it again.", "http", 409);
+    const updated = { ...existing, status: resolution, resolvedAt: new Date().toISOString(), version: existing.version + 1 };
+    this.settlements = this.settlements.map((item) => item.id === settlementId ? updated : item);
+    this.expenses = this.expenses.map((item) => item.id === existing.expenseId ? { ...item, status: resolution === "confirmed" ? "settled" : resolution === "disputed" ? "disputed" : "open", version: item.version + 1 } : item);
+    return updated;
+  }
+
+  async getFamilyBalance(familyCircleId: EntityId): Promise<FamilyBalance> {
+    this.assertCurrentFamily(familyCircleId);
+    const pending = this.settlements.filter((item) => matchesSyntheticFamily(item.familyCircleId, familyCircleId) && item.status === "pending");
+    const owesMinor = pending.filter((item) => item.requestedFromIdentityId === actor.identityId).reduce((total, item) => total + item.amountMinor, 0);
+    const owedMinor = pending.filter((item) => item.requestedByIdentityId === actor.identityId).reduce((total, item) => total + item.amountMinor, 0);
+    return { familyCircleId, identityId: actor.identityId, currency: "CAD", owesMinor, owedMinor, netMinor: owedMinor - owesMinor, calculatedAt: new Date().toISOString() };
+  }
+
+  async searchSupport(input: SupportSearchInput): Promise<readonly SupportResource[]> {
+    if (input.query.trim().length < 2) throw new PeacePadApiError("Enter a city or postal code.", "http", 400);
+    return [];
+  }
+
+  async listScheduledCalls(familyCircleId: EntityId): Promise<readonly ScheduledCall[]> {
+    this.assertCurrentFamily(familyCircleId);
+    return this.scheduledCalls.filter((item) => matchesSyntheticFamily(item.familyCircleId, familyCircleId));
+  }
+
+  async createScheduledCall(input: CreateScheduledCallInput, context: WriteContext): Promise<ScheduledCall> {
+    const call: ScheduledCall = { ...versioned(`scheduled-call-${Date.now().toString(36)}`), ...input, createdByIdentityId: context.actor.identityId, status: "scheduled" };
+    this.scheduledCalls = [call, ...this.scheduledCalls];
+    return call;
+  }
+
+  async cancelScheduledCall(callId: EntityId, context: WriteContext): Promise<ScheduledCall> {
+    const existing = this.scheduledCalls.find((item) => item.id === callId);
+    if (!existing) throw new PeacePadApiError("Scheduled call not found.", "http", 404);
+    if (context.expectedVersion !== existing.version) throw new PeacePadApiError("This scheduled call changed. Review it again.", "http", 409);
+    const updated = { ...existing, status: "cancelled" as const, version: existing.version + 1 };
+    this.scheduledCalls = this.scheduledCalls.map((item) => item.id === callId ? updated : item);
+    return updated;
+  }
+
+  async createMediaCall(conversationId: EntityId, mediaType: "audio" | "video", context: WriteContext): Promise<MediaCallSession> {
+    if (mediaType === "audio") return this.createAudioCall(conversationId, context);
+    const now = new Date();
+    this.videoCall = {
+      id: `video-call-${Date.now().toString(36)}`,
+      familyCircleId: "family-current",
+      conversationId,
+      callerIdentityId: context.actor.identityId,
+      calleeIdentityId: "identity-coparent",
+      type: "video",
+      status: "ringing",
+      createdAt: now.toISOString(),
+      expiresAt: new Date(now.getTime() + 60_000).toISOString(),
+      acceptedAt: null,
+      endedAt: null,
+      endedByIdentityId: null,
+      endReason: null,
+      schemaVersion: "2.0",
+      version: 1,
+      region: context.region
+    };
+    return this.videoCall;
+  }
+
+  async getCurrentMediaCall(conversationId: EntityId): Promise<MediaCallSession | null> {
+    if (this.videoCall?.conversationId === conversationId && ["ringing", "active"].includes(this.videoCall.status)) return this.videoCall;
+    return this.getCurrentAudioCall(conversationId);
+  }
+
+  async createConchSession(input: CreateConchSessionInput, context: WriteContext): Promise<ConchSession> {
+    const now = new Date().toISOString();
+    this.conchSession = {
+      ...versioned(`conch-${Date.now().toString(36)}`),
+      ...input,
+      participantIdentityIds: [context.actor.identityId, "identity-coparent"],
+      createdByIdentityId: context.actor.identityId,
+      status: "invited",
+      consentedIdentityIds: [context.actor.identityId],
+      currentSpeakerIdentityId: null,
+      turnStartedAt: null,
+      recordingEnabled: false,
+      transcriptEnabled: false,
+      summaryConsentIdentityIds: [],
+      endedAt: null,
+      provenance: { ...provenance(), createdAt: now }
+    };
+    return this.conchSession;
+  }
+
+  async getCurrentConchSession(conversationId: EntityId): Promise<ConchSession | null> {
+    return this.conchSession?.conversationId === conversationId && !["ended", "declined", "expired"].includes(this.conchSession.status) ? this.conchSession : null;
+  }
+
+  async getCurrentConchTurn(sessionId: EntityId): Promise<ConchTurn | null> {
+    return this.conchTurns.find((item) => item.conchSessionId === sessionId && item.endedAt === null) ?? null;
+  }
+
+  async respondToConchSession(sessionId: EntityId, response: "accept" | "decline", context: WriteContext): Promise<ConchSession> {
+    const session = this.requireConch(sessionId, context.expectedVersion);
+    const consented = response === "accept" ? [...new Set([...session.consentedIdentityIds, context.actor.identityId])] : session.consentedIdentityIds;
+    this.conchSession = { ...session, status: response === "accept" ? "active" : "declined", consentedIdentityIds: consented, currentSpeakerIdentityId: response === "accept" ? session.createdByIdentityId : null, turnStartedAt: response === "accept" ? new Date().toISOString() : null, version: session.version + 1 };
+    if (response === "accept") {
+      this.conchTurns = [{ ...versioned(`conch-turn-${Date.now().toString(36)}`), conchSessionId: session.id, speakerIdentityId: session.createdByIdentityId, startedAt: this.conchSession.turnStartedAt!, endedAt: null, outcome: null, reactions: [] }, ...this.conchTurns];
+    }
+    return this.conchSession;
+  }
+
+  async consentToConchSession(sessionId: EntityId, summaryConsent: boolean, context: WriteContext): Promise<ConchSession> {
+    const session = this.requireConch(sessionId, context.expectedVersion);
+    const summaryConsentIdentityIds = summaryConsent ? [...new Set([...session.summaryConsentIdentityIds, context.actor.identityId])] : session.summaryConsentIdentityIds.filter((id) => id !== context.actor.identityId);
+    this.conchSession = { ...session, summaryConsentIdentityIds, version: session.version + 1 };
+    return this.conchSession;
+  }
+
+  async passConchTurn(sessionId: EntityId, context: WriteContext): Promise<Readonly<{ session: ConchSession; turn: ConchTurn }>> {
+    const session = this.requireConch(sessionId, context.expectedVersion);
+    if (session.status !== "active" || session.currentSpeakerIdentityId !== context.actor.identityId) throw new PeacePadApiError("It is not your turn to pass the Conch.", "http", 409);
+    const activeTurn = this.conchTurns.find((item) => item.conchSessionId === session.id && item.endedAt === null && item.speakerIdentityId === context.actor.identityId);
+    if (!activeTurn) throw new PeacePadApiError("Conch turn not found.", "http", 404);
+    const turn: ConchTurn = { ...activeTurn, endedAt: new Date().toISOString(), outcome: "passed", version: activeTurn.version + 1 };
+    this.conchTurns = this.conchTurns.map((item) => item.id === turn.id ? turn : item);
+    const nextSpeaker = session.participantIdentityIds.find((id) => id !== context.actor.identityId) ?? context.actor.identityId;
+    this.conchSession = { ...session, currentSpeakerIdentityId: nextSpeaker, turnStartedAt: new Date().toISOString(), version: session.version + 1 };
+    this.conchTurns = [{ ...versioned(`conch-turn-${Date.now().toString(36)}-next`), conchSessionId: session.id, speakerIdentityId: nextSpeaker, startedAt: this.conchSession.turnStartedAt!, endedAt: null, outcome: null, reactions: [] }, ...this.conchTurns];
+    return { session: this.conchSession, turn };
+  }
+
+  async reactToConchTurn(sessionId: EntityId, turnId: EntityId, reaction: ConchReaction, context: WriteContext): Promise<ConchTurn> {
+    this.requireConch(sessionId, context.expectedVersion);
+    const turn = this.conchTurns.find((item) => item.id === turnId && item.conchSessionId === sessionId);
+    if (!turn) throw new PeacePadApiError("Conch turn not found.", "http", 404);
+    const updated = { ...turn, reactions: [...turn.reactions.filter((item) => item.identityId !== context.actor.identityId), { identityId: context.actor.identityId, reaction, reactedAt: new Date().toISOString() }], version: turn.version + 1 };
+    this.conchTurns = this.conchTurns.map((item) => item.id === turnId ? updated : item);
+    return updated;
+  }
+
+  async endConchSession(sessionId: EntityId, context: WriteContext): Promise<ConchSession> {
+    const session = this.requireConch(sessionId, context.expectedVersion);
+    this.conchSession = { ...session, status: "ended", endedAt: new Date().toISOString(), currentSpeakerIdentityId: null, turnStartedAt: null, version: session.version + 1 };
+    this.conchTurns = this.conchTurns.map((turn) => turn.conchSessionId === sessionId && turn.endedAt === null ? { ...turn, endedAt: this.conchSession!.endedAt, outcome: "ended", version: turn.version + 1 } : turn);
+    return this.conchSession;
+  }
+
+  private requireConch(sessionId: EntityId, expectedVersion: number | null): ConchSession {
+    if (!this.conchSession || this.conchSession.id !== sessionId) throw new PeacePadApiError("Conch session not found.", "http", 404);
+    if (expectedVersion !== null && expectedVersion !== this.conchSession.version) throw new PeacePadApiError("This Conch session changed. Refresh and try again.", "http", 409);
+    return this.conchSession;
   }
 
   private assertInvitationVersion(invitationId: EntityId, expectedVersion: number | null) {

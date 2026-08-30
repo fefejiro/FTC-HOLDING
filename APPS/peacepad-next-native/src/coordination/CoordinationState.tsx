@@ -27,6 +27,8 @@ import {
   createWriteContext,
   type AcceptedInvitation,
   type CalendarLayer,
+  type AttachmentMediaType,
+  type ConversationAttachment,
   type EntityId,
   type InvitationPreview,
   type MessageCheckPreference,
@@ -88,6 +90,9 @@ type CoordinationStateValue = {
   messageCheckBusy: boolean;
   messageError?: string;
   sentMessages: readonly SentMessage[];
+  messageAttachments: readonly ConversationAttachment[];
+  attachmentBusy: boolean;
+  attachmentError?: string;
   queuedActionBusyIds: readonly string[];
   queuedActionError?: string;
   messageSearchQuery: string;
@@ -119,6 +124,9 @@ type CoordinationStateValue = {
   setTaskCompleted: (taskId: string, completed: boolean) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
   setMessageDraft: (draft: string) => void;
+  uploadMessageAttachment: (input: Readonly<{ originalFileName: string; mediaType: AttachmentMediaType; bytes: ArrayBuffer }>) => Promise<void>;
+  openMessageAttachment: (attachmentId: string) => Promise<string>;
+  transcribeCoachAudio: (bytes: ArrayBuffer, mediaType: "audio/m4a" | "audio/mp4" | "audio/webm") => Promise<string>;
   setMessageCheckEnabled: (enabled: boolean) => Promise<void>;
   checkMessage: () => Promise<void>;
   sendMessage: (useSuggestion: boolean) => Promise<void>;
@@ -308,6 +316,9 @@ export function CoordinationStateProvider({
   const [messageCheckBusy, setMessageCheckBusy] = useState(false);
   const [messageError, setMessageError] = useState<string>();
   const [sentMessages, setSentMessages] = useState<readonly SentMessage[]>([]);
+  const [messageAttachments, setMessageAttachments] = useState<readonly ConversationAttachment[]>([]);
+  const [attachmentBusy, setAttachmentBusy] = useState(false);
+  const [attachmentError, setAttachmentError] = useState<string>();
   const [queuedActionBusyIds, setQueuedActionBusyIds] = useState<readonly string[]>([]);
   const [queuedActionError, setQueuedActionError] = useState<string>();
   const [outboxScheduleVersion, setOutboxScheduleVersion] = useState(0);
@@ -355,6 +366,8 @@ export function CoordinationStateProvider({
     setEvents([]);
     setTasks([]);
     setSentMessages([]);
+    setMessageAttachments([]);
+    setAttachmentError(undefined);
     setMessageSearchResults([]);
     setMessageSearchQueryState("");
     setCorrectingMessageId(undefined);
@@ -399,14 +412,19 @@ export function CoordinationStateProvider({
     const parentingTasks = typeof (resolvedApi as Partial<PeacePadCoordinationApi>).listParentingTasks === "function"
       ? resolvedApi.listParentingTasks(activeRuntime.familyCircleId)
       : Promise.resolve([] as readonly ParentingTask[]);
+    const conversationAttachments = connectedRuntime
+      && typeof (resolvedApi as Partial<PeacePadCoordinationApi>).listConversationAttachments === "function"
+      ? resolvedApi.listConversationAttachments(connectedRuntime.conversationId)
+      : Promise.resolve([] as readonly ConversationAttachment[]);
     void retry.then(() => Promise.all([
       resolvedApi.listCalendarLayers(activeRuntime.familyCircleId),
       resolvedApi.listScheduleEvents(activeRuntime.familyCircleId),
       parentingTasks,
       connectedRuntime ? resolvedApi.listMessages(connectedRuntime.conversationId) : Promise.resolve([]),
+      conversationAttachments,
       connectedRuntime ? resolvedApi.getMessageCheckPreference(connectedRuntime.conversationId) : Promise.resolve(undefined),
       connectedRuntime ? outbox.list() : Promise.resolve([])
-    ])).then(([nextLayers, nextEvents, nextTasks, nextMessages, preference, queuedMessages]) => {
+    ])).then(([nextLayers, nextEvents, nextTasks, nextMessages, nextAttachments, preference, queuedMessages]) => {
         if (cancelled || hydrationGeneration.current !== generation) return;
         setLayers(nextLayers);
         setVisibleLayerIds(nextLayers.map((layer) => layer.id));
@@ -414,6 +432,7 @@ export function CoordinationStateProvider({
         setTasks(nextTasks);
         const waitingMessages = outboxScope ? queuedVisibleMessages(queuedMessages, outboxScope) : [];
         setSentMessages([...visibleMessages(nextMessages, activeRuntime.actorIdentityId), ...waitingMessages]);
+        setMessageAttachments(nextAttachments);
         setMessageCheckPreference(preference);
         setMessageCheckEnabledState(preference?.enabled ?? false);
         setMessageCheckHydrated(true);
@@ -519,6 +538,9 @@ export function CoordinationStateProvider({
     messageCheckBusy,
     messageError,
     sentMessages,
+    messageAttachments,
+    attachmentBusy,
+    attachmentError,
     queuedActionBusyIds,
     queuedActionError,
     messageSearchQuery,
@@ -692,6 +714,38 @@ export function CoordinationStateProvider({
       setMessageDraftState(draft);
       setMessagePreview(undefined);
       setMessageError(undefined);
+    },
+    uploadMessageAttachment: async ({ originalFileName, mediaType, bytes }) => {
+      if (!hasConnectedConversation(activeRuntime)) throw new Error("Connect another parent before sharing a file.");
+      setAttachmentBusy(true);
+      setAttachmentError(undefined);
+      try {
+        const context = writeContext(activeRuntime);
+        const intent = await resolvedApi.createAttachmentUploadIntent({
+          familyCircleId: activeRuntime.familyCircleId,
+          target: { kind: "conversation", conversationId: activeRuntime.conversationId },
+          originalFileName,
+          mediaType,
+          byteLength: bytes.byteLength
+        }, context);
+        await resolvedApi.uploadPrivateAttachment(intent, bytes);
+        const attachment = await resolvedApi.completeConversationAttachment(intent.id, { ...context, expectedVersion: intent.version });
+        setMessageAttachments((current) => [attachment, ...current.filter((item) => item.id !== attachment.id)]);
+      } catch (cause) {
+        const message = cause instanceof Error ? cause.message : "PeacePad could not share that attachment.";
+        setAttachmentError(message);
+        throw cause;
+      } finally {
+        setAttachmentBusy(false);
+      }
+    },
+    openMessageAttachment: async (attachmentId) => {
+      const result = await resolvedApi.getConversationAttachmentDownload(attachmentId);
+      return result.downloadUrl;
+    },
+    transcribeCoachAudio: async (bytes, mediaType) => {
+      const result = await resolvedApi.transcribeCoachAudio(bytes, mediaType);
+      return result.transcript;
     },
     setMessageCheckEnabled: async (enabled) => {
       if (!hasConnectedConversation(activeRuntime) || (!demoMode && !messageCheckHydrated)) return;
@@ -980,6 +1034,9 @@ export function CoordinationStateProvider({
     outbox,
     resolvedApi,
     sentMessages,
+    messageAttachments,
+    attachmentBusy,
+    attachmentError,
     tasks,
     visibleLayerIds
   ]);

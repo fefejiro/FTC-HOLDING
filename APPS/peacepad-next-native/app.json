@@ -12,8 +12,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "ca.peacepad.nextnative.lab",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "PeacePad uses the microphone only while you are in a foreground audio call.",
-        "NSCameraUsageDescription": "PeacePad uses camera APIs to support optional video calling; this release uses microphone-only calls.",
+        "NSMicrophoneUsageDescription": "PeacePad uses the microphone only when you choose a private audio or video call, voice note, or Coach voice conversation.",
+        "NSCameraUsageDescription": "PeacePad uses the camera only when you choose a private video call or take a photo for a message or record.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -34,6 +34,13 @@
       }
     },
     "plugins": [
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "PeacePad uses the microphone only when you choose a private audio or video call, voice note, or Coach voice conversation.",
+          "recordAudioAndroid": true
+        }
+      ],
       "expo-secure-store",
       "expo-notifications",
       "expo-dev-client",

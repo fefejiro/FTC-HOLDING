@@ -593,7 +593,7 @@ describe("HttpPeacePadCoordinationApi", () => {
       "https://staging-api.peacepad.test/api/v2/calls/call%2Fcurrent/turn-credentials",
       "https://staging-api.peacepad.test/api/v2/calls/call%2Fcurrent/signals"
     ]);
-    expect(JSON.parse((fetcher.mock.calls[1]?.[1] as RequestInit).body as string)).toEqual({ conversationId: "conversation/current" });
+    expect(JSON.parse((fetcher.mock.calls[1]?.[1] as RequestInit).body as string)).toEqual({ conversationId: "conversation/current", mediaType: "audio" });
     expect((fetcher.mock.calls[5]?.[1] as RequestInit).headers).toMatchObject({
       "If-Match": "4",
       "X-PeacePad-Region": "ca",

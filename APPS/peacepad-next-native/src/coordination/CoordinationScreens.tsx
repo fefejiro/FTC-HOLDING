@@ -29,10 +29,11 @@ import { PersonalityProfilePanel } from "../preferences/PersonalityProfilePanel"
 import { CustodySchedulePlanner } from "../calendar/CustodySchedulePlanner";
 import { custodyParentForDate, type CustodyBlock, type CustodySchedule } from "../calendar/custodySchedule";
 import { custodyScheduleText } from "../calendar/custodyScheduleLocalization";
-import { PrepChatAssistant } from "../legacy/PrepChatAssistant";
+import { CoachConversation } from "../coach/CoachConversation";
+import { ConversationVoiceNote } from "../messages/ConversationVoiceNote";
 import type { AccountExportManifest } from "../api/CoordinationApi";
 
-export type CoordinationScreen = "home" | "messages" | "calendar" | "activities" | "tasks" | "invite" | "records" | "calls" | "more";
+export type CoordinationScreen = "home" | "messages" | "calendar" | "activities" | "tasks" | "invite" | "records" | "calls" | "family" | "more";
 type Navigate = (screen: CoordinationScreen) => void;
 
 const layerColors: Record<string, string> = {
@@ -257,6 +258,14 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
       <Pressable accessibilityRole="button" accessibilityLabel={task.title} onPress={() => setScreen("tasks")} style={({ pressed }) => [styles.taskCard, pressed ? styles.pressed : null]}>
         <View style={styles.cardHeadingRow}><PeacePadIcon name="checkmark-circle-outline" size={23} color={colors.warning} /><Text style={styles.taskTitle}>{task.title}</Text></View>
         <Text style={styles.caption}>{task.body}</Text>
+      </Pressable>
+
+      <Pressable accessibilityRole="button" accessibilityLabel="Family tools" onPress={() => setScreen("family")} style={({ pressed }) => [styles.activityCard, { backgroundColor: "#FFE4D6", borderColor: "#F2A791" }, pressed ? styles.pressed : null]}>
+        <View style={[styles.activityDot, { backgroundColor: colors.sun }]}><PeacePadIcon name="heart-circle-outline" size={23} color={colors.text} /></View>
+        <View style={styles.activityCopy}>
+          <Text style={styles.activityTitle}>Family tools</Text>
+          <Text style={styles.caption}>Children, shared costs, support, call plans and Conch.</Text>
+        </View>
       </Pressable>
 
       <Pressable accessibilityRole="button" accessibilityLabel={h("record")} onPress={() => setScreen("records")} style={({ pressed }) => [styles.recordCard, pressed ? styles.pressed : null]}>
@@ -706,6 +715,9 @@ export function MessagesScreen() {
     messageCheckHydrated,
     messageDraft,
     messageError,
+    messageAttachments,
+    attachmentBusy,
+    attachmentError,
     messagePreview,
     messageSearchBusy,
     messageSearchError,
@@ -722,6 +734,9 @@ export function MessagesScreen() {
     setCorrectionDraft,
     setMessageCheckEnabled,
     setMessageDraft,
+    uploadMessageAttachment,
+    openMessageAttachment,
+    transcribeCoachAudio,
     setMessageSearchQuery,
     startCorrection
   } = useCoordinationState();
@@ -739,7 +754,31 @@ export function MessagesScreen() {
         title={m("title")}
       />
 
-      <PrepChatAssistant onUseDraft={setMessageDraft} />
+      <CoachConversation onTranscribe={transcribeCoachAudio} onUseDraft={setMessageDraft} />
+
+      <View style={[styles.card, { backgroundColor: colors.successSurface, borderColor: colors.successBorder }]}>
+        <Text style={styles.heading}>Photos, files, and voice notes</Text>
+        <Text style={styles.body}>Share only what you choose. Files are private to this connected conversation and use short-lived links.</Text>
+        <ConversationVoiceNote busy={attachmentBusy} onUpload={uploadMessageAttachment} />
+        <LabButton disabled={!messageCheckHydrated || attachmentBusy} label={attachmentBusy ? "Sharing securely..." : "Choose a file to share"} onPress={() => void (async () => {
+          try {
+            const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false, type: ["image/jpeg", "image/png", "application/pdf", "text/plain", "audio/mp4", "audio/m4a", "audio/webm"] });
+            if (result.canceled) return;
+            const selected = result.assets[0];
+            const allowed = ["image/jpeg", "image/png", "application/pdf", "text/plain", "audio/mp4", "audio/m4a", "audio/webm"] as const;
+            const mediaType = allowed.find((type) => type === selected.mimeType);
+            if (!mediaType) throw new Error("Choose a JPEG, PNG, PDF, text file, or voice note.");
+            const bytes = await new File(selected.uri).arrayBuffer();
+            await uploadMessageAttachment({ originalFileName: selected.name, mediaType, bytes });
+          } catch { /* State exposes a privacy-safe error below. */ }
+        })()} />
+        {attachmentError ? <Text accessibilityRole="alert" style={styles.error}>{attachmentError}</Text> : null}
+        {messageAttachments.map((attachment) => <View key={attachment.id} style={styles.searchResult}>
+          <Text style={styles.actionTitle}>{attachment.originalFileName}</Text>
+          <Text style={styles.caption}>{attachment.mediaType} · {attachment.byteLength} bytes</Text>
+          <LabButton label="Open attachment" onPress={() => void openMessageAttachment(attachment.id).then((url) => Linking.openURL(url)).catch(() => undefined)} variant="secondary" />
+        </View>)}
+      </View>
 
       <View style={styles.card}>
         <Text style={styles.heading}>{m("find")}</Text>
@@ -1051,6 +1090,10 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
       <Pressable accessibilityRole="button" onPress={() => setScreen("invite")} style={[styles.actionCard, styles.moreFamilyCard]}>
         <View style={styles.cardHeadingRow}><PeacePadIcon name="people-outline" size={23} color={colors.successText} /><Text style={styles.actionTitle}>{t("more.family.title")}</Text></View>
         <Text style={styles.caption}>{t("more.family.body")}</Text>
+      </Pressable>
+      <Pressable accessibilityRole="button" onPress={() => setScreen("family")} style={[styles.actionCard, styles.morePrivacyCard]}>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="heart-circle-outline" size={23} color={colors.aqua} /><Text style={styles.actionTitle}>Family tools</Text></View>
+        <Text style={styles.caption}>Manage child updates, expenses, local support, scheduled calls and Conch.</Text>
       </Pressable>
       <View style={[styles.actionCard, styles.morePrivacyCard]}>
         <View style={styles.cardHeadingRow}><PeacePadIcon name="shield-checkmark-outline" size={23} color={colors.accent} /><Text style={styles.actionTitle}>{t("more.privacy.title")}</Text></View>

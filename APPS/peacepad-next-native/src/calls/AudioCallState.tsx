@@ -13,13 +13,20 @@ type AudioCallStateValue = Readonly<{
   incoming: boolean;
   mediaState: "unavailable" | AudioMediaConnectionState;
   muted: boolean;
+  cameraEnabled: boolean;
+  selectedMediaType: "audio" | "video";
+  localStreamUrl: string | null;
+  remoteStreamUrl: string | null;
   durationSeconds: number;
   refresh: () => Promise<void>;
-  start: () => Promise<void>;
+  start: (mediaType?: "audio" | "video") => Promise<void>;
   accept: () => Promise<void>;
   decline: () => Promise<void>;
   end: () => Promise<void>;
   toggleMute: () => void;
+  toggleCamera: () => void;
+  switchCamera: () => void;
+  setSelectedMediaType: (type: "audio" | "video") => void;
   retryMedia: () => void;
 }>;
 
@@ -64,6 +71,10 @@ export function AudioCallStateProvider({ api, children, mediaRuntime, runtime }:
   const [error, setError] = useState<string>();
   const [mediaState, setMediaState] = useState<"unavailable" | AudioMediaConnectionState>("unavailable");
   const [muted, setMuted] = useState(false);
+  const [cameraEnabled, setCameraEnabled] = useState(true);
+  const [selectedMediaType, setSelectedMediaType] = useState<"audio" | "video">("audio");
+  const [localStreamUrl, setLocalStreamUrl] = useState<string | null>(null);
+  const [remoteStreamUrl, setRemoteStreamUrl] = useState<string | null>(null);
   const [durationSeconds, setDurationSeconds] = useState(0);
   const [mediaAttempt, setMediaAttempt] = useState(0);
   const inFlight = useRef(false);
@@ -86,10 +97,10 @@ export function AudioCallStateProvider({ api, children, mediaRuntime, runtime }:
   };
 
   const refresh = () => hasConnectedConversation(activeRuntime)
-    ? run(() => resolvedApi.getCurrentAudioCall(activeRuntime.conversationId))
+    ? run(() => resolvedApi.getCurrentMediaCall(activeRuntime.conversationId))
     : Promise.resolve();
-  const start = () => hasConnectedConversation(activeRuntime)
-    ? run(() => resolvedApi.createAudioCall(activeRuntime.conversationId, context(activeRuntime)))
+  const start = (mediaType: "audio" | "video" = selectedMediaType) => hasConnectedConversation(activeRuntime)
+    ? (setSelectedMediaType(mediaType), run(() => resolvedApi.createMediaCall(activeRuntime.conversationId, mediaType, context(activeRuntime))))
     : Promise.resolve();
   const accept = () => call ? run(() => resolvedApi.acceptAudioCall(call.id, context(activeRuntime, call.version))) : Promise.resolve();
   const decline = () => call ? run(() => resolvedApi.declineAudioCall(call.id, context(activeRuntime, call.version))) : Promise.resolve();
@@ -101,6 +112,14 @@ export function AudioCallStateProvider({ api, children, mediaRuntime, runtime }:
       return next;
     });
   };
+  const toggleCamera = () => {
+    setCameraEnabled((current) => {
+      const next = !current;
+      mediaController.current?.setCameraEnabled(next);
+      return next;
+    });
+  };
+  const switchCamera = () => mediaController.current?.switchCamera();
   const retryMedia = () => {
     setError(undefined);
     setMediaAttempt((attempt) => attempt + 1);
@@ -114,7 +133,7 @@ export function AudioCallStateProvider({ api, children, mediaRuntime, runtime }:
   useEffect(() => {
     if (!shouldHydrate || !hasConnectedConversation(activeRuntime) || call?.status !== "ringing") return;
     const timer = setInterval(() => {
-      if (!inFlight.current) void run(() => resolvedApi.getCurrentAudioCall(activeRuntime.conversationId));
+      if (!inFlight.current) void run(() => resolvedApi.getCurrentMediaCall(activeRuntime.conversationId));
     }, 2_500);
     return () => clearInterval(timer);
   }, [activeRuntime.conversationId, call?.id, call?.status, resolvedApi, shouldHydrate]);
@@ -125,6 +144,9 @@ export function AudioCallStateProvider({ api, children, mediaRuntime, runtime }:
     if (!hasConnectedConversation(activeRuntime) || !mediaRuntime || call?.status !== "active") {
       mediaController.current = undefined;
       setMuted(false);
+      setCameraEnabled(true);
+      setLocalStreamUrl(null);
+      setRemoteStreamUrl(null);
       setMediaState("unavailable");
       return;
     }
@@ -135,12 +157,15 @@ export function AudioCallStateProvider({ api, children, mediaRuntime, runtime }:
       context: () => context(activeRuntime, call.version),
       runtime: mediaRuntime,
       onState: (state) => { if (!disposed) setMediaState(state); },
+      onLocalStream: (url) => { if (!disposed) setLocalStreamUrl(url); },
+      onRemoteStream: (url) => { if (!disposed) setRemoteStreamUrl(url); },
     }).then((startedController) => {
       if (disposed) void startedController.close();
       else {
         controller = startedController;
         mediaController.current = startedController;
         startedController.setMuted(muted);
+        startedController.setCameraEnabled(cameraEnabled);
       }
     }).catch((caught) => {
       if (!disposed) {
@@ -167,10 +192,10 @@ export function AudioCallStateProvider({ api, children, mediaRuntime, runtime }:
   }, [call?.acceptedAt, call?.id, call?.status]);
 
   const value = useMemo<AudioCallStateValue>(() => ({
-    call, hydrated, busy, error, mediaState, muted, durationSeconds,
+    call, hydrated, busy, error, mediaState, muted, cameraEnabled, selectedMediaType, localStreamUrl, remoteStreamUrl, durationSeconds,
     incoming: Boolean(call && call.calleeIdentityId === activeRuntime.actorIdentityId),
-    refresh, start, accept, decline, end, toggleMute, retryMedia
-  }), [call, hydrated, busy, error, mediaState, muted, durationSeconds, activeRuntime.actorIdentityId]);
+    refresh, start, accept, decline, end, toggleMute, toggleCamera, switchCamera, setSelectedMediaType, retryMedia
+  }), [call, hydrated, busy, error, mediaState, muted, cameraEnabled, selectedMediaType, localStreamUrl, remoteStreamUrl, durationSeconds, activeRuntime.actorIdentityId]);
   return <AudioCallStateContext.Provider value={value}>{children}</AudioCallStateContext.Provider>;
 }
 
