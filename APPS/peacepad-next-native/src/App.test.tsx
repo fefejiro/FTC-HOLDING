@@ -140,6 +140,16 @@ describe("PeacePad coordination shell", () => {
     expect(screen.getByText("Message Check")).toBeOnTheScreen();
   });
 
+  it.each([
+    ["Tasks", "Keep small parenting commitments clear and in one place."],
+    ["Add a record", "Create a Case Binder"],
+    ["Invite co-parent", "Family connection"]
+  ] as const)("routes the %s Home action", (action, expected) => {
+    renderApp();
+    fireEvent.press(screen.getByRole("button", { name: action }));
+    expect(screen.getByText(expected)).toBeOnTheScreen();
+  });
+
   it("opens the ported activity library and keeps location use explicit", () => {
     renderApp();
     fireEvent.press(screen.getByRole("button", { name: "Activity ideas" }));
