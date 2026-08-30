@@ -328,3 +328,26 @@ Therefore Android is **not the same code** as the iOS 1.1 candidate and must not
   Unity EditMode/PlayMode suite still has no host-produced results XML, and no
   Google Play upload/public-production claim is made. Build the signed AAB only
   from this exact source state after the APK gate is accepted.
+
+### Signed Android Play candidate from the verified APK source (2026-08-30)
+
+- The APK gate and AAB were produced from the same canonical JCI source commit
+  `7fd4b6fd3` (`fix(jci): stabilize Android input runtime`) with Unity
+  `6000.4.5f1`, normal UPM mode, IL2CPP, and ARM64. The unrelated edit to
+  `scripts/NEXT-GAME-RELEASE-PLAN.md` remains unstaged.
+- Immutable Play candidate:
+  `D:\FTC-HOLDING-releases\just-checking-in\android-2026-08-19\JustCheckingIn-1.1.0-code4-standalone-input-play-candidate-20260830.aab`.
+  Size: `28,180,204` bytes. SHA-256:
+  `20CA6FE7CF8B68FCFA2AD6E2C38FC9F965F5BC10770808C55B00075F16276B42`.
+- `bundletool 1.17.2 validate` returned exit code `0`. Bundle manifest
+  reports package `com.ftcholding.justcheckingin`, version name `1.1.0`,
+  version code `4`, min SDK `25`, compile/target SDK `36`. The bundle contains
+  only `arm64-v8a` native libraries and is signed by
+  `CN=Just Checking In, OU=FTC, O=Fejiro Technology Consultancy Inc., L=Pickering, ST=Ontario, C=CA`
+  with certificate SHA-256
+  `3f57ea45405524c9cf9a38ce0774e7dc56b80cf3481696adc04577b77c6825b3`.
+- The exact matching APK (same source/build inputs) is installed and smoke
+  verified on Pixel 7 serial `2B260DLH2000C8`; the AAB is a Play upload
+  candidate and has not been uploaded. No Play review, production, or public
+  availability claim is made. The complete Unity EditMode/PlayMode suite still
+  lacks host-produced XML because of the known AssetDatabase import stall.
