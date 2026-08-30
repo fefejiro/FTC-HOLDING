@@ -193,7 +193,7 @@ export function PublicOnboardingAuth() {
     return (
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.keyboard}>
         <ScrollView contentContainerStyle={styles.auth} keyboardShouldPersistTaps="handled">
-          <View style={styles.logoRow}><Image source={require("../foundation/peacepad-conch.png")} style={styles.logo} /><Text style={styles.brand}>PeacePad</Text></View>
+          <View style={styles.logoRow}><Image source={require("../../assets/icon-production.png")} style={styles.logo} /><Text style={styles.brand}>PeacePad</Text></View>
           <AccessibleHeading style={styles.title}>{strings.resetTitle}</AccessibleHeading>
           <Text style={styles.body}>{strings.resetBody}</Text>
           <TextInput accessibilityLabel={strings.newPassword} autoComplete="new-password" onChangeText={setNewPassword} onSubmitEditing={() => void updatePassword()} placeholder={strings.newPassword} returnKeyType="done" secureTextEntry style={styles.input} textContentType="newPassword" value={newPassword} />
@@ -213,7 +213,7 @@ export function PublicOnboardingAuth() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.keyboard}>
       <ScrollView contentContainerStyle={styles.auth} keyboardShouldPersistTaps="handled">
-        <View style={styles.logoRow}><Image source={require("../foundation/peacepad-conch.png")} style={styles.logo} /><Text style={styles.brand}>PeacePad</Text></View>
+        <View style={styles.logoRow}><Image source={require("../../assets/icon-production.png")} style={styles.logo} /><Text style={styles.brand}>PeacePad</Text></View>
         <AccessibleHeading style={styles.title}>{mode === "create" ? strings.createTitle : strings.signInTitle}</AccessibleHeading>
         {appleAvailable ? <AppleAuthentication.AppleAuthenticationButton
           accessibilityLabel={strings.apple}
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   introCopyCompact: { padding: spacing.lg },
   auth: { flexGrow: 1, gap: spacing.md, justifyContent: "center", padding: spacing.xl },
   logoRow: { alignItems: "center", flexDirection: "row", gap: spacing.sm },
-  logo: { height: 48, width: 48 },
+  logo: { borderRadius: 16, height: 48, width: 48 },
   brand: { color: colors.brand, fontSize: 25, fontWeight: "800" },
   title: { ...typography.title, color: colors.text },
   body: { ...typography.body, color: colors.muted },

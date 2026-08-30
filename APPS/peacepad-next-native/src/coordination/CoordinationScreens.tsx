@@ -204,7 +204,7 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
   return (
     <View style={styles.stack}>
       <View style={styles.brandHero}>
-        <Image accessibilityLabel={h("logo")} source={require("../foundation/peacepad-conch.png")} style={styles.logo} />
+        <Image accessibilityLabel={h("logo")} source={require("../../assets/icon-production.png")} style={styles.logo} />
         <View style={styles.brandHeroCopy}>
           <AccessibleHeading style={styles.title}>{h("title")}</AccessibleHeading>
           <Text style={styles.body}>{h("body")}</Text>
@@ -1162,7 +1162,7 @@ const styles = StyleSheet.create({
   fieldLabel: { ...typography.caption, color: colors.text, fontWeight: "800", marginTop: spacing.sm, textTransform: "uppercase" },
   brandHero: { alignItems: "center", flexDirection: "row", gap: spacing.md, paddingVertical: spacing.sm },
   brandHeroCopy: { flex: 1, gap: spacing.xs },
-  logo: { height: 64, width: 64 },
+  logo: { borderRadius: 20, height: 64, width: 64 },
   actionGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
   actionCard: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 22, borderWidth: 1, gap: spacing.sm, justifyContent: "center", minHeight: 88, minWidth: "46%", padding: spacing.lg, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 1 },
   actionCardLargeText: { minWidth: "100%", width: "100%" },
