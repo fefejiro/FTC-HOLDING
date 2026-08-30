@@ -49,5 +49,26 @@ namespace Jci.Tests.EditMode
             store.DeleteAll();
             Assert.That(File.Exists(store.Path), Is.False);
         }
+
+        [Test]
+        public void InvalidActiveSessionIsDiscardedWithoutDeletingValidLocalData()
+        {
+            var store = new JciLocalStore(Path.Combine(directory, "jci.json"));
+            var document = new JciStoreDocument();
+            document.Connections.Add(new LocalConnection("maya", "Maya", 10));
+            document.ActiveSession = new ActiveTogetherSession
+            {
+                ConnectionId = "missing-connection",
+                CurrentPromptId = "today",
+                StartedAtUtcTicks = 20,
+            };
+
+            store.Save(document);
+            var loaded = store.Load();
+
+            Assert.That(loaded.ActiveSession, Is.Null);
+            Assert.That(loaded.Connections, Has.Count.EqualTo(1));
+            Assert.That(loaded.Connections[0].DisplayName, Is.EqualTo("Maya"));
+        }
     }
 }

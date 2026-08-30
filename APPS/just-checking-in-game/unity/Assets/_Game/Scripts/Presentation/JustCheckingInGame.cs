@@ -28,11 +28,15 @@ namespace Jci.Presentation
         private JciStoreDocument document;
         private JciTogetherSession together;
         private MoodOption selectedMood;
-        private bool reducedMotion;
         private Sprite sunLogo;
         private Sprite warmBackdrop;
         private Sprite cardFront;
         private Sprite cardBack;
+#if UNITY_ANDROID && !UNITY_EDITOR
+        private AndroidJavaClass androidBackBridge;
+        private AndroidJavaObject androidActivity;
+        private volatile bool androidBackRequested;
+#endif
 
         private enum JciScreen
         {
@@ -43,6 +47,7 @@ namespace Jci.Presentation
             SelfSummary,
             TogetherPicker,
             TogetherActive,
+            TogetherPassPhone,
             TogetherSummary,
             Journey
         }
@@ -68,7 +73,6 @@ namespace Jci.Presentation
             Screen.fullScreenMode = FullScreenMode.Windowed;
             Screen.fullScreen = false;
 #endif
-            reducedMotion = PlayerPrefs.GetInt("jci.reducedMotion", 0) == 1;
             store = new JciLocalStore(Path.Combine(UnityEngine.Application.persistentDataPath, "jci-local-v1.json"));
             document = store.Load();
             sunLogo = LoadSprite("JciSunLogo");
@@ -77,12 +81,89 @@ namespace Jci.Presentation
             cardBack = LoadSprite("JciCardBack");
             BuildCanvas();
             ShowHome();
+#if UNITY_ANDROID && !UNITY_EDITOR
+            RegisterAndroidBackCallback();
+#endif
+        }
+
+        private void OnEnable()
+        {
+            UnityEngine.Application.wantsToQuit += OnWantsToQuit;
+        }
+
+        private void OnDisable()
+        {
+            UnityEngine.Application.wantsToQuit -= OnWantsToQuit;
+#if UNITY_ANDROID && !UNITY_EDITOR
+            UnregisterAndroidBackCallback();
+#endif
         }
 
         private void Update()
         {
-            if (Input.GetKeyDown(KeyCode.Escape)) HandleBack();
+#if UNITY_ANDROID && !UNITY_EDITOR
+            if (androidBackRequested)
+            {
+                androidBackRequested = false;
+                HandleBack();
+            }
+#endif
         }
+
+        private bool OnWantsToQuit()
+        {
+            if (currentScreen == JciScreen.Home) return true;
+            HandleBack();
+            return false;
+        }
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        private void RegisterAndroidBackCallback()
+        {
+            try
+            {
+                using (var version = new AndroidJavaClass("android.os.Build$VERSION"))
+                {
+                    if (version.GetStatic<int>("SDK_INT") < 33) return;
+                }
+
+                using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+                {
+                    androidActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+                }
+
+                androidBackBridge = new AndroidJavaClass("com.ftcholding.justcheckingin.JciBackBridge");
+                androidBackBridge.CallStatic("register", androidActivity);
+                UnityEngine.Debug.Log("JCI Android back callback registered");
+            }
+            catch (Exception error)
+            {
+                UnityEngine.Debug.LogWarning("JCI Android back callback unavailable: " + error.Message);
+            }
+        }
+
+        private void UnregisterAndroidBackCallback()
+        {
+            if (androidBackBridge == null || androidActivity == null) return;
+            try
+            {
+                androidBackBridge.CallStatic("unregister", androidActivity);
+            }
+            catch (Exception error)
+            {
+                UnityEngine.Debug.LogWarning("JCI Android back callback cleanup: " + error.Message);
+            }
+            androidBackBridge.Dispose();
+            androidActivity.Dispose();
+            androidBackBridge = null;
+            androidActivity = null;
+        }
+
+        public void OnAndroidBackInvoked(string message)
+        {
+            androidBackRequested = true;
+        }
+#endif
 
         private void HandleBack()
         {
@@ -107,6 +188,7 @@ namespace Jci.Presentation
                     ShowHome();
                     break;
                 case JciScreen.TogetherActive:
+                case JciScreen.TogetherPassPhone:
                     if (together != null && together.Phase == SessionPhase.Active)
                     {
                         document.ActiveSession = together.Snapshot();
@@ -193,18 +275,17 @@ namespace Jci.Presentation
             AddBrandHeader(body);
             var hero = AddText(body, "A little time to connect.", 31, Parse(Ink), FontStyle.Bold, 74);
             hero.rectTransform.sizeDelta = new Vector2(0, 74);
-            screenMotion.Play(reducedMotion);
+            screenMotion.Play();
         }
 
         private void ShowHome()
         {
             currentScreen = JciScreen.Home;
             ClearBody();
-            AddText(body, "How would you like to arrive?", 18, Parse(Ink), FontStyle.Normal, 43);
+            AddText(body, "How would you like to check in?", 18, Parse(Ink), FontStyle.Normal, 43);
             if (document.ActiveSession != null) AddButton(body, "Resume your check-in", ResumeTogether, Parse(Coral));
             AddPhysicalDeck(body);
-            AddButton(body, "Draw a card for myself", ShowSelfIntro, Parse(Teal));
-            AddButton(body, "Reduced motion: " + (reducedMotion ? "On" : "Off"), ToggleReducedMotion, new Color(1f, 1f, 1f, .72f), Parse(Ink));
+            AddButton(body, "My journey", ShowJourney, Parse(Card), Parse(Ink));
         }
 
         private void ShowSelfIntro()
@@ -291,9 +372,20 @@ namespace Jci.Presentation
 
         private void ResumeTogether()
         {
-            together = new JciTogetherSession(JciContent.Prompts, unchecked((int)DateTime.UtcNow.Ticks));
-            together.Restore(document.ActiveSession);
-            ShowTogether();
+            try
+            {
+                together = new JciTogetherSession(JciContent.Prompts, unchecked((int)DateTime.UtcNow.Ticks));
+                together.Restore(document.ActiveSession);
+                ShowTogether();
+            }
+            catch (ArgumentException)
+            {
+                // A stale pre-release snapshot must never leave a dead Resume button on Home.
+                document.ActiveSession = null;
+                store.Save(document);
+                together = null;
+                ShowHome();
+            }
         }
 
         private void ShowTogether()
@@ -301,7 +393,7 @@ namespace Jci.Presentation
             currentScreen = JciScreen.TogetherActive;
             ClearBody();
             if (together == null || together.CurrentPrompt == null) { ShowHome(); return; }
-            AddText(body, "TOGETHER - YOUR TURN " + together.TurnNumber.ToString("00"), 15, Parse(Gold), FontStyle.Bold, 42);
+            AddText(body, "TOGETHER - " + CurrentTurnLabel() + " - TURN " + together.TurnNumber.ToString("00"), 15, Parse(Gold), FontStyle.Bold, 42);
             AddCardText(body, together.CurrentPrompt.Text, 23, 205, Parse(Coral));
             AddButton(body, "I am ready - next prompt", CompleteTurn, Parse(Coral));
             AddButton(body, "Not today", PassTurn, Parse(Teal));
@@ -316,7 +408,39 @@ namespace Jci.Presentation
             document.ActiveSession = together.Snapshot();
             store.Save(document);
             Haptic();
-            ShowTogether();
+            ShowPassPhone();
+        }
+
+        private void ShowPassPhone()
+        {
+            currentScreen = JciScreen.TogetherPassPhone;
+            ClearBody();
+            var handoff = together.TurnNumber % 2 == 1 ? "Pass the phone back to you." : "Pass the phone to " + ConnectionDisplayName() + ".";
+            AddCardText(body, handoff, 24, 150, Parse(Coral));
+            AddText(body, "The next card stays hidden until they are ready.", 17, Parse(Ink), FontStyle.Normal, 58);
+            AddButton(body, "I'm ready", ShowTogether, Parse(Teal));
+            AddButton(body, "End this check-in", EndTogether, Parse(Card), Parse(Ink));
+        }
+
+        private string CurrentTurnLabel()
+        {
+            if (together == null || together.TurnNumber % 2 == 1) return "Your turn";
+            return ConnectionDisplayName() + "'s turn";
+        }
+
+        private string ConnectionDisplayName()
+        {
+            if (together == null) return "your partner";
+            for (var i = 0; i < document.Connections.Count; i++)
+            {
+                var connection = document.Connections[i];
+                if (string.Equals(connection.Id, together.ConnectionId, StringComparison.Ordinal) && !string.IsNullOrWhiteSpace(connection.DisplayName))
+                {
+                    return connection.DisplayName;
+                }
+            }
+
+            return "your partner";
         }
 
         private void EndTogether()
@@ -365,18 +489,10 @@ namespace Jci.Presentation
             ShowHome();
         }
 
-        private void ToggleReducedMotion()
-        {
-            reducedMotion = !reducedMotion;
-            PlayerPrefs.SetInt("jci.reducedMotion", reducedMotion ? 1 : 0);
-            PlayerPrefs.Save();
-            ShowHome();
-        }
-
         private void Haptic()
         {
 #if UNITY_IOS && !UNITY_EDITOR
-            if (!reducedMotion) Handheld.Vibrate();
+            Handheld.Vibrate();
 #endif
         }
 
@@ -438,11 +554,10 @@ namespace Jci.Presentation
             var rowRect = row.GetComponent<RectTransform>();
             rowRect.anchorMin = new Vector2(0, 0); rowRect.anchorMax = new Vector2(1, 0); rowRect.pivot = new Vector2(.5f, 0); rowRect.anchoredPosition = new Vector2(0, 6); rowRect.sizeDelta = new Vector2(0, 184);
             var rowLayout = row.GetComponent<HorizontalLayoutGroup>();
-            rowLayout.spacing = 7; rowLayout.padding = new RectOffset(0, 0, 0, 0); rowLayout.childAlignment = TextAnchor.MiddleCenter; rowLayout.childControlWidth = false; rowLayout.childControlHeight = false; rowLayout.childForceExpandWidth = false; rowLayout.childForceExpandHeight = false;
+            rowLayout.spacing = 16; rowLayout.padding = new RectOffset(0, 0, 0, 0); rowLayout.childAlignment = TextAnchor.MiddleCenter; rowLayout.childControlWidth = false; rowLayout.childControlHeight = false; rowLayout.childForceExpandWidth = false; rowLayout.childForceExpandHeight = false;
 
-            AddPhysicalModeCard(row.transform, "Check in\nwith myself", "A moment for you.", ShowSelfIntro, Parse(Teal));
-            AddPhysicalModeCard(row.transform, "Check in\ntogether", "Share the moment.", ShowTogetherPicker, Parse(Coral));
-            AddPhysicalModeCard(row.transform, "Your connection\njourney", "Small moments.", ShowJourney, Parse(Gold));
+            AddPhysicalModeCard(row.transform, "With\nmyself", "A moment for me.", ShowSelf, Parse(Teal));
+            AddPhysicalModeCard(row.transform, "Together\nhere", "Share this phone.", ShowTogetherPicker, Parse(Coral));
         }
 
         private static void AddDeckImage(Transform parent, Sprite sprite, Vector2 position, Vector2 size, float angle, float alpha)
@@ -616,30 +731,20 @@ namespace Jci.Presentation
         }
     }
 
-    /// <summary>Subtle screen fade/scale transition. It is disabled when reduced motion is enabled.</summary>
+    /// <summary>Short screen fade/scale transition between card states.</summary>
     internal sealed class JciScreenMotion : MonoBehaviour
     {
         private CanvasGroup group;
         private float elapsed;
-        private bool reduced;
 
         private void Awake()
         {
             group = GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
         }
 
-        public void Play(bool reducedMotion)
+        public void Play()
         {
-            reduced = reducedMotion;
             elapsed = 0f;
-            if (reduced)
-            {
-                group.alpha = 1f;
-                transform.localScale = Vector3.one;
-                enabled = false;
-                return;
-            }
-
             group.alpha = 0f;
             transform.localScale = Vector3.one * 0.985f;
             enabled = true;
@@ -647,7 +752,6 @@ namespace Jci.Presentation
 
         private void Update()
         {
-            if (reduced) return;
             elapsed += Time.unscaledDeltaTime;
             var t = Mathf.Clamp01(elapsed / 0.24f);
             var eased = 1f - Mathf.Pow(1f - t, 3f);
@@ -657,7 +761,7 @@ namespace Jci.Presentation
         }
     }
 
-    /// <summary>Very low-amplitude glass highlight pulse, automatically respecting reduced motion.</summary>
+    /// <summary>Very low-amplitude glass highlight pulse.</summary>
     internal sealed class JciGlassPulse : MonoBehaviour
     {
         private Image image;
@@ -672,14 +776,6 @@ namespace Jci.Presentation
         private void Update()
         {
             if (image == null) return;
-            if (PlayerPrefs.GetInt("jci.reducedMotion", 0) == 1)
-            {
-                var reduced = image.color;
-                reduced.a = BaseAlpha;
-                image.color = reduced;
-                return;
-            }
-
             elapsed += Time.unscaledDeltaTime;
             var color = image.color;
             color.a = BaseAlpha + Mathf.Sin(elapsed * 0.8f) * 0.012f;
@@ -687,59 +783,55 @@ namespace Jci.Presentation
         }
     }
 
-    /// <summary>Subtle breathing motion for prompt and affirmation surfaces.</summary>
+    /// <summary>A sequenced card-deal entrance with a gentle settled float.</summary>
     internal sealed class JciCardMotion : MonoBehaviour
     {
         private RectTransform rect;
         private float elapsed;
-        private bool reduced;
+        private float delay;
+        private float initialTilt;
         private Vector3 restingScale;
 
         private void Awake()
         {
             rect = GetComponent<RectTransform>();
             restingScale = rect == null ? Vector3.one : rect.localScale;
-            reduced = PlayerPrefs.GetInt("jci.reducedMotion", 0) == 1;
-            if (reduced)
-            {
-                enabled = false;
-                return;
-            }
-
-            // A short card deal-in makes the tactile card metaphor readable,
-            // then settles into a barely perceptible breathing motion.
-            rect.localScale = restingScale * .92f;
+            var order = transform.GetSiblingIndex() % 5;
+            delay = order * .055f;
+            initialTilt = (order % 2 == 0 ? -1f : 1f) * (4f + order);
+            rect.localScale = restingScale * .72f;
+            rect.localRotation = Quaternion.Euler(0f, 0f, initialTilt);
         }
 
         private void Update()
         {
-            if (rect == null || reduced) return;
+            if (rect == null) return;
             elapsed += Time.unscaledDeltaTime;
-            var entrance = Mathf.Clamp01(elapsed / .28f);
-            var easedEntrance = 1f - Mathf.Pow(1f - entrance, 3f);
-            var breathe = 1f + Mathf.Sin(Mathf.Max(0f, elapsed - .28f) * .75f) * .006f;
-            var scale = Mathf.Lerp(.92f, 1f, easedEntrance) * breathe;
+            var entrance = Mathf.Clamp01((elapsed - delay) / .42f);
+            const float overshoot = 1.70158f;
+            var easedEntrance = 1f + (overshoot + 1f) * Mathf.Pow(entrance - 1f, 3f) + overshoot * Mathf.Pow(entrance - 1f, 2f);
+            var breathe = 1f + Mathf.Sin(Mathf.Max(0f, elapsed - delay - .42f) * .8f) * .006f;
+            var scale = Mathf.Lerp(.72f, 1f, easedEntrance) * breathe;
             rect.localScale = restingScale * scale;
+            rect.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(initialTilt, 0f, Mathf.Clamp01(easedEntrance)));
         }
     }
 
-    /// <summary>Small tactile press response for touch buttons, disabled for reduced motion.</summary>
+    /// <summary>Small tactile press response for touch buttons.</summary>
     internal sealed class JciButtonMotion : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
     {
         private RectTransform rect;
         private Vector3 restingScale;
-        private bool reduced;
 
         private void Awake()
         {
             rect = GetComponent<RectTransform>();
             restingScale = rect.localScale;
-            reduced = PlayerPrefs.GetInt("jci.reducedMotion", 0) == 1;
         }
 
         public void OnPointerDown(PointerEventData eventData)
         {
-            if (!reduced && rect != null) rect.localScale = restingScale * 0.975f;
+            if (rect != null) rect.localScale = restingScale * 0.975f;
         }
 
         public void OnPointerUp(PointerEventData eventData) { Restore(); }

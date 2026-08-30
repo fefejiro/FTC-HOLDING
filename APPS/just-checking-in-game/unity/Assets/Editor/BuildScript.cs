@@ -17,7 +17,7 @@ namespace Jci.Editor
     public static class BuildScript
     {
         private const string MarketingVersion = "1.1.0";
-        private const int AndroidVersionCode = 3;
+        private const int AndroidVersionCode = 4;
         private const string IosBuildNumber = "4";
         private const string AndroidOutputPath = "Builds/Android/JustCheckingIn.aab";
         private const string IosOutputPath = "Builds/iOS/JustCheckingIn";
@@ -75,8 +75,13 @@ namespace Jci.Editor
         [MenuItem("JCI/Build Android APK For Device")]
         public static void BuildAndroidApkForDevice()
         {
+            EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Android, BuildTarget.Android);
             ConfigureCommonPlayerSettings();
             ConfigureAndroidPlayerSettings();
+            // Use the canonical IL2CPP backend; Android ARM64 is not supported by Mono.
+            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
+            // Re-apply ARM64 immediately before BuildPlayer after backend selection.
+            PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
 
             string keystorePath = ResolveKeystorePath(RequireEnvAny("KEYSTORE_PATH", "ANDROID_KEYSTORE_NAME"));
             string keystorePass = RequireEnvAny("KEYSTORE_PASS", "ANDROID_KEYSTORE_PASS");
