@@ -236,8 +236,6 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
   const message = typeof failureDetail === "string"
     ? failureDetail
     : typeof failureDetail?.message === "string" ? failureDetail.message : "";
-  const databaseCode = typeof failureDetail === "object" && typeof failureDetail?.code === "string"
-    ? failureDetail.code : "";
   const directCodes: Partial<Record<string, ErrorCode>> = {
     REGION_MISMATCH: "REGION_MISMATCH",
     SCHEMA_MISMATCH: "SCHEMA_MISMATCH",
@@ -280,18 +278,9 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     "DEVICE_PUSH_INVALID", "DEVICE_PUSH_CONFIGURATION_INVALID", "PARENTING_TASK_INVALID", "PARENTING_TASK_ASSIGNEE_INVALID",
   ]);
   const safeCode = directCodes[message] ?? (invalidRequestCodes.has(message) ? "INVALID_REQUEST" : "DATABASE_NOT_READY");
-  // Keep provider/SQL details out of client responses while retaining a
-  // server-side correlation point for production diagnosis. No identity,
-  // family, message, or attachment content is logged here.
-  if (safeCode === "DATABASE_NOT_READY") {
-    console.error("PeacePad RPC failure", {
-      requestId,
-      environment: config.environment,
-      region: config.region,
-      postgresCode: databaseCode || undefined,
-      providerMessage: message || undefined,
-    });
-  }
+  // Provider/SQL details are deliberately neither returned nor logged here.
+  // The request id remains in the generic response envelope for a user to
+  // share with support without exposing identity, family, or message data.
   const status = safeCode === "DATABASE_NOT_READY" ? 503
     : safeCode === "SIGNAL_RATE_LIMITED" ? 429
     : ["REGION_MISMATCH", "CONCURRENCY_CONFLICT", "IDEMPOTENCY_CONFLICT", "CALL_ALREADY_ACTIVE", "CALL_STATE_INVALID"].includes(safeCode) ? 409
