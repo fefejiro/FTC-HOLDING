@@ -20,6 +20,8 @@ describe("resolveEnvironmentConfig", () => {
 
       expect(resolveEnvironmentConfig()).toMatchObject({ environment: "staging" });
       expect(resolveSupabaseStagingConfig()).toMatchObject({ region: "ca", projectRef: "rohvkyuxbnqzglaromms" });
+      expect(resolveSupabaseStagingDirectory()).toEqual([expect.objectContaining({ region: "ca" })]);
+      expect(resolveSupabaseRuntimeDirectory()).toEqual([expect.objectContaining({ region: "ca" })]);
     } finally {
       for (const [key, value] of Object.entries({
         EXPO_PUBLIC_PEACEPAD_ENV: previous.environment,
@@ -135,6 +137,19 @@ describe("resolveSupabaseProductionConfig", () => {
     ]);
   });
 
+  it("reads a complete production configuration from bundled public variables", () => {
+    const previous = Object.fromEntries(Object.keys(production).map((key) => [key, process.env[key]]));
+    try {
+      Object.assign(process.env, production);
+      expect(resolveSupabaseProductionConfig()).toMatchObject({ environment: "production", region: "ca" });
+    } finally {
+      for (const [key, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
+  });
+
   it("fails closed on a swapped project, missing write authorization, and private key material", () => {
     expect(() => resolveSupabaseProductionConfig({
       ...production,
@@ -204,6 +219,10 @@ describe("resolveSupabaseStagingConfig", () => {
     expect(() => resolveSupabaseStagingConfig({ ...ca, EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY: "service_role_secret" })).toThrow("secret and legacy JWT keys are prohibited");
     expect(() => resolveSupabaseStagingConfig({ ...ca, EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY: "ey.a.b" })).toThrow("legacy JWT keys are prohibited");
     expect(() => resolveSupabaseStagingConfig({ ...ca, EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY: "" })).toThrow("requires an sb_publishable_ Supabase key");
+    expect(() => resolveSupabaseStagingConfig({
+      EXPO_PUBLIC_PEACEPAD_ENV: "staging",
+      EXPO_PUBLIC_PEACEPAD_REGION: "ca"
+    })).toThrow("exact approved Supabase project");
   });
 
   it("rejects the paused historical project refs", () => {

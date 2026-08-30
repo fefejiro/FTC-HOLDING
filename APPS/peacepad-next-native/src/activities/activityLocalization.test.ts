@@ -12,7 +12,10 @@ describe("activity localization", () => {
     expect(spanish.title).toBe("Ideas de actividades");
     expect(spanish.weatherChoices.cold).toBe("Frío");
     expect(spanish.plan("Picnic")).toContain("Picnic");
+    expect(spanish.result(1)).toBe("1 idea");
+    expect(spanish.result(2)).toBe("2 ideas");
 
+    expect(activityCopy("en").result(1)).toBe("1 idea");
     expect(activityCopy("en").result(0)).toBe("0 ideas");
   });
 });
