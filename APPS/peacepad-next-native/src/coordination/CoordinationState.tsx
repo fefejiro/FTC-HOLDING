@@ -34,6 +34,8 @@ import {
   type MessageCheckPreference,
   type MessageEvent,
   type ParentingTask,
+  type ParentingScheduleException,
+  type ParentingSchedulePlan,
   type ParticipantGrant,
   type ScheduleEvent
 } from "../domain/v2";
@@ -82,6 +84,8 @@ type CoordinationStateValue = {
   visibleLayerIds: readonly string[];
   events: readonly ScheduleEvent[];
   tasks: readonly ParentingTask[];
+  parentingSchedulePlan: ParentingSchedulePlan | null;
+  parentingScheduleExceptions: readonly ParentingScheduleException[];
   actorIdentityId?: EntityId;
   messageCheckEnabled: boolean;
   messageCheckHydrated: boolean;
@@ -112,6 +116,22 @@ type CoordinationStateValue = {
   setCalendarView: (view: CalendarView) => void;
   toggleLayerFilter: (layerId: string) => void;
   setLayerShared: (layerId: string, shared: boolean) => Promise<void>;
+  saveParentingSchedulePlan: (input: Readonly<{
+    calendarLayerId: EntityId;
+    pattern: import("../domain/v2").ParentingSchedulePattern;
+    startDate: string;
+    primaryParent: "you" | "other";
+    timezone: string;
+    status: "active" | "paused";
+  }>) => Promise<void>;
+  createParentingScheduleException: (input: Readonly<{
+    assignedParent: "you" | "other";
+    kind: ParentingScheduleException["kind"];
+    startDate: string;
+    endDate: string;
+    note: string | null;
+  }>) => Promise<void>;
+  resolveParentingScheduleException: (exceptionId: EntityId, resolution: "accepted" | "declined" | "cancelled") => Promise<void>;
   addEvent: (input: {
     layerId: string;
     title: string;
@@ -308,6 +328,8 @@ export function CoordinationStateProvider({
   const [visibleLayerIds, setVisibleLayerIds] = useState<readonly string[]>(demoMode ? defaultCalendarLayers.map((layer) => layer.id) : []);
   const [events, setEvents] = useState<readonly ScheduleEvent[]>([]);
   const [tasks, setTasks] = useState<readonly ParentingTask[]>([]);
+  const [parentingSchedulePlan, setParentingSchedulePlan] = useState<ParentingSchedulePlan | null>(null);
+  const [parentingScheduleExceptions, setParentingScheduleExceptions] = useState<readonly ParentingScheduleException[]>([]);
   const [messageCheckEnabled, setMessageCheckEnabledState] = useState(false);
   const [messageCheckHydrated, setMessageCheckHydrated] = useState(demoMode);
   const [messageCheckPreference, setMessageCheckPreference] = useState<MessageCheckPreference>();
@@ -365,6 +387,8 @@ export function CoordinationStateProvider({
     setVisibleLayerIds(demoMode ? defaultCalendarLayers.map((layer) => layer.id) : []);
     setEvents([]);
     setTasks([]);
+    setParentingSchedulePlan(null);
+    setParentingScheduleExceptions([]);
     setSentMessages([]);
     setMessageAttachments([]);
     setAttachmentError(undefined);
@@ -416,6 +440,12 @@ export function CoordinationStateProvider({
       && typeof (resolvedApi as Partial<PeacePadCoordinationApi>).listConversationAttachments === "function"
       ? resolvedApi.listConversationAttachments(connectedRuntime.conversationId)
       : Promise.resolve([] as readonly ConversationAttachment[]);
+    const parentingSchedule = typeof (resolvedApi as Partial<PeacePadCoordinationApi>).getParentingSchedulePlan === "function"
+      ? resolvedApi.getParentingSchedulePlan(activeRuntime.familyCircleId)
+      : Promise.resolve(null);
+    const parentingScheduleExceptionsRequest = typeof (resolvedApi as Partial<PeacePadCoordinationApi>).listParentingScheduleExceptions === "function"
+      ? resolvedApi.listParentingScheduleExceptions(activeRuntime.familyCircleId)
+      : Promise.resolve([] as readonly ParentingScheduleException[]);
     void retry.then(() => Promise.all([
       resolvedApi.listCalendarLayers(activeRuntime.familyCircleId),
       resolvedApi.listScheduleEvents(activeRuntime.familyCircleId),
@@ -423,13 +453,17 @@ export function CoordinationStateProvider({
       connectedRuntime ? resolvedApi.listMessages(connectedRuntime.conversationId) : Promise.resolve([]),
       conversationAttachments,
       connectedRuntime ? resolvedApi.getMessageCheckPreference(connectedRuntime.conversationId) : Promise.resolve(undefined),
-      connectedRuntime ? outbox.list() : Promise.resolve([])
-    ])).then(([nextLayers, nextEvents, nextTasks, nextMessages, nextAttachments, preference, queuedMessages]) => {
+      connectedRuntime ? outbox.list() : Promise.resolve([]),
+      parentingSchedule,
+      parentingScheduleExceptionsRequest
+    ])).then(([nextLayers, nextEvents, nextTasks, nextMessages, nextAttachments, preference, queuedMessages, nextParentingSchedule, nextScheduleExceptions]) => {
         if (cancelled || hydrationGeneration.current !== generation) return;
         setLayers(nextLayers);
         setVisibleLayerIds(nextLayers.map((layer) => layer.id));
         setEvents(nextEvents);
         setTasks(nextTasks);
+        setParentingSchedulePlan(nextParentingSchedule);
+        setParentingScheduleExceptions(nextScheduleExceptions);
         const waitingMessages = outboxScope ? queuedVisibleMessages(queuedMessages, outboxScope) : [];
         setSentMessages([...visibleMessages(nextMessages, activeRuntime.actorIdentityId), ...waitingMessages]);
         setMessageAttachments(nextAttachments);
@@ -530,6 +564,8 @@ export function CoordinationStateProvider({
     visibleLayerIds,
     events,
     tasks,
+    parentingSchedulePlan,
+    parentingScheduleExceptions,
     actorIdentityId: activeRuntime?.actorIdentityId,
     messageCheckEnabled,
     messageCheckHydrated,
@@ -649,6 +685,51 @@ export function CoordinationStateProvider({
         writeContext(activeRuntime, layer.version)
       );
       setLayers((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+    },
+    saveParentingSchedulePlan: async (input) => {
+      if (!activeRuntime) throw new Error("Sign in to save a parenting schedule.");
+      const conversations = await resolvedApi.listConversations(activeRuntime.familyCircleId);
+      const participants = conversations.find((item) => item.id === activeRuntime.conversationId)?.participantIdentityIds ?? [];
+      const otherIdentityId = participants.find((identityId) => identityId !== activeRuntime.actorIdentityId) ?? null;
+      if (input.primaryParent === "other" && !otherIdentityId) throw new Error("Connect the other parent before assigning their first parenting block.");
+      const saved = await resolvedApi.saveParentingSchedulePlan(
+        {
+          familyCircleId: activeRuntime.familyCircleId,
+          calendarLayerId: input.calendarLayerId,
+          pattern: input.pattern,
+          startDate: input.startDate,
+          primaryParentIdentityId: input.primaryParent === "you" ? activeRuntime.actorIdentityId : otherIdentityId!,
+          secondaryParentIdentityId: input.primaryParent === "you" ? otherIdentityId : activeRuntime.actorIdentityId,
+          timezone: input.timezone,
+          status: input.status
+        },
+        writeContext(activeRuntime, parentingSchedulePlan?.version ?? null)
+      );
+      setParentingSchedulePlan(saved);
+    },
+    createParentingScheduleException: async (input) => {
+      if (!activeRuntime || !parentingSchedulePlan) throw new Error("Save the shared parenting plan before adding an exception.");
+      const conversations = await resolvedApi.listConversations(activeRuntime.familyCircleId);
+      const participants = conversations.find((item) => item.id === activeRuntime.conversationId)?.participantIdentityIds ?? [];
+      const otherIdentityId = participants.find((identityId) => identityId !== activeRuntime.actorIdentityId) ?? null;
+      if (input.assignedParent === "other" && !otherIdentityId) throw new Error("Connect the other parent before assigning this exception.");
+      const created = await resolvedApi.createParentingScheduleException({
+        familyCircleId: activeRuntime.familyCircleId,
+        parentingSchedulePlanId: parentingSchedulePlan.id,
+        assignedParentIdentityId: input.assignedParent === "you" ? activeRuntime.actorIdentityId : otherIdentityId!,
+        kind: input.kind,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        note: input.note
+      }, writeContext(activeRuntime));
+      setParentingScheduleExceptions((current) => [created, ...current]);
+    },
+    resolveParentingScheduleException: async (exceptionId, resolution) => {
+      if (!activeRuntime) throw new Error("Sign in to respond to this schedule request.");
+      const current = parentingScheduleExceptions.find((item) => item.id === exceptionId);
+      if (!current) return;
+      const updated = await resolvedApi.resolveParentingScheduleException(exceptionId, resolution, writeContext(activeRuntime, current.version));
+      setParentingScheduleExceptions((items) => items.map((item) => item.id === updated.id ? updated : item));
     },
     addEvent: async ({ layerId, title, startsAt, endsAt, eventType }) => {
       const layer = layers.find((item) => item.id === layerId);
@@ -1038,6 +1119,8 @@ export function CoordinationStateProvider({
     attachmentBusy,
     attachmentError,
     tasks,
+    parentingSchedulePlan,
+    parentingScheduleExceptions,
     visibleLayerIds
   ]);
 

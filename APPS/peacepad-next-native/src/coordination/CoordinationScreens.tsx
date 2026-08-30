@@ -483,7 +483,13 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
     setLayerShared,
     toggleLayerFilter,
     visibleLayerIds,
-    connected
+    connected,
+    parentingSchedulePlan,
+    saveParentingSchedulePlan,
+    actorIdentityId,
+    parentingScheduleExceptions,
+    createParentingScheduleException,
+    resolveParentingScheduleException
   } = useCoordinationState();
   const [eventTitle, setEventTitle] = useState("");
   const [selectedLayerId, setSelectedLayerId] = useState(layers[0]?.id ?? "");
@@ -495,6 +501,11 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
   const [pendingDeleteEventId, setPendingDeleteEventId] = useState<string>();
   const [eventType, setEventType] = useState<"parenting-time" | "appointment" | "change-request">("parenting-time");
   const [custodySchedule, setCustodySchedule] = useState<CustodySchedule>();
+  const [exceptionStartDate, setExceptionStartDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [exceptionEndDate, setExceptionEndDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [exceptionNote, setExceptionNote] = useState("");
+  const [exceptionBusy, setExceptionBusy] = useState(false);
+  const [exceptionError, setExceptionError] = useState<string>();
 
   const visibleEvents = events.filter((event) => visibleLayerIds.includes(event.calendarLayerId));
   const views: readonly CalendarView[] = ["month", "week", "day"];
@@ -543,6 +554,12 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
       <CalendarViewPanel anchorDate={calendarAnchorDate} calendarView={calendarView} custodySchedule={custodySchedule} events={visibleEvents} layers={layers} locale={locale} />
 
       <CustodySchedulePlanner
+        initialSchedule={parentingSchedulePlan ? {
+          enabled: parentingSchedulePlan.status === "active",
+          pattern: parentingSchedulePlan.pattern,
+          startDate: parentingSchedulePlan.startDate,
+          primaryParent: parentingSchedulePlan.primaryParentIdentityId === actorIdentityId ? "you" : "other"
+        } : undefined}
         locale={locale}
         onAddBlocks={async (blocks: readonly CustodyBlock[]) => {
           if (!selectedLayerId) return;
@@ -567,8 +584,45 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
           }
         }}
         onScheduleChange={setCustodySchedule}
+        onSave={(schedule) => saveParentingSchedulePlan({
+          calendarLayerId: selectedLayerId,
+          pattern: schedule.pattern,
+          startDate: schedule.startDate,
+          primaryParent: schedule.primaryParent,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+          status: schedule.enabled ? "active" : "paused"
+        })}
         selectedLayerId={selectedLayerId}
       />
+
+      <View style={styles.card}>
+        <Text style={styles.heading}>Changes, holidays and swaps</Text>
+        <Text style={styles.body}>Propose a one-off change without rewriting the regular parenting plan. Both parents can see and respond to it.</Text>
+        <TextInput accessibilityLabel="Change start date" onChangeText={setExceptionStartDate} placeholder="YYYY-MM-DD" style={styles.input} value={exceptionStartDate} />
+        <TextInput accessibilityLabel="Change end date" onChangeText={setExceptionEndDate} placeholder="YYYY-MM-DD" style={styles.input} value={exceptionEndDate} />
+        <TextInput accessibilityLabel="Change note" maxLength={500} multiline onChangeText={setExceptionNote} placeholder="Holiday, school closure, travel, or swap details" style={[styles.input, styles.multilineInput]} value={exceptionNote} />
+        {exceptionError ? <Text accessibilityRole="alert" style={styles.error}>{exceptionError}</Text> : null}
+        <LabButton disabled={!parentingSchedulePlan || exceptionBusy} label={exceptionBusy ? "Sending proposal..." : "Propose change"} onPress={() => {
+          setExceptionBusy(true);
+          setExceptionError(undefined);
+          void createParentingScheduleException({ assignedParent: "you", kind: "other", startDate: exceptionStartDate, endDate: exceptionEndDate, note: exceptionNote.trim() || null })
+            .then(() => setExceptionNote(""))
+            .catch((error) => setExceptionError(error instanceof Error ? error.message : "PeacePad could not save that change."))
+            .finally(() => setExceptionBusy(false));
+        }} />
+        {parentingScheduleExceptions.map((item) => (
+          <View key={item.id} style={styles.listItem}>
+            <View style={styles.flexOne}>
+              <Text style={styles.actionTitle}>{item.startDate} - {item.endDate}</Text>
+              <Text style={styles.caption}>{item.note || "Parenting-time change"} · {item.status}</Text>
+            </View>
+            {item.status === "proposed" ? <View style={styles.rowWrap}>
+              <LabButton label="Accept" onPress={() => void resolveParentingScheduleException(item.id, "accepted")} variant="secondary" />
+              <LabButton label="Decline" onPress={() => void resolveParentingScheduleException(item.id, "declined")} variant="secondary" />
+            </View> : null}
+          </View>
+        ))}
+      </View>
 
       <View style={styles.card}>
         <Text style={styles.heading}>{calendarText(locale, "calendars")}</Text>
@@ -1327,6 +1381,10 @@ const styles = StyleSheet.create({
   smallButton: { alignItems: "center", backgroundColor: colors.brandSoft, borderRadius: 999, justifyContent: "center", minHeight: 44, minWidth: 64, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   smallButtonText: { ...typography.caption, color: colors.brand, fontWeight: "800" },
   input: { ...typography.body, backgroundColor: colors.surface, borderColor: "#E7C8BD", borderRadius: 18, borderWidth: 1, color: colors.text, minHeight: 52, padding: spacing.md },
+  multilineInput: { minHeight: 96, textAlignVertical: "top" },
+  listItem: { alignItems: "center", backgroundColor: colors.cream, borderRadius: 18, flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, padding: spacing.md },
+  flexOne: { flex: 1, minWidth: 180 },
+  rowWrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   messageInput: { minHeight: 120, textAlignVertical: "top" },
   wrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   chip: { alignItems: "center", backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 999, borderWidth: 1, justifyContent: "center", minHeight: 44, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },

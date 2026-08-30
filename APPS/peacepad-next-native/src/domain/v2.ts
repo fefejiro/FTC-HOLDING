@@ -194,6 +194,36 @@ export type ScheduleEvent = VersionedEntity &
     visibilityOverride: LayerVisibility | null;
   }>;
 
+export type ParentingSchedulePattern = "week_on_off" | "every_other_weekend" | "two_two_three";
+
+/** The single shared parenting-time rule currently active for a family. */
+export type ParentingSchedulePlan = VersionedEntity & Readonly<{
+  familyCircleId: EntityId;
+  calendarLayerId: EntityId;
+  createdByIdentityId: EntityId;
+  pattern: ParentingSchedulePattern;
+  startDate: string;
+  primaryParentIdentityId: EntityId;
+  secondaryParentIdentityId: EntityId | null;
+  timezone: string;
+  status: "active" | "paused";
+  updatedAt: IsoUtcTimestamp;
+}>;
+
+export type ParentingScheduleException = VersionedEntity & Readonly<{
+  familyCircleId: EntityId;
+  parentingSchedulePlanId: EntityId;
+  requestedByIdentityId: EntityId;
+  assignedParentIdentityId: EntityId;
+  kind: "holiday" | "vacation" | "swap" | "other";
+  startDate: string;
+  endDate: string;
+  note: string | null;
+  status: "proposed" | "accepted" | "declined" | "cancelled";
+  resolvedByIdentityId: EntityId | null;
+  resolvedAt: IsoUtcTimestamp | null;
+}>;
+
 /**
  * A practical item a parent can keep private or explicitly share.  This is a
  * native V2 record, not a client-side checklist or a migrated legacy shell.

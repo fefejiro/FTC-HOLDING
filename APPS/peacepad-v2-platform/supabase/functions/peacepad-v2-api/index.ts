@@ -465,6 +465,14 @@ const parentCoreWrite = (method: string, path: string): { operation: string; id?
   return null;
 };
 
+const parentingScheduleWrite = (method: string, path: string): { operation: string; id?: string } | null => {
+  if (method === "PUT" && path === "/api/v2/parenting-schedule") return { operation: "schedule.save" };
+  if (method === "POST" && path === "/api/v2/parenting-schedule/exceptions") return { operation: "exception.create" };
+  const exception = path.match(/^\/api\/v2\/parenting-schedule\/exceptions\/([^/]+)$/);
+  if (method === "PATCH" && exception) return { operation: "exception.resolve", id: decodeURIComponent(exception[1]) };
+  return null;
+};
+
 const databaseIdempotencyToken = async (
   config: RuntimeConfig,
   identityId: string,
@@ -1036,6 +1044,21 @@ const handler = async (request: Request): Promise<Response> => {
     return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
   }
 
+
+  if (request.method === "GET" && ["/api/v2/parenting-schedule", "/api/v2/parenting-schedule/exceptions"].includes(path)) {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
+    const familyId = new URL(request.url).searchParams.get("familyCircleId")?.trim() ?? "";
+    if (!isUuid(familyId)) return failure(request, 400, "INVALID_REQUEST", "A valid family scope is required.", requestId, config);
+    const { data, error } = await authenticated.admin.rpc("peacepad_v2_parenting_schedule_read", {
+      p_identity_id: authenticated.user.id,
+      p_region: config.region,
+      p_family_id: familyId,
+      p_resource: path.endsWith("/exceptions") ? "exceptions" : "plan",
+    });
+    return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
+  }
+
   if (request.method === "GET" && path === "/api/v2/conch-sessions/current") {
     const authenticated = await authenticate(request, config);
     if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
@@ -1261,6 +1284,32 @@ const handler = async (request: Request): Promise<Response> => {
       sentAt,
       expiresAt,
     }, requestId, config);
+  }
+
+  const parentingScheduleMutation = parentingScheduleWrite(request.method, path);
+  if (parentingScheduleMutation) {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
+    const writeContext = writeHeaders(request, config, requestId);
+    if (!writeContext.ok) return writeContext.error;
+    const body = await readJsonObject(request);
+    if (!body || (parentingScheduleMutation.id && !isUuid(parentingScheduleMutation.id))) {
+      return failure(request, 400, "INVALID_REQUEST", "Valid parenting schedule details are required.", requestId, config);
+    }
+    const expectedVersionHeader = (request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? "";
+    const expectedVersion = expectedVersionHeader ? Number(expectedVersionHeader) : null;
+    if (parentingScheduleMutation.operation === "exception.resolve" && (!Number.isInteger(expectedVersion) || Number(expectedVersion) < 1)) {
+      return failure(request, 400, "INVALID_REQUEST", "A valid expected version is required.", requestId, config);
+    }
+    const payload = { ...body, ...(parentingScheduleMutation.id ? { id: parentingScheduleMutation.id } : {}) };
+    const databaseWriteToken = await databaseIdempotencyToken(config, authenticated.user.id, writeContext.idempotencyKey,
+      parentingScheduleMutation.operation.replace(/\./g, "_"), { identityId: authenticated.user.id, region: config.region, expectedVersion, payload });
+    const { data, error } = await authenticated.admin.rpc("peacepad_v2_parenting_schedule_write", {
+      p_identity_id: authenticated.user.id, p_region: config.region, p_operation: parentingScheduleMutation.operation,
+      p_payload: payload, p_expected_version: expectedVersion, p_idempotency_key: databaseWriteToken,
+      p_schema_version: writeContext.schemaVersion,
+    });
+    return error ? rpcFailure(request, requestId, config, error.message) : json(request, parentingScheduleMutation.operation === "exception.create" ? 201 : 200, data, requestId, config);
   }
 
   const parentCoreMutation = parentCoreWrite(request.method, path);

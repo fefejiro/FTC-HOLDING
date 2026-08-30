@@ -471,4 +471,34 @@ describe("SyntheticCoordinationApi safety behavior", () => {
     expect(expense.receiptAttachmentId).toBe(receipt.id);
     await expect(api.getExpenseReceiptDownload(receipt.id)).resolves.toMatchObject({ attachment: { linkedExpenseId: expense.id } });
   });
+
+  it("persists one shared parenting plan and versioned change requests", async () => {
+    const api = new SyntheticCoordinationApi();
+    const plan = await api.saveParentingSchedulePlan({
+      familyCircleId: "family-current",
+      calendarLayerId: "layer-parenting",
+      pattern: "two_two_three",
+      startDate: "2026-09-01",
+      primaryParentIdentityId: context.actor.identityId,
+      secondaryParentIdentityId: "identity-coparent",
+      timezone: "America/Toronto",
+      status: "active"
+    }, context);
+    await expect(api.getParentingSchedulePlan("family-current")).resolves.toEqual(plan);
+    await expect(api.saveParentingSchedulePlan({ ...plan, pattern: "week_on_off" }, context)).rejects.toMatchObject({ status: 409 });
+
+    const proposed = await api.createParentingScheduleException({
+      familyCircleId: "family-current",
+      parentingSchedulePlanId: plan.id,
+      assignedParentIdentityId: "identity-coparent",
+      kind: "holiday",
+      startDate: "2026-12-24",
+      endDate: "2026-12-26",
+      note: "Holiday handover"
+    }, context);
+    expect(proposed).toMatchObject({ status: "proposed", version: 1 });
+    await expect(api.resolveParentingScheduleException(proposed.id, "accepted", { ...context, expectedVersion: proposed.version }))
+      .resolves.toMatchObject({ status: "accepted", version: 2 });
+    await expect(api.listParentingScheduleExceptions("family-current")).resolves.toHaveLength(1);
+  });
 });

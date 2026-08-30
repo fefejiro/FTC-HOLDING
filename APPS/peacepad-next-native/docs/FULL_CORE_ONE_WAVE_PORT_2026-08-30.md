@@ -31,6 +31,11 @@ WebView or a legacy-island bridge.
 - Receipts now have their own private object path and authorization model:
   owner-only before association, authorized family participants only after the
   receipt is attached to the shared expense. JPG, PNG, and PDF only.
+- Parenting-time patterns are now canonical family data instead of a local
+  preview: one versioned shared plan persists the rotation, anchor date,
+  parents, calendar layer and timezone. Authorized parents can propose and
+  accept/decline one-off holidays, swaps and other date exceptions without
+  silently rewriting the recurring plan.
 - The approved family-first visual system is used across the added native
   screens: purple anchor with coral, sun, aqua, cream, warm copy and no emoji
   product icons.
@@ -48,8 +53,8 @@ WebView or a legacy-island bridge.
 
 ## Local evidence from this wave
 
-The following passed from the canonical checkout after the receipt path was
-added:
+The following passed from the canonical checkout after the receipt and shared
+parenting-schedule paths were added:
 
 ```text
 npm run typecheck
@@ -59,6 +64,12 @@ npm run secret-scan
 APPS/peacepad-v2-platform/scripts/validate-supabase-edge-function.ps1
 git diff --check
 ```
+
+The current full Native suite is 65 passing suites and 471 passing tests with
+one intentionally skipped test. A direct Deno check reaches four pre-existing
+generated Supabase typing errors in incoming-call push code; it reports no new
+parenting-schedule error. The missing root `scripts/audit-secrets.cjs` command
+is a repository-script gap; the Native scoped secret scan passed.
 
 The receipt contract has focused tests for intent, byte upload, completion,
 expense association, and signed-download retrieval in the synthetic adapter.

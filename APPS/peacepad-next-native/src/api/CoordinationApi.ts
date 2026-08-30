@@ -16,6 +16,8 @@ import type {
   MessageCheckPreference,
   MessageEvent,
   ParentingTask,
+  ParentingScheduleException,
+  ParentingSchedulePlan,
   ParticipantGrant,
   PrivateAttachment,
   PrivateAttachmentDownload,
@@ -292,6 +294,14 @@ export type CreateScheduleEventInput = Readonly<
   >
 >;
 
+export type SaveParentingSchedulePlanInput = Readonly<Pick<ParentingSchedulePlan,
+  "familyCircleId" | "calendarLayerId" | "pattern" | "startDate" | "primaryParentIdentityId" | "secondaryParentIdentityId" | "timezone" | "status"
+>>;
+
+export type CreateParentingScheduleExceptionInput = Readonly<Pick<ParentingScheduleException,
+  "familyCircleId" | "parentingSchedulePlanId" | "assignedParentIdentityId" | "kind" | "startDate" | "endDate" | "note"
+>>;
+
 export type CreateParentingTaskInput = Readonly<{
   familyCircleId: EntityId;
   title: string;
@@ -409,6 +419,11 @@ export interface PeacePadCoordinationApi {
   createScheduleEvent(input: CreateScheduleEventInput, context: WriteContext): Promise<ScheduleEvent>;
   updateScheduleEvent(event: ScheduleEvent, context: WriteContext): Promise<ScheduleEvent>;
   deleteScheduleEvent(eventId: EntityId, context: WriteContext): Promise<void>;
+  getParentingSchedulePlan(familyCircleId: EntityId): Promise<ParentingSchedulePlan | null>;
+  saveParentingSchedulePlan(input: SaveParentingSchedulePlanInput, context: WriteContext): Promise<ParentingSchedulePlan>;
+  listParentingScheduleExceptions(familyCircleId: EntityId): Promise<readonly ParentingScheduleException[]>;
+  createParentingScheduleException(input: CreateParentingScheduleExceptionInput, context: WriteContext): Promise<ParentingScheduleException>;
+  resolveParentingScheduleException(exceptionId: EntityId, resolution: "accepted" | "declined" | "cancelled", context: WriteContext): Promise<ParentingScheduleException>;
   listParentingTasks(familyCircleId: EntityId): Promise<readonly ParentingTask[]>;
   createParentingTask(input: CreateParentingTaskInput, context: WriteContext): Promise<ParentingTask>;
   updateParentingTask(task: ParentingTask, context: WriteContext): Promise<ParentingTask>;
@@ -858,6 +873,26 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
 
   getPrivateAttachmentDownload(attachmentId: EntityId) {
     return this.request<PrivateAttachmentDownload>(`/api/v2/attachments/${encodeURIComponent(attachmentId)}/download`);
+  }
+
+  getParentingSchedulePlan(familyCircleId: EntityId) {
+    return this.request<ParentingSchedulePlan | null>(`/api/v2/parenting-schedule?familyCircleId=${encodeURIComponent(familyCircleId)}`);
+  }
+
+  saveParentingSchedulePlan(input: SaveParentingSchedulePlanInput, context: WriteContext) {
+    return this.write<ParentingSchedulePlan>("/api/v2/parenting-schedule", "PUT", input, context);
+  }
+
+  listParentingScheduleExceptions(familyCircleId: EntityId) {
+    return this.request<readonly ParentingScheduleException[]>(`/api/v2/parenting-schedule/exceptions?familyCircleId=${encodeURIComponent(familyCircleId)}`);
+  }
+
+  createParentingScheduleException(input: CreateParentingScheduleExceptionInput, context: WriteContext) {
+    return this.write<ParentingScheduleException>("/api/v2/parenting-schedule/exceptions", "POST", input, context);
+  }
+
+  resolveParentingScheduleException(exceptionId: EntityId, resolution: "accepted" | "declined" | "cancelled", context: WriteContext) {
+    return this.write<ParentingScheduleException>(`/api/v2/parenting-schedule/exceptions/${encodeURIComponent(exceptionId)}`, "PATCH", { resolution }, context);
   }
 
   completeConversationAttachment(attachmentId: EntityId, context: WriteContext) {

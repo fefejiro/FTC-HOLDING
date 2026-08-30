@@ -19,6 +19,8 @@ import {
   type CreatedFamily,
   type AccountExportManifest,
   type CreateScheduleEventInput,
+  type SaveParentingSchedulePlanInput,
+  type CreateParentingScheduleExceptionInput,
   type CreateChildProfileInput,
   type CreateChildUpdateInput,
   type CreateExpenseInput,
@@ -56,6 +58,8 @@ import {
   type PrivateAttachmentDownload,
   type PrivateTimelineEntry,
   type ParentingTask,
+  type ParentingScheduleException,
+  type ParentingSchedulePlan,
   type RecordProvenance,
   type ScheduleEvent,
   type VersionedEntity,
@@ -142,6 +146,8 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
   private createdInvitationCount = 0;
   private layers = [...defaultCalendarLayers];
   private events: ScheduleEvent[] = [];
+  private parentingSchedulePlan: ParentingSchedulePlan | null = null;
+  private parentingScheduleExceptions: ParentingScheduleException[] = [];
   private tasks: ParentingTask[] = [];
   private conversations: Conversation[] = [{
     ...versioned("conversation-primary"),
@@ -891,6 +897,50 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
       version: this.personalityPreference.version + 1
     };
     return this.personalityPreference;
+  }
+
+  async getParentingSchedulePlan(familyCircleId: EntityId): Promise<ParentingSchedulePlan | null> {
+    return this.parentingSchedulePlan && matchesSyntheticFamily(this.parentingSchedulePlan.familyCircleId, familyCircleId)
+      ? this.parentingSchedulePlan
+      : null;
+  }
+
+  async saveParentingSchedulePlan(input: SaveParentingSchedulePlanInput, context: WriteContext): Promise<ParentingSchedulePlan> {
+    const previous = this.parentingSchedulePlan;
+    if (previous && context.expectedVersion !== previous.version) throw new PeacePadApiError("The parenting plan changed. Refresh before saving.", "http", 409);
+    this.parentingSchedulePlan = {
+      ...versioned(previous?.id ?? `parenting-plan-${Date.now().toString(36)}`),
+      ...input,
+      createdByIdentityId: previous?.createdByIdentityId ?? actor.identityId,
+      updatedAt: new Date().toISOString(),
+      version: (previous?.version ?? 0) + 1
+    };
+    return this.parentingSchedulePlan;
+  }
+
+  async listParentingScheduleExceptions(familyCircleId: EntityId): Promise<readonly ParentingScheduleException[]> {
+    return this.parentingScheduleExceptions.filter((item) => matchesSyntheticFamily(item.familyCircleId, familyCircleId));
+  }
+
+  async createParentingScheduleException(input: CreateParentingScheduleExceptionInput, _context: WriteContext): Promise<ParentingScheduleException> {
+    const item: ParentingScheduleException = {
+      ...versioned(`schedule-exception-${Date.now().toString(36)}`),
+      ...input,
+      requestedByIdentityId: actor.identityId,
+      status: "proposed",
+      resolvedByIdentityId: null,
+      resolvedAt: null
+    };
+    this.parentingScheduleExceptions = [item, ...this.parentingScheduleExceptions];
+    return item;
+  }
+
+  async resolveParentingScheduleException(exceptionId: EntityId, resolution: "accepted" | "declined" | "cancelled", context: WriteContext): Promise<ParentingScheduleException> {
+    const current = this.parentingScheduleExceptions.find((item) => item.id === exceptionId);
+    if (!current || current.version !== context.expectedVersion) throw new PeacePadApiError("The schedule request changed. Refresh before responding.", "http", 409);
+    const updated = { ...current, status: resolution, resolvedByIdentityId: actor.identityId, resolvedAt: new Date().toISOString(), version: current.version + 1 } as ParentingScheduleException;
+    this.parentingScheduleExceptions = this.parentingScheduleExceptions.map((item) => item.id === exceptionId ? updated : item);
+    return updated;
   }
 
   async transcribeCoachAudio(bytes: ArrayBuffer, mediaType: "audio/m4a" | "audio/mp4" | "audio/webm") {
