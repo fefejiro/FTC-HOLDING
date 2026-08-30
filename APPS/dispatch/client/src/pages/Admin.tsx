@@ -191,7 +191,8 @@ const STATUS_LABEL: Record<RequestStatus, string> = {
 
 const ALL_STATUSES: RequestStatus[] = ['pending', 'accepted', 'en_route', 'completed', 'cancelled'];
 
-function fmt(str: string) {
+function fmt(str: string | null) {
+  if (!str) return 'Not available';
   return new Date(str).toLocaleString('en-CA', {
     month: 'short',
     day: 'numeric',
@@ -278,7 +279,7 @@ function filterRequests(requests: ServiceRequest[], filter: AdminFilter) {
 // ── Admin Login ───────────────────────────────────────────────────────────────
 
 function AdminLogin({ onSuccess }: { onSuccess: (token: string | null) => void }) {
-  const [pin, setPin] = useState('8701');
+  const [pin, setPin] = useState('8080');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showResetHelp, setShowResetHelp] = useState(false);
@@ -330,7 +331,7 @@ function AdminLogin({ onSuccess }: { onSuccess: (token: string | null) => void }
           {showResetHelp ? (
             <div className="rounded-xl border border-dispatch-border bg-dispatch-bg/70 p-3 text-sm text-slate-400 leading-relaxed">
               <div className="font-semibold text-white">Admin reset</div>
-              <p className="mt-1">The current backup admin PIN is <span className="font-semibold text-white">8701</span>. We can move this back to environment-only later if you want a tighter setup.</p>
+              <p className="mt-1">The current oversight PIN is <span className="font-semibold text-white">8080</span>. We can move this back to environment-only later if you want a tighter setup.</p>
             </div>
           ) : null}
         </div>
@@ -384,7 +385,7 @@ function AddOperatorForm({
 }) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [pin, setPin] = useState('9090');
+  const [pin, setPin] = useState('8080');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -414,7 +415,7 @@ function AddOperatorForm({
       setSuccess(`Operator "${name}" created.`);
       setName('');
       setPhone('');
-      setPin('9090');
+      setPin('8080');
       setTimeout(onClose, 1500);
     } catch {
       setError('Network error. Try again.');
@@ -466,7 +467,7 @@ function AddOperatorForm({
             className="w-full bg-dispatch-bg border border-dispatch-border rounded-xl pl-10 pr-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-orange-500 text-sm tracking-widest transition-colors"
           />
         </div>
-        <p className="-mt-1 text-[11px] text-slate-500">Default operator PIN is 9090. You can set a different one here if needed.</p>
+        <p className="-mt-1 text-[11px] text-slate-500">Default operator PIN is 8080. You can set a different one here if needed.</p>
         {error && (
           <div className="flex items-center gap-1.5 text-red-400 text-xs">
             <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />

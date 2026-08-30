@@ -760,7 +760,7 @@ function PinScreen({
           {showResetHelp ? (
             <div className="rounded-xl border border-dispatch-border bg-dispatch-bg/70 p-3 text-sm text-slate-400 leading-relaxed">
               <div className="font-semibold text-white">Operator reset</div>
-              <p className="mt-1">Ask the admin team to reset your on-duty PIN. The current default operator PIN is <span className="font-semibold text-white">9090</span>.</p>
+              <p className="mt-1">Ask the admin team to reset your on-duty PIN. The current default operator PIN is <span className="font-semibold text-white">8080</span>.</p>
             </div>
           ) : null}
           <p className="text-xs leading-relaxed text-slate-500">
@@ -1208,6 +1208,7 @@ function IncidentCard({
   currentOperatorId,
   isWorkflowUpdating,
   proximityLabel,
+  regionKey,
 }: {
   incident: IncidentWithMeta;
   selected?: boolean;
@@ -1216,9 +1217,10 @@ function IncidentCard({
   currentOperatorId: string;
   isWorkflowUpdating?: boolean;
   proximityLabel: string;
+  regionKey: DispatchRegionKey;
 }) {
   void proximityLabel;
-  const mapsUrl = incidentMapsUrl(incident);
+  const mapsUrl = incidentMapsUrl(incident, regionKey);
   const label = incidentLabel(incident);
   const isHigh = incidentIsHighPriority(incident);
   const occurredAt = incidentOccurredAt(incident);
@@ -1306,6 +1308,7 @@ function IncidentDetailCard({
   currentOperatorId,
   isWorkflowUpdating,
   proximityLabel,
+  regionKey,
 }: {
   incident: IncidentWithMeta;
   onBack: () => void;
@@ -1314,9 +1317,10 @@ function IncidentDetailCard({
   currentOperatorId: string;
   isWorkflowUpdating?: boolean;
   proximityLabel: string;
+  regionKey: DispatchRegionKey;
 }) {
   void proximityLabel;
-  const mapsUrl = incidentMapsUrl(incident);
+  const mapsUrl = incidentMapsUrl(incident, regionKey);
   const severity = incident.severity ? String(incident.severity).replace(/_/g, ' ') : 'Not specified';
   const occurredAt = incidentOccurredAt(incident);
   const freshness = incidentFreshnessMeta(occurredAt);
@@ -2248,9 +2252,9 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
             {roadAlertsState === 'success'
               ? sortedIncidentFeed.map((incident) => (
                   <Fragment key={incident.id}>
-                    <IncidentCard incident={incident} proximityLabel={proximityPoint.label} selected={selectedIncident?.id === incident.id} onSelect={(value) => setSelectedIncidentId(value.id)} onNavigate={handleIncidentNavigate} currentOperatorId={session.id} isWorkflowUpdating={isWorkflowUpdating} />
+                    <IncidentCard incident={incident} proximityLabel={proximityPoint.label} regionKey={regionKey} selected={selectedIncident?.id === incident.id} onSelect={(value) => setSelectedIncidentId(value.id)} onNavigate={handleIncidentNavigate} currentOperatorId={session.id} isWorkflowUpdating={isWorkflowUpdating} />
                     {selectedIncident?.id === incident.id ? (
-                      <IncidentDetailCard incident={incident} proximityLabel={proximityPoint.label} onBack={() => setSelectedIncidentId(null)} onNavigate={handleIncidentNavigate} onResolve={handleIncidentResolution} currentOperatorId={session.id} isWorkflowUpdating={isWorkflowUpdating} />
+                      <IncidentDetailCard incident={incident} proximityLabel={proximityPoint.label} regionKey={regionKey} onBack={() => setSelectedIncidentId(null)} onNavigate={handleIncidentNavigate} onResolve={handleIncidentResolution} currentOperatorId={session.id} isWorkflowUpdating={isWorkflowUpdating} />
                     ) : null}
                   </Fragment>
                 ))

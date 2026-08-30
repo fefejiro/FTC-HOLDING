@@ -1,13 +1,16 @@
 import { expect, test } from '@playwright/test';
 
 const OPERATOR_NAME = process.env.DISPATCH_TEST_OPERATOR_NAME || 'Ottawa Operator';
-const OPERATOR_PIN = process.env.DISPATCH_TEST_OPERATOR_PIN || '9090';
+const OPERATOR_PIN = process.env.DISPATCH_TEST_OPERATOR_PIN || '8080';
 const VALID_ROAD_ALERT_STATE_PATTERNS = [
   /Loading Ottawa roadside alerts/i,
   /Roadside alerts are temporarily unavailable/i,
   /No roadside alerts right now/i,
   /Still monitoring Ottawa incident sources/i,
+  /Showing live Ottawa roadside signals/i,
   /Qualified Ottawa signal/i,
+  /Qualified official signal/i,
+  /Qualified regional signal/i,
   /Official Ottawa traffic feed/i,
   /Official Ottawa transit feed/i,
   /Official regional feed/i,
@@ -44,7 +47,7 @@ test.describe('operator mobile road alerts', () => {
         continue;
       }
 
-      await expect(page.getByLabel('PIN')).toBeVisible();
+      await expect(page.getByPlaceholder('Access PIN')).toBeVisible();
       loginReady = true;
       break;
     }
@@ -63,7 +66,7 @@ test.describe('operator mobile road alerts', () => {
       await operatorSelect.selectOption({ label: fallback });
     });
 
-    await page.getByLabel('PIN').fill(OPERATOR_PIN);
+    await page.getByPlaceholder('Access PIN').fill(OPERATOR_PIN);
     await page.getByRole('button', { name: /Open field workspace/i }).click();
 
     await expect(page.getByText(/Live feed connected|Reconnecting live feed/i)).toBeVisible();
