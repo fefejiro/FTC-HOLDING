@@ -5,6 +5,7 @@ import { useLocalization } from "../localization/LocalizationProvider";
 import { PERSONALITY_TYPES, type PersonalityType } from "../api/CoordinationApi";
 import { useOptionalStagingAccountActions } from "../session/StagingAccountActions";
 import { colors, spacing, typography } from "../theme";
+import { CommunicationStyleQuestionnaire } from "./CommunicationStyleQuestionnaire";
 
 /**
  * An optional, self-selected communication preference. This is deliberately
@@ -25,6 +26,7 @@ export function PersonalityProfilePanel() {
     <View style={styles.card}>
       <AccessibleHeading style={styles.title}>{t("personality.title")}</AccessibleHeading>
       <Text style={styles.body}>{t("personality.body")}</Text>
+      <CommunicationStyleQuestionnaire identityId={actions.personalityPreference.identityId} onChoose={(personalityType) => save(personalityType)} />
       <View accessibilityLabel={t("personality.title")} accessibilityRole="radiogroup" style={styles.options}>
         {PERSONALITY_TYPES.map((personalityType) => {
           const isSelected = selected === personalityType;

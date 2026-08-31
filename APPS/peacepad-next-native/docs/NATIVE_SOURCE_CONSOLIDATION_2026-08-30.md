@@ -7,12 +7,27 @@ All new Native V2 work now starts from `main` at or after merge commit
 2026-08-30. The former integration branch is retained temporarily as a
 rollback reference; it is no longer a competing source of truth.
 
+The legacy product-behaviour reference is the private standalone repository
+`fefejiro/fefejiro-PeacePadAI` at exact commit
+`428db353925a45bbb59d3588381e783ef9d0514e` (2026-01-24). This is the last
+product snapshot before the separate PeacePad Agent experiment was merged on
+2026-01-26. The older `fefejiro/PeacePad-` head at `36e1eb56e` remains useful
+for archaeology, but it predates substantial voice-note, Conch, calendar,
+expense, support, call-engine, accessibility, and native-notification work.
+
+Use the Jan 24 snapshot as a behaviour library only. Port reviewed workflows,
+contracts, rules, and user intent into React Native; do not copy its web UI,
+Capacitor adapters, committed uploads, build credentials, database settings,
+mock production data, admin/test surfaces, or co-parent personality guesses.
+The Jan 26 `agent_core`, `memory`, `ui_hooks`, and Python database experiment is
+not a Native V2 source.
+
 ## What it combines
 
 - Native account entry, invitations, messaging, records, calendar, parenting
   time, tasks, personality preferences, push handling and audio-call entry.
 - Weather-aware activity ideas and calendar planning.
-- Solo Prep Chat before a co-parent connection exists.
+- Private PeacePad Coach preparation before a co-parent connection exists.
 - The warm multi-colour home, full-bleed brand icon, call entry, and
   privacy-safe account export summary.
 

@@ -9,7 +9,6 @@ on:
         type: choice
         options:
           - ca
-          - us
       mode:
         description: Validate only or deploy fictional staging
         required: true
@@ -35,7 +34,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: peacepad-v2-supabase-staging-${{ inputs.region }}
+  group: peacepad-v2-supabase-staging-ca
   cancel-in-progress: false
 
 jobs:
@@ -43,7 +42,7 @@ jobs:
     name: Validate or deploy ${{ inputs.region }} fictional staging
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment: peacepad-v2-staging-${{ inputs.region }}
+    environment: peacepad-v2-staging-ca
 
     steps:
       - name: Fetch trusted deployment control
@@ -79,7 +78,7 @@ jobs:
           SELECTED_REF: ${{ github.ref_name }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $projects = @{ ca = 'rohvkyuxbnqzglaromms'; us = 'spmpndalcvwmygznihec' }
+          $projects = @{ ca = 'rohvkyuxbnqzglaromms' }
           if ($env:SELECTED_REF -cne 'main') {
             throw 'The registered deployment control must be dispatched from main.'
           }
@@ -93,7 +92,7 @@ jobs:
             throw 'Deployment requires the exact confirmation DEPLOY FICTIONAL STAGING.'
           }
 
-          git -c protocol.version=2 fetch --no-tags --depth=1 origin refs/heads/feat/peacepad-v2-supabase-free-staging
+          git -c protocol.version=2 fetch --no-tags --depth=1 origin refs/heads/peacepad-native-main
           if ($LASTEXITCODE -ne 0) {
             throw 'The reviewed PeacePad V2 staging branch could not be fetched.'
           }
@@ -123,7 +122,6 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $expected = @{
             ca = @{ ref = 'rohvkyuxbnqzglaromms'; databaseRegion = 'ca-central-1' }
-            us = @{ ref = 'spmpndalcvwmygznihec'; databaseRegion = 'us-east-2' }
           }
           if ([string]::IsNullOrWhiteSpace($env:SUPABASE_ACCESS_TOKEN)) {
             throw 'SUPABASE_ACCESS_TOKEN is not configured in the protected regional environment.'
@@ -163,11 +161,20 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PEACEPAD_MAINTENANCE_SECRET: ${{ secrets.MAINTENANCE_SECRET }}
           PEACEPAD_IDEMPOTENCY_SECRET: ${{ secrets.IDEMPOTENCY_SECRET }}
+          PEACEPAD_PUSH_TOKEN_SECRET: ${{ secrets.PUSH_TOKEN_SECRET }}
+          PEACEPAD_TURN_URLS: ${{ secrets.TURN_URLS }}
+          PEACEPAD_TURN_SHARED_SECRET: ${{ secrets.TURN_SHARED_SECRET }}
+          PEACEPAD_SUPPORT_DISCOVERY_URL: ${{ secrets.SUPPORT_DISCOVERY_URL }}
+          PEACEPAD_SUPPORT_DISCOVERY_TOKEN: ${{ secrets.SUPPORT_DISCOVERY_TOKEN }}
+          PEACEPAD_COACH_TRANSCRIPTION_URL: ${{ secrets.COACH_TRANSCRIPTION_URL }}
+          PEACEPAD_COACH_TRANSCRIPTION_TOKEN: ${{ secrets.COACH_TRANSCRIPTION_TOKEN }}
+          PEACEPAD_COACH_CONVERSATION_URL: ${{ secrets.COACH_CONVERSATION_URL }}
+          PEACEPAD_COACH_CONVERSATION_TOKEN: ${{ secrets.COACH_CONVERSATION_TOKEN }}
           REQUESTED_REGION: ${{ inputs.region }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $projects = @{ ca = 'rohvkyuxbnqzglaromms'; us = 'spmpndalcvwmygznihec' }
-          $functionRegions = @{ ca = 'ca-central-1'; us = 'us-east-1' }
+          $projects = @{ ca = 'rohvkyuxbnqzglaromms' }
+          $functionRegions = @{ ca = 'ca-central-1' }
           if ([string]::IsNullOrWhiteSpace($env:PEACEPAD_MAINTENANCE_SECRET) -or $env:PEACEPAD_MAINTENANCE_SECRET.Length -lt 32) {
             throw 'MAINTENANCE_SECRET is missing or too short.'
           }
@@ -177,6 +184,7 @@ jobs:
           Write-Output "::add-mask::$env:DATABASE_URL"
           Write-Output "::add-mask::$env:PEACEPAD_MAINTENANCE_SECRET"
           Write-Output "::add-mask::$env:PEACEPAD_IDEMPOTENCY_SECRET"
+          ./scripts/validate-protected-provider-config.ps1
           supabase db push --db-url $env:DATABASE_URL --yes --agent no --workdir .
           if ($LASTEXITCODE -ne 0) { throw 'Migration apply failed.' }
           ./scripts/deploy-supabase-free-staging.ps1 -Region $env:REQUESTED_REGION -ProjectRef $projects[$env:REQUESTED_REGION] -FunctionRegion $functionRegions[$env:REQUESTED_REGION]
@@ -188,9 +196,9 @@ jobs:
           REQUESTED_REGION: ${{ inputs.region }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $projects = @{ ca = 'rohvkyuxbnqzglaromms'; us = 'spmpndalcvwmygznihec' }
-          $functionRegions = @{ ca = 'ca-central-1'; us = 'us-east-1' }
-          $wrongRegions = @{ ca = 'us'; us = 'ca' }
+          $projects = @{ ca = 'rohvkyuxbnqzglaromms' }
+          $functionRegions = @{ ca = 'ca-central-1' }
+          $wrongRegions = @{ ca = 'us' }
           $baseUrl = "https://$($projects[$env:REQUESTED_REGION]).supabase.co/functions/v1/peacepad-v2-api"
           $headers = @{ 'x-region' = $functionRegions[$env:REQUESTED_REGION]; 'x-peacepad-region' = $env:REQUESTED_REGION }
           $health = Invoke-RestMethod -Method Get -Uri "$baseUrl/health" -Headers $headers -TimeoutSec 20
@@ -221,7 +229,7 @@ jobs:
           JOB_STATUS: ${{ job.status }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $projects = @{ ca = 'rohvkyuxbnqzglaromms'; us = 'spmpndalcvwmygznihec' }
+          $projects = @{ ca = 'rohvkyuxbnqzglaromms' }
           $migrationRoot = 'peacepad-v2-target/APPS/peacepad-v2-platform/supabase/migrations'
           $edgeFunctionPath = 'peacepad-v2-target/APPS/peacepad-v2-platform/supabase/functions/peacepad-v2-api/index.ts'
           $migrationFiles = if (Test-Path -LiteralPath $migrationRoot) { @(Get-ChildItem "$migrationRoot/*.sql" | Sort-Object Name) } else { @() }

@@ -105,9 +105,9 @@ describe("resolveEnvironmentConfig", () => {
 });
 
 describe("resolveFunctionInvocationRegion", () => {
-  it("pins approved staging APIs to their supported Edge invocation regions", () => {
+  it("pins the approved Canadian staging API to its Edge invocation region", () => {
     expect(resolveFunctionInvocationRegion("https://rohvkyuxbnqzglaromms.supabase.co/functions/v1/peacepad-v2-api")).toBe("ca-central-1");
-    expect(resolveFunctionInvocationRegion("https://spmpndalcvwmygznihec.supabase.co/functions/v1/peacepad-v2-api/")).toBe("us-east-1");
+    expect(resolveFunctionInvocationRegion("https://spmpndalcvwmygznihec.supabase.co/functions/v1/peacepad-v2-api/")).toBeUndefined();
     expect(resolveFunctionInvocationRegion("http://127.0.0.1:8787")).toBeUndefined();
     expect(resolveFunctionInvocationRegion("https://ftdqnhlesqrkstnqgfxr.supabase.co/functions/v1/peacepad-v2-api")).toBeUndefined();
   });
@@ -203,18 +203,9 @@ describe("resolveSupabaseStagingConfig", () => {
     });
   });
 
-  it("accepts only the exact US project for a US build", () => {
-    expect(resolveSupabaseStagingConfig({
-      ...ca,
-      EXPO_PUBLIC_PEACEPAD_REGION: "us",
-      EXPO_PUBLIC_PEACEPAD_SUPABASE_URL: "https://spmpndalcvwmygznihec.supabase.co",
-      EXPO_PUBLIC_PEACEPAD_API_BASE_URL: "https://spmpndalcvwmygznihec.supabase.co/functions/v1/peacepad-v2-api"
-    })).toMatchObject({ region: "us", projectRef: "spmpndalcvwmygznihec" });
-  });
-
   it("rejects project swapping, non-staging use, and service-role material", () => {
-    expect(() => resolveSupabaseStagingConfig({ ...ca, EXPO_PUBLIC_PEACEPAD_REGION: "eu" })).toThrow("REGION=ca or us");
-    expect(() => resolveSupabaseStagingConfig({ ...ca, EXPO_PUBLIC_PEACEPAD_REGION: "us" })).toThrow("exact approved Supabase project");
+    expect(() => resolveSupabaseStagingConfig({ ...ca, EXPO_PUBLIC_PEACEPAD_REGION: "eu" })).toThrow("REGION=ca");
+    expect(() => resolveSupabaseStagingConfig({ ...ca, EXPO_PUBLIC_PEACEPAD_REGION: "us" })).toThrow("REGION=ca");
     expect(() => resolveSupabaseStagingConfig({ ...ca, EXPO_PUBLIC_PEACEPAD_ENV: "lab" })).toThrow("only in staging");
     expect(() => resolveSupabaseStagingConfig({ ...ca, EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY: "service_role_secret" })).toThrow("secret and legacy JWT keys are prohibited");
     expect(() => resolveSupabaseStagingConfig({ ...ca, EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY: "ey.a.b" })).toThrow("legacy JWT keys are prohibited");
@@ -233,7 +224,6 @@ describe("resolveSupabaseStagingConfig", () => {
     })).toThrow("exact approved Supabase project");
     expect(() => resolveSupabaseStagingConfig({
       ...ca,
-      EXPO_PUBLIC_PEACEPAD_REGION: "us",
       EXPO_PUBLIC_PEACEPAD_SUPABASE_URL: "https://kgechdqdtryktfahyqez.supabase.co",
       EXPO_PUBLIC_PEACEPAD_API_BASE_URL: "https://kgechdqdtryktfahyqez.supabase.co/functions/v1/peacepad-v2-api"
     })).toThrow("exact approved Supabase project");
@@ -241,22 +231,18 @@ describe("resolveSupabaseStagingConfig", () => {
 });
 
 describe("resolveSupabaseStagingDirectory", () => {
-  const dualRegion = {
+  const canadaDirectory = {
     EXPO_PUBLIC_PEACEPAD_ENV: "staging",
     EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_URL: "https://rohvkyuxbnqzglaromms.supabase.co",
     EXPO_PUBLIC_PEACEPAD_CA_API_BASE_URL: "https://rohvkyuxbnqzglaromms.supabase.co/functions/v1/peacepad-v2-api",
-    EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_fictional_ca",
-    EXPO_PUBLIC_PEACEPAD_US_SUPABASE_URL: "https://spmpndalcvwmygznihec.supabase.co",
-    EXPO_PUBLIC_PEACEPAD_US_API_BASE_URL: "https://spmpndalcvwmygznihec.supabase.co/functions/v1/peacepad-v2-api",
-    EXPO_PUBLIC_PEACEPAD_US_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_fictional_us"
+    EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_fictional_ca"
   };
 
-  it("returns the exact approved Canada and United States directory for one binary", () => {
-    expect(resolveSupabaseStagingDirectory(dualRegion)).toEqual([
-      expect.objectContaining({ region: "ca", projectRef: "rohvkyuxbnqzglaromms" }),
-      expect.objectContaining({ region: "us", projectRef: "spmpndalcvwmygznihec" })
+  it("returns only the exact approved Canadian staging directory", () => {
+    expect(resolveSupabaseStagingDirectory(canadaDirectory)).toEqual([
+      expect.objectContaining({ region: "ca", projectRef: "rohvkyuxbnqzglaromms" })
     ]);
-    expect(resolveEnvironmentConfig(dualRegion)).toMatchObject({
+    expect(resolveEnvironmentConfig(canadaDirectory)).toMatchObject({
       environment: "staging",
       productionApiWritesEnabled: false
     });
@@ -272,42 +258,26 @@ describe("resolveSupabaseStagingDirectory", () => {
     })).toEqual([expect.objectContaining({ region: "ca" })]);
   });
 
-  it("fails closed on partial, mixed, swapped, secret, and legacy regional configuration", () => {
+  it("fails closed on partial, swapped, secret, and legacy Canadian configuration", () => {
     expect(() => resolveSupabaseStagingDirectory({
-      ...dualRegion,
+      ...canadaDirectory,
       EXPO_PUBLIC_PEACEPAD_ENV: "lab"
     })).toThrow("only in staging");
     expect(() => resolveSupabaseStagingDirectory({
-      ...dualRegion,
-      EXPO_PUBLIC_PEACEPAD_US_SUPABASE_PUBLISHABLE_KEY: undefined
-    })).toThrow("US regional configuration is incomplete");
+      ...canadaDirectory,
+      EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_PUBLISHABLE_KEY: undefined
+    })).toThrow("requires an sb_publishable_ Supabase key");
     expect(() => resolveSupabaseStagingDirectory({
-      ...dualRegion,
-      EXPO_PUBLIC_PEACEPAD_REGION: "ca"
-    })).toThrow("must not be mixed");
-    expect(() => resolveSupabaseStagingDirectory({
-      ...dualRegion,
-      EXPO_PUBLIC_PEACEPAD_SUPABASE_URL: "https://rohvkyuxbnqzglaromms.supabase.co"
-    })).toThrow("must not be mixed");
-    expect(() => resolveSupabaseStagingDirectory({
-      ...dualRegion,
-      EXPO_PUBLIC_PEACEPAD_API_BASE_URL: "https://rohvkyuxbnqzglaromms.supabase.co/functions/v1/peacepad-v2-api"
-    })).toThrow("must not be mixed");
-    expect(() => resolveSupabaseStagingDirectory({
-      ...dualRegion,
-      EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_single"
-    })).toThrow("must not be mixed");
-    expect(() => resolveSupabaseStagingDirectory({
-      ...dualRegion,
+      ...canadaDirectory,
       EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_URL: "https://spmpndalcvwmygznihec.supabase.co"
     })).toThrow("exact approved Supabase project");
     expect(() => resolveSupabaseStagingDirectory({
-      ...dualRegion,
+      ...canadaDirectory,
       EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_PUBLISHABLE_KEY: "sb_secret_private"
     })).toThrow("secret and legacy JWT keys are prohibited");
     expect(() => resolveSupabaseStagingDirectory({
-      ...dualRegion,
-      EXPO_PUBLIC_PEACEPAD_US_SUPABASE_PUBLISHABLE_KEY: "ey.a.b"
+      ...canadaDirectory,
+      EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_PUBLISHABLE_KEY: "ey.a.b"
     })).toThrow("legacy JWT keys are prohibited");
   });
 });

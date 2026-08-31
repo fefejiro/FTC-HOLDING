@@ -11,12 +11,14 @@ import { verifyTurnConfiguration, type PeacePadIceServer } from "./AudioMediaPol
 export type NativeAudioMediaCallbacks = Readonly<{
   onIceCandidate: (signal: AudioCallSignal & { kind: "ice" }) => void;
   onConnectionStateChange: (state: string) => void;
+  onLocalStream: (url: string | null) => void;
+  onRemoteStream: (url: string | null) => void;
 }>;
 
 type PeerEventTarget = Readonly<{
   addEventListener: (
-    event: "icecandidate" | "connectionstatechange",
-    listener: (event: { candidate?: { toJSON: () => { candidate: string; sdpMid?: string | null; sdpMLineIndex?: number | null } } }) => void,
+    event: "icecandidate" | "connectionstatechange" | "track",
+    listener: (event: { candidate?: { toJSON: () => { candidate: string; sdpMid?: string | null; sdpMLineIndex?: number | null } }; streams?: readonly MediaStream[] }) => void,
   ) => void;
 }>;
 
@@ -29,6 +31,7 @@ export class NativeAudioMediaSession {
   static async create(
     iceServers: readonly PeacePadIceServer[],
     callbacks: NativeAudioMediaCallbacks,
+    mediaType: "audio" | "video" = "audio",
   ): Promise<NativeAudioMediaSession> {
     const verified = verifyTurnConfiguration(iceServers);
     const peer = new RTCPeerConnection({
@@ -40,8 +43,12 @@ export class NativeAudioMediaSession {
     });
     let localStream: MediaStream | undefined;
     try {
-      localStream = await mediaDevices.getUserMedia({ audio: true, video: false });
-      for (const track of localStream.getAudioTracks()) peer.addTrack(track, localStream);
+      localStream = await mediaDevices.getUserMedia({
+        audio: true,
+        video: mediaType === "video" ? { facingMode: "user", frameRate: 24, height: 720, width: 1280 } : false,
+      });
+      for (const track of localStream.getTracks()) peer.addTrack(track, localStream);
+      callbacks.onLocalStream(localStream.toURL());
       const eventTarget = peer as unknown as PeerEventTarget;
       eventTarget.addEventListener("icecandidate", (event) => {
         if (!event.candidate) return;
@@ -56,6 +63,7 @@ export class NativeAudioMediaSession {
         });
       });
       eventTarget.addEventListener("connectionstatechange", () => callbacks.onConnectionStateChange(peer.connectionState));
+      eventTarget.addEventListener("track", (event) => callbacks.onRemoteStream(event.streams?.[0]?.toURL() ?? null));
       return new NativeAudioMediaSession(peer, localStream);
     } catch (error) {
       localStream?.getTracks().forEach((track) => track.stop());
@@ -65,7 +73,7 @@ export class NativeAudioMediaSession {
   }
 
   async createOffer(): Promise<AudioCallSignal & { kind: "offer" }> {
-    const offer = await this.peer.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: false });
+    const offer = await this.peer.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: this.localStream.getVideoTracks().length > 0 });
     await this.peer.setLocalDescription(offer);
     if (!offer.sdp) throw new Error("PeacePad could not create a secure audio offer.");
     return { kind: "offer", payload: { sdp: offer.sdp } };
@@ -90,6 +98,17 @@ export class NativeAudioMediaSession {
   setMuted(muted: boolean): void {
     this.localStream.getAudioTracks().forEach((track) => {
       track.enabled = !muted;
+    });
+  }
+
+  setCameraEnabled(enabled: boolean): void {
+    this.localStream.getVideoTracks().forEach((track) => { track.enabled = enabled; });
+  }
+
+  switchCamera(): void {
+    this.localStream.getVideoTracks().forEach((track) => {
+      const candidate = track as typeof track & { _switchCamera?: () => void };
+      candidate._switchCamera?.();
     });
   }
 

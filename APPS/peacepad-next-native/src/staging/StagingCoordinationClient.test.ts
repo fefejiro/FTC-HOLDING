@@ -5,7 +5,7 @@ const base = { environment: "staging" as const, apiBaseUrl: "http://127.0.0.1:87
 test("creates the coordination client only for staging", () => {
   expect(createStagingCoordinationClient(base, async () => "fictional-token")).toBeDefined();
   expect(createStagingCoordinationClient({ ...base, apiBaseUrl: "https://rohvkyuxbnqzglaromms.supabase.co/functions/v1/peacepad-v2-api" }, async () => "fictional-token")).toBeDefined();
-  expect(createStagingCoordinationClient({ ...base, apiBaseUrl: "https://spmpndalcvwmygznihec.supabase.co/functions/v1/peacepad-v2-api" }, async () => "fictional-token")).toBeDefined();
+  expect(() => createStagingCoordinationClient({ ...base, apiBaseUrl: "https://spmpndalcvwmygznihec.supabase.co/functions/v1/peacepad-v2-api" }, async () => "fictional-token")).toThrow("unapproved API host");
   expect(() => createStagingCoordinationClient({ ...base, environment: "lab" }, async () => undefined)).toThrow("staging or explicitly authorized production environment");
   expect(() => createStagingCoordinationClient({ ...base, apiBaseUrl: "https://api.peacepad.ca" }, async () => undefined)).toThrow("unapproved API host");
   expect(() => createStagingCoordinationClient({ ...base, apiBaseUrl: "https://ftdqnhlesqrkstnqgfxr.supabase.co/functions/v1/peacepad-v2-api" }, async () => undefined)).toThrow("unapproved API host");

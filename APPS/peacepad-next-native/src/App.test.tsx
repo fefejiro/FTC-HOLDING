@@ -42,17 +42,34 @@ describe("PeacePad coordination shell", () => {
   it("starts safely and rejects unsupported routes", () => {
     expect(resolveStartScreen()).toBe("foundation");
     expect(resolveStartScreen("home")).toBe("home");
+    expect(resolveStartScreen("coach")).toBe("coach");
+    expect(resolveStartScreen("conch")).toBe("conch");
     expect(resolveStartScreen("evidence-detail")).toBe("foundation");
     expect(resolveStartScreen("production-admin")).toBe("foundation");
   });
 
+  it("makes consent-based Conch mode directly discoverable from More", () => {
+    renderApp("more");
+    expect(screen.getByLabelText("Open Conch mode")).toBeOnTheScreen();
+    expect(screen.getByText("Conch mode")).toBeOnTheScreen();
+  });
+
   it("shows a quiet state-derived Home without internal language", () => {
     renderApp();
-    expect(screen.getByText("What would you like to do?")).toBeOnTheScreen();
+    expect(screen.getByRole("header", { name: "Ready for today?" })).toBeOnTheScreen();
+    expect(screen.getByText("Small steps. Kind words. Big impact—for your kids.")).toBeOnTheScreen();
     expect(screen.getByText("Upcoming events")).toBeOnTheScreen();
     for (const phrase of ["Premium because", "Gate 1", "Lab-only", "prototype", "mock", "synthetic"]) {
       expect(screen.queryByText(new RegExp(phrase, "i"))).not.toBeOnTheScreen();
     }
+  });
+
+  it("keeps PeaceBot Coach reachable before a co-parent connects", () => {
+    renderApp();
+    fireEvent.press(screen.getByRole("button", { name: "Open PeaceBot Coach" }));
+    expect(screen.getByRole("header", { name: "PeaceBot Coach" })).toBeOnTheScreen();
+    expect(screen.getByText(/nothing is shared until you choose it/i)).toBeOnTheScreen();
+    expect(screen.queryByText("Connect another parent first")).not.toBeOnTheScreen();
   });
 
   it("keeps internal reconstruction language off the welcome screen", async () => {
@@ -213,11 +230,11 @@ describe("PeacePad coordination shell", () => {
   it.each([
     ["Français", "Accueil", "Que souhaitez-vous faire?", "Envoyer un message", "Aujourd’hui", "Non connecté"],
     ["Español", "Inicio", "¿Qué te gustaría hacer?", "Enviar un mensaje", "Hoy", "Sin conexión"]
-  ])("localizes Home tasks and state summaries with semantic headings in %s", (language, homeTab, title, sendAction, today, disconnected) => {
+  ])("localizes Home tasks and state summaries with semantic headings in %s", (language, homeTab, _legacyTitle, sendAction, today, disconnected) => {
     renderApp("more");
     fireEvent.press(screen.getByRole("radio", { name: language }));
     fireEvent.press(screen.getByRole("tab", { name: homeTab }));
-    expect(screen.getByRole("header", { name: title })).toBeOnTheScreen();
+    expect(screen.getByRole("header", { name: /Prêt pour aujourd’hui\?|¿Listo para hoy\?/ })).toBeOnTheScreen();
     expect(screen.getByRole("button", { name: sendAction })).toBeOnTheScreen();
     expect(screen.getByRole("header", { name: today })).toBeOnTheScreen();
     expect(screen.getByText(disconnected)).toBeOnTheScreen();

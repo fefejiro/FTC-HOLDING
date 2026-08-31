@@ -66,8 +66,7 @@ describe("HttpPeacePadCoordinationApi", () => {
   });
 
   it.each([
-    ["rohvkyuxbnqzglaromms", "ca-central-1"],
-    ["spmpndalcvwmygznihec", "us-east-1"]
+    ["rohvkyuxbnqzglaromms", "ca-central-1"]
   ])("pins approved project %s to Edge region %s", async (projectRef, functionRegion) => {
     const fetcher = jest.fn(async () => response(200, []));
     const api = new HttpPeacePadCoordinationApi({
@@ -593,7 +592,7 @@ describe("HttpPeacePadCoordinationApi", () => {
       "https://staging-api.peacepad.test/api/v2/calls/call%2Fcurrent/turn-credentials",
       "https://staging-api.peacepad.test/api/v2/calls/call%2Fcurrent/signals"
     ]);
-    expect(JSON.parse((fetcher.mock.calls[1]?.[1] as RequestInit).body as string)).toEqual({ conversationId: "conversation/current" });
+    expect(JSON.parse((fetcher.mock.calls[1]?.[1] as RequestInit).body as string)).toEqual({ conversationId: "conversation/current", mediaType: "audio" });
     expect((fetcher.mock.calls[5]?.[1] as RequestInit).headers).toMatchObject({
       "If-Match": "4",
       "X-PeacePad-Region": "ca",
@@ -718,5 +717,37 @@ describe("HttpPeacePadCoordinationApi", () => {
         status: 502
       });
     }
+  });
+
+  it("sends private and conversation-scoped PeaceBot turns with an explicit context boundary", async () => {
+    const fetcher = jest.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => response(200, {
+      reply: "Let us focus on one clear pickup detail.",
+      draft: "Could we confirm Saturday's pickup time?",
+      note: null,
+      provider: "configured"
+    }));
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
+    const turn = {
+      topic: "Saturday pickup",
+      feeling: "anxious" as const,
+      entryMode: "sending" as const,
+      messages: [{ role: "parent" as const, content: "Saturday pickup" }]
+    };
+
+    await api.coachConversationTurn(turn);
+    await api.coachConversationTurn({ ...turn, conversationId: "conversation-current" });
+
+    expect(fetcher.mock.calls.map(([url]) => url)).toEqual([
+      "https://staging-api.peacepad.test/api/v2/coach/conversation",
+      "https://staging-api.peacepad.test/api/v2/coach/conversation"
+    ]);
+    expect(JSON.parse((fetcher.mock.calls[0]?.[1] as RequestInit).body as string)).toMatchObject({
+      conversationId: null,
+      topic: "Saturday pickup"
+    });
+    expect(JSON.parse((fetcher.mock.calls[1]?.[1] as RequestInit).body as string)).toMatchObject({
+      conversationId: "conversation-current",
+      topic: "Saturday pickup"
+    });
   });
 });

@@ -27,6 +27,12 @@ export type CustodyBlock = Readonly<{
   parent: CustodyParent;
 }>;
 
+export type CustodyOverride = Readonly<{
+  startDate: string;
+  endDate: string;
+  parent: CustodyParent;
+}>;
+
 function parseDateOnly(value: string): Date | undefined {
   if (typeof value !== "string") return undefined;
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
@@ -61,7 +67,7 @@ function opposite(parent: CustodyParent): CustodyParent {
 }
 
 /** Return the parent who has parenting time on a UTC calendar date. */
-export function custodyParentForDate(date: Date | string, schedule?: CustodySchedule): CustodyParent | null {
+export function custodyParentForDate(date: Date | string, schedule?: CustodySchedule, overrides: readonly CustodyOverride[] = []): CustodyParent | null {
   if (!schedule?.enabled) return null;
   const startDate = parseDateOnly(schedule.startDate);
   if (!startDate) return null;
@@ -69,6 +75,10 @@ export function custodyParentForDate(date: Date | string, schedule?: CustodySche
   const targetDate = typeof date === "string" ? parseDateOnly(date) : new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
   if (!targetDate) return null;
   if (Number.isNaN(targetDate.getTime())) return null;
+
+  const targetDateOnly = dateOnly(targetDate);
+  const override = overrides.find((item) => item.startDate <= targetDateOnly && item.endDate >= targetDateOnly);
+  if (override) return override.parent;
 
   const daysSinceStart = differenceInDays(targetDate, startDate);
   if (daysSinceStart < 0) return null;

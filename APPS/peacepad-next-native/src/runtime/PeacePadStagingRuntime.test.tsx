@@ -52,10 +52,16 @@ const productionSupabase = {
 
 const authValue = (overrides: Record<string, unknown> = {}) => ({
   status: "ready",
+  authIntent: "default",
   session: { user: { id: IDENTITY } },
   error: undefined,
   getAccessToken: jest.fn(async () => "fictional-access-token"),
   signInWithPassword: jest.fn(async () => undefined),
+  signUpWithPassword: jest.fn(async () => ({ confirmationRequired: true })),
+  signInWithApple: jest.fn(async () => undefined),
+  signInWithGoogle: jest.fn(async () => undefined),
+  sendPasswordReset: jest.fn(async () => undefined),
+  updatePassword: jest.fn(async () => undefined),
   signOut: jest.fn(async () => undefined),
   ...overrides
 });
@@ -134,6 +140,7 @@ describe("validateVerifiedSessionContext", () => {
 describe("PeacePadStagingRuntime gates", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -166,7 +173,7 @@ describe("PeacePadStagingRuntime gates", () => {
     );
   });
 
-  it("renders restore, error, and signed-out gates without synthetic coordination", () => {
+  it("renders restore, error, and the full signed-out onboarding gate without synthetic coordination", async () => {
     (useSupabaseSession as jest.Mock).mockReturnValue(authValue({ status: "loading", session: undefined }));
     const view = render(<PeacePadStagingRuntime environment={environment} supabase={supabase}>ready</PeacePadStagingRuntime>);
     expect(screen.getByText("Restoring your session")).toBeTruthy();
@@ -176,43 +183,33 @@ describe("PeacePadStagingRuntime gates", () => {
     expect(screen.getByText("Auth unavailable")).toBeTruthy();
 
     const signInWithPassword = jest.fn(async () => undefined);
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue("true");
     (useSupabaseSession as jest.Mock).mockReturnValue(authValue({ status: "signed-out", session: undefined, signInWithPassword }));
     view.rerender(<PeacePadStagingRuntime environment={environment} supabase={supabase}>ready</PeacePadStagingRuntime>);
-    expect(screen.getByText("Sign in to staging")).toBeTruthy();
-    expect(screen.getByTestId("staging-region-label")).toHaveTextContent("Canada staging");
-    expect(screen.getByTestId("staging-sign-in-scroll")).toHaveProp("keyboardShouldPersistTaps", "handled");
-    fireEvent.changeText(screen.getByLabelText("Staging email"), "fictional.parent@example.test");
-    fireEvent.changeText(screen.getByLabelText("Staging password"), "fictional-password");
-    fireEvent.press(screen.getByRole("button", { name: "Sign in" }));
-    return waitFor(() => expect(signInWithPassword).toHaveBeenCalledWith("fictional.parent@example.test", "fictional-password"));
+    expect(await screen.findByTestId("staging-region-label")).toHaveTextContent("Canada staging");
+    expect(screen.getByText("Create your PeacePad account")).toBeTruthy();
+    fireEvent.press(screen.getByText("Sign in"));
+    fireEvent.changeText(screen.getByLabelText("Email"), "fictional.parent@example.test");
+    fireEvent.changeText(screen.getByLabelText("Password"), "fictional-password");
+    fireEvent.press(screen.getAllByText("Sign in")[0]);
+    await waitFor(() => expect(signInWithPassword).toHaveBeenCalledWith("fictional.parent@example.test", "fictional-password"));
   });
 
   it("submits staging credentials from the password keyboard exactly once", async () => {
     const signInWithPassword = jest.fn(async () => undefined);
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue("true");
     (useSupabaseSession as jest.Mock).mockReturnValue(authValue({ status: "signed-out", session: undefined, signInWithPassword }));
     render(<PeacePadStagingRuntime environment={environment} supabase={supabase}>ready</PeacePadStagingRuntime>);
 
-    fireEvent.changeText(screen.getByLabelText("Staging email"), "  fictional.keyboard@example.test  ");
-    fireEvent.changeText(screen.getByLabelText("Staging password"), "fictional-password");
-    fireEvent(screen.getByLabelText("Staging password"), "submitEditing");
-    fireEvent(screen.getByLabelText("Staging password"), "submitEditing");
+    fireEvent.press(await screen.findByText("Sign in"));
+    fireEvent.changeText(screen.getByLabelText("Email"), "  fictional.keyboard@example.test  ");
+    fireEvent.changeText(screen.getByLabelText("Password"), "fictional-password");
+    fireEvent(screen.getByLabelText("Password"), "submitEditing");
+    fireEvent(screen.getByLabelText("Password"), "submitEditing");
 
     await waitFor(() => expect(signInWithPassword).toHaveBeenCalledTimes(1));
     expect(signInWithPassword).toHaveBeenCalledWith("fictional.keyboard@example.test", "fictional-password");
-    await waitFor(() => expect(screen.getByRole("button", { name: "Sign in" })).toBeTruthy());
-  });
-
-  it.each([
-    ["fr", "Environnement de test aux États-Unis"],
-    ["es", "Entorno de pruebas de Estados Unidos"]
-  ])("identifies the configured United States staging region in %s", (locale, regionLabel) => {
-    (useSupabaseSession as jest.Mock).mockReturnValue(authValue({ status: "signed-out", session: undefined }));
-    render(
-      <LocalizationProvider initialLocale={locale}>
-        <PeacePadStagingRuntime environment={environment} supabase={{ ...supabase, region: "us" }}>ready</PeacePadStagingRuntime>
-      </LocalizationProvider>
-    );
-    expect(screen.getByTestId("staging-region-label")).toHaveTextContent(regionLabel);
+    await waitFor(() => expect(screen.getAllByText("Sign in").length).toBeGreaterThan(0));
   });
 
   it("shows safe empty states for an account without a family or conversation", async () => {
@@ -244,6 +241,7 @@ describe("PeacePadStagingRuntime gates", () => {
     fireEvent.press(screen.getByRole("button", { name: "Start on my own" }));
     expect(await screen.findByTestId("solo-workspace")).toBeTruthy();
     expect(screen.getByText(/Use PeacePad privately now/)).toBeTruthy();
+    expect(screen.getByText("Talk it through with PeaceBot")).toBeTruthy();
     expect(SecureStore.setItemAsync).toHaveBeenCalledWith(`peacepad_v2_solo_onboarding:${IDENTITY}`, "enabled");
   });
 
@@ -365,12 +363,13 @@ describe("PeacePadStagingRuntime gates", () => {
     await waitFor(() => expect(screen.getByLabelText("Invitation code").props.value).toBe("OLD111"));
 
     currentAuth = authValue({ status: "signed-out", session: undefined });
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue("true");
     view.rerender(
       <PeacePadStagingRuntime environment={environment} fetcher={fetcher as unknown as typeof fetch} supabase={supabase}>
         ready
       </PeacePadStagingRuntime>
     );
-    await waitFor(() => expect(screen.getByText("Sign in to staging")).toBeTruthy());
+    await waitFor(() => expect(screen.getByTestId("staging-region-label")).toHaveTextContent("Canada staging"));
 
     currentAuth = authValue({ session: { user: { id: OTHER_IDENTITY } } });
     view.rerender(

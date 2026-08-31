@@ -11,12 +11,16 @@ export type AudioMediaSession = Readonly<{
   acceptAnswer: (sdp: string) => Promise<void>;
   addIceCandidate: (signal: AudioCallSignal & { kind: "ice" }) => Promise<void>;
   setMuted: (muted: boolean) => void;
+  setCameraEnabled?: (enabled: boolean) => void;
+  switchCamera?: () => void;
   close: () => void;
 }>;
 
 export type AudioCallMediaController = Readonly<{
   close: () => Promise<void>;
   setMuted: (muted: boolean) => void;
+  setCameraEnabled: (enabled: boolean) => void;
+  switchCamera: () => void;
 }>;
 
 export type AudioMediaFactory = (
@@ -24,7 +28,10 @@ export type AudioMediaFactory = (
   callbacks: Readonly<{
     onIceCandidate: (signal: AudioCallSignal & { kind: "ice" }) => void;
     onConnectionStateChange: (state: string) => void;
+    onLocalStream: (url: string | null) => void;
+    onRemoteStream: (url: string | null) => void;
   }>,
+  mediaType?: "audio" | "video",
 ) => Promise<AudioMediaSession>;
 
 export type AudioCallMediaRuntime = Readonly<{
@@ -40,10 +47,12 @@ type StartInput = Readonly<{
   context: () => WriteContext;
   runtime: AudioCallMediaRuntime;
   onState: (state: AudioMediaConnectionState) => void;
+  onLocalStream?: (url: string | null) => void;
+  onRemoteStream?: (url: string | null) => void;
 }>;
 
-export async function startAudioCallMedia({ api, call, localIdentityId, context, runtime, onState }: StartInput): Promise<AudioCallMediaController> {
-  if (call.status !== "active") throw new Error("Audio media requires an active call.");
+export async function startAudioCallMedia({ api, call, localIdentityId, context, runtime, onState, onLocalStream = () => undefined, onRemoteStream = () => undefined }: StartInput): Promise<AudioCallMediaController> {
+  if (call.status !== "active") throw new Error("Call media requires an active call.");
   if (localIdentityId !== call.callerIdentityId && localIdentityId !== call.calleeIdentityId) {
     throw new Error("Audio media is unavailable for this identity.");
   }
@@ -62,6 +71,8 @@ export async function startAudioCallMedia({ api, call, localIdentityId, context,
   const controller: AudioCallMediaController = {
     close,
     setMuted: (muted) => media?.setMuted(muted),
+    setCameraEnabled: (enabled) => media?.setCameraEnabled?.(enabled),
+    switchCamera: () => media?.switchCamera?.(),
   };
   const fail = () => {
     if (closed) return;
@@ -107,7 +118,9 @@ export async function startAudioCallMedia({ api, call, localIdentityId, context,
         if (state === "connected") onState("connected");
         else if (["failed", "closed"].includes(state)) fail();
       },
-    });
+      onLocalStream,
+      onRemoteStream,
+    }, call.type);
     if (closed) {
       media.close();
       return controller;

@@ -16,6 +16,26 @@ jest.mock("expo-network", () => ({
 
 jest.mock("expo-device", () => ({ isDevice: true }));
 
+jest.mock("expo-audio", () => ({
+  AudioModule: { requestRecordingPermissionsAsync: jest.fn(async () => ({ granted: true })) },
+  RecordingPresets: { HIGH_QUALITY: {} },
+  setAudioModeAsync: jest.fn(async () => undefined),
+  useAudioPlayer: jest.fn(() => ({ pause: jest.fn(), play: jest.fn(), seekTo: jest.fn(async () => undefined) })),
+  useAudioPlayerStatus: jest.fn(() => ({ playing: false, currentTime: 0, duration: 0, isLoaded: true })),
+  useAudioRecorder: jest.fn(() => ({
+    prepareToRecordAsync: jest.fn(async () => undefined),
+    record: jest.fn(),
+    stop: jest.fn(async () => undefined),
+    uri: "file:///coach.m4a"
+  })),
+  useAudioRecorderState: jest.fn(() => ({ canRecord: true, durationMillis: 0, isRecording: false, url: null }))
+}));
+
+jest.mock("expo-speech", () => ({
+  speak: jest.fn((_text: string, options?: { onDone?: () => void }) => options?.onDone?.()),
+  stop: jest.fn(async () => undefined)
+}));
+
 jest.mock("expo-constants", () => ({
   __esModule: true,
   default: {
@@ -31,11 +51,14 @@ jest.mock("expo-constants", () => ({
 jest.mock("expo-notifications", () => ({
   AndroidImportance: { MAX: 5 },
   AndroidNotificationVisibility: { PRIVATE: 0 },
+  SchedulableTriggerInputTypes: { DATE: "date" },
   getExpoPushTokenAsync: jest.fn(),
   getLastNotificationResponseAsync: jest.fn(async () => null),
   addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+  cancelScheduledNotificationAsync: jest.fn(async () => undefined),
   getPermissionsAsync: jest.fn(async () => ({ status: "undetermined" })),
   requestPermissionsAsync: jest.fn(async () => ({ status: "denied" })),
+  scheduleNotificationAsync: jest.fn(async () => "task-reminder-1"),
   setNotificationChannelAsync: jest.fn(async () => null),
   setNotificationHandler: jest.fn()
 }));

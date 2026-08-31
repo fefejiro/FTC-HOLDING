@@ -4,7 +4,6 @@ import type { AccessTokenProvider } from "../api/CoordinationApi";
 
 const APPROVED_SUPABASE_API_HOSTS = new Set([
   "rohvkyuxbnqzglaromms.supabase.co",
-  "spmpndalcvwmygznihec.supabase.co",
   "qzekqjewpugdotskrtni.supabase.co"
 ]);
 

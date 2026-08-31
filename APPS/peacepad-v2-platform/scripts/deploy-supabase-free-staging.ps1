@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [Parameter(Mandatory)] [ValidateSet('ca', 'us')] [string] $Region,
+  [Parameter(Mandatory)] [ValidateSet('ca')] [string] $Region,
   [Parameter(Mandatory)] [string] $ProjectRef,
   [Parameter(Mandatory)] [string] $FunctionRegion,
   [string] $SupabaseCli = 'supabase',
@@ -11,7 +11,6 @@ $ErrorActionPreference = 'Stop'
 $platformRoot = Split-Path -Parent $PSScriptRoot
 $expectedProjects = @{
   ca = @{ ProjectRef = 'rohvkyuxbnqzglaromms'; DatabaseRegion = 'ca-central-1'; FunctionRegion = 'ca-central-1' }
-  us = @{ ProjectRef = 'spmpndalcvwmygznihec'; DatabaseRegion = 'us-east-2'; FunctionRegion = 'us-east-1' }
 }
 
 function Invoke-Supabase([string[]] $Arguments) {
@@ -64,6 +63,16 @@ if (-not $SkipDeploy) {
   if ([string]::IsNullOrWhiteSpace($idempotencySecret) -or $idempotencySecret.Length -lt 32) {
     throw 'PEACEPAD_IDEMPOTENCY_SECRET must be supplied through the process environment and contain at least 32 characters.'
   }
+  & (Join-Path $PSScriptRoot 'validate-protected-provider-config.ps1')
+  $pushTokenSecret = [Environment]::GetEnvironmentVariable('PEACEPAD_PUSH_TOKEN_SECRET')
+  $turnUrls = [Environment]::GetEnvironmentVariable('PEACEPAD_TURN_URLS')
+  $turnSharedSecret = [Environment]::GetEnvironmentVariable('PEACEPAD_TURN_SHARED_SECRET')
+  $supportDiscoveryUrl = [Environment]::GetEnvironmentVariable('PEACEPAD_SUPPORT_DISCOVERY_URL')
+  $supportDiscoveryToken = [Environment]::GetEnvironmentVariable('PEACEPAD_SUPPORT_DISCOVERY_TOKEN')
+  $coachTranscriptionUrl = [Environment]::GetEnvironmentVariable('PEACEPAD_COACH_TRANSCRIPTION_URL')
+  $coachTranscriptionToken = [Environment]::GetEnvironmentVariable('PEACEPAD_COACH_TRANSCRIPTION_TOKEN')
+  $coachConversationUrl = [Environment]::GetEnvironmentVariable('PEACEPAD_COACH_CONVERSATION_URL')
+  $coachConversationToken = [Environment]::GetEnvironmentVariable('PEACEPAD_COACH_CONVERSATION_TOKEN')
 }
 
 if ($SkipDeploy) {
@@ -78,6 +87,15 @@ Invoke-Supabase @(
   "PEACEPAD_FUNCTION_REGION=$FunctionRegion",
   "PEACEPAD_MAINTENANCE_SECRET=$maintenanceSecret",
   "PEACEPAD_IDEMPOTENCY_SECRET=$idempotencySecret",
+  "PEACEPAD_PUSH_TOKEN_SECRET=$pushTokenSecret",
+  "PEACEPAD_TURN_URLS=$turnUrls",
+  "PEACEPAD_TURN_SHARED_SECRET=$turnSharedSecret",
+  "PEACEPAD_SUPPORT_DISCOVERY_URL=$supportDiscoveryUrl",
+  "PEACEPAD_SUPPORT_DISCOVERY_TOKEN=$supportDiscoveryToken",
+  "PEACEPAD_COACH_TRANSCRIPTION_URL=$coachTranscriptionUrl",
+  "PEACEPAD_COACH_TRANSCRIPTION_TOKEN=$coachTranscriptionToken",
+  "PEACEPAD_COACH_CONVERSATION_URL=$coachConversationUrl",
+  "PEACEPAD_COACH_CONVERSATION_TOKEN=$coachConversationToken",
   '--project-ref', $ProjectRef,
   '--agent', 'no'
 )

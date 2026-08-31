@@ -17,6 +17,12 @@ type RuntimeConfig = Readonly<{
   pushTokenSecret: string;
   turnUrls: readonly string[];
   turnSharedSecret: string;
+  supportDiscoveryUrl: string;
+  supportDiscoveryToken: string;
+  coachTranscriptionUrl: string;
+  coachTranscriptionToken: string;
+  coachConversationUrl: string;
+  coachConversationToken: string;
   environment: DeploymentEnvironment;
   productionWritesEnabled: boolean;
 }>;
@@ -33,6 +39,7 @@ type ErrorCode =
   | "CALL_STATE_INVALID"
   | "CONFIGURATION_ERROR"
   | "CONVERSATION_ACCESS_DENIED"
+  | "CONCH_SUMMARY_CONSENT_REQUIRED"
   | "DATABASE_NOT_READY"
   | "DEVICE_PUSH_ACCESS_DENIED"
   | "FAMILY_ACCESS_DENIED"
@@ -96,6 +103,12 @@ const readConfig = (): RuntimeConfig => {
     pushTokenSecret: env("PEACEPAD_PUSH_TOKEN_SECRET"),
     turnUrls: parseTurnUrls(env("PEACEPAD_TURN_URLS")),
     turnSharedSecret: env("PEACEPAD_TURN_SHARED_SECRET"),
+    supportDiscoveryUrl: env("PEACEPAD_SUPPORT_DISCOVERY_URL"),
+    supportDiscoveryToken: env("PEACEPAD_SUPPORT_DISCOVERY_TOKEN"),
+    coachTranscriptionUrl: env("PEACEPAD_COACH_TRANSCRIPTION_URL"),
+    coachTranscriptionToken: env("PEACEPAD_COACH_TRANSCRIPTION_TOKEN"),
+    coachConversationUrl: env("PEACEPAD_COACH_CONVERSATION_URL"),
+    coachConversationToken: env("PEACEPAD_COACH_CONVERSATION_TOKEN"),
     environment: environment as DeploymentEnvironment,
     // Production starts fail-closed. It can only accept writes after an explicit,
     // separately reviewed enablement change.
@@ -243,6 +256,7 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     IDENTITY_NOT_BOUND: "IDENTITY_NOT_BOUND",
     FAMILY_ACCESS_DENIED: "FAMILY_ACCESS_DENIED",
     CONVERSATION_ACCESS_DENIED: "CONVERSATION_ACCESS_DENIED",
+    CONCH_SUMMARY_CONSENT_REQUIRED: "CONCH_SUMMARY_CONSENT_REQUIRED",
     CALENDAR_ACCESS_DENIED: "CALENDAR_ACCESS_DENIED",
     CALL_ACCESS_DENIED: "CALL_ACCESS_DENIED",
     CALL_ALREADY_ACTIVE: "CALL_ALREADY_ACTIVE",
@@ -276,6 +290,8 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     "TIMELINE_REQUEST_INVALID", "TIMELINE_SOURCE_INVALID", "TIMELINE_SOURCE_ALREADY_LINKED",
     "PERSONALITY_TYPE_INVALID",
     "DEVICE_PUSH_INVALID", "DEVICE_PUSH_CONFIGURATION_INVALID", "PARENTING_TASK_INVALID", "PARENTING_TASK_ASSIGNEE_INVALID",
+    "PARENTING_SCHEDULE_INVALID",
+    "SETTLEMENT_RESOLUTION_INVALID", "SETTLEMENT_RESOLUTION_NOTE_INVALID",
   ]);
   const safeCode = directCodes[message] ?? (invalidRequestCodes.has(message) ? "INVALID_REQUEST" : "DATABASE_NOT_READY");
   // Provider/SQL details are deliberately neither returned nor logged here.
@@ -284,7 +300,7 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
   const status = safeCode === "DATABASE_NOT_READY" ? 503
     : safeCode === "SIGNAL_RATE_LIMITED" ? 429
     : ["REGION_MISMATCH", "CONCURRENCY_CONFLICT", "IDEMPOTENCY_CONFLICT", "CALL_ALREADY_ACTIVE", "CALL_STATE_INVALID"].includes(safeCode) ? 409
-    : ["AI_CONSENT_REQUIRED", "INVITATION_SELF_ACCEPT_DENIED", "FAMILY_ACCESS_DENIED", "CONVERSATION_ACCESS_DENIED", "MESSAGE_ACCESS_DENIED", "MESSAGE_CHECK_DISABLED", "CALENDAR_ACCESS_DENIED", "CALL_ACCESS_DENIED", "DEVICE_PUSH_ACCESS_DENIED"].includes(safeCode) ? 403
+    : ["AI_CONSENT_REQUIRED", "CONCH_SUMMARY_CONSENT_REQUIRED", "INVITATION_SELF_ACCEPT_DENIED", "FAMILY_ACCESS_DENIED", "CONVERSATION_ACCESS_DENIED", "MESSAGE_ACCESS_DENIED", "MESSAGE_CHECK_DISABLED", "CALENDAR_ACCESS_DENIED", "CALL_ACCESS_DENIED", "DEVICE_PUSH_ACCESS_DENIED"].includes(safeCode) ? 403
     : 400;
   const databaseMessage = config.environment === "production"
     ? "PeacePad could not load your family space right now. Please try again."
@@ -365,6 +381,8 @@ const writeOperation = (method: string, path: string, body: Record<string, unkno
   if (method === "PATCH" && /^\/api\/v2\/case-binders\/[^/]+$/.test(path)) return "case_binder.archived";
   if (method === "POST" && path === "/api/v2/attachment-upload-intents") return "attachment_intent.prepared";
   if (method === "POST" && /^\/api\/v2\/attachments\/[^/]+\/complete$/.test(path)) return "attachment.uploaded";
+  if (method === "POST" && /^\/api\/v2\/conversation-attachments\/[^/]+\/complete$/.test(path)) return "conversation_attachment.completed";
+  if (method === "POST" && /^\/api\/v2\/expense-receipts\/[^/]+\/complete$/.test(path)) return "expense_receipt.completed";
   if (method === "POST" && path === "/api/v2/timeline-entries") return "timeline_entry.linked";
   if (method === "POST" && path === "/api/v2/calls") return "call.created";
   const callTransition = path.match(/^\/api\/v2\/calls\/[^/]+\/(accept|decline|end)$/);
@@ -378,6 +396,88 @@ const writeOperation = (method: string, path: string, body: Record<string, unkno
     return invitationTransition[1] === "accept" ? "invitation.accepted" : "invitation.declined";
   }
   if (method === "DELETE" && /^\/api\/v2\/invitations\/[^/]+$/.test(path)) return "invitation.revoked";
+  return null;
+};
+
+async function dispatchIncomingCallPush(
+  config: RuntimeConfig,
+  admin: ReturnType<typeof createClient>,
+  call: unknown,
+): Promise<void> {
+  if (!call || typeof call !== "object" || config.pushTokenSecret.length < 32) return;
+  const value = call as Record<string, unknown>;
+  const callId = typeof value.callId === "string" ? value.callId : "";
+  const callerIdentityId = typeof value.callerIdentityId === "string" ? value.callerIdentityId : "";
+  const mediaType = value.type === "video" ? "video" : "audio";
+  if (!isUuid(callId) || !isUuid(callerIdentityId)) return;
+  const { data, error } = await admin.rpc("peacepad_v2_call_push_targets", {
+    p_caller_identity_id: callerIdentityId,
+    p_region: config.region,
+    p_call_id: callId,
+    p_token_secret: config.pushTokenSecret,
+  });
+  if (error || !Array.isArray(data) || !data.length) return;
+  const messages = data.flatMap((target: Record<string, unknown>) => {
+    const token = typeof target.token === "string" ? target.token : "";
+    if (!/^(?:ExponentPushToken|ExpoPushToken)\[[A-Za-z0-9_-]{20,200}\]$/.test(token)) return [];
+    return [{
+      to: token,
+      title: mediaType === "video" ? "Incoming PeacePad video call" : "Incoming PeacePad call",
+      body: "Open PeacePad to answer or decline.",
+      sound: "default",
+      priority: "high",
+      channelId: "peacepad-calls",
+      ttl: 45,
+      data: { type: "incoming-call", callId, mediaType },
+    }];
+  });
+  if (!messages.length) return;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 4_000);
+  try {
+    const response = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify(messages),
+      signal: controller.signal,
+    });
+    // Push delivery is best-effort; the callee can still discover the ringing
+    // call through authenticated polling when the provider is unavailable.
+    void response.ok;
+  } catch {
+    // Do not log call, identity, token, or family correlation data.
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+const parentCoreWrite = (method: string, path: string): { operation: string; id?: string; extra?: Record<string, unknown> } | null => {
+  if (method === "POST" && path === "/api/v2/children") return { operation: "child.create" };
+  const child = path.match(/^\/api\/v2\/children\/([^/]+)$/);
+  if (method === "PATCH" && child) return { operation: "child.update", id: decodeURIComponent(child[1]) };
+  if (method === "POST" && path === "/api/v2/child-updates") return { operation: "child-update.create" };
+  if (method === "POST" && path === "/api/v2/expenses") return { operation: "expense.create" };
+  const expense = path.match(/^\/api\/v2\/expenses\/([^/]+)$/);
+  if (method === "PATCH" && expense) return { operation: "expense.update", id: decodeURIComponent(expense[1]) };
+  if (method === "POST" && path === "/api/v2/settlements") return { operation: "settlement.request" };
+  const settlement = path.match(/^\/api\/v2\/settlements\/([^/]+)$/);
+  if (method === "PATCH" && settlement) return { operation: "settlement.resolve", id: decodeURIComponent(settlement[1]) };
+  if (method === "POST" && path === "/api/v2/scheduled-calls") return { operation: "scheduled-call.create" };
+  const scheduled = path.match(/^\/api\/v2\/scheduled-calls\/([^/]+)$/);
+  if (method === "PATCH" && scheduled) return { operation: "scheduled-call.cancel", id: decodeURIComponent(scheduled[1]) };
+  if (method === "POST" && path === "/api/v2/conch-sessions") return { operation: "conch.create" };
+  const conch = path.match(/^\/api\/v2\/conch-sessions\/([^/]+)\/(respond|consent|pass|end)$/);
+  if (method === "POST" && conch) return { operation: `conch.${conch[2]}`, id: decodeURIComponent(conch[1]) };
+  const conchReaction = path.match(/^\/api\/v2\/conch-sessions\/([^/]+)\/turns\/([^/]+)\/reactions$/);
+  if (method === "POST" && conchReaction) return { operation: "conch.react", id: decodeURIComponent(conchReaction[1]), extra: { turnId: decodeURIComponent(conchReaction[2]) } };
+  return null;
+};
+
+const parentingScheduleWrite = (method: string, path: string): { operation: string; id?: string } | null => {
+  if (method === "PUT" && path === "/api/v2/parenting-schedule") return { operation: "schedule.save" };
+  if (method === "POST" && path === "/api/v2/parenting-schedule/exceptions") return { operation: "exception.create" };
+  const exception = path.match(/^\/api\/v2\/parenting-schedule\/exceptions\/([^/]+)$/);
+  if (method === "PATCH" && exception) return { operation: "exception.resolve", id: decodeURIComponent(exception[1]) };
   return null;
 };
 
@@ -832,6 +932,304 @@ const handler = async (request: Request): Promise<Response> => {
     return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data ?? [], requestId, config);
   }
 
+  if (request.method === "GET" && path === "/api/v2/conversation-attachments") {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
+    const conversationId = new URL(request.url).searchParams.get("conversationId")?.trim() ?? "";
+    if (!isUuid(conversationId)) return failure(request, 400, "INVALID_REQUEST", "A valid conversation is required.", requestId, config);
+    const { data, error } = await authenticated.admin.rpc("peacepad_v2_list_conversation_attachments", {
+      p_identity_id: authenticated.user.id, p_region: config.region, p_conversation_id: conversationId,
+    });
+    return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data ?? [], requestId, config);
+  }
+
+  const conversationAttachmentDownload = path.match(/^\/api\/v2\/conversation-attachments\/([^/]+)\/download$/);
+  if (request.method === "GET" && conversationAttachmentDownload) {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
+    const attachmentId = decodeURIComponent(conversationAttachmentDownload[1]);
+    if (!isUuid(attachmentId)) return failure(request, 400, "INVALID_REQUEST", "A valid attachment is required.", requestId, config);
+    const { data, error } = await authenticated.admin.rpc("peacepad_v2_authorize_conversation_attachment_download", {
+      p_identity_id: authenticated.user.id, p_region: config.region, p_attachment_id: attachmentId,
+    });
+    if (error) return rpcFailure(request, requestId, config, error.message);
+    const authorization = data && typeof data === "object" ? data as Record<string, unknown> : {};
+    const objectPath = typeof authorization.objectPath === "string" ? authorization.objectPath : "";
+    if (!objectPath.startsWith(`${config.region}/conversations/`)) {
+      return failure(request, 502, "INVALID_UPSTREAM_RESPONSE", "PeacePad could not authorize the conversation attachment.", requestId, config);
+    }
+    const signed = await authenticated.admin.storage.from(PRIVATE_RECORDS_BUCKET).createSignedUrl(objectPath, 60, {
+      download: typeof authorization.originalFileName === "string" ? authorization.originalFileName : true,
+    });
+    if (signed.error || !signed.data?.signedUrl) return failure(request, 503, "STORAGE_UNAVAILABLE", "The attachment is temporarily unavailable.", requestId, config);
+    const { objectPath: _objectPath, ...attachment } = authorization;
+    return json(request, 200, { attachment, downloadUrl: signed.data.signedUrl, expiresAt: new Date(Date.now() + 60_000).toISOString() }, requestId, config);
+  }
+
+  const expenseReceiptDownload = path.match(/^\/api\/v2\/expense-receipts\/([^/]+)\/download$/);
+  if (request.method === "GET" && expenseReceiptDownload) {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
+    const attachmentId = decodeURIComponent(expenseReceiptDownload[1]);
+    if (!isUuid(attachmentId)) return failure(request, 400, "INVALID_REQUEST", "A valid receipt is required.", requestId, config);
+    const { data, error } = await authenticated.admin.rpc("peacepad_v2_authorize_expense_receipt_download", {
+      p_identity_id: authenticated.user.id, p_region: config.region, p_receipt_attachment_id: attachmentId,
+    });
+    if (error) return rpcFailure(request, requestId, config, error.message);
+    const authorization = data && typeof data === "object" ? data as Record<string, unknown> : {};
+    const objectPath = typeof authorization.objectPath === "string" ? authorization.objectPath : "";
+    if (!objectPath.startsWith(`${config.region}/expense-receipts/`)) {
+      return failure(request, 502, "INVALID_UPSTREAM_RESPONSE", "PeacePad could not authorize the receipt.", requestId, config);
+    }
+    const signed = await authenticated.admin.storage.from(PRIVATE_RECORDS_BUCKET).createSignedUrl(objectPath, 60, {
+      download: typeof authorization.originalFileName === "string" ? authorization.originalFileName : true,
+    });
+    if (signed.error || !signed.data?.signedUrl) return failure(request, 503, "STORAGE_UNAVAILABLE", "The receipt is temporarily unavailable.", requestId, config);
+    const { objectPath: _objectPath, ...attachment } = authorization;
+    return json(request, 200, { attachment, downloadUrl: signed.data.signedUrl, expiresAt: new Date(Date.now() + 60_000).toISOString() }, requestId, config);
+  }
+
+  if (request.method === "POST" && path === "/api/v2/coach/transcriptions") {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
+    if (!config.coachTranscriptionUrl || !config.coachTranscriptionToken) {
+      return failure(request, 503, "CONFIGURATION_ERROR", "Coach voice is temporarily unavailable. You can still type to Coach.", requestId, config);
+    }
+    const mediaType = request.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase() ?? "";
+    if (!["audio/m4a", "audio/mp4", "audio/webm"].includes(mediaType)) {
+      return failure(request, 400, "INVALID_REQUEST", "Coach voice format is invalid.", requestId, config);
+    }
+    const bytes = await request.arrayBuffer();
+    if (bytes.byteLength < 256 || bytes.byteLength > 8 * 1024 * 1024) {
+      return failure(request, 400, "INVALID_REQUEST", "Coach voice recording must be under eight megabytes.", requestId, config);
+    }
+    try {
+      const upstream = await fetch(config.coachTranscriptionUrl, {
+        method: "POST",
+        body: bytes,
+        headers: {
+          Authorization: `Bearer ${config.coachTranscriptionToken}`,
+          "Content-Type": mediaType,
+          "X-PeacePad-Region": config.region,
+          "X-PeacePad-Purpose": "coach-transcription"
+        }
+      });
+      const payload = await upstream.json().catch(() => null) as { transcript?: unknown } | null;
+      const transcript = typeof payload?.transcript === "string" ? payload.transcript.trim() : "";
+      if (!upstream.ok || !transcript || transcript.length > 10000) {
+        return failure(request, 502, "INVALID_UPSTREAM_RESPONSE", "Coach could not transcribe that recording. You can still type to Coach.", requestId, config);
+      }
+      return json(request, 200, { transcript }, requestId, config);
+    } catch {
+      return failure(request, 503, "CONFIGURATION_ERROR", "Coach voice is temporarily unavailable. You can still type to Coach.", requestId, config);
+    }
+  }
+
+  if (request.method === "POST" && path === "/api/v2/coach/conversation") {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
+    if (!config.coachConversationUrl || !config.coachConversationToken) {
+      return failure(request, 503, "CONFIGURATION_ERROR", "Coach conversation is temporarily unavailable. You can still prepare a draft.", requestId, config);
+    }
+    const body = await readJsonObject(request);
+    const conversationId = typeof body?.conversationId === "string" ? body.conversationId : "";
+    const topic = typeof body?.topic === "string" ? body.topic.trim() : "";
+    const feeling = typeof body?.feeling === "string" ? body.feeling : "";
+    const entryMode = typeof body?.entryMode === "string" ? body.entryMode : "";
+    const messages = Array.isArray(body?.messages) ? body.messages : [];
+    if ((conversationId && !isUuid(conversationId)) || !topic || topic.length > 4000 || !["calm", "anxious", "frustrated", "overwhelmed", "sad", "angry"].includes(feeling) || !["sending", "received"].includes(entryMode) || messages.length > 12 || messages.some((item) => !item || !["parent", "coach"].includes(item.role) || typeof item.content !== "string" || !item.content.trim() || item.content.length > 4000)) {
+      return failure(request, 400, "INVALID_REQUEST", "Coach conversation details are invalid.", requestId, config);
+    }
+    // A missing conversation ID is an explicitly private Coach session. The
+    // provider receives only the parent's submitted text and no shared-family
+    // context. When a conversation is supplied, retain the strict membership
+    // authorization boundary before using it as shared context.
+    if (conversationId) {
+      const { data: authorized, error } = await authenticated.admin.rpc("peacepad_v2_authorize_coach_conversation", {
+        p_identity_id: authenticated.user.id, p_region: config.region, p_conversation_id: conversationId,
+      });
+      if (error) return rpcFailure(request, requestId, config, error.message);
+      if (authorized !== true) return failure(request, 403, "CONVERSATION_ACCESS_DENIED", "You do not have access to this conversation.", requestId, config);
+    }
+    try {
+      const upstream = await fetch(config.coachConversationUrl, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${config.coachConversationToken}`, "Content-Type": "application/json", "X-PeacePad-Region": config.region, "X-PeacePad-Purpose": "coach-conversation" },
+        body: JSON.stringify({ topic, feeling, entryMode, messages: messages.slice(-8).map((item) => ({ role: item.role, content: item.content.trim() })) }),
+      });
+      const payload = await upstream.json().catch(() => null) as { reply?: unknown; draft?: unknown; note?: unknown } | null;
+      const reply = typeof payload?.reply === "string" ? payload.reply.trim() : "";
+      const draft = payload?.draft === null || typeof payload?.draft === "undefined" ? null : typeof payload.draft === "string" ? payload.draft.trim() : "invalid";
+      const note = payload?.note === null || typeof payload?.note === "undefined" ? null : typeof payload.note === "string" ? payload.note.trim() : "invalid";
+      if (!upstream.ok || !reply || reply.length > 4000 || draft === "invalid" || note === "invalid" || (typeof draft === "string" && draft.length > 4000) || (typeof note === "string" && note.length > 1000)) {
+        return failure(request, 502, "INVALID_UPSTREAM_RESPONSE", "Coach could not prepare a response. You can still prepare a draft.", requestId, config);
+      }
+      return json(request, 200, { reply, draft, note, provider: "configured" }, requestId, config);
+    } catch {
+      return failure(request, 503, "CONFIGURATION_ERROR", "Coach conversation is temporarily unavailable. You can still prepare a draft.", requestId, config);
+    }
+  }
+
+  const parentCoreReadResources: Record<string, string> = {
+    "/api/v2/children": "children",
+    "/api/v2/child-updates": "child-updates",
+    "/api/v2/expenses": "expenses",
+    "/api/v2/settlements": "settlements",
+    "/api/v2/expenses/balance": "balance",
+    "/api/v2/scheduled-calls": "scheduled-calls",
+  };
+  if (request.method === "GET" && parentCoreReadResources[path]) {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
+    const query = new URL(request.url).searchParams;
+    const familyId = query.get("familyCircleId")?.trim() ?? "";
+    const childProfileId = query.get("childProfileId")?.trim() || null;
+    if (!isUuid(familyId) || (childProfileId !== null && !isUuid(childProfileId))) {
+      return failure(request, 400, "INVALID_REQUEST", "A valid family scope is required.", requestId, config);
+    }
+    const { data, error } = await authenticated.admin.rpc("peacepad_v2_parent_core_list", {
+      p_identity_id: authenticated.user.id,
+      p_region: config.region,
+      p_family_id: familyId,
+      p_resource: parentCoreReadResources[path],
+      p_filter: childProfileId,
+    });
+    return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
+  }
+
+
+  if (request.method === "GET" && ["/api/v2/parenting-schedule", "/api/v2/parenting-schedule/exceptions"].includes(path)) {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
+    const familyId = new URL(request.url).searchParams.get("familyCircleId")?.trim() ?? "";
+    if (!isUuid(familyId)) return failure(request, 400, "INVALID_REQUEST", "A valid family scope is required.", requestId, config);
+    const { data, error } = await authenticated.admin.rpc("peacepad_v2_parenting_schedule_read", {
+      p_identity_id: authenticated.user.id,
+      p_region: config.region,
+      p_family_id: familyId,
+      p_resource: path.endsWith("/exceptions") ? "exceptions" : "plan",
+    });
+    return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
+  }
+
+  if (request.method === "GET" && path === "/api/v2/conch-sessions/current") {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
+    const conversationId = new URL(request.url).searchParams.get("conversationId")?.trim() ?? "";
+    if (!isUuid(conversationId)) return failure(request, 400, "INVALID_REQUEST", "A valid conversation is required.", requestId, config);
+    const { data, error } = await authenticated.admin.rpc("peacepad_v2_get_current_conch", {
+      p_identity_id: authenticated.user.id,
+      p_region: config.region,
+      p_conversation_id: conversationId,
+    });
+    return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
+  }
+
+  const currentConchTurnMatch = path.match(/^\/api\/v2\/conch-sessions\/([^/]+)\/turns\/current$/);
+  if (request.method === "GET" && currentConchTurnMatch) {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
+    const sessionId = decodeURIComponent(currentConchTurnMatch[1]);
+    if (!isUuid(sessionId)) return failure(request, 400, "INVALID_REQUEST", "A valid Conch session is required.", requestId, config);
+    const { data, error } = await authenticated.admin.rpc("peacepad_v2_get_current_conch_turn", {
+      p_identity_id: authenticated.user.id,
+      p_region: config.region,
+      p_conch_session_id: sessionId,
+    });
+    return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
+  }
+
+  const conchSummaryMatch = path.match(/^\/api\/v2\/conch-sessions\/([^/]+)\/summary$/);
+  if ((request.method === "GET" || request.method === "PUT") && conchSummaryMatch) {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
+    const sessionId = decodeURIComponent(conchSummaryMatch[1]);
+    if (!isUuid(sessionId)) return failure(request, 400, "INVALID_REQUEST", "A valid Conch session is required.", requestId, config);
+    if (request.method === "GET") {
+      const { data, error } = await authenticated.admin.rpc("peacepad_v2_get_conch_summary", {
+        p_identity_id: authenticated.user.id, p_region: config.region, p_conch_session_id: sessionId,
+      });
+      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
+    }
+    const writeContext = writeHeaders(request, config, requestId);
+    if (!writeContext.ok) return writeContext.error;
+    const body = await readJsonObject(request);
+    const summaryBody = typeof body?.body === "string" ? body.body.trim() : "";
+    if (!body || Object.keys(body).some((key) => key !== "body") || !summaryBody || summaryBody.length > 1000) {
+      return failure(request, 400, "INVALID_REQUEST", "Keep the agreed Conch summary between 1 and 1,000 characters.", requestId, config);
+    }
+    const expectedVersionHeader = (request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? "";
+    const expectedVersion = expectedVersionHeader ? Number(expectedVersionHeader) : null;
+    if (expectedVersion !== null && (!Number.isInteger(expectedVersion) || expectedVersion < 1)) {
+      return failure(request, 400, "INVALID_REQUEST", "A valid Conch summary version is required.", requestId, config);
+    }
+    const databaseWriteToken = await databaseIdempotencyToken(config, authenticated.user.id, writeContext.idempotencyKey, "conch.summary_saved", {
+      identityId: authenticated.user.id, region: config.region, sessionId, expectedVersion, body: summaryBody,
+    });
+    const { data, error } = await authenticated.admin.rpc("peacepad_v2_save_conch_summary", {
+      p_identity_id: authenticated.user.id, p_region: config.region, p_conch_session_id: sessionId,
+      p_body: summaryBody, p_expected_version: expectedVersion, p_idempotency_key: databaseWriteToken,
+      p_schema_version: writeContext.schemaVersion,
+    });
+    return error ? rpcFailure(request, requestId, config, error.message) : json(request, expectedVersion === null ? 201 : 200, data, requestId, config);
+  }
+
+  if (request.method === "GET" && path === "/api/v2/support/search") {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
+    const query = new URL(request.url).searchParams;
+    const location = query.get("query")?.trim() ?? "";
+    const country = query.get("country")?.trim() ?? "";
+    const kind = query.get("kind")?.trim() || undefined;
+    if (location.length < 2 || location.length > 120 || !["CA", "US"].includes(country)) {
+      return failure(request, 400, "INVALID_REQUEST", "Enter a valid city or postal code.", requestId, config);
+    }
+    if (!config.supportDiscoveryUrl) {
+      return failure(request, 503, "CONFIGURATION_ERROR", "Local support discovery is not configured for this region.", requestId, config);
+    }
+    let upstream: Response;
+    try {
+      upstream = await fetch(config.supportDiscoveryUrl, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          ...(config.supportDiscoveryToken ? { authorization: `Bearer ${config.supportDiscoveryToken}` } : {}),
+        },
+        body: JSON.stringify({ query: location, category: kind, location: { city: location }, limit: 12 }),
+      });
+    } catch {
+      return failure(request, 503, "CONFIGURATION_ERROR", "Local support providers are temporarily unavailable.", requestId, config);
+    }
+    if (!upstream.ok) return failure(request, 503, "CONFIGURATION_ERROR", "Local support providers are temporarily unavailable.", requestId, config);
+    const payload = await upstream.json().catch(() => null) as { ranked_resources?: unknown } | null;
+    if (!payload || !Array.isArray(payload.ranked_resources)) {
+      return failure(request, 502, "INVALID_UPSTREAM_RESPONSE", "PeacePad could not verify local support results.", requestId, config);
+    }
+    const resources = payload.ranked_resources.slice(0, 12).map((item, index) => {
+      const candidate = item && typeof item === "object" ? item as Record<string, unknown> : {};
+      const type = typeof candidate.type === "string" ? candidate.type.toLowerCase() : "family-service";
+      const resourceKind = type.includes("crisis") ? "crisis" : type.includes("legal") ? "legal"
+        : type.includes("counsel") || type.includes("therap") ? "counselling"
+        : type.includes("parent") ? "parenting" : "family-service";
+      return {
+        providerId: `support-${index}-${encodeURIComponent(String(candidate.title ?? "provider")).slice(0, 48)}`,
+        name: String(candidate.title ?? "Support provider"),
+        kind: resourceKind,
+        description: String(candidate.description ?? candidate.disclaimer ?? "Verify current services directly with the provider."),
+        phone: typeof candidate.phone === "string" ? candidate.phone : null,
+        website: typeof candidate.url === "string" ? candidate.url : null,
+        address: typeof candidate.location === "string" ? candidate.location : null,
+        locality: location,
+        subdivision: country === "CA" ? config.region.toUpperCase() : "",
+        country,
+        distanceKm: null,
+        verifiedAt: null,
+        emergency: resourceKind === "crisis",
+      };
+    });
+    return json(request, 200, resources, requestId, config);
+  }
+
   if (request.method === "GET" && path === "/api/v2/calls/current") {
     const authenticated = await authenticate(request, config);
     if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
@@ -976,6 +1374,119 @@ const handler = async (request: Request): Promise<Response> => {
     }, requestId, config);
   }
 
+  const parentingScheduleMutation = parentingScheduleWrite(request.method, path);
+  if (parentingScheduleMutation) {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
+    const writeContext = writeHeaders(request, config, requestId);
+    if (!writeContext.ok) return writeContext.error;
+    const body = await readJsonObject(request);
+    if (!body || (parentingScheduleMutation.id && !isUuid(parentingScheduleMutation.id))) {
+      return failure(request, 400, "INVALID_REQUEST", "Valid parenting schedule details are required.", requestId, config);
+    }
+    const expectedVersionHeader = (request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? "";
+    const expectedVersion = expectedVersionHeader ? Number(expectedVersionHeader) : null;
+    if (parentingScheduleMutation.operation === "exception.resolve" && (!Number.isInteger(expectedVersion) || Number(expectedVersion) < 1)) {
+      return failure(request, 400, "INVALID_REQUEST", "A valid expected version is required.", requestId, config);
+    }
+    const payload = { ...body, ...(parentingScheduleMutation.id ? { id: parentingScheduleMutation.id } : {}) };
+    const databaseWriteToken = await databaseIdempotencyToken(config, authenticated.user.id, writeContext.idempotencyKey,
+      parentingScheduleMutation.operation.replace(/\./g, "_"), { identityId: authenticated.user.id, region: config.region, expectedVersion, payload });
+    const { data, error } = await authenticated.admin.rpc("peacepad_v2_parenting_schedule_write", {
+      p_identity_id: authenticated.user.id, p_region: config.region, p_operation: parentingScheduleMutation.operation,
+      p_payload: payload, p_expected_version: expectedVersion, p_idempotency_key: databaseWriteToken,
+      p_schema_version: writeContext.schemaVersion,
+    });
+    return error ? rpcFailure(request, requestId, config, error.message) : json(request, parentingScheduleMutation.operation === "exception.create" ? 201 : 200, data, requestId, config);
+  }
+
+  const parentCoreMutation = parentCoreWrite(request.method, path);
+  if (parentCoreMutation) {
+    const authenticated = await authenticate(request, config);
+    if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
+    const writeContext = writeHeaders(request, config, requestId);
+    if (!writeContext.ok) return writeContext.error;
+    const body = await readJsonObject(request);
+    if (!body || (parentCoreMutation.id && !isUuid(parentCoreMutation.id))) {
+      return failure(request, 400, "INVALID_REQUEST", "Valid parent-core details are required.", requestId, config);
+    }
+    if (parentCoreMutation.operation === "conch.react") {
+      const turnId = parentCoreMutation.extra?.turnId;
+      const validReaction = ["heard", "pause", "agree", "needs-clarification"].includes(String(body.reaction));
+      if (typeof turnId !== "string" || !isUuid(turnId) || !validReaction || Object.keys(body).some((key) => key !== "reaction")) {
+        return failure(request, 400, "INVALID_REQUEST", "A valid Conch reaction is required.", requestId, config);
+      }
+    }
+    const expectedVersionHeader = (request.headers.get("if-match") ?? request.headers.get("x-expected-version"))?.trim() ?? "";
+    const expectedVersion = expectedVersionHeader ? Number(expectedVersionHeader) : null;
+    const requiresVersion = parentCoreMutation.operation.endsWith(".update")
+      || parentCoreMutation.operation.endsWith(".resolve")
+      || parentCoreMutation.operation.endsWith(".cancel")
+      || ["conch.respond", "conch.consent", "conch.react", "conch.pass", "conch.end"].includes(parentCoreMutation.operation);
+    if (requiresVersion && (!Number.isInteger(expectedVersion) || Number(expectedVersion) < 1)) {
+      return failure(request, 400, "INVALID_REQUEST", "A valid expected version is required.", requestId, config);
+    }
+    if (parentCoreMutation.operation === "settlement.resolve") {
+      const resolution = typeof body.resolution === "string" ? body.resolution : "";
+      const resolutionNote = typeof body.resolutionNote === "string" ? body.resolutionNote.trim() : "";
+      const keysValid = Object.keys(body).every((key) => key === "resolution" || key === "resolutionNote");
+      const noteValid = resolution === "disputed"
+        ? resolutionNote.length >= 3 && resolutionNote.length <= 500
+        : (resolution === "confirmed" || resolution === "cancelled") && resolutionNote.length === 0;
+      if (!keysValid || !noteValid) {
+        return failure(
+          request,
+          400,
+          "INVALID_REQUEST",
+          resolution === "disputed"
+            ? "A dispute explanation between 3 and 500 characters is required."
+            : "A valid settlement resolution is required.",
+          requestId,
+          config,
+        );
+      }
+      const payload = { id: parentCoreMutation.id, resolution, resolutionNote: resolutionNote || null };
+      const databaseWriteToken = await databaseIdempotencyToken(
+        config,
+        authenticated.user.id,
+        writeContext.idempotencyKey,
+        "settlement.resolve",
+        { identityId: authenticated.user.id, region: config.region, method: request.method, path, expectedVersion, payload },
+      );
+      const { data, error } = await authenticated.admin.rpc("peacepad_v2_resolve_expense_settlement", {
+        p_identity_id: authenticated.user.id,
+        p_region: config.region,
+        p_settlement_id: parentCoreMutation.id,
+        p_resolution: resolution,
+        p_resolution_note: resolutionNote || null,
+        p_expected_version: expectedVersion,
+        p_idempotency_key: databaseWriteToken,
+        p_schema_version: writeContext.schemaVersion,
+      });
+      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
+    }
+    const payload = { ...body, ...(parentCoreMutation.extra ?? {}), ...(parentCoreMutation.id ? { id: parentCoreMutation.id } : {}) };
+    const tokenOperation = parentCoreMutation.operation.replace(/-/g, "_");
+    const databaseWriteToken = await databaseIdempotencyToken(
+      config,
+      authenticated.user.id,
+      writeContext.idempotencyKey,
+      tokenOperation,
+      { identityId: authenticated.user.id, region: config.region, method: request.method, path, expectedVersion, payload },
+    );
+    const { data, error } = await authenticated.admin.rpc("peacepad_v2_parent_core_write", {
+      p_identity_id: authenticated.user.id,
+      p_region: config.region,
+      p_operation: parentCoreMutation.operation,
+      p_payload: payload,
+      p_expected_version: expectedVersion,
+      p_idempotency_key: databaseWriteToken,
+      p_schema_version: writeContext.schemaVersion,
+    });
+    const created = ["child.create", "child-update.create", "expense.create", "settlement.request", "scheduled-call.create", "conch.create"].includes(parentCoreMutation.operation);
+    return error ? rpcFailure(request, requestId, config, error.message) : json(request, created ? 201 : 200, data, requestId, config);
+  }
+
   const isInvitationTransition = /^\/api\/v2\/invitations\/[^/]+\/(accept|decline)$/.test(path);
   const isInvitationRevocation = /^\/api\/v2\/invitations\/[^/]+$/.test(path);
   const isAccountDeletion = path === "/api/v2/account";
@@ -998,6 +1509,8 @@ const handler = async (request: Request): Promise<Response> => {
   const caseBinderMatch = path.match(/^\/api\/v2\/case-binders\/([^/]+)$/);
   const isAttachmentIntentCreation = path === "/api/v2/attachment-upload-intents";
   const attachmentCompletionMatch = path.match(/^\/api\/v2\/attachments\/([^/]+)\/complete$/);
+  const conversationAttachmentCompletionMatch = path.match(/^\/api\/v2\/conversation-attachments\/([^/]+)\/complete$/);
+  const expenseReceiptCompletionMatch = path.match(/^\/api\/v2\/expense-receipts\/([^/]+)\/complete$/);
   const isTimelineEntryCreation = path === "/api/v2/timeline-entries";
   const isAudioCallCreation = path === "/api/v2/calls";
   const audioCallTransition = path.match(/^\/api\/v2\/calls\/([^/]+)\/(accept|decline|end)$/);
@@ -1010,7 +1523,7 @@ const handler = async (request: Request): Promise<Response> => {
       "/api/v2/families",
       "/api/v2/invitations",
       "/api/v2/account/export",
-    ].includes(path) || isInvitationTransition || isConversationCreation || isMessageSend || isMessageLifecycle || isMessageCorrection || isCalendarLayerCreation || isScheduleEventCreation || isParentingTaskCreation || isCaseBinderCreation || isAttachmentIntentCreation || attachmentCompletionMatch || isTimelineEntryCreation || isAudioCallCreation || audioCallTransition || isDevicePushRegistration)) ||
+    ].includes(path) || isInvitationTransition || isConversationCreation || isMessageSend || isMessageLifecycle || isMessageCorrection || isCalendarLayerCreation || isScheduleEventCreation || isParentingTaskCreation || isCaseBinderCreation || isAttachmentIntentCreation || attachmentCompletionMatch || conversationAttachmentCompletionMatch || expenseReceiptCompletionMatch || isTimelineEntryCreation || isAudioCallCreation || audioCallTransition || isDevicePushRegistration)) ||
     (request.method === "PATCH" && (isProfileUpdate || calendarLayerMatch || scheduleEventMatch || parentingTaskMatch || caseBinderMatch)) ||
     isMessageCheckUpdate ||
     isPersonalityPreferenceUpdate ||
@@ -1056,17 +1569,23 @@ const handler = async (request: Request): Promise<Response> => {
 
     if (isAudioCallCreation) {
       const conversationId = typeof body.conversationId === "string" ? body.conversationId : "";
-      if (!isUuid(conversationId) || Object.keys(body).some((key) => key !== "conversationId")) {
+      const mediaType = body.mediaType === undefined ? "audio" : body.mediaType;
+      if (!isUuid(conversationId) || !["audio", "video"].includes(String(mediaType)) || Object.keys(body).some((key) => !["conversationId", "mediaType"].includes(key))) {
         return failure(request, 400, "INVALID_REQUEST", "A valid canonical conversation is required.", requestId, config);
       }
-      const { data, error } = await authenticated.admin.rpc("peacepad_v2_create_audio_call", {
+      const callArgs = {
         p_identity_id: authenticated.user.id,
         p_region: config.region,
         p_conversation_id: conversationId,
         p_idempotency_key: databaseWriteToken,
         p_schema_version: context.schemaVersion,
-      });
-      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 201, data, requestId, config);
+      };
+      const { data, error } = mediaType === "audio"
+        ? await authenticated.admin.rpc("peacepad_v2_create_audio_call", callArgs)
+        : await authenticated.admin.rpc("peacepad_v2_create_media_call", { ...callArgs, p_media_type: mediaType });
+      if (error) return rpcFailure(request, requestId, config, error.message);
+      await dispatchIncomingCallPush(config, authenticated.admin, data);
+      return json(request, 201, data, requestId, config);
     }
 
     if (audioCallTransition) {
@@ -1441,18 +1960,27 @@ const handler = async (request: Request): Promise<Response> => {
       const target = body.target && typeof body.target === "object" && !Array.isArray(body.target)
         ? body.target as Record<string, unknown> : null;
       const binderId = target?.kind === "private-binder" && typeof target.binderId === "string" ? target.binderId : "";
+      const conversationId = target?.kind === "conversation" && typeof target.conversationId === "string" ? target.conversationId : "";
+      const isExpenseReceiptTarget = target?.kind === "expense-receipt" && Object.keys(target).length === 1;
       const originalFileName = typeof body.originalFileName === "string" ? body.originalFileName.trim() : "";
       const mediaType = typeof body.mediaType === "string" ? body.mediaType : "";
       const byteLength = typeof body.byteLength === "number" ? body.byteLength : 0;
       const unexpectedBytes = "bytes" in body || "base64" in body || "data" in body || "file" in body;
-      if (!isUuid(familyId) || !isUuid(binderId) || !originalFileName || unexpectedBytes
-        || !["image/jpeg", "image/png", "application/pdf", "text/plain"].includes(mediaType)
+      const isConversationTarget = Boolean(conversationId);
+      const allowedMedia = isConversationTarget
+        ? ["image/jpeg", "image/png", "application/pdf", "text/plain", "audio/m4a", "audio/mp4", "audio/webm"]
+        : isExpenseReceiptTarget
+          ? ["image/jpeg", "image/png", "application/pdf"]
+          : ["image/jpeg", "image/png", "application/pdf", "text/plain"];
+      if (!isUuid(familyId) || (!isUuid(binderId) && !isUuid(conversationId) && !isExpenseReceiptTarget) || !originalFileName || unexpectedBytes
+        || !allowedMedia.includes(mediaType)
         || !Number.isSafeInteger(byteLength) || byteLength < 1 || byteLength > 26_214_400) {
         return failure(request, 400, "INVALID_REQUEST", "Attachment metadata is invalid.", requestId, config);
       }
-      const { data, error } = await authenticated.admin.rpc("peacepad_v2_prepare_attachment_intent", {
+      const preparationFunction = isConversationTarget ? "peacepad_v2_prepare_conversation_attachment" : isExpenseReceiptTarget ? "peacepad_v2_prepare_expense_receipt" : "peacepad_v2_prepare_attachment_intent";
+      const { data, error } = await authenticated.admin.rpc(preparationFunction, {
         p_identity_id: authenticated.user.id, p_region: config.region, p_family_id: familyId,
-        p_case_binder_id: binderId, p_original_file_name: originalFileName,
+        ...(isConversationTarget ? { p_conversation_id: conversationId } : isExpenseReceiptTarget ? {} : { p_case_binder_id: binderId }), p_original_file_name: originalFileName,
         p_media_type: mediaType, p_byte_length: byteLength,
         p_idempotency_key: databaseWriteToken, p_schema_version: context.schemaVersion,
       });
@@ -1461,7 +1989,11 @@ const handler = async (request: Request): Promise<Response> => {
       const objectPath = typeof intent.objectPath === "string" ? intent.objectPath : "";
       if (
         intent.uploadTransport !== "supabase-signed"
-        || !objectPath.startsWith(`${config.region}/${authenticated.user.id}/${binderId}/`)
+        || !(isConversationTarget
+          ? objectPath.startsWith(`${config.region}/conversations/${conversationId}/`)
+          : isExpenseReceiptTarget
+            ? objectPath.startsWith(`${config.region}/expense-receipts/${authenticated.user.id}/`)
+            : objectPath.startsWith(`${config.region}/${authenticated.user.id}/${binderId}/`))
       ) {
         return failure(request, 502, "INVALID_UPSTREAM_RESPONSE", "PeacePad could not prepare private storage.", requestId, config);
       }
@@ -1525,6 +2057,54 @@ const handler = async (request: Request): Promise<Response> => {
         p_expected_version: expectedVersion,
         p_idempotency_key: databaseWriteToken,
         p_schema_version: context.schemaVersion,
+      });
+      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
+    }
+
+    if (conversationAttachmentCompletionMatch) {
+      const attachmentId = decodeURIComponent(conversationAttachmentCompletionMatch[1]);
+      if (!isUuid(attachmentId) || Object.keys(body).length !== 0) return failure(request, 400, "INVALID_REQUEST", "A valid attachment completion request is required.", requestId, config);
+      const { data: prepared, error: preparedError } = await authenticated.admin.rpc("peacepad_v2_get_conversation_attachment_intent", {
+        p_identity_id: authenticated.user.id, p_region: config.region, p_attachment_id: attachmentId,
+      });
+      if (preparedError) return rpcFailure(request, requestId, config, preparedError.message);
+      const receipt = prepared && typeof prepared === "object" ? prepared as Record<string, unknown> : {};
+      const objectPath = typeof receipt.objectPath === "string" ? receipt.objectPath : "";
+      if (!objectPath.startsWith(`${config.region}/conversations/`)) return failure(request, 502, "INVALID_UPSTREAM_RESPONSE", "PeacePad could not verify the shared object path.", requestId, config);
+      const info = await authenticated.admin.storage.from(PRIVATE_RECORDS_BUCKET).info(objectPath);
+      if (info.error || !info.data) return failure(request, 409, "STORAGE_OBJECT_INVALID", "The uploaded attachment could not be verified.", requestId, config);
+      const storageInfo = info.data as unknown as Record<string, unknown>;
+      const observedSize = Number(storageInfo.size);
+      const observedType = typeof storageInfo.contentType === "string" ? storageInfo.contentType : typeof storageInfo.content_type === "string" ? storageInfo.content_type : "";
+      if (!Number.isSafeInteger(observedSize) || observedSize < 1 || !observedType) return failure(request, 409, "STORAGE_OBJECT_INVALID", "The uploaded attachment metadata is invalid.", requestId, config);
+      const { data, error } = await authenticated.admin.rpc("peacepad_v2_complete_conversation_attachment", {
+        p_identity_id: authenticated.user.id, p_region: config.region, p_attachment_id: attachmentId,
+        p_observed_media_type: observedType, p_observed_byte_length: observedSize,
+        p_idempotency_key: databaseWriteToken, p_schema_version: context.schemaVersion,
+      });
+      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
+    }
+
+    if (expenseReceiptCompletionMatch) {
+      const attachmentId = decodeURIComponent(expenseReceiptCompletionMatch[1]);
+      if (!isUuid(attachmentId) || Object.keys(body).length !== 0) return failure(request, 400, "INVALID_REQUEST", "A valid receipt completion request is required.", requestId, config);
+      const { data: prepared, error: preparedError } = await authenticated.admin.rpc("peacepad_v2_get_expense_receipt_intent", {
+        p_identity_id: authenticated.user.id, p_region: config.region, p_receipt_attachment_id: attachmentId,
+      });
+      if (preparedError) return rpcFailure(request, requestId, config, preparedError.message);
+      const receipt = prepared && typeof prepared === "object" ? prepared as Record<string, unknown> : {};
+      const objectPath = typeof receipt.objectPath === "string" ? receipt.objectPath : "";
+      if (!objectPath.startsWith(`${config.region}/expense-receipts/${authenticated.user.id}/`)) return failure(request, 502, "INVALID_UPSTREAM_RESPONSE", "PeacePad could not verify the receipt path.", requestId, config);
+      const info = await authenticated.admin.storage.from(PRIVATE_RECORDS_BUCKET).info(objectPath);
+      if (info.error || !info.data) return failure(request, 409, "STORAGE_OBJECT_INVALID", "The uploaded receipt could not be verified.", requestId, config);
+      const storageInfo = info.data as unknown as Record<string, unknown>;
+      const observedSize = Number(storageInfo.size);
+      const observedType = typeof storageInfo.contentType === "string" ? storageInfo.contentType : typeof storageInfo.content_type === "string" ? storageInfo.content_type : "";
+      if (!Number.isSafeInteger(observedSize) || observedSize < 1 || !observedType) return failure(request, 409, "STORAGE_OBJECT_INVALID", "The uploaded receipt metadata is invalid.", requestId, config);
+      const { data, error } = await authenticated.admin.rpc("peacepad_v2_complete_expense_receipt", {
+        p_identity_id: authenticated.user.id, p_region: config.region, p_receipt_attachment_id: attachmentId,
+        p_observed_media_type: observedType, p_observed_byte_length: observedSize,
+        p_idempotency_key: databaseWriteToken, p_schema_version: context.schemaVersion,
       });
       return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
     }

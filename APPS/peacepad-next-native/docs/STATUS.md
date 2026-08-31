@@ -1,6 +1,6 @@
 # PeacePad Native V2 status
 
-> Current full-build implementation handover: [FULL_BUILD_HANDOVER_2026-08-14.md](FULL_BUILD_HANDOVER_2026-08-14.md).
+> Current active full-core implementation handover: [FULL_CORE_ONE_WAVE_PORT_2026-08-30.md](FULL_CORE_ONE_WAVE_PORT_2026-08-30.md). Historical release evidence below remains historical; it is not a current Native V2 public-release claim.
 
 ## Snapshot
 

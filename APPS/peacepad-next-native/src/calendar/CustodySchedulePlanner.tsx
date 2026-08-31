@@ -22,20 +22,25 @@ export function CustodySchedulePlanner({
   locale,
   selectedLayerId,
   onAddBlocks,
-  onScheduleChange
+  onScheduleChange,
+  initialSchedule,
+  onSave
 }: {
   locale: SupportedLocale;
   selectedLayerId: string;
   onAddBlocks: (blocks: readonly CustodyBlock[]) => Promise<void>;
   onScheduleChange?: (schedule: CustodySchedule | undefined) => void;
+  initialSchedule?: CustodySchedule;
+  onSave?: (schedule: CustodySchedule) => Promise<void>;
 }) {
-  const [enabled, setEnabled] = useState(false);
-  const [pattern, setPattern] = useState<CustodyPattern>("week_on_off");
-  const [startDate, setStartDate] = useState(todayDateOnly);
-  const [primaryParent, setPrimaryParent] = useState<CustodyParent>("you");
+  const [enabled, setEnabled] = useState(initialSchedule?.enabled ?? false);
+  const [pattern, setPattern] = useState<CustodyPattern>(initialSchedule?.pattern ?? "week_on_off");
+  const [startDate, setStartDate] = useState(initialSchedule?.startDate ?? todayDateOnly);
+  const [primaryParent, setPrimaryParent] = useState<CustodyParent>(initialSchedule?.primaryParent ?? "you");
   const [busy, setBusy] = useState(false);
   const [added, setAdded] = useState(false);
   const [error, setError] = useState(false);
+  const [saved, setSaved] = useState(false);
   const schedule = useMemo<CustodySchedule>(() => ({ enabled, pattern, startDate, primaryParent }), [enabled, pattern, primaryParent, startDate]);
   const previewSchedule = useMemo<CustodySchedule>(() => ({ ...schedule, enabled: true }), [schedule]);
   const preview = useMemo(() => buildCustodyPreview(previewSchedule, 28), [previewSchedule]);
@@ -43,9 +48,17 @@ export function CustodySchedulePlanner({
   useEffect(() => {
     onScheduleChange?.(enabled ? schedule : undefined);
   }, [enabled, onScheduleChange, schedule]);
+  useEffect(() => {
+    if (!initialSchedule) return;
+    setEnabled(initialSchedule.enabled);
+    setPattern(initialSchedule.pattern);
+    setStartDate(initialSchedule.startDate);
+    setPrimaryParent(initialSchedule.primaryParent);
+  }, [initialSchedule]);
   const setScheduleValue = <T,>(setter: (value: T) => void, value: T) => {
     setAdded(false);
     setError(false);
+    setSaved(false);
     setter(value);
   };
 
@@ -129,6 +142,21 @@ export function CustodySchedulePlanner({
       {!selectedLayerId ? <Text accessibilityRole="alert" style={styles.error}>{custodyScheduleText(locale, "noCalendar")}</Text> : null}
       {error ? <Text accessibilityRole="alert" style={styles.error}>{custodyScheduleText(locale, "addError")}</Text> : null}
       {added ? <Text accessibilityLiveRegion="polite" style={styles.success}>{custodyScheduleText(locale, "added")}</Text> : null}
+      {saved ? <Text accessibilityLiveRegion="polite" style={styles.success}>Shared parenting schedule saved for both parents.</Text> : null}
+      {onSave ? <LabButton
+        disabled={!selectedLayerId || busy}
+        label={busy ? "Saving shared plan..." : "Save shared plan"}
+        onPress={() => {
+          setBusy(true);
+          setError(false);
+          setSaved(false);
+          void onSave(schedule)
+            .then(() => setSaved(true))
+            .catch(() => setError(true))
+            .finally(() => setBusy(false));
+        }}
+        variant="secondary"
+      /> : null}
       <LabButton
         disabled={!enabled || !selectedLayerId || !blocks.length || busy || added}
         label={busy ? custodyScheduleText(locale, "addDates") : custodyScheduleText(locale, "addDates")}

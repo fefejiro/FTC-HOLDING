@@ -29,9 +29,6 @@ for (const key of [
   "EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_URL",
   "EXPO_PUBLIC_PEACEPAD_CA_API_BASE_URL",
   "EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_PUBLISHABLE_KEY",
-  "EXPO_PUBLIC_PEACEPAD_US_SUPABASE_URL",
-  "EXPO_PUBLIC_PEACEPAD_US_API_BASE_URL",
-  "EXPO_PUBLIC_PEACEPAD_US_SUPABASE_PUBLISHABLE_KEY",
   "EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS"
 ]) {
   if (!environmentSource.includes(`process.env.${key}`)) {
@@ -90,7 +87,7 @@ if (!iosInfoPlist.NSMicrophoneUsageDescription) {
   failures.push("iOS microphone usage disclosure is required for foreground audio calls.");
 }
 
-if (iosInfoPlist.NSCameraUsageDescription !== "PeacePad uses camera APIs to support optional video calling; this release uses microphone-only calls.") {
+if (iosInfoPlist.NSCameraUsageDescription !== "PeacePad uses the camera only when you choose a private video call or take a photo for a message or record.") {
   failures.push("iOS camera purpose string is required because the WebRTC binary references camera APIs.");
 }
 

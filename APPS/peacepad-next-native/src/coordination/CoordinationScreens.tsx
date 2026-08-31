@@ -3,6 +3,8 @@ import { Image, Linking, Pressable, Share, StyleSheet, Text, TextInput, useWindo
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import { InvitationQr } from "../components/InvitationQr";
+import { PeacePadIcon } from "../components/PeacePadIcon";
+import { ScreenHeader } from "../components/ScreenHeader";
 import { LabButton } from "../components/LabButton";
 import { AccessibleHeading } from "../components/AccessibleHeading";
 import { languageNames, supportedLocales, useLocalization, useOptionalLocalization } from "../localization/LocalizationProvider";
@@ -10,7 +12,7 @@ import { calendarNavigationText, calendarStatusText, calendarText, formatCalenda
 import { formatLocalizedDate } from "../localization/localizedDate";
 import { messageText } from "../localization/messageLocalization";
 import { workflowText } from "../localization/workflowLocalization";
-import { homeText } from "../localization/homeLocalization";
+import { homeHeroText, homeText } from "../localization/homeLocalization";
 import { callText } from "../localization/callLocalization";
 import { PublicOnboardingSlides } from "../auth/PublicOnboardingAuth";
 import { LinkedSignInMethods } from "../auth/LinkedSignInMethods";
@@ -25,12 +27,14 @@ import { ParentingTasksScreen } from "../tasks/ParentingTasksScreen";
 import { taskCopy } from "../tasks/taskLocalization";
 import { PersonalityProfilePanel } from "../preferences/PersonalityProfilePanel";
 import { CustodySchedulePlanner } from "../calendar/CustodySchedulePlanner";
-import { custodyParentForDate, type CustodyBlock, type CustodySchedule } from "../calendar/custodySchedule";
+import { custodyParentForDate, type CustodyBlock, type CustodyOverride, type CustodySchedule } from "../calendar/custodySchedule";
 import { custodyScheduleText } from "../calendar/custodyScheduleLocalization";
-import { PrepChatAssistant } from "../legacy/PrepChatAssistant";
+import { buildPeacePadCalendar } from "../calendar/calendarExport";
+import { CoachConversation } from "../coach/CoachConversation";
+import { ConversationVoiceNote } from "../messages/ConversationVoiceNote";
 import type { AccountExportManifest } from "../api/CoordinationApi";
 
-export type CoordinationScreen = "home" | "messages" | "calendar" | "activities" | "tasks" | "invite" | "records" | "calls" | "more";
+export type CoordinationScreen = "home" | "coach" | "messages" | "calendar" | "activities" | "tasks" | "invite" | "records" | "calls" | "family" | "conch" | "more";
 type Navigate = (screen: CoordinationScreen) => void;
 
 const layerColors: Record<string, string> = {
@@ -93,7 +97,8 @@ function CalendarViewPanel({
   layers,
   locale,
   anchorDate,
-  custodySchedule
+  custodySchedule,
+  custodyOverrides
 }: {
   calendarView: CalendarView;
   events: ReturnType<typeof useCoordinationState>["events"];
@@ -101,6 +106,7 @@ function CalendarViewPanel({
   locale: ReturnType<typeof useLocalization>["locale"];
   anchorDate: Date;
   custodySchedule?: CustodySchedule;
+  custodyOverrides?: readonly CustodyOverride[];
 }) {
   const layerName = (calendarLayerId: string) =>
     layers.find((layer) => layer.id === calendarLayerId)?.name ?? "Calendar";
@@ -124,7 +130,7 @@ function CalendarViewPanel({
           {cells.map((cell) => {
             const date = cell.day ? new Date(Date.UTC(anchorDate.getUTCFullYear(), anchorDate.getUTCMonth(), cell.day)) : undefined;
             const dayEvents = date ? events.filter((event) => eventOccursOnDay(event, date)) : [];
-            const custodyParent = date ? custodyParentForDate(date, custodySchedule) : null;
+            const custodyParent = date ? custodyParentForDate(date, custodySchedule, custodyOverrides) : null;
             return (
               <View accessibilityLabel={date ? `${formatCalendarDate(locale, date, { month: "long", day: "numeric" })}${custodyParent ? `, ${custodyScheduleText(locale, custodyParent === "you" ? "yourTime" : "otherTime")}` : ""}` : undefined} key={cell.key} style={[styles.monthCell, custodyParent === "you" ? styles.yourTimeCell : custodyParent === "other" ? styles.otherTimeCell : null]}>
                 {cell.day ? <Text style={styles.dayNumber}>{cell.day}</Text> : null}
@@ -149,7 +155,7 @@ function CalendarViewPanel({
         <View style={styles.scheduleList}>
           {week.map((date) => {
             const dayEvents = events.filter((event) => eventOccursOnDay(event, date));
-            const custodyParent = custodyParentForDate(date, custodySchedule);
+            const custodyParent = custodyParentForDate(date, custodySchedule, custodyOverrides);
             return (
               <View key={date.toISOString()} style={styles.scheduleRow}>
                 <Text style={styles.scheduleDate}>{formatCalendarDay(locale, date)}</Text>
@@ -171,7 +177,7 @@ function CalendarViewPanel({
   }
 
   const dayEvents = events.filter((event) => eventOccursOnDay(event, anchorDate));
-  const custodyParent = custodyParentForDate(anchorDate, custodySchedule);
+  const custodyParent = custodyParentForDate(anchorDate, custodySchedule, custodyOverrides);
   return (
     <View accessibilityLabel={`${calendarText(locale, "day")} ${calendarText(locale, "title")}`.toLocaleLowerCase(locale)} style={styles.calendarCanvas}>
       <Text style={styles.calendarMonth}>{formatCalendarDate(locale, anchorDate, { weekday: "long", month: "long", day: "numeric" })}</Text>
@@ -193,6 +199,8 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
   const h = (key: Parameters<typeof homeText>[1]) => homeText(locale, key);
   const task = taskCopy(locale);
   const { connected, events, invitationGrant } = useCoordinationState();
+  const accountActions = useOptionalStagingAccountActions();
+  const firstName = accountActions?.displayName?.trim().split(/\s+/)[0];
   const nextEvent = [...events].sort((left, right) => left.startsAt.localeCompare(right.startsAt))[0];
   const nextEventDate = nextEvent
     ? formatLocalizedDate(locale, nextEvent.startsAt, { weekday: "short", month: "short", day: "numeric" })
@@ -206,12 +214,19 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
       <View style={styles.brandHero}>
         <View style={styles.heroSun} />
         <View style={styles.heroBubble} />
-        <Image accessibilityLabel={h("logo")} source={require("../../assets/icon-production.png")} style={styles.logo} />
         <View style={styles.brandHeroCopy}>
+          <View accessibilityLabel="PeacePad Native V2" style={styles.brandLockup}>
+            <Image accessibilityLabel={h("logo")} source={require("../../assets/icon-production.png")} style={styles.logo} />
+            <View>
+              <Text style={styles.brandName}>PeacePad</Text>
+              <Text style={styles.brandVersion}>Native V2</Text>
+            </View>
+          </View>
           <Text style={styles.heroEyebrow}>YOUR FAMILY, YOUR PACE</Text>
-          <AccessibleHeading style={styles.title}>{h("title")}</AccessibleHeading>
-          <Text style={styles.body}>{h("body")}</Text>
+          <AccessibleHeading style={styles.heroTitle}>{homeHeroText(locale, firstName ? "greetingNamed" : "greeting", firstName)}</AccessibleHeading>
+          <Text style={styles.heroBody}>{homeHeroText(locale, "impact")}</Text>
         </View>
+        <View accessible={false} style={styles.heroDoodle}><PeacePadIcon name="sunny-outline" size={38} color={colors.warning} /><PeacePadIcon name="heart-outline" size={27} color={colors.coral} /></View>
       </View>
 
       <View style={styles.datePill}>
@@ -244,8 +259,8 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
         </Pressable>
       )}
 
-      <Pressable accessibilityRole="button" accessibilityLabel="Activity ideas" onPress={() => setScreen("activities")} style={({ pressed }) => [styles.activityCard, pressed ? styles.pressed : null]}>
-        <View style={styles.activityDot}><Text accessible={false} style={styles.activityDotText}>☀️</Text></View>
+      <Pressable accessibilityHint="Shows weather-aware ideas for time with your children." accessibilityRole="button" accessibilityLabel="Activity ideas" onPress={() => setScreen("activities")} style={({ pressed }) => [styles.activityCard, pressed ? styles.pressed : null]}>
+        <View style={styles.activityDot}><PeacePadIcon name="sunny-outline" size={23} color={colors.text} /></View>
         <View style={styles.activityCopy}>
           <Text style={styles.activityTitle}>Activity ideas</Text>
           <Text style={styles.caption}>Find weather-aware ideas for the time you have together.</Text>
@@ -253,12 +268,36 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
       </Pressable>
 
       <Pressable accessibilityRole="button" accessibilityLabel={task.title} onPress={() => setScreen("tasks")} style={({ pressed }) => [styles.taskCard, pressed ? styles.pressed : null]}>
-        <View style={styles.cardHeadingRow}><Text accessible={false} style={styles.cardEmoji}>✅</Text><Text style={styles.taskTitle}>{task.title}</Text></View>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="checkmark-circle-outline" size={23} color={colors.warning} /><Text style={styles.taskTitle}>{task.title}</Text></View>
         <Text style={styles.caption}>{task.body}</Text>
       </Pressable>
 
+      <Pressable accessibilityHint="Opens a private place to speak or type and prepare calm, child-focused wording." accessibilityRole="button" accessibilityLabel="Open PeaceBot Coach" onPress={() => setScreen("coach")} style={({ pressed }) => [styles.activityCard, { backgroundColor: colors.cream, borderColor: colors.warningBorder }, pressed ? styles.pressed : null]}>
+        <View style={[styles.activityDot, { backgroundColor: "#FFD9CF" }]}><PeacePadIcon name="heart-circle-outline" size={23} color={colors.coral} /></View>
+        <View style={styles.activityCopy}>
+          <Text style={styles.activityTitle}>PeaceBot Coach</Text>
+          <Text style={styles.caption}>Talk it through privately, prepare calm wording, and choose what to share.</Text>
+        </View>
+      </Pressable>
+
+      <Pressable accessibilityRole="button" accessibilityLabel="Family tools" onPress={() => setScreen("family")} style={({ pressed }) => [styles.activityCard, { backgroundColor: "#FFE4D6", borderColor: "#F2A791" }, pressed ? styles.pressed : null]}>
+        <View style={[styles.activityDot, { backgroundColor: colors.sun }]}><PeacePadIcon name="heart-circle-outline" size={23} color={colors.text} /></View>
+        <View style={styles.activityCopy}>
+          <Text style={styles.activityTitle}>Family tools</Text>
+          <Text style={styles.caption}>Children, shared costs, support, call plans and Conch.</Text>
+        </View>
+      </Pressable>
+
+      {connected ? <Pressable accessibilityRole="button" accessibilityLabel="Open Conch mode" onPress={() => setScreen("conch")} style={({ pressed }) => [styles.activityCard, { backgroundColor: "#DDF6F0", borderColor: "#76CCBE" }, pressed ? styles.pressed : null]}>
+        <View style={[styles.activityDot, { backgroundColor: "#BEEAE2" }]}><PeacePadIcon name="people-circle-outline" size={23} color={colors.successText} /></View>
+        <View style={styles.activityCopy}>
+          <Text style={styles.activityTitle}>Conch mode</Text>
+          <Text style={styles.caption}>A consent-based audio or video conversation where each parent gets a calm turn.</Text>
+        </View>
+      </Pressable> : null}
+
       <Pressable accessibilityRole="button" accessibilityLabel={h("record")} onPress={() => setScreen("records")} style={({ pressed }) => [styles.recordCard, pressed ? styles.pressed : null]}>
-        <View style={styles.cardHeadingRow}><Text accessible={false} style={styles.cardEmoji}>📎</Text><Text style={styles.recordTitle}>{h("record")}</Text></View>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="attach-outline" size={23} color={colors.accent} /><Text style={styles.recordTitle}>{h("record")}</Text></View>
         <Text style={styles.caption}>{h("recordBody")}</Text>
       </Pressable>
 
@@ -267,16 +306,16 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
           <Text style={styles.messageCtaTitle}>{h("send")}</Text>
           <Text style={styles.messageCtaBody}>{h("sendBody")}</Text>
         </View>
-        <View style={styles.messageCtaIcon}><Text accessible={false} style={styles.messageCtaEmoji}>💬</Text></View>
+        <View style={styles.messageCtaIcon}><PeacePadIcon name="chatbubble-ellipses-outline" size={27} color={colors.onBrand} /></View>
       </Pressable>
 
       {connected ? <Pressable accessibilityLabel={callText(locale, "title")} accessibilityRole="button" onPress={() => setScreen("calls")} style={({ pressed }) => [styles.callCard, pressed ? styles.pressed : null]}>
-        <View style={styles.cardHeadingRow}><Text accessible={false} style={styles.cardEmoji}>📞</Text><Text style={styles.callTitle}>{callText(locale, "title")}</Text></View>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="call-outline" size={23} color={colors.brand} /><Text style={styles.callTitle}>{callText(locale, "title")}</Text></View>
         <Text style={styles.caption}>{callText(locale, "body")}</Text>
       </Pressable> : null}
 
       <Pressable accessibilityLabel={h("invite")} accessibilityRole="button" onPress={() => setScreen("invite")} style={({ pressed }) => [styles.inviteCard, pressed ? styles.pressed : null]}>
-        <View style={styles.cardHeadingRow}><Text accessible={false} style={styles.cardEmoji}>🤝</Text><Text style={styles.inviteTitle}>{h("invite")}</Text></View>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="people-outline" size={23} color={colors.successText} /><Text style={styles.inviteTitle}>{h("invite")}</Text></View>
         <Text style={styles.caption}>{h("inviteBody")}</Text>
       </Pressable>
 
@@ -472,7 +511,13 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
     setLayerShared,
     toggleLayerFilter,
     visibleLayerIds,
-    connected
+    connected,
+    parentingSchedulePlan,
+    saveParentingSchedulePlan,
+    actorIdentityId,
+    parentingScheduleExceptions,
+    createParentingScheduleException,
+    resolveParentingScheduleException
   } = useCoordinationState();
   const [eventTitle, setEventTitle] = useState("");
   const [selectedLayerId, setSelectedLayerId] = useState(layers[0]?.id ?? "");
@@ -484,8 +529,18 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
   const [pendingDeleteEventId, setPendingDeleteEventId] = useState<string>();
   const [eventType, setEventType] = useState<"parenting-time" | "appointment" | "change-request">("parenting-time");
   const [custodySchedule, setCustodySchedule] = useState<CustodySchedule>();
+  const [exceptionStartDate, setExceptionStartDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [exceptionEndDate, setExceptionEndDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [exceptionNote, setExceptionNote] = useState("");
+  const [exceptionKind, setExceptionKind] = useState<"holiday" | "vacation" | "swap" | "other">("swap");
+  const [exceptionAssignedParent, setExceptionAssignedParent] = useState<"you" | "other">("you");
+  const [exceptionBusy, setExceptionBusy] = useState(false);
+  const [exceptionError, setExceptionError] = useState<string>();
 
   const visibleEvents = events.filter((event) => visibleLayerIds.includes(event.calendarLayerId));
+  const custodyOverrides: readonly CustodyOverride[] = parentingScheduleExceptions
+    .filter((item) => item.status === "accepted")
+    .map((item) => ({ startDate: item.startDate, endDate: item.endDate, parent: item.assignedParentIdentityId === actorIdentityId ? "you" : "other" }));
   const views: readonly CalendarView[] = ["month", "week", "day"];
   const moveCalendar = (amount: number) => setCalendarAnchorDate((current) => calendarView === "month"
     ? addUtcMonths(current, amount)
@@ -497,12 +552,14 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
 
   return (
     <View style={styles.stack}>
-      <View style={styles.titleRow}>
-        <View>
-          <AccessibleHeading style={styles.title}>{calendarText(locale, "title")}</AccessibleHeading>
-          <Text style={styles.body}>{calendarText(locale, "body")}</Text>
-        </View>
-      </View>
+      <ScreenHeader
+        accent={colors.coral}
+        icon="calendar-outline"
+        kicker="Shared plans"
+        softBackground={colors.cream}
+        subtitle={calendarText(locale, "body")}
+        title={calendarText(locale, "title")}
+      />
 
       <View accessibilityLabel={calendarText(locale, "view")} accessibilityRole="tablist" style={styles.segmented}>
         {views.map((view) => (
@@ -527,9 +584,15 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
         <LabButton label={calendarNavigationText(locale, "next")} onPress={() => moveCalendar(1)} variant="secondary" />
       </View>
 
-      <CalendarViewPanel anchorDate={calendarAnchorDate} calendarView={calendarView} custodySchedule={custodySchedule} events={visibleEvents} layers={layers} locale={locale} />
+      <CalendarViewPanel anchorDate={calendarAnchorDate} calendarView={calendarView} custodyOverrides={custodyOverrides} custodySchedule={custodySchedule} events={visibleEvents} layers={layers} locale={locale} />
 
       <CustodySchedulePlanner
+        initialSchedule={parentingSchedulePlan ? {
+          enabled: parentingSchedulePlan.status === "active",
+          pattern: parentingSchedulePlan.pattern,
+          startDate: parentingSchedulePlan.startDate,
+          primaryParent: parentingSchedulePlan.primaryParentIdentityId === actorIdentityId ? "you" : "other"
+        } : undefined}
         locale={locale}
         onAddBlocks={async (blocks: readonly CustodyBlock[]) => {
           if (!selectedLayerId) return;
@@ -554,8 +617,56 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
           }
         }}
         onScheduleChange={setCustodySchedule}
+        onSave={(schedule) => saveParentingSchedulePlan({
+          calendarLayerId: selectedLayerId,
+          pattern: schedule.pattern,
+          startDate: schedule.startDate,
+          primaryParent: schedule.primaryParent,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+          status: schedule.enabled ? "active" : "paused"
+        })}
         selectedLayerId={selectedLayerId}
       />
+
+      <LabButton label="Share calendar" onPress={() => void Share.share({
+        title: "PeacePad parenting calendar",
+        message: buildPeacePadCalendar({ schedule: custodySchedule, scheduleEvents: visibleEvents, exceptions: parentingScheduleExceptions, actorIdentityId })
+      })} variant="secondary" />
+
+      <View style={styles.card}>
+        <Text style={styles.heading}>Changes, holidays and swaps</Text>
+        <Text style={styles.body}>Propose a one-off change without rewriting the regular parenting plan. Both parents can see and respond to it.</Text>
+        <View accessibilityRole="radiogroup" style={styles.rowWrap}>
+          {(["holiday", "vacation", "swap", "other"] as const).map((kind) => <Pressable accessibilityLabel={kind} accessibilityRole="radio" accessibilityState={{ checked: exceptionKind === kind }} key={kind} onPress={() => setExceptionKind(kind)} style={[styles.chip, exceptionKind === kind ? styles.chipActive : null]}><Text style={[styles.chipText, exceptionKind === kind ? styles.chipTextActive : null]}>{kind}</Text></Pressable>)}
+        </View>
+        <View accessibilityRole="radiogroup" style={styles.rowWrap}>
+          {(["you", "other"] as const).map((parent) => { const label = parent === "you" ? "Your time" : "Other parent's time"; return <Pressable accessibilityLabel={label} accessibilityRole="radio" accessibilityState={{ checked: exceptionAssignedParent === parent }} key={parent} onPress={() => setExceptionAssignedParent(parent)} style={[styles.chip, exceptionAssignedParent === parent ? styles.chipActive : null]}><Text style={[styles.chipText, exceptionAssignedParent === parent ? styles.chipTextActive : null]}>{label}</Text></Pressable>; })}
+        </View>
+        <TextInput accessibilityLabel="Change start date" onChangeText={setExceptionStartDate} placeholder="YYYY-MM-DD" style={styles.input} value={exceptionStartDate} />
+        <TextInput accessibilityLabel="Change end date" onChangeText={setExceptionEndDate} placeholder="YYYY-MM-DD" style={styles.input} value={exceptionEndDate} />
+        <TextInput accessibilityLabel="Change note" maxLength={500} multiline onChangeText={setExceptionNote} placeholder="Holiday, school closure, travel, or swap details" style={[styles.input, styles.multilineInput]} value={exceptionNote} />
+        {exceptionError ? <Text accessibilityRole="alert" style={styles.error}>{exceptionError}</Text> : null}
+        <LabButton disabled={!parentingSchedulePlan || exceptionBusy} label={exceptionBusy ? "Sending proposal..." : "Propose change"} onPress={() => {
+          setExceptionBusy(true);
+          setExceptionError(undefined);
+          void createParentingScheduleException({ assignedParent: exceptionAssignedParent, kind: exceptionKind, startDate: exceptionStartDate, endDate: exceptionEndDate, note: exceptionNote.trim() || null })
+            .then(() => setExceptionNote(""))
+            .catch((error) => setExceptionError(error instanceof Error ? error.message : "PeacePad could not save that change."))
+            .finally(() => setExceptionBusy(false));
+        }} />
+        {parentingScheduleExceptions.map((item) => (
+          <View key={item.id} style={styles.listItem}>
+            <View style={styles.flexOne}>
+              <Text style={styles.actionTitle}>{item.startDate} - {item.endDate}</Text>
+              <Text style={styles.caption}>{item.note || "Parenting-time change"} · {item.status}</Text>
+            </View>
+            {item.status === "proposed" ? <View style={styles.rowWrap}>
+              <LabButton label="Accept" onPress={() => void resolveParentingScheduleException(item.id, "accepted")} variant="secondary" />
+              <LabButton label="Decline" onPress={() => void resolveParentingScheduleException(item.id, "declined")} variant="secondary" />
+            </View> : null}
+          </View>
+        ))}
+      </View>
 
       <View style={styles.card}>
         <Text style={styles.heading}>{calendarText(locale, "calendars")}</Text>
@@ -702,6 +813,9 @@ export function MessagesScreen() {
     messageCheckHydrated,
     messageDraft,
     messageError,
+    messageAttachments,
+    attachmentBusy,
+    attachmentError,
     messagePreview,
     messageSearchBusy,
     messageSearchError,
@@ -718,6 +832,10 @@ export function MessagesScreen() {
     setCorrectionDraft,
     setMessageCheckEnabled,
     setMessageDraft,
+    uploadMessageAttachment,
+    openMessageAttachment,
+    transcribeCoachAudio,
+    coachConversationTurn,
     setMessageSearchQuery,
     startCorrection
   } = useCoordinationState();
@@ -726,10 +844,40 @@ export function MessagesScreen() {
 
   return (
     <View style={styles.stack}>
-      <AccessibleHeading style={styles.title}>{m("title")}</AccessibleHeading>
-      <Text style={styles.body}>{m("body")}</Text>
+      <ScreenHeader
+        accent={colors.aqua}
+        icon="chatbubble-ellipses-outline"
+        kicker="Communication"
+        softBackground={colors.successSurface}
+        subtitle={m("body")}
+        title={m("title")}
+      />
 
-      <PrepChatAssistant onUseDraft={setMessageDraft} />
+      <CoachConversation onTranscribe={transcribeCoachAudio} onConversationTurn={coachConversationTurn} onUseDraft={setMessageDraft} />
+
+      <View style={[styles.card, { backgroundColor: colors.successSurface, borderColor: colors.successBorder }]}>
+        <Text style={styles.heading}>Photos, files, and voice notes</Text>
+        <Text style={styles.body}>Share only what you choose. Files are private to this connected conversation and use short-lived links.</Text>
+        <ConversationVoiceNote busy={attachmentBusy} onUpload={uploadMessageAttachment} />
+        <LabButton disabled={!messageCheckHydrated || attachmentBusy} label={attachmentBusy ? "Sharing securely..." : "Choose a file to share"} onPress={() => void (async () => {
+          try {
+            const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false, type: ["image/jpeg", "image/png", "application/pdf", "text/plain", "audio/mp4", "audio/m4a", "audio/webm"] });
+            if (result.canceled) return;
+            const selected = result.assets[0];
+            const allowed = ["image/jpeg", "image/png", "application/pdf", "text/plain", "audio/mp4", "audio/m4a", "audio/webm"] as const;
+            const mediaType = allowed.find((type) => type === selected.mimeType);
+            if (!mediaType) throw new Error("Choose a JPEG, PNG, PDF, text file, or voice note.");
+            const bytes = await new File(selected.uri).arrayBuffer();
+            await uploadMessageAttachment({ originalFileName: selected.name, mediaType, bytes });
+          } catch { /* State exposes a privacy-safe error below. */ }
+        })()} />
+        {attachmentError ? <Text accessibilityRole="alert" style={styles.error}>{attachmentError}</Text> : null}
+        {messageAttachments.map((attachment) => <View key={attachment.id} style={styles.searchResult}>
+          <Text style={styles.actionTitle}>{attachment.originalFileName}</Text>
+          <Text style={styles.caption}>{attachment.mediaType} · {attachment.byteLength} bytes</Text>
+          <LabButton label="Open attachment" onPress={() => void openMessageAttachment(attachment.id).then((url) => Linking.openURL(url)).catch(() => undefined)} variant="secondary" />
+        </View>)}
+      </View>
 
       <View style={styles.card}>
         <Text style={styles.heading}>{m("find")}</Text>
@@ -738,6 +886,7 @@ export function MessagesScreen() {
           autoCapitalize="none"
           onChangeText={setMessageSearchQuery}
           placeholder={m("searchPlaceholder")}
+          placeholderTextColor={colors.muted}
           returnKeyType="search"
           onSubmitEditing={() => void searchMessages()}
           style={styles.input}
@@ -950,12 +1099,19 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
   const eventCandidate = events.find((event) => !linkedSourceIds.has(event.id));
   return (
     <View style={styles.stack}>
-      <AccessibleHeading style={styles.title}>{w("records")}</AccessibleHeading>
+      <ScreenHeader
+        accent={colors.accent}
+        icon="document-text-outline"
+        kicker="Private by default"
+        softBackground={colors.successSurface}
+        subtitle={w("binderBody")}
+        title={w("records")}
+      />
       {loading ? <View style={styles.card}><Text style={styles.heading}>{w("opening")}</Text><Text style={styles.body}>{w("loading")}</Text></View> : null}
       {!loading && binders.length > 1 ? <View style={styles.card}>
         <Text style={styles.heading}>{w("binders")}</Text>
         {binders.filter((candidate) => candidate.status === "active").map((candidate) => (
-          <Pressable accessibilityRole="button" key={candidate.id} onPress={() => selectBinder(candidate.id)} style={styles.actionCard}>
+          <Pressable accessibilityHint={w("private")} accessibilityLabel={`${candidate.name}, ${candidate.childLabel}`} accessibilityRole="button" key={candidate.id} onPress={() => selectBinder(candidate.id)} style={styles.actionCard}>
             <Text style={styles.actionTitle}>{candidate.name}</Text>
             <Text style={styles.caption}>{candidate.childLabel} · {w("private")}</Text>
           </Pressable>
@@ -964,7 +1120,9 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
       {!loading && !binder ? <View style={styles.card}>
         <Text style={styles.heading}>{w("createBinder")}</Text>
         <Text style={styles.body}>{w("binderBody")}</Text>
+        <Text style={styles.fieldLabel}>{w("binderName")}</Text>
         <TextInput accessibilityLabel={w("binderName")} onChangeText={setBinderName} placeholder={w("binderName")} style={styles.input} value={binderName} />
+        <Text style={styles.fieldLabel}>{w("childLabel")}</Text>
         <TextInput accessibilityLabel={w("childLabel")} onChangeText={setChildLabel} placeholder={w("childLabel")} style={styles.input} value={childLabel} />
         <LabButton disabled={busy} label={busy ? w("creating") : w("create")} onPress={() => void saveBinder()} />
       </View> : !loading && binder ? <View style={styles.card}>
@@ -996,7 +1154,7 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
       </View> : null}
       {error || recordsError ? <Text accessibilityRole="alert" style={styles.error}>{error ?? recordsError}</Text> : null}
       {recordsError && !loading ? <LabButton label={w("tryAgain")} onPress={() => void reload()} variant="secondary" /> : null}
-      <Pressable accessibilityRole="button" onPress={() => setScreen("home")} style={styles.actionCard}>
+      <Pressable accessibilityHint={w("anotherTask")} accessibilityLabel={w("returnHome")} accessibilityRole="button" onPress={() => setScreen("home")} style={styles.actionCard}>
         <Text style={styles.actionTitle}>{w("returnHome")}</Text>
         <Text style={styles.caption}>{w("anotherTask")}</Text>
       </Pressable>
@@ -1020,22 +1178,37 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
   }
   return (
     <View style={styles.stack}>
-      <AccessibleHeading style={styles.title}>{t("more.title")}</AccessibleHeading>
-      <Pressable accessibilityRole="button" onPress={() => setScreen("invite")} style={[styles.actionCard, styles.moreFamilyCard]}>
-        <View style={styles.cardHeadingRow}><Text accessible={false} style={styles.cardEmoji}>🤝</Text><Text style={styles.actionTitle}>{t("more.family.title")}</Text></View>
+      <ScreenHeader
+        accent={colors.brand}
+        icon="sparkles-outline"
+        kicker="Your PeacePad"
+        softBackground={colors.brandSoft}
+        subtitle={t("more.support.body")}
+        title={t("more.title")}
+      />
+      <Pressable accessibilityHint={t("more.family.body")} accessibilityLabel={t("more.family.title")} accessibilityRole="button" onPress={() => setScreen("invite")} style={[styles.actionCard, styles.moreFamilyCard]}>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="people-outline" size={23} color={colors.successText} /><Text style={styles.actionTitle}>{t("more.family.title")}</Text></View>
         <Text style={styles.caption}>{t("more.family.body")}</Text>
       </Pressable>
+      <Pressable accessibilityHint="Manage child updates, expenses, local support, scheduled calls and Conch." accessibilityLabel="Family tools" accessibilityRole="button" onPress={() => setScreen("family")} style={[styles.actionCard, styles.morePrivacyCard]}>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="heart-circle-outline" size={23} color={colors.aqua} /><Text style={styles.actionTitle}>Family tools</Text></View>
+        <Text style={styles.caption}>Manage child updates, expenses, local support, scheduled calls and Conch.</Text>
+      </Pressable>
+      <Pressable accessibilityHint="Open a consent-based conversation where each parent gets a calm turn to speak." accessibilityLabel="Open Conch mode" accessibilityRole="button" onPress={() => setScreen("conch")} style={[styles.actionCard, styles.moreSupportCard]}>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="people-circle-outline" size={23} color={colors.aqua} /><Text style={styles.actionTitle}>Conch mode</Text></View>
+        <Text style={styles.caption}>Take turns, listen carefully, and agree on a child-focused next step—without recording the call.</Text>
+      </Pressable>
       <View style={[styles.actionCard, styles.morePrivacyCard]}>
-        <View style={styles.cardHeadingRow}><Text accessible={false} style={styles.cardEmoji}>🛡️</Text><Text style={styles.actionTitle}>{t("more.privacy.title")}</Text></View>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="shield-checkmark-outline" size={23} color={colors.accent} /><Text style={styles.actionTitle}>{t("more.privacy.title")}</Text></View>
         <Text style={styles.caption}>{t("more.privacy.body")}</Text>
       </View>
-      <Pressable accessibilityRole="button" onPress={() => setShowSupport((current) => !current)} style={[styles.actionCard, styles.moreSupportCard]}>
-        <View style={styles.cardHeadingRow}><Text accessible={false} style={styles.cardEmoji}>💛</Text><Text style={styles.actionTitle}>{t("more.support.title")}</Text></View>
+      <Pressable accessibilityHint={t("more.support.body")} accessibilityLabel={t("more.support.title")} accessibilityRole="button" accessibilityState={{ expanded: showSupport }} onPress={() => setShowSupport((current) => !current)} style={[styles.actionCard, styles.moreSupportCard]}>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="heart-outline" size={23} color={colors.coral} /><Text style={styles.actionTitle}>{t("more.support.title")}</Text></View>
         <Text style={styles.caption}>{t("more.support.body")}</Text>
       </Pressable>
       {showSupport ? <View style={styles.actionCardLargeText}><SupportPanel /></View> : null}
-      <Pressable accessibilityRole="button" onPress={() => setReplayIntroduction(true)} style={[styles.actionCard, styles.moreIntroCard]}>
-        <View style={styles.cardHeadingRow}><Text accessible={false} style={styles.cardEmoji}>✨</Text><Text style={styles.actionTitle}>{t("more.introduction.title")}</Text></View>
+      <Pressable accessibilityHint={t("more.introduction.body")} accessibilityLabel={t("more.introduction.title")} accessibilityRole="button" onPress={() => setReplayIntroduction(true)} style={[styles.actionCard, styles.moreIntroCard]}>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="sparkles-outline" size={23} color={colors.brand} /><Text style={styles.actionTitle}>{t("more.introduction.title")}</Text></View>
         <Text style={styles.caption}>{t("more.introduction.body")}</Text>
       </Pressable>
       <LinkedSignInMethods />
@@ -1159,21 +1332,27 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
 }
 
 const styles = StyleSheet.create({
-  stack: { gap: spacing.lg },
+  stack: { gap: spacing.md },
   stackTight: { gap: spacing.sm },
   title: { ...typography.title, color: colors.text },
   heading: { ...typography.subheading, color: colors.text },
   body: { ...typography.body, color: colors.muted },
   caption: { ...typography.caption, color: colors.muted },
   fieldLabel: { ...typography.caption, color: colors.text, fontWeight: "800", marginTop: spacing.sm, textTransform: "uppercase" },
-  brandHero: { alignItems: "center", backgroundColor: "#FFE4D6", borderRadius: 30, flexDirection: "row", gap: spacing.md, minHeight: 154, overflow: "hidden", padding: spacing.lg, position: "relative" },
-  brandHeroCopy: { flex: 1, gap: spacing.xs, zIndex: 2 },
+  brandHero: { backgroundColor: colors.cream, borderColor: colors.border, borderRadius: 30, borderWidth: 1, minHeight: 230, overflow: "hidden", padding: spacing.lg, position: "relative" },
+  brandHeroCopy: { gap: spacing.sm, maxWidth: "88%", zIndex: 2 },
+  brandLockup: { alignItems: "center", flexDirection: "row", gap: spacing.md, marginBottom: spacing.md },
+  brandName: { color: colors.text, fontSize: 25, fontWeight: "900", lineHeight: 29 },
+  brandVersion: { ...typography.body, color: colors.brand, fontWeight: "800" },
   heroEyebrow: { ...typography.caption, color: colors.coral, fontWeight: "900", letterSpacing: 1.1 },
-  heroSun: { backgroundColor: "#F7C948", borderRadius: 999, height: 92, opacity: 0.42, position: "absolute", right: -20, top: -24, width: 92 },
-  heroBubble: { backgroundColor: "#72D7C9", borderRadius: 999, bottom: -35, height: 92, opacity: 0.38, position: "absolute", right: 54, width: 92 },
-  logo: { borderRadius: 23, height: 72, width: 72, zIndex: 2 },
+  heroTitle: { ...typography.title, color: colors.text, maxWidth: 285 },
+  heroBody: { ...typography.subheading, color: colors.text, fontWeight: "500", maxWidth: 300 },
+  heroDoodle: { alignItems: "center", gap: spacing.xs, position: "absolute", right: spacing.lg, top: spacing.lg },
+  heroSun: { backgroundColor: "#F7C948", borderRadius: 999, height: 120, opacity: 0.26, position: "absolute", right: -35, top: -35, width: 120 },
+  heroBubble: { backgroundColor: "#72D7C9", borderRadius: 999, bottom: -48, height: 132, opacity: 0.22, position: "absolute", right: -18, width: 132 },
+  logo: { borderRadius: 18, height: 56, width: 56, zIndex: 2 },
   actionGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
-  actionCard: { backgroundColor: "#FFF1DF", borderColor: "#F2C8B5", borderRadius: 24, borderWidth: 1, gap: spacing.sm, justifyContent: "center", minHeight: 88, minWidth: "46%", padding: spacing.lg, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 1 },
+  actionCard: { backgroundColor: "#FFF1DF", borderColor: "#F2C8B5", borderRadius: 22, borderWidth: 1, gap: spacing.sm, justifyContent: "center", minHeight: 76, minWidth: "46%", padding: spacing.md, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 1 },
   moreFamilyCard: { backgroundColor: "#EAF6CF", borderColor: "#BBD781" },
   morePrivacyCard: { backgroundColor: "#DDF6F0", borderColor: "#76CCBE" },
   moreSupportCard: { backgroundColor: "#FFF1B8", borderColor: "#F0C940" },
@@ -1188,28 +1367,25 @@ const styles = StyleSheet.create({
   datePillText: { ...typography.body, color: colors.text, fontWeight: "700" },
   todayLine: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
   connectionStatus: { ...typography.caption, color: colors.muted, fontWeight: "700" },
-  planCard: { backgroundColor: "#FFFDF8", borderColor: "#F2C8B5", borderRadius: 24, borderWidth: 1, flexDirection: "row", gap: spacing.md, minHeight: 132, overflow: "hidden", paddingRight: spacing.lg, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 1 },
+  planCard: { backgroundColor: "#FFFDF8", borderColor: "#F2C8B5", borderRadius: 22, borderWidth: 1, flexDirection: "row", gap: spacing.md, minHeight: 116, overflow: "hidden", paddingRight: spacing.md, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 1 },
   planCardEmpty: { minHeight: 112 },
   planAccent: { backgroundColor: colors.coral, width: 10 },
   planAccentSun: { backgroundColor: colors.sun },
-  planCopy: { flex: 1, gap: spacing.xs, justifyContent: "center", paddingVertical: spacing.lg },
+  planCopy: { flex: 1, gap: spacing.xs, justifyContent: "center", paddingVertical: spacing.md },
   planEyebrow: { ...typography.caption, color: colors.coral, fontWeight: "800", textTransform: "uppercase" },
   planTitle: { ...typography.heading, color: colors.text },
   activityCard: { alignItems: "center", backgroundColor: colors.warningSurface, borderColor: colors.warningBorder, borderRadius: 22, borderWidth: 1, flexDirection: "row", gap: spacing.md, padding: spacing.md },
   activityDot: { alignItems: "center", backgroundColor: colors.sun, borderRadius: 999, height: 44, justifyContent: "center", width: 44 },
-  activityDotText: { color: colors.text, fontSize: 24, fontWeight: "800" },
   activityCopy: { flex: 1, gap: spacing.xs },
   activityTitle: { ...typography.body, color: colors.text, fontWeight: "800" },
   cardHeadingRow: { alignItems: "center", flexDirection: "row", gap: spacing.sm },
-  cardEmoji: { fontSize: 23, lineHeight: 29 },
-  taskCard: { backgroundColor: "#FFF1B8", borderColor: "#F0C940", borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg, transform: [{ rotate: "-0.35deg" }] },
+  taskCard: { backgroundColor: "#FFF1B8", borderColor: "#F0C940", borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.md },
   taskTitle: { ...typography.subheading, color: colors.warning },
-  recordCard: { backgroundColor: "#DDF6F0", borderColor: "#76CCBE", borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg, transform: [{ rotate: "0.35deg" }] },
+  recordCard: { backgroundColor: "#DDF6F0", borderColor: "#76CCBE", borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.md },
   recordTitle: { ...typography.subheading, color: colors.accent },
   messageCta: { alignItems: "center", backgroundColor: colors.coral, borderRadius: 26, flexDirection: "row", gap: spacing.md, justifyContent: "space-between", padding: spacing.lg },
   messageCtaCopy: { flex: 1, gap: spacing.xs },
   messageCtaIcon: { alignItems: "center", backgroundColor: "rgba(255,255,255,0.22)", borderRadius: 999, height: 54, justifyContent: "center", width: 54 },
-  messageCtaEmoji: { fontSize: 27 },
   messageCtaTitle: { ...typography.heading, color: colors.onBrand },
   messageCtaBody: { ...typography.body, color: colors.onBrand },
   callCard: { backgroundColor: "#E8E0FA", borderColor: "#B8A4E4", borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg },
@@ -1227,7 +1403,6 @@ const styles = StyleSheet.create({
   error: { ...typography.body, color: colors.dangerText, fontWeight: "700" },
   errorText: { ...typography.caption, color: colors.dangerText, fontWeight: "700" },
   success: { ...typography.body, color: colors.successText, fontWeight: "700" },
-  titleRow: { flexDirection: "row", justifyContent: "space-between" },
   segmented: { backgroundColor: colors.cream, borderRadius: 18, flexDirection: "row", padding: spacing.xs },
   segment: { alignItems: "center", borderRadius: 14, flex: 1, justifyContent: "center", minHeight: 48, paddingVertical: spacing.md },
   segmentActive: { backgroundColor: colors.surface },
@@ -1261,6 +1436,10 @@ const styles = StyleSheet.create({
   smallButton: { alignItems: "center", backgroundColor: colors.brandSoft, borderRadius: 999, justifyContent: "center", minHeight: 44, minWidth: 64, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   smallButtonText: { ...typography.caption, color: colors.brand, fontWeight: "800" },
   input: { ...typography.body, backgroundColor: colors.surface, borderColor: "#E7C8BD", borderRadius: 18, borderWidth: 1, color: colors.text, minHeight: 52, padding: spacing.md },
+  multilineInput: { minHeight: 96, textAlignVertical: "top" },
+  listItem: { alignItems: "center", backgroundColor: colors.cream, borderRadius: 18, flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, padding: spacing.md },
+  flexOne: { flex: 1, minWidth: 180 },
+  rowWrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   messageInput: { minHeight: 120, textAlignVertical: "top" },
   wrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   chip: { alignItems: "center", backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 999, borderWidth: 1, justifyContent: "center", minHeight: 44, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },

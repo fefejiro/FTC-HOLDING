@@ -9,12 +9,9 @@ const expectedProjectId = "a4ecee72-ebae-483d-8553-035847ebb3d3";
 const requiredRegionalNames = [
   "EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_URL",
   "EXPO_PUBLIC_PEACEPAD_CA_API_BASE_URL",
-  "EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_PUBLISHABLE_KEY",
-  "EXPO_PUBLIC_PEACEPAD_US_SUPABASE_URL",
-  "EXPO_PUBLIC_PEACEPAD_US_API_BASE_URL",
-  "EXPO_PUBLIC_PEACEPAD_US_SUPABASE_PUBLISHABLE_KEY"
+  "EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_PUBLISHABLE_KEY"
 ];
-const projectRefs = { ca: "rohvkyuxbnqzglaromms", us: "spmpndalcvwmygznihec" };
+const projectRefs = { ca: "rohvkyuxbnqzglaromms" };
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -103,7 +100,7 @@ function verifyOnlineContract() {
   const environment = runEas(["env:list", "production", "--format", "long"]);
   const configuredNames = new Set(environment.match(/EXPO_PUBLIC_PEACEPAD_[A-Z0-9_]+/g) ?? []);
   const missing = requiredRegionalNames.filter((name) => !configuredNames.has(name));
-  assert(missing.length === 0, `EAS production is missing ${missing.length} required dual-region variable name(s): ${missing.join(", ")}`);
+  assert(missing.length === 0, `EAS production is missing ${missing.length} required Canadian staging variable name(s): ${missing.join(", ")}`);
 }
 
 try {
