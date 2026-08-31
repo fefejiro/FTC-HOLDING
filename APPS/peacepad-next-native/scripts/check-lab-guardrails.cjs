@@ -118,8 +118,10 @@ const playStoreInternalProfileName = "playstore-internal";
 allowedEasProfiles.push(playStoreInternalProfileName);
 const playStoreProductionProfileName = "playstore-production";
 allowedEasProfiles.push(playStoreProductionProfileName);
+const productionDeviceApkProfileName = "production-device-apk";
+allowedEasProfiles.push(productionDeviceApkProfileName);
 if (Object.keys(easBuildProfiles).some((profile) => !allowedEasProfiles.includes(profile))) {
-  failures.push("EAS must remain limited to approved lab, regional staging, and internal TestFlight profiles before Gate 6.");
+  failures.push("EAS must remain limited to the reviewed lab, staging, physical-device, and store release profiles.");
 }
 for (const profile of labEasProfiles) {
   const config = easBuildProfiles[profile];
@@ -216,6 +218,19 @@ if (
   || playStoreProductionProfile?.android?.credentialsSource !== "local"
 ) {
   failures.push("The Android Play production profile must remain an exact, signed AAB backed by the authorized Canada production runtime.");
+}
+const productionDeviceApkProfile = easBuildProfiles[productionDeviceApkProfileName];
+if (
+  productionDeviceApkProfile?.distribution !== "internal"
+  || productionDeviceApkProfile?.environment !== "production"
+  || productionDeviceApkProfile?.env?.PEACEPAD_ANDROID_RELEASE_MODE !== playStoreProductionProfileName
+  || productionDeviceApkProfile?.env?.EXPO_PUBLIC_PEACEPAD_ENV !== "production"
+  || productionDeviceApkProfile?.env?.EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED !== "true"
+  || productionDeviceApkProfile?.env?.EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS !== "false"
+  || productionDeviceApkProfile?.android?.buildType !== "apk"
+  || productionDeviceApkProfile?.android?.credentialsSource !== "local"
+) {
+  failures.push("The production device APK must be internal-distribution packaging of the exact signed Canada production runtime.");
 }
 const submitProfiles = Object.keys(easJson.submit || {});
 if (

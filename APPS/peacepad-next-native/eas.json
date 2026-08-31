@@ -111,6 +111,20 @@
         "buildType": "app-bundle",
         "credentialsSource": "local"
       }
+    },
+    "production-device-apk": {
+      "distribution": "internal",
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS": "false",
+        "EXPO_PUBLIC_PEACEPAD_ENV": "production",
+        "EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED": "true",
+        "PEACEPAD_ANDROID_RELEASE_MODE": "playstore-production"
+      },
+      "android": {
+        "buildType": "apk",
+        "credentialsSource": "local"
+      }
     }
   },
   "submit": {
