@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 const projects = Object.freeze({
   ca: "rohvkyuxbnqzglaromms",
   us: "spmpndalcvwmygznihec",
-  production: "qzekqjewpugdotskrtni",
+  production: "rohvkyuxbnqzglaromms",
 });
 const functionRegions = Object.freeze({
   ca: "ca-central-1",

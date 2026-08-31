@@ -29,7 +29,10 @@ const DEFAULT_LAB_API_URL = "http://127.0.0.1:8787";
 const PRODUCTION_API_HOST = /^https:\/\/api\.peacepad\.ca(?:\/|$)/i;
 const STAGING_PROJECT = "rohvkyuxbnqzglaromms";
 const STAGING_FUNCTION_REGION = "ca-central-1";
-const PRODUCTION_PROJECT = "qzekqjewpugdotskrtni";
+// The proven Canada project is promoted in place for production. Runtime mode
+// and explicit write authorization, rather than a second Supabase project,
+// preserve the staging/production safety boundary.
+const PRODUCTION_PROJECT = STAGING_PROJECT;
 const PRODUCTION_FUNCTION_REGION = "ca-central-1";
 
 function readBundledEnvironmentValues(): EnvironmentValues {

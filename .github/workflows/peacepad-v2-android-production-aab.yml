@@ -23,6 +23,7 @@ jobs:
   build-signed-production-aab:
     name: Build signed Android production AAB without Play publication
     runs-on: ubuntu-latest
+    environment: peacepad-v2-staging-ca
     # EAS can spend several minutes queued before the signed build starts.
     # Keep the runner alive long enough to receive the artifact instead of
     # leaving a remote build orphaned at the GitHub job timeout.
@@ -103,7 +104,7 @@ jobs:
         run: |
           set -euo pipefail
           health="$(curl --fail --location --retry 3 --connect-timeout 20 --max-time 60 \
-            https://qzekqjewpugdotskrtni.supabase.co/functions/v1/peacepad-v2-api/health)"
+            https://rohvkyuxbnqzglaromms.supabase.co/functions/v1/peacepad-v2-api/health)"
           node -e 'const health=JSON.parse(process.argv[1]); if(health.status!=="ok"||health.environment!=="production"||health.region!=="ca"||health.writesEnabled!==true) process.exit(1)' "$health"
 
       - name: Verify Canada production contract and start signed AAB build
@@ -113,6 +114,9 @@ jobs:
           EXPECTED_SHA: ${{ inputs.source_sha }}
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EAS_NO_VCS: "1"
+          PEACEPAD_PRODUCTION_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_PEACEPAD_SUPABASE_URL }}
+          PEACEPAD_PRODUCTION_API_BASE_URL: ${{ vars.EXPO_PUBLIC_PEACEPAD_API_BASE_URL }}
+          PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY }}
           EXPO_PUBLIC_PEACEPAD_ENV: production
           EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED: "true"
           PEACEPAD_ANDROID_RELEASE_MODE: playstore-production
@@ -123,14 +127,18 @@ jobs:
             set -eu
             test -s assets/icon.png
             export EXPO_PUBLIC_PEACEPAD_ENV=production
+            export EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_URL="$PEACEPAD_PRODUCTION_SUPABASE_URL"
+            export EXPO_PUBLIC_PEACEPAD_PRODUCTION_API_BASE_URL="$PEACEPAD_PRODUCTION_API_BASE_URL"
+            export EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY="$PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY"
+            export EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED=true
             export PEACEPAD_ANDROID_RELEASE_MODE=playstore-production
             node scripts/check-lab-guardrails.cjs
-            node -e 'const cfg=require("./app.config.js")({config:require("./app.json").expo}); if(cfg.android.package!=="ca.peacepad.family"||cfg.version!=="2.0.1"||cfg.android.versionCode!==48||cfg.extra.productionApiWritesEnabled!==true||cfg.extra.googleSignInEnabled!==true) process.exit(1);'
+            node -e 'const cfg=require("./app.config.js")({config:require("./app.json").expo}); if(cfg.android.package!=="ca.peacepad.family"||cfg.version!=="2.0.1"||cfg.android.versionCode!==50||cfg.extra.productionApiWritesEnabled!==true||cfg.extra.googleSignInEnabled!==true) process.exit(1);'
             npx --yes eas-cli@21.8.0 build --platform android --profile playstore-production --non-interactive --wait --json > "$RUNNER_TEMP/peacepad-v2-android-production-build.json"
           EOF
           )
           npx --yes eas-cli@21.8.0 env:exec production "$release_command" --non-interactive
-          node -e 'const fs=require("fs"); const b=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/peacepad-v2-android-production-build.json","utf8")); const first=Array.isArray(b)?b[0]:b; if(!first?.id||!first?.artifacts?.buildUrl) process.exit(1); fs.writeFileSync(process.env.RUNNER_TEMP+"/peacepad-v2-android-production-build.manifest", `source_sha=${process.env.EXPECTED_SHA||""}\nprofile=playstore-production\npackage=ca.peacepad.family\nversion=2.0.1\nversion_code=48\nproduction_writes_enabled=true\nplay_submission_attempted=false\nbuild_id=${first.id}\nartifact_url=${first.artifacts.buildUrl}\n`);'
+          node -e 'const fs=require("fs"); const b=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/peacepad-v2-android-production-build.json","utf8")); const first=Array.isArray(b)?b[0]:b; if(!first?.id||!first?.artifacts?.buildUrl) process.exit(1); fs.writeFileSync(process.env.RUNNER_TEMP+"/peacepad-v2-android-production-build.manifest", `source_sha=${process.env.EXPECTED_SHA||""}\nprofile=playstore-production\npackage=ca.peacepad.family\nversion=2.0.1\nversion_code=50\nproduction_writes_enabled=true\nplay_submission_attempted=false\nbuild_id=${first.id}\nartifact_url=${first.artifacts.buildUrl}\n`);'
 
       - name: Upload production AAB build evidence without Play submission
         if: always()
