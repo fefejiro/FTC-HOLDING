@@ -401,7 +401,7 @@ const writeOperation = (method: string, path: string, body: Record<string, unkno
 
 async function dispatchIncomingCallPush(
   config: RuntimeConfig,
-  admin: ReturnType<typeof createClient>,
+  admin: { rpc: unknown },
   call: unknown,
 ): Promise<void> {
   if (!call || typeof call !== "object" || config.pushTokenSecret.length < 32) return;
