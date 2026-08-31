@@ -17,6 +17,8 @@ type RuntimeConfig = Readonly<{
   pushTokenSecret: string;
   turnUrls: readonly string[];
   turnSharedSecret: string;
+  cloudflareTurnKeyId: string;
+  cloudflareTurnApiToken: string;
   supportDiscoveryUrl: string;
   supportDiscoveryToken: string;
   coachTranscriptionUrl: string;
@@ -222,6 +224,8 @@ const readConfig = (): RuntimeConfig => {
     pushTokenSecret: env("PEACEPAD_PUSH_TOKEN_SECRET"),
     turnUrls: parseTurnUrls(env("PEACEPAD_TURN_URLS")),
     turnSharedSecret: env("PEACEPAD_TURN_SHARED_SECRET"),
+    cloudflareTurnKeyId: env("PEACEPAD_CLOUDFLARE_TURN_KEY_ID"),
+    cloudflareTurnApiToken: env("PEACEPAD_CLOUDFLARE_TURN_API_TOKEN"),
     supportDiscoveryUrl: env("PEACEPAD_SUPPORT_DISCOVERY_URL"),
     supportDiscoveryToken: env("PEACEPAD_SUPPORT_DISCOVERY_TOKEN"),
     coachTranscriptionUrl: env("PEACEPAD_COACH_TRANSCRIPTION_URL"),
@@ -1405,7 +1409,8 @@ const handler = async (request: Request): Promise<Response> => {
       || requestedRegion !== config.region
       || schemaVersion !== "2.0"
     ) return failure(request, 400, "INVALID_REQUEST", "A valid active call version is required.", requestId, config);
-    if (config.turnUrls.length < 1 || config.turnSharedSecret.length < 32) {
+    const hasCloudflareTurn = Boolean(config.cloudflareTurnKeyId && config.cloudflareTurnApiToken);
+    if (!hasCloudflareTurn && (config.turnUrls.length < 1 || config.turnSharedSecret.length < 32)) {
       return failure(request, 503, "TURN_CREDENTIALS_UNAVAILABLE", "Private audio relay is not configured for this region.", requestId, config);
     }
 
@@ -1423,6 +1428,27 @@ const handler = async (request: Request): Promise<Response> => {
       || Number(authorization.version) !== expectedVersion
       || authorization.region !== config.region
     ) return failure(request, 502, "INVALID_UPSTREAM_RESPONSE", "PeacePad could not authorize private audio relay.", requestId, config);
+    if (hasCloudflareTurn) {
+      try {
+        const upstream = await fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${encodeURIComponent(config.cloudflareTurnKeyId)}/credentials/generate-ice-servers`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${config.cloudflareTurnApiToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ ttl: 3600 }),
+        });
+        const payload = await upstream.json().catch(() => null) as { iceServers?: unknown } | null;
+        if (!upstream.ok || !Array.isArray(payload?.iceServers) || payload.iceServers.length < 1) {
+          return failure(request, 503, "TURN_CREDENTIALS_UNAVAILABLE", "Private audio relay is temporarily unavailable.", requestId, config);
+        }
+        return json(request, 200, {
+          callId,
+          callVersion: expectedVersion,
+          expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+          iceServers: payload.iceServers,
+        }, requestId, config);
+      } catch {
+        return failure(request, 503, "TURN_CREDENTIALS_UNAVAILABLE", "Private audio relay is temporarily unavailable.", requestId, config);
+      }
+    }
     const credential = await createTurnCredential(
       { urls: config.turnUrls, sharedSecret: config.turnSharedSecret },
       { identityId: authenticated.user.id, callId, region: config.region },

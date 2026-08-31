@@ -67,6 +67,8 @@ if (-not $SkipDeploy) {
   $pushTokenSecret = [Environment]::GetEnvironmentVariable('PEACEPAD_PUSH_TOKEN_SECRET')
   $turnUrls = [Environment]::GetEnvironmentVariable('PEACEPAD_TURN_URLS')
   $turnSharedSecret = [Environment]::GetEnvironmentVariable('PEACEPAD_TURN_SHARED_SECRET')
+  $cloudflareTurnKeyId = [Environment]::GetEnvironmentVariable('PEACEPAD_CLOUDFLARE_TURN_KEY_ID')
+  $cloudflareTurnApiToken = [Environment]::GetEnvironmentVariable('PEACEPAD_CLOUDFLARE_TURN_API_TOKEN')
   $supportDiscoveryUrl = [Environment]::GetEnvironmentVariable('PEACEPAD_SUPPORT_DISCOVERY_URL')
   $supportDiscoveryToken = [Environment]::GetEnvironmentVariable('PEACEPAD_SUPPORT_DISCOVERY_TOKEN')
   $coachTranscriptionUrl = [Environment]::GetEnvironmentVariable('PEACEPAD_COACH_TRANSCRIPTION_URL')
@@ -88,10 +90,13 @@ $secretArguments = @(
   "PEACEPAD_FUNCTION_REGION=$FunctionRegion",
   "PEACEPAD_MAINTENANCE_SECRET=$maintenanceSecret",
   "PEACEPAD_IDEMPOTENCY_SECRET=$idempotencySecret",
-  "PEACEPAD_PUSH_TOKEN_SECRET=$pushTokenSecret",
-  "PEACEPAD_TURN_URLS=$turnUrls",
-  "PEACEPAD_TURN_SHARED_SECRET=$turnSharedSecret"
+  "PEACEPAD_PUSH_TOKEN_SECRET=$pushTokenSecret"
 )
+if (-not [string]::IsNullOrWhiteSpace($cloudflareTurnKeyId)) {
+  $secretArguments += "PEACEPAD_CLOUDFLARE_TURN_KEY_ID=$cloudflareTurnKeyId", "PEACEPAD_CLOUDFLARE_TURN_API_TOKEN=$cloudflareTurnApiToken"
+} else {
+  $secretArguments += "PEACEPAD_TURN_URLS=$turnUrls", "PEACEPAD_TURN_SHARED_SECRET=$turnSharedSecret"
+}
 if (-not [string]::IsNullOrWhiteSpace($geminiApiKey)) {
   $secretArguments += "PEACEPAD_GEMINI_API_KEY=$geminiApiKey"
 } else {

@@ -32,7 +32,15 @@ function Require-OptionalProviderPair([string] $UrlName, [string] $TokenName) {
 }
 
 Require-Secret 'PEACEPAD_PUSH_TOKEN_SECRET' 32
-Require-Secret 'PEACEPAD_TURN_SHARED_SECRET' 32
+$cloudflareTurnKeyId = [Environment]::GetEnvironmentVariable('PEACEPAD_CLOUDFLARE_TURN_KEY_ID')
+$cloudflareTurnApiToken = [Environment]::GetEnvironmentVariable('PEACEPAD_CLOUDFLARE_TURN_API_TOKEN')
+$useCloudflareTurn = -not [string]::IsNullOrWhiteSpace($cloudflareTurnKeyId) -or -not [string]::IsNullOrWhiteSpace($cloudflareTurnApiToken)
+if ($useCloudflareTurn) {
+  Require-Secret 'PEACEPAD_CLOUDFLARE_TURN_KEY_ID' 8
+  Require-Secret 'PEACEPAD_CLOUDFLARE_TURN_API_TOKEN' 24
+} else {
+  Require-Secret 'PEACEPAD_TURN_SHARED_SECRET' 32
+}
 Require-OptionalProviderPair 'PEACEPAD_SUPPORT_DISCOVERY_URL' 'PEACEPAD_SUPPORT_DISCOVERY_TOKEN'
 $geminiApiKey = [Environment]::GetEnvironmentVariable('PEACEPAD_GEMINI_API_KEY')
 if ([string]::IsNullOrWhiteSpace($geminiApiKey)) {
@@ -43,10 +51,12 @@ if ([string]::IsNullOrWhiteSpace($geminiApiKey)) {
 }
 Require-OptionalProviderPair 'PEACEPAD_COACH_CONVERSATION_URL' 'PEACEPAD_COACH_CONVERSATION_TOKEN'
 
-$turnUrls = [Environment]::GetEnvironmentVariable('PEACEPAD_TURN_URLS')
-$validTurnUrls = @($turnUrls -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^turns?:[^\s]+$' })
-if ([string]::IsNullOrWhiteSpace($turnUrls) -or $validTurnUrls.Count -lt 1) {
-  $missing.Add('PEACEPAD_TURN_URLS')
+if (-not $useCloudflareTurn) {
+  $turnUrls = [Environment]::GetEnvironmentVariable('PEACEPAD_TURN_URLS')
+  $validTurnUrls = @($turnUrls -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^turns?:[^\s]+$' })
+  if ([string]::IsNullOrWhiteSpace($turnUrls) -or $validTurnUrls.Count -lt 1) {
+    $missing.Add('PEACEPAD_TURN_URLS')
+  }
 }
 
 if ($missing.Count -gt 0) {
