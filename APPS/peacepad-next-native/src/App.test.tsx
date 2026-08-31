@@ -42,8 +42,15 @@ describe("PeacePad coordination shell", () => {
   it("starts safely and rejects unsupported routes", () => {
     expect(resolveStartScreen()).toBe("foundation");
     expect(resolveStartScreen("home")).toBe("home");
+    expect(resolveStartScreen("conch")).toBe("conch");
     expect(resolveStartScreen("evidence-detail")).toBe("foundation");
     expect(resolveStartScreen("production-admin")).toBe("foundation");
+  });
+
+  it("makes consent-based Conch mode directly discoverable from More", () => {
+    renderApp("more");
+    expect(screen.getByLabelText("Open Conch mode")).toBeOnTheScreen();
+    expect(screen.getByText("Conch mode")).toBeOnTheScreen();
   });
 
   it("shows a quiet state-derived Home without internal language", () => {

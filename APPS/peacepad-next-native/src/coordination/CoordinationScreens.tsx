@@ -34,7 +34,7 @@ import { CoachConversation } from "../coach/CoachConversation";
 import { ConversationVoiceNote } from "../messages/ConversationVoiceNote";
 import type { AccountExportManifest } from "../api/CoordinationApi";
 
-export type CoordinationScreen = "home" | "messages" | "calendar" | "activities" | "tasks" | "invite" | "records" | "calls" | "family" | "more";
+export type CoordinationScreen = "home" | "messages" | "calendar" | "activities" | "tasks" | "invite" | "records" | "calls" | "family" | "conch" | "more";
 type Navigate = (screen: CoordinationScreen) => void;
 
 const layerColors: Record<string, string> = {
@@ -279,6 +279,14 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
           <Text style={styles.caption}>Children, shared costs, support, call plans and Conch.</Text>
         </View>
       </Pressable>
+
+      {connected ? <Pressable accessibilityRole="button" accessibilityLabel="Open Conch mode" onPress={() => setScreen("conch")} style={({ pressed }) => [styles.activityCard, { backgroundColor: "#DDF6F0", borderColor: "#76CCBE" }, pressed ? styles.pressed : null]}>
+        <View style={[styles.activityDot, { backgroundColor: "#BEEAE2" }]}><PeacePadIcon name="people-circle-outline" size={23} color={colors.successText} /></View>
+        <View style={styles.activityCopy}>
+          <Text style={styles.activityTitle}>Conch mode</Text>
+          <Text style={styles.caption}>A consent-based audio or video conversation where each parent gets a calm turn.</Text>
+        </View>
+      </Pressable> : null}
 
       <Pressable accessibilityRole="button" accessibilityLabel={h("record")} onPress={() => setScreen("records")} style={({ pressed }) => [styles.recordCard, pressed ? styles.pressed : null]}>
         <View style={styles.cardHeadingRow}><PeacePadIcon name="attach-outline" size={23} color={colors.accent} /><Text style={styles.recordTitle}>{h("record")}</Text></View>
@@ -1177,6 +1185,10 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
       <Pressable accessibilityHint="Manage child updates, expenses, local support, scheduled calls and Conch." accessibilityLabel="Family tools" accessibilityRole="button" onPress={() => setScreen("family")} style={[styles.actionCard, styles.morePrivacyCard]}>
         <View style={styles.cardHeadingRow}><PeacePadIcon name="heart-circle-outline" size={23} color={colors.aqua} /><Text style={styles.actionTitle}>Family tools</Text></View>
         <Text style={styles.caption}>Manage child updates, expenses, local support, scheduled calls and Conch.</Text>
+      </Pressable>
+      <Pressable accessibilityHint="Open a consent-based conversation where each parent gets a calm turn to speak." accessibilityLabel="Open Conch mode" accessibilityRole="button" onPress={() => setScreen("conch")} style={[styles.actionCard, styles.moreSupportCard]}>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="people-circle-outline" size={23} color={colors.aqua} /><Text style={styles.actionTitle}>Conch mode</Text></View>
+        <Text style={styles.caption}>Take turns, listen carefully, and agree on a child-focused next step—without recording the call.</Text>
       </Pressable>
       <View style={[styles.actionCard, styles.morePrivacyCard]}>
         <View style={styles.cardHeadingRow}><PeacePadIcon name="shield-checkmark-outline" size={23} color={colors.accent} /><Text style={styles.actionTitle}>{t("more.privacy.title")}</Text></View>

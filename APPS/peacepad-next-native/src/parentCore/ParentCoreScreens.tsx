@@ -25,9 +25,9 @@ const sections: readonly Readonly<{ id: Section; label: string; icon: PeacePadIc
 
 const expenseCategories: readonly FamilyExpense["category"][] = ["education", "health", "childcare", "activity", "clothing", "food", "travel", "other"];
 
-export function ParentCoreHubScreen() {
+export function ParentCoreHubScreen({ initialSection = "children" }: { initialSection?: Section }) {
   const state = useParentCoreState();
-  const [section, setSection] = useState<Section>("children");
+  const [section, setSection] = useState<Section>(initialSection);
 
   useEffect(() => {
     if (!state.hydrated && !state.busy) void state.reload().catch(() => undefined);
