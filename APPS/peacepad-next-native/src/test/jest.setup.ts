@@ -49,11 +49,14 @@ jest.mock("expo-constants", () => ({
 jest.mock("expo-notifications", () => ({
   AndroidImportance: { MAX: 5 },
   AndroidNotificationVisibility: { PRIVATE: 0 },
+  SchedulableTriggerInputTypes: { DATE: "date" },
   getExpoPushTokenAsync: jest.fn(),
   getLastNotificationResponseAsync: jest.fn(async () => null),
   addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+  cancelScheduledNotificationAsync: jest.fn(async () => undefined),
   getPermissionsAsync: jest.fn(async () => ({ status: "undetermined" })),
   requestPermissionsAsync: jest.fn(async () => ({ status: "denied" })),
+  scheduleNotificationAsync: jest.fn(async () => "task-reminder-1"),
   setNotificationChannelAsync: jest.fn(async () => null),
   setNotificationHandler: jest.fn()
 }));

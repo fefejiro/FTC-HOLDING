@@ -6,6 +6,7 @@ import { useCoordinationState } from "../coordination/CoordinationState";
 import { useOptionalLocalization } from "../localization/LocalizationProvider";
 import { colors, spacing, typography } from "../theme";
 import { taskCopy } from "./taskLocalization";
+import { cancelTaskReminder, scheduleTaskReminder } from "../notifications/TaskReminders";
 
 export function dueDateToIso(value: string): string | undefined {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
@@ -31,6 +32,7 @@ export function ParentingTasksScreen() {
   const [title, setTitle] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [shared, setShared] = useState(false);
+  const [remindMe, setRemindMe] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -51,10 +53,16 @@ export function ParentingTasksScreen() {
     setBusy(true);
     setError(undefined);
     try {
-      await addTask({ title: normalizedTitle, dueAt: normalizedDueAt, shared: connected && shared });
+      const task = await addTask({ title: normalizedTitle, dueAt: normalizedDueAt, shared: connected && shared });
+      if (remindMe && task?.dueAt) {
+        const reminder = await scheduleTaskReminder(task.id, task.title, task.dueAt);
+        if (reminder === "not-permitted") setError("Task saved. Turn on notifications in your device settings to receive this reminder.");
+        if (reminder === "not-due") setError("Task saved. That due date is too soon for a 9 AM reminder.");
+      }
       setTitle("");
       setDueAt("");
       setShared(false);
+      setRemindMe(false);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "PeacePad could not save that task.");
     } finally {
@@ -67,6 +75,7 @@ export function ParentingTasksScreen() {
     setError(undefined);
     try {
       await setTaskCompleted(taskId, completed);
+      if (completed) await cancelTaskReminder(taskId);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "PeacePad could not update that task.");
     } finally {
@@ -79,6 +88,7 @@ export function ParentingTasksScreen() {
     setError(undefined);
     try {
       await deleteTask(taskId);
+      await cancelTaskReminder(taskId);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "PeacePad could not remove that task.");
     } finally {
@@ -100,6 +110,10 @@ export function ParentingTasksScreen() {
           <View style={[styles.checkbox, shared ? styles.checkboxChecked : null]}><Text style={styles.checkboxText}>{shared ? "✓" : ""}</Text></View>
           <View style={styles.shareCopy}><Text style={styles.actionTitle}>{t.sharedLabel}</Text><Text style={styles.caption}>{t.sharedBody}</Text></View>
         </Pressable> : <Text style={styles.caption}>{t.sharedBody}</Text>}
+        {dueAt.trim() ? <Pressable accessibilityLabel="Remind me at 9 AM on the due date" accessibilityRole="checkbox" accessibilityState={{ checked: remindMe }} onPress={() => setRemindMe((current) => !current)} style={({ pressed }) => [styles.shareRow, pressed ? styles.pressed : null]}>
+          <View style={[styles.checkbox, remindMe ? styles.checkboxChecked : null]}><Text style={styles.checkboxText}>{remindMe ? "✓" : ""}</Text></View>
+          <View style={styles.shareCopy}><Text style={styles.actionTitle}>Remind me at 9 AM</Text><Text style={styles.caption}>This is a private reminder on this device. It does not alert the other parent.</Text></View>
+        </Pressable> : null}
         {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
         <LabButton disabled={busy} label={t.add} onPress={() => void add()} />
       </View>

@@ -142,7 +142,7 @@ type CoordinationStateValue = {
     eventType?: "parenting-time" | "appointment" | "holiday" | "change-request";
   }) => Promise<void>;
   deleteEvent: (eventId: string) => Promise<void>;
-  addTask: (input: { title: string; dueAt?: string; shared: boolean }) => Promise<void>;
+  addTask: (input: { title: string; dueAt?: string; shared: boolean }) => Promise<ParentingTask | undefined>;
   setTaskCompleted: (taskId: string, completed: boolean) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
   setMessageDraft: (draft: string) => void;
@@ -770,7 +770,7 @@ export function CoordinationStateProvider({
     },
     addTask: async ({ title, dueAt, shared }) => {
       const normalizedTitle = title.trim();
-      if (!normalizedTitle) return;
+      if (!normalizedTitle) return undefined;
       if (!activeRuntime) throw new Error("Sign in to use PeacePad tasks.");
       const task = await resolvedApi.createParentingTask({
         familyCircleId: activeRuntime.familyCircleId,
@@ -780,6 +780,7 @@ export function CoordinationStateProvider({
         visibility: shared && hasConnectedConversation(activeRuntime) ? { scope: "family" } : { scope: "private" }
       }, writeContext(activeRuntime));
       setTasks((current) => [...current, task]);
+      return task;
     },
     setTaskCompleted: async (taskId, completed) => {
       const task = tasks.find((item) => item.id === taskId);

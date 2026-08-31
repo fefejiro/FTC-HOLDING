@@ -32,6 +32,9 @@ WebView or a legacy-island bridge.
 - Conch invitations now expose distinct accept, decline and sender-cancel
   actions; the safe-end action appears only after the session is active, and
   the paired native media call follows the same decision.
+- Parents can optionally schedule a private 9 AM on-device reminder for a
+  future parenting task. It is removed when that task is completed or deleted,
+  needs notification permission, and never claims to notify the other parent.
 - Incoming call push target selection and Expo delivery attempt after call
   creation. Locked-screen delivery remains a physical-device verification item.
 - Receipts now have their own private object path and authorization model:
@@ -86,7 +89,7 @@ APPS/peacepad-v2-platform/scripts/validate-supabase-edge-function.ps1
 git diff --check
 ```
 
-The current full Native suite is 66 passing suites and 476 passing tests with
+The current full Native suite is 67 passing suites and 480 passing tests with
 one intentionally skipped test. A direct Deno check reaches four pre-existing
 generated Supabase typing errors in incoming-call push code; it reports no new
 parenting-schedule error. The missing root `scripts/audit-secrets.cjs` command
