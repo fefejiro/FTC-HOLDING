@@ -837,8 +837,10 @@ export function CoordinationStateProvider({
       return result.transcript;
     },
     coachConversationTurn: async (input) => {
-      if (!hasConnectedConversation(activeRuntime)) throw new Error("Connect another parent before using shared Coach context.");
-      return resolvedApi.coachConversationTurn({ ...input, conversationId: activeRuntime.conversationId });
+      return resolvedApi.coachConversationTurn({
+        ...input,
+        conversationId: hasConnectedConversation(activeRuntime) ? activeRuntime.conversationId : undefined
+      });
     },
     setMessageCheckEnabled: async (enabled) => {
       if (!hasConnectedConversation(activeRuntime) || (!demoMode && !messageCheckHydrated)) return;

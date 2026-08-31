@@ -8,6 +8,7 @@ describe("CoachConversation", () => {
     const onUseDraft = jest.fn();
     const view = render(<CoachConversation onTranscribe={jest.fn()} onUseDraft={onUseDraft} />);
 
+    expect(view.getByText("Talk it through with PeaceBot")).toBeTruthy();
     fireEvent.press(view.getByText("Open Coach"));
     fireEvent.changeText(view.getByLabelText("Coach conversation"), "You never answer me about Saturday pickup");
     fireEvent.press(view.getByText("Prepare calm wording"));

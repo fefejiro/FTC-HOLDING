@@ -188,7 +188,7 @@ export type CoachConversationMessage = Readonly<{
 }>;
 
 export type CoachConversationTurnInput = Readonly<{
-  conversationId: EntityId;
+  conversationId?: EntityId;
   topic: string;
   feeling: "calm" | "anxious" | "frustrated" | "overwhelmed" | "sad" | "angry";
   entryMode: "sending" | "received";
@@ -1070,7 +1070,13 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
     }
     return this.request<CoachConversationTurn>("/api/v2/coach/conversation", {
       method: "POST",
-      body: JSON.stringify({ topic, feeling: input.feeling, entryMode: input.entryMode, messages })
+      body: JSON.stringify({
+        conversationId: input.conversationId ?? null,
+        topic,
+        feeling: input.feeling,
+        entryMode: input.entryMode,
+        messages
+      })
     }).then((result) => {
       if (!result || typeof result.reply !== "string" || !result.reply.trim() || result.reply.length > 4000 ||
         (result.draft !== null && typeof result.draft !== "string") ||

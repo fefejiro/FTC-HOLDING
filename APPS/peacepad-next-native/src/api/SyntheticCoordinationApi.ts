@@ -81,9 +81,9 @@ import type {
   SupportResource
 } from "../domain/parentCore";
 import type { ChildProfile } from "../domain/v2";
-import { buildCalmDraft, type PrepEntryMode, type PrepFeeling } from "../legacy/prepChat";
+import { buildCalmDraft, type CoachEntryMode, type CoachFeeling } from "../coach/coachDraft";
 
-function buildLocalCoachDraft(topic: string, feeling: PrepFeeling, entryMode: PrepEntryMode): string {
+function buildLocalCoachDraft(topic: string, feeling: CoachFeeling, entryMode: CoachEntryMode): string {
   return buildCalmDraft(topic, feeling, entryMode);
 }
 

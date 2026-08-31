@@ -1,7 +1,7 @@
-import { buildCalmDraft } from "./prepChat";
+import { buildCalmDraft } from "./coachDraft";
 
-describe("legacy Prep Chat drafting", () => {
-  it("turns a solo topic into a reviewable calm draft", () => {
+describe("PeaceBot local draft fallback", () => {
+  it("turns a private topic into reviewable calm wording", () => {
     expect(buildCalmDraft("  pickup time  ", "frustrated")).toBe(
       "I would like to talk about pickup time. I am feeling frustrated, so I would like us to keep this conversation calm. Could we agree on a clear next step?"
     );
@@ -13,7 +13,7 @@ describe("legacy Prep Chat drafting", () => {
     );
   });
 
-  it("preserves the received-message entry point from the legacy journey", () => {
+  it("supports responding to a received message", () => {
     expect(buildCalmDraft("Saturday pickup", "anxious", "received")).toBe(
       "I received a message about Saturday pickup. I am feeling anxious, so I would like us to keep this conversation calm. Could we agree on a clear next step?"
     );

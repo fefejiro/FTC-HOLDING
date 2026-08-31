@@ -719,4 +719,36 @@ describe("HttpPeacePadCoordinationApi", () => {
       });
     }
   });
+
+  it("sends private and conversation-scoped PeaceBot turns with an explicit context boundary", async () => {
+    const fetcher = jest.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => response(200, {
+      reply: "Let us focus on one clear pickup detail.",
+      draft: "Could we confirm Saturday's pickup time?",
+      note: null,
+      provider: "configured"
+    }));
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
+    const turn = {
+      topic: "Saturday pickup",
+      feeling: "anxious" as const,
+      entryMode: "sending" as const,
+      messages: [{ role: "parent" as const, content: "Saturday pickup" }]
+    };
+
+    await api.coachConversationTurn(turn);
+    await api.coachConversationTurn({ ...turn, conversationId: "conversation-current" });
+
+    expect(fetcher.mock.calls.map(([url]) => url)).toEqual([
+      "https://staging-api.peacepad.test/api/v2/coach/conversation",
+      "https://staging-api.peacepad.test/api/v2/coach/conversation"
+    ]);
+    expect(JSON.parse((fetcher.mock.calls[0]?.[1] as RequestInit).body as string)).toMatchObject({
+      conversationId: null,
+      topic: "Saturday pickup"
+    });
+    expect(JSON.parse((fetcher.mock.calls[1]?.[1] as RequestInit).body as string)).toMatchObject({
+      conversationId: "conversation-current",
+      topic: "Saturday pickup"
+    });
+  });
 });

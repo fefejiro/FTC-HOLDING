@@ -77,6 +77,22 @@ describe("PublicOnboardingAuth", () => {
     await waitFor(() => expect(signInWithPassword).toHaveBeenCalledWith("parent@example.com", "calmer-password"));
   });
 
+  it("keeps the full account flow while clearly identifying fictional staging", async () => {
+    secureStore.getItemAsync.mockResolvedValue("true");
+    render(
+      <LocalizationProvider initialLocale="en" production>
+        <PublicOnboardingAuth environmentNotice={{
+          label: "Canada staging",
+          body: "Use fictional test accounts only.",
+          labelTestID: "staging-region-label"
+        }} />
+      </LocalizationProvider>
+    );
+    expect(await screen.findByTestId("staging-region-label")).toHaveTextContent("Canada staging");
+    expect(screen.getByText("Use fictional test accounts only.")).toBeTruthy();
+    expect(screen.getByText("Create your PeacePad account")).toBeTruthy();
+  });
+
   it("uses the native Apple credential only when Apple returns an identity token", async () => {
     secureStore.getItemAsync.mockResolvedValue("true");
     const signInWithApple = jest.fn(async () => undefined);

@@ -5,14 +5,14 @@ import { File } from "expo-file-system";
 import * as Speech from "expo-speech";
 import { LabButton } from "../components/LabButton";
 import { colors, spacing, typography } from "../theme";
-import { buildCalmDraft, type PrepEntryMode, type PrepFeeling } from "../legacy/prepChat";
+import { buildCalmDraft, type CoachEntryMode, type CoachFeeling } from "./coachDraft";
 import type { CoachConversationMessage, CoachConversationTurn } from "../api/CoordinationApi";
 
-const feelings: readonly PrepFeeling[] = ["calm", "anxious", "frustrated", "overwhelmed", "sad", "angry"];
+const feelings: readonly CoachFeeling[] = ["calm", "anxious", "frustrated", "overwhelmed", "sad", "angry"];
 
 type CoachConversationProps = Readonly<{
   onTranscribe: (bytes: ArrayBuffer, mediaType: "audio/m4a") => Promise<string>;
-  onConversationTurn?: (input: { topic: string; feeling: PrepFeeling; entryMode: PrepEntryMode; messages: readonly CoachConversationMessage[] }) => Promise<CoachConversationTurn>;
+  onConversationTurn?: (input: { topic: string; feeling: CoachFeeling; entryMode: CoachEntryMode; messages: readonly CoachConversationMessage[] }) => Promise<CoachConversationTurn>;
   onUseDraft: (draft: string) => void;
 }>;
 
@@ -20,8 +20,8 @@ export function CoachConversation({ onTranscribe, onConversationTurn, onUseDraft
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder, 250);
   const [open, setOpen] = useState(false);
-  const [entryMode, setEntryMode] = useState<PrepEntryMode>("sending");
-  const [feeling, setFeeling] = useState<PrepFeeling>("calm");
+  const [entryMode, setEntryMode] = useState<CoachEntryMode>("sending");
+  const [feeling, setFeeling] = useState<CoachFeeling>("calm");
   const [conversation, setConversation] = useState("");
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -109,12 +109,12 @@ export function CoachConversation({ onTranscribe, onConversationTurn, onUseDraft
   };
 
   return (
-    <View accessibilityLabel="PeacePad Coach" style={styles.card}>
+    <View accessibilityLabel="PeaceBot Coach" style={styles.card}>
       <View style={styles.heroRow}>
         <View style={styles.coachMark}><Text style={styles.coachMarkText}>P</Text></View>
         <View style={styles.heroCopy}>
-          <Text accessibilityRole="header" style={styles.heading}>Talk it through with Coach</Text>
-          <Text style={styles.body}>Speak or type privately. Coach helps you prepare child-focused wording; nothing is shared until you choose it.</Text>
+          <Text accessibilityRole="header" style={styles.heading}>Talk it through with PeaceBot</Text>
+          <Text style={styles.body}>Speak or type privately. PeaceBot Coach helps you prepare child-focused wording; nothing is shared until you choose it.</Text>
         </View>
       </View>
       <LabButton label={open ? "Close Coach" : "Open Coach"} onPress={() => setOpen((current) => !current)} variant="secondary" />

@@ -91,7 +91,13 @@ function localized(locale: SupportedLocale) {
   return copy[locale] ?? copy.en;
 }
 
-export function PublicOnboardingAuth() {
+type AuthEnvironmentNotice = Readonly<{
+  label: string;
+  body: string;
+  labelTestID?: string;
+}>;
+
+export function PublicOnboardingAuth({ environmentNotice }: { environmentNotice?: AuthEnvironmentNotice } = {}) {
   const { locale } = useOptionalLocalization();
   const auth = useSupabaseSession();
   const strings = localized(locale);
@@ -107,6 +113,7 @@ export function PublicOnboardingAuth() {
   const [error, setError] = useState<string>();
   const [appleAvailable, setAppleAvailable] = useState(false);
   const passwordInput = useRef<TextInput>(null);
+  const submissionInFlight = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -126,7 +133,8 @@ export function PublicOnboardingAuth() {
 
   const submit = async () => {
     const normalizedEmail = email.trim();
-    if (busy || !normalizedEmail || password.length < 8) return;
+    if (busy || submissionInFlight.current || !normalizedEmail || password.length < 8) return;
+    submissionInFlight.current = true;
     setBusy(true); setError(undefined); setMessage(undefined);
     try {
       if (mode === "create") {
@@ -137,7 +145,7 @@ export function PublicOnboardingAuth() {
       }
     } catch {
       setError(auth.error ?? strings.unavailable);
-    } finally { setBusy(false); }
+    } finally { submissionInFlight.current = false; setBusy(false); }
   };
 
   const signInWithApple = async () => {
@@ -194,6 +202,7 @@ export function PublicOnboardingAuth() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.keyboard}>
         <ScrollView contentContainerStyle={styles.auth} keyboardShouldPersistTaps="handled">
           <View style={styles.logoRow}><Image source={require("../../assets/icon-production.png")} style={styles.logo} /><Text style={styles.brand}>PeacePad</Text></View>
+          {environmentNotice ? <EnvironmentNotice notice={environmentNotice} /> : null}
           <AccessibleHeading style={styles.title}>{strings.resetTitle}</AccessibleHeading>
           <Text style={styles.body}>{strings.resetBody}</Text>
           <TextInput accessibilityLabel={strings.newPassword} autoComplete="new-password" onChangeText={setNewPassword} onSubmitEditing={() => void updatePassword()} placeholder={strings.newPassword} returnKeyType="done" secureTextEntry style={styles.input} textContentType="newPassword" value={newPassword} />
@@ -214,6 +223,7 @@ export function PublicOnboardingAuth() {
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.keyboard}>
       <ScrollView contentContainerStyle={styles.auth} keyboardShouldPersistTaps="handled">
         <View style={styles.logoRow}><Image source={require("../../assets/icon-production.png")} style={styles.logo} /><Text style={styles.brand}>PeacePad</Text></View>
+        {environmentNotice ? <EnvironmentNotice notice={environmentNotice} /> : null}
         <AccessibleHeading style={styles.title}>{mode === "create" ? strings.createTitle : strings.signInTitle}</AccessibleHeading>
         {appleAvailable ? <AppleAuthentication.AppleAuthenticationButton
           accessibilityLabel={strings.apple}
@@ -242,6 +252,15 @@ export function PublicOnboardingAuth() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+  );
+}
+
+function EnvironmentNotice({ notice }: { notice: AuthEnvironmentNotice }) {
+  return (
+    <View accessibilityRole="summary" style={styles.environmentNotice}>
+      <Text testID={notice.labelTestID} style={styles.environmentNoticeLabel}>{notice.label}</Text>
+      <Text style={styles.environmentNoticeBody}>{notice.body}</Text>
+    </View>
   );
 }
 
@@ -295,6 +314,9 @@ const styles = StyleSheet.create({
   error: { color: colors.dangerText, fontSize: 14 },
   success: { backgroundColor: colors.successSurface, borderColor: colors.successBorder, borderRadius: 14, borderWidth: 1, gap: spacing.xs, padding: spacing.md },
   successTitle: { color: colors.successText, fontSize: 16, fontWeight: "700" },
+  environmentNotice: { backgroundColor: colors.successSurface, borderColor: colors.successBorder, borderRadius: 16, borderWidth: 1, gap: spacing.xs, padding: spacing.md },
+  environmentNoticeLabel: { ...typography.caption, color: colors.successText, fontWeight: "800", textTransform: "uppercase" },
+  environmentNoticeBody: { ...typography.body, color: colors.text },
   switch: { color: colors.muted, textAlign: "center" },
   switchAction: { color: colors.brand, fontWeight: "700" },
   legal: { ...typography.caption, color: colors.muted, textAlign: "center" },

@@ -1037,14 +1037,20 @@ const handler = async (request: Request): Promise<Response> => {
     const feeling = typeof body?.feeling === "string" ? body.feeling : "";
     const entryMode = typeof body?.entryMode === "string" ? body.entryMode : "";
     const messages = Array.isArray(body?.messages) ? body.messages : [];
-    if (!isUuid(conversationId) || !topic || topic.length > 4000 || !["calm", "anxious", "frustrated", "overwhelmed", "sad", "angry"].includes(feeling) || !["sending", "received"].includes(entryMode) || messages.length > 12 || messages.some((item) => !item || !["parent", "coach"].includes(item.role) || typeof item.content !== "string" || !item.content.trim() || item.content.length > 4000)) {
+    if ((conversationId && !isUuid(conversationId)) || !topic || topic.length > 4000 || !["calm", "anxious", "frustrated", "overwhelmed", "sad", "angry"].includes(feeling) || !["sending", "received"].includes(entryMode) || messages.length > 12 || messages.some((item) => !item || !["parent", "coach"].includes(item.role) || typeof item.content !== "string" || !item.content.trim() || item.content.length > 4000)) {
       return failure(request, 400, "INVALID_REQUEST", "Coach conversation details are invalid.", requestId, config);
     }
-    const { data: authorized, error } = await authenticated.admin.rpc("peacepad_v2_authorize_coach_conversation", {
-      p_identity_id: authenticated.user.id, p_region: config.region, p_conversation_id: conversationId,
-    });
-    if (error) return rpcFailure(request, requestId, config, error.message);
-    if (authorized !== true) return failure(request, 403, "CONVERSATION_ACCESS_DENIED", "You do not have access to this conversation.", requestId, config);
+    // A missing conversation ID is an explicitly private Coach session. The
+    // provider receives only the parent's submitted text and no shared-family
+    // context. When a conversation is supplied, retain the strict membership
+    // authorization boundary before using it as shared context.
+    if (conversationId) {
+      const { data: authorized, error } = await authenticated.admin.rpc("peacepad_v2_authorize_coach_conversation", {
+        p_identity_id: authenticated.user.id, p_region: config.region, p_conversation_id: conversationId,
+      });
+      if (error) return rpcFailure(request, requestId, config, error.message);
+      if (authorized !== true) return failure(request, 403, "CONVERSATION_ACCESS_DENIED", "You do not have access to this conversation.", requestId, config);
+    }
     try {
       const upstream = await fetch(config.coachConversationUrl, {
         method: "POST",
