@@ -82,6 +82,124 @@ const PERSONALITY_TYPES = new Set([
   "ISTP", "ISFP", "ESTP", "ESFP",
 ]);
 
+type SupportResource = Readonly<{
+  providerId: string;
+  name: string;
+  kind: "crisis" | "counselling" | "parenting" | "family-service";
+  description: string;
+  phone: string | null;
+  website: string;
+  address: null;
+  locality: string;
+  subdivision: string;
+  country: string;
+  distanceKm: null;
+  verifiedAt: null;
+  emergency: boolean;
+}>;
+
+const firstPartySupportResources = (location: string, country: string, kind?: string): SupportResource[] => {
+  const common: SupportResource[] = country === "CA" ? [
+    {
+      providerId: "ca-211",
+      name: "211 Canada",
+      kind: "family-service",
+      description: "Free, confidential navigation to community, social, health, housing, legal, and family services. Call 211 or search the official directory.",
+      phone: "211",
+      website: "https://211.ca/",
+      address: null,
+      locality: location,
+      subdivision: "",
+      country,
+      distanceKm: null,
+      verifiedAt: null,
+      emergency: false,
+    },
+    {
+      providerId: "ca-988",
+      name: "9-8-8 Suicide Crisis Helpline",
+      kind: "crisis",
+      description: "Immediate, confidential suicide-crisis support anywhere in Canada by call or text, 24 hours a day.",
+      phone: "988",
+      website: "https://988.ca/",
+      address: null,
+      locality: "Canada",
+      subdivision: "",
+      country,
+      distanceKm: null,
+      verifiedAt: null,
+      emergency: true,
+    },
+    {
+      providerId: "ca-kids-help-phone",
+      name: "Kids Help Phone",
+      kind: "counselling",
+      description: "Confidential support and crisis resources for children, youth, and young adults across Canada.",
+      phone: "1-800-668-6868",
+      website: "https://kidshelpphone.ca/",
+      address: null,
+      locality: "Canada",
+      subdivision: "",
+      country,
+      distanceKm: null,
+      verifiedAt: null,
+      emergency: true,
+    },
+  ] : [
+    {
+      providerId: "us-211",
+      name: "211 United States",
+      kind: "family-service",
+      description: "Confidential navigation to local community, housing, food, health, and family services. Call 211 or search the official directory.",
+      phone: "211",
+      website: "https://www.211.org/",
+      address: null,
+      locality: location,
+      subdivision: "",
+      country,
+      distanceKm: null,
+      verifiedAt: null,
+      emergency: false,
+    },
+    {
+      providerId: "us-988",
+      name: "988 Suicide & Crisis Lifeline",
+      kind: "crisis",
+      description: "Immediate crisis support in the United States by call, text, or chat, 24 hours a day.",
+      phone: "988",
+      website: "https://988lifeline.org/",
+      address: null,
+      locality: "United States",
+      subdivision: "",
+      country,
+      distanceKm: null,
+      verifiedAt: null,
+      emergency: true,
+    },
+  ];
+  if (!kind) return common;
+  const normalized = kind.toLowerCase();
+  const exact = common.filter((resource) => resource.kind === normalized);
+  return exact.length ? exact : common;
+};
+
+const firstPartyCoachReply = (topic: string, feeling: string, entryMode: string) => {
+  const opening = feeling === "angry" || feeling === "frustrated" || feeling === "overwhelmed"
+    ? "Let us slow this down before you respond."
+    : "Let us keep this clear, calm, and focused on the child.";
+  const perspective = entryMode === "received"
+    ? "Separate what was actually said from what it made you feel, then answer only the practical child-related point."
+    : "Lead with the practical child-related need, use a specific time or action, and leave blame out of the message.";
+  const compactTopic = topic.replace(/\s+/g, " ").trim().slice(0, 1200);
+  return {
+    reply: `${opening} ${perspective}`,
+    draft: entryMode === "received"
+      ? `Thanks for letting me know. Regarding ${compactTopic}, could we agree on the specific next step that works best for our child?`
+      : `Hi, regarding ${compactTopic}, could we agree on a clear next step that works best for our child? Thank you.`,
+    note: "Review and edit this draft before deliberately sharing it. PeacePad has not sent anything.",
+  };
+};
+
 const env = (name: string): string => Deno.env.get(name)?.trim() ?? "";
 
 const readConfig = (): RuntimeConfig => {
@@ -1035,9 +1153,6 @@ const handler = async (request: Request): Promise<Response> => {
   if (request.method === "POST" && path === "/api/v2/coach/conversation") {
     const authenticated = await authenticate(request, config);
     if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
-    if (!config.coachConversationUrl || !config.coachConversationToken) {
-      return failure(request, 503, "CONFIGURATION_ERROR", "Coach conversation is temporarily unavailable. You can still prepare a draft.", requestId, config);
-    }
     const body = await readJsonObject(request);
     const conversationId = typeof body?.conversationId === "string" ? body.conversationId : "";
     const topic = typeof body?.topic === "string" ? body.topic.trim() : "";
@@ -1057,6 +1172,9 @@ const handler = async (request: Request): Promise<Response> => {
       });
       if (error) return rpcFailure(request, requestId, config, error.message);
       if (authorized !== true) return failure(request, 403, "CONVERSATION_ACCESS_DENIED", "You do not have access to this conversation.", requestId, config);
+    }
+    if (!config.coachConversationUrl || !config.coachConversationToken) {
+      return json(request, 200, { ...firstPartyCoachReply(topic, feeling, entryMode), provider: "peacepad-first-party" }, requestId, config);
     }
     try {
       const upstream = await fetch(config.coachConversationUrl, {
@@ -1191,9 +1309,8 @@ const handler = async (request: Request): Promise<Response> => {
     if (location.length < 2 || location.length > 120 || !["CA", "US"].includes(country)) {
       return failure(request, 400, "INVALID_REQUEST", "Enter a valid city or postal code.", requestId, config);
     }
-    if (!config.supportDiscoveryUrl) {
-      return failure(request, 503, "CONFIGURATION_ERROR", "Local support discovery is not configured for this region.", requestId, config);
-    }
+    const firstPartyResources = firstPartySupportResources(location, country, kind);
+    if (!config.supportDiscoveryUrl) return json(request, 200, firstPartyResources, requestId, config);
     let upstream: Response;
     try {
       upstream = await fetch(config.supportDiscoveryUrl, {
@@ -1205,12 +1322,12 @@ const handler = async (request: Request): Promise<Response> => {
         body: JSON.stringify({ query: location, category: kind, location: { city: location }, limit: 12 }),
       });
     } catch {
-      return failure(request, 503, "CONFIGURATION_ERROR", "Local support providers are temporarily unavailable.", requestId, config);
+      return json(request, 200, firstPartyResources, requestId, config);
     }
-    if (!upstream.ok) return failure(request, 503, "CONFIGURATION_ERROR", "Local support providers are temporarily unavailable.", requestId, config);
+    if (!upstream.ok) return json(request, 200, firstPartyResources, requestId, config);
     const payload = await upstream.json().catch(() => null) as { ranked_resources?: unknown } | null;
     if (!payload || !Array.isArray(payload.ranked_resources)) {
-      return failure(request, 502, "INVALID_UPSTREAM_RESPONSE", "PeacePad could not verify local support results.", requestId, config);
+      return json(request, 200, firstPartyResources, requestId, config);
     }
     const resources = payload.ranked_resources.slice(0, 12).map((item, index) => {
       const candidate = item && typeof item === "object" ? item as Record<string, unknown> : {};
@@ -1234,7 +1351,7 @@ const handler = async (request: Request): Promise<Response> => {
         emergency: resourceKind === "crisis",
       };
     });
-    return json(request, 200, resources, requestId, config);
+    return json(request, 200, resources.length ? resources : firstPartyResources, requestId, config);
   }
 
   if (request.method === "GET" && path === "/api/v2/calls/current") {

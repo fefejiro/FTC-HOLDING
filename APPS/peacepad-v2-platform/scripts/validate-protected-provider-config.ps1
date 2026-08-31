@@ -21,14 +21,22 @@ function Require-HttpsUrl([string] $Name) {
   }
 }
 
+function Require-OptionalProviderPair([string] $UrlName, [string] $TokenName) {
+  $urlValue = [Environment]::GetEnvironmentVariable($UrlName)
+  $tokenValue = [Environment]::GetEnvironmentVariable($TokenName)
+  if ([string]::IsNullOrWhiteSpace($urlValue) -and [string]::IsNullOrWhiteSpace($tokenValue)) {
+    return
+  }
+  Require-HttpsUrl $UrlName
+  Require-Secret $TokenName
+}
+
 Require-Secret 'PEACEPAD_PUSH_TOKEN_SECRET' 32
 Require-Secret 'PEACEPAD_TURN_SHARED_SECRET' 32
-Require-HttpsUrl 'PEACEPAD_SUPPORT_DISCOVERY_URL'
-Require-Secret 'PEACEPAD_SUPPORT_DISCOVERY_TOKEN'
+Require-OptionalProviderPair 'PEACEPAD_SUPPORT_DISCOVERY_URL' 'PEACEPAD_SUPPORT_DISCOVERY_TOKEN'
 Require-HttpsUrl 'PEACEPAD_COACH_TRANSCRIPTION_URL'
 Require-Secret 'PEACEPAD_COACH_TRANSCRIPTION_TOKEN'
-Require-HttpsUrl 'PEACEPAD_COACH_CONVERSATION_URL'
-Require-Secret 'PEACEPAD_COACH_CONVERSATION_TOKEN'
+Require-OptionalProviderPair 'PEACEPAD_COACH_CONVERSATION_URL' 'PEACEPAD_COACH_CONVERSATION_TOKEN'
 
 $turnUrls = [Environment]::GetEnvironmentVariable('PEACEPAD_TURN_URLS')
 $validTurnUrls = @($turnUrls -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^turns?:[^\s]+$' })
