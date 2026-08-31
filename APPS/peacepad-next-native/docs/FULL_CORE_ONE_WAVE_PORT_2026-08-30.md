@@ -76,6 +76,12 @@ WebView or a legacy-island bridge.
 - The approved family-first visual system is used across the added native
   screens: purple anchor with coral, sun, aqua, cream, warm copy and no emoji
   product icons.
+- PeaceBot Coach is now a first-class Home destination for both solo and
+  connected parents. Previously, the complete private-workspace route hid
+  Messages until another parent connected, which also made the embedded Coach
+  unreachable for a solo parent. The dedicated Coach screen supports typed or
+  spoken preparation, an editable private working draft, an explicit handoff
+  to Messages when connected, and deliberate operating-system sharing.
 
 ## Deliberate safety boundaries
 
@@ -102,7 +108,7 @@ APPS/peacepad-v2-platform/scripts/validate-supabase-edge-function.ps1
 git diff --check
 ```
 
-The current full Native suite is 68 passing suites and 485 passing tests with
+The current full Native suite is 69 passing suites and 488 passing tests with
 one intentionally skipped test. A direct Deno check reaches four pre-existing
 generated Supabase typing errors in incoming-call push code; it reports no new
 parenting-schedule error. The missing root `scripts/audit-secrets.cjs` command

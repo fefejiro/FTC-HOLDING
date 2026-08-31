@@ -29,6 +29,7 @@ import * as Notifications from "expo-notifications";
 import { isIncomingCallNotificationResponse } from "./notifications/NotificationNavigation";
 import { ParentCoreHubScreen } from "./parentCore/ParentCoreScreens";
 import { ParentCoreStateProvider } from "./parentCore/ParentCoreState";
+import { CoachScreen } from "./coach/CoachScreen";
 
 export type AppScreen = "foundation" | CoordinationScreen;
 type RootStackParamList = Record<AppScreen, { activityTitle?: string; code?: string } | undefined>;
@@ -42,7 +43,7 @@ export const peacePadLinking: LinkingOptions<RootStackParamList> = {
 declare const process: { env?: Record<string, string | undefined> };
 
 export function resolveStartScreen(value?: string): AppScreen {
-  const supported = new Set<AppScreen>(["foundation", "home", "messages", "calendar", "activities", "tasks", "invite", "records", "calls", "family", "conch", "more"]);
+  const supported = new Set<AppScreen>(["foundation", "home", "coach", "messages", "calendar", "activities", "tasks", "invite", "records", "calls", "family", "conch", "more"]);
   return value && supported.has(value as AppScreen) ? value as AppScreen : "foundation";
 }
 
@@ -52,7 +53,7 @@ export function PeacePadCoordinationApp({ startScreen, wrapLocalization = true, 
       <StatusBar barStyle="dark-content" />
       <NotificationNavigationBridge />
       <Stack.Navigator initialRouteName={resolveStartScreen(startScreen ?? process.env?.EXPO_PUBLIC_PEACEPAD_LAB_START_SCREEN)} screenOptions={{ headerShown: false }}>
-        {(["foundation", "home", "messages", "calendar", "activities", "tasks", "invite", "records", "calls", "family", "conch", "more"] as const).map((name) => (
+        {(["foundation", "home", "coach", "messages", "calendar", "activities", "tasks", "invite", "records", "calls", "family", "conch", "more"] as const).map((name) => (
           <Stack.Screen key={name} name={name}>
             {({ route }) => <CoordinationRoute activeScreen={name} activityTitle={route.params?.activityTitle} invitationCode={route.params?.code} />}
           </Stack.Screen>
@@ -162,7 +163,7 @@ function CoordinationRoute({ activeScreen, activityTitle, invitationCode }: { ac
     pendingScrollReset.current = false;
     scrollRef.current?.scrollTo({ animated: false, y: 0 });
   }, []);
-  const primary: PrimaryTaskScreen = activeScreen === "activities" || activeScreen === "tasks" || activeScreen === "invite" || activeScreen === "foundation" || activeScreen === "calls" || activeScreen === "family" || activeScreen === "conch" || (!connected && activeScreen === "messages") ? "home" : activeScreen;
+  const primary: PrimaryTaskScreen = activeScreen === "coach" || activeScreen === "activities" || activeScreen === "tasks" || activeScreen === "invite" || activeScreen === "foundation" || activeScreen === "calls" || activeScreen === "family" || activeScreen === "conch" || (!connected && activeScreen === "messages") ? "home" : activeScreen;
   return (
     <SafeAreaView style={styles.safe}>
       <PendingInvitationNavigation />
@@ -170,6 +171,7 @@ function CoordinationRoute({ activeScreen, activityTitle, invitationCode }: { ac
         <ScrollView ref={scrollRef} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" onContentSizeChange={settleScrollReset}>
           {activeScreen === "foundation" ? <FoundationScreen onOpenLab={() => setScreen("home")} onPhaseChange={resetScroll} /> : null}
           {activeScreen === "home" ? <CoordinationHomeScreen setScreen={setScreen} /> : null}
+          {activeScreen === "coach" ? <CoachScreen onOpenMessages={connected ? () => setScreen("messages") : undefined} /> : null}
           {activeScreen === "messages" ? connected ? <MessagesScreen /> : <ConnectionRequiredScreen setScreen={setScreen} /> : null}
           {activeScreen === "calendar" ? <CalendarScreen initialEventTitle={activityTitle} /> : null}
           {activeScreen === "activities" ? <ActivitySuggestionsScreen onPlanActivity={(title) => navigation.navigate("calendar", { activityTitle: title })} /> : null}

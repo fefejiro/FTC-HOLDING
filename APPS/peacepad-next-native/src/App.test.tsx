@@ -42,6 +42,7 @@ describe("PeacePad coordination shell", () => {
   it("starts safely and rejects unsupported routes", () => {
     expect(resolveStartScreen()).toBe("foundation");
     expect(resolveStartScreen("home")).toBe("home");
+    expect(resolveStartScreen("coach")).toBe("coach");
     expect(resolveStartScreen("conch")).toBe("conch");
     expect(resolveStartScreen("evidence-detail")).toBe("foundation");
     expect(resolveStartScreen("production-admin")).toBe("foundation");
@@ -61,6 +62,14 @@ describe("PeacePad coordination shell", () => {
     for (const phrase of ["Premium because", "Gate 1", "Lab-only", "prototype", "mock", "synthetic"]) {
       expect(screen.queryByText(new RegExp(phrase, "i"))).not.toBeOnTheScreen();
     }
+  });
+
+  it("keeps PeaceBot Coach reachable before a co-parent connects", () => {
+    renderApp();
+    fireEvent.press(screen.getByRole("button", { name: "Open PeaceBot Coach" }));
+    expect(screen.getByRole("header", { name: "PeaceBot Coach" })).toBeOnTheScreen();
+    expect(screen.getByText(/nothing is shared until you choose it/i)).toBeOnTheScreen();
+    expect(screen.queryByText("Connect another parent first")).not.toBeOnTheScreen();
   });
 
   it("keeps internal reconstruction language off the welcome screen", async () => {

@@ -34,7 +34,7 @@ import { CoachConversation } from "../coach/CoachConversation";
 import { ConversationVoiceNote } from "../messages/ConversationVoiceNote";
 import type { AccountExportManifest } from "../api/CoordinationApi";
 
-export type CoordinationScreen = "home" | "messages" | "calendar" | "activities" | "tasks" | "invite" | "records" | "calls" | "family" | "conch" | "more";
+export type CoordinationScreen = "home" | "coach" | "messages" | "calendar" | "activities" | "tasks" | "invite" | "records" | "calls" | "family" | "conch" | "more";
 type Navigate = (screen: CoordinationScreen) => void;
 
 const layerColors: Record<string, string> = {
@@ -270,6 +270,14 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
       <Pressable accessibilityRole="button" accessibilityLabel={task.title} onPress={() => setScreen("tasks")} style={({ pressed }) => [styles.taskCard, pressed ? styles.pressed : null]}>
         <View style={styles.cardHeadingRow}><PeacePadIcon name="checkmark-circle-outline" size={23} color={colors.warning} /><Text style={styles.taskTitle}>{task.title}</Text></View>
         <Text style={styles.caption}>{task.body}</Text>
+      </Pressable>
+
+      <Pressable accessibilityHint="Opens a private place to speak or type and prepare calm, child-focused wording." accessibilityRole="button" accessibilityLabel="Open PeaceBot Coach" onPress={() => setScreen("coach")} style={({ pressed }) => [styles.activityCard, { backgroundColor: colors.cream, borderColor: colors.warningBorder }, pressed ? styles.pressed : null]}>
+        <View style={[styles.activityDot, { backgroundColor: "#FFD9CF" }]}><PeacePadIcon name="heart-circle-outline" size={23} color={colors.coral} /></View>
+        <View style={styles.activityCopy}>
+          <Text style={styles.activityTitle}>PeaceBot Coach</Text>
+          <Text style={styles.caption}>Talk it through privately, prepare calm wording, and choose what to share.</Text>
+        </View>
       </Pressable>
 
       <Pressable accessibilityRole="button" accessibilityLabel="Family tools" onPress={() => setScreen("family")} style={({ pressed }) => [styles.activityCard, { backgroundColor: "#FFE4D6", borderColor: "#F2A791" }, pressed ? styles.pressed : null]}>
