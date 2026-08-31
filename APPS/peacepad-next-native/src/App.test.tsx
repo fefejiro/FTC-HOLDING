@@ -48,7 +48,8 @@ describe("PeacePad coordination shell", () => {
 
   it("shows a quiet state-derived Home without internal language", () => {
     renderApp();
-    expect(screen.getByText("What would you like to do?")).toBeOnTheScreen();
+    expect(screen.getByRole("header", { name: "Ready for today?" })).toBeOnTheScreen();
+    expect(screen.getByText("Small steps. Kind words. Big impact—for your kids.")).toBeOnTheScreen();
     expect(screen.getByText("Upcoming events")).toBeOnTheScreen();
     for (const phrase of ["Premium because", "Gate 1", "Lab-only", "prototype", "mock", "synthetic"]) {
       expect(screen.queryByText(new RegExp(phrase, "i"))).not.toBeOnTheScreen();
@@ -213,11 +214,11 @@ describe("PeacePad coordination shell", () => {
   it.each([
     ["Français", "Accueil", "Que souhaitez-vous faire?", "Envoyer un message", "Aujourd’hui", "Non connecté"],
     ["Español", "Inicio", "¿Qué te gustaría hacer?", "Enviar un mensaje", "Hoy", "Sin conexión"]
-  ])("localizes Home tasks and state summaries with semantic headings in %s", (language, homeTab, title, sendAction, today, disconnected) => {
+  ])("localizes Home tasks and state summaries with semantic headings in %s", (language, homeTab, _legacyTitle, sendAction, today, disconnected) => {
     renderApp("more");
     fireEvent.press(screen.getByRole("radio", { name: language }));
     fireEvent.press(screen.getByRole("tab", { name: homeTab }));
-    expect(screen.getByRole("header", { name: title })).toBeOnTheScreen();
+    expect(screen.getByRole("header", { name: /Prêt pour aujourd’hui\?|¿Listo para hoy\?/ })).toBeOnTheScreen();
     expect(screen.getByRole("button", { name: sendAction })).toBeOnTheScreen();
     expect(screen.getByRole("header", { name: today })).toBeOnTheScreen();
     expect(screen.getByText(disconnected)).toBeOnTheScreen();

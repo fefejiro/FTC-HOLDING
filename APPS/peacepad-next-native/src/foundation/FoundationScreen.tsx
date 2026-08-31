@@ -382,6 +382,7 @@ function PrimaryButton({
 }) {
   return (
     <Pressable
+      accessibilityLabel={label}
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       disabled={disabled}
@@ -400,6 +401,7 @@ function PrimaryButton({
 function SecondaryButton({ label, onPress }: { label: string; onPress: () => void }) {
   return (
     <Pressable
+      accessibilityLabel={label}
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [

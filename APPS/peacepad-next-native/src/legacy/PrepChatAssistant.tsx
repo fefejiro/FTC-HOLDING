@@ -63,6 +63,7 @@ export function PrepChatAssistant({ onUseDraft }: { onUseDraft: (draft: string) 
           <View accessibilityLabel={t("starter")} style={styles.wrap}>
             {(["starterSchedule", "starterBoundary", "starterUpsetting", "starterPickup"] as const).map((candidate) => (
               <Pressable
+                accessibilityLabel={t(candidate)}
                 accessibilityRole="button"
                 key={candidate}
                 onPress={() => {

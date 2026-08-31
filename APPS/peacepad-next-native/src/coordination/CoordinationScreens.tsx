@@ -12,7 +12,7 @@ import { calendarNavigationText, calendarStatusText, calendarText, formatCalenda
 import { formatLocalizedDate } from "../localization/localizedDate";
 import { messageText } from "../localization/messageLocalization";
 import { workflowText } from "../localization/workflowLocalization";
-import { homeText } from "../localization/homeLocalization";
+import { homeHeroText, homeText } from "../localization/homeLocalization";
 import { callText } from "../localization/callLocalization";
 import { PublicOnboardingSlides } from "../auth/PublicOnboardingAuth";
 import { LinkedSignInMethods } from "../auth/LinkedSignInMethods";
@@ -199,6 +199,8 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
   const h = (key: Parameters<typeof homeText>[1]) => homeText(locale, key);
   const task = taskCopy(locale);
   const { connected, events, invitationGrant } = useCoordinationState();
+  const accountActions = useOptionalStagingAccountActions();
+  const firstName = accountActions?.displayName?.trim().split(/\s+/)[0];
   const nextEvent = [...events].sort((left, right) => left.startsAt.localeCompare(right.startsAt))[0];
   const nextEventDate = nextEvent
     ? formatLocalizedDate(locale, nextEvent.startsAt, { weekday: "short", month: "short", day: "numeric" })
@@ -212,12 +214,19 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
       <View style={styles.brandHero}>
         <View style={styles.heroSun} />
         <View style={styles.heroBubble} />
-        <Image accessibilityLabel={h("logo")} source={require("../../assets/icon-production.png")} style={styles.logo} />
         <View style={styles.brandHeroCopy}>
+          <View accessibilityLabel="PeacePad Native V2" style={styles.brandLockup}>
+            <Image accessibilityLabel={h("logo")} source={require("../../assets/icon-production.png")} style={styles.logo} />
+            <View>
+              <Text style={styles.brandName}>PeacePad</Text>
+              <Text style={styles.brandVersion}>Native V2</Text>
+            </View>
+          </View>
           <Text style={styles.heroEyebrow}>YOUR FAMILY, YOUR PACE</Text>
-          <AccessibleHeading style={styles.title}>{h("title")}</AccessibleHeading>
-          <Text style={styles.body}>{h("body")}</Text>
+          <AccessibleHeading style={styles.heroTitle}>{homeHeroText(locale, firstName ? "greetingNamed" : "greeting", firstName)}</AccessibleHeading>
+          <Text style={styles.heroBody}>{homeHeroText(locale, "impact")}</Text>
         </View>
+        <View accessible={false} style={styles.heroDoodle}><PeacePadIcon name="sunny-outline" size={38} color={colors.warning} /><PeacePadIcon name="heart-outline" size={27} color={colors.coral} /></View>
       </View>
 
       <View style={styles.datePill}>
@@ -250,7 +259,7 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
         </Pressable>
       )}
 
-      <Pressable accessibilityRole="button" accessibilityLabel="Activity ideas" onPress={() => setScreen("activities")} style={({ pressed }) => [styles.activityCard, pressed ? styles.pressed : null]}>
+      <Pressable accessibilityHint="Shows weather-aware ideas for time with your children." accessibilityRole="button" accessibilityLabel="Activity ideas" onPress={() => setScreen("activities")} style={({ pressed }) => [styles.activityCard, pressed ? styles.pressed : null]}>
         <View style={styles.activityDot}><PeacePadIcon name="sunny-outline" size={23} color={colors.text} /></View>
         <View style={styles.activityCopy}>
           <Text style={styles.activityTitle}>Activity ideas</Text>
@@ -612,10 +621,10 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
         <Text style={styles.heading}>Changes, holidays and swaps</Text>
         <Text style={styles.body}>Propose a one-off change without rewriting the regular parenting plan. Both parents can see and respond to it.</Text>
         <View accessibilityRole="radiogroup" style={styles.rowWrap}>
-          {(["holiday", "vacation", "swap", "other"] as const).map((kind) => <Pressable accessibilityRole="radio" accessibilityState={{ selected: exceptionKind === kind }} key={kind} onPress={() => setExceptionKind(kind)} style={[styles.chip, exceptionKind === kind ? styles.chipActive : null]}><Text style={[styles.chipText, exceptionKind === kind ? styles.chipTextActive : null]}>{kind}</Text></Pressable>)}
+          {(["holiday", "vacation", "swap", "other"] as const).map((kind) => <Pressable accessibilityLabel={kind} accessibilityRole="radio" accessibilityState={{ checked: exceptionKind === kind }} key={kind} onPress={() => setExceptionKind(kind)} style={[styles.chip, exceptionKind === kind ? styles.chipActive : null]}><Text style={[styles.chipText, exceptionKind === kind ? styles.chipTextActive : null]}>{kind}</Text></Pressable>)}
         </View>
         <View accessibilityRole="radiogroup" style={styles.rowWrap}>
-          {(["you", "other"] as const).map((parent) => <Pressable accessibilityRole="radio" accessibilityState={{ selected: exceptionAssignedParent === parent }} key={parent} onPress={() => setExceptionAssignedParent(parent)} style={[styles.chip, exceptionAssignedParent === parent ? styles.chipActive : null]}><Text style={[styles.chipText, exceptionAssignedParent === parent ? styles.chipTextActive : null]}>{parent === "you" ? "Your time" : "Other parent's time"}</Text></Pressable>)}
+          {(["you", "other"] as const).map((parent) => { const label = parent === "you" ? "Your time" : "Other parent's time"; return <Pressable accessibilityLabel={label} accessibilityRole="radio" accessibilityState={{ checked: exceptionAssignedParent === parent }} key={parent} onPress={() => setExceptionAssignedParent(parent)} style={[styles.chip, exceptionAssignedParent === parent ? styles.chipActive : null]}><Text style={[styles.chipText, exceptionAssignedParent === parent ? styles.chipTextActive : null]}>{label}</Text></Pressable>; })}
         </View>
         <TextInput accessibilityLabel="Change start date" onChangeText={setExceptionStartDate} placeholder="YYYY-MM-DD" style={styles.input} value={exceptionStartDate} />
         <TextInput accessibilityLabel="Change end date" onChangeText={setExceptionEndDate} placeholder="YYYY-MM-DD" style={styles.input} value={exceptionEndDate} />
@@ -1086,7 +1095,7 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
       {!loading && binders.length > 1 ? <View style={styles.card}>
         <Text style={styles.heading}>{w("binders")}</Text>
         {binders.filter((candidate) => candidate.status === "active").map((candidate) => (
-          <Pressable accessibilityRole="button" key={candidate.id} onPress={() => selectBinder(candidate.id)} style={styles.actionCard}>
+          <Pressable accessibilityHint={w("private")} accessibilityLabel={`${candidate.name}, ${candidate.childLabel}`} accessibilityRole="button" key={candidate.id} onPress={() => selectBinder(candidate.id)} style={styles.actionCard}>
             <Text style={styles.actionTitle}>{candidate.name}</Text>
             <Text style={styles.caption}>{candidate.childLabel} · {w("private")}</Text>
           </Pressable>
@@ -1129,7 +1138,7 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
       </View> : null}
       {error || recordsError ? <Text accessibilityRole="alert" style={styles.error}>{error ?? recordsError}</Text> : null}
       {recordsError && !loading ? <LabButton label={w("tryAgain")} onPress={() => void reload()} variant="secondary" /> : null}
-      <Pressable accessibilityRole="button" onPress={() => setScreen("home")} style={styles.actionCard}>
+      <Pressable accessibilityHint={w("anotherTask")} accessibilityLabel={w("returnHome")} accessibilityRole="button" onPress={() => setScreen("home")} style={styles.actionCard}>
         <Text style={styles.actionTitle}>{w("returnHome")}</Text>
         <Text style={styles.caption}>{w("anotherTask")}</Text>
       </Pressable>
@@ -1161,11 +1170,11 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
         subtitle={t("more.support.body")}
         title={t("more.title")}
       />
-      <Pressable accessibilityRole="button" onPress={() => setScreen("invite")} style={[styles.actionCard, styles.moreFamilyCard]}>
+      <Pressable accessibilityHint={t("more.family.body")} accessibilityLabel={t("more.family.title")} accessibilityRole="button" onPress={() => setScreen("invite")} style={[styles.actionCard, styles.moreFamilyCard]}>
         <View style={styles.cardHeadingRow}><PeacePadIcon name="people-outline" size={23} color={colors.successText} /><Text style={styles.actionTitle}>{t("more.family.title")}</Text></View>
         <Text style={styles.caption}>{t("more.family.body")}</Text>
       </Pressable>
-      <Pressable accessibilityRole="button" onPress={() => setScreen("family")} style={[styles.actionCard, styles.morePrivacyCard]}>
+      <Pressable accessibilityHint="Manage child updates, expenses, local support, scheduled calls and Conch." accessibilityLabel="Family tools" accessibilityRole="button" onPress={() => setScreen("family")} style={[styles.actionCard, styles.morePrivacyCard]}>
         <View style={styles.cardHeadingRow}><PeacePadIcon name="heart-circle-outline" size={23} color={colors.aqua} /><Text style={styles.actionTitle}>Family tools</Text></View>
         <Text style={styles.caption}>Manage child updates, expenses, local support, scheduled calls and Conch.</Text>
       </Pressable>
@@ -1173,12 +1182,12 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
         <View style={styles.cardHeadingRow}><PeacePadIcon name="shield-checkmark-outline" size={23} color={colors.accent} /><Text style={styles.actionTitle}>{t("more.privacy.title")}</Text></View>
         <Text style={styles.caption}>{t("more.privacy.body")}</Text>
       </View>
-      <Pressable accessibilityRole="button" onPress={() => setShowSupport((current) => !current)} style={[styles.actionCard, styles.moreSupportCard]}>
+      <Pressable accessibilityHint={t("more.support.body")} accessibilityLabel={t("more.support.title")} accessibilityRole="button" accessibilityState={{ expanded: showSupport }} onPress={() => setShowSupport((current) => !current)} style={[styles.actionCard, styles.moreSupportCard]}>
         <View style={styles.cardHeadingRow}><PeacePadIcon name="heart-outline" size={23} color={colors.coral} /><Text style={styles.actionTitle}>{t("more.support.title")}</Text></View>
         <Text style={styles.caption}>{t("more.support.body")}</Text>
       </Pressable>
       {showSupport ? <View style={styles.actionCardLargeText}><SupportPanel /></View> : null}
-      <Pressable accessibilityRole="button" onPress={() => setReplayIntroduction(true)} style={[styles.actionCard, styles.moreIntroCard]}>
+      <Pressable accessibilityHint={t("more.introduction.body")} accessibilityLabel={t("more.introduction.title")} accessibilityRole="button" onPress={() => setReplayIntroduction(true)} style={[styles.actionCard, styles.moreIntroCard]}>
         <View style={styles.cardHeadingRow}><PeacePadIcon name="sparkles-outline" size={23} color={colors.brand} /><Text style={styles.actionTitle}>{t("more.introduction.title")}</Text></View>
         <Text style={styles.caption}>{t("more.introduction.body")}</Text>
       </Pressable>
@@ -1310,11 +1319,17 @@ const styles = StyleSheet.create({
   body: { ...typography.body, color: colors.muted },
   caption: { ...typography.caption, color: colors.muted },
   fieldLabel: { ...typography.caption, color: colors.text, fontWeight: "800", marginTop: spacing.sm, textTransform: "uppercase" },
-  brandHero: { alignItems: "center", backgroundColor: "#FFE4D6", borderRadius: 26, flexDirection: "row", gap: spacing.md, minHeight: 132, overflow: "hidden", padding: spacing.md, position: "relative" },
-  brandHeroCopy: { flex: 1, gap: spacing.xs, zIndex: 2 },
+  brandHero: { backgroundColor: colors.cream, borderColor: colors.border, borderRadius: 30, borderWidth: 1, minHeight: 230, overflow: "hidden", padding: spacing.lg, position: "relative" },
+  brandHeroCopy: { gap: spacing.sm, maxWidth: "88%", zIndex: 2 },
+  brandLockup: { alignItems: "center", flexDirection: "row", gap: spacing.md, marginBottom: spacing.md },
+  brandName: { color: colors.text, fontSize: 25, fontWeight: "900", lineHeight: 29 },
+  brandVersion: { ...typography.body, color: colors.brand, fontWeight: "800" },
   heroEyebrow: { ...typography.caption, color: colors.coral, fontWeight: "900", letterSpacing: 1.1 },
-  heroSun: { backgroundColor: "#F7C948", borderRadius: 999, height: 92, opacity: 0.42, position: "absolute", right: -20, top: -24, width: 92 },
-  heroBubble: { backgroundColor: "#72D7C9", borderRadius: 999, bottom: -35, height: 92, opacity: 0.38, position: "absolute", right: 54, width: 92 },
+  heroTitle: { ...typography.title, color: colors.text, maxWidth: 285 },
+  heroBody: { ...typography.subheading, color: colors.text, fontWeight: "500", maxWidth: 300 },
+  heroDoodle: { alignItems: "center", gap: spacing.xs, position: "absolute", right: spacing.lg, top: spacing.lg },
+  heroSun: { backgroundColor: "#F7C948", borderRadius: 999, height: 120, opacity: 0.26, position: "absolute", right: -35, top: -35, width: 120 },
+  heroBubble: { backgroundColor: "#72D7C9", borderRadius: 999, bottom: -48, height: 132, opacity: 0.22, position: "absolute", right: -18, width: 132 },
   logo: { borderRadius: 18, height: 56, width: 56, zIndex: 2 },
   actionGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
   actionCard: { backgroundColor: "#FFF1DF", borderColor: "#F2C8B5", borderRadius: 22, borderWidth: 1, gap: spacing.sm, justifyContent: "center", minHeight: 76, minWidth: "46%", padding: spacing.md, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 1 },
