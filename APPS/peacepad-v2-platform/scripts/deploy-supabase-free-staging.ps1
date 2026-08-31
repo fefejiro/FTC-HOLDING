@@ -71,6 +71,7 @@ if (-not $SkipDeploy) {
   $supportDiscoveryToken = [Environment]::GetEnvironmentVariable('PEACEPAD_SUPPORT_DISCOVERY_TOKEN')
   $coachTranscriptionUrl = [Environment]::GetEnvironmentVariable('PEACEPAD_COACH_TRANSCRIPTION_URL')
   $coachTranscriptionToken = [Environment]::GetEnvironmentVariable('PEACEPAD_COACH_TRANSCRIPTION_TOKEN')
+  $geminiApiKey = [Environment]::GetEnvironmentVariable('PEACEPAD_GEMINI_API_KEY')
   $coachConversationUrl = [Environment]::GetEnvironmentVariable('PEACEPAD_COACH_CONVERSATION_URL')
   $coachConversationToken = [Environment]::GetEnvironmentVariable('PEACEPAD_COACH_CONVERSATION_TOKEN')
 }
@@ -89,10 +90,13 @@ $secretArguments = @(
   "PEACEPAD_IDEMPOTENCY_SECRET=$idempotencySecret",
   "PEACEPAD_PUSH_TOKEN_SECRET=$pushTokenSecret",
   "PEACEPAD_TURN_URLS=$turnUrls",
-  "PEACEPAD_TURN_SHARED_SECRET=$turnSharedSecret",
-  "PEACEPAD_COACH_TRANSCRIPTION_URL=$coachTranscriptionUrl",
-  "PEACEPAD_COACH_TRANSCRIPTION_TOKEN=$coachTranscriptionToken"
+  "PEACEPAD_TURN_SHARED_SECRET=$turnSharedSecret"
 )
+if (-not [string]::IsNullOrWhiteSpace($geminiApiKey)) {
+  $secretArguments += "PEACEPAD_GEMINI_API_KEY=$geminiApiKey"
+} else {
+  $secretArguments += "PEACEPAD_COACH_TRANSCRIPTION_URL=$coachTranscriptionUrl", "PEACEPAD_COACH_TRANSCRIPTION_TOKEN=$coachTranscriptionToken"
+}
 if (-not [string]::IsNullOrWhiteSpace($supportDiscoveryUrl)) {
   $secretArguments += "PEACEPAD_SUPPORT_DISCOVERY_URL=$supportDiscoveryUrl", "PEACEPAD_SUPPORT_DISCOVERY_TOKEN=$supportDiscoveryToken"
 }

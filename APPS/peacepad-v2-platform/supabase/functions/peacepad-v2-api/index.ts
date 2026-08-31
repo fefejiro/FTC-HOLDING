@@ -21,6 +21,7 @@ type RuntimeConfig = Readonly<{
   supportDiscoveryToken: string;
   coachTranscriptionUrl: string;
   coachTranscriptionToken: string;
+  geminiApiKey: string;
   coachConversationUrl: string;
   coachConversationToken: string;
   environment: DeploymentEnvironment;
@@ -225,6 +226,7 @@ const readConfig = (): RuntimeConfig => {
     supportDiscoveryToken: env("PEACEPAD_SUPPORT_DISCOVERY_TOKEN"),
     coachTranscriptionUrl: env("PEACEPAD_COACH_TRANSCRIPTION_URL"),
     coachTranscriptionToken: env("PEACEPAD_COACH_TRANSCRIPTION_TOKEN"),
+    geminiApiKey: env("PEACEPAD_GEMINI_API_KEY"),
     coachConversationUrl: env("PEACEPAD_COACH_CONVERSATION_URL"),
     coachConversationToken: env("PEACEPAD_COACH_CONVERSATION_TOKEN"),
     environment: environment as DeploymentEnvironment,
@@ -515,6 +517,16 @@ const writeOperation = (method: string, path: string, body: Record<string, unkno
   }
   if (method === "DELETE" && /^\/api\/v2\/invitations\/[^/]+$/.test(path)) return "invitation.revoked";
   return null;
+};
+
+const arrayBufferToBase64 = (value: ArrayBuffer): string => {
+  const bytes = new Uint8Array(value);
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, Math.min(offset + chunkSize, bytes.length)));
+  }
+  return btoa(binary);
 };
 
 async function dispatchIncomingCallPush(
@@ -1117,7 +1129,7 @@ const handler = async (request: Request): Promise<Response> => {
   if (request.method === "POST" && path === "/api/v2/coach/transcriptions") {
     const authenticated = await authenticate(request, config);
     if (!authenticated) return failure(request, 401, "AUTH_REQUIRED", authRequiredMessage(config), requestId, config);
-    if (!config.coachTranscriptionUrl || !config.coachTranscriptionToken) {
+    if (!config.geminiApiKey && (!config.coachTranscriptionUrl || !config.coachTranscriptionToken)) {
       return failure(request, 503, "CONFIGURATION_ERROR", "Coach voice is temporarily unavailable. You can still type to Coach.", requestId, config);
     }
     const mediaType = request.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase() ?? "";
@@ -1129,18 +1141,28 @@ const handler = async (request: Request): Promise<Response> => {
       return failure(request, 400, "INVALID_REQUEST", "Coach voice recording must be under eight megabytes.", requestId, config);
     }
     try {
-      const upstream = await fetch(config.coachTranscriptionUrl, {
-        method: "POST",
-        body: bytes,
-        headers: {
-          Authorization: `Bearer ${config.coachTranscriptionToken}`,
-          "Content-Type": mediaType,
-          "X-PeacePad-Region": config.region,
-          "X-PeacePad-Purpose": "coach-transcription"
-        }
-      });
-      const payload = await upstream.json().catch(() => null) as { transcript?: unknown } | null;
-      const transcript = typeof payload?.transcript === "string" ? payload.transcript.trim() : "";
+      const upstream = config.geminiApiKey
+        ? await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": config.geminiApiKey },
+          body: JSON.stringify({
+            model: "gemini-3.5-transcribe",
+            input: [{ type: "audio", data: arrayBufferToBase64(bytes), mime_type: mediaType }],
+          }),
+        })
+        : await fetch(config.coachTranscriptionUrl, {
+          method: "POST",
+          body: bytes,
+          headers: {
+            Authorization: `Bearer ${config.coachTranscriptionToken}`,
+            "Content-Type": mediaType,
+            "X-PeacePad-Region": config.region,
+            "X-PeacePad-Purpose": "coach-transcription"
+          }
+        });
+      const payload = await upstream.json().catch(() => null) as { transcript?: unknown; output_text?: unknown } | null;
+      const transcriptValue = config.geminiApiKey ? payload?.output_text : payload?.transcript;
+      const transcript = typeof transcriptValue === "string" ? transcriptValue.trim() : "";
       if (!upstream.ok || !transcript || transcript.length > 10000) {
         return failure(request, 502, "INVALID_UPSTREAM_RESPONSE", "Coach could not transcribe that recording. You can still type to Coach.", requestId, config);
       }

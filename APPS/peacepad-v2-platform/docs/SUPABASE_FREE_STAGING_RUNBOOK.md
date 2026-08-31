@@ -111,15 +111,18 @@ or screenshots:
 - `SUPPORT_DISCOVERY_TOKEN`
 - `COACH_TRANSCRIPTION_URL`
 - `COACH_TRANSCRIPTION_TOKEN`
+- `GEMINI_API_KEY` (preferred alternative to the transcription URL/token pair)
 - `COACH_CONVERSATION_URL`
 - `COACH_CONVERSATION_TOKEN`
 
 Provider behavior:
 
-- `PUSH_TOKEN_SECRET`, `TURN_URLS`, `TURN_SHARED_SECRET`,
-  `COACH_TRANSCRIPTION_URL`, and `COACH_TRANSCRIPTION_TOKEN` are required for a
-  deploy. Push registration, private media relay, and voice transcription must
-  never be represented as working without their real infrastructure.
+- `PUSH_TOKEN_SECRET`, `TURN_URLS`, and `TURN_SHARED_SECRET` are required for a
+  deploy. Voice transcription additionally requires either the protected
+  `GEMINI_API_KEY` (preferred) or both `COACH_TRANSCRIPTION_URL` and
+  `COACH_TRANSCRIPTION_TOKEN`. Push registration, private media relay, and
+  voice transcription must never be represented as working without their real
+  infrastructure.
 - `SUPPORT_DISCOVERY_URL` plus `SUPPORT_DISCOVERY_TOKEN` are an optional
   enrichment pair. When absent or unavailable, the authenticated API returns
   PeacePad's first-party CA/US support directory with live official 211, 988,

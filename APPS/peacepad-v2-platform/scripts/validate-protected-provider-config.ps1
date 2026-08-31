@@ -34,8 +34,13 @@ function Require-OptionalProviderPair([string] $UrlName, [string] $TokenName) {
 Require-Secret 'PEACEPAD_PUSH_TOKEN_SECRET' 32
 Require-Secret 'PEACEPAD_TURN_SHARED_SECRET' 32
 Require-OptionalProviderPair 'PEACEPAD_SUPPORT_DISCOVERY_URL' 'PEACEPAD_SUPPORT_DISCOVERY_TOKEN'
-Require-HttpsUrl 'PEACEPAD_COACH_TRANSCRIPTION_URL'
-Require-Secret 'PEACEPAD_COACH_TRANSCRIPTION_TOKEN'
+$geminiApiKey = [Environment]::GetEnvironmentVariable('PEACEPAD_GEMINI_API_KEY')
+if ([string]::IsNullOrWhiteSpace($geminiApiKey)) {
+  Require-HttpsUrl 'PEACEPAD_COACH_TRANSCRIPTION_URL'
+  Require-Secret 'PEACEPAD_COACH_TRANSCRIPTION_TOKEN'
+} elseif ($geminiApiKey.Trim().Length -lt 24) {
+  $missing.Add('PEACEPAD_GEMINI_API_KEY')
+}
 Require-OptionalProviderPair 'PEACEPAD_COACH_CONVERSATION_URL' 'PEACEPAD_COACH_CONVERSATION_TOKEN'
 
 $turnUrls = [Environment]::GetEnvironmentVariable('PEACEPAD_TURN_URLS')
