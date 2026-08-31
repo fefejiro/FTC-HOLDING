@@ -116,8 +116,8 @@ describe("resolveFunctionInvocationRegion", () => {
 describe("resolveSupabaseProductionConfig", () => {
   const production = {
     EXPO_PUBLIC_PEACEPAD_ENV: "production",
-    EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_URL: "https://qzekqjewpugdotskrtni.supabase.co",
-    EXPO_PUBLIC_PEACEPAD_PRODUCTION_API_BASE_URL: "https://qzekqjewpugdotskrtni.supabase.co/functions/v1/peacepad-v2-api",
+    EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_URL: "https://rohvkyuxbnqzglaromms.supabase.co",
+    EXPO_PUBLIC_PEACEPAD_PRODUCTION_API_BASE_URL: "https://rohvkyuxbnqzglaromms.supabase.co/functions/v1/peacepad-v2-api",
     EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_fictional_production",
     EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED: "true"
   };
@@ -130,10 +130,10 @@ describe("resolveSupabaseProductionConfig", () => {
     expect(resolveSupabaseProductionConfig(production)).toMatchObject({
       environment: "production",
       region: "ca",
-      projectRef: "qzekqjewpugdotskrtni"
+      projectRef: "rohvkyuxbnqzglaromms"
     });
     expect(resolveSupabaseRuntimeDirectory(production)).toEqual([
-      expect.objectContaining({ environment: "production", region: "ca", projectRef: "qzekqjewpugdotskrtni" })
+      expect.objectContaining({ environment: "production", region: "ca", projectRef: "rohvkyuxbnqzglaromms" })
     ]);
   });
 
@@ -157,7 +157,7 @@ describe("resolveSupabaseProductionConfig", () => {
     })).toThrow("requires the production runtime");
     expect(() => resolveSupabaseProductionConfig({
       ...production,
-      EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_URL: "https://rohvkyuxbnqzglaromms.supabase.co"
+      EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_URL: "https://qzekqjewpugdotskrtni.supabase.co"
     })).toThrow("exact approved Canada Supabase project");
     expect(() => resolveEnvironmentConfig({
       ...production,

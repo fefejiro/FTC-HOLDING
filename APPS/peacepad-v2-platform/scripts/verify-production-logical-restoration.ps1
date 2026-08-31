@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [string]$ProjectRef = "qzekqjewpugdotskrtni",
+  [string]$ProjectRef = "rohvkyuxbnqzglaromms",
   [string]$Region = "ca-central-1",
   [string]$CredentialTarget = "PeacePadV2:Production:Database",
   [string]$PostgresBin = "C:\Program Files\PostgreSQL\18\bin",

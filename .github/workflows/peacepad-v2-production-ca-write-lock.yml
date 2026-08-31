@@ -1,4 +1,4 @@
-name: PeacePad V2 Canada Production Write Lock
+name: PeacePad V2 Canada Production Boundary
 
 on:
   workflow_dispatch:
@@ -19,13 +19,13 @@ concurrency:
 
 jobs:
   verify-write-lock:
-    name: Verify Canada production remains fail-closed
+    name: Verify Canada production remains healthy and authorization-closed
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
       # Use Supabase's dedicated Functions hostname so hosted runners do not
       # traverse the general project gateway that intermittently returned 503.
-      API_BASE_URL: https://qzekqjewpugdotskrtni.functions.supabase.co/peacepad-v2-api
+      API_BASE_URL: https://rohvkyuxbnqzglaromms.supabase.co/functions/v1/peacepad-v2-api
       SUPABASE_PUBLISHABLE_KEY: ${{ vars.PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY }}
 
     steps:
@@ -47,11 +47,11 @@ jobs:
               .status == (if $route == "health" then "ok" else "ready" end)
               and .environment == "production"
               and .region == "ca"
-              and .writesEnabled == false
+              and .writesEnabled == true
             ' --arg route "$route" <<<"$response" >/dev/null
           done
 
-      - name: Verify writes are rejected before authentication
+      - name: Verify unauthenticated writes remain rejected
         shell: bash
         run: |
           set -euo pipefail
@@ -66,10 +66,9 @@ jobs:
             --header 'content-type: application/json' \
             --data '{}' \
             "$API_BASE_URL/api/v2/invitations")"
-          test "$status" = "503"
+          test "$status" = "401"
           jq -e '
-            .error.code == "PRODUCTION_WRITES_DISABLED"
-            and .error.message == "Production writes are not enabled."
+            .error.code == "AUTH_REQUIRED"
             and (.error.requestId | type == "string" and length > 0)
           ' "$body_path" >/dev/null
 
@@ -80,10 +79,10 @@ jobs:
           {
             echo "## PeacePad V2 Canada production write lock"
             echo
-            echo "- Project: \`qzekqjewpugdotskrtni\`"
+            echo "- Project: \`rohvkyuxbnqzglaromms\`"
             echo "- Expected environment: \`production\`"
             echo "- Expected region: \`ca\`"
-            echo "- Expected writes enabled: \`false\`"
+            echo "- Expected writes enabled: \`true\`"
             echo "- Verified at: \`$(date -u +'%Y-%m-%dT%H:%M:%SZ')\`"
             echo "- Result: \`${{ job.status }}\`"
           } >> "$GITHUB_STEP_SUMMARY"

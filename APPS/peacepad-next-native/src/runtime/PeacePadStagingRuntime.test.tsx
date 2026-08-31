@@ -35,7 +35,7 @@ const supabase = {
   region: "ca" as const
 };
 const productionEnvironment = {
-  apiBaseUrl: "https://qzekqjewpugdotskrtni.supabase.co/functions/v1/peacepad-v2-api",
+  apiBaseUrl: "https://rohvkyuxbnqzglaromms.supabase.co/functions/v1/peacepad-v2-api",
   diagnosticsEnabled: false,
   environment: "production" as const,
   productionApiWritesEnabled: true as const,
@@ -44,8 +44,8 @@ const productionEnvironment = {
 const productionSupabase = {
   apiBaseUrl: productionEnvironment.apiBaseUrl,
   environment: "production" as const,
-  projectRef: "qzekqjewpugdotskrtni",
-  projectUrl: "https://qzekqjewpugdotskrtni.supabase.co",
+  projectRef: "rohvkyuxbnqzglaromms",
+  projectUrl: "https://rohvkyuxbnqzglaromms.supabase.co",
   publishableKey: "sb_publishable_test",
   region: "ca" as const
 };

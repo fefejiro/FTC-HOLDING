@@ -3,8 +3,7 @@ import type { PeacePadEnvironmentConfig } from "../config/environment";
 import type { AccessTokenProvider } from "../api/CoordinationApi";
 
 const APPROVED_SUPABASE_API_HOSTS = new Set([
-  "rohvkyuxbnqzglaromms.supabase.co",
-  "qzekqjewpugdotskrtni.supabase.co"
+  "rohvkyuxbnqzglaromms.supabase.co"
 ]);
 
 /** Creates the existing v2 coordination client with a fictional staging token. */
@@ -19,11 +18,8 @@ export const createStagingCoordinationClient = (
     throw new Error("Coordination client requires an exact staging or explicitly authorized production environment.");
   }
   const host = new URL(config.apiBaseUrl).hostname;
-  if (production && host !== "qzekqjewpugdotskrtni.supabase.co") {
+  if (production && host !== "rohvkyuxbnqzglaromms.supabase.co") {
     throw new Error("Production coordination requires the approved Canada API host.");
-  }
-  if (staging && host === "qzekqjewpugdotskrtni.supabase.co") {
-    throw new Error("Staging coordination cannot target the production API host.");
   }
   if (host !== "localhost" && host !== "127.0.0.1" && !host.endsWith(".staging.peacepad.ca") && !APPROVED_SUPABASE_API_HOSTS.has(host)) {
     throw new Error("Coordination client rejected an unapproved API host.");
