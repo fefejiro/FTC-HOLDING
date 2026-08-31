@@ -14,13 +14,11 @@ if ($config.fictionalDataOnly -ne $true) { throw "Supabase free staging must be 
 if ($config.productionApiWritesEnabled -ne $false) { throw "Production API writes must remain disabled." }
 
 $ca = $config.regions.ca
-$us = $config.regions.us
-if (-not $ca -or -not $us) { throw "Both Canadian and U.S. staging regions are required." }
+if (-not $ca) { throw "Canadian staging is required." }
+if (@($config.regions.PSObject.Properties).Count -ne 1) { throw "Exactly one Canadian staging region is allowed." }
 if ($ca.supabaseRegion -ne "ca-central-1") { throw "Canadian staging must be pinned to ca-central-1." }
-if ($us.supabaseRegion -ne "us-east-2") { throw "U.S. staging must be pinned to us-east-2." }
-if ($ca.projectRef -eq $us.projectRef) { throw "Canadian and U.S. staging must use different Supabase projects." }
 
-foreach ($region in @($ca, $us)) {
+foreach ($region in @($ca)) {
   if ($region.projectRef -match "[./:]" -or $region.projectRef -match "\s") {
     throw "Store only the public project reference in configuration, never a URL or secret."
   }
@@ -36,7 +34,6 @@ if ($raw -match '(?i)(service_role|service-role|secret[_-]?key|postgres(?:ql)?:/
 $restoreScript = Get-Content -LiteralPath (Resolve-Path -LiteralPath $ManagedRestoreScriptPath).Path -Raw
 $requiredRestorePatterns = @(
   'rohvkyuxbnqzglaromms',
-  'spmpndalcvwmygznihec',
   'begin read only',
   'pg_dump.+--data-only.+--schema=peacepad_v2',
   'pg_restore.+--data-only.+--disable-triggers.+--single-transaction.+--exit-on-error',

@@ -326,10 +326,7 @@ foreach ($pattern in @('MAINTENANCE_SECRET', 'internal/v2/auth-cleanup/run', 'Ti
 }
 foreach ($pattern in @(
   'rohvkyuxbnqzglaromms',
-  'spmpndalcvwmygznihec',
   "FunctionRegion = 'ca-central-1'",
-  "FunctionRegion = 'us-east-1'",
-  "DatabaseRegion = 'us-east-2'",
   "'projects', 'list', '--output', 'json'",
   '\$visibleProject\[0\]\.region',
   'cannot see the approved',

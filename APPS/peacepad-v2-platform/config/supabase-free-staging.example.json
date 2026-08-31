@@ -5,14 +5,9 @@
   "productionApiWritesEnabled": false,
   "regions": {
     "ca": {
-      "projectRef": "replace-with-canadian-project-ref",
+      "projectRef": "rohvkyuxbnqzglaromms",
       "supabaseRegion": "ca-central-1",
-      "apiBaseUrl": "https://replace-with-canadian-api.example.workers.dev"
-    },
-    "us": {
-      "projectRef": "replace-with-us-project-ref",
-      "supabaseRegion": "us-east-2",
-      "apiBaseUrl": "https://replace-with-us-api.example.workers.dev"
+      "apiBaseUrl": "https://rohvkyuxbnqzglaromms.supabase.co/functions/v1/peacepad-v2-api"
     }
   }
 }

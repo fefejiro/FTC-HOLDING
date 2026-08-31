@@ -8,8 +8,8 @@ to reduce free-plan pressure, configuration drift, and release ambiguity.
 
 | Purpose | Project | Reference | Region | Provider state at consolidation |
 | --- | --- | --- | --- | --- |
-| Native V2 staging | `peacepad-v2-staging-ca-mike` | `rohvkyuxbnqzglaromms` | `ca-central-1` | Paused; recoverable |
-| Production | `peacepad-v2-production-ca` | `qzekqjewpugdotskrtni` | `ca-central-1` | Active; not modified |
+| Native V2 staging | `peacepad-v2-staging-ca-mike` | `rohvkyuxbnqzglaromms` | `ca-central-1` | Active and healthy on 2026-08-31 |
+| Production | `peacepad-v2-production-ca` | `qzekqjewpugdotskrtni` | `ca-central-1` | Paused; not modified during staging work |
 
 ## Permanently deleted projects
 
@@ -44,7 +44,6 @@ project, generic project, user account, or local source tree was deleted.
 - Jest: `69` suites passed; `487` tests passed and `1` skipped.
 - Static iOS release preflight: passed; no build or submission started.
 
-The retained Canadian staging project must be resumed and provider health
-verified before the next managed staging/device test. Resuming it may require a
-free-plan active-project slot; unrelated projects must not be paused or deleted
-without a separate inventory and approval.
+The retained Canadian staging project is active. The guarded deployment lane
+must dry-run all migrations from the exact reviewed Native V2 commit before an
+apply. Production remains paused and must not be contacted by staging tests.

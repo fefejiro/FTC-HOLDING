@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [Parameter(Mandatory)] [ValidateSet('ca', 'us')] [string] $Region,
+  [Parameter(Mandatory)] [ValidateSet('ca')] [string] $Region,
   [Parameter(Mandatory)] [string] $ProjectRef,
   [Parameter(Mandatory)] [string] $FunctionRegion,
   [string] $SupabaseCli = 'supabase',
@@ -11,7 +11,6 @@ $ErrorActionPreference = 'Stop'
 $platformRoot = Split-Path -Parent $PSScriptRoot
 $expectedProjects = @{
   ca = @{ ProjectRef = 'rohvkyuxbnqzglaromms'; DatabaseRegion = 'ca-central-1'; FunctionRegion = 'ca-central-1' }
-  us = @{ ProjectRef = 'spmpndalcvwmygznihec'; DatabaseRegion = 'us-east-2'; FunctionRegion = 'us-east-1' }
 }
 
 function Invoke-Supabase([string[]] $Arguments) {

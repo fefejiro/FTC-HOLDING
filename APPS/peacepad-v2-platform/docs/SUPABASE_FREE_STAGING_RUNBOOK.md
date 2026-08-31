@@ -4,12 +4,11 @@
 
 | Data plane | Project | Database region | Edge invocation region |
 | --- | --- | --- | --- |
-| Canada | `peacepad-v2-staging-ca` (`rohvkyuxbnqzglaromms`) | `ca-central-1` | `ca-central-1` |
-| United States | `peacepad-v2-staging-us` (`spmpndalcvwmygznihec`) | `us-east-2` | `us-east-1` |
+| Canada | `peacepad-v2-staging-ca-mike` (`rohvkyuxbnqzglaromms`) | `ca-central-1` | `ca-central-1` |
 
-The U.S. execution location is the nearest supported Edge Function invocation
-region. It is not a data-residency certification. Both projects contain only
-fictional staging identities and records.
+Native V2 now uses only this Canadian fictional-staging data plane. The earlier
+U.S. staging projects were retired during the 2026-08-31 consolidation and are
+not valid deployment targets.
 
 ## Local verification
 
@@ -17,7 +16,6 @@ fictional staging identities and records.
 ./scripts/validate-supabase-free-staging.ps1
 ./scripts/validate-supabase-edge-function.ps1
 ./scripts/deploy-supabase-free-staging.ps1 -Region ca -ProjectRef rohvkyuxbnqzglaromms -FunctionRegion ca-central-1 -SkipDeploy
-./scripts/deploy-supabase-free-staging.ps1 -Region us -ProjectRef spmpndalcvwmygznihec -FunctionRegion us-east-1 -SkipDeploy
 ```
 
 ## 2026-08-10 project rebind and rollback record
@@ -46,7 +44,8 @@ project. Use an IPv4 pooler connection and a password supplied through the
 operator's secret store; never place a database password in the repository,
 shell history, Expo configuration, screenshots, or logs.
 
-Run migration dry-run and apply through the Supabase CLI:
+Run migration dry-run and apply through the Supabase CLI for the Canadian
+staging project only:
 
 ```powershell
 supabase db push --db-url $env:PEACEPAD_STAGING_DATABASE_URL --dry-run --agent no --workdir .
@@ -105,6 +104,15 @@ or screenshots:
 - `DATABASE_URL`
 - `MAINTENANCE_SECRET`
 - `IDEMPOTENCY_SECRET`
+- `PUSH_TOKEN_SECRET`
+- `TURN_URLS`
+- `TURN_SHARED_SECRET`
+- `SUPPORT_DISCOVERY_URL`
+- `SUPPORT_DISCOVERY_TOKEN`
+- `COACH_TRANSCRIPTION_URL`
+- `COACH_TRANSCRIPTION_TOKEN`
+- `COACH_CONVERSATION_URL`
+- `COACH_CONVERSATION_TOKEN`
 
 All four required secret slots exist independently in each protected regional
 environment. Their values are not repository evidence and must not be printed
