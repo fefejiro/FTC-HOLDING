@@ -66,7 +66,7 @@ Passed:
 - `git diff --check`
 - Direct dynamic-config checks for production-without-Google and
   staging-with-valid-Google configuration
-- `scripts/validate-supabase-edge-function.ps1` â€”
+- `scripts/validate-supabase-edge-function.ps1` —
   `SUPABASE_EDGE_BOUNDARY_LOCAL_VERIFIED`
 
 The clean worktree has no tracked or untracked source changes after the
