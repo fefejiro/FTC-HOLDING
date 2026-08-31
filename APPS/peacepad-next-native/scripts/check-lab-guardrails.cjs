@@ -227,7 +227,7 @@ if (
 ) {
   failures.push("EAS Submit must target only the reviewed internal and production profiles for App Store record 6793350735.");
 }
-for (const expectedReleaseValue of ["ca.peacepad.family", "6793350735", "2.0.1", "43", "45", "testflight-internal", "appstore-production", "staging-simulator-dual", "playstore-internal", "playstore-production"]) {
+for (const expectedReleaseValue of ["ca.peacepad.family", "6793350735", "2.0.1", "9", "10", "49", "50", "testflight-internal", "appstore-production", "staging-simulator-dual", "playstore-internal", "playstore-production"]) {
   if (!dynamicAppConfigSource.includes(expectedReleaseValue)) {
     failures.push(`Dynamic app config is missing the reviewed TestFlight value ${expectedReleaseValue}.`);
   }
