@@ -212,20 +212,6 @@ describe("PeacePadStagingRuntime gates", () => {
     await waitFor(() => expect(screen.getAllByText("Sign in").length).toBeGreaterThan(0));
   });
 
-  it.each([
-    ["fr", "Environnement de test aux États-Unis"],
-    ["es", "Entorno de pruebas de Estados Unidos"]
-  ])("identifies the configured United States staging region in %s", async (locale, regionLabel) => {
-    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue("true");
-    (useSupabaseSession as jest.Mock).mockReturnValue(authValue({ status: "signed-out", session: undefined }));
-    render(
-      <LocalizationProvider initialLocale={locale}>
-        <PeacePadStagingRuntime environment={environment} supabase={{ ...supabase, region: "us" }}>ready</PeacePadStagingRuntime>
-      </LocalizationProvider>
-    );
-    expect(await screen.findByTestId("staging-region-label")).toHaveTextContent(regionLabel);
-  });
-
   it("shows safe empty states for an account without a family or conversation", async () => {
     const auth = authValue();
     (useSupabaseSession as jest.Mock).mockReturnValue(auth);

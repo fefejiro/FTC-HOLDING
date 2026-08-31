@@ -13,14 +13,6 @@ const configs: readonly PeacePadSupabaseConfig[] = [
     projectUrl: "https://rohvkyuxbnqzglaromms.supabase.co",
     apiBaseUrl: "https://rohvkyuxbnqzglaromms.supabase.co/functions/v1/peacepad-v2-api",
     publishableKey: "sb_publishable_fictional_ca"
-  },
-  {
-    environment: "staging",
-    region: "us",
-    projectRef: "spmpndalcvwmygznihec",
-    projectUrl: "https://spmpndalcvwmygznihec.supabase.co",
-    apiBaseUrl: "https://spmpndalcvwmygznihec.supabase.co/functions/v1/peacepad-v2-api",
-    publishableKey: "sb_publishable_fictional_us"
   }
 ];
 
@@ -42,27 +34,25 @@ describe("StagingRegionGate", () => {
     expect(SecureStore.getItemAsync).toHaveBeenCalledWith("peacepad_v2_staging_region");
   });
 
-  it("requires an explicit choice before creating a regional runtime and persists only the region", async () => {
+  it("requires explicit confirmation of the Canadian staging runtime and persists only the region", async () => {
     const onSelect = jest.fn();
     const { save, store } = createStore();
     render(<LocalizationProvider initialLocale="en"><StagingRegionGate configs={configs} onSelect={onSelect} store={store} /></LocalizationProvider>);
 
     expect(screen.getByRole("radio", { name: "Canada staging" }).props.accessibilityState).toEqual({ checked: true });
     expect(onSelect).not.toHaveBeenCalled();
-    fireEvent.press(screen.getByRole("radio", { name: "United States staging" }));
-    expect(screen.getByRole("radio", { name: "United States staging" }).props.accessibilityState).toEqual({ checked: true });
-    fireEvent.press(screen.getByRole("button", { name: "Continue to United States staging" }));
+    fireEvent.press(screen.getByRole("button", { name: "Continue to Canada staging" }));
 
-    await waitFor(() => expect(onSelect).toHaveBeenCalledWith(configs[1]));
-    expect(save).toHaveBeenCalledWith("us");
+    await waitFor(() => expect(onSelect).toHaveBeenCalledWith(configs[0]));
+    expect(save).toHaveBeenCalledWith("ca");
   });
 
   it("restores a valid preference but still waits for explicit confirmation", async () => {
     const onSelect = jest.fn();
-    const { store } = createStore("us");
+    const { store } = createStore("ca");
     render(<LocalizationProvider initialLocale="en"><StagingRegionGate configs={configs} onSelect={onSelect} store={store} /></LocalizationProvider>);
 
-    await waitFor(() => expect(screen.getByRole("radio", { name: "United States staging" }).props.accessibilityState).toEqual({ checked: true }));
+    await waitFor(() => expect(screen.getByRole("radio", { name: "Canada staging" }).props.accessibilityState).toEqual({ checked: true }));
     expect(onSelect).not.toHaveBeenCalled();
   });
 
@@ -79,6 +69,6 @@ describe("StagingRegionGate", () => {
 
   it("rejects a malformed directory instead of silently choosing a region", () => {
     const { store } = createStore();
-    expect(() => render(<LocalizationProvider initialLocale="en"><StagingRegionGate configs={[configs[0]]} onSelect={jest.fn()} store={store} /></LocalizationProvider>)).toThrow("requires at least two verified staging regions");
+    expect(() => render(<LocalizationProvider initialLocale="en"><StagingRegionGate configs={[]} onSelect={jest.fn()} store={store} /></LocalizationProvider>)).toThrow("requires exactly one verified staging region");
   });
 });

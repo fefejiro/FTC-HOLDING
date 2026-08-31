@@ -66,8 +66,7 @@ describe("HttpPeacePadCoordinationApi", () => {
   });
 
   it.each([
-    ["rohvkyuxbnqzglaromms", "ca-central-1"],
-    ["spmpndalcvwmygznihec", "us-east-1"]
+    ["rohvkyuxbnqzglaromms", "ca-central-1"]
   ])("pins approved project %s to Edge region %s", async (projectRef, functionRegion) => {
     const fetcher = jest.fn(async () => response(200, []));
     const api = new HttpPeacePadCoordinationApi({

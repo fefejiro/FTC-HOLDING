@@ -8,7 +8,7 @@ export type PeacePadEnvironmentConfig = {
   diagnosticsEnabled: boolean;
 };
 
-export type PeacePadStagingRegion = "ca" | "us";
+export type PeacePadStagingRegion = "ca";
 
 export type PeacePadSupabaseConfig = Readonly<{
   environment: "staging" | "production";
@@ -27,14 +27,8 @@ declare const process: {
 
 const DEFAULT_LAB_API_URL = "http://127.0.0.1:8787";
 const PRODUCTION_API_HOST = /^https:\/\/api\.peacepad\.ca(?:\/|$)/i;
-const STAGING_PROJECTS: Record<PeacePadStagingRegion, string> = {
-  ca: "rohvkyuxbnqzglaromms",
-  us: "spmpndalcvwmygznihec"
-};
-const STAGING_FUNCTION_REGIONS: Record<PeacePadStagingRegion, string> = {
-  ca: "ca-central-1",
-  us: "us-east-1"
-};
+const STAGING_PROJECT = "rohvkyuxbnqzglaromms";
+const STAGING_FUNCTION_REGION = "ca-central-1";
 const PRODUCTION_PROJECT = "qzekqjewpugdotskrtni";
 const PRODUCTION_FUNCTION_REGION = "ca-central-1";
 
@@ -50,9 +44,6 @@ function readBundledEnvironmentValues(): EnvironmentValues {
     EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_URL: process.env.EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_URL,
     EXPO_PUBLIC_PEACEPAD_CA_API_BASE_URL: process.env.EXPO_PUBLIC_PEACEPAD_CA_API_BASE_URL,
     EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_PUBLISHABLE_KEY,
-    EXPO_PUBLIC_PEACEPAD_US_SUPABASE_URL: process.env.EXPO_PUBLIC_PEACEPAD_US_SUPABASE_URL,
-    EXPO_PUBLIC_PEACEPAD_US_API_BASE_URL: process.env.EXPO_PUBLIC_PEACEPAD_US_API_BASE_URL,
-    EXPO_PUBLIC_PEACEPAD_US_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_PEACEPAD_US_SUPABASE_PUBLISHABLE_KEY,
     EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_URL: process.env.EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_URL,
     EXPO_PUBLIC_PEACEPAD_PRODUCTION_API_BASE_URL: process.env.EXPO_PUBLIC_PEACEPAD_PRODUCTION_API_BASE_URL,
     EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY,
@@ -73,8 +64,7 @@ export function resolveEnvironmentConfig(
     : values.EXPO_PUBLIC_PEACEPAD_ENV === "staging" ? "staging" : "lab";
   const configuredUrl = (environment === "production" ? values.EXPO_PUBLIC_PEACEPAD_PRODUCTION_API_BASE_URL?.trim() : undefined)
     || values.EXPO_PUBLIC_PEACEPAD_API_BASE_URL?.trim()
-    || values.EXPO_PUBLIC_PEACEPAD_CA_API_BASE_URL?.trim()
-    || values.EXPO_PUBLIC_PEACEPAD_US_API_BASE_URL?.trim();
+    || values.EXPO_PUBLIC_PEACEPAD_CA_API_BASE_URL?.trim();
 
   if (environment === "staging" && !configuredUrl) {
     throw new Error("Staging requires EXPO_PUBLIC_PEACEPAD_API_BASE_URL.");
@@ -124,10 +114,8 @@ export const environmentConfig = resolveEnvironmentConfig();
 
 export function resolveFunctionInvocationRegion(apiBaseUrl: string): string | undefined {
   const normalizedUrl = trimTrailingSlash(apiBaseUrl);
-  for (const region of Object.keys(STAGING_PROJECTS) as PeacePadStagingRegion[]) {
-    const expectedApiBaseUrl = `https://${STAGING_PROJECTS[region]}.supabase.co/functions/v1/peacepad-v2-api`;
-    if (normalizedUrl === expectedApiBaseUrl) return STAGING_FUNCTION_REGIONS[region];
-  }
+  const expectedStagingApiBaseUrl = `https://${STAGING_PROJECT}.supabase.co/functions/v1/peacepad-v2-api`;
+  if (normalizedUrl === expectedStagingApiBaseUrl) return STAGING_FUNCTION_REGION;
   if (normalizedUrl === `https://${PRODUCTION_PROJECT}.supabase.co/functions/v1/peacepad-v2-api`) {
     return PRODUCTION_FUNCTION_REGION;
   }
@@ -141,10 +129,10 @@ export function resolveSupabaseStagingConfig(
     throw new Error("Supabase coordination is available only in staging.");
   }
   const region = values.EXPO_PUBLIC_PEACEPAD_REGION;
-  if (region !== "ca" && region !== "us") {
-    throw new Error("Staging requires EXPO_PUBLIC_PEACEPAD_REGION=ca or us.");
+  if (region !== "ca") {
+    throw new Error("Staging requires EXPO_PUBLIC_PEACEPAD_REGION=ca.");
   }
-  const projectRef = STAGING_PROJECTS[region];
+  const projectRef = STAGING_PROJECT;
   const projectUrl = trimTrailingSlash(values.EXPO_PUBLIC_PEACEPAD_SUPABASE_URL?.trim() ?? "");
   const publishableKey = values.EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY?.trim() ?? "";
   const apiBaseUrl = trimTrailingSlash(values.EXPO_PUBLIC_PEACEPAD_API_BASE_URL?.trim() ?? "");
@@ -190,52 +178,22 @@ export function resolveSupabaseProductionConfig(
   };
 }
 
-const scopedStagingKeys = {
-  ca: {
-    projectUrl: "EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_URL",
-    apiBaseUrl: "EXPO_PUBLIC_PEACEPAD_CA_API_BASE_URL",
-    publishableKey: "EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_PUBLISHABLE_KEY"
-  },
-  us: {
-    projectUrl: "EXPO_PUBLIC_PEACEPAD_US_SUPABASE_URL",
-    apiBaseUrl: "EXPO_PUBLIC_PEACEPAD_US_API_BASE_URL",
-    publishableKey: "EXPO_PUBLIC_PEACEPAD_US_SUPABASE_PUBLISHABLE_KEY"
-  }
-} as const;
-
 export function resolveSupabaseStagingDirectory(
   values: EnvironmentValues = readBundledEnvironmentValues()
 ): readonly PeacePadSupabaseConfig[] {
   if (values.EXPO_PUBLIC_PEACEPAD_ENV !== "staging") {
     throw new Error("Supabase coordination is available only in staging.");
   }
-  const hasScopedValues = (Object.values(scopedStagingKeys).flatMap((keys) => Object.values(keys)) as string[])
-    .some((key) => Boolean(values[key]?.trim()));
-  if (!hasScopedValues) return [resolveSupabaseStagingConfig(values)];
-  if (
-    values.EXPO_PUBLIC_PEACEPAD_REGION?.trim()
-    || values.EXPO_PUBLIC_PEACEPAD_SUPABASE_URL?.trim()
-    || values.EXPO_PUBLIC_PEACEPAD_API_BASE_URL?.trim()
-    || values.EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY?.trim()
-  ) {
-    throw new Error("Regional staging directory values must not be mixed with a single-region staging configuration.");
-  }
-  return (Object.keys(scopedStagingKeys) as PeacePadStagingRegion[]).map((region) => {
-    const keys = scopedStagingKeys[region];
-    const projectUrl = values[keys.projectUrl]?.trim();
-    const apiBaseUrl = values[keys.apiBaseUrl]?.trim();
-    const publishableKey = values[keys.publishableKey]?.trim();
-    if (!projectUrl || !apiBaseUrl || !publishableKey) {
-      throw new Error(`Staging ${region.toUpperCase()} regional configuration is incomplete.`);
-    }
-    return resolveSupabaseStagingConfig({
+  const directValues: EnvironmentValues = values.EXPO_PUBLIC_PEACEPAD_SUPABASE_URL?.trim()
+    ? values
+    : {
       EXPO_PUBLIC_PEACEPAD_ENV: "staging",
-      EXPO_PUBLIC_PEACEPAD_REGION: region,
-      EXPO_PUBLIC_PEACEPAD_SUPABASE_URL: projectUrl,
-      EXPO_PUBLIC_PEACEPAD_API_BASE_URL: apiBaseUrl,
-      EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY: publishableKey
-    });
-  });
+      EXPO_PUBLIC_PEACEPAD_REGION: "ca",
+      EXPO_PUBLIC_PEACEPAD_SUPABASE_URL: values.EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_URL,
+      EXPO_PUBLIC_PEACEPAD_API_BASE_URL: values.EXPO_PUBLIC_PEACEPAD_CA_API_BASE_URL,
+      EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY: values.EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_PUBLISHABLE_KEY
+    };
+  return [resolveSupabaseStagingConfig(directValues)];
 }
 
 export function resolveSupabaseRuntimeDirectory(

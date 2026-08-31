@@ -1,4 +1,4 @@
-import React, { Component, useCallback, useEffect, useMemo, useRef, useState, type ErrorInfo, type ReactNode } from "react";
+import React, { Component, useCallback, useEffect, useMemo, useRef, type ErrorInfo, type ReactNode } from "react";
 import { NavigationContainer, useNavigation, type LinkingOptions } from "@react-navigation/native";
 import { createNativeStackNavigator, type NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
@@ -17,7 +17,6 @@ import {
 } from "./coordination/CoordinationScreens";
 import { CoordinationStateProvider, useCoordinationState } from "./coordination/CoordinationState";
 import { environmentConfig, resolveSupabaseRuntimeDirectory, type PeacePadSupabaseConfig } from "./config/environment";
-import { StagingRegionGate } from "./config/StagingRegionGate";
 import { FoundationScreen } from "./foundation/FoundationScreen";
 import { LocalizationProvider } from "./localization/LocalizationProvider";
 import { RecordsStateProvider } from "./records/RecordsState";
@@ -129,8 +128,8 @@ function PeacePadStagingApp() {
 }
 
 export function PeacePadStagingRegionRouter({ directory }: { directory: readonly PeacePadSupabaseConfig[] }) {
-  const [staging, setStaging] = useState<PeacePadSupabaseConfig | undefined>(() => directory.length === 1 ? directory[0] : undefined);
-  if (!staging) return <StagingRegionGate configs={directory} onSelect={setStaging} />;
+  const staging = directory[0];
+  if (!staging || directory.length !== 1) throw new Error("PeacePad requires exactly one approved backend for the selected environment.");
   return <SelectedPeacePadStagingApp staging={staging} />;
 }
 
