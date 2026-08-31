@@ -2,6 +2,7 @@ import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
 
 const TASK_REMINDERS_KEY = "peacepad.v2.task-reminders";
+const CALL_REMINDERS_KEY = "peacepad.v2.scheduled-call-reminders";
 
 type StoredTaskReminders = Readonly<Record<string, string>>;
 
@@ -14,8 +15,15 @@ export function taskReminderDate(dueAt: string, now = new Date()): Date | undefi
   return reminder.getTime() > now.getTime() ? reminder : undefined;
 }
 
-async function readStoredReminders(): Promise<StoredTaskReminders> {
-  const raw = await SecureStore.getItemAsync(TASK_REMINDERS_KEY);
+export function scheduledCallReminderDate(startsAt: string, now = new Date()): Date | undefined {
+  const starts = new Date(startsAt);
+  if (Number.isNaN(starts.getTime())) return undefined;
+  const reminder = new Date(starts.getTime() - 15 * 60_000);
+  return reminder.getTime() > now.getTime() ? reminder : undefined;
+}
+
+async function readStoredReminders(key = TASK_REMINDERS_KEY): Promise<StoredTaskReminders> {
+  const raw = await SecureStore.getItemAsync(key);
   if (!raw) return {};
   try {
     const value = JSON.parse(raw) as unknown;
@@ -26,8 +34,8 @@ async function readStoredReminders(): Promise<StoredTaskReminders> {
   }
 }
 
-async function writeStoredReminders(value: StoredTaskReminders): Promise<void> {
-  await SecureStore.setItemAsync(TASK_REMINDERS_KEY, JSON.stringify(value), {
+async function writeStoredReminders(value: StoredTaskReminders, key = TASK_REMINDERS_KEY): Promise<void> {
+  await SecureStore.setItemAsync(key, JSON.stringify(value), {
     keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY
   });
 }
@@ -65,4 +73,33 @@ export async function cancelTaskReminder(taskId: string): Promise<void> {
   await Notifications.cancelScheduledNotificationAsync(identifier);
   const { [taskId]: _removed, ...remaining } = reminders;
   await writeStoredReminders(remaining);
+}
+
+export async function scheduleScheduledCallReminder(callId: string, mediaType: "audio" | "video", startsAt: string): Promise<TaskReminderResult> {
+  const trigger = scheduledCallReminderDate(startsAt);
+  if (!trigger) return "not-due";
+  const permission = await Notifications.getPermissionsAsync();
+  if (permission.status !== "granted") return permission.status === "denied" ? "not-permitted" : "unavailable";
+  const reminders = await readStoredReminders(CALL_REMINDERS_KEY);
+  if (reminders[callId]) await Notifications.cancelScheduledNotificationAsync(reminders[callId]);
+  const identifier = await Notifications.scheduleNotificationAsync({
+    content: {
+      title: "PeacePad call reminder",
+      body: `Your ${mediaType} call starts in 15 minutes.`,
+      data: { kind: "scheduled-call", callId },
+      sound: "default"
+    },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: trigger }
+  });
+  await writeStoredReminders({ ...reminders, [callId]: identifier }, CALL_REMINDERS_KEY);
+  return "scheduled";
+}
+
+export async function cancelScheduledCallReminder(callId: string): Promise<void> {
+  const reminders = await readStoredReminders(CALL_REMINDERS_KEY);
+  const identifier = reminders[callId];
+  if (!identifier) return;
+  await Notifications.cancelScheduledNotificationAsync(identifier);
+  const { [callId]: _removed, ...remaining } = reminders;
+  await writeStoredReminders(remaining, CALL_REMINDERS_KEY);
 }

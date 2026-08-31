@@ -1,6 +1,6 @@
 import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
-import { cancelTaskReminder, scheduleTaskReminder, taskReminderDate } from "./TaskReminders";
+import { cancelScheduledCallReminder, cancelTaskReminder, scheduledCallReminderDate, scheduleScheduledCallReminder, scheduleTaskReminder, taskReminderDate } from "./TaskReminders";
 
 describe("task reminders", () => {
   beforeEach(() => {
@@ -37,5 +37,14 @@ describe("task reminders", () => {
     await cancelTaskReminder("task-1");
     expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith("task-reminder-1");
     expect(SecureStore.setItemAsync).toHaveBeenCalledWith(expect.any(String), "{}", expect.anything());
+  });
+
+  it("schedules and cancels a private fifteen-minute scheduled-call reminder", async () => {
+    expect(scheduledCallReminderDate("2026-09-03T14:00:00.000Z", new Date("2026-09-01T00:00:00.000Z"))).toEqual(new Date("2026-09-03T13:45:00.000Z"));
+    await expect(scheduleScheduledCallReminder("call-1", "video", "2026-09-03T14:00:00.000Z")).resolves.toBe("scheduled");
+    expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(expect.objectContaining({ content: expect.objectContaining({ data: { kind: "scheduled-call", callId: "call-1" } }) }));
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(JSON.stringify({ "call-1": "call-reminder-1" }));
+    await cancelScheduledCallReminder("call-1");
+    expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith("call-reminder-1");
   });
 });

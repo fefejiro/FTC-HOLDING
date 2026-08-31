@@ -10,6 +10,7 @@ import { colors, spacing, typography } from "../theme";
 import { useParentCoreState } from "./ParentCoreState";
 import { useAudioCallState } from "../calls/AudioCallState";
 import { VideoStage } from "../calls/AudioCallScreen";
+import { cancelScheduledCallReminder, scheduleScheduledCallReminder } from "../notifications/TaskReminders";
 
 type Section = "children" | "money" | "support" | "calls" | "conch";
 
@@ -168,6 +169,7 @@ function ScheduledCallsPanel() {
   const [when, setWhen] = useState(() => new Date(Date.now() + 86_400_000).toISOString().slice(0, 16).replace("T", " "));
   const [note, setNote] = useState("");
   const [mediaType, setMediaType] = useState<"audio" | "video">("video");
+  const [remindMe, setRemindMe] = useState(false);
   const parsed = useMemo(() => parseLocalDateTime(when), [when]);
   return <View style={styles.panel}>
     <SectionHeading color={colors.sun} icon="calendar-outline" subtitle="Agree on a time before the phone rings. Both parents see the same saved plan." title="Scheduled calls" />
@@ -175,9 +177,10 @@ function ScheduledCallsPanel() {
       <View style={styles.chips}>{(["audio", "video"] as const).map((type) => <Pressable accessibilityRole="radio" accessibilityState={{ checked: mediaType === type }} key={type} onPress={() => setMediaType(type)} style={[styles.chip, mediaType === type ? styles.chipActive : null]}><Text style={[styles.chipText, mediaType === type ? styles.chipTextActive : null]}>{type === "video" ? "Video call" : "Audio call"}</Text></Pressable>)}</View>
       <TextInput accessibilityLabel="Call date and time" onChangeText={setWhen} placeholder="YYYY-MM-DD HH:mm" style={styles.input} value={when} />
       <TextInput accessibilityLabel="Optional call note" maxLength={240} onChangeText={setNote} placeholder="Optional child-focused note" style={styles.input} value={note} />
-      <LabButton disabled={state.busy || !parsed || !state.otherParentIdentityId} label={state.otherParentIdentityId ? "Schedule call" : "Connect a parent to schedule"} onPress={() => parsed ? void state.scheduleCall(parsed, mediaType, note).then(() => setNote("")).catch(() => undefined) : undefined} />
+      {parsed ? <Pressable accessibilityLabel="Remind me 15 minutes before this call" accessibilityRole="checkbox" accessibilityState={{ checked: remindMe }} onPress={() => setRemindMe((current) => !current)} style={styles.reminderRow}><View style={[styles.reminderCheckbox, remindMe ? styles.reminderCheckboxChecked : null]}><Text style={styles.reminderCheck}>{remindMe ? "✓" : ""}</Text></View><View style={styles.reminderCopy}><Text style={styles.cardTitle}>Remind me 15 minutes before</Text><Text style={styles.caption}>Private to this device. The other parent is not alerted by this reminder.</Text></View></Pressable> : null}
+      <LabButton disabled={state.busy || !parsed || !state.otherParentIdentityId} label={state.otherParentIdentityId ? "Schedule call" : "Connect a parent to schedule"} onPress={() => parsed ? void state.scheduleCall(parsed, mediaType, note).then(async (call) => { if (call && remindMe) await scheduleScheduledCallReminder(call.id, call.mediaType, call.startsAt); setNote(""); setRemindMe(false); }).catch(() => undefined) : undefined} />
     </View>
-    {state.scheduledCalls.map((call) => <View key={call.id} style={styles.listCard}><View style={styles.rowBetween}><Text style={styles.cardTitle}>{call.mediaType === "video" ? "Video call" : "Audio call"}</Text><PeacePadIcon color={call.mediaType === "video" ? colors.coral : colors.aqua} name={call.mediaType === "video" ? "videocam-outline" : "call-outline"} /></View><Text style={styles.body}>{new Date(call.startsAt).toLocaleString()}</Text>{call.note ? <Text style={styles.caption}>{call.note}</Text> : null}{call.status === "scheduled" ? <LabButton disabled={state.busy} label="Cancel call" onPress={() => void state.cancelScheduledCall(call).catch(() => undefined)} variant="secondary" /> : <Text style={styles.caption}>{call.status}</Text>}</View>)}
+    {state.scheduledCalls.map((call) => <View key={call.id} style={styles.listCard}><View style={styles.rowBetween}><Text style={styles.cardTitle}>{call.mediaType === "video" ? "Video call" : "Audio call"}</Text><PeacePadIcon color={call.mediaType === "video" ? colors.coral : colors.aqua} name={call.mediaType === "video" ? "videocam-outline" : "call-outline"} /></View><Text style={styles.body}>{new Date(call.startsAt).toLocaleString()}</Text>{call.note ? <Text style={styles.caption}>{call.note}</Text> : null}{call.status === "scheduled" ? <LabButton disabled={state.busy} label="Cancel call" onPress={() => void state.cancelScheduledCall(call).then(() => cancelScheduledCallReminder(call.id)).catch(() => undefined)} variant="secondary" /> : <Text style={styles.caption}>{call.status}</Text>}</View>)}
   </View>;
 }
 
@@ -280,6 +283,11 @@ const styles = StyleSheet.create({
   loading: { alignItems: "center", gap: spacing.md, padding: spacing.xl },
   rowBetween: { alignItems: "center", flexDirection: "row", gap: spacing.md, justifyContent: "space-between" },
   inlineActions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  reminderRow: { alignItems: "center", flexDirection: "row", gap: spacing.sm, minHeight: 52 },
+  reminderCheckbox: { alignItems: "center", borderColor: colors.border, borderRadius: 5, borderWidth: 2, height: 24, justifyContent: "center", width: 24 },
+  reminderCheckboxChecked: { backgroundColor: colors.brand, borderColor: colors.brand },
+  reminderCheck: { color: colors.onBrand, fontSize: 16, fontWeight: "800" },
+  reminderCopy: { flex: 1, gap: 2 },
   urgent: { ...typography.caption, color: colors.dangerText, fontWeight: "900" },
   conchCard: { backgroundColor: "#DDF6F0", borderColor: "#76CCBE", borderRadius: 28, borderWidth: 1, gap: spacing.md, padding: spacing.xl },
   summaryCard: { backgroundColor: "#FFFDF8", borderColor: colors.warningBorder, borderRadius: 20, borderWidth: 1, gap: spacing.md, padding: spacing.md },

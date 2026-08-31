@@ -35,6 +35,9 @@ WebView or a legacy-island bridge.
 - Parents can optionally schedule a private 9 AM on-device reminder for a
   future parenting task. It is removed when that task is completed or deleted,
   needs notification permission, and never claims to notify the other parent.
+- A scheduled audio or video call can also have an optional private reminder
+  fifteen minutes before it starts; cancelling the call removes that device
+  reminder. This does not replace a real incoming-call notification.
 - Incoming call push target selection and Expo delivery attempt after call
   creation. Locked-screen delivery remains a physical-device verification item.
 - Receipts now have their own private object path and authorization model:
@@ -89,7 +92,7 @@ APPS/peacepad-v2-platform/scripts/validate-supabase-edge-function.ps1
 git diff --check
 ```
 
-The current full Native suite is 67 passing suites and 480 passing tests with
+The current full Native suite is 67 passing suites and 481 passing tests with
 one intentionally skipped test. A direct Deno check reaches four pre-existing
 generated Supabase typing errors in incoming-call push code; it reports no new
 parenting-schedule error. The missing root `scripts/audit-secrets.cjs` command

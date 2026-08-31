@@ -69,7 +69,7 @@ type ParentCoreStateValue = Readonly<{
   requestSettlement: (expense: FamilyExpense) => Promise<void>;
   resolveSettlement: (settlement: ExpenseSettlement, resolution: "confirmed" | "disputed" | "cancelled") => Promise<void>;
   searchSupport: (query: string, kind?: SupportResource["kind"]) => Promise<void>;
-  scheduleCall: (startsAt: string, mediaType: "audio" | "video", note?: string) => Promise<void>;
+  scheduleCall: (startsAt: string, mediaType: "audio" | "video", note?: string) => Promise<ScheduledCall | undefined>;
   cancelScheduledCall: (call: ScheduledCall) => Promise<void>;
   createConch: (mediaType: "audio" | "video") => Promise<void>;
   acceptConch: () => Promise<void>;
@@ -162,11 +162,11 @@ export function ParentCoreStateProvider({
     return () => clearInterval(timer);
   }, [conchSession?.id, conchSession?.status, conchSession?.turnDurationSeconds, conchSession?.turnStartedAt]);
 
-  const run = useCallback(async (operation: () => Promise<void>) => {
+  const run = useCallback(async <T,>(operation: () => Promise<T>): Promise<T> => {
     setBusy(true);
     setError(undefined);
     try {
-      await operation();
+      return await operation();
     } catch (cause) {
       setError(messageFor(cause));
       throw cause;
@@ -290,6 +290,7 @@ export function ParentCoreStateProvider({
         note: note?.trim() || null
       }, context(activeRuntime));
       setScheduledCalls((current) => [call, ...current]);
+      return call;
     }),
     cancelScheduledCall: (call) => run(async () => {
       const updated = await resolvedApi.cancelScheduledCall(call.id, context(activeRuntime, call.version));
