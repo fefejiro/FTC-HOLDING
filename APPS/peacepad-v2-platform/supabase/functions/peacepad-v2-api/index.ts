@@ -410,14 +410,21 @@ async function dispatchIncomingCallPush(
   const callerIdentityId = typeof value.callerIdentityId === "string" ? value.callerIdentityId : "";
   const mediaType = value.type === "video" ? "video" : "audio";
   if (!isUuid(callId) || !isUuid(callerIdentityId)) return;
-  const { data, error } = await admin.rpc("peacepad_v2_call_push_targets", {
+  // The generated client has no project schema at Edge-build time, so its
+  // unparameterized rpc() overload incorrectly narrows arguments to undefined.
+  // Keep the boundary explicit without weakening the rest of the admin client.
+  const pushTargetRpc = admin.rpc as unknown as (
+    name: string,
+    args: Record<string, string>,
+  ) => Promise<{ data: unknown; error: unknown }>;
+  const { data, error } = await pushTargetRpc("peacepad_v2_call_push_targets", {
     p_caller_identity_id: callerIdentityId,
     p_region: config.region,
     p_call_id: callId,
     p_token_secret: config.pushTokenSecret,
   });
   if (error || !Array.isArray(data) || !data.length) return;
-  const messages = data.flatMap((target: Record<string, unknown>) => {
+  const messages = (data as Record<string, unknown>[]).flatMap((target) => {
     const token = typeof target.token === "string" ? target.token : "";
     if (!/^(?:ExponentPushToken|ExpoPushToken)\[[A-Za-z0-9_-]{20,200}\]$/.test(token)) return [];
     return [{

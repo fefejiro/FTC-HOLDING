@@ -108,11 +108,17 @@ APPS/peacepad-v2-platform/scripts/validate-supabase-edge-function.ps1
 git diff --check
 ```
 
-The current full Native suite is 69 passing suites and 488 passing tests with
-one intentionally skipped test. A direct Deno check reaches four pre-existing
-generated Supabase typing errors in incoming-call push code; it reports no new
-parenting-schedule error. The missing root `scripts/audit-secrets.cjs` command
-is a repository-script gap; the Native scoped secret scan passed.
+The current full Native suite is 70 passing suites and 489 passing tests with
+one intentionally skipped test. The added interaction test exercises the solo
+child/update, shared-expense settlement, location support, scheduled-call, and
+Conch invitation paths through the rendered Native UI. Measured coverage is
+75.31% statements, 70.51% branches, 70.86% functions, and 79.97% lines. CI
+therefore keeps a 75% statement/line floor and a 70% branch/function floor as
+an explicit ratchet rather than pretending unexecuted UI callbacks are proven.
+Incoming-call push RPC typing is now bounded at the schema-less Supabase build
+edge instead of weakening the whole admin client. The missing root
+`scripts/audit-secrets.cjs` command is a repository-script gap; the Native
+scoped secret scan passed.
 
 The receipt contract has focused tests for intent, byte upload, completion,
 expense association, and signed-download retrieval in the synthetic adapter.
