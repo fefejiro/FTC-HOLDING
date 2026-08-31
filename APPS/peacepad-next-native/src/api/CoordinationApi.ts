@@ -152,6 +152,11 @@ export type CreateSettlementInput = Readonly<{
   currency: ExpenseSettlement["currency"];
 }>;
 
+export type ResolveSettlementInput = Readonly<{
+  resolution: "confirmed" | "disputed" | "cancelled";
+  resolutionNote?: string | null;
+}>;
+
 export type SupportSearchInput = Readonly<{
   query: string;
   country: "CA" | "US";
@@ -404,7 +409,7 @@ export interface PeacePadCoordinationApi {
   updateExpense(expense: FamilyExpense, context: WriteContext): Promise<FamilyExpense>;
   listSettlements(familyCircleId: EntityId): Promise<readonly ExpenseSettlement[]>;
   requestSettlement(input: CreateSettlementInput, context: WriteContext): Promise<ExpenseSettlement>;
-  resolveSettlement(settlementId: EntityId, resolution: "confirmed" | "disputed" | "cancelled", context: WriteContext): Promise<ExpenseSettlement>;
+  resolveSettlement(settlementId: EntityId, input: ResolveSettlementInput, context: WriteContext): Promise<ExpenseSettlement>;
   getFamilyBalance(familyCircleId: EntityId): Promise<FamilyBalance>;
   searchSupport(input: SupportSearchInput): Promise<readonly SupportResource[]>;
   listScheduledCalls(familyCircleId: EntityId): Promise<readonly ScheduledCall[]>;
@@ -659,8 +664,8 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
     return this.write<ExpenseSettlement>("/api/v2/settlements", "POST", input, context);
   }
 
-  resolveSettlement(settlementId: EntityId, resolution: "confirmed" | "disputed" | "cancelled", context: WriteContext) {
-    return this.write<ExpenseSettlement>(`/api/v2/settlements/${encodeURIComponent(settlementId)}`, "PATCH", { resolution }, context);
+  resolveSettlement(settlementId: EntityId, input: ResolveSettlementInput, context: WriteContext) {
+    return this.write<ExpenseSettlement>(`/api/v2/settlements/${encodeURIComponent(settlementId)}`, "PATCH", input, context);
   }
 
   getFamilyBalance(familyCircleId: EntityId) {

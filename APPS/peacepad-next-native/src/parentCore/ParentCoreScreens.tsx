@@ -23,6 +23,8 @@ const sections: readonly Readonly<{ id: Section; label: string; icon: PeacePadIc
   { id: "conch", label: "Conch", icon: "people-circle-outline", color: "#24766E" }
 ];
 
+const expenseCategories: readonly FamilyExpense["category"][] = ["education", "health", "childcare", "activity", "clothing", "food", "travel", "other"];
+
 export function ParentCoreHubScreen() {
   const state = useParentCoreState();
   const [section, setSection] = useState<Section>("children");
@@ -110,7 +112,6 @@ function ExpensesPanel() {
   const [receiptName, setReceiptName] = useState("");
   const amountMinor = parseExpenseAmount(amount);
   const displayedExpenses = useMemo(() => filterExpenses(state.expenses, filter), [filter, state.expenses]);
-  const categories: readonly FamilyExpense["category"][] = ["education", "health", "childcare", "activity", "clothing", "food", "travel", "other"];
   const chooseReceipt = async () => {
     const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false, type: ["image/jpeg", "image/png", "application/pdf"] });
     if (result.canceled) return;
@@ -136,7 +137,7 @@ function ExpensesPanel() {
       <TextInput accessibilityLabel="Amount in Canadian dollars" inputMode="decimal" onChangeText={setAmount} placeholder="0.00 CAD" style={styles.input} value={amount} />
       <TextInput accessibilityLabel="Expense details" maxLength={500} multiline onChangeText={setDescription} placeholder="Optional context: what this covered and why" style={[styles.input, styles.multiline]} value={description} />
       <Text style={styles.cardTitle}>Category</Text>
-      <View style={styles.chips}>{categories.map((item) => <Pressable accessibilityRole="radio" accessibilityState={{ checked: category === item }} key={item} onPress={() => setCategory(item)} style={[styles.chip, category === item ? styles.chipActive : null]}><Text style={[styles.chipText, category === item ? styles.chipTextActive : null]}>{item[0].toUpperCase() + item.slice(1)}</Text></Pressable>)}</View>
+      <View style={styles.chips}>{expenseCategories.map((item) => <Pressable accessibilityRole="radio" accessibilityState={{ checked: category === item }} key={item} onPress={() => setCategory(item)} style={[styles.chip, category === item ? styles.chipActive : null]}><Text style={[styles.chipText, category === item ? styles.chipTextActive : null]}>{item[0].toUpperCase() + item.slice(1)}</Text></Pressable>)}</View>
       {state.children.length ? <><Text style={styles.cardTitle}>For which child? <Text style={styles.caption}>(optional)</Text></Text><View style={styles.chips}>{state.children.map((child) => { const selected = selectedChildIds.includes(child.id); return <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: selected }} key={child.id} onPress={() => setSelectedChildIds((current) => selected ? current.filter((id) => id !== child.id) : [...current, child.id])} style={[styles.chip, selected ? styles.chipActive : null]}><Text style={[styles.chipText, selected ? styles.chipTextActive : null]}>{child.displayName}</Text></Pressable>; })}</View></> : null}
       <Text style={styles.cardTitle}>How should it be shared?</Text>
       <View style={styles.chips}>{([
@@ -157,15 +158,32 @@ function ExpensesPanel() {
 
 function ExpenseCard({ expense }: { expense: FamilyExpense }) {
   const state = useParentCoreState();
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(expense.title);
+  const [editDescription, setEditDescription] = useState(expense.description ?? "");
+  const [editCategory, setEditCategory] = useState<FamilyExpense["category"]>(expense.category);
+  const [disputing, setDisputing] = useState(false);
+  const [disputeReason, setDisputeReason] = useState("");
   const existingSettlement = state.settlements.find((item) => item.expenseId === expense.id && item.status === "pending");
+  const settlementHistory = state.settlements.filter((item) => item.expenseId === expense.id && item.status !== "pending");
+  const canEdit = expense.createdByIdentityId === state.actorIdentityId && expense.status === "open";
   return <View style={styles.listCard}>
     <View style={styles.rowBetween}><Text style={styles.cardTitle}>{expense.title}</Text><Text style={styles.money}>{formatMoney(expense.amountMinor)}</Text></View>
     {expense.description ? <Text style={styles.body}>{expense.description}</Text> : null}
     <Text style={styles.caption}>{expense.splits.length === 1 ? "Private record" : `Other parent's share: ${formatMoney(state.otherParentIdentityId ? settlementShareMinor(expense, state.otherParentIdentityId) : 0)}`}</Text>
+    {editing ? <View style={styles.formCard}>
+      <Text style={styles.cardTitle}>Edit expense details</Text>
+      <TextInput accessibilityLabel="Edit expense title" maxLength={120} onChangeText={setEditTitle} style={styles.input} value={editTitle} />
+      <TextInput accessibilityLabel="Edit expense description" maxLength={500} multiline onChangeText={setEditDescription} placeholder="Optional context" style={[styles.input, styles.multiline]} value={editDescription} />
+      <View style={styles.chips}>{expenseCategories.map((item) => <Pressable accessibilityRole="radio" accessibilityState={{ checked: editCategory === item }} key={item} onPress={() => setEditCategory(item)} style={[styles.chip, editCategory === item ? styles.chipActive : null]}><Text style={[styles.chipText, editCategory === item ? styles.chipTextActive : null]}>{item[0].toUpperCase() + item.slice(1)}</Text></Pressable>)}</View>
+      <View style={styles.inlineActions}><LabButton disabled={state.busy || editTitle.trim().length < 2} label="Save changes" onPress={() => void state.updateExpense(expense, { title: editTitle, description: editDescription, category: editCategory }).then(() => setEditing(false)).catch(() => undefined)} /><LabButton disabled={state.busy} label="Cancel" onPress={() => { setEditTitle(expense.title); setEditDescription(expense.description ?? ""); setEditCategory(expense.category); setEditing(false); }} variant="secondary" /></View>
+    </View> : canEdit ? <LabButton disabled={state.busy} label="Edit expense details" onPress={() => setEditing(true)} variant="secondary" /> : null}
     <Text style={styles.caption}>{expense.category} · {new Date(expense.incurredAt).toLocaleDateString()} · {expense.status}</Text>
     {expense.receiptAttachmentId ? <LabButton disabled={state.busy} label="Open attached receipt" onPress={() => void state.openExpenseReceipt(expense.receiptAttachmentId!).then((url) => Linking.openURL(url)).catch(() => undefined)} variant="secondary" /> : null}
     {!existingSettlement && expense.status === "open" ? <LabButton disabled={state.busy || !state.otherParentIdentityId} label={state.otherParentIdentityId ? "Request settlement" : "Connect a parent to settle"} onPress={() => void state.requestSettlement(expense).catch(() => undefined)} variant="secondary" /> : null}
-    {existingSettlement && existingSettlement.requestedFromIdentityId === state.balance?.identityId ? <View style={styles.inlineActions}><LabButton disabled={state.busy} label="Confirm" onPress={() => void state.resolveSettlement(existingSettlement, "confirmed").catch(() => undefined)} /><LabButton disabled={state.busy} label="Dispute" onPress={() => void state.resolveSettlement(existingSettlement, "disputed").catch(() => undefined)} variant="secondary" /></View> : null}
+    {existingSettlement && existingSettlement.requestedFromIdentityId === state.actorIdentityId ? <View style={styles.formCard}><Text style={styles.cardTitle}>Settlement request</Text><Text style={styles.body}>Confirm this amount only if it matches what you agreed.</Text><View style={styles.inlineActions}><LabButton disabled={state.busy} label="Confirm" onPress={() => void state.resolveSettlement(existingSettlement, "confirmed").catch(() => undefined)} /><LabButton disabled={state.busy} label={disputing ? "Close dispute form" : "Dispute with reason"} onPress={() => setDisputing((current) => !current)} variant="secondary" /></View>{disputing ? <><TextInput accessibilityLabel="Settlement dispute reason" maxLength={500} multiline onChangeText={setDisputeReason} placeholder="Briefly explain what needs to be corrected" style={[styles.input, styles.multiline]} value={disputeReason} /><LabButton disabled={state.busy || disputeReason.trim().length < 3} label="Send dispute" onPress={() => void state.resolveSettlement(existingSettlement, "disputed", disputeReason).then(() => { setDisputing(false); setDisputeReason(""); }).catch(() => undefined)} variant="secondary" /></> : null}</View> : null}
+    {existingSettlement && existingSettlement.requestedByIdentityId === state.actorIdentityId ? <LabButton disabled={state.busy} label="Cancel settlement request" onPress={() => void state.resolveSettlement(existingSettlement, "cancelled").catch(() => undefined)} variant="secondary" /> : null}
+    {settlementHistory.length ? <View style={styles.historyCard}><Text style={styles.cardTitle}>Settlement history</Text>{settlementHistory.map((settlement) => <View key={settlement.id} style={styles.historyRow}><View style={styles.rowBetween}><Text style={styles.body}>{settlement.status[0].toUpperCase() + settlement.status.slice(1)}</Text><Text style={styles.caption}>{formatMoney(settlement.amountMinor)}</Text></View>{settlement.resolutionNote ? <Text style={styles.caption}>{settlement.resolutionNote}</Text> : null}<Text style={styles.caption}>{new Date(settlement.resolvedAt ?? settlement.requestedAt).toLocaleString()}</Text></View>)}</View> : null}
   </View>;
 }
 
@@ -313,6 +331,8 @@ const styles = StyleSheet.create({
   urgent: { ...typography.caption, color: colors.dangerText, fontWeight: "900" },
   conchCard: { backgroundColor: "#DDF6F0", borderColor: "#76CCBE", borderRadius: 28, borderWidth: 1, gap: spacing.md, padding: spacing.xl },
   summaryCard: { backgroundColor: "#FFFDF8", borderColor: colors.warningBorder, borderRadius: 20, borderWidth: 1, gap: spacing.md, padding: spacing.md },
+  historyCard: { backgroundColor: colors.cream, borderRadius: 20, gap: spacing.sm, padding: spacing.md },
+  historyRow: { borderBottomColor: colors.border, borderBottomWidth: 1, gap: spacing.xs, paddingBottom: spacing.sm },
   privacyNote: { alignItems: "center", backgroundColor: colors.cream, borderRadius: 20, flexDirection: "row", gap: spacing.md, padding: spacing.md },
   pressed: { opacity: 0.75 }
 });

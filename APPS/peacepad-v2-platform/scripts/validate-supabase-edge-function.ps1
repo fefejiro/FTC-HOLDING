@@ -38,11 +38,12 @@ $audioCallTurnMigrationPath = Join-Path $platformRoot 'supabase/migrations/20260
 $audioCallTurnProofPath = Join-Path $platformRoot 'scripts/verify-audio-call-turn-authorization.sql'
 $audioCallTurnIssuerPath = Join-Path $platformRoot 'supabase/functions/peacepad-v2-api/turn.ts'
 $audioCallTurnTestPath = Join-Path $platformRoot 'supabase/functions/peacepad-v2-api/turn_test.ts'
+$expenseSettlementResolutionMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608300009_v2_expense_settlement_resolution_notes.sql'
 $authCleanupRunnerPath = Join-Path $platformRoot 'scripts/run-auth-cleanup.ps1'
 $deployRunnerPath = Join-Path $platformRoot 'scripts/deploy-supabase-free-staging.ps1'
 $configPath = Join-Path $platformRoot 'supabase/config.toml'
 
-foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $parentingTasksMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $idempotencyReceiptMigrationPath, $privateRecordsMigrationPath, $privateAttachmentsMigrationPath, $devicePushMigrationPath, $devicePushProofPath, $familyExitMigrationPath, $familyExitProofPath, $profileUpdateMigrationPath, $profileUpdateProofPath, $privateTimelineMigrationPath, $audioCallMigrationPath, $audioCallProofPath, $audioCallSignalingMigrationPath, $audioCallSignalingProofPath, $audioCallSignalValidatorPath, $audioCallSignalTestPath, $audioCallTurnMigrationPath, $audioCallTurnProofPath, $audioCallTurnIssuerPath, $audioCallTurnTestPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
+foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $parentingTasksMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $idempotencyReceiptMigrationPath, $privateRecordsMigrationPath, $privateAttachmentsMigrationPath, $devicePushMigrationPath, $devicePushProofPath, $familyExitMigrationPath, $familyExitProofPath, $profileUpdateMigrationPath, $profileUpdateProofPath, $privateTimelineMigrationPath, $audioCallMigrationPath, $audioCallProofPath, $audioCallSignalingMigrationPath, $audioCallSignalingProofPath, $audioCallSignalValidatorPath, $audioCallSignalTestPath, $audioCallTurnMigrationPath, $audioCallTurnProofPath, $audioCallTurnIssuerPath, $audioCallTurnTestPath, $expenseSettlementResolutionMigrationPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
     throw "Required Supabase staging file is missing: $path"
   }
@@ -83,9 +84,19 @@ $audioCallTurnMigration = Get-Content -LiteralPath $audioCallTurnMigrationPath -
 $audioCallTurnProof = Get-Content -LiteralPath $audioCallTurnProofPath -Raw
 $audioCallTurnIssuer = Get-Content -LiteralPath $audioCallTurnIssuerPath -Raw
 $audioCallTurnTest = Get-Content -LiteralPath $audioCallTurnTestPath -Raw
+$expenseSettlementResolutionMigration = Get-Content -LiteralPath $expenseSettlementResolutionMigrationPath -Raw
 $authCleanupRunner = Get-Content -LiteralPath $authCleanupRunnerPath -Raw
 $deployRunner = Get-Content -LiteralPath $deployRunnerPath -Raw
 $config = Get-Content -LiteralPath $configPath -Raw
+
+$migrationNames = @(Get-ChildItem -LiteralPath (Join-Path $platformRoot 'supabase/migrations') -File -Filter '*.sql' | Sort-Object Name | Select-Object -ExpandProperty Name)
+$migrationPrefixes = @($migrationNames | ForEach-Object { ($_ -split '_', 2)[0] })
+if (($migrationPrefixes | Sort-Object -Unique).Count -ne $migrationPrefixes.Count) {
+  throw 'Supabase migration ordering contains a duplicate timestamp prefix.'
+}
+if ($migrationNames[-1] -ne '202608300009_v2_expense_settlement_resolution_notes.sql') {
+  throw 'Expense settlement resolution-note migration must remain the latest ordered migration.'
+}
 
 $requiredFunctionPatterns = @(
   'admin.auth.getUser(token)',
@@ -876,6 +887,33 @@ if (
   $config -notmatch 'verify_jwt\s*=\s*false'
 ) {
   throw 'Function must allow public health checks and enforce protected JWTs in its handler.'
+}
+
+foreach ($pattern in @(
+  'add column if not exists resolution_note text',
+  'expense_settlement_resolution_note_valid',
+  "status = 'disputed'.+char_length\(resolution_note\) between 3 and 500",
+  "'resolutionNote',r\.resolution_note",
+  'create or replace function public\.peacepad_v2_resolve_expense_settlement',
+  "p_resolution not in \('confirmed', 'disputed', 'cancelled'\)",
+  'SETTLEMENT_RESOLUTION_NOTE_INVALID',
+  "'settlement.resolve'",
+  'revoke all on function public\.peacepad_v2_resolve_expense_settlement',
+  'to service_role'
+)) {
+  if ($expenseSettlementResolutionMigration -notmatch $pattern) {
+    throw "Expense settlement resolution-note migration is missing required boundary: $pattern"
+  }
+}
+foreach ($pattern in @(
+  'parentCoreMutation\.operation === "settlement\.resolve"',
+  'resolutionNote\.length >= 3 && resolutionNote\.length <= 500',
+  'peacepad_v2_resolve_expense_settlement',
+  'p_resolution_note: resolutionNote \|\| null'
+)) {
+  if ($function -notmatch $pattern) {
+    throw "Edge Function is missing settlement resolution-note validation: $pattern"
+  }
 }
 
 Write-Output 'SUPABASE_EDGE_BOUNDARY_LOCAL_VERIFIED'

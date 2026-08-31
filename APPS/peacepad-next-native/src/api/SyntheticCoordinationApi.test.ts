@@ -417,7 +417,7 @@ describe("SyntheticCoordinationApi safety behavior", () => {
       currency: "CAD"
     }, context);
     expect(settlement).toMatchObject({ status: "pending", amountMinor: 5000 });
-    await expect(api.resolveSettlement(settlement.id, "confirmed", { ...context, expectedVersion: settlement.version }))
+    await expect(api.resolveSettlement(settlement.id, { resolution: "confirmed" }, { ...context, actor: { ...context.actor, identityId: "identity-coparent" }, expectedVersion: settlement.version }))
       .resolves.toMatchObject({ status: "confirmed", version: 2 });
 
     const scheduled = await api.createScheduledCall({
@@ -489,6 +489,21 @@ describe("SyntheticCoordinationApi safety behavior", () => {
     await expect(api.getConchSummary(conch.id)).resolves.toEqual(summary);
     await api.consentToConchSession(conch.id, false, { ...otherContext, expectedVersion: bothConsent.version });
     await expect(api.getConchSummary(conch.id)).resolves.toBeNull();
+  });
+
+  it("requires and preserves a reason when a settlement is disputed", async () => {
+    const api = new SyntheticCoordinationApi();
+    const expense = await api.createExpense({
+      familyCircleId: "family-current", childProfileIds: [], title: "Activity fee", description: null,
+      category: "activity", amountMinor: 8000, currency: "CAD", incurredAt: "2026-09-01T14:00:00.000Z",
+      splits: [{ identityId: context.actor.identityId, shareType: "percentage", shareValue: 50 }, { identityId: "identity-coparent", shareType: "percentage", shareValue: 50 }],
+      receiptAttachmentId: null
+    }, context);
+    const settlement = await api.requestSettlement({ familyCircleId: "family-current", expenseId: expense.id, requestedFromIdentityId: "identity-coparent", amountMinor: 4000, currency: "CAD" }, context);
+    const respondingContext = { ...context, actor: { ...context.actor, identityId: "identity-coparent" }, expectedVersion: settlement.version };
+    await expect(api.resolveSettlement(settlement.id, { resolution: "disputed" }, respondingContext)).rejects.toMatchObject({ status: 400 });
+    await expect(api.resolveSettlement(settlement.id, { resolution: "disputed", resolutionNote: "Receipt total does not match." }, respondingContext))
+      .resolves.toMatchObject({ status: "disputed", resolutionNote: "Receipt total does not match.", version: 2 });
   });
 
   it("persists one shared parenting plan and versioned change requests", async () => {

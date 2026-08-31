@@ -45,6 +45,12 @@ type ExpenseDraft = Readonly<{
   }>;
 }>;
 
+type ExpenseEditDraft = Readonly<{
+  title: string;
+  description?: string;
+  category: FamilyExpense["category"];
+}>;
+
 type ParentCoreStateValue = Readonly<{
   actorIdentityId: EntityId;
   hydrated: boolean;
@@ -67,9 +73,10 @@ type ParentCoreStateValue = Readonly<{
   createChild: (displayName: string) => Promise<void>;
   createChildUpdate: (childProfileId: EntityId, title: string, body: string, kind?: CreateChildUpdateInput["kind"]) => Promise<void>;
   createExpense: (draft: ExpenseDraft) => Promise<void>;
+  updateExpense: (expense: FamilyExpense, draft: ExpenseEditDraft) => Promise<void>;
   openExpenseReceipt: (receiptAttachmentId: EntityId) => Promise<string>;
   requestSettlement: (expense: FamilyExpense) => Promise<void>;
-  resolveSettlement: (settlement: ExpenseSettlement, resolution: "confirmed" | "disputed" | "cancelled") => Promise<void>;
+  resolveSettlement: (settlement: ExpenseSettlement, resolution: "confirmed" | "disputed" | "cancelled", resolutionNote?: string) => Promise<void>;
   searchSupport: (query: string, kind?: SupportResource["kind"]) => Promise<void>;
   scheduleCall: (startsAt: string, mediaType: "audio" | "video", note?: string) => Promise<ScheduledCall | undefined>;
   cancelScheduledCall: (call: ScheduledCall) => Promise<void>;
@@ -245,6 +252,17 @@ export function ParentCoreStateProvider({
       }, context(activeRuntime));
       setExpenses((current) => [expense, ...current]);
     }),
+    updateExpense: (expense, draft) => run(async () => {
+      if (expense.createdByIdentityId !== activeRuntime.actorIdentityId) throw new Error("Only the parent who recorded this expense can edit it.");
+      if (expense.status !== "open") throw new Error("Resolve or cancel the settlement before editing this expense.");
+      const updated = await resolvedApi.updateExpense({
+        ...expense,
+        title: draft.title.trim(),
+        description: draft.description?.trim() || null,
+        category: draft.category
+      }, context(activeRuntime, expense.version));
+      setExpenses((current) => current.map((item) => item.id === updated.id ? updated : item));
+    }),
     openExpenseReceipt: async (receiptAttachmentId) => {
       const download = await resolvedApi.getExpenseReceiptDownload(receiptAttachmentId);
       return download.downloadUrl;
@@ -263,8 +281,8 @@ export function ParentCoreStateProvider({
       setSettlements((current) => [settlement, ...current]);
       await reload();
     }),
-    resolveSettlement: (settlement, resolution) => run(async () => {
-      const updated = await resolvedApi.resolveSettlement(settlement.id, resolution, context(activeRuntime, settlement.version));
+    resolveSettlement: (settlement, resolution, resolutionNote) => run(async () => {
+      const updated = await resolvedApi.resolveSettlement(settlement.id, { resolution, resolutionNote: resolutionNote?.trim() || null }, context(activeRuntime, settlement.version));
       setSettlements((current) => current.map((item) => item.id === updated.id ? updated : item));
       await reload();
     }),

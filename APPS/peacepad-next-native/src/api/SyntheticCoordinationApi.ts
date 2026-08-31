@@ -1068,20 +1068,28 @@ export class SyntheticCoordinationApi implements PeacePadCoordinationApi {
       requestedByIdentityId: context.actor.identityId,
       status: "pending",
       requestedAt: now,
-      resolvedAt: null
+      resolvedAt: null,
+      resolutionNote: null
     };
     this.settlements = [settlement, ...this.settlements];
     this.expenses = this.expenses.map((item) => item.id === expense.id ? { ...item, status: "settlement-requested", version: item.version + 1 } : item);
     return settlement;
   }
 
-  async resolveSettlement(settlementId: EntityId, resolution: "confirmed" | "disputed" | "cancelled", context: WriteContext): Promise<ExpenseSettlement> {
+  async resolveSettlement(settlementId: EntityId, input: { resolution: "confirmed" | "disputed" | "cancelled"; resolutionNote?: string | null }, context: WriteContext): Promise<ExpenseSettlement> {
     const existing = this.settlements.find((item) => item.id === settlementId);
     if (!existing) throw new PeacePadApiError("Settlement request not found.", "http", 404);
     if (context.expectedVersion !== existing.version) throw new PeacePadApiError("This settlement changed. Review it again.", "http", 409);
-    const updated = { ...existing, status: resolution, resolvedAt: new Date().toISOString(), version: existing.version + 1 };
+    const authorized = input.resolution === "cancelled"
+      ? existing.requestedByIdentityId === context.actor.identityId
+      : existing.requestedFromIdentityId === context.actor.identityId;
+    if (!authorized) throw new PeacePadApiError("Only the expected parent can resolve this request.", "http", 403);
+    const resolutionNote = input.resolutionNote?.trim() || null;
+    if (input.resolution === "disputed" && (!resolutionNote || resolutionNote.length < 3)) throw new PeacePadApiError("Explain briefly why you are disputing this request.", "http", 400);
+    if (resolutionNote && resolutionNote.length > 500) throw new PeacePadApiError("Keep the settlement note under 500 characters.", "http", 400);
+    const updated = { ...existing, status: input.resolution, resolutionNote, resolvedAt: new Date().toISOString(), version: existing.version + 1 };
     this.settlements = this.settlements.map((item) => item.id === settlementId ? updated : item);
-    this.expenses = this.expenses.map((item) => item.id === existing.expenseId ? { ...item, status: resolution === "confirmed" ? "settled" : resolution === "disputed" ? "disputed" : "open", version: item.version + 1 } : item);
+    this.expenses = this.expenses.map((item) => item.id === existing.expenseId ? { ...item, status: input.resolution === "confirmed" ? "settled" : input.resolution === "disputed" ? "disputed" : "open", version: item.version + 1 } : item);
     return updated;
   }
 

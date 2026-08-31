@@ -49,6 +49,7 @@ export type ExpenseSettlement = VersionedEntity & Readonly<{
   status: "pending" | "confirmed" | "disputed" | "cancelled";
   requestedAt: IsoUtcTimestamp;
   resolvedAt: IsoUtcTimestamp | null;
+  resolutionNote: string | null;
 }>;
 
 export type FamilyBalance = Readonly<{

@@ -291,6 +291,7 @@ const rpcFailure = (request: Request, requestId: string, config: RuntimeConfig, 
     "PERSONALITY_TYPE_INVALID",
     "DEVICE_PUSH_INVALID", "DEVICE_PUSH_CONFIGURATION_INVALID", "PARENTING_TASK_INVALID", "PARENTING_TASK_ASSIGNEE_INVALID",
     "PARENTING_SCHEDULE_INVALID",
+    "SETTLEMENT_RESOLUTION_INVALID", "SETTLEMENT_RESOLUTION_NOTE_INVALID",
   ]);
   const safeCode = directCodes[message] ?? (invalidRequestCodes.has(message) ? "INVALID_REQUEST" : "DATABASE_NOT_READY");
   // Provider/SQL details are deliberately neither returned nor logged here.
@@ -1418,6 +1419,45 @@ const handler = async (request: Request): Promise<Response> => {
       || ["conch.respond", "conch.consent", "conch.react", "conch.pass", "conch.end"].includes(parentCoreMutation.operation);
     if (requiresVersion && (!Number.isInteger(expectedVersion) || Number(expectedVersion) < 1)) {
       return failure(request, 400, "INVALID_REQUEST", "A valid expected version is required.", requestId, config);
+    }
+    if (parentCoreMutation.operation === "settlement.resolve") {
+      const resolution = typeof body.resolution === "string" ? body.resolution : "";
+      const resolutionNote = typeof body.resolutionNote === "string" ? body.resolutionNote.trim() : "";
+      const keysValid = Object.keys(body).every((key) => key === "resolution" || key === "resolutionNote");
+      const noteValid = resolution === "disputed"
+        ? resolutionNote.length >= 3 && resolutionNote.length <= 500
+        : (resolution === "confirmed" || resolution === "cancelled") && resolutionNote.length === 0;
+      if (!keysValid || !noteValid) {
+        return failure(
+          request,
+          400,
+          "INVALID_REQUEST",
+          resolution === "disputed"
+            ? "A dispute explanation between 3 and 500 characters is required."
+            : "A valid settlement resolution is required.",
+          requestId,
+          config,
+        );
+      }
+      const payload = { id: parentCoreMutation.id, resolution, resolutionNote: resolutionNote || null };
+      const databaseWriteToken = await databaseIdempotencyToken(
+        config,
+        authenticated.user.id,
+        writeContext.idempotencyKey,
+        "settlement.resolve",
+        { identityId: authenticated.user.id, region: config.region, method: request.method, path, expectedVersion, payload },
+      );
+      const { data, error } = await authenticated.admin.rpc("peacepad_v2_resolve_expense_settlement", {
+        p_identity_id: authenticated.user.id,
+        p_region: config.region,
+        p_settlement_id: parentCoreMutation.id,
+        p_resolution: resolution,
+        p_resolution_note: resolutionNote || null,
+        p_expected_version: expectedVersion,
+        p_idempotency_key: databaseWriteToken,
+        p_schema_version: writeContext.schemaVersion,
+      });
+      return error ? rpcFailure(request, requestId, config, error.message) : json(request, 200, data, requestId, config);
     }
     const payload = { ...body, ...(parentCoreMutation.extra ?? {}), ...(parentCoreMutation.id ? { id: parentCoreMutation.id } : {}) };
     const tokenOperation = parentCoreMutation.operation.replace(/-/g, "_");
