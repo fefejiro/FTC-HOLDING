@@ -24,6 +24,8 @@ alter table peacepad_v2.family_expense
   add constraint family_expense_receipt_attachment_id_fkey
   foreign key (receipt_attachment_id) references peacepad_v2.expense_receipt_attachment(receipt_attachment_id);
 alter table peacepad_v2.expense_receipt_attachment
+  drop constraint if exists expense_receipt_linked_expense_fkey;
+alter table peacepad_v2.expense_receipt_attachment
   add constraint expense_receipt_linked_expense_fkey
   foreign key (linked_expense_id) references peacepad_v2.family_expense(expense_id) on delete set null;
 
