@@ -22,7 +22,10 @@ concurrency:
 jobs:
   build-and-upload:
     name: Build and upload production 2.0.1 (10)
-    runs-on: macos-26-intel
+    # macos-26-intel is no longer provisioned for this repository.  Keep the
+    # production workflow on the same supported runner family as the Native V2
+    # iOS canary, where Xcode/EAS perform the signed local build.
+    runs-on: macos-15
     environment: peacepad-v2-staging-ca
     timeout-minutes: 120
     env:
