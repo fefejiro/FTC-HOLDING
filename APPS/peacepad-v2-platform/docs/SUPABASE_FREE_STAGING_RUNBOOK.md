@@ -114,6 +114,21 @@ or screenshots:
 - `COACH_CONVERSATION_URL`
 - `COACH_CONVERSATION_TOKEN`
 
+Provider behavior:
+
+- `PUSH_TOKEN_SECRET`, `TURN_URLS`, `TURN_SHARED_SECRET`,
+  `COACH_TRANSCRIPTION_URL`, and `COACH_TRANSCRIPTION_TOKEN` are required for a
+  deploy. Push registration, private media relay, and voice transcription must
+  never be represented as working without their real infrastructure.
+- `SUPPORT_DISCOVERY_URL` plus `SUPPORT_DISCOVERY_TOKEN` are an optional
+  enrichment pair. When absent or unavailable, the authenticated API returns
+  PeacePad's first-party CA/US support directory with live official 211, 988,
+  and youth-support links.
+- `COACH_CONVERSATION_URL` plus `COACH_CONVERSATION_TOKEN` are an optional
+  enrichment pair. When absent or unavailable, typed Coach uses the
+  privacy-safe first-party child-focused response and draft flow. Nothing is
+  sent until the parent deliberately shares it.
+
 All four required secret slots exist independently in each protected regional
 environment. Their values are not repository evidence and must not be printed
 or copied into logs. The access token used by a run must be able to see the

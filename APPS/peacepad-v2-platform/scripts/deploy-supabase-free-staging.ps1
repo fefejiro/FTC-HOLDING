@@ -80,7 +80,7 @@ if ($SkipDeploy) {
   return
 }
 
-Invoke-Supabase @(
+$secretArguments = @(
   'secrets', 'set',
   "PEACEPAD_REGION=$Region",
   "PEACEPAD_PROJECT_REF=$ProjectRef",
@@ -90,15 +90,18 @@ Invoke-Supabase @(
   "PEACEPAD_PUSH_TOKEN_SECRET=$pushTokenSecret",
   "PEACEPAD_TURN_URLS=$turnUrls",
   "PEACEPAD_TURN_SHARED_SECRET=$turnSharedSecret",
-  "PEACEPAD_SUPPORT_DISCOVERY_URL=$supportDiscoveryUrl",
-  "PEACEPAD_SUPPORT_DISCOVERY_TOKEN=$supportDiscoveryToken",
   "PEACEPAD_COACH_TRANSCRIPTION_URL=$coachTranscriptionUrl",
-  "PEACEPAD_COACH_TRANSCRIPTION_TOKEN=$coachTranscriptionToken",
-  "PEACEPAD_COACH_CONVERSATION_URL=$coachConversationUrl",
-  "PEACEPAD_COACH_CONVERSATION_TOKEN=$coachConversationToken",
-  '--project-ref', $ProjectRef,
-  '--agent', 'no'
+  "PEACEPAD_COACH_TRANSCRIPTION_TOKEN=$coachTranscriptionToken"
 )
+if (-not [string]::IsNullOrWhiteSpace($supportDiscoveryUrl)) {
+  $secretArguments += "PEACEPAD_SUPPORT_DISCOVERY_URL=$supportDiscoveryUrl", "PEACEPAD_SUPPORT_DISCOVERY_TOKEN=$supportDiscoveryToken"
+}
+if (-not [string]::IsNullOrWhiteSpace($coachConversationUrl)) {
+  $secretArguments += "PEACEPAD_COACH_CONVERSATION_URL=$coachConversationUrl", "PEACEPAD_COACH_CONVERSATION_TOKEN=$coachConversationToken"
+}
+$secretArguments += '--project-ref', $ProjectRef, '--agent', 'no'
+
+Invoke-Supabase $secretArguments
 
 Invoke-Supabase @(
   'functions', 'deploy', 'peacepad-v2-api',
