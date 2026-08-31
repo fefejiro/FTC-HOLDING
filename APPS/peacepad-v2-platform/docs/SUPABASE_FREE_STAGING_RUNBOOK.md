@@ -107,6 +107,8 @@ or screenshots:
 - `PUSH_TOKEN_SECRET`
 - `TURN_URLS`
 - `TURN_SHARED_SECRET`
+- `CLOUDFLARE_TURN_KEY_ID` and `CLOUDFLARE_TURN_API_TOKEN` (preferred
+  alternative to the self-managed TURN URL/shared-secret pair)
 - `SUPPORT_DISCOVERY_URL`
 - `SUPPORT_DISCOVERY_TOKEN`
 - `COACH_TRANSCRIPTION_URL`
@@ -117,8 +119,9 @@ or screenshots:
 
 Provider behavior:
 
-- `PUSH_TOKEN_SECRET`, `TURN_URLS`, and `TURN_SHARED_SECRET` are required for a
-  deploy. Voice transcription additionally requires either the protected
+- `PUSH_TOKEN_SECRET` is required for a deploy. Private media relay requires
+  either the protected Cloudflare TURN key ID/API token pair (preferred) or
+  both `TURN_URLS` and `TURN_SHARED_SECRET`. Voice transcription additionally requires either the protected
   `GEMINI_API_KEY` (preferred) or both `COACH_TRANSCRIPTION_URL` and
   `COACH_TRANSCRIPTION_TOKEN`. Push registration, private media relay, and
   voice transcription must never be represented as working without their real
