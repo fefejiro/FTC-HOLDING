@@ -18,6 +18,7 @@ import type {
   ScheduledCall,
   SupportResource
 } from "../domain/parentCore";
+import { buildExpenseSplits, settlementShareMinor, type ExpenseSplitMode } from "./expensePlanning";
 
 const DEMO_RUNTIME: CoordinationRuntime = {
   actorIdentityId: "11111111-1111-4111-8111-111111111111",
@@ -36,6 +37,7 @@ type ExpenseDraft = Readonly<{
   category: FamilyExpense["category"];
   childProfileIds?: readonly EntityId[];
   description?: string;
+  splitMode?: ExpenseSplitMode;
   receipt?: Readonly<{
     originalFileName: string;
     mediaType: "image/jpeg" | "image/png" | "application/pdf";
@@ -217,12 +219,7 @@ export function ParentCoreStateProvider({
       setUpdates((current) => [update, ...current]);
     }),
     createExpense: (draft) => run(async () => {
-      const participants = otherParentIdentityId
-        ? [
-          { identityId: activeRuntime.actorIdentityId, shareType: "percentage" as const, shareValue: 50 },
-          { identityId: otherParentIdentityId, shareType: "percentage" as const, shareValue: 50 }
-        ]
-        : [{ identityId: activeRuntime.actorIdentityId, shareType: "percentage" as const, shareValue: 100 }];
+      const participants = buildExpenseSplits(activeRuntime.actorIdentityId, otherParentIdentityId, draft.splitMode ?? "equal");
       const receipt = draft.receipt ? await (async () => {
         const intent = await resolvedApi.createAttachmentUploadIntent({
           familyCircleId: activeRuntime.familyCircleId,
@@ -254,10 +251,8 @@ export function ParentCoreStateProvider({
     },
     requestSettlement: (expense) => run(async () => {
       if (!otherParentIdentityId) throw new Error("Connect another parent before requesting a settlement.");
-      const split = expense.splits.find((item) => item.identityId === otherParentIdentityId);
-      const amountMinor = split?.shareType === "fixed"
-        ? split.shareValue
-        : Math.round(expense.amountMinor * ((split?.shareValue ?? 50) / 100));
+      const amountMinor = settlementShareMinor(expense, otherParentIdentityId);
+      if (amountMinor <= 0) throw new Error("This expense does not assign an amount to the other parent.");
       const settlement = await resolvedApi.requestSettlement({
         familyCircleId: activeRuntime.familyCircleId,
         expenseId: expense.id,

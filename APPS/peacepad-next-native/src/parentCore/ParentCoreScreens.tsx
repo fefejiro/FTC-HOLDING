@@ -11,6 +11,7 @@ import { useParentCoreState } from "./ParentCoreState";
 import { useAudioCallState } from "../calls/AudioCallState";
 import { VideoStage } from "../calls/AudioCallScreen";
 import { cancelScheduledCallReminder, scheduleScheduledCallReminder } from "../notifications/TaskReminders";
+import { filterExpenses, parseExpenseAmount, settlementShareMinor, type ExpenseFilter, type ExpenseSplitMode } from "./expensePlanning";
 
 type Section = "children" | "money" | "support" | "calls" | "conch";
 
@@ -100,9 +101,16 @@ function ExpensesPanel() {
   const state = useParentCoreState();
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState<FamilyExpense["category"]>("other");
+  const [splitMode, setSplitMode] = useState<ExpenseSplitMode>("private");
+  const [selectedChildIds, setSelectedChildIds] = useState<readonly string[]>([]);
+  const [filter, setFilter] = useState<ExpenseFilter>("all");
   const [receipt, setReceipt] = useState<Readonly<{ originalFileName: string; mediaType: "image/jpeg" | "image/png" | "application/pdf"; bytes: ArrayBuffer }> | null>(null);
   const [receiptName, setReceiptName] = useState("");
-  const amountMinor = Math.round(Number(amount) * 100);
+  const amountMinor = parseExpenseAmount(amount);
+  const displayedExpenses = useMemo(() => filterExpenses(state.expenses, filter), [filter, state.expenses]);
+  const categories: readonly FamilyExpense["category"][] = ["education", "health", "childcare", "activity", "clothing", "food", "travel", "other"];
   const chooseReceipt = async () => {
     const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false, type: ["image/jpeg", "image/png", "application/pdf"] });
     if (result.canceled) return;
@@ -126,12 +134,24 @@ function ExpensesPanel() {
       <Text style={styles.cardTitle}>Record an expense</Text>
       <TextInput accessibilityLabel="Expense title" maxLength={120} onChangeText={setTitle} placeholder="School supplies, activity fee..." style={styles.input} value={title} />
       <TextInput accessibilityLabel="Amount in Canadian dollars" inputMode="decimal" onChangeText={setAmount} placeholder="0.00 CAD" style={styles.input} value={amount} />
+      <TextInput accessibilityLabel="Expense details" maxLength={500} multiline onChangeText={setDescription} placeholder="Optional context: what this covered and why" style={[styles.input, styles.multiline]} value={description} />
+      <Text style={styles.cardTitle}>Category</Text>
+      <View style={styles.chips}>{categories.map((item) => <Pressable accessibilityRole="radio" accessibilityState={{ checked: category === item }} key={item} onPress={() => setCategory(item)} style={[styles.chip, category === item ? styles.chipActive : null]}><Text style={[styles.chipText, category === item ? styles.chipTextActive : null]}>{item[0].toUpperCase() + item.slice(1)}</Text></Pressable>)}</View>
+      {state.children.length ? <><Text style={styles.cardTitle}>For which child? <Text style={styles.caption}>(optional)</Text></Text><View style={styles.chips}>{state.children.map((child) => { const selected = selectedChildIds.includes(child.id); return <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: selected }} key={child.id} onPress={() => setSelectedChildIds((current) => selected ? current.filter((id) => id !== child.id) : [...current, child.id])} style={[styles.chip, selected ? styles.chipActive : null]}><Text style={[styles.chipText, selected ? styles.chipTextActive : null]}>{child.displayName}</Text></Pressable>; })}</View></> : null}
+      <Text style={styles.cardTitle}>How should it be shared?</Text>
+      <View style={styles.chips}>{([
+        { id: "private", label: "Keep private" },
+        ...(state.otherParentIdentityId ? [{ id: "equal", label: "Split 50/50" }, { id: "other-parent", label: "Other parent covers it" }] as const : [])
+      ] as readonly { id: ExpenseSplitMode; label: string }[]).map((item) => <Pressable accessibilityRole="radio" accessibilityState={{ checked: splitMode === item.id }} key={item.id} onPress={() => setSplitMode(item.id)} style={[styles.chip, splitMode === item.id ? styles.chipActive : null]}><Text style={[styles.chipText, splitMode === item.id ? styles.chipTextActive : null]}>{item.label}</Text></Pressable>)}</View>
+      <Text style={styles.caption}>{splitMode === "private" ? "Saved for your records only; no settlement can be requested." : splitMode === "other-parent" ? "The full amount can be requested from the connected parent." : "Each connected parent is assigned half."}</Text>
       <LabButton disabled={state.busy} label={receipt ? "Replace receipt" : "Attach receipt (optional)"} onPress={() => void chooseReceipt().catch(() => undefined)} variant="secondary" />
       {receiptName ? <Text accessibilityLiveRegion="polite" style={styles.caption}>Receipt ready: {receiptName}</Text> : null}
-      <LabButton disabled={state.busy || title.trim().length < 2 || !Number.isSafeInteger(amountMinor) || amountMinor <= 0} label="Save expense" onPress={() => void state.createExpense({ title, amountMinor, category: "other", receipt: receipt ?? undefined }).then(() => { setTitle(""); setAmount(""); setReceipt(null); setReceiptName(""); }).catch(() => undefined)} />
+      <LabButton disabled={state.busy || title.trim().length < 2 || amountMinor === null} label="Save expense" onPress={() => amountMinor === null ? undefined : void state.createExpense({ title, amountMinor, category, description: description.trim() || undefined, childProfileIds: selectedChildIds, splitMode, receipt: receipt ?? undefined }).then(() => { setTitle(""); setAmount(""); setDescription(""); setCategory("other"); setSplitMode("private"); setSelectedChildIds([]); setReceipt(null); setReceiptName(""); }).catch(() => undefined)} />
     </View>
     {!state.expenses.length ? <WarmEmpty icon="wallet-outline" title="No expenses recorded" body="Private expenses stay yours. When another parent is connected, you can choose to request a settlement." /> : null}
-    {state.expenses.map((expense) => <ExpenseCard expense={expense} key={expense.id} />)}
+    {state.expenses.length ? <View style={styles.chips}>{(["all", "open", "settlement-requested", "settled", "disputed"] as const).map((item) => <Pressable accessibilityRole="radio" accessibilityState={{ checked: filter === item }} key={item} onPress={() => setFilter(item)} style={[styles.chip, filter === item ? styles.chipActive : null]}><Text style={[styles.chipText, filter === item ? styles.chipTextActive : null]}>{item === "all" ? "All" : item.replace("-", " ")}</Text></Pressable>)}</View> : null}
+    {state.expenses.length && !displayedExpenses.length ? <WarmEmpty icon="filter-outline" title="Nothing in this view" body="Choose another status to see your recorded expenses." /> : null}
+    {displayedExpenses.map((expense) => <ExpenseCard expense={expense} key={expense.id} />)}
   </View>;
 }
 
@@ -140,6 +160,8 @@ function ExpenseCard({ expense }: { expense: FamilyExpense }) {
   const existingSettlement = state.settlements.find((item) => item.expenseId === expense.id && item.status === "pending");
   return <View style={styles.listCard}>
     <View style={styles.rowBetween}><Text style={styles.cardTitle}>{expense.title}</Text><Text style={styles.money}>{formatMoney(expense.amountMinor)}</Text></View>
+    {expense.description ? <Text style={styles.body}>{expense.description}</Text> : null}
+    <Text style={styles.caption}>{expense.splits.length === 1 ? "Private record" : `Other parent's share: ${formatMoney(state.otherParentIdentityId ? settlementShareMinor(expense, state.otherParentIdentityId) : 0)}`}</Text>
     <Text style={styles.caption}>{expense.category} · {new Date(expense.incurredAt).toLocaleDateString()} · {expense.status}</Text>
     {expense.receiptAttachmentId ? <LabButton disabled={state.busy} label="Open attached receipt" onPress={() => void state.openExpenseReceipt(expense.receiptAttachmentId!).then((url) => Linking.openURL(url)).catch(() => undefined)} variant="secondary" /> : null}
     {!existingSettlement && expense.status === "open" ? <LabButton disabled={state.busy || !state.otherParentIdentityId} label={state.otherParentIdentityId ? "Request settlement" : "Connect a parent to settle"} onPress={() => void state.requestSettlement(expense).catch(() => undefined)} variant="secondary" /> : null}

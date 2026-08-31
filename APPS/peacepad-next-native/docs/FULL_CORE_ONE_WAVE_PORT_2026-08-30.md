@@ -43,6 +43,11 @@ WebView or a legacy-island bridge.
 - Receipts now have their own private object path and authorization model:
   owner-only before association, authorized family participants only after the
   receipt is attached to the shared expense. JPG, PNG, and PDF only.
+- The parent-facing expense flow now uses the existing reviewed V2 contract
+  for strict two-decimal currency entry, category and optional child context,
+  private records, equal splits, full repayment by the connected parent,
+  receipt attachment, visible settlement shares, and status filtering. A
+  private expense cannot accidentally produce a settlement request.
 - Parenting-time patterns are now canonical family data instead of a local
   preview: one versioned shared plan persists the rotation, anchor date,
   parents, calendar layer and timezone. Authorized parents can propose and
@@ -92,7 +97,7 @@ APPS/peacepad-v2-platform/scripts/validate-supabase-edge-function.ps1
 git diff --check
 ```
 
-The current full Native suite is 67 passing suites and 481 passing tests with
+The current full Native suite is 68 passing suites and 484 passing tests with
 one intentionally skipped test. A direct Deno check reaches four pre-existing
 generated Supabase typing errors in incoming-call push code; it reports no new
 parenting-schedule error. The missing root `scripts/audit-secrets.cjs` command
@@ -107,7 +112,9 @@ These are local code checks, not provider/deployment proof.
 1. Apply and verify all reviewed V2 migrations in the intended non-production
    environment; there is no local PostgreSQL/Deno provider proof in this
    checkout.
-2. Finish the remaining legacy-core UI/data parity work in this same checkout.
+2. Finish the remaining legacy-core UI/data work in this same checkout,
+   especially expense editing/dispute reasons and history, then complete the
+   cross-platform family-first visual/accessibility sweep.
 3. Run the full automated suite after the complete feature wave, then create
    Android APK/AAB and iOS candidate artifacts from one exact commit.
 4. Execute the two-account, two-device matrix on Pixel and iPhone, including
