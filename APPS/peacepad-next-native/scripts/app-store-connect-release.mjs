@@ -78,10 +78,16 @@ if (mode === "prepare") {
     method: "PATCH",
     body: JSON.stringify({ data: { type: "builds", id: build.id } }),
   });
-  await request(`builds/${build.id}`, {
-    method: "PATCH",
-    body: JSON.stringify({ data: { type: "builds", id: build.id, attributes: { usesNonExemptEncryption: false } } }),
-  });
+  if (build.attributes?.usesNonExemptEncryption !== false) {
+    try {
+      await request(`builds/${build.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ data: { type: "builds", id: build.id, attributes: { usesNonExemptEncryption: false } } }),
+      });
+    } catch (error) {
+      if (error.status !== 409 || !error.message.includes("already set")) throw error;
+    }
+  }
   const detail = await request(`appStoreVersions/${version.id}?include=appStoreVersionLocalizations`);
   const localizations = (detail.included ?? []).filter((item) => item.type === "appStoreVersionLocalizations");
   for (const localization of localizations) {
