@@ -14,6 +14,7 @@
       "infoPlist": {
         "NSMicrophoneUsageDescription": "PeacePad uses the microphone only when you choose a private audio or video call, voice note, or Coach voice conversation.",
         "NSCameraUsageDescription": "PeacePad uses the camera only when you choose a private video call or take a photo for a message or record.",
+        "NSLocationWhenInUseUsageDescription": "PeacePad uses your location only when you choose to find nearby counselling, legal, safety, or family support.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -43,6 +44,12 @@
       ],
       "expo-secure-store",
       "expo-notifications",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "PeacePad uses your location only when you choose to find nearby counselling, legal, safety, or family support."
+        }
+      ],
       "expo-dev-client",
       "./plugins/withPeacePadAudioWebRTC"
     ],

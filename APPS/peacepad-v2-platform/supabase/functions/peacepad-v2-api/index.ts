@@ -88,7 +88,7 @@ const PERSONALITY_TYPES = new Set([
 type SupportResource = Readonly<{
   providerId: string;
   name: string;
-  kind: "crisis" | "counselling" | "parenting" | "family-service";
+  kind: "crisis" | "counselling" | "parenting" | "family-service" | "legal";
   description: string;
   phone: string | null;
   website: string;
@@ -1332,7 +1332,16 @@ const handler = async (request: Request): Promise<Response> => {
     const location = query.get("query")?.trim() ?? "";
     const country = query.get("country")?.trim() ?? "";
     const kind = query.get("kind")?.trim() || undefined;
-    if (location.length < 2 || location.length > 120 || !["CA", "US"].includes(country)) {
+    const latitudeValue = query.get("latitude");
+    const longitudeValue = query.get("longitude");
+    const radiusValue = query.get("radiusKm");
+    const latitude = latitudeValue === null ? undefined : Number(latitudeValue);
+    const longitude = longitudeValue === null ? undefined : Number(longitudeValue);
+    const radiusKm = radiusValue === null ? undefined : Number(radiusValue);
+    const hasCoordinates = latitude !== undefined || longitude !== undefined;
+    const validCoordinates = !hasCoordinates || (Number.isFinite(latitude) && Number.isFinite(longitude) && latitude! >= -90 && latitude! <= 90 && longitude! >= -180 && longitude! <= 180);
+    const validRadius = radiusKm === undefined || (Number.isFinite(radiusKm) && [5, 10, 25, 50, 100].includes(radiusKm));
+    if (location.length < 2 || location.length > 120 || !["CA", "US"].includes(country) || !validCoordinates || !validRadius) {
       return failure(request, 400, "INVALID_REQUEST", "Enter a valid city or postal code.", requestId, config);
     }
     const firstPartyResources = firstPartySupportResources(location, country, kind);
@@ -1345,7 +1354,7 @@ const handler = async (request: Request): Promise<Response> => {
           "content-type": "application/json",
           ...(config.supportDiscoveryToken ? { authorization: `Bearer ${config.supportDiscoveryToken}` } : {}),
         },
-        body: JSON.stringify({ query: location, category: kind, location: { city: location }, limit: 12 }),
+        body: JSON.stringify({ query: location, category: kind, location: { city: location, ...(hasCoordinates ? { latitude, longitude } : {}) }, ...(radiusKm !== undefined ? { radiusKm } : {}), limit: 12 }),
       });
     } catch {
       return json(request, 200, firstPartyResources, requestId, config);
@@ -1372,7 +1381,7 @@ const handler = async (request: Request): Promise<Response> => {
         locality: location,
         subdivision: country === "CA" ? config.region.toUpperCase() : "",
         country,
-        distanceKm: null,
+        distanceKm: typeof candidate.distanceKm === "number" && Number.isFinite(candidate.distanceKm) ? candidate.distanceKm : null,
         verifiedAt: null,
         emergency: resourceKind === "crisis",
       };

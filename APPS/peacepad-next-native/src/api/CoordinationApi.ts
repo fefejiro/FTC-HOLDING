@@ -163,6 +163,7 @@ export type SupportSearchInput = Readonly<{
   kind?: SupportResource["kind"];
   latitude?: number;
   longitude?: number;
+  radiusKm?: number;
 }>;
 
 export type CreateScheduledCallInput = Readonly<{
@@ -677,6 +678,7 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
     if (input.kind) query.set("kind", input.kind);
     if (input.latitude !== undefined) query.set("latitude", String(input.latitude));
     if (input.longitude !== undefined) query.set("longitude", String(input.longitude));
+    if (input.radiusKm !== undefined) query.set("radiusKm", String(input.radiusKm));
     return this.request<readonly SupportResource[]>(`/api/v2/support/search?${query.toString()}`);
   }
 

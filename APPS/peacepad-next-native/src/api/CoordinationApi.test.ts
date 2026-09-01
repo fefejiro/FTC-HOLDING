@@ -29,6 +29,24 @@ function response(status: number, payload: unknown): Response {
 }
 
 describe("HttpPeacePadCoordinationApi", () => {
+  it("sends the chosen location and kilometre range to support search", async () => {
+    const fetcher = jest.fn(async () => response(200, []));
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
+
+    await api.searchSupport({
+      query: "Durham counselling",
+      country: "CA",
+      kind: "counselling",
+      latitude: 43.8975,
+      longitude: -78.9429,
+      radiusKm: 25,
+    });
+
+    expect((fetcher.mock.calls as unknown as readonly (readonly [string])[])[0]?.[0]).toBe(
+      `${config.apiBaseUrl}/api/v2/support/search?query=Durham+counselling&country=CA&kind=counselling&latitude=43.8975&longitude=-78.9429&radiusKm=25`,
+    );
+  });
+
   it("rejects an empty bootstrap display name before making a request", async () => {
     const fetcher = jest.fn(async () => response(201, {}));
     const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);

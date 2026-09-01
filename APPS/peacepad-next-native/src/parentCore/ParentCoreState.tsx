@@ -77,7 +77,7 @@ type ParentCoreStateValue = Readonly<{
   openExpenseReceipt: (receiptAttachmentId: EntityId) => Promise<string>;
   requestSettlement: (expense: FamilyExpense) => Promise<void>;
   resolveSettlement: (settlement: ExpenseSettlement, resolution: "confirmed" | "disputed" | "cancelled", resolutionNote?: string) => Promise<void>;
-  searchSupport: (query: string, kind?: SupportResource["kind"]) => Promise<void>;
+  searchSupport: (query: string, kind?: SupportResource["kind"], location?: Readonly<{ latitude: number; longitude: number; radiusKm: number }>) => Promise<void>;
   scheduleCall: (startsAt: string, mediaType: "audio" | "video", note?: string) => Promise<ScheduledCall | undefined>;
   cancelScheduledCall: (call: ScheduledCall) => Promise<void>;
   createConch: (mediaType: "audio" | "video") => Promise<void>;
@@ -286,9 +286,9 @@ export function ParentCoreStateProvider({
       setSettlements((current) => current.map((item) => item.id === updated.id ? updated : item));
       await reload();
     }),
-    searchSupport: (query, kind) => run(async () => {
+    searchSupport: (query, kind, location) => run(async () => {
       setSupportQuery(query);
-      const resources = await resolvedApi.searchSupport({ query, country: activeRuntime.region === "ca" ? "CA" : "US", kind });
+      const resources = await resolvedApi.searchSupport({ query, country: activeRuntime.region === "ca" ? "CA" : "US", kind, ...location });
       setSupportResources(resources);
     }),
     scheduleCall: (startsAt, mediaType, note) => run(async () => {

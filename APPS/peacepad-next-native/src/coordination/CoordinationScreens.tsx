@@ -34,7 +34,7 @@ import { CoachConversation } from "../coach/CoachConversation";
 import { ConversationVoiceNote } from "../messages/ConversationVoiceNote";
 import type { AccountExportManifest } from "../api/CoordinationApi";
 
-export type CoordinationScreen = "home" | "coach" | "messages" | "calendar" | "activities" | "tasks" | "invite" | "records" | "calls" | "family" | "conch" | "more";
+export type CoordinationScreen = "home" | "coach" | "messages" | "calendar" | "activities" | "tasks" | "invite" | "records" | "calls" | "family" | "support" | "conch" | "more";
 type Navigate = (screen: CoordinationScreen) => void;
 
 const layerColors: Record<string, string> = {
@@ -290,6 +290,14 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
       <Pressable accessibilityRole="button" accessibilityLabel={task.title} onPress={() => setScreen("tasks")} style={({ pressed }) => [styles.taskCard, pressed ? styles.pressed : null]}>
         <View style={styles.cardHeadingRow}><PeacePadIcon name="checkmark-circle-outline" size={23} color={colors.warning} /><Text style={styles.taskTitle}>{task.title}</Text></View>
         <Text style={styles.caption}>{task.body}</Text>
+      </Pressable>
+
+      <Pressable accessibilityHint="Find counselling, safety, legal and family support near you." accessibilityRole="button" accessibilityLabel="Find support near me" onPress={() => setScreen("support")} style={({ pressed }) => [styles.activityCard, { backgroundColor: "#F3E7F1", borderColor: "#CBB1D7" }, pressed ? styles.pressed : null]}>
+        <View style={[styles.activityDot, { backgroundColor: "#E5D1EC" }]}><PeacePadIcon name="heart-outline" size={23} color={colors.brand} /></View>
+        <View style={styles.activityCopy}>
+          <Text style={styles.activityTitle}>Find support near me</Text>
+          <Text style={styles.caption}>Counselling, safety help, legal guidance and someone to talk to.</Text>
+        </View>
       </Pressable>
 
       <Pressable accessibilityHint="Opens a private place to speak or type and prepare calm, child-focused wording." accessibilityRole="button" accessibilityLabel="Open PeaceBot Coach" onPress={() => setScreen("coach")} style={({ pressed }) => [styles.activityCard, { backgroundColor: colors.cream, borderColor: colors.warningBorder }, pressed ? styles.pressed : null]}>
@@ -1223,9 +1231,13 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
         <View style={styles.cardHeadingRow}><PeacePadIcon name="people-outline" size={23} color={colors.successText} /><Text style={styles.actionTitle}>{t("more.family.title")}</Text></View>
         <Text style={styles.caption}>{t("more.family.body")}</Text>
       </Pressable>
-      <Pressable accessibilityHint="Manage child updates, expenses, local support, scheduled calls and Conch." accessibilityLabel="Family tools" accessibilityRole="button" onPress={() => setScreen("family")} style={[styles.actionCard, styles.morePrivacyCard]}>
+      <Pressable accessibilityHint="Manage child updates, expenses, scheduled calls and Conch." accessibilityLabel="Family tools" accessibilityRole="button" onPress={() => setScreen("family")} style={[styles.actionCard, styles.morePrivacyCard]}>
         <View style={styles.cardHeadingRow}><PeacePadIcon name="heart-circle-outline" size={23} color={colors.aqua} /><Text style={styles.actionTitle}>Family tools</Text></View>
-        <Text style={styles.caption}>Manage child updates, expenses, local support, scheduled calls and Conch.</Text>
+        <Text style={styles.caption}>Manage child updates, expenses, scheduled calls and Conch.</Text>
+      </Pressable>
+      <Pressable accessibilityHint="Find counselling, safety, legal and family services near you." accessibilityLabel="Find real-world support" accessibilityRole="button" onPress={() => setScreen("support")} style={[styles.actionCard, styles.moreSupportCard]}>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="heart-outline" size={23} color={colors.coral} /><Text style={styles.actionTitle}>Find real-world support</Text></View>
+        <Text style={styles.caption}>Nearby counselling, abuse support, legal help and someone to talk to.</Text>
       </Pressable>
       <Pressable accessibilityHint="Open a consent-based conversation where each parent gets a calm turn to speak." accessibilityLabel="Open Conch mode" accessibilityRole="button" onPress={() => setScreen("conch")} style={[styles.actionCard, styles.moreSupportCard]}>
         <View style={styles.cardHeadingRow}><PeacePadIcon name="people-circle-outline" size={23} color={colors.aqua} /><Text style={styles.actionTitle}>Conch mode</Text></View>
