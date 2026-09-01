@@ -180,16 +180,23 @@ jobs:
           test -f APPS/peacepad-v2-platform/scripts/verify-managed-two-account.mjs
           test "$(git status --short)" = ""
 
-      - name: Obtain short-lived masked Auth administration credential
+      - name: Run fictional two-account production journey
         shell: bash
         env:
           PROJECT_REF: rohvkyuxbnqzglaromms
+          PEACEPAD_PROJECT_REF: rohvkyuxbnqzglaromms
+          PEACEPAD_PRODUCTION_CONTRACT_AUTHORIZATION: I_CONFIRM_FICTIONAL_PRODUCTION_CONTRACT_AND_CLEANUP
+          PEACEPAD_REGION: ca
+          PEACEPAD_TARGET: production
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY }}
         run: |
           set -euo pipefail
           test -n "$SUPABASE_ACCESS_TOKEN"
           key_file="$RUNNER_TEMP/peacepad-production-api-keys.json"
           credential_file="$RUNNER_TEMP/peacepad-production-service-role-key"
+          evidence_dir="$RUNNER_TEMP/peacepad-production-contract-evidence"
+          mkdir -p "$evidence_dir"
           trap 'rm -f "$key_file" "$credential_file"' EXIT
           curl --fail --silent --show-error --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 90 \
             --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
@@ -201,21 +208,6 @@ jobs:
           echo "::add-mask::$service_role_key"
           printf '%s' "$service_role_key" > "$credential_file"
           chmod 600 "$credential_file"
-
-      - name: Run fictional two-account production journey
-        shell: bash
-        env:
-          PEACEPAD_PROJECT_REF: rohvkyuxbnqzglaromms
-          PEACEPAD_PRODUCTION_CONTRACT_AUTHORIZATION: I_CONFIRM_FICTIONAL_PRODUCTION_CONTRACT_AND_CLEANUP
-          PEACEPAD_REGION: ca
-          PEACEPAD_TARGET: production
-          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY }}
-        run: |
-          set -euo pipefail
-          credential_file="$RUNNER_TEMP/peacepad-production-service-role-key"
-          evidence_dir="$RUNNER_TEMP/peacepad-production-contract-evidence"
-          mkdir -p "$evidence_dir"
-          trap 'rm -f "$credential_file"' EXIT
           export SUPABASE_SERVICE_ROLE_KEY="$(cat "$credential_file")"
           echo "::add-mask::$SUPABASE_SERVICE_ROLE_KEY"
           node APPS/peacepad-v2-platform/scripts/verify-managed-two-account.mjs > "$evidence_dir/contract.json"
