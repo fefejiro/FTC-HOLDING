@@ -3,6 +3,16 @@ name: PeacePad V2 iOS Production Build and Upload
 on:
   workflow_dispatch:
     inputs:
+      operation:
+        description: Build/upload, read App Store status, prepare build 12, or submit 2.0.2
+        required: true
+        default: build-upload
+        type: choice
+        options:
+          - build-upload
+          - asc-status
+          - asc-prepare
+          - asc-submit
       source_sha:
         description: Exact reviewed Native V2 source SHA
         required: true
@@ -21,6 +31,7 @@ concurrency:
 
 jobs:
   build-and-upload:
+    if: inputs.operation == 'build-upload'
     name: Build and upload production 2.0.2 (12)
     # Apple requires Xcode 26 / the iOS 26 SDK for uploads from April 28, 2026.
     # The standard macos-26 arm64 image is available to this repository; do not
@@ -222,3 +233,35 @@ jobs:
           if-no-files-found: error
           retention-days: 1
           path: ${{ runner.temp }}/peacepad-v2-production-2.0.2-12.ipa
+
+  app-store-release:
+    if: inputs.operation != 'build-upload'
+    name: PeacePad 2.0.2 App Store operation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Require exact App Store authorization
+        env:
+          OPERATION: ${{ inputs.operation }}
+          AUTHORIZATION: ${{ inputs.authorization }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$OPERATION:$AUTHORIZATION" in
+            asc-status:STATUS|asc-prepare:I_CONFIRM_IOS_2_0_2_PREPARE|asc-submit:I_CONFIRM_IOS_2_0_2_SUBMIT) ;;
+            *) exit 1 ;;
+          esac
+
+      - name: Checkout release control
+        uses: actions/checkout@v4
+
+      - name: Run scoped App Store operation
+        env:
+          ASC_API_KEY_ID: ${{ secrets.JCI_APPLE_API_KEY_ID }}
+          ASC_API_ISSUER_ID: ${{ secrets.JCI_APPLE_API_ISSUER_ID }}
+          ASC_API_PRIVATE_KEY: ${{ secrets.JCI_APPLE_API_PRIVATE_KEY }}
+          OPERATION: ${{ inputs.operation }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node APPS/peacepad-next-native/scripts/app-store-connect-release.mjs "${OPERATION#asc-}"
