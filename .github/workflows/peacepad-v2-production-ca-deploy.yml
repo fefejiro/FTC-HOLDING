@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       confirmation:
-        description: Type PROMOTE PEACEPAD CA TO PRODUCTION
+        description: Exact promotion or fictional production-contract confirmation
         required: true
         type: string
 
@@ -21,6 +21,7 @@ concurrency:
 
 jobs:
   promote-production:
+    if: inputs.confirmation == 'PROMOTE PEACEPAD CA TO PRODUCTION'
     name: Promote the proven Canada data plane to production
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -150,3 +151,98 @@ jobs:
           if-no-files-found: error
           retention-days: 30
           path: ${{ runner.temp }}/peacepad-production-evidence/manifest.json
+
+  production-contract-e2e:
+    if: inputs.confirmation == 'I_CONFIRM_FICTIONAL_PRODUCTION_CONTRACT_AND_CLEANUP'
+    name: Verify fictional two-account production contract and cleanup
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: peacepad-v2-staging-ca
+    steps:
+      - name: Checkout exact reviewed source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_commit_sha }}
+          fetch-depth: 1
+
+      - name: Bind exact production contract
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+          TARGET_SHA: ${{ inputs.target_commit_sha }}
+          SELECTED_REF: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          test "$SELECTED_REF" = "peacepad-native-main"
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$CONFIRMATION" = "I_CONFIRM_FICTIONAL_PRODUCTION_CONTRACT_AND_CLEANUP"
+          test -f APPS/peacepad-v2-platform/scripts/verify-managed-two-account.mjs
+          test "$(git status --short)" = ""
+
+      - name: Obtain short-lived masked Auth administration credential
+        shell: bash
+        env:
+          PROJECT_REF: rohvkyuxbnqzglaromms
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          key_file="$RUNNER_TEMP/peacepad-production-api-keys.json"
+          credential_file="$RUNNER_TEMP/peacepad-production-service-role-key"
+          trap 'rm -f "$key_file" "$credential_file"' EXIT
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 90 \
+            --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PROJECT_REF/api-keys" \
+            --output "$key_file"
+          chmod 600 "$key_file"
+          service_role_key="$(jq -er '[.[] | select(.name == "service_role") | (.api_key // .key)] | if length == 1 then .[0] else error("service role key unavailable") end' "$key_file")"
+          [[ "$service_role_key" == *.*.* || "$service_role_key" == sb_secret_* ]]
+          echo "::add-mask::$service_role_key"
+          printf '%s' "$service_role_key" > "$credential_file"
+          chmod 600 "$credential_file"
+
+      - name: Run fictional two-account production journey
+        shell: bash
+        env:
+          PEACEPAD_PROJECT_REF: rohvkyuxbnqzglaromms
+          PEACEPAD_PRODUCTION_CONTRACT_AUTHORIZATION: I_CONFIRM_FICTIONAL_PRODUCTION_CONTRACT_AND_CLEANUP
+          PEACEPAD_REGION: ca
+          PEACEPAD_TARGET: production
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          set -euo pipefail
+          credential_file="$RUNNER_TEMP/peacepad-production-service-role-key"
+          evidence_dir="$RUNNER_TEMP/peacepad-production-contract-evidence"
+          mkdir -p "$evidence_dir"
+          trap 'rm -f "$credential_file"' EXIT
+          export SUPABASE_SERVICE_ROLE_KEY="$(cat "$credential_file")"
+          echo "::add-mask::$SUPABASE_SERVICE_ROLE_KEY"
+          node APPS/peacepad-v2-platform/scripts/verify-managed-two-account.mjs > "$evidence_dir/contract.json"
+          jq -e '
+            .classification == "fictional-only" and .target == "production" and
+            .projectRef == "rohvkyuxbnqzglaromms" and .region == "ca" and
+            .auth == true and .identityBootstrap == true and .wrongRegionDenied == true and
+            .idempotentReplay == true and .changedReplayDenied == true and
+            .invitationAccepted == true and .messageDelivered == true and
+            .messageCheck == true and .sharedCalendar == true and .privateRecords == true and
+            .callLifecycle == true and .postEndSignalDenied == true and
+            .accountDeletion == true and .oldTokensDenied == true
+          ' "$evidence_dir/contract.json" >/dev/null
+          jq '{
+            result: "FICTIONAL_PRODUCTION_TWO_ACCOUNT_CONTRACT_AND_CLEANUP_VERIFIED",
+            target, projectRef, region, auth, identityBootstrap, wrongRegionDenied,
+            idempotentReplay, changedReplayDenied, invitationAccepted, messageDelivered,
+            messageCheck, sharedCalendar, privateRecords, callLifecycle, postEndSignalDenied,
+            accountDeletion, oldTokensDenied, productionContacted: true,
+            fictionalAccountsRetained: false, credentialsRetained: false
+          }' "$evidence_dir/contract.json" > "$evidence_dir/manifest.json"
+          rm -f "$evidence_dir/contract.json"
+
+      - name: Upload non-secret production contract evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: peacepad-v2-production-contract-${{ inputs.target_commit_sha }}
+          path: ${{ runner.temp }}/peacepad-production-contract-evidence/manifest.json
+          if-no-files-found: error
+          retention-days: 30
