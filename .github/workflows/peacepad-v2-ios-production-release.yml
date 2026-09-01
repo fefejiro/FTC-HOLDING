@@ -22,10 +22,10 @@ concurrency:
 jobs:
   build-and-upload:
     name: Build and upload production 2.0.2 (11)
-    # macos-26-intel is no longer provisioned for this repository.  Keep the
-    # production workflow on the same supported runner family as the Native V2
-    # iOS canary, where Xcode/EAS perform the signed local build.
-    runs-on: macos-15
+    # Apple requires Xcode 26 / the iOS 26 SDK for uploads from April 28, 2026.
+    # The standard macos-26 arm64 image is available to this repository; do not
+    # use the unprovisioned macos-26-intel larger-runner label.
+    runs-on: macos-26
     environment: peacepad-v2-staging-ca
     timeout-minutes: 120
     env:
@@ -69,7 +69,11 @@ jobs:
 
       - name: Record Xcode toolchain
         shell: bash
-        run: xcodebuild -version | tee "$RUNNER_TEMP/peacepad-v2-xcode-version.txt"
+        run: |
+          set -euo pipefail
+          xcodebuild -version | tee "$RUNNER_TEMP/peacepad-v2-xcode-version.txt"
+          xcode_major="$(xcodebuild -version | awk '/^Xcode / { split($2, version, "."); print version[1] }')"
+          test "$xcode_major" -ge 26
 
       - name: Create exact app-only release workspace
         shell: bash
