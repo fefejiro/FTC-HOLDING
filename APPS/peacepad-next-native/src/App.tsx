@@ -147,7 +147,8 @@ function SelectedPeacePadStagingApp({ staging }: { staging: PeacePadSupabaseConf
 }
 
 function CoordinationRoute({ activeScreen, activityTitle, invitationCode }: { activeScreen: AppScreen; activityTitle?: string; invitationCode?: string }) {
-  const { connected } = useCoordinationState();
+  const { connected, invitationGrant } = useCoordinationState();
+  const hasCoParent = Boolean(invitationGrant);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const scrollRef = useRef<ScrollView>(null);
   const pendingScrollReset = useRef(false);
@@ -178,9 +179,9 @@ function CoordinationRoute({ activeScreen, activityTitle, invitationCode }: { ac
           {activeScreen === "tasks" ? <ParentingTasksScreen /> : null}
           {activeScreen === "invite" ? <InvitationScreen initialCode={invitationCode} /> : null}
           {activeScreen === "records" ? <RecordsHomeScreen setScreen={setScreen} /> : null}
-          {activeScreen === "calls" ? connected ? <AudioCallScreen /> : <ConnectionRequiredScreen setScreen={setScreen} /> : null}
+          {activeScreen === "calls" ? hasCoParent ? <AudioCallScreen /> : <ConnectionRequiredScreen setScreen={setScreen} /> : null}
           {activeScreen === "family" ? <ParentCoreHubScreen /> : null}
-          {activeScreen === "conch" ? connected ? <ParentCoreHubScreen initialSection="conch" /> : <ConnectionRequiredScreen setScreen={setScreen} /> : null}
+          {activeScreen === "conch" ? hasCoParent ? <ParentCoreHubScreen initialSection="conch" /> : <ConnectionRequiredScreen setScreen={setScreen} /> : null}
           {activeScreen === "more" ? <MoreScreen setScreen={setScreen} /> : null}
         </ScrollView>
         {activeScreen !== "foundation" ? <TaskNavigation active={primary} available={connected ? undefined : ["home", "calendar", "records", "more"]} onSelect={setScreen} /> : null}

@@ -64,6 +64,12 @@ describe("PeacePad coordination shell", () => {
     }
   });
 
+  it("shows calls and Conch before connection with an honest invite path", () => {
+    renderApp();
+    fireEvent.press(screen.getByRole("button", { name: "Invite a co-parent to unlock calls and Conch" }));
+    expect(screen.getByText("Family connection")).toBeOnTheScreen();
+  });
+
   it("keeps PeaceBot Coach reachable before a co-parent connects", () => {
     renderApp();
     fireEvent.press(screen.getByRole("button", { name: "Open PeaceBot Coach" }));

@@ -198,7 +198,8 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
   const { locale } = useOptionalLocalization();
   const h = (key: Parameters<typeof homeText>[1]) => homeText(locale, key);
   const task = taskCopy(locale);
-  const { connected, events, invitationGrant } = useCoordinationState();
+  const { events, invitationGrant } = useCoordinationState();
+  const hasCoParent = Boolean(invitationGrant);
   const accountActions = useOptionalStagingAccountActions();
   const firstName = accountActions?.displayName?.trim().split(/\s+/)[0];
   const nextEvent = [...events].sort((left, right) => left.startsAt.localeCompare(right.startsAt))[0];
@@ -232,6 +233,25 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
       <View style={styles.datePill}>
         <Text style={styles.datePillText}>{formatLocalizedDate(locale, new Date(), { weekday: "long", month: "long", day: "numeric" })}</Text>
       </View>
+
+      {hasCoParent ? <View accessibilityLabel="Shared connection tools" style={styles.sharedTools}>
+        <Pressable accessibilityHint="Start or answer a private audio or video call with your connected co-parent." accessibilityLabel="Open audio and video calls" accessibilityRole="button" onPress={() => setScreen("calls")} style={({ pressed }) => [styles.sharedToolCard, styles.callToolCard, pressed ? styles.pressed : null]}>
+          <PeacePadIcon color={colors.brand} name="videocam-outline" size={24} />
+          <Text style={styles.sharedToolTitle}>Audio & video calls</Text>
+          <Text style={styles.caption}>Talk when it helps.</Text>
+        </Pressable>
+        <Pressable accessibilityHint="Open a consent-based, turn-taking audio or video conversation." accessibilityLabel="Open Conch mode" accessibilityRole="button" onPress={() => setScreen("conch")} style={({ pressed }) => [styles.sharedToolCard, styles.conchToolCard, pressed ? styles.pressed : null]}>
+          <PeacePadIcon color={colors.successText} name="people-circle-outline" size={24} />
+          <Text style={styles.sharedToolTitle}>Conch mode</Text>
+          <Text style={styles.caption}>One calm turn each.</Text>
+        </Pressable>
+      </View> : <Pressable accessibilityHint="Invite a co-parent to unlock shared messages, audio and video calls, and Conch mode." accessibilityLabel="Invite a co-parent to unlock calls and Conch" accessibilityRole="button" onPress={() => setScreen("invite")} style={({ pressed }) => [styles.connectionToolCard, pressed ? styles.pressed : null]}>
+        <View style={[styles.activityDot, { backgroundColor: "#BEEAE2" }]}><PeacePadIcon color={colors.successText} name="people-circle-outline" size={24} /></View>
+        <View style={styles.activityCopy}>
+          <Text style={styles.activityTitle}>Calls & Conch are ready when you are</Text>
+          <Text style={styles.caption}>Invite a co-parent to unlock shared audio, video and calm turn-taking conversations.</Text>
+        </View>
+      </Pressable>}
 
       <View style={styles.todayLine}>
         <Text accessibilityRole="header" style={styles.heading}>{h("today")}</Text>
@@ -288,7 +308,7 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
         </View>
       </Pressable>
 
-      {connected ? <Pressable accessibilityRole="button" accessibilityLabel="Open Conch mode" onPress={() => setScreen("conch")} style={({ pressed }) => [styles.activityCard, { backgroundColor: "#DDF6F0", borderColor: "#76CCBE" }, pressed ? styles.pressed : null]}>
+      {hasCoParent ? <Pressable accessibilityRole="button" accessibilityLabel="Open Conch mode" onPress={() => setScreen("conch")} style={({ pressed }) => [styles.activityCard, { backgroundColor: "#DDF6F0", borderColor: "#76CCBE" }, pressed ? styles.pressed : null]}>
         <View style={[styles.activityDot, { backgroundColor: "#BEEAE2" }]}><PeacePadIcon name="people-circle-outline" size={23} color={colors.successText} /></View>
         <View style={styles.activityCopy}>
           <Text style={styles.activityTitle}>Conch mode</Text>
@@ -309,7 +329,7 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
         <View style={styles.messageCtaIcon}><PeacePadIcon name="chatbubble-ellipses-outline" size={27} color={colors.onBrand} /></View>
       </Pressable>
 
-      {connected ? <Pressable accessibilityLabel={callText(locale, "title")} accessibilityRole="button" onPress={() => setScreen("calls")} style={({ pressed }) => [styles.callCard, pressed ? styles.pressed : null]}>
+      {hasCoParent ? <Pressable accessibilityLabel={callText(locale, "title")} accessibilityRole="button" onPress={() => setScreen("calls")} style={({ pressed }) => [styles.callCard, pressed ? styles.pressed : null]}>
         <View style={styles.cardHeadingRow}><PeacePadIcon name="call-outline" size={23} color={colors.brand} /><Text style={styles.callTitle}>{callText(locale, "title")}</Text></View>
         <Text style={styles.caption}>{callText(locale, "body")}</Text>
       </Pressable> : null}
@@ -1378,6 +1398,12 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.72 },
   datePill: { alignSelf: "flex-start", backgroundColor: colors.cream, borderColor: colors.border, borderRadius: 999, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   datePillText: { ...typography.body, color: colors.text, fontWeight: "700" },
+  sharedTools: { flexDirection: "row", gap: spacing.sm },
+  sharedToolCard: { borderRadius: 20, borderWidth: 1, flex: 1, gap: spacing.xs, minHeight: 132, padding: spacing.md },
+  callToolCard: { backgroundColor: "#F1E9FF", borderColor: "#D6B9F8" },
+  conchToolCard: { backgroundColor: "#DDF6F0", borderColor: "#76CCBE" },
+  sharedToolTitle: { ...typography.body, color: colors.text, fontWeight: "900" },
+  connectionToolCard: { alignItems: "center", backgroundColor: "#DDF6F0", borderColor: "#76CCBE", borderRadius: 20, borderWidth: 1, flexDirection: "row", gap: spacing.md, padding: spacing.md },
   todayLine: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
   connectionStatus: { ...typography.caption, color: colors.muted, fontWeight: "700" },
   planCard: { backgroundColor: "#FFFDF8", borderColor: "#F2C8B5", borderRadius: 22, borderWidth: 1, flexDirection: "row", gap: spacing.md, minHeight: 116, overflow: "hidden", paddingRight: spacing.md, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 1 },
