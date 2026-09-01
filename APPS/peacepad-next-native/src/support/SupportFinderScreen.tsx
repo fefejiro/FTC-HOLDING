@@ -1,9 +1,8 @@
 import React, { useMemo, useState } from "react";
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import * as Location from "expo-location";
 import { LabButton } from "../components/LabButton";
 import { PeacePadIcon, type PeacePadIconName } from "../components/PeacePadIcon";
-import { ScreenHeader } from "../components/ScreenHeader";
 import type { SupportResourceKind } from "../domain/parentCore";
 import { useParentCoreState } from "../parentCore/ParentCoreState";
 import { colors, spacing, typography } from "../theme";
@@ -70,14 +69,30 @@ export function SupportFinderScreen() {
   };
 
   return <View style={styles.stack}>
-    <ScreenHeader
-      accent={colors.brand}
-      icon="heart-outline"
-      kicker="REAL-WORLD HELP"
-      softBackground="#F3E7F1"
-      subtitle="A private, simple way to find people and services near you."
-      title="What kind of help do you need?"
-    />
+    <View style={styles.brandRow}>
+      <View style={styles.logoFrame}>
+        <Image
+          accessibilityLabel="PeacePad logo"
+          resizeMode="contain"
+          source={require("../../assets/icon-production.png")}
+          style={styles.logo}
+        />
+      </View>
+      <View style={styles.brandCopy}>
+        <Text style={styles.brandName}>PeacePad</Text>
+        <Text style={styles.brandNote}>Private support, on your terms</Text>
+      </View>
+      <View style={styles.heartMark}><PeacePadIcon color={colors.coral} name="heart-outline" size={24} /></View>
+    </View>
+
+    <View style={styles.hero}>
+      <View style={styles.heroCopy}>
+        <Text style={styles.kicker}>REAL-WORLD HELP</Text>
+        <Text accessibilityRole="header" style={styles.title}>What kind of help do you need?</Text>
+        <Text style={styles.subtitle}>Find trusted people and services near you. Your search stays private.</Text>
+      </View>
+      <View style={styles.heroIcon}><PeacePadIcon color={colors.brand} name="heart-outline" size={29} /></View>
+    </View>
 
     <View accessibilityRole="radiogroup" style={styles.needList}>
       {needs.map((item) => {
@@ -89,7 +104,7 @@ export function SupportFinderScreen() {
           onPress={() => { setNeed(item); setSearched(false); }}
           style={({ pressed }) => [styles.needCard, selected ? styles.needCardSelected : null, pressed ? styles.pressed : null]}
         >
-          <View style={[styles.iconTile, selected ? styles.iconTileSelected : null]}><PeacePadIcon color={selected ? colors.onBrand : colors.brand} name={item.icon} size={23} /></View>
+          <View style={[styles.iconTile, selected ? styles.iconTileSelected : null]}><PeacePadIcon color={selected ? colors.onBrand : colors.brand} name={item.icon} size={21} /></View>
           <Text style={[styles.needLabel, selected ? styles.needLabelSelected : null]}>{item.label}</Text>
           <PeacePadIcon color={selected ? colors.onBrand : colors.muted} name={selected ? "checkmark-circle" : "chevron-forward"} size={22} />
         </Pressable>;
@@ -144,11 +159,24 @@ export function SupportFinderScreen() {
 }
 
 const styles = StyleSheet.create({
-  stack: { gap: spacing.lg },
+  stack: { gap: spacing.md },
+  brandRow: { alignItems: "center", flexDirection: "row", gap: spacing.sm, paddingHorizontal: spacing.xs },
+  logoFrame: { alignItems: "center", backgroundColor: colors.brand, borderRadius: 15, height: 46, justifyContent: "center", overflow: "hidden", width: 46 },
+  logo: { height: 46, width: 46 },
+  brandCopy: { flex: 1 },
+  brandName: { color: colors.text, fontSize: 21, fontWeight: "900", letterSpacing: -0.3 },
+  brandNote: { ...typography.caption, color: colors.muted },
+  heartMark: { alignItems: "center", backgroundColor: colors.subtleSurface, borderRadius: 999, height: 40, justifyContent: "center", width: 40 },
+  hero: { alignItems: "flex-start", backgroundColor: colors.cream, borderColor: "#F4D6C7", borderRadius: 24, borderWidth: 1, flexDirection: "row", gap: spacing.md, overflow: "hidden", padding: spacing.lg },
+  heroCopy: { flex: 1, gap: spacing.xs },
+  heroIcon: { alignItems: "center", backgroundColor: colors.surface, borderRadius: 18, height: 54, justifyContent: "center", width: 54 },
+  kicker: { ...typography.caption, color: colors.coral, fontWeight: "900", letterSpacing: 1.1 },
+  title: { ...typography.heading, color: colors.text, fontSize: 27, lineHeight: 33 },
+  subtitle: { ...typography.body, color: colors.muted },
   needList: { gap: spacing.sm },
-  needCard: { alignItems: "center", backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 20, borderWidth: 1, flexDirection: "row", gap: spacing.md, minHeight: 64, padding: spacing.md },
+  needCard: { alignItems: "center", backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 18, borderWidth: 1, flexDirection: "row", gap: spacing.md, minHeight: 58, paddingHorizontal: spacing.md, paddingVertical: 9 },
   needCardSelected: { backgroundColor: colors.brand, borderColor: colors.brand },
-  iconTile: { alignItems: "center", backgroundColor: colors.brandSoft, borderRadius: 16, height: 44, justifyContent: "center", width: 44 },
+  iconTile: { alignItems: "center", backgroundColor: colors.brandSoft, borderRadius: 14, height: 40, justifyContent: "center", width: 40 },
   iconTileSelected: { backgroundColor: "rgba(255,255,255,0.18)" },
   needLabel: { ...typography.body, color: colors.text, flex: 1, fontWeight: "800" },
   needLabelSelected: { color: colors.onBrand },
