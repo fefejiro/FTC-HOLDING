@@ -4,8 +4,8 @@ const DUAL_SIMULATOR_MODE = "staging-simulator-dual";
 const PLAYSTORE_INTERNAL_MODE = "playstore-internal";
 const PLAYSTORE_PRODUCTION_MODE = "playstore-production";
 const TESTFLIGHT_VERSION = "2.0.2";
-const TESTFLIGHT_BUILD_NUMBER = "11";
-const APPSTORE_PRODUCTION_BUILD_NUMBER = "11";
+const TESTFLIGHT_BUILD_NUMBER = "12";
+const APPSTORE_PRODUCTION_BUILD_NUMBER = "12";
 // Internal candidates use fictional staging. A separately rebuilt production
 // artifact must remain monotonic across every Play track.
 const PLAYSTORE_VERSION_CODE = 51;

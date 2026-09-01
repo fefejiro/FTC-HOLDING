@@ -59,7 +59,7 @@ describe("PeacePad iOS release variant", () => {
         "expo-apple-authentication",
         ["@react-native-google-signin/google-signin", { iosUrlScheme: "com.googleusercontent.apps.123456789-ios" }]
       ]),
-      ios: { buildNumber: "11", bundleIdentifier: "ca.peacepad.family" },
+      ios: { buildNumber: "12", bundleIdentifier: "ca.peacepad.family" },
       extra: {
         appStoreId: "6793350735",
         productionApiWritesEnabled: false,
@@ -100,7 +100,7 @@ describe("PeacePad iOS release variant", () => {
       version: "2.0.2",
       scheme: "peacepad",
       plugins: expect.arrayContaining(["expo-apple-authentication"]),
-        ios: { buildNumber: "11", bundleIdentifier: "ca.peacepad.family", usesAppleSignIn: true },
+        ios: { buildNumber: "12", bundleIdentifier: "ca.peacepad.family", usesAppleSignIn: true },
       extra: {
         appStoreId: "6793350735",
         environment: "production",
