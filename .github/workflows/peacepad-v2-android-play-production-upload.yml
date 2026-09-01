@@ -24,7 +24,7 @@ on:
         required: false
         type: string
       release_authorization:
-        description: Enter I_CONFIRM_CANADA_PRODUCTION_AAB_UPLOAD to upload only to Play Internal Testing
+        description: Enter I_CONFIRM_CANADA_PRODUCTION_AAB_UPLOAD to release the reviewed AAB to Play production
         required: true
         type: string
 
@@ -37,7 +37,7 @@ concurrency:
 
 jobs:
   upload-production-aab:
-    name: Upload reviewed production AAB to Google Play Internal Testing
+    name: Release reviewed production AAB to Google Play production
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -159,14 +159,14 @@ jobs:
           EOF
           keytool -printcert -jarfile "$RUNNER_TEMP/peacepad-v2-production-release.aab" > "$RUNNER_TEMP/peacepad-v2-production-release-certificate.txt"
 
-      - name: Upload only to Google Play Internal Testing
+      - name: Upload to Google Play production
         id: upload
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PEACEPAD_PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: ca.peacepad.family
           releaseFiles: ${{ runner.temp }}/peacepad-v2-production-release.aab
-          track: internal
+          track: production
           status: completed
 
       - name: Write non-secret production upload evidence
@@ -184,7 +184,7 @@ jobs:
           package=ca.peacepad.family
           version=2.0.2
           version_code=51
-          track=internal
+          track=production
           production_writes_enabled=true
           upload_outcome=$UPLOAD_OUTCOME
           EOF
