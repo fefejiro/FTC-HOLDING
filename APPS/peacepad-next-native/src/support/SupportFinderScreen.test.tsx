@@ -31,10 +31,10 @@ describe("SupportFinderScreen", () => {
     fireEvent.press(screen.getByRole("button", { name: "Use my current location" }));
     await waitFor(() => expect(screen.getByDisplayValue("Durham, Ontario")).toBeOnTheScreen());
     fireEvent.press(screen.getByRole("radio", { name: "10 kilometres" }));
-    expect(screen.getByRole("button", { name: "Find help within 10 km" })).toBeEnabled();
-    fireEvent.press(screen.getByRole("button", { name: "Find help within 10 km" }));
+    expect(screen.getByRole("button", { name: "Find official help near me" })).toBeEnabled();
+    fireEvent.press(screen.getByRole("button", { name: "Find official help near me" }));
     expect(await screen.findByText("No nearby match yet")).toBeOnTheScreen();
-    expect(screen.getByText("Support searches stay private from your family space. If you are in immediate danger, contact local emergency services.")).toBeOnTheScreen();
+    expect(screen.getByText("Support searches stay private from your family space. If you are in immediate danger in Canada, call 911.")).toBeOnTheScreen();
   });
 
   it("allows manual location entry without asking for GPS", async () => {
@@ -42,6 +42,6 @@ describe("SupportFinderScreen", () => {
     await screen.findByRole("header", { name: "What kind of help do you need?" });
     fireEvent.press(screen.getByRole("radio", { name: "Counselling" }));
     fireEvent.changeText(screen.getByLabelText("City or postal code"), "Whitby");
-    expect(screen.getByRole("button", { name: "Find help within 25 km" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Find official help near me" })).toBeEnabled();
   });
 });

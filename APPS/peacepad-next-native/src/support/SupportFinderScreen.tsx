@@ -113,7 +113,7 @@ export function SupportFinderScreen() {
 
     {need ? <View style={styles.stepCard}>
       <Text accessibilityRole="header" style={styles.heading}>Where should we search?</Text>
-      <Text style={styles.body}>Your location is used only for this search. It is not shared with your co-parent.</Text>
+      <Text style={styles.body}>Your location is used only for this search. It is not shared with your co-parent. Canada-wide services may appear without a distance.</Text>
       <LabButton disabled={locating} label={locating ? "Finding your location..." : "Use my current location"} onPress={() => void useCurrentLocation()} variant="secondary" />
       {locating ? <ActivityIndicator color={colors.brand} /> : null}
       <Text style={styles.or}>or</Text>
@@ -138,7 +138,7 @@ export function SupportFinderScreen() {
           style={[styles.radiusChip, radiusKm === radius ? styles.radiusChipSelected : null]}
         ><Text style={[styles.radiusText, radiusKm === radius ? styles.radiusTextSelected : null]}>{radius} km</Text></Pressable>)}
       </View>
-      <LabButton disabled={state.busy || place.trim().length < 2} label={state.busy ? "Searching..." : `Find help within ${radiusKm} km`} onPress={() => void search().catch(() => undefined)} />
+      <LabButton disabled={state.busy || place.trim().length < 2} label={state.busy ? "Searching..." : "Find official help near me"} onPress={() => void search().catch(() => undefined)} />
     </View> : null}
 
     {state.error ? <Text accessibilityRole="alert" style={styles.errorCard}>{state.error}</Text> : null}
@@ -147,14 +147,14 @@ export function SupportFinderScreen() {
     {visibleResources.map((resource) => <View key={resource.providerId} style={styles.resultCard}>
       <View style={styles.resultHeading}><Text style={styles.resultTitle}>{resource.name}</Text>{resource.emergency ? <Text style={styles.urgent}>URGENT HELP</Text> : null}</View>
       <Text style={styles.body}>{resource.description}</Text>
-      <Text style={styles.meta}>{[resource.locality, resource.subdivision, resource.distanceKm === null ? "Online or wider-area service" : `${resource.distanceKm.toFixed(1)} km away`].filter(Boolean).join(" · ")}</Text>
+      <Text style={styles.meta}>{[resource.locality, resource.subdivision, resource.distanceKm === null ? "Canada-wide or directory service" : `${resource.distanceKm.toFixed(1)} km away`].filter(Boolean).join(" · ")}</Text>
       <View style={styles.actions}>
         {resource.phone ? <LabButton label={`Call ${resource.phone}`} onPress={() => void Linking.openURL(`tel:${resource.phone}`)} variant="secondary" /> : null}
         {resource.website ? <LabButton label="View service" onPress={() => void Linking.openURL(resource.website!)} variant="secondary" /> : null}
       </View>
     </View>)}
 
-    <View style={styles.privacyCard}><PeacePadIcon color={colors.successText} name="shield-checkmark-outline" size={24} /><Text style={styles.privacyText}>Support searches stay private from your family space. If you are in immediate danger, contact local emergency services.</Text></View>
+    <View style={styles.privacyCard}><PeacePadIcon color={colors.successText} name="shield-checkmark-outline" size={24} /><Text style={styles.privacyText}>Support searches stay private from your family space. If you are in immediate danger in Canada, call 911.</Text></View>
   </View>;
 }
 

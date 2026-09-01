@@ -119,6 +119,66 @@ const firstPartySupportResources = (location: string, country: string, kind?: st
       emergency: false,
     },
     {
+      providerId: "ca-211-counselling",
+      name: "211 Canada — counselling and someone to talk to",
+      kind: "counselling",
+      description: "A free and confidential navigator for local counselling, mental-health, peer-support, and community services across Canada. Call 211 or choose your province on the official directory.",
+      phone: "211",
+      website: "https://211.ca/211-service-providers/",
+      address: null,
+      locality: location,
+      subdivision: "",
+      country,
+      distanceKm: null,
+      verifiedAt: null,
+      emergency: false,
+    },
+    {
+      providerId: "ca-sheltersafe",
+      name: "ShelterSafe Canada",
+      kind: "crisis",
+      description: "A Canada-wide map of nearby shelters and transition houses for women and children experiencing violence. Use a safer device if someone may monitor this one.",
+      phone: null,
+      website: "https://sheltersafe.ca/",
+      address: null,
+      locality: location,
+      subdivision: "",
+      country,
+      distanceKm: null,
+      verifiedAt: null,
+      emergency: true,
+    },
+    {
+      providerId: "ca-justice-legal-aid",
+      name: "Legal aid in Canada",
+      kind: "legal",
+      description: "Justice Canada’s official directory links to the legal aid plan for every province and territory. Eligibility and available family-law help vary by jurisdiction.",
+      phone: null,
+      website: "https://www.justice.gc.ca/eng/fund-fina/gov-gouv/aid-aide/",
+      address: null,
+      locality: location,
+      subdivision: "",
+      country,
+      distanceKm: null,
+      verifiedAt: null,
+      emergency: false,
+    },
+    {
+      providerId: "ca-family-justice-services",
+      name: "Family Justice Services",
+      kind: "family-service",
+      description: "Search the Government of Canada inventory for mediation, parenting information, court support, enforcement, and other family justice services in your province or territory.",
+      phone: null,
+      website: "https://www.justice.gc.ca/eng/fl-df/fjs-sjf/",
+      address: null,
+      locality: location,
+      subdivision: "",
+      country,
+      distanceKm: null,
+      verifiedAt: null,
+      emergency: false,
+    },
+    {
       providerId: "ca-988",
       name: "9-8-8 Suicide Crisis Helpline",
       kind: "crisis",
@@ -136,7 +196,7 @@ const firstPartySupportResources = (location: string, country: string, kind?: st
     {
       providerId: "ca-kids-help-phone",
       name: "Kids Help Phone",
-      kind: "counselling",
+      kind: "parenting",
       description: "Confidential support and crisis resources for children, youth, and young adults across Canada.",
       phone: "1-800-668-6868",
       website: "https://kidshelpphone.ca/",
@@ -1386,7 +1446,10 @@ const handler = async (request: Request): Promise<Response> => {
         emergency: resourceKind === "crisis",
       };
     });
-    return json(request, 200, resources.length ? resources : firstPartyResources, requestId, config);
+    const mergedResources = [...resources, ...firstPartyResources].filter((resource, index, all) => (
+      all.findIndex((candidate) => candidate.providerId === resource.providerId || candidate.website === resource.website) === index
+    ));
+    return json(request, 200, mergedResources, requestId, config);
   }
 
   if (request.method === "GET" && path === "/api/v2/calls/current") {
