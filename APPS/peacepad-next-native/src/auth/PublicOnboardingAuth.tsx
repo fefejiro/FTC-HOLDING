@@ -47,6 +47,8 @@ const copy = {
     newPassword: "New password", updatePassword: "Save new password",
     legal: "By continuing, you agree to the Terms and acknowledge the Privacy Policy.",
     terms: "Terms", privacy: "Privacy", unavailable: "PeacePad could not complete that request. Try again.",
+    invalidEmail: "Enter a valid email address.", serviceUnavailable: "PeacePad sign-in is temporarily unavailable. Please try again shortly.",
+    invalidCredentials: "That email or password did not match. Check it and try again.", confirmEmailFirst: "Confirm your email before signing in.",
     appleUnavailable: "Sign in with Apple is not available right now.", googleUnavailable: "Sign in with Google is not available right now.", passwordHint: "Use at least 8 characters."
   },
   fr: {
@@ -65,6 +67,8 @@ const copy = {
     newPassword: "Nouveau mot de passe", updatePassword: "Enregistrer le mot de passe",
     legal: "En continuant, vous acceptez les Conditions et reconnaissez la Politique de confidentialité.",
     terms: "Conditions", privacy: "Confidentialité", unavailable: "PeacePad n’a pas pu effectuer cette demande. Réessayez.",
+    invalidEmail: "Entrez une adresse courriel valide.", serviceUnavailable: "La connexion à PeacePad est temporairement indisponible. Réessayez bientôt.",
+    invalidCredentials: "Ce courriel ou mot de passe ne correspond pas. Vérifiez-le et réessayez.", confirmEmailFirst: "Confirmez votre courriel avant de vous connecter.",
     appleUnavailable: "La connexion avec Apple est indisponible pour le moment.", googleUnavailable: "La connexion avec Google est indisponible pour le moment.", passwordHint: "Utilisez au moins 8 caractères."
   },
   es: {
@@ -83,12 +87,35 @@ const copy = {
     newPassword: "Contraseña nueva", updatePassword: "Guardar contraseña nueva",
     legal: "Al continuar, aceptas los Términos y reconoces la Política de privacidad.",
     terms: "Términos", privacy: "Privacidad", unavailable: "PeacePad no pudo completar la solicitud. Inténtalo de nuevo.",
+    invalidEmail: "Ingresa una dirección de correo válida.", serviceUnavailable: "El inicio de sesión de PeacePad no está disponible temporalmente. Inténtalo de nuevo pronto.",
+    invalidCredentials: "El correo o la contraseña no coinciden. Revísalos e inténtalo de nuevo.", confirmEmailFirst: "Confirma tu correo antes de iniciar sesión.",
     appleUnavailable: "Iniciar sesión con Apple no está disponible ahora.", googleUnavailable: "Iniciar sesión con Google no está disponible ahora.", passwordHint: "Usa al menos 8 caracteres."
   }
 } as const;
 
 function localized(locale: SupportedLocale) {
   return copy[locale] ?? copy.en;
+}
+
+type AuthStrings = ReturnType<typeof localized>;
+
+function authFailureMessage(cause: unknown, strings: AuthStrings, provider?: "apple" | "google"): string {
+  const detail = cause && typeof cause === "object"
+    ? `${"code" in cause ? String(cause.code) : ""} ${"message" in cause ? String(cause.message) : ""}`
+    : cause instanceof Error ? cause.message : String(cause ?? "");
+  if (/invalid login credentials/i.test(detail)) return strings.invalidCredentials;
+  if (/email not confirmed/i.test(detail)) return strings.confirmEmailFirst;
+  if (/invalid.*email|email.*invalid/i.test(detail)) return strings.invalidEmail;
+  if (/invalid.*api.?key|unauthorized|jwt|network request failed|fetch failed/i.test(detail)) return strings.serviceUnavailable;
+  if (provider === "apple") return strings.appleUnavailable;
+  if (provider === "google") return strings.googleUnavailable;
+  return strings.unavailable;
+}
+
+function reportAuthFailure(stage: "password" | "apple" | "google" | "reset" | "update-password", cause: unknown) {
+  const status = cause && typeof cause === "object" && "status" in cause ? Number(cause.status) || undefined : undefined;
+  const code = cause && typeof cause === "object" && "code" in cause ? String(cause.code).slice(0, 80) : "unknown";
+  console.warn(`[PeacePadAuth] ${stage} failed`, { code, status });
 }
 
 type AuthEnvironmentNotice = Readonly<{
@@ -143,8 +170,9 @@ export function PublicOnboardingAuth({ environmentNotice }: { environmentNotice?
       } else {
         await auth.signInWithPassword(normalizedEmail, password);
       }
-    } catch {
-      setError(auth.error ?? strings.unavailable);
+    } catch (cause) {
+      reportAuthFailure("password", cause);
+      setError(authFailureMessage(cause, strings));
     } finally { submissionInFlight.current = false; setBusy(false); }
   };
 
@@ -163,7 +191,10 @@ export function PublicOnboardingAuth({ environmentNotice }: { environmentNotice?
         ? [credential.fullName.givenName, credential.fullName.familyName].filter(Boolean).join(" ") || undefined
         : undefined);
     } catch (cause) {
-      if ((cause as { code?: string })?.code !== "ERR_REQUEST_CANCELED") setError(strings.appleUnavailable);
+      if ((cause as { code?: string })?.code !== "ERR_REQUEST_CANCELED") {
+        reportAuthFailure("apple", cause);
+        setError(authFailureMessage(cause, strings, "apple"));
+      }
     } finally { setBusy(false); }
   };
 
@@ -173,8 +204,9 @@ export function PublicOnboardingAuth({ environmentNotice }: { environmentNotice?
     try {
       const identityToken = await requestGoogleIdentityToken();
       if (identityToken) await auth.signInWithGoogle(identityToken);
-    } catch {
-      setError(strings.googleUnavailable);
+    } catch (cause) {
+      reportAuthFailure("google", cause);
+      setError(authFailureMessage(cause, strings, "google"));
     } finally { setBusy(false); }
   };
 
@@ -184,7 +216,7 @@ export function PublicOnboardingAuth({ environmentNotice }: { environmentNotice?
     try {
       await auth.sendPasswordReset(email.trim());
       setMessage(strings.resetSent);
-    } catch { setError(strings.unavailable); }
+    } catch (cause) { reportAuthFailure("reset", cause); setError(authFailureMessage(cause, strings)); }
     finally { setBusy(false); }
   };
 
@@ -193,7 +225,7 @@ export function PublicOnboardingAuth({ environmentNotice }: { environmentNotice?
     setBusy(true); setError(undefined); setMessage(undefined);
     try {
       await auth.updatePassword(newPassword);
-    } catch { setError(strings.unavailable); }
+    } catch (cause) { reportAuthFailure("update-password", cause); setError(authFailureMessage(cause, strings)); }
     finally { setBusy(false); }
   };
 
@@ -235,8 +267,8 @@ export function PublicOnboardingAuth({ environmentNotice }: { environmentNotice?
         /> : null}
         {googleSignInEnabled ? <LabButton disabled={busy} label={strings.google} onPress={() => void signInWithGoogle()} /> : null}
         {appleAvailable || googleSignInEnabled ? <Text style={styles.or}>{strings.or}</Text> : null}
-        <TextInput accessibilityLabel={strings.email} autoCapitalize="none" autoComplete="email" keyboardType="email-address" onChangeText={setEmail} onSubmitEditing={() => passwordInput.current?.focus()} placeholder={strings.email} returnKeyType="next" style={styles.input} textContentType="emailAddress" value={email} />
-        <TextInput accessibilityLabel={strings.password} autoComplete={mode === "create" ? "new-password" : "current-password"} onChangeText={setPassword} onSubmitEditing={() => void submit()} placeholder={strings.password} ref={passwordInput} returnKeyType="done" secureTextEntry style={styles.input} textContentType={mode === "create" ? "newPassword" : "password"} value={password} />
+        <View style={styles.field}><Text style={styles.inputLabel}>{strings.email}</Text><TextInput accessibilityLabel={strings.email} autoCapitalize="none" autoComplete="email" keyboardType="email-address" onChangeText={setEmail} onSubmitEditing={() => passwordInput.current?.focus()} placeholder={strings.email} placeholderTextColor={colors.muted} returnKeyType="next" style={styles.input} textContentType="emailAddress" value={email} /></View>
+        <View style={styles.field}><Text style={styles.inputLabel}>{strings.password}</Text><TextInput accessibilityLabel={strings.password} autoComplete={mode === "create" ? "new-password" : "current-password"} onChangeText={setPassword} onSubmitEditing={() => void submit()} placeholder={strings.password} placeholderTextColor={colors.muted} ref={passwordInput} returnKeyType="done" secureTextEntry style={styles.input} textContentType={mode === "create" ? "newPassword" : "password"} value={password} /></View>
         {mode === "create" ? <Text style={styles.hint}>{strings.passwordHint}</Text> : null}
         <LabButton disabled={busy || !email.trim() || password.length < 8} label={busy ? strings.working : mode === "create" ? strings.createAction : strings.signInAction} onPress={() => void submit()} />
         {mode === "sign-in" ? <Pressable accessibilityRole="button" disabled={busy || !email.trim()} onPress={() => void resetPassword()}><Text style={styles.link}>{strings.forgot}</Text></Pressable> : null}
@@ -304,6 +336,8 @@ const styles = StyleSheet.create({
   title: { ...typography.title, color: colors.text },
   body: { ...typography.body, color: colors.muted },
   input: { backgroundColor: colors.surface, borderColor: "#E7C8BD", borderRadius: 18, borderWidth: 1, color: colors.text, fontSize: 16, minHeight: 54, padding: spacing.md },
+  field: { gap: spacing.xs },
+  inputLabel: { ...typography.caption, color: colors.text, fontWeight: "700" },
   hint: { ...typography.caption, color: colors.muted },
   link: { ...typography.body, color: colors.brand, fontWeight: "700", textAlign: "center" },
   dots: { alignItems: "center", flexDirection: "row", gap: spacing.sm, justifyContent: "center", minHeight: 24 },

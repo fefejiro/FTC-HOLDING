@@ -77,6 +77,34 @@ describe("PublicOnboardingAuth", () => {
     await waitFor(() => expect(signInWithPassword).toHaveBeenCalledWith("parent@example.com", "calmer-password"));
   });
 
+  it("explains invalid credentials without exposing provider details", async () => {
+    secureStore.getItemAsync.mockResolvedValue("true");
+    const signInWithPassword = jest.fn(async () => {
+      throw { code: "invalid_credentials", status: 400, message: "Invalid login credentials" };
+    });
+    (useSupabaseSession as jest.Mock).mockReturnValue(sessionValue({ signInWithPassword }));
+    render(<LocalizationProvider initialLocale="en" production><PublicOnboardingAuth /></LocalizationProvider>);
+    fireEvent.press(await screen.findByText("Sign in"));
+    fireEvent.changeText(screen.getByLabelText("Email"), "parent@example.com");
+    fireEvent.changeText(screen.getByLabelText("Password"), "wrong-password");
+    fireEvent.press(screen.getAllByText("Sign in")[0]);
+    expect(await screen.findByText("That email or password did not match. Check it and try again.")).toBeTruthy();
+  });
+
+  it("reports a provider outage when the protected public key is rejected", async () => {
+    secureStore.getItemAsync.mockResolvedValue("true");
+    const signInWithPassword = jest.fn(async () => {
+      throw { code: "invalid_api_key", status: 401, message: "Invalid API key" };
+    });
+    (useSupabaseSession as jest.Mock).mockReturnValue(sessionValue({ signInWithPassword }));
+    render(<LocalizationProvider initialLocale="en" production><PublicOnboardingAuth /></LocalizationProvider>);
+    fireEvent.press(await screen.findByText("Sign in"));
+    fireEvent.changeText(screen.getByLabelText("Email"), "parent@example.com");
+    fireEvent.changeText(screen.getByLabelText("Password"), "calmer-password");
+    fireEvent.press(screen.getAllByText("Sign in")[0]);
+    expect(await screen.findByText("PeacePad sign-in is temporarily unavailable. Please try again shortly.")).toBeTruthy();
+  });
+
   it("keeps the full account flow while clearly identifying fictional staging", async () => {
     secureStore.getItemAsync.mockResolvedValue("true");
     render(
