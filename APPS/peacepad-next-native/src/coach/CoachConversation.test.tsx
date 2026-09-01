@@ -9,9 +9,9 @@ describe("CoachConversation", () => {
     const view = render(<CoachConversation onTranscribe={jest.fn()} onUseDraft={onUseDraft} />);
 
     expect(view.getByText("Talk it through with PeaceBot")).toBeTruthy();
-    fireEvent.press(view.getByText("Open Coach"));
+    fireEvent.press(view.getByText("Open Conch Coach"));
     fireEvent.changeText(view.getByLabelText("Coach conversation"), "You never answer me about Saturday pickup");
-    fireEvent.press(view.getByText("Prepare calm wording"));
+    fireEvent.press(view.getByText("Create a calm draft without AI"));
 
     expect(view.getByLabelText("Coach draft")).toBeTruthy();
     fireEvent.press(view.getByText("Listen to draft"));
@@ -31,9 +31,9 @@ describe("CoachConversation", () => {
     }));
     const view = render(<CoachConversation onConversationTurn={onConversationTurn} onTranscribe={jest.fn()} onUseDraft={onUseDraft} />);
 
-    fireEvent.press(view.getByText("Open Coach"));
+    fireEvent.press(view.getByText("Open Conch Coach"));
     fireEvent.changeText(view.getByLabelText("Coach conversation"), "Saturday pickup");
-    fireEvent.press(view.getByText("Ask Coach"));
+    fireEvent.press(view.getByText("Send to Coach"));
 
     await waitFor(() => expect(onConversationTurn).toHaveBeenCalledWith(expect.objectContaining({ topic: "Saturday pickup" })));
     expect(view.getByLabelText("Coach conversation history")).toBeTruthy();

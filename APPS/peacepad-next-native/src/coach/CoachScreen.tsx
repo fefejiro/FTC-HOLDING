@@ -51,6 +51,7 @@ export function CoachScreen({ onOpenMessages }: { onOpenMessages?: () => void })
         title="PeaceBot Coach"
       />
       <CoachConversation
+        initiallyOpen
         onConversationTurn={coachConversationTurn}
         onTranscribe={transcribeCoachAudio}
         onUseDraft={useDraft}
