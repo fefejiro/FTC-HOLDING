@@ -156,6 +156,11 @@ test.describe("Site routes", () => {
     await expect(cta).toHaveAttribute("href", "/work-with-ftc");
   });
 
+  test("connect page gives the QR code a plain-language label", async ({ page }) => {
+    await page.goto("/connect");
+    await expect(page.getByAltText("QR code for the Una Labs networking hub")).toBeVisible();
+  });
+
   test("case study detail route works", async ({ page }) => {
     test.skip(IS_PAGES_PREVIEW, "Preview host falls back for work slug routes; validate on unalabs.cloud/custom domain.");
 

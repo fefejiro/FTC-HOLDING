@@ -48,7 +48,7 @@ export default function ConnectPage() {
           <div className="connect-qr-grid">
             <Image
               src="/connect/qr.svg"
-              alt="QR code linking to unalabs.cloud/connect"
+              alt="QR code for the Una Labs networking hub"
               width={220}
               height={220}
             />
