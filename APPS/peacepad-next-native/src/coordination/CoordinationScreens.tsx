@@ -525,9 +525,17 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
   const [eventStartsAt, setEventStartsAt] = useState(() => calendarDateTimeInput(new Date()));
   const [eventEndsAt, setEventEndsAt] = useState(() => calendarDateTimeInput(new Date(Date.now() + 60 * 60 * 1000)));
   const [eventTimeError, setEventTimeError] = useState(false);
+  const [eventSaveBusy, setEventSaveBusy] = useState(false);
+  const [eventSaveError, setEventSaveError] = useState<string>();
   const [pendingShareLayerId, setPendingShareLayerId] = useState<string>();
   const [pendingDeleteEventId, setPendingDeleteEventId] = useState<string>();
   const [eventType, setEventType] = useState<"parenting-time" | "appointment" | "change-request">("parenting-time");
+
+  useEffect(() => {
+    if (layers.length > 0 && !layers.some((layer) => layer.id === selectedLayerId)) {
+      setSelectedLayerId(layers[0].id);
+    }
+  }, [layers, selectedLayerId]);
   const [custodySchedule, setCustodySchedule] = useState<CustodySchedule>();
   const [exceptionStartDate, setExceptionStartDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [exceptionEndDate, setExceptionEndDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -759,7 +767,8 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
             </Pressable>
           ) : null}
         </View>
-        <LabButton label={w("saveEvent")} disabled={!eventTitle.trim()} onPress={() => {
+        {eventSaveError ? <Text accessibilityRole="alert" style={styles.errorText}>{eventSaveError}</Text> : null}
+        <LabButton label={eventSaveBusy ? "Saving event..." : w("saveEvent")} disabled={!eventTitle.trim() || !selectedLayerId || eventSaveBusy} onPress={() => {
           const startsAt = parseCalendarDateTime(eventStartsAt);
           const endsAt = parseCalendarDateTime(eventEndsAt);
           if (!startsAt || !endsAt || new Date(endsAt).getTime() <= new Date(startsAt).getTime()) {
@@ -767,14 +776,18 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
             return;
           }
           setEventTimeError(false);
+          setEventSaveError(undefined);
+          setEventSaveBusy(true);
           void addEvent({
             layerId: selectedLayerId,
             title: eventTitle,
             startsAt,
             endsAt,
             eventType
-          });
-          setEventTitle("");
+          })
+            .then(() => setEventTitle(""))
+            .catch((error) => setEventSaveError(error instanceof Error ? error.message : "PeacePad could not save that event."))
+            .finally(() => setEventSaveBusy(false));
         }} />
       </View>
 

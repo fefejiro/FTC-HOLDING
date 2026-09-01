@@ -8,7 +8,8 @@ import {
   type MessageSearchResult,
   type CoachConversationTurn,
   type CoachConversationTurnInput,
-  type PeacePadCoordinationApi
+  type PeacePadCoordinationApi,
+  HttpPeacePadCoordinationApi
 } from "../api/CoordinationApi";
 import { defaultCalendarLayers, SyntheticCoordinationApi } from "../api/SyntheticCoordinationApi";
 import {
@@ -48,6 +49,25 @@ import {
   type ConnectivityMonitor,
   type ConnectivitySnapshot
 } from "../connectivity/ConnectivityMonitor";
+
+const DEFAULT_CALENDAR_LAYER_INPUTS = [
+  { name: "Parenting Time", kind: "parenting-time", icon: "clock", colorToken: "teal" },
+  { name: "Expenses & Requests", kind: "expenses-requests", icon: "receipt", colorToken: "green" },
+  { name: "Events & Activities", kind: "events-activities", icon: "activity", colorToken: "violet" },
+  { name: "Calls", kind: "calls", icon: "phone", colorToken: "blue" }
+] as const;
+
+export async function provisionDefaultCalendarLayers(
+  api: Pick<PeacePadCoordinationApi, "createCalendarLayer">,
+  runtime: CoordinationRuntime
+): Promise<readonly CalendarLayer[]> {
+  return Promise.all(DEFAULT_CALENDAR_LAYER_INPUTS.map((layer) => api.createCalendarLayer({
+    familyCircleId: runtime.familyCircleId,
+    ownerIdentityId: runtime.actorIdentityId,
+    ...layer,
+    visibility: { scope: "private" as const }
+  }, writeContext(runtime))));
+}
 
 declare const process: {
   env?: Record<string, string | undefined>;
@@ -140,7 +160,7 @@ type CoordinationStateValue = {
     startsAt: string;
     endsAt: string;
     eventType?: "parenting-time" | "appointment" | "holiday" | "change-request";
-  }) => Promise<void>;
+  }) => Promise<ScheduleEvent>;
   deleteEvent: (eventId: string) => Promise<void>;
   addTask: (input: { title: string; dueAt?: string; shared: boolean }) => Promise<ParentingTask | undefined>;
   setTaskCompleted: (taskId: string, completed: boolean) => Promise<void>;
@@ -459,7 +479,10 @@ export function CoordinationStateProvider({
       connectedRuntime ? outbox.list() : Promise.resolve([]),
       parentingSchedule,
       parentingScheduleExceptionsRequest
-    ])).then(([nextLayers, nextEvents, nextTasks, nextMessages, nextAttachments, preference, queuedMessages, nextParentingSchedule, nextScheduleExceptions]) => {
+    ])).then(async ([listedLayers, nextEvents, nextTasks, nextMessages, nextAttachments, preference, queuedMessages, nextParentingSchedule, nextScheduleExceptions]) => {
+        const nextLayers = listedLayers.length > 0 || !(resolvedApi instanceof HttpPeacePadCoordinationApi)
+          ? listedLayers
+          : await provisionDefaultCalendarLayers(resolvedApi, activeRuntime);
         if (cancelled || hydrationGeneration.current !== generation) return;
         setLayers(nextLayers);
         setVisibleLayerIds(nextLayers.map((layer) => layer.id));
@@ -740,7 +763,8 @@ export function CoordinationStateProvider({
     },
     addEvent: async ({ layerId, title, startsAt, endsAt, eventType }) => {
       const layer = layers.find((item) => item.id === layerId);
-      if (!layer || !title.trim()) return;
+      if (!title.trim()) throw new Error("Enter an event title.");
+      if (!layer) throw new Error("Choose a calendar before saving this event.");
       if (!activeRuntime) throw new Error("Sign in to use family coordination.");
       const resolvedEventType = eventType ?? (layer.kind === "parenting-time" ? "parenting-time" : "appointment");
       if (resolvedEventType === "change-request" && !hasConnectedConversation(activeRuntime)) {
@@ -760,6 +784,7 @@ export function CoordinationStateProvider({
         visibilityOverride: null
       }, writeContext(activeRuntime));
       setEvents((current) => [...current, event]);
+      return event;
     },
     deleteEvent: async (eventId) => {
       const event = events.find((item) => item.id === eventId);
