@@ -199,7 +199,7 @@ export type CoachConversationTurn = Readonly<{
   reply: string;
   draft: string | null;
   note: string | null;
-  provider: "configured" | "local-fallback";
+  provider: "configured" | "peacepad-first-party" | "local-fallback";
 }>;
 
 export type AudioCallSignal = Readonly<
@@ -1081,7 +1081,7 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
       if (!result || typeof result.reply !== "string" || !result.reply.trim() || result.reply.length > 4000 ||
         (result.draft !== null && typeof result.draft !== "string") ||
         (result.note !== null && typeof result.note !== "string") ||
-        result.provider !== "configured") {
+        (result.provider !== "configured" && result.provider !== "peacepad-first-party")) {
         throw new PeacePadApiError("PeacePad could not verify the Coach response.", "http", 502);
       }
       return { ...result, reply: result.reply.trim(), draft: result.draft?.trim() || null, note: result.note?.trim() || null };

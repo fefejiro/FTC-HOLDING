@@ -750,4 +750,20 @@ describe("HttpPeacePadCoordinationApi", () => {
       topic: "Saturday pickup"
     });
   });
+
+  it("accepts the privacy-safe first-party Coach response used when no external provider is configured", async () => {
+    const api = new HttpPeacePadCoordinationApi(config, jest.fn(async () => response(200, {
+      reply: "Let us keep this calm and focused on the child.",
+      draft: "Could we confirm the pickup time that works best for our child?",
+      note: "Review and edit this draft before sharing it.",
+      provider: "peacepad-first-party"
+    })), accessToken);
+
+    await expect(api.coachConversationTurn({
+      topic: "Confirm school pickup",
+      feeling: "calm",
+      entryMode: "sending",
+      messages: [{ role: "parent", content: "Confirm school pickup" }]
+    })).resolves.toMatchObject({ provider: "peacepad-first-party" });
+  });
 });
