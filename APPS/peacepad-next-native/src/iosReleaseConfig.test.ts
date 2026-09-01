@@ -54,12 +54,12 @@ describe("PeacePad iOS release variant", () => {
     process.env.PEACEPAD_IOS_RELEASE_MODE = "testflight-internal";
     process.env.EXPO_PUBLIC_PEACEPAD_ENV = "staging";
     expect(resolveConfig({ config: structuredClone(appJson.expo) })).toMatchObject({
-      version: "2.0.1",
+      version: "2.0.2",
       plugins: expect.arrayContaining([
         "expo-apple-authentication",
         ["@react-native-google-signin/google-signin", { iosUrlScheme: "com.googleusercontent.apps.123456789-ios" }]
       ]),
-      ios: { buildNumber: "9", bundleIdentifier: "ca.peacepad.family" },
+      ios: { buildNumber: "11", bundleIdentifier: "ca.peacepad.family" },
       extra: {
         appStoreId: "6793350735",
         productionApiWritesEnabled: false,
@@ -97,10 +97,10 @@ describe("PeacePad iOS release variant", () => {
     process.env.EXPO_PUBLIC_PEACEPAD_ENV = "production";
     process.env.EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED = "true";
     expect(resolveConfig({ config: structuredClone(appJson.expo) })).toMatchObject({
-      version: "2.0.1",
+      version: "2.0.2",
       scheme: "peacepad",
       plugins: expect.arrayContaining(["expo-apple-authentication"]),
-        ios: { buildNumber: "10", bundleIdentifier: "ca.peacepad.family", usesAppleSignIn: true },
+        ios: { buildNumber: "11", bundleIdentifier: "ca.peacepad.family", usesAppleSignIn: true },
       extra: {
         appStoreId: "6793350735",
         environment: "production",
@@ -125,7 +125,7 @@ describe("PeacePad iOS release variant", () => {
     process.env.PEACEPAD_ANDROID_RELEASE_MODE = "playstore-internal";
     process.env.EXPO_PUBLIC_PEACEPAD_ENV = "staging";
     expect(resolveConfig({ config: structuredClone(appJson.expo) })).toMatchObject({
-      version: "2.0.1",
+      version: "2.0.2",
       android: {
         blockedPermissions: [
           "android.permission.READ_EXTERNAL_STORAGE",
@@ -133,7 +133,7 @@ describe("PeacePad iOS release variant", () => {
           "android.permission.WRITE_EXTERNAL_STORAGE"
         ],
         package: "ca.peacepad.family",
-        versionCode: 49
+        versionCode: 51
       },
       plugins: expect.arrayContaining([
         ["@react-native-google-signin/google-signin", { iosUrlScheme: "com.googleusercontent.apps.123456789-ios" }]
@@ -175,10 +175,10 @@ describe("PeacePad iOS release variant", () => {
     process.env.EXPO_PUBLIC_PEACEPAD_ENV = "production";
     process.env.EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED = "true";
     expect(resolveConfig({ config: structuredClone(appJson.expo) })).toMatchObject({
-      version: "2.0.1",
+      version: "2.0.2",
       android: {
         package: "ca.peacepad.family",
-        versionCode: 50
+        versionCode: 51
       },
       extra: {
         environment: "production",

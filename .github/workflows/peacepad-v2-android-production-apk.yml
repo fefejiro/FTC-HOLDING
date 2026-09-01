@@ -111,14 +111,14 @@ jobs:
             export PEACEPAD_ANDROID_RELEASE_MODE=playstore-production
             node scripts/check-lab-guardrails.cjs
             node scripts/check-secrets.cjs
-            node -e 'const cfg=require("./app.config.js")({config:require("./app.json").expo}); if(cfg.android.package!=="ca.peacepad.family"||cfg.version!=="2.0.1"||cfg.android.versionCode!==50||cfg.extra.environment!=="production"||cfg.extra.productionApiWritesEnabled!==true||cfg.extra.googleSignInEnabled!==true) process.exit(1);'
-            npx --yes eas-cli@21.8.0 build --platform android --profile production-device-apk --local --non-interactive --output "$RUNNER_TEMP/PeacePad-2.0.1-50-production.apk"
+            node -e 'const cfg=require("./app.config.js")({config:require("./app.json").expo}); if(cfg.android.package!=="ca.peacepad.family"||cfg.version!=="2.0.2"||cfg.android.versionCode!==51||cfg.extra.environment!=="production"||cfg.extra.productionApiWritesEnabled!==true||cfg.extra.googleSignInEnabled!==true) process.exit(1);'
+            npx --yes eas-cli@21.8.0 build --platform android --profile production-device-apk --local --non-interactive --output "$RUNNER_TEMP/PeacePad-2.0.2-51-production.apk"
           EOF
           )
           npx --yes eas-cli@21.8.0 env:exec production "$release_command" --non-interactive
-          test -s "$RUNNER_TEMP/PeacePad-2.0.1-50-production.apk"
-          sha256sum "$RUNNER_TEMP/PeacePad-2.0.1-50-production.apk" > "$RUNNER_TEMP/PeacePad-2.0.1-50-production.apk.sha256"
-          node -e 'const fs=require("fs");fs.writeFileSync(process.env.RUNNER_TEMP+"/peacepad-v2-production-apk.manifest",`source_sha=${process.env.EXPECTED_SHA}\npackage=ca.peacepad.family\nversion=2.0.1\nversion_code=50\nruntime=production\nstore_submission_attempted=false\n`);'
+          test -s "$RUNNER_TEMP/PeacePad-2.0.2-51-production.apk"
+          sha256sum "$RUNNER_TEMP/PeacePad-2.0.2-51-production.apk" > "$RUNNER_TEMP/PeacePad-2.0.2-51-production.apk.sha256"
+          node -e 'const fs=require("fs");fs.writeFileSync(process.env.RUNNER_TEMP+"/peacepad-v2-production-apk.manifest",`source_sha=${process.env.EXPECTED_SHA}\npackage=ca.peacepad.family\nversion=2.0.2\nversion_code=51\nruntime=production\nstore_submission_attempted=false\n`);'
 
       - name: Upload non-secret APK build evidence
         if: always()
@@ -128,6 +128,6 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
           path: |
-            ${{ runner.temp }}/PeacePad-2.0.1-50-production.apk
-            ${{ runner.temp }}/PeacePad-2.0.1-50-production.apk.sha256
+            ${{ runner.temp }}/PeacePad-2.0.2-51-production.apk
+            ${{ runner.temp }}/PeacePad-2.0.2-51-production.apk.sha256
             ${{ runner.temp }}/peacepad-v2-production-apk.manifest
