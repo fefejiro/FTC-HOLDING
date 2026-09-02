@@ -89,6 +89,29 @@ Uploaded, accepted, submitted, under review, and publicly available are
 different states. On the next session, refresh both provider/public states
 before describing PeacePad as launched.
 
+## Auth incident captured 2026-09-02
+
+The iPhone confirmation email opened `http://localhost:3000` and failed with
+`ERR_CONNECTION_REFUSED`. In the canonical source at the release SHA,
+`SupabaseSessionProvider` already sends the native redirect
+`peacepad://auth/confirm` (and `peacepad://auth/reset-password` for recovery),
+and the production Expo config registers the `peacepad` scheme. Therefore this
+is a hosted Supabase Auth URL configuration/stale-provider issue, not evidence
+that the native redirect code is missing.
+
+Before another store build, the provider owner must verify the production
+Supabase Auth URL configuration: use `https://peacepad.ca` as the site URL and
+allow the exact native redirects `peacepad://auth/confirm` and
+`peacepad://auth/reset-password` (plus any explicitly approved web fallback).
+Then send a new disposable confirmation email and prove that it opens the
+PeacePad app. Do not use a `localhost` site URL in production. Google and Apple
+provider settings must likewise be enabled for the production project and
+matched to the native client IDs; keep their secrets out of source and logs.
+
+The old email must not be treated as a valid test result after the provider
+fix; request a fresh confirmation link because Auth links are single-use and
+may carry the old redirect target.
+
 ## Safe resume checklist
 
 1. `git -C C:\ppn status --short --branch`; preserve unrelated dirty files.
@@ -108,4 +131,3 @@ before describing PeacePad as launched.
 There were no open PeacePad pull requests in `fefejiro/FTC-HOLDING`,
 `fefejiro/PeacePad-`, or `fefejiro/fefejiro-PeacePadAI` when this handover was
 closed. Do not close unrelated FTC pull requests.
-
