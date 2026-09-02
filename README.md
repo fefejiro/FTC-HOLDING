@@ -38,7 +38,7 @@ See `DOCS/FTC_PROJECT_LEDGER.md` for the authoritative status. Summary:
 |---------|----------------------|-------------------------------|
 | Una Labs | **LIVE SURFACE** | Public site returned HTTP 200; authenticated workflows were not re-executed in this audit |
 | Garden Cleaners | **LIVE SURFACE / QA BLOCKED** | Public site returned HTTP 200; current PR checks still show an anonymous Playwright failure |
-| PeacePad Web | **LIVE ROLLBACK PRODUCT** | Public web returned HTTP 200; this does not promote Native V2 |
+| PeacePad Web | **LIVE SURFACE / ROLLBACK PRODUCT** | Public web returned HTTP 200; this does not promote Native V2 |
 | PeacePad Native V2 | **STAGING / RELEASE BLOCKED** | Hosted and PostgreSQL evidence exists; managed regional deployment, device, TestFlight, and production gates remain open |
 | SayWetin | **DEGRADED** | Web returned HTTP 200; `api.saywetin.app/health` returned HTTP 404 |
 | Anion | **LIVE / HARDENING** | Production health returned HTTP 200; remaining release and handover gates are tracked separately |
