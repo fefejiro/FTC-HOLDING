@@ -79,7 +79,7 @@ JSON
   echo "[JCI] Existing 1024x1024 app icon installed in ${icon_set}"
 }
 
-echo "[JCI] iOS 1.2.0/build 5 publish run ${RUN_ID}"
+echo "[JCI] iOS 1.2.0/build 6 publish run ${RUN_ID}"
 [[ "$(uname -s)" == "Darwin" ]] || fail "This wrapper must run on macOS with Xcode."
 [[ -d "${UNITY_PROJECT}" ]] || fail "Unity project missing: ${UNITY_PROJECT}"
 [[ -x "${UNITY_PATH}" ]] || fail "Unity ${UNITY_VERSION_EXPECTED} missing: ${UNITY_PATH}"
@@ -117,7 +117,7 @@ fi
 [[ -n "${JCI_SIGNING_KEYCHAIN_PASSWORD:-}" ]] || fail "Missing required environment variable: JCI_SIGNING_KEYCHAIN_PASSWORD"
 
 grep -q 'bundleVersion: 1.2.0' "${UNITY_PROJECT}/ProjectSettings/ProjectSettings.asset" || fail "ProjectSettings is not version 1.2.0"
-grep -q 'iPhone: 5' "${UNITY_PROJECT}/ProjectSettings/ProjectSettings.asset" || fail "ProjectSettings is not iOS build 5"
+grep -q 'iPhone: 6' "${UNITY_PROJECT}/ProjectSettings/ProjectSettings.asset" || fail "ProjectSettings is not iOS build 6"
 grep -q 'iPhone: com.ftcholding.justcheckingin' "${UNITY_PROJECT}/ProjectSettings/ProjectSettings.asset" || fail "Bundle ID mismatch"
 
 UNITY_VERSION="$("${UNITY_PATH}" -version 2>/dev/null | head -n 1 || true)"
@@ -219,6 +219,6 @@ elif ! xcrun altool --upload-app -f "${IPA_PATH}" -t ios -u "${APPLE_ID}" -p "${
   xcrun iTMSTransporter -m upload -assetFile "${IPA_PATH}" -u "${APPLE_ID}" -p "${APPLE_APP_SPECIFIC_PASSWORD}"
 fi
 
-echo "[JCI] Upload completed. This is not public availability. Confirm build 5 in App Store Connect, submit review with automatic release, then verify the public listing after approval."
+echo "[JCI] Upload completed. This is not public availability. Confirm build 6 in App Store Connect, submit review with automatic release, then verify the public listing after approval."
 echo "[JCI] IPA=${IPA_PATH}"
 echo "[JCI] LOG=${LOG_PATH}"

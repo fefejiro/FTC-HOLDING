@@ -36,7 +36,7 @@ namespace Jci.Tests.EditMode
             var path = Path.Combine(directory, "jci.json");
             File.WriteAllText(path, "not-json");
             var document = new JciLocalStore(path).Load();
-            Assert.That(document.SchemaVersion, Is.EqualTo(1));
+            Assert.That(document.SchemaVersion, Is.EqualTo(2));
             Assert.That(File.Exists(path), Is.False);
             Assert.That(Directory.GetFiles(directory, "jci.json.corrupt-*").Length, Is.EqualTo(1));
         }
@@ -69,6 +69,27 @@ namespace Jci.Tests.EditMode
             Assert.That(loaded.ActiveSession, Is.Null);
             Assert.That(loaded.Connections, Has.Count.EqualTo(1));
             Assert.That(loaded.Connections[0].DisplayName, Is.EqualTo("Maya"));
+        }
+
+        [Test]
+        public void ActiveSelfSessionRoundTripsAndInvalidStateIsDiscarded()
+        {
+            var store = new JciLocalStore(Path.Combine(directory, "jci.json"));
+            var document = new JciStoreDocument
+            {
+                ActiveSelfSession = new ActiveSelfSession
+                {
+                    MoodId = "okay", StartedAtUtcTicks = 10, CurrentPromptId = "today",
+                    SeenCardIds = new[] { "today" }, CardsSeen = 1,
+                }
+            };
+            store.Save(document);
+            var loaded = store.Load();
+            Assert.That(loaded.SchemaVersion, Is.EqualTo(2));
+            Assert.That(loaded.ActiveSelfSession.MoodId, Is.EqualTo("okay"));
+            loaded.ActiveSelfSession.MoodId = string.Empty;
+            store.Save(loaded);
+            Assert.That(store.Load().ActiveSelfSession, Is.Null);
         }
     }
 }

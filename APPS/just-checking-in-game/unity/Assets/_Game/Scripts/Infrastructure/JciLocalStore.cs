@@ -7,7 +7,7 @@ namespace Jci.Infrastructure
 {
     public sealed class JciLocalStore
     {
-        private const int CurrentSchemaVersion = 1;
+        private const int CurrentSchemaVersion = 2;
         private readonly string path;
 
         public JciLocalStore(string filePath)
@@ -102,6 +102,7 @@ namespace Jci.Infrastructure
             if (document.SelfCheckIns == null) document.SelfCheckIns = new System.Collections.Generic.List<SelfCheckInRecord>();
             if (document.TogetherSessions == null) document.TogetherSessions = new System.Collections.Generic.List<TogetherSessionSummary>();
             if (!HasValidActiveSession(document)) document.ActiveSession = null;
+            if (!HasValidActiveSelfSession(document)) document.ActiveSelfSession = null;
         }
 
         private static bool HasValidActiveSession(JciStoreDocument document)
@@ -122,6 +123,13 @@ namespace Jci.Infrastructure
             }
 
             return false;
+        }
+
+        private static bool HasValidActiveSelfSession(JciStoreDocument document)
+        {
+            var session = document.ActiveSelfSession;
+            return session != null && !string.IsNullOrWhiteSpace(session.MoodId) &&
+                !string.IsNullOrWhiteSpace(session.CurrentPromptId) && session.StartedAtUtcTicks > 0;
         }
 
         private void QuarantineCorruptFile()

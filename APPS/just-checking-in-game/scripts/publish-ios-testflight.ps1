@@ -7,7 +7,7 @@ $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
 $UnityProject = Join-Path $Root 'unity'
 $ExpectedVersion = '1.2.0'
-$ExpectedBuild = '5'
+$ExpectedBuild = '6'
 $ExpectedBundle = 'com.ftcholding.justcheckingin'
 
 function Stop-Jci([string]$Message) { throw "[JCI][FAIL] $Message" }

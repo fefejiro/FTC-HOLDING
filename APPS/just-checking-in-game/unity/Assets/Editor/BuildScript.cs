@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
+using UnityEditor.Android;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
@@ -16,15 +17,15 @@ namespace Jci.Editor
     /// </summary>
     public static class BuildScript
     {
-        // 1.1.0/build 4 is already a public iOS release and Android code 4 is
-        // consumed. Keep both stores on this next shared source release.
+        // 1.2.0/build 4/5 are already consumed. This shared correction is
+        // intentionally versioned as Android code 6 and iOS build 6.
         private const string MarketingVersion = "1.2.0";
-        private const int AndroidVersionCode = 5;
-        private const string IosBuildNumber = "5";
+        private const int AndroidVersionCode = 6;
+        private const string IosBuildNumber = "6";
         private const string AndroidOutputPath = "Builds/Android/JustCheckingIn.aab";
         private const string IosOutputPath = "Builds/iOS/JustCheckingIn";
         private const string BootScenePath = "Assets/_Game/Scenes/Boot.unity";
-        private const string AppIconPath = "Assets/_Game/Art/jci-icon.png";
+        private const string AppIconPath = "Assets/_Game/Art/jci-sun-icon.png";
 
         [MenuItem("JCI/Build Android AAB")]
         public static void BuildAndroid()
@@ -195,11 +196,37 @@ namespace Jci.Editor
 
         private static void ConfigureAndroidPlayerSettings()
         {
+            ConfigureAndroidToolchain();
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
             // Just Checking In is intentionally offline. Do not request network access
             // that the game does not need.
             PlayerSettings.Android.forceInternetPermission = false;
             PlayerSettings.Android.forceSDCardPermission = false;
+        }
+
+        private static void ConfigureAndroidToolchain()
+        {
+            // Unity otherwise falls back to the per-user C: SDK, which is easy to
+            // exhaust on this host. Respect the verified D:-backed toolchain when
+            // the caller provides it, while retaining Unity's configured defaults.
+            string sdkRoot = Environment.GetEnvironmentVariable("JCI_ANDROID_SDK_ROOT");
+            string ndkRoot = Environment.GetEnvironmentVariable("JCI_ANDROID_NDK_ROOT");
+            string jdkRoot = Environment.GetEnvironmentVariable("JCI_ANDROID_JDK_ROOT");
+
+            if (!string.IsNullOrWhiteSpace(sdkRoot) && Directory.Exists(sdkRoot))
+            {
+                AndroidExternalToolsSettings.sdkRootPath = sdkRoot;
+            }
+
+            if (!string.IsNullOrWhiteSpace(ndkRoot) && Directory.Exists(ndkRoot))
+            {
+                AndroidExternalToolsSettings.ndkRootPath = ndkRoot;
+            }
+
+            if (!string.IsNullOrWhiteSpace(jdkRoot) && Directory.Exists(jdkRoot))
+            {
+                AndroidExternalToolsSettings.jdkRootPath = jdkRoot;
+            }
         }
 
         private static void ConfigureIosPlayerSettings()
