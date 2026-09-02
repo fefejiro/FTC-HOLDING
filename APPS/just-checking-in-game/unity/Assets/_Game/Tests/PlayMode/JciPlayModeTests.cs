@@ -50,7 +50,7 @@ namespace Jci.Tests.PlayMode
             Click("Solo check-in");
             Click("Draw a card");
             Click("Drained");
-            Click("That feels true - finish");
+            Click("Finish this check-in");
             yield return null;
             var path = Path.Combine(UnityEngine.Application.persistentDataPath, "jci-local-v1.json");
             Assert.That(File.Exists(path), Is.True);
@@ -66,14 +66,16 @@ namespace Jci.Tests.PlayMode
             Click("Check in together");
             var input = Object.FindAnyObjectByType<InputField>();
             Assert.That(input, Is.Not.Null);
+            Assert.That(FindButton("Start together").interactable, Is.False);
             input.text = "Test connection";
+            Assert.That(FindButton("Start together").interactable, Is.True);
             Click("Start together");
-            Click("I am ready - next prompt");
+            Click("Next card");
             game.SendMessage("OnApplicationPause", true);
             yield return null;
             Assert.That(File.ReadAllText(Path.Combine(UnityEngine.Application.persistentDataPath, "jci-local-v1.json")), Does.Contain("ActiveSession"));
-            Click("Close this check-in");
-            Assert.That(FindButton("Keep going"), Is.Not.Null);
+            Click("End check-in");
+            Assert.That(FindButton("Return home"), Is.Not.Null);
         }
 
         [UnityTest]
@@ -110,7 +112,7 @@ namespace Jci.Tests.PlayMode
             var input = Object.FindAnyObjectByType<InputField>();
             input.text = "Relaunch connection";
             Click("Start together");
-            Click("I am ready - next prompt");
+            Click("Next card");
             game.SendMessage("OnApplicationPause", true);
             Object.Destroy(game);
             yield return null;
@@ -120,22 +122,18 @@ namespace Jci.Tests.PlayMode
             yield return null;
             Assert.That(FindButton("Resume your check-in"), Is.Not.Null);
             Click("Resume your check-in");
-            Assert.That(FindButton("Close this check-in"), Is.Not.Null);
+            Assert.That(FindButton("End check-in"), Is.Not.Null);
         }
 
         [UnityTest]
-        public IEnumerator ReducedMotionPreferencePersistsAcrossRelaunch()
+        public IEnumerator RuntimeAddsPurposefulMotionAndTactileButtonFeedback()
         {
-            Click("Reduced motion: Off");
-            Assert.That(PlayerPrefs.GetInt("jci.reducedMotion", 0), Is.EqualTo(1));
-            Assert.That(FindButton("Reduced motion: On"), Is.Not.Null);
-            Object.Destroy(game);
+            var canvas = game.GetComponentInChildren<Canvas>();
+            var body = canvas.transform.Find("Safe Area/Body");
+            Assert.That(HasComponentNamed(body.gameObject, "JciScreenMotion"), Is.True);
+            Assert.That(HasComponentNamed(FindButton("Solo check-in").gameObject, "JciCardMotion"), Is.True);
+            Assert.That(HasComponentNamed(FindButton("Solo check-in").gameObject, "JciButtonMotion"), Is.True);
             yield return null;
-
-            game = new GameObject("JCI reduced-motion runtime");
-            game.AddComponent<JustCheckingInGame>();
-            yield return null;
-            Assert.That(FindButton("Reduced motion: On"), Is.Not.Null);
         }
 
         private static void Click(string label)
@@ -154,6 +152,13 @@ namespace Jci.Tests.PlayMode
             }
 
             return null;
+        }
+
+        private static bool HasComponentNamed(GameObject target, string componentName)
+        {
+            foreach (var component in target.GetComponents<MonoBehaviour>())
+                if (component != null && component.GetType().Name == componentName) return true;
+            return false;
         }
 
         private static string NormalizeLabel(string value)

@@ -42,8 +42,8 @@ jobs:
           set -euo pipefail
           sed -i '' $'s/\r$//' APPS/just-checking-in-game/scripts/*.sh
           chmod +x APPS/just-checking-in-game/scripts/*.sh
-          grep -q 'bundleVersion: 1.1.0' "$JCI_PROJECT/ProjectSettings/ProjectSettings.asset"
-          grep -q 'iPhone: 4' "$JCI_PROJECT/ProjectSettings/ProjectSettings.asset"
+          grep -q 'bundleVersion: 1.2.0' "$JCI_PROJECT/ProjectSettings/ProjectSettings.asset"
+          grep -q 'iPhone: 5' "$JCI_PROJECT/ProjectSettings/ProjectSettings.asset"
           grep -q 'iPhone: com.ftcholding.justcheckingin' "$JCI_PROJECT/ProjectSettings/ProjectSettings.asset"
 
       - name: Fail fast if release credentials are not configured
@@ -155,7 +155,7 @@ jobs:
 
   asc-prepare:
     if: github.event_name == 'workflow_dispatch' && inputs.mode == 'asc-prepare'
-    name: Prepare JCI 1.1.0 App Store version
+    name: Prepare JCI 1.2.0 App Store version
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -171,7 +171,7 @@ jobs:
 
   asc-submit:
     if: github.event_name == 'workflow_dispatch' && inputs.mode == 'asc-submit'
-    name: Submit JCI 1.1.0 for App Review
+    name: Submit JCI 1.2.0 for App Review
     runs-on: ubuntu-latest
     permissions:
       contents: read

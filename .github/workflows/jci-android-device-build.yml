@@ -28,10 +28,10 @@ jobs:
         run: |
           set -euo pipefail
           test -f "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
-          grep -q 'MarketingVersion = "1.1.0"' "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
-          grep -q 'AndroidVersionCode = 3' "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
+          grep -q 'MarketingVersion = "1.2.0"' "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
+          grep -q 'AndroidVersionCode = 5' "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
           grep -q 'BuildAndroidApkForDevice' "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
-          grep -q 'bundleVersion: 1.1.0' "$JCI_PROJECT/ProjectSettings/ProjectSettings.asset"
+          grep -q 'bundleVersion: 1.2.0' "$JCI_PROJECT/ProjectSettings/ProjectSettings.asset"
 
       - name: Validate Android signing secrets
         shell: bash
@@ -89,7 +89,7 @@ jobs:
           apk="$JCI_PROJECT/Builds/Android/JustCheckingIn-device.apk"
           test -s "$apk"
           sha256sum "$apk" | tee jci-android-device.sha256
-          printf '{"source":"%s","unity":"%s","package":"com.ftcholding.justcheckingin","version":"1.1.0","versionCode":3,"artifact":"%s"}\n' \
+          printf '{"source":"%s","unity":"%s","package":"com.ftcholding.justcheckingin","version":"1.2.0","versionCode":5,"artifact":"%s"}\n' \
             "$GITHUB_SHA" "$JCI_UNITY_VERSION" "$(sha256sum "$apk" | awk '{print $1}')" > jci-android-device-manifest.json
 
       - name: Upload signed APK for Pixel QA

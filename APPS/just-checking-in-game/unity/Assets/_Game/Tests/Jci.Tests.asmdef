@@ -1,15 +1,15 @@
 {
   "name": "Jci.EditMode.Tests",
   "rootNamespace": "Jci.Tests",
-  "references": ["Jci.Runtime", "UnityEngine.TestRunner", "UnityEditor.TestRunner"],
+  "references": ["Jci.Runtime"],
   "includePlatforms": ["Editor"],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
-  "overrideReferences": true,
-  "precompiledReferences": ["nunit.framework.dll"],
+  "overrideReferences": false,
+  "precompiledReferences": [],
   "autoReferenced": false,
   "defineConstraints": ["UNITY_INCLUDE_TESTS"],
   "versionDefines": [],
   "noEngineReferences": false,
-  "optionalUnityReferences": []
+  "optionalUnityReferences": ["TestAssemblies"]
 }

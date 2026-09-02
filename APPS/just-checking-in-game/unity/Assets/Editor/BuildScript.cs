@@ -16,9 +16,11 @@ namespace Jci.Editor
     /// </summary>
     public static class BuildScript
     {
-        private const string MarketingVersion = "1.1.0";
-        private const int AndroidVersionCode = 4;
-        private const string IosBuildNumber = "4";
+        // 1.1.0/build 4 is already a public iOS release and Android code 4 is
+        // consumed. Keep both stores on this next shared source release.
+        private const string MarketingVersion = "1.2.0";
+        private const int AndroidVersionCode = 5;
+        private const string IosBuildNumber = "5";
         private const string AndroidOutputPath = "Builds/Android/JustCheckingIn.aab";
         private const string IosOutputPath = "Builds/iOS/JustCheckingIn";
         private const string BootScenePath = "Assets/_Game/Scenes/Boot.unity";

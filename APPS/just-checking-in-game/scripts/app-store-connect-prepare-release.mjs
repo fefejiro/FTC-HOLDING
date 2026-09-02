@@ -1,11 +1,10 @@
 import crypto from "node:crypto";
-// Idempotently prepares the JCI 1.1.0 candidate for review.
-// Build 4 must be VALID before any metadata mutation occurs.
-// Re-running is safe: existing version/localization records are retained.
-// Required store-side attributes are reconciled on every prepare run.
 
+// Idempotently prepares the JCI 1.2.0 candidate for review. Build 5 must be
+// VALID before this script changes the store record.
 const required = ["JCI_APPLE_API_KEY_ID", "JCI_APPLE_API_ISSUER_ID", "JCI_APPLE_API_PRIVATE_KEY"];
 for (const name of required) if (!process.env[name]) throw new Error(`Missing ${name}`);
+
 const encode = (value) => Buffer.from(value).toString("base64url");
 const now = Math.floor(Date.now() / 1000);
 const header = encode(JSON.stringify({ alg: "ES256", kid: process.env.JCI_APPLE_API_KEY_ID, typ: "JWT" }));
@@ -33,67 +32,44 @@ const request = async (path, options = {}) => {
 
 const app = await request("apps/6799443182?fields[apps]=name,bundleId&include=appStoreVersions");
 const builds = await request("builds?filter[app]=6799443182&sort=-uploadedDate&limit=20&fields[builds]=version,processingState,uploadedDate");
-const build = (builds.data ?? []).find((item) => item.attributes?.version === "4" && item.attributes?.processingState === "VALID");
-if (!build) throw new Error("No VALID JCI build 4 is available in App Store Connect");
+const build = (builds.data ?? []).find((item) => item.attributes?.version === "5" && item.attributes?.processingState === "VALID");
+if (!build) throw new Error("No VALID JCI build 5 is available in App Store Connect");
 
-let version = (app.included ?? []).find((item) => item.type === "appStoreVersions" && item.attributes?.versionString === "1.1.0");
+let version = (app.included ?? []).find((item) => item.type === "appStoreVersions" && item.attributes?.versionString === "1.2.0");
 if (!version) {
   const created = await request("appStoreVersions", {
     method: "POST",
-    body: JSON.stringify({ data: { type: "appStoreVersions", attributes: { platform: "IOS", versionString: "1.1.0", copyright: "2026 Fejiro Technology Consultancy Inc.", releaseType: "AFTER_APPROVAL", usesIdfa: false }, relationships: { app: { data: { type: "apps", id: "6799443182" } } } } }),
+    body: JSON.stringify({ data: { type: "appStoreVersions", attributes: { platform: "IOS", versionString: "1.2.0", copyright: "2026 Fejiro Technology Consultancy Inc.", releaseType: "AFTER_APPROVAL", usesIdfa: false }, relationships: { app: { data: { type: "apps", id: "6799443182" } } } } }),
   });
   version = created.data;
-  console.log(`Created App Store version ${version.id} (1.1.0)`);
+  console.log(`Created App Store version ${version.id} (1.2.0)`);
 } else {
-  console.log(`Using existing App Store version ${version.id} (1.1.0)`);
+  console.log(`Using existing App Store version ${version.id} (1.2.0)`);
 }
 
-// Apple keeps a withdrawn review version in WAITING_FOR_REVIEW while its
-// reviewed build is being removed. Explicitly clear the relationship first;
-// this is the supported API path for replacing a build after withdrawal.
-await request(`appStoreVersions/${version.id}/relationships/build`, {
-  method: "PATCH",
-  body: JSON.stringify({ data: null }),
-});
-console.log(`Removed any prior build from version ${version.id}`);
-await request(`appStoreVersions/${version.id}/relationships/build`, {
-  method: "PATCH",
-  body: JSON.stringify({ data: { type: "builds", id: build.id } }),
-});
-console.log(`Attached build ${build.id} (4) to version ${version.id}`);
-await request(`builds/${build.id}`, {
-  method: "PATCH",
-  body: JSON.stringify({ data: { type: "builds", id: build.id, attributes: { usesNonExemptEncryption: false } } }),
-});
-console.log("Set build 4 export compliance: no exempt encryption");
+await request(`appStoreVersions/${version.id}/relationships/build`, { method: "PATCH", body: JSON.stringify({ data: null }) });
+await request(`appStoreVersions/${version.id}/relationships/build`, { method: "PATCH", body: JSON.stringify({ data: { type: "builds", id: build.id } }) });
+await request(`builds/${build.id}`, { method: "PATCH", body: JSON.stringify({ data: { type: "builds", id: build.id, attributes: { usesNonExemptEncryption: false } } }) });
+console.log(`Attached build ${build.id} (5) with no exempt encryption to version ${version.id}`);
+
+const localization = {
+  description: "Make room for a conversation that matters.\n\nJust Checking In is a warm, offline card experience for a quiet moment alone or a more meaningful moment together. Draw a prompt, take your time, and let the conversation go where it needs to go.\n\nWAYS TO CHECK IN\n\n- With myself: choose a mood and reflect at your own pace.\n- Together: pass the phone, take turns, and get to know each other beyond small talk.\n- Connection journey: revisit the small moments that add up over time.\n\nMADE FOR REAL LIFE\n\nUse it on date night, with family, on a road trip, with new friends, or whenever 'How are you?' deserves a better answer. There are no scores and no pressure - just a gentle structure for being present.\n\nPRIVATE BY DESIGN\n\nJust Checking In works offline. It requires no account, has no ads or in-app purchases, and does not collect personal data.\n\nSlow down. Draw a card. Feel a little closer.",
+  keywords: "conversation,connection,check in,card game,questions,relationships,wellbeing,self reflection",
+  promotionalText: "Draw a card. Take a moment. Feel a little closer.",
+  supportUrl: "https://just-checking-in-game.pages.dev/",
+  marketingUrl: "https://just-checking-in-game.pages.dev/",
+  whatsNew: "A warmer card-table experience with refined solo and together check-ins, smoother transitions, and clearer turn-taking.",
+};
 
 let detail;
 try { detail = await request(`appStoreVersions/${version.id}?include=appStoreVersionLocalizations`); } catch (error) { if (error.status !== 404) throw error; }
-const localizations = (detail?.included ?? []).filter((item) => item.type === "appStoreVersionLocalizations");
-const enUs = localizations.find((item) => item.attributes?.locale === "en-US");
+const enUs = (detail?.included ?? []).find((item) => item.type === "appStoreVersionLocalizations" && item.attributes?.locale === "en-US");
 if (enUs) {
-  await request(`appStoreVersionLocalizations/${enUs.id}`, {
-    method: "PATCH",
-    body: JSON.stringify({ data: { type: "appStoreVersionLocalizations", id: enUs.id, attributes: { whatsNew: "Meet Check In With Myself, local Connection Journeys, session summaries, and a smoother, more comfortable way to take turns." } } }),
-  });
-  console.log("Updated en-US What’s New text");
-}
-if (!localizations.some((item) => item.attributes?.locale === "en-US")) {
-  await request("appStoreVersionLocalizations", {
-    method: "POST",
-    body: JSON.stringify({ data: { type: "appStoreVersionLocalizations", attributes: {
-      locale: "en-US",
-      description: "Make room for conversations that matter.\n\nJust Checking In is a warm, offline conversation card game for friends, couples, families, and anyone who wants to connect beyond small talk. Choose a mood, pass the phone, and take turns answering prompts that can be light, playful, thoughtful, or appreciative.\n\nFOUR WAYS TO CONNECT\n\n• Easy — relaxed conversation starters for any moment\n• Closer — thoughtful questions that invite real connection\n• Playful — imaginative prompts for laughs and game night\n• Appreciate — gratitude cards that help people feel seen\n\nSIMPLE TO PLAY\n\n1. Pick a category.\n2. Read the card aloud.\n3. Answer only what feels comfortable.\n4. Pass the phone and listen without trying to fix.\n\nMADE FOR REAL LIFE\n\nUse it on date night, during a family gathering, on a road trip, with new friends, or whenever “How are you?” deserves a better answer. There are no scores and no pressure—just a gentle structure for taking turns and being present.\n\nPRIVATE BY DESIGN\n\nJust Checking In works offline. It requires no account, contains no ads or in-app purchases, and does not collect personal data. Your conversation stays in the room.\n\nSlow down. Ask something meaningful. Feel a little closer.",
-      keywords: "conversation,connection,check in,card game,questions,relationships,wellbeing",
-      promotionalText: "A gentler way to connect—with yourself or someone beside you.",
-      supportUrl: "https://just-checking-in-game.pages.dev/",
-      marketingUrl: "https://just-checking-in-game.pages.dev/",
-      whatsNew: "Meet Check In With Myself, local Connection Journeys, session summaries, and a smoother, more comfortable way to take turns.",
-    }, relationships: { appStoreVersion: { data: { type: "appStoreVersions", id: version.id } } } } }),
-  });
-  console.log("Created en-US version localization");
+  await request(`appStoreVersionLocalizations/${enUs.id}`, { method: "PATCH", body: JSON.stringify({ data: { type: "appStoreVersionLocalizations", id: enUs.id, attributes: localization } }) });
+  console.log("Updated en-US version localization");
 } else {
-  console.log("Existing en-US version localization retained");
+  await request("appStoreVersionLocalizations", { method: "POST", body: JSON.stringify({ data: { type: "appStoreVersionLocalizations", attributes: { locale: "en-US", ...localization }, relationships: { appStoreVersion: { data: { type: "appStoreVersions", id: version.id } } } } }) });
+  console.log("Created en-US version localization");
 }
 
-console.log(JSON.stringify({ appId: "6799443182", bundleId: app.data?.attributes?.bundleId, versionId: version.id, version: "1.1.0", buildId: build.id, build: "4" }, null, 2));
+console.log(JSON.stringify({ appId: "6799443182", bundleId: app.data?.attributes?.bundleId, versionId: version.id, version: "1.2.0", buildId: build.id, build: "5" }, null, 2));

@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-// Submit only the prepared JCI 1.1.0 version; the public 1.0.0 release is untouched.
+// Submit only the prepared JCI 1.2.0 version; the public 1.1.0 release is untouched.
 // Apple review remains the external approval boundary.
 
 const required = ["JCI_APPLE_API_KEY_ID", "JCI_APPLE_API_ISSUER_ID", "JCI_APPLE_API_PRIVATE_KEY"];
@@ -19,8 +19,8 @@ const request = async (path, options = {}) => {
 };
 
 const app = await request("apps/6799443182?include=appStoreVersions");
-const version = (app.included ?? []).find((item) => item.type === "appStoreVersions" && item.attributes?.versionString === "1.1.0");
-if (!version) throw new Error("JCI 1.1.0 App Store version was not found");
+const version = (app.included ?? []).find((item) => item.type === "appStoreVersions" && item.attributes?.versionString === "1.2.0");
+if (!version) throw new Error("JCI 1.2.0 App Store version was not found");
 
 let reviewDetail;
 try { reviewDetail = await request(`appStoreVersions/${version.id}/appStoreReviewDetail`); } catch (error) { if (error.status !== 404) throw error; }
@@ -51,4 +51,4 @@ const submitted = await request(`reviewSubmissions/${submissionId}`, {
   method: "PATCH",
   body: JSON.stringify({ data: { type: "reviewSubmissions", id: submissionId, attributes: { submitted: true } } }),
 });
-console.log(JSON.stringify({ appId: "6799443182", versionId: version.id, version: "1.1.0", submissionId, submissionState: submitted.data?.attributes?.state ?? null, submitted: submitted.data?.attributes?.submitted ?? true }, null, 2));
+console.log(JSON.stringify({ appId: "6799443182", versionId: version.id, version: "1.2.0", submissionId, submissionState: submitted.data?.attributes?.state ?? null, submitted: submitted.data?.attributes?.submitted ?? true }, null, 2));
