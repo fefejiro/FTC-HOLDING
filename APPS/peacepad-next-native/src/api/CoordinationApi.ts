@@ -5,12 +5,19 @@ import type {
   CaseBinder,
   CalendarLayer,
   Conversation,
+  ConversationAttachment,
+  ConversationAttachmentDownload,
+  ExpenseReceiptAttachment,
+  ExpenseReceiptDownload,
   EntityId,
   FamilyInvitation,
   InvitationPreview,
   LayerVisibility,
   MessageCheckPreference,
   MessageEvent,
+  ParentingTask,
+  ParentingScheduleException,
+  ParentingSchedulePlan,
   ParticipantGrant,
   PrivateAttachment,
   PrivateAttachmentDownload,
@@ -20,6 +27,20 @@ import type {
   WriteContext
 } from "../domain/v2";
 import type { MessagePreviewResponse } from "./contracts";
+import type {
+  ChildUpdate,
+  ChildUpdateKind,
+  ConchReaction,
+  ConchSession,
+  ConchSummary,
+  ConchTurn,
+  ExpenseSettlement,
+  FamilyBalance,
+  FamilyExpense,
+  MediaCallSession,
+  ScheduledCall,
+  SupportResource
+} from "../domain/parentCore";
 import { resolveFunctionInvocationRegion, type PeacePadEnvironmentConfig } from "../config/environment";
 import { PeacePadApiError } from "./PeacePadApiClient";
 
@@ -82,7 +103,7 @@ export type AudioCallSession = Readonly<{
   conversationId: EntityId;
   callerIdentityId: EntityId;
   calleeIdentityId: EntityId;
-  type: "audio";
+  type: "audio" | "video";
   status: AudioCallStatus;
   createdAt: string;
   expiresAt: string;
@@ -93,6 +114,92 @@ export type AudioCallSession = Readonly<{
   schemaVersion: "2.0";
   version: number;
   region: "ca" | "us";
+}>;
+
+export type CreateChildProfileInput = Readonly<{
+  familyCircleId: EntityId;
+  displayName: string;
+}>;
+
+export type CreateChildUpdateInput = Readonly<{
+  familyCircleId: EntityId;
+  childProfileId: EntityId;
+  kind: ChildUpdateKind;
+  title: string;
+  body: string;
+  occurredAt: string;
+  visibility: LayerVisibility;
+}>;
+
+export type CreateExpenseInput = Readonly<{
+  familyCircleId: EntityId;
+  childProfileIds: readonly EntityId[];
+  title: string;
+  description: string | null;
+  category: FamilyExpense["category"];
+  amountMinor: number;
+  currency: FamilyExpense["currency"];
+  incurredAt: string;
+  splits: FamilyExpense["splits"];
+  receiptAttachmentId: EntityId | null;
+}>;
+
+export type CreateSettlementInput = Readonly<{
+  familyCircleId: EntityId;
+  expenseId: EntityId;
+  requestedFromIdentityId: EntityId;
+  amountMinor: number;
+  currency: ExpenseSettlement["currency"];
+}>;
+
+export type ResolveSettlementInput = Readonly<{
+  resolution: "confirmed" | "disputed" | "cancelled";
+  resolutionNote?: string | null;
+}>;
+
+export type SupportSearchInput = Readonly<{
+  query: string;
+  country: "CA" | "US";
+  kind?: SupportResource["kind"];
+  latitude?: number;
+  longitude?: number;
+}>;
+
+export type CreateScheduledCallInput = Readonly<{
+  familyCircleId: EntityId;
+  conversationId: EntityId;
+  participantIdentityIds: readonly EntityId[];
+  mediaType: "audio" | "video";
+  startsAt: string;
+  durationMinutes: number;
+  note: string | null;
+}>;
+
+export type CreateConchSessionInput = Readonly<{
+  familyCircleId: EntityId;
+  conversationId: EntityId;
+  mediaType: "audio" | "video";
+  turnDurationSeconds: number;
+}>;
+
+export type CoachConversationMessage = Readonly<{
+  role: "parent" | "coach";
+  content: string;
+}>;
+
+export type CoachConversationTurnInput = Readonly<{
+  conversationId?: EntityId;
+  topic: string;
+  feeling: "calm" | "anxious" | "frustrated" | "overwhelmed" | "sad" | "angry";
+  entryMode: "sending" | "received";
+  messages: readonly CoachConversationMessage[];
+}>;
+
+export type CoachConversationTurn = Readonly<{
+  reply: string;
+  draft: string | null;
+  note: string | null;
+  provider: "configured" | "local-fallback";
 }>;
 
 export type AudioCallSignal = Readonly<
@@ -146,6 +253,24 @@ export type UpdatedProfile = Readonly<{
   version: number;
 }>;
 
+export const PERSONALITY_TYPES = [
+  "INTJ", "INTP", "ENTJ", "ENTP",
+  "INFJ", "INFP", "ENFJ", "ENFP",
+  "ISTJ", "ISFJ", "ESTJ", "ESFJ",
+  "ISTP", "ISFP", "ESTP", "ESFP"
+] as const;
+
+export type PersonalityType = typeof PERSONALITY_TYPES[number];
+
+export type PersonalityPreference = Readonly<{
+  identityId: EntityId;
+  region: "ca" | "us";
+  personalityType: PersonalityType | null;
+  updatedAt: string | null;
+  version: number;
+  schemaVersion: "2.0";
+}>;
+
 export type DevicePushRegistration = Readonly<{
   registrationId: EntityId;
   platform: "ios" | "android";
@@ -194,6 +319,22 @@ export type CreateScheduleEventInput = Readonly<
     | "visibilityOverride"
   >
 >;
+
+export type SaveParentingSchedulePlanInput = Readonly<Pick<ParentingSchedulePlan,
+  "familyCircleId" | "calendarLayerId" | "pattern" | "startDate" | "primaryParentIdentityId" | "secondaryParentIdentityId" | "timezone" | "status"
+>>;
+
+export type CreateParentingScheduleExceptionInput = Readonly<Pick<ParentingScheduleException,
+  "familyCircleId" | "parentingSchedulePlanId" | "assignedParentIdentityId" | "kind" | "startDate" | "endDate" | "note"
+>>;
+
+export type CreateParentingTaskInput = Readonly<{
+  familyCircleId: EntityId;
+  title: string;
+  dueAt: string | null;
+  assignedToIdentityId: EntityId | null;
+  visibility: LayerVisibility;
+}>;
 
 export type CreateConversationInput = Readonly<{
   familyCircleId: EntityId;
@@ -250,11 +391,30 @@ export type LinkTimelineSourceInput = Readonly<{
 }>;
 
 export interface PeacePadCoordinationApi {
+  bootstrapIdentity?(displayName: string, region: "ca" | "us"): Promise<{ identityId: EntityId; region: "ca" | "us"; displayName: string }>;
   registerDevicePush(input: RegisterDevicePushInput, context: WriteContext): Promise<DevicePushRegistration>;
   revokeDevicePush(registrationId: EntityId, context: WriteContext): Promise<RevokedDevicePushRegistration>;
   deleteAccount(context: WriteContext): Promise<DeletedAccount>;
   prepareAccountExport(context: WriteContext): Promise<AccountExportManifest>;
   updateProfile(displayName: string, context: WriteContext): Promise<UpdatedProfile>;
+  getPersonalityPreference(): Promise<PersonalityPreference>;
+  setPersonalityPreference(personalityType: PersonalityType | null, context: WriteContext): Promise<PersonalityPreference>;
+  listChildProfiles(familyCircleId: EntityId): Promise<readonly import("../domain/v2").ChildProfile[]>;
+  createChildProfile(input: CreateChildProfileInput, context: WriteContext): Promise<import("../domain/v2").ChildProfile>;
+  updateChildProfile(profile: import("../domain/v2").ChildProfile, context: WriteContext): Promise<import("../domain/v2").ChildProfile>;
+  listChildUpdates(familyCircleId: EntityId, childProfileId?: EntityId): Promise<readonly ChildUpdate[]>;
+  createChildUpdate(input: CreateChildUpdateInput, context: WriteContext): Promise<ChildUpdate>;
+  listExpenses(familyCircleId: EntityId): Promise<readonly FamilyExpense[]>;
+  createExpense(input: CreateExpenseInput, context: WriteContext): Promise<FamilyExpense>;
+  updateExpense(expense: FamilyExpense, context: WriteContext): Promise<FamilyExpense>;
+  listSettlements(familyCircleId: EntityId): Promise<readonly ExpenseSettlement[]>;
+  requestSettlement(input: CreateSettlementInput, context: WriteContext): Promise<ExpenseSettlement>;
+  resolveSettlement(settlementId: EntityId, input: ResolveSettlementInput, context: WriteContext): Promise<ExpenseSettlement>;
+  getFamilyBalance(familyCircleId: EntityId): Promise<FamilyBalance>;
+  searchSupport(input: SupportSearchInput): Promise<readonly SupportResource[]>;
+  listScheduledCalls(familyCircleId: EntityId): Promise<readonly ScheduledCall[]>;
+  createScheduledCall(input: CreateScheduledCallInput, context: WriteContext): Promise<ScheduledCall>;
+  cancelScheduledCall(callId: EntityId, context: WriteContext): Promise<ScheduledCall>;
   createFamily(familyName: string, context: WriteContext): Promise<CreatedFamily>;
   leaveFamily(familyCircleId: EntityId, context: WriteContext): Promise<LeftFamily>;
   listCaseBinders(familyCircleId: EntityId): Promise<readonly CaseBinder[]>;
@@ -265,6 +425,11 @@ export interface PeacePadCoordinationApi {
   completePrivateAttachment(attachmentId: EntityId, context: WriteContext): Promise<PrivateAttachment>;
   listPrivateAttachments(binderId: EntityId): Promise<readonly PrivateAttachment[]>;
   getPrivateAttachmentDownload(attachmentId: EntityId): Promise<PrivateAttachmentDownload>;
+  completeConversationAttachment(attachmentId: EntityId, context: WriteContext): Promise<ConversationAttachment>;
+  listConversationAttachments(conversationId: EntityId): Promise<readonly ConversationAttachment[]>;
+  getConversationAttachmentDownload(attachmentId: EntityId): Promise<ConversationAttachmentDownload>;
+  completeExpenseReceipt(intentId: EntityId, context: WriteContext): Promise<ExpenseReceiptAttachment>;
+  getExpenseReceiptDownload(attachmentId: EntityId): Promise<ExpenseReceiptDownload>;
   listPrivateTimeline(binderId: EntityId, before?: string, limit?: number): Promise<readonly PrivateTimelineEntry[]>;
   linkTimelineSource(input: LinkTimelineSourceInput, context: WriteContext): Promise<PrivateTimelineEntry>;
   createInvitation(input: CreateInvitationInput, context: WriteContext): Promise<CreatedInvitation>;
@@ -280,6 +445,15 @@ export interface PeacePadCoordinationApi {
   createScheduleEvent(input: CreateScheduleEventInput, context: WriteContext): Promise<ScheduleEvent>;
   updateScheduleEvent(event: ScheduleEvent, context: WriteContext): Promise<ScheduleEvent>;
   deleteScheduleEvent(eventId: EntityId, context: WriteContext): Promise<void>;
+  getParentingSchedulePlan(familyCircleId: EntityId): Promise<ParentingSchedulePlan | null>;
+  saveParentingSchedulePlan(input: SaveParentingSchedulePlanInput, context: WriteContext): Promise<ParentingSchedulePlan>;
+  listParentingScheduleExceptions(familyCircleId: EntityId): Promise<readonly ParentingScheduleException[]>;
+  createParentingScheduleException(input: CreateParentingScheduleExceptionInput, context: WriteContext): Promise<ParentingScheduleException>;
+  resolveParentingScheduleException(exceptionId: EntityId, resolution: "accepted" | "declined" | "cancelled", context: WriteContext): Promise<ParentingScheduleException>;
+  listParentingTasks(familyCircleId: EntityId): Promise<readonly ParentingTask[]>;
+  createParentingTask(input: CreateParentingTaskInput, context: WriteContext): Promise<ParentingTask>;
+  updateParentingTask(task: ParentingTask, context: WriteContext): Promise<ParentingTask>;
+  deleteParentingTask(taskId: EntityId, context: WriteContext): Promise<void>;
   listConversations(familyCircleId: EntityId): Promise<readonly Conversation[]>;
   createConversation(input: CreateConversationInput, context: WriteContext): Promise<Conversation>;
   listMessages(conversationId: EntityId): Promise<readonly MessageEvent[]>;
@@ -294,6 +468,8 @@ export interface PeacePadCoordinationApi {
     context: WriteContext
   ): Promise<MessageCheckPreference>;
   previewMessage(conversationId: EntityId, content: string): Promise<MessagePreviewResponse>;
+  transcribeCoachAudio(bytes: ArrayBuffer, mediaType: "audio/m4a" | "audio/mp4" | "audio/webm"): Promise<Readonly<{ transcript: string }>>;
+  coachConversationTurn(input: CoachConversationTurnInput): Promise<CoachConversationTurn>;
   getCurrentAudioCall(conversationId: EntityId): Promise<AudioCallSession | null>;
   createAudioCall(conversationId: EntityId, context: WriteContext): Promise<AudioCallSession>;
   acceptAudioCall(callId: EntityId, context: WriteContext): Promise<AudioCallSession>;
@@ -301,6 +477,18 @@ export interface PeacePadCoordinationApi {
   endAudioCall(callId: EntityId, context: WriteContext): Promise<AudioCallSession>;
   getAudioCallTurnCredentials(callId: EntityId, context: WriteContext): Promise<AudioCallTurnCredentials>;
   sendAudioCallSignal(callId: EntityId, signal: AudioCallSignal, context: WriteContext): Promise<AudioCallSignalReceipt>;
+  createMediaCall(conversationId: EntityId, mediaType: "audio" | "video", context: WriteContext): Promise<MediaCallSession>;
+  getCurrentMediaCall(conversationId: EntityId): Promise<MediaCallSession | null>;
+  createConchSession(input: CreateConchSessionInput, context: WriteContext): Promise<ConchSession>;
+  getCurrentConchSession(conversationId: EntityId): Promise<ConchSession | null>;
+  getCurrentConchTurn(sessionId: EntityId): Promise<ConchTurn | null>;
+  respondToConchSession(sessionId: EntityId, response: "accept" | "decline", context: WriteContext): Promise<ConchSession>;
+  consentToConchSession(sessionId: EntityId, summaryConsent: boolean, context: WriteContext): Promise<ConchSession>;
+  getConchSummary(sessionId: EntityId): Promise<ConchSummary | null>;
+  saveConchSummary(sessionId: EntityId, body: string, context: WriteContext): Promise<ConchSummary>;
+  passConchTurn(sessionId: EntityId, context: WriteContext): Promise<Readonly<{ session: ConchSession; turn: ConchTurn }>>;
+  reactToConchTurn(sessionId: EntityId, turnId: EntityId, reaction: ConchReaction, context: WriteContext): Promise<ConchTurn>;
+  endConchSession(sessionId: EntityId, context: WriteContext): Promise<ConchSession>;
 }
 
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
@@ -332,6 +520,25 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
     private readonly fetcher: FetchLike = fetch,
     private readonly accessToken: AccessTokenProvider = async () => undefined
   ) {}
+
+  bootstrapIdentity(displayName: string, region: "ca" | "us") {
+    const normalized = displayName.trim();
+    if (!normalized || normalized.length > 120) {
+      return Promise.reject(new PeacePadApiError("Enter a valid profile name.", "http", 400));
+    }
+    return this.request<{ identityId: EntityId; region: "ca" | "us"; displayName: string }>(
+      "/api/v2/session/bootstrap",
+      {
+        method: "POST",
+        body: JSON.stringify({ displayName: normalized }),
+        headers: {
+          "Idempotency-Key": `identity-bootstrap-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+          "X-PeacePad-Region": region,
+          "X-PeacePad-Schema-Version": "2.0"
+        }
+      }
+    );
+  }
 
   registerDevicePush(input: RegisterDevicePushInput, context: WriteContext) {
     return this.write<DevicePushRegistration>("/api/v2/devices/push", "POST", input, context);
@@ -368,6 +575,121 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
       throw new PeacePadApiError("PeacePad could not verify the profile update.", "http", 502);
     }
     return result;
+  }
+
+  async getPersonalityPreference() {
+    const result = await this.request<PersonalityPreference>("/api/v2/account/personality-preference");
+    if (
+      !result
+      || typeof result.identityId !== "string"
+      || result.region !== "ca" && result.region !== "us"
+      || (result.personalityType !== null && !PERSONALITY_TYPES.includes(result.personalityType))
+      || (result.updatedAt !== null && (typeof result.updatedAt !== "string" || Number.isNaN(Date.parse(result.updatedAt))))
+      || !Number.isInteger(result.version)
+      || result.version < 0
+      || result.schemaVersion !== "2.0"
+    ) {
+      throw new PeacePadApiError("PeacePad could not verify your communication profile.", "http", 502);
+    }
+    return result;
+  }
+
+  async setPersonalityPreference(personalityType: PersonalityType | null, context: WriteContext) {
+    if (personalityType !== null && !PERSONALITY_TYPES.includes(personalityType)) {
+      throw new PeacePadApiError("Choose a valid communication profile.", "http", 400);
+    }
+    if (context.expectedVersion === null) {
+      throw new PeacePadApiError("A communication profile version is required.", "http", 400);
+    }
+    const result = await this.write<PersonalityPreference>(
+      "/api/v2/account/personality-preference",
+      "PUT",
+      { personalityType },
+      context
+    );
+    if (
+      !result
+      || result.identityId !== context.actor.identityId
+      || result.region !== context.region
+      || result.personalityType !== personalityType
+      || (result.updatedAt !== null && Number.isNaN(Date.parse(result.updatedAt)))
+      || !Number.isInteger(result.version)
+      || result.version <= context.expectedVersion
+      || result.schemaVersion !== "2.0"
+    ) {
+      throw new PeacePadApiError("PeacePad could not verify your communication profile.", "http", 502);
+    }
+    return result;
+  }
+
+  listChildProfiles(familyCircleId: EntityId) {
+    return this.request<readonly import("../domain/v2").ChildProfile[]>(`/api/v2/children?familyCircleId=${encodeURIComponent(familyCircleId)}`);
+  }
+
+  createChildProfile(input: CreateChildProfileInput, context: WriteContext) {
+    return this.write<import("../domain/v2").ChildProfile>("/api/v2/children", "POST", input, context);
+  }
+
+  updateChildProfile(profile: import("../domain/v2").ChildProfile, context: WriteContext) {
+    return this.write<import("../domain/v2").ChildProfile>(`/api/v2/children/${encodeURIComponent(profile.id)}`, "PATCH", profile, context);
+  }
+
+  listChildUpdates(familyCircleId: EntityId, childProfileId?: EntityId) {
+    const query = new URLSearchParams({ familyCircleId });
+    if (childProfileId) query.set("childProfileId", childProfileId);
+    return this.request<readonly ChildUpdate[]>(`/api/v2/child-updates?${query.toString()}`);
+  }
+
+  createChildUpdate(input: CreateChildUpdateInput, context: WriteContext) {
+    return this.write<ChildUpdate>("/api/v2/child-updates", "POST", input, context);
+  }
+
+  listExpenses(familyCircleId: EntityId) {
+    return this.request<readonly FamilyExpense[]>(`/api/v2/expenses?familyCircleId=${encodeURIComponent(familyCircleId)}`);
+  }
+
+  createExpense(input: CreateExpenseInput, context: WriteContext) {
+    return this.write<FamilyExpense>("/api/v2/expenses", "POST", input, context);
+  }
+
+  updateExpense(expense: FamilyExpense, context: WriteContext) {
+    return this.write<FamilyExpense>(`/api/v2/expenses/${encodeURIComponent(expense.id)}`, "PATCH", expense, context);
+  }
+
+  listSettlements(familyCircleId: EntityId) {
+    return this.request<readonly ExpenseSettlement[]>(`/api/v2/settlements?familyCircleId=${encodeURIComponent(familyCircleId)}`);
+  }
+
+  requestSettlement(input: CreateSettlementInput, context: WriteContext) {
+    return this.write<ExpenseSettlement>("/api/v2/settlements", "POST", input, context);
+  }
+
+  resolveSettlement(settlementId: EntityId, input: ResolveSettlementInput, context: WriteContext) {
+    return this.write<ExpenseSettlement>(`/api/v2/settlements/${encodeURIComponent(settlementId)}`, "PATCH", input, context);
+  }
+
+  getFamilyBalance(familyCircleId: EntityId) {
+    return this.request<FamilyBalance>(`/api/v2/expenses/balance?familyCircleId=${encodeURIComponent(familyCircleId)}`);
+  }
+
+  searchSupport(input: SupportSearchInput) {
+    const query = new URLSearchParams({ query: input.query.trim(), country: input.country });
+    if (input.kind) query.set("kind", input.kind);
+    if (input.latitude !== undefined) query.set("latitude", String(input.latitude));
+    if (input.longitude !== undefined) query.set("longitude", String(input.longitude));
+    return this.request<readonly SupportResource[]>(`/api/v2/support/search?${query.toString()}`);
+  }
+
+  listScheduledCalls(familyCircleId: EntityId) {
+    return this.request<readonly ScheduledCall[]>(`/api/v2/scheduled-calls?familyCircleId=${encodeURIComponent(familyCircleId)}`);
+  }
+
+  createScheduledCall(input: CreateScheduledCallInput, context: WriteContext) {
+    return this.write<ScheduledCall>("/api/v2/scheduled-calls", "POST", input, context);
+  }
+
+  cancelScheduledCall(callId: EntityId, context: WriteContext) {
+    return this.write<ScheduledCall>(`/api/v2/scheduled-calls/${encodeURIComponent(callId)}`, "PATCH", { status: "cancelled" }, context);
   }
 
   createFamily(familyName: string, context: WriteContext) {
@@ -514,6 +836,22 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
     await this.write(`/api/v2/schedule-events/${encodeURIComponent(eventId)}`, "DELETE", undefined, context);
   }
 
+  listParentingTasks(familyCircleId: EntityId) {
+    return this.request<readonly ParentingTask[]>(`/api/v2/parenting-tasks?familyCircleId=${encodeURIComponent(familyCircleId)}`);
+  }
+
+  createParentingTask(input: CreateParentingTaskInput, context: WriteContext) {
+    return this.write<ParentingTask>("/api/v2/parenting-tasks", "POST", input, context);
+  }
+
+  updateParentingTask(task: ParentingTask, context: WriteContext) {
+    return this.write<ParentingTask>(`/api/v2/parenting-tasks/${encodeURIComponent(task.id)}`, "PATCH", task, context);
+  }
+
+  async deleteParentingTask(taskId: EntityId, context: WriteContext) {
+    await this.write(`/api/v2/parenting-tasks/${encodeURIComponent(taskId)}`, "DELETE", undefined, context);
+  }
+
   createAttachmentUploadIntent(input: CreateAttachmentUploadIntentInput, context: WriteContext) {
     return this.write<AttachmentUploadIntent>("/api/v2/attachment-upload-intents", "POST", input, context);
   }
@@ -564,6 +902,46 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
 
   getPrivateAttachmentDownload(attachmentId: EntityId) {
     return this.request<PrivateAttachmentDownload>(`/api/v2/attachments/${encodeURIComponent(attachmentId)}/download`);
+  }
+
+  getParentingSchedulePlan(familyCircleId: EntityId) {
+    return this.request<ParentingSchedulePlan | null>(`/api/v2/parenting-schedule?familyCircleId=${encodeURIComponent(familyCircleId)}`);
+  }
+
+  saveParentingSchedulePlan(input: SaveParentingSchedulePlanInput, context: WriteContext) {
+    return this.write<ParentingSchedulePlan>("/api/v2/parenting-schedule", "PUT", input, context);
+  }
+
+  listParentingScheduleExceptions(familyCircleId: EntityId) {
+    return this.request<readonly ParentingScheduleException[]>(`/api/v2/parenting-schedule/exceptions?familyCircleId=${encodeURIComponent(familyCircleId)}`);
+  }
+
+  createParentingScheduleException(input: CreateParentingScheduleExceptionInput, context: WriteContext) {
+    return this.write<ParentingScheduleException>("/api/v2/parenting-schedule/exceptions", "POST", input, context);
+  }
+
+  resolveParentingScheduleException(exceptionId: EntityId, resolution: "accepted" | "declined" | "cancelled", context: WriteContext) {
+    return this.write<ParentingScheduleException>(`/api/v2/parenting-schedule/exceptions/${encodeURIComponent(exceptionId)}`, "PATCH", { resolution }, context);
+  }
+
+  completeConversationAttachment(attachmentId: EntityId, context: WriteContext) {
+    return this.write<ConversationAttachment>(`/api/v2/conversation-attachments/${encodeURIComponent(attachmentId)}/complete`, "POST", {}, context);
+  }
+
+  listConversationAttachments(conversationId: EntityId) {
+    return this.request<readonly ConversationAttachment[]>(`/api/v2/conversation-attachments?conversationId=${encodeURIComponent(conversationId)}`);
+  }
+
+  getConversationAttachmentDownload(attachmentId: EntityId) {
+    return this.request<ConversationAttachmentDownload>(`/api/v2/conversation-attachments/${encodeURIComponent(attachmentId)}/download`);
+  }
+
+  completeExpenseReceipt(intentId: EntityId, context: WriteContext) {
+    return this.write<ExpenseReceiptAttachment>(`/api/v2/expense-receipts/${encodeURIComponent(intentId)}/complete`, "POST", {}, context);
+  }
+
+  getExpenseReceiptDownload(attachmentId: EntityId) {
+    return this.request<ExpenseReceiptDownload>(`/api/v2/expense-receipts/${encodeURIComponent(attachmentId)}/download`);
   }
 
   listPrivateTimeline(binderId: EntityId, before?: string, limit = 50) {
@@ -660,7 +1038,62 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
   }
 
   createAudioCall(conversationId: EntityId, context: WriteContext) {
-    return this.write<AudioCallSession>("/api/v2/calls", "POST", { conversationId }, context);
+    return this.write<AudioCallSession>("/api/v2/calls", "POST", { conversationId, mediaType: "audio" }, context);
+  }
+
+  async transcribeCoachAudio(bytes: ArrayBuffer, mediaType: "audio/m4a" | "audio/mp4" | "audio/webm") {
+    if (bytes.byteLength < 256 || bytes.byteLength > 8 * 1024 * 1024) {
+      throw new PeacePadApiError("Record a Coach voice note under eight megabytes.", "http", 400);
+    }
+    const result = await this.request<Readonly<{ transcript: string }>>("/api/v2/coach/transcriptions", {
+      method: "POST",
+      body: bytes as unknown as RequestInit["body"],
+      headers: {
+        "Content-Type": mediaType,
+        "X-PeacePad-Schema-Version": "2.0"
+      }
+    });
+    if (!result || typeof result.transcript !== "string" || !result.transcript.trim() || result.transcript.length > 10000) {
+      throw new PeacePadApiError("PeacePad could not verify the Coach transcript.", "http", 502);
+    }
+    return { transcript: result.transcript.trim() };
+  }
+
+  coachConversationTurn(input: CoachConversationTurnInput) {
+    const topic = input.topic.trim();
+    if (!topic || topic.length > 4000 || input.messages.length > 12) {
+      return Promise.reject(new PeacePadApiError("Tell Coach what is happening in fewer than 4,000 characters.", "http", 400));
+    }
+    const messages = input.messages.map((message) => ({ role: message.role, content: message.content.trim() }));
+    if (messages.some((message) => !message.content || message.content.length > 4000)) {
+      return Promise.reject(new PeacePadApiError("Coach could not read one of those messages.", "http", 400));
+    }
+    return this.request<CoachConversationTurn>("/api/v2/coach/conversation", {
+      method: "POST",
+      body: JSON.stringify({
+        conversationId: input.conversationId ?? null,
+        topic,
+        feeling: input.feeling,
+        entryMode: input.entryMode,
+        messages
+      })
+    }).then((result) => {
+      if (!result || typeof result.reply !== "string" || !result.reply.trim() || result.reply.length > 4000 ||
+        (result.draft !== null && typeof result.draft !== "string") ||
+        (result.note !== null && typeof result.note !== "string") ||
+        result.provider !== "configured") {
+        throw new PeacePadApiError("PeacePad could not verify the Coach response.", "http", 502);
+      }
+      return { ...result, reply: result.reply.trim(), draft: result.draft?.trim() || null, note: result.note?.trim() || null };
+    });
+  }
+
+  createMediaCall(conversationId: EntityId, mediaType: "audio" | "video", context: WriteContext) {
+    return this.write<MediaCallSession>("/api/v2/calls", "POST", { conversationId, mediaType }, context);
+  }
+
+  getCurrentMediaCall(conversationId: EntityId) {
+    return this.request<MediaCallSession | null>(`/api/v2/calls/current?conversationId=${encodeURIComponent(conversationId)}`);
   }
 
   acceptAudioCall(callId: EntityId, context: WriteContext) {
@@ -702,6 +1135,50 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
         "X-PeacePad-Schema-Version": context.schemaVersion
       }
     });
+  }
+
+  createConchSession(input: CreateConchSessionInput, context: WriteContext) {
+    return this.write<ConchSession>("/api/v2/conch-sessions", "POST", input, context);
+  }
+
+  getCurrentConchSession(conversationId: EntityId) {
+    return this.request<ConchSession | null>(`/api/v2/conch-sessions/current?conversationId=${encodeURIComponent(conversationId)}`);
+  }
+
+  getCurrentConchTurn(sessionId: EntityId) {
+    return this.request<ConchTurn | null>(`/api/v2/conch-sessions/${encodeURIComponent(sessionId)}/turns/current`);
+  }
+
+  respondToConchSession(sessionId: EntityId, response: "accept" | "decline", context: WriteContext) {
+    return this.write<ConchSession>(`/api/v2/conch-sessions/${encodeURIComponent(sessionId)}/respond`, "POST", { response }, context);
+  }
+
+  consentToConchSession(sessionId: EntityId, summaryConsent: boolean, context: WriteContext) {
+    return this.write<ConchSession>(`/api/v2/conch-sessions/${encodeURIComponent(sessionId)}/consent`, "POST", { summaryConsent }, context);
+  }
+
+  getConchSummary(sessionId: EntityId) {
+    return this.request<ConchSummary | null>(`/api/v2/conch-sessions/${encodeURIComponent(sessionId)}/summary`);
+  }
+
+  saveConchSummary(sessionId: EntityId, body: string, context: WriteContext) {
+    const normalized = body.trim();
+    if (!normalized || normalized.length > 1000) {
+      return Promise.reject(new PeacePadApiError("Keep the agreed Conch summary between 1 and 1,000 characters.", "http", 400));
+    }
+    return this.write<ConchSummary>(`/api/v2/conch-sessions/${encodeURIComponent(sessionId)}/summary`, "PUT", { body: normalized }, context);
+  }
+
+  passConchTurn(sessionId: EntityId, context: WriteContext) {
+    return this.write<Readonly<{ session: ConchSession; turn: ConchTurn }>>(`/api/v2/conch-sessions/${encodeURIComponent(sessionId)}/pass`, "POST", {}, context);
+  }
+
+  reactToConchTurn(sessionId: EntityId, turnId: EntityId, reaction: ConchReaction, context: WriteContext) {
+    return this.write<ConchTurn>(`/api/v2/conch-sessions/${encodeURIComponent(sessionId)}/turns/${encodeURIComponent(turnId)}/reactions`, "POST", { reaction }, context);
+  }
+
+  endConchSession(sessionId: EntityId, context: WriteContext) {
+    return this.write<ConchSession>(`/api/v2/conch-sessions/${encodeURIComponent(sessionId)}/end`, "POST", {}, context);
   }
 
   private write<T = Record<string, never>>(
@@ -746,8 +1223,24 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
       const payload = (await response.json().catch(() => null)) as T | ErrorPayload | null;
       if (!response.ok) {
         const error = errorDetail((payload ?? null) as ErrorPayload | null);
+        // Keep production diagnostics useful without logging tokens, IDs, or
+        // user content. The request ID lets support correlate this event with
+        // the Edge function log when a family-space load fails.
+        console.warn("[PeacePad API] request failed", {
+          environment: this.config.environment,
+          path,
+          status: response.status,
+          code: error.code,
+          requestId: error.requestId ?? response.headers.get("x-request-id") ?? undefined
+        });
         if (response.status === 401) {
-          throw new PeacePadApiError("Your staging session expired. Sign in again.", "auth-required", 401);
+          throw new PeacePadApiError(
+            this.config.environment === "production"
+              ? "Your PeacePad session expired. Sign in again."
+              : "Your staging session expired. Sign in again.",
+            "auth-required",
+            401
+          );
         }
         const invitationReason = error.code ? INVITATION_REASONS[error.code] : undefined;
         if (invitationReason) {
@@ -764,7 +1257,12 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
       if (error instanceof Error && error.name === "AbortError") {
         throw new PeacePadApiError("PeacePad took too long to respond. Try again.", "timeout");
       }
-      throw new PeacePadApiError("PeacePad cannot reach the staging service right now.", "network");
+      throw new PeacePadApiError(
+        this.config.environment === "production"
+          ? "PeacePad cannot reach the service right now."
+          : "PeacePad cannot reach the staging service right now.",
+        "network"
+      );
     } finally {
       clearTimeout(timeout);
     }

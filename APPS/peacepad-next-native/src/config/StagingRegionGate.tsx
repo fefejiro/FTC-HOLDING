@@ -30,7 +30,7 @@ export function StagingRegionGate({
   onSelect(config: PeacePadSupabaseConfig): void;
   store?: StagingRegionStore;
 }) {
-  if (configs.length < 2) throw new Error("The regional selector requires at least two verified staging regions.");
+  if (configs.length !== 1) throw new Error("PeacePad requires exactly one verified staging region.");
   const { t } = useLocalization();
   const [selectedRegion, setSelectedRegion] = useState<PeacePadStagingRegion>(configs[0].region);
   const [busy, setBusy] = useState(false);
@@ -39,13 +39,13 @@ export function StagingRegionGate({
   useEffect(() => {
     let active = true;
     void store.read().then((stored) => {
-      if (active && (stored === "ca" || stored === "us") && allowedRegions.has(stored)) setSelectedRegion(stored);
+      if (active && stored === "ca" && allowedRegions.has(stored)) setSelectedRegion(stored);
     }).catch(() => undefined);
     return () => { active = false; };
   }, [allowedRegions, store]);
 
   const selectedConfig = configs.find((config) => config.region === selectedRegion) ?? configs[0];
-  const regionLabel = (region: PeacePadStagingRegion) => t(region === "ca" ? "runtime.regionCanada" : "runtime.regionUnitedStates");
+  const regionLabel = (_region: PeacePadStagingRegion) => t("runtime.regionCanada");
   const continueToRegion = useCallback(async () => {
     if (busy) return;
     setBusy(true);

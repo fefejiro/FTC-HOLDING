@@ -5,7 +5,7 @@
 **Primary branch:** `main`  
 **Repository visibility:** **PUBLIC**
 
-FTC Holding is a product studio. This monorepo contains product apps, shared packages, and operational docs at different evidence and release levels. New devs: read this file first, then `DOCS/FTC_PROJECT_LEDGER.md` for project status, then `DOCS/RUNBOOK.md` for ops.
+FTC Holding is a product studio. This monorepo contains product apps, shared packages, and operational docs at different evidence and release levels. New devs: begin with [`DOCS/FTC_DEVELOPER_START_HERE.md`](DOCS/FTC_DEVELOPER_START_HERE.md), then read `DOCS/FTC_PROJECT_LEDGER.md` for project status and `DOCS/RUNBOOK.md` for ops.
 
 ---
 

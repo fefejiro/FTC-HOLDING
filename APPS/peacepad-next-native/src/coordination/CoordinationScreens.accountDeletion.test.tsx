@@ -94,11 +94,11 @@ describe("staging account deletion", () => {
   it("replays the three-screen introduction from Settings without signing out", () => {
     render(withLocalization(<MoreScreen setScreen={jest.fn()} />));
     fireEvent.press(screen.getByRole("button", { name: "Replay introduction" }));
-    expect(screen.getByRole("header", { name: "A calmer space for co-parenting" })).toBeOnTheScreen();
+    expect(screen.getByRole("header", { name: "A calmer way to coordinate parenting" })).toBeOnTheScreen();
     fireEvent.press(screen.getByRole("button", { name: "Next" }));
     expect(screen.getByRole("header", { name: "Pause before you send" })).toBeOnTheScreen();
     fireEvent.press(screen.getByRole("button", { name: "Next" }));
-    expect(screen.getByRole("header", { name: "Keep family plans together" })).toBeOnTheScreen();
+    expect(screen.getByRole("header", { name: "Keep parenting plans organized" })).toBeOnTheScreen();
     fireEvent.press(screen.getByRole("button", { name: "Get started" }));
     expect(screen.getByRole("header", { name: "More" })).toBeOnTheScreen();
   });

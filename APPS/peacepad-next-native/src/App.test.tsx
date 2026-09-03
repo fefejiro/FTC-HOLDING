@@ -8,6 +8,8 @@ import { SyntheticCoordinationApi } from "./api/SyntheticCoordinationApi";
 import { CoordinationStateProvider, resolveCalendarStartView, type CoordinationRuntime } from "./coordination/CoordinationState";
 import { PendingStagingInvitationProvider } from "./runtime/PeacePadStagingRuntime";
 
+const currentCalendarMonth = new Intl.DateTimeFormat("en", { month: "long", timeZone: "UTC", year: "numeric" }).format(new Date());
+
 function createTestApi() {
   return new SyntheticCoordinationApi([{
     code: "CALM26",
@@ -26,10 +28,11 @@ function createTestApi() {
 function renderApp(
   startScreen = "home",
   initialCalendarView?: "month" | "week" | "day",
-  api = createTestApi()
+  api: PeacePadCoordinationApi = createTestApi(),
+  runtime?: CoordinationRuntime
 ) {
   return render(
-    <CoordinationStateProvider api={api} initialCalendarView={initialCalendarView}>
+    <CoordinationStateProvider api={api} initialCalendarView={initialCalendarView} runtime={runtime}>
       <PeacePadCoordinationApp startScreen={startScreen} />
     </CoordinationStateProvider>
   );
@@ -39,17 +42,34 @@ describe("PeacePad coordination shell", () => {
   it("starts safely and rejects unsupported routes", () => {
     expect(resolveStartScreen()).toBe("foundation");
     expect(resolveStartScreen("home")).toBe("home");
+    expect(resolveStartScreen("coach")).toBe("coach");
+    expect(resolveStartScreen("conch")).toBe("conch");
     expect(resolveStartScreen("evidence-detail")).toBe("foundation");
     expect(resolveStartScreen("production-admin")).toBe("foundation");
   });
 
+  it("makes consent-based Conch mode directly discoverable from More", () => {
+    renderApp("more");
+    expect(screen.getByLabelText("Open Conch mode")).toBeOnTheScreen();
+    expect(screen.getByText("Conch mode")).toBeOnTheScreen();
+  });
+
   it("shows a quiet state-derived Home without internal language", () => {
     renderApp();
-    expect(screen.getByText("What would you like to do?")).toBeOnTheScreen();
+    expect(screen.getByRole("header", { name: "Ready for today?" })).toBeOnTheScreen();
+    expect(screen.getByText("Small steps. Kind words. Big impact—for your kids.")).toBeOnTheScreen();
     expect(screen.getByText("Upcoming events")).toBeOnTheScreen();
     for (const phrase of ["Premium because", "Gate 1", "Lab-only", "prototype", "mock", "synthetic"]) {
       expect(screen.queryByText(new RegExp(phrase, "i"))).not.toBeOnTheScreen();
     }
+  });
+
+  it("keeps PeaceBot Coach reachable before a co-parent connects", () => {
+    renderApp();
+    fireEvent.press(screen.getByRole("button", { name: "Open PeaceBot Coach" }));
+    expect(screen.getByRole("header", { name: "PeaceBot Coach" })).toBeOnTheScreen();
+    expect(screen.getByText(/nothing is shared until you choose it/i)).toBeOnTheScreen();
+    expect(screen.queryByText("Connect another parent first")).not.toBeOnTheScreen();
   });
 
   it("keeps internal reconstruction language off the welcome screen", async () => {
@@ -62,7 +82,7 @@ describe("PeacePad coordination shell", () => {
 
   it.each([
     ["Messages", "Get suggestions for clarity and tone before you send. You choose what changes."],
-    ["Calendar", "August 2026"],
+    ["Calendar", currentCalendarMonth],
     ["Records", "Create a Case Binder"],
     ["More", "Family connection"]
   ] as const)("opens %s from primary navigation", (label, expected) => {
@@ -137,6 +157,28 @@ describe("PeacePad coordination shell", () => {
     expect(screen.getByText("Message Check")).toBeOnTheScreen();
   });
 
+  it.each([
+    ["Tasks", "Keep small parenting commitments clear and in one place."],
+    ["Add a record", "Create a Case Binder"],
+    ["Invite co-parent", "Family connection"]
+  ] as const)("routes the %s Home action", (action, expected) => {
+    renderApp();
+    fireEvent.press(screen.getByRole("button", { name: action }));
+    expect(screen.getByText(expected)).toBeOnTheScreen();
+  });
+
+  it("opens the ported activity library and keeps location use explicit", () => {
+    renderApp();
+    fireEvent.press(screen.getByRole("button", { name: "Activity ideas" }));
+    expect(screen.getByRole("header", { name: "Activity ideas" })).toBeOnTheScreen();
+    expect(screen.getByText(/does not use your location automatically/i)).toBeOnTheScreen();
+    fireEvent.press(screen.getByRole("radio", { name: "Rainy" }));
+    expect(screen.getByText("Indoor Fort Building")).toBeOnTheScreen();
+    fireEvent.press(screen.getByRole("button", { name: "Plan Indoor Fort Building in calendar" }));
+    expect(screen.getByLabelText("month calendar")).toBeOnTheScreen();
+    expect(screen.getByDisplayValue("Indoor Fort Building")).toBeOnTheScreen();
+  });
+
   it("exposes an accessible language choice and updates supported shell text", () => {
     renderApp("more");
     expect(screen.getByRole("radio", { name: "English" }).props.accessibilityState).toEqual({ checked: true });
@@ -188,11 +230,11 @@ describe("PeacePad coordination shell", () => {
   it.each([
     ["Français", "Accueil", "Que souhaitez-vous faire?", "Envoyer un message", "Aujourd’hui", "Non connecté"],
     ["Español", "Inicio", "¿Qué te gustaría hacer?", "Enviar un mensaje", "Hoy", "Sin conexión"]
-  ])("localizes Home tasks and state summaries with semantic headings in %s", (language, homeTab, title, sendAction, today, disconnected) => {
+  ])("localizes Home tasks and state summaries with semantic headings in %s", (language, homeTab, _legacyTitle, sendAction, today, disconnected) => {
     renderApp("more");
     fireEvent.press(screen.getByRole("radio", { name: language }));
     fireEvent.press(screen.getByRole("tab", { name: homeTab }));
-    expect(screen.getByRole("header", { name: title })).toBeOnTheScreen();
+    expect(screen.getByRole("header", { name: /Prêt pour aujourd’hui\?|¿Listo para hoy\?/ })).toBeOnTheScreen();
     expect(screen.getByRole("button", { name: sendAction })).toBeOnTheScreen();
     expect(screen.getByRole("header", { name: today })).toBeOnTheScreen();
     expect(screen.getByText(disconnected)).toBeOnTheScreen();
@@ -279,6 +321,36 @@ describe("secure invitation flow", () => {
 });
 
 describe("layered calendar", () => {
+  const connectedRuntime: CoordinationRuntime = {
+    actorIdentityId: "11111111-1111-4111-8111-111111111111",
+    identityVersion: 1,
+    sessionId: "10000000-0000-4000-8000-000000000002",
+    familyCircleId: "33333333-3333-4333-8333-333333333333",
+    participantGrantId: "10000000-0000-4000-8000-000000000004",
+    participantGrantVersion: 1,
+    conversationId: "55555555-5555-4555-8555-555555555555",
+    region: "ca"
+  };
+
+  it("lets a connected parent submit a schedule-change request with an awaiting-response state", async () => {
+    const synthetic = new SyntheticCoordinationApi();
+    const api = new Proxy({} as unknown as PeacePadCoordinationApi, {
+      get(target, property) {
+        const value = (target as unknown as Record<PropertyKey, unknown>)[property];
+        if (value !== undefined) return value;
+        const syntheticValue = (synthetic as unknown as Record<PropertyKey, unknown>)[property];
+        return typeof syntheticValue === "function" ? syntheticValue.bind(synthetic) : syntheticValue;
+      }
+    });
+    renderApp("calendar", undefined, api, connectedRuntime);
+    expect(await screen.findByRole("tab", { name: "Request a schedule change" })).toBeOnTheScreen();
+    fireEvent.changeText(screen.getByLabelText("Event title"), "Weekend visit");
+    fireEvent.press(screen.getByRole("tab", { name: "Request a schedule change" }));
+    fireEvent.press(screen.getByRole("button", { name: "Save event" }));
+    expect((await screen.findAllByText("Weekend visit")).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/Awaiting response/)).toBeOnTheScreen();
+  });
+
   it("starts private, confirms sharing, switches views, and creates an event", async () => {
     renderApp("calendar");
     expect(screen.getByLabelText("month calendar")).toBeOnTheScreen();
@@ -322,6 +394,26 @@ describe("layered calendar", () => {
     expect(screen.getByText("Delete this event? Shared participants may lose access to it.")).toBeOnTheScreen();
     fireEvent.press(screen.getByText("Confirm delete"));
     await waitFor(() => expect(screen.queryByText("Dentist appointment")).not.toBeOnTheScreen());
+  });
+
+  it("uses entered dates, rejects an invalid time range, and lets a parent return to today", async () => {
+    renderApp("calendar");
+    const thisMonth = currentCalendarMonth;
+    fireEvent.press(screen.getByRole("button", { name: "Previous" }));
+    expect(screen.queryByText(thisMonth)).not.toBeOnTheScreen();
+    fireEvent.press(screen.getByRole("button", { name: "Today" }));
+    expect(screen.getByText(thisMonth)).toBeOnTheScreen();
+
+    fireEvent.changeText(screen.getByLabelText("Event title"), "Parenting time request");
+    fireEvent.changeText(screen.getByLabelText("Starts"), "2026-08-15 14:00");
+    fireEvent.changeText(screen.getByLabelText("Ends"), "2026-08-15 13:00");
+    fireEvent.press(screen.getByRole("button", { name: "Save event" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Enter a valid end time after the start time.");
+    expect(screen.queryByText("Parenting time request")).not.toBeOnTheScreen();
+
+    fireEvent.changeText(screen.getByLabelText("Ends"), "2026-08-15 15:00");
+    fireEvent.press(screen.getByRole("button", { name: "Save event" }));
+    expect((await screen.findAllByText("Parenting time request")).length).toBeGreaterThanOrEqual(1);
   });
 });
 

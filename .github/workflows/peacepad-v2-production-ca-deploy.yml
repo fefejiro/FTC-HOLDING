@@ -1,0 +1,152 @@
+name: PeacePad V2 Canada Production Promotion
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_commit_sha:
+        description: Exact reviewed peacepad-native-main commit to promote
+        required: true
+        type: string
+      confirmation:
+        description: Type PROMOTE PEACEPAD CA TO PRODUCTION
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: peacepad-v2-production-ca
+  cancel-in-progress: false
+
+jobs:
+  promote-production:
+    name: Promote the proven Canada data plane to production
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: peacepad-v2-staging-ca
+    steps:
+      - name: Checkout trusted control
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Bind promotion to main and the reviewed Native V2 head
+        shell: pwsh
+        env:
+          TARGET_SHA: ${{ inputs.target_commit_sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          SELECTED_REF: ${{ github.ref_name }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:SELECTED_REF -cne 'main') { throw 'Production promotion must be dispatched from main.' }
+          if ($env:CONFIRMATION -cne 'PROMOTE PEACEPAD CA TO PRODUCTION') { throw 'Exact production confirmation is required.' }
+          if ($env:TARGET_SHA -cnotmatch '^[0-9a-f]{40}$') { throw 'A full lowercase target SHA is required.' }
+          git fetch --no-tags origin refs/heads/peacepad-native-main
+          if ($LASTEXITCODE -ne 0) { throw 'Could not fetch the reviewed PeacePad branch.' }
+          if ((git rev-parse FETCH_HEAD).Trim() -cne $env:TARGET_SHA) { throw 'Target SHA is not the current reviewed PeacePad branch head.' }
+          git worktree add --detach peacepad-v2-target $env:TARGET_SHA
+          if ($LASTEXITCODE -ne 0) { throw 'Could not materialize the exact production target.' }
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1
+        with:
+          version: 2.113.0
+
+      - name: Validate source and protected provider configuration
+        shell: pwsh
+        env:
+          PEACEPAD_PUSH_TOKEN_SECRET: ${{ secrets.PUSH_TOKEN_SECRET }}
+          PEACEPAD_TURN_URLS: ${{ secrets.TURN_URLS }}
+          PEACEPAD_TURN_SHARED_SECRET: ${{ secrets.TURN_SHARED_SECRET }}
+          PEACEPAD_CLOUDFLARE_TURN_KEY_ID: ${{ secrets.CLOUDFLARE_TURN_KEY_ID }}
+          PEACEPAD_CLOUDFLARE_TURN_API_TOKEN: ${{ secrets.CLOUDFLARE_TURN_API_TOKEN }}
+          PEACEPAD_SUPPORT_DISCOVERY_URL: ${{ secrets.SUPPORT_DISCOVERY_URL }}
+          PEACEPAD_SUPPORT_DISCOVERY_TOKEN: ${{ secrets.SUPPORT_DISCOVERY_TOKEN }}
+          PEACEPAD_COACH_TRANSCRIPTION_URL: ${{ secrets.COACH_TRANSCRIPTION_URL }}
+          PEACEPAD_COACH_TRANSCRIPTION_TOKEN: ${{ secrets.COACH_TRANSCRIPTION_TOKEN }}
+          PEACEPAD_GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PEACEPAD_COACH_CONVERSATION_URL: ${{ secrets.COACH_CONVERSATION_URL }}
+          PEACEPAD_COACH_CONVERSATION_TOKEN: ${{ secrets.COACH_CONVERSATION_TOKEN }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          ./peacepad-v2-target/APPS/peacepad-v2-platform/scripts/validate-supabase-edge-function.ps1
+          ./peacepad-v2-target/APPS/peacepad-v2-platform/scripts/validate-supabase-production-edge.ps1
+          ./peacepad-v2-target/APPS/peacepad-v2-platform/scripts/validate-protected-provider-config.ps1
+
+      - name: Verify project, apply migrations, and deploy production runtime
+        shell: pwsh
+        working-directory: peacepad-v2-target/APPS/peacepad-v2-platform
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PEACEPAD_MAINTENANCE_SECRET: ${{ secrets.MAINTENANCE_SECRET }}
+          PEACEPAD_IDEMPOTENCY_SECRET: ${{ secrets.IDEMPOTENCY_SECRET }}
+          PEACEPAD_PUSH_TOKEN_SECRET: ${{ secrets.PUSH_TOKEN_SECRET }}
+          PEACEPAD_TURN_URLS: ${{ secrets.TURN_URLS }}
+          PEACEPAD_TURN_SHARED_SECRET: ${{ secrets.TURN_SHARED_SECRET }}
+          PEACEPAD_CLOUDFLARE_TURN_KEY_ID: ${{ secrets.CLOUDFLARE_TURN_KEY_ID }}
+          PEACEPAD_CLOUDFLARE_TURN_API_TOKEN: ${{ secrets.CLOUDFLARE_TURN_API_TOKEN }}
+          PEACEPAD_SUPPORT_DISCOVERY_URL: ${{ secrets.SUPPORT_DISCOVERY_URL }}
+          PEACEPAD_SUPPORT_DISCOVERY_TOKEN: ${{ secrets.SUPPORT_DISCOVERY_TOKEN }}
+          PEACEPAD_COACH_TRANSCRIPTION_URL: ${{ secrets.COACH_TRANSCRIPTION_URL }}
+          PEACEPAD_COACH_TRANSCRIPTION_TOKEN: ${{ secrets.COACH_TRANSCRIPTION_TOKEN }}
+          PEACEPAD_GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PEACEPAD_COACH_CONVERSATION_URL: ${{ secrets.COACH_CONVERSATION_URL }}
+          PEACEPAD_COACH_CONVERSATION_TOKEN: ${{ secrets.COACH_CONVERSATION_TOKEN }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ([string]::IsNullOrWhiteSpace($env:SUPABASE_ACCESS_TOKEN) -or [string]::IsNullOrWhiteSpace($env:DATABASE_URL)) {
+            throw 'Protected Supabase production credentials are incomplete.'
+          }
+          Write-Output "::add-mask::$env:DATABASE_URL"
+          $visible = @(supabase projects list --output json | ConvertFrom-Json)
+          $project = @($visible | Where-Object { $_.ref -eq 'rohvkyuxbnqzglaromms' })
+          if ($project.Count -ne 1 -or $project[0].region -ne 'ca-central-1') { throw 'Approved Canada project visibility failed.' }
+          supabase db push --db-url $env:DATABASE_URL --dry-run --agent no --workdir .
+          if ($LASTEXITCODE -ne 0) { throw 'Production migration dry-run failed.' }
+          supabase db push --db-url $env:DATABASE_URL --yes --agent no --workdir .
+          if ($LASTEXITCODE -ne 0) { throw 'Production migration apply failed.' }
+          ./scripts/deploy-supabase-production-ca.ps1 -SupabaseCli supabase -EnableWrites -Confirmation 'PROMOTE PEACEPAD CA TO PRODUCTION'
+
+      - name: Verify public production boundary
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $base = 'https://rohvkyuxbnqzglaromms.supabase.co/functions/v1/peacepad-v2-api'
+          foreach ($route in @('health', 'readyz')) {
+            $response = Invoke-RestMethod -Method Get -Uri "$base/$route" -TimeoutSec 30
+            $expectedStatus = if ($route -eq 'health') { 'ok' } else { 'ready' }
+            if ($response.status -ne $expectedStatus -or $response.environment -ne 'production' -or $response.region -ne 'ca' -or $response.writesEnabled -ne $true) {
+              throw "Production $route boundary did not match the promoted contract."
+            }
+          }
+
+      - name: Publish non-secret promotion evidence
+        if: always()
+        shell: pwsh
+        env:
+          TARGET_SHA: ${{ inputs.target_commit_sha }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          $manifest = [ordered]@{
+            result = if ($env:JOB_STATUS -eq 'success') { 'PRODUCTION_BACKEND_PROMOTED_VERIFIED' } else { 'PRODUCTION_PROMOTION_NOT_VERIFIED' }
+            targetCommitSha = $env:TARGET_SHA
+            projectRef = 'rohvkyuxbnqzglaromms'
+            environment = 'production'
+            region = 'ca'
+            writesEnabled = $true
+            jobStatus = $env:JOB_STATUS
+          }
+          New-Item -ItemType Directory -Force "$env:RUNNER_TEMP/peacepad-production-evidence" | Out-Null
+          $manifest | ConvertTo-Json | Set-Content -Encoding utf8 "$env:RUNNER_TEMP/peacepad-production-evidence/manifest.json"
+
+      - name: Upload non-secret evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: peacepad-v2-production-ca-${{ inputs.target_commit_sha }}
+          if-no-files-found: error
+          retention-days: 30
+          path: ${{ runner.temp }}/peacepad-production-evidence/manifest.json

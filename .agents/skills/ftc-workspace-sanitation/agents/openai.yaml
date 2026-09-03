@@ -1,0 +1,11 @@
+interface:
+  display_name: "FTC Workspace Sanitation"
+  short_description: "Safely orient, audit, and tidy FTC workspaces"
+  default_prompt: "Use $ftc-workspace-sanitation to orient me in FTC Holding and run a safe workspace audit."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "ftc_workspace"
+      description: "Read-only FTC workspace, Git worktree, disk, and cache context"
+      transport: "stdio"

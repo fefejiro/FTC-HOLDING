@@ -4,10 +4,12 @@ const DUAL_SIMULATOR_MODE = "staging-simulator-dual";
 const PLAYSTORE_INTERNAL_MODE = "playstore-internal";
 const PLAYSTORE_PRODUCTION_MODE = "playstore-production";
 const TESTFLIGHT_VERSION = "2.0.1";
-const TESTFLIGHT_BUILD_NUMBER = "3";
-const APPSTORE_PRODUCTION_BUILD_NUMBER = "6";
-const PLAYSTORE_VERSION_CODE = 43;
-const PLAYSTORE_PRODUCTION_VERSION_CODE = 44;
+const TESTFLIGHT_BUILD_NUMBER = "9";
+const APPSTORE_PRODUCTION_BUILD_NUMBER = "10";
+// Internal candidates use fictional staging. A separately rebuilt production
+// artifact must remain monotonic across every Play track.
+const PLAYSTORE_VERSION_CODE = 49;
+const PLAYSTORE_PRODUCTION_VERSION_CODE = 50;
 const PRODUCTION_BUNDLE_ID = "ca.peacepad.family";
 const APP_STORE_ID = "6793350735";
 const GOOGLE_SIGN_IN_PLUGIN = "@react-native-google-signin/google-signin";
@@ -110,7 +112,7 @@ module.exports = ({ config }) => {
     }
     return {
       ...config,
-      icon: "./assets/icon.png",
+      icon: "./assets/icon-production.png",
       scheme: "peacepad",
       version: TESTFLIGHT_VERSION,
       plugins: [

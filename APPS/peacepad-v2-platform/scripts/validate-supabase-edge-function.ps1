@@ -11,6 +11,7 @@ $invitationMigrationPath = Join-Path $platformRoot 'supabase/migrations/20260809
 $accountDeletionMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090003_v2_account_deletion.sql'
 $messagingMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090004_v2_persistent_messaging.sql'
 $calendarMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090005_v2_persistent_calendar.sql'
+$parentingTasksMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608270001_v2_parenting_tasks.sql'
 $messageCheckMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090006_v2_message_check.sql'
 $sessionMembershipMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090007_v2_session_memberships.sql'
 $sessionIdentityVersionMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090008_v2_session_identity_version.sql'
@@ -37,11 +38,12 @@ $audioCallTurnMigrationPath = Join-Path $platformRoot 'supabase/migrations/20260
 $audioCallTurnProofPath = Join-Path $platformRoot 'scripts/verify-audio-call-turn-authorization.sql'
 $audioCallTurnIssuerPath = Join-Path $platformRoot 'supabase/functions/peacepad-v2-api/turn.ts'
 $audioCallTurnTestPath = Join-Path $platformRoot 'supabase/functions/peacepad-v2-api/turn_test.ts'
+$expenseSettlementResolutionMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608300009_v2_expense_settlement_resolution_notes.sql'
 $authCleanupRunnerPath = Join-Path $platformRoot 'scripts/run-auth-cleanup.ps1'
 $deployRunnerPath = Join-Path $platformRoot 'scripts/deploy-supabase-free-staging.ps1'
 $configPath = Join-Path $platformRoot 'supabase/config.toml'
 
-foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $idempotencyReceiptMigrationPath, $privateRecordsMigrationPath, $privateAttachmentsMigrationPath, $devicePushMigrationPath, $devicePushProofPath, $familyExitMigrationPath, $familyExitProofPath, $profileUpdateMigrationPath, $profileUpdateProofPath, $privateTimelineMigrationPath, $audioCallMigrationPath, $audioCallProofPath, $audioCallSignalingMigrationPath, $audioCallSignalingProofPath, $audioCallSignalValidatorPath, $audioCallSignalTestPath, $audioCallTurnMigrationPath, $audioCallTurnProofPath, $audioCallTurnIssuerPath, $audioCallTurnTestPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
+foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $parentingTasksMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $idempotencyReceiptMigrationPath, $privateRecordsMigrationPath, $privateAttachmentsMigrationPath, $devicePushMigrationPath, $devicePushProofPath, $familyExitMigrationPath, $familyExitProofPath, $profileUpdateMigrationPath, $profileUpdateProofPath, $privateTimelineMigrationPath, $audioCallMigrationPath, $audioCallProofPath, $audioCallSignalingMigrationPath, $audioCallSignalingProofPath, $audioCallSignalValidatorPath, $audioCallSignalTestPath, $audioCallTurnMigrationPath, $audioCallTurnProofPath, $audioCallTurnIssuerPath, $audioCallTurnTestPath, $expenseSettlementResolutionMigrationPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
     throw "Required Supabase staging file is missing: $path"
   }
@@ -55,6 +57,7 @@ $invitationMigration = Get-Content -LiteralPath $invitationMigrationPath -Raw
 $accountDeletionMigration = Get-Content -LiteralPath $accountDeletionMigrationPath -Raw
 $messagingMigration = Get-Content -LiteralPath $messagingMigrationPath -Raw
 $calendarMigration = Get-Content -LiteralPath $calendarMigrationPath -Raw
+$parentingTasksMigration = Get-Content -LiteralPath $parentingTasksMigrationPath -Raw
 $messageCheckMigration = Get-Content -LiteralPath $messageCheckMigrationPath -Raw
 $sessionMembershipMigration = Get-Content -LiteralPath $sessionMembershipMigrationPath -Raw
 $sessionIdentityVersionMigration = Get-Content -LiteralPath $sessionIdentityVersionMigrationPath -Raw
@@ -81,9 +84,19 @@ $audioCallTurnMigration = Get-Content -LiteralPath $audioCallTurnMigrationPath -
 $audioCallTurnProof = Get-Content -LiteralPath $audioCallTurnProofPath -Raw
 $audioCallTurnIssuer = Get-Content -LiteralPath $audioCallTurnIssuerPath -Raw
 $audioCallTurnTest = Get-Content -LiteralPath $audioCallTurnTestPath -Raw
+$expenseSettlementResolutionMigration = Get-Content -LiteralPath $expenseSettlementResolutionMigrationPath -Raw
 $authCleanupRunner = Get-Content -LiteralPath $authCleanupRunnerPath -Raw
 $deployRunner = Get-Content -LiteralPath $deployRunnerPath -Raw
 $config = Get-Content -LiteralPath $configPath -Raw
+
+$migrationNames = @(Get-ChildItem -LiteralPath (Join-Path $platformRoot 'supabase/migrations') -File -Filter '*.sql' | Sort-Object Name | Select-Object -ExpandProperty Name)
+$migrationPrefixes = @($migrationNames | ForEach-Object { ($_ -split '_', 2)[0] })
+if (($migrationPrefixes | Sort-Object -Unique).Count -ne $migrationPrefixes.Count) {
+  throw 'Supabase migration ordering contains a duplicate timestamp prefix.'
+}
+if ($migrationNames[-1] -ne '202608300009_v2_expense_settlement_resolution_notes.sql') {
+  throw 'Expense settlement resolution-note migration must remain the latest ordered migration.'
+}
 
 $requiredFunctionPatterns = @(
   'admin.auth.getUser(token)',
@@ -111,6 +124,7 @@ $requiredFunctionPatterns = @(
   'peacepad_v2_send_message',
   '/api/v2/calendar-layers',
   '/api/v2/schedule-events',
+  '/api/v2/parenting-tasks',
   'peacepad_v2_create_calendar_layer',
   'peacepad_v2_create_schedule_event',
   '/api/v2/message-previews',
@@ -118,6 +132,13 @@ $requiredFunctionPatterns = @(
   'peacepad_v2_get_message_check',
   'peacepad_v2_set_message_check',
   'peacepad_v2_authorize_message_preview',
+  '/api/v2/coach/conversation',
+  'PEACEPAD_COACH_TRANSCRIPTION_URL',
+  'PEACEPAD_COACH_TRANSCRIPTION_TOKEN',
+  'PEACEPAD_COACH_CONVERSATION_URL',
+  'PEACEPAD_COACH_CONVERSATION_TOKEN',
+  'if (conversationId)',
+  'peacepad_v2_authorize_coach_conversation',
   'auth.admin.signOut',
   'auth.admin.deleteUser',
   '/internal/v2/auth-cleanup/run',
@@ -140,6 +161,7 @@ $requiredFunctionPatterns = @(
   '/api/v2/calls',
   '/api/v2/calls/current',
   'peacepad_v2_create_audio_call',
+  'peacepad_v2_create_media_call',
   'peacepad_v2_accept_audio_call',
   'peacepad_v2_decline_audio_call',
   'peacepad_v2_end_audio_call',
@@ -156,7 +178,8 @@ $requiredFunctionPatterns = @(
   'private=true',
   'validateAudioCallSignal',
   'p_identity_id: authenticated.user.id',
-  'key !== "conversationId"',
+  '["conversationId", "mediaType"].includes(key)',
+  '["audio", "video"].includes',
   'Object.keys(body).length !== 0',
   'peacepadnextlab',
   'crypto.subtle.digest',
@@ -222,6 +245,41 @@ foreach ($pattern in @(
     throw "Session identity-version migration is missing required boundary: $pattern"
   }
 }
+foreach ($table in @('parenting_task')) {
+  if ($parentingTasksMigration -notmatch "create table if not exists peacepad_v2\.$table") {
+    throw "Parenting Tasks migration is missing table: $table"
+  }
+  if ($parentingTasksMigration -notmatch "alter table peacepad_v2\.$table enable row level security") {
+    throw "Parenting Tasks migration is missing fail-closed RLS: $table"
+  }
+}
+foreach ($rpc in @(
+  'peacepad_v2_list_parenting_tasks',
+  'peacepad_v2_create_parenting_task',
+  'peacepad_v2_update_parenting_task',
+  'peacepad_v2_delete_parenting_task'
+)) {
+  if ($parentingTasksMigration -notmatch "create or replace function public\.$rpc") {
+    throw "Parenting Tasks migration is missing RPC: $rpc"
+  }
+  if ($parentingTasksMigration -notmatch "revoke all on function public\.$rpc") {
+    throw "Parenting Tasks RPC is not revoked from mobile roles: $rpc"
+  }
+}
+foreach ($pattern in @(
+  'task_visibility_allows',
+  'visibility_valid',
+  'PARENTING_TASK_ACCESS_DENIED',
+  'PARENTING_TASK_OWNER_REQUIRED',
+  'CONCURRENCY_CONFLICT',
+  "'parenting_task.created'",
+  "'parenting_task.updated'",
+  "'parenting_task.deleted'"
+)) {
+  if ($parentingTasksMigration -notmatch $pattern) {
+    throw "Parenting Tasks migration is missing required boundary: $pattern"
+  }
+}
 foreach ($pattern in @(
   'drop constraint if exists identity_identity_id_fkey',
   'auth_principal_deleted_at',
@@ -268,10 +326,7 @@ foreach ($pattern in @('MAINTENANCE_SECRET', 'internal/v2/auth-cleanup/run', 'Ti
 }
 foreach ($pattern in @(
   'rohvkyuxbnqzglaromms',
-  'spmpndalcvwmygznihec',
   "FunctionRegion = 'ca-central-1'",
-  "FunctionRegion = 'us-east-1'",
-  "DatabaseRegion = 'us-east-2'",
   "'projects', 'list', '--output', 'json'",
   '\$visibleProject\[0\]\.region',
   'cannot see the approved',
@@ -836,6 +891,33 @@ if (
   $config -notmatch 'verify_jwt\s*=\s*false'
 ) {
   throw 'Function must allow public health checks and enforce protected JWTs in its handler.'
+}
+
+foreach ($pattern in @(
+  'add column if not exists resolution_note text',
+  'expense_settlement_resolution_note_valid',
+  "status = 'disputed'.+char_length\(resolution_note\) between 3 and 500",
+  "'resolutionNote',r\.resolution_note",
+  'create or replace function public\.peacepad_v2_resolve_expense_settlement',
+  "p_resolution not in \('confirmed', 'disputed', 'cancelled'\)",
+  'SETTLEMENT_RESOLUTION_NOTE_INVALID',
+  "'settlement.resolve'",
+  'revoke all on function public\.peacepad_v2_resolve_expense_settlement',
+  'to service_role'
+)) {
+  if ($expenseSettlementResolutionMigration -notmatch $pattern) {
+    throw "Expense settlement resolution-note migration is missing required boundary: $pattern"
+  }
+}
+foreach ($pattern in @(
+  'parentCoreMutation\.operation === "settlement\.resolve"',
+  'resolutionNote\.length >= 3 && resolutionNote\.length <= 500',
+  'peacepad_v2_resolve_expense_settlement',
+  'p_resolution_note: resolutionNote \|\| null'
+)) {
+  if ($function -notmatch $pattern) {
+    throw "Edge Function is missing settlement resolution-note validation: $pattern"
+  }
 }
 
 Write-Output 'SUPABASE_EDGE_BOUNDARY_LOCAL_VERIFIED'

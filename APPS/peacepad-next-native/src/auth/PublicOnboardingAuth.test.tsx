@@ -48,7 +48,7 @@ describe("PublicOnboardingAuth", () => {
 
   it("opens with a short, warm first-run introduction and no staging language", async () => {
     render(<LocalizationProvider initialLocale="en" production><PublicOnboardingAuth /></LocalizationProvider>);
-    expect(await screen.findByText("A calmer space for co-parenting")).toBeTruthy();
+    expect(await screen.findByText("A calmer way to coordinate parenting")).toBeTruthy();
     expect(screen.getByText("Communicate with care, even when the moment is difficult.")).toBeTruthy();
     expect(screen.queryByText(/staging|Canada|stored in/i)).toBeNull();
   });
@@ -75,6 +75,22 @@ describe("PublicOnboardingAuth", () => {
     fireEvent.changeText(screen.getByLabelText("Password"), "calmer-password");
     fireEvent.press(screen.getAllByText("Sign in")[0]);
     await waitFor(() => expect(signInWithPassword).toHaveBeenCalledWith("parent@example.com", "calmer-password"));
+  });
+
+  it("keeps the full account flow while clearly identifying fictional staging", async () => {
+    secureStore.getItemAsync.mockResolvedValue("true");
+    render(
+      <LocalizationProvider initialLocale="en" production>
+        <PublicOnboardingAuth environmentNotice={{
+          label: "Canada staging",
+          body: "Use fictional test accounts only.",
+          labelTestID: "staging-region-label"
+        }} />
+      </LocalizationProvider>
+    );
+    expect(await screen.findByTestId("staging-region-label")).toHaveTextContent("Canada staging");
+    expect(screen.getByText("Use fictional test accounts only.")).toBeTruthy();
+    expect(screen.getByText("Create your PeacePad account")).toBeTruthy();
   });
 
   it("uses the native Apple credential only when Apple returns an identity token", async () => {
@@ -124,8 +140,8 @@ describe("PublicOnboardingAuth", () => {
   });
 
   it.each([
-    ["fr", "Un espace plus calme pour la coparentalité"],
-    ["es", "Un espacio más tranquilo para la crianza compartida"]
+    ["fr", "Une façon plus calme de coordonner la parentalité"],
+    ["es", "Una forma más tranquila de coordinar la crianza"]
   ])("localizes the first public introduction in %s", async (locale, title) => {
     render(<LocalizationProvider initialLocale={locale} production><PublicOnboardingAuth /></LocalizationProvider>);
     expect(await screen.findByText(title)).toBeTruthy();

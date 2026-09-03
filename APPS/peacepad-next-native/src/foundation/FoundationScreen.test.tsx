@@ -205,4 +205,5 @@ describe("PeacePad native foundation", () => {
     );
     expect(await screen.findByText("The message is factual.")).toBeOnTheScreen();
   });
+
 });

@@ -29,17 +29,18 @@ if ($function.Contains('env("SB_REGION")')) {
   throw 'Production availability must not compare the caller-near Edge PoP with the Canada data region.'
 }
 foreach ($required in @(
-  "`$projectRef = 'qzekqjewpugdotskrtni'",
+  "`$projectRef = 'rohvkyuxbnqzglaromms'",
   "`$functionRegion = 'ca-central-1'",
   'PEACEPAD_RUNTIME_ENVIRONMENT=production',
-  'PEACEPAD_PRODUCTION_WRITES_ENABLED=false',
+  'PEACEPAD_PRODUCTION_WRITES_ENABLED=true',
   'PEACEPAD_PUSH_TOKEN_SECRET',
   'PEACEPAD_ALLOWED_ORIGINS=https://peacepad.ca,https://www.peacepad.ca',
   'SUPABASE_PRODUCTION_EDGE_DEPLOYED'
 )) {
   if (-not $deploy.Contains($required)) { throw "Production deploy guard is missing: $required" }
 }
-if ($deploy -match 'productionWritesEnabled=true|PEACEPAD_PRODUCTION_WRITES_ENABLED=true') { throw 'Production deploy runner must be write-disabled.' }
+if (-not $deploy.Contains("'PROMOTE PEACEPAD CA TO PRODUCTION'")) { throw 'Production deploy runner must require the exact promotion confirmation.' }
+if (-not $deploy.Contains('-EnableWrites')) { throw 'Production deploy runner must require the explicit write-enable switch.' }
 foreach ($functionName in @('prevent_audit_mutation', 'prevent_consent_mutation', 'recurrence_valid', 'prevent_message_mutation', 'message_check_json')) {
   if ($hardening -notmatch "alter function peacepad_v2\.$functionName") { throw "Search-path hardening is missing for $functionName" }
 }

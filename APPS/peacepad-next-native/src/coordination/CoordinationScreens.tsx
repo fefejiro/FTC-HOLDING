@@ -3,14 +3,16 @@ import { Image, Linking, Pressable, Share, StyleSheet, Text, TextInput, useWindo
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import { InvitationQr } from "../components/InvitationQr";
+import { PeacePadIcon } from "../components/PeacePadIcon";
+import { ScreenHeader } from "../components/ScreenHeader";
 import { LabButton } from "../components/LabButton";
 import { AccessibleHeading } from "../components/AccessibleHeading";
 import { languageNames, supportedLocales, useLocalization, useOptionalLocalization } from "../localization/LocalizationProvider";
-import { calendarText, formatCalendarDate, formatCalendarDay } from "../localization/calendarLocalization";
+import { calendarNavigationText, calendarStatusText, calendarText, formatCalendarDate, formatCalendarDay } from "../localization/calendarLocalization";
 import { formatLocalizedDate } from "../localization/localizedDate";
 import { messageText } from "../localization/messageLocalization";
 import { workflowText } from "../localization/workflowLocalization";
-import { homeText } from "../localization/homeLocalization";
+import { homeHeroText, homeText } from "../localization/homeLocalization";
 import { callText } from "../localization/callLocalization";
 import { PublicOnboardingSlides } from "../auth/PublicOnboardingAuth";
 import { LinkedSignInMethods } from "../auth/LinkedSignInMethods";
@@ -20,8 +22,19 @@ import { useRecordsState } from "../records/RecordsState";
 import type { AttachmentMediaType } from "../domain/v2";
 import { useOptionalStagingAccountActions } from "../session/StagingAccountActions";
 import { useCoordinationState, type CalendarView } from "./CoordinationState";
+import { ActivitySuggestionsScreen } from "../activities/ActivitySuggestionsScreen";
+import { ParentingTasksScreen } from "../tasks/ParentingTasksScreen";
+import { taskCopy } from "../tasks/taskLocalization";
+import { PersonalityProfilePanel } from "../preferences/PersonalityProfilePanel";
+import { CustodySchedulePlanner } from "../calendar/CustodySchedulePlanner";
+import { custodyParentForDate, type CustodyBlock, type CustodyOverride, type CustodySchedule } from "../calendar/custodySchedule";
+import { custodyScheduleText } from "../calendar/custodyScheduleLocalization";
+import { buildPeacePadCalendar } from "../calendar/calendarExport";
+import { CoachConversation } from "../coach/CoachConversation";
+import { ConversationVoiceNote } from "../messages/ConversationVoiceNote";
+import type { AccountExportManifest } from "../api/CoordinationApi";
 
-export type CoordinationScreen = "home" | "messages" | "calendar" | "invite" | "records" | "calls" | "more";
+export type CoordinationScreen = "home" | "coach" | "messages" | "calendar" | "activities" | "tasks" | "invite" | "records" | "calls" | "family" | "conch" | "more";
 type Navigate = (screen: CoordinationScreen) => void;
 
 const layerColors: Record<string, string> = {
@@ -33,44 +46,95 @@ const layerColors: Record<string, string> = {
   green: "#62B44B"
 };
 
-const august2026Weekdays = [2, 3, 4, 5, 6, 7, 1] as const;
-const august2026Week = [1, 2, 3, 4, 5, 6, 7] as const;
+function atUtcDay(value: Date): Date {
+  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+}
 
-function eventDay(event: ReturnType<typeof useCoordinationState>["events"][number]): number {
-  return new Date(event.startsAt).getUTCDate();
+function addUtcDays(value: Date, amount: number): Date {
+  const next = atUtcDay(value);
+  next.setUTCDate(next.getUTCDate() + amount);
+  return next;
+}
+
+function addUtcMonths(value: Date, amount: number): Date {
+  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth() + amount, 1));
+}
+
+function sameUtcDay(left: Date, right: Date): boolean {
+  return left.getUTCFullYear() === right.getUTCFullYear()
+    && left.getUTCMonth() === right.getUTCMonth()
+    && left.getUTCDate() === right.getUTCDate();
+}
+
+function eventOccursOnDay(event: ReturnType<typeof useCoordinationState>["events"][number], date: Date): boolean {
+  return sameUtcDay(new Date(event.startsAt), date);
+}
+
+function calendarDateTimeInput(value: Date): string {
+  const local = new Date(value.getTime() - value.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16).replace("T", " ");
+}
+
+function parseCalendarDateTime(value: string): string | undefined {
+  const match = /^(\d{4})-(\d{2})-(\d{2})\s(\d{2}):(\d{2})$/.exec(value.trim());
+  if (!match) return undefined;
+  const [year, month, day, hour, minute] = match.slice(1).map(Number);
+  const parsed = new Date(year, month - 1, day, hour, minute);
+  return parsed.getFullYear() === year && parsed.getMonth() === month - 1 && parsed.getDate() === day
+    && parsed.getHours() === hour && parsed.getMinutes() === minute
+    ? parsed.toISOString()
+    : undefined;
+}
+
+function startOfUtcWeek(value: Date): Date {
+  const date = atUtcDay(value);
+  return addUtcDays(date, -((date.getUTCDay() + 6) % 7));
 }
 
 function CalendarViewPanel({
   calendarView,
   events,
   layers,
-  locale
+  locale,
+  anchorDate,
+  custodySchedule,
+  custodyOverrides
 }: {
   calendarView: CalendarView;
   events: ReturnType<typeof useCoordinationState>["events"];
   layers: ReturnType<typeof useCoordinationState>["layers"];
   locale: ReturnType<typeof useLocalization>["locale"];
+  anchorDate: Date;
+  custodySchedule?: CustodySchedule;
+  custodyOverrides?: readonly CustodyOverride[];
 }) {
   const layerName = (calendarLayerId: string) =>
     layers.find((layer) => layer.id === calendarLayerId)?.name ?? "Calendar";
 
   if (calendarView === "month") {
+    const firstOfMonth = new Date(Date.UTC(anchorDate.getUTCFullYear(), anchorDate.getUTCMonth(), 1));
+    const leadingBlankCount = (firstOfMonth.getUTCDay() + 6) % 7;
+    const daysInMonth = new Date(Date.UTC(anchorDate.getUTCFullYear(), anchorDate.getUTCMonth() + 1, 0)).getUTCDate();
+    const weekdays = Array.from({ length: 7 }, (_, index) => addUtcDays(firstOfMonth, index - leadingBlankCount));
     const cells: readonly { key: string; day?: number }[] = [
-      ...Array.from({ length: 6 }, (_, index) => ({ key: `blank-${index}` })),
-      ...Array.from({ length: 31 }, (_, index) => ({ key: `day-${index + 1}`, day: index + 1 }))
+      ...Array.from({ length: leadingBlankCount }, (_, index) => ({ key: `blank-${index}` })),
+      ...Array.from({ length: daysInMonth }, (_, index) => ({ key: `day-${index + 1}`, day: index + 1 }))
     ];
     return (
       <View accessibilityLabel={`${calendarText(locale, "month")} ${calendarText(locale, "title")}`.toLocaleLowerCase(locale)} style={styles.calendarCanvas}>
-        <Text style={styles.calendarMonth}>{formatCalendarDate(locale, "2026-08-01T00:00:00.000Z", { month: "long", year: "numeric" })}</Text>
+        <Text style={styles.calendarMonth}>{formatCalendarDate(locale, firstOfMonth, { month: "long", year: "numeric" })}</Text>
         <View style={styles.monthGrid}>
-          {august2026Weekdays.map((day) => (
-            <Text key={day} style={styles.weekday}>{formatCalendarDate(locale, new Date(Date.UTC(2026, 7, day)), { weekday: "short" })}</Text>
+          {weekdays.map((date) => (
+            <Text key={date.toISOString()} style={styles.weekday}>{formatCalendarDate(locale, date, { weekday: "short" })}</Text>
           ))}
           {cells.map((cell) => {
-            const dayEvents = cell.day ? events.filter((event) => eventDay(event) === cell.day) : [];
+            const date = cell.day ? new Date(Date.UTC(anchorDate.getUTCFullYear(), anchorDate.getUTCMonth(), cell.day)) : undefined;
+            const dayEvents = date ? events.filter((event) => eventOccursOnDay(event, date)) : [];
+            const custodyParent = date ? custodyParentForDate(date, custodySchedule, custodyOverrides) : null;
             return (
-              <View accessibilityLabel={cell.day ? formatCalendarDate(locale, new Date(Date.UTC(2026, 7, cell.day)), { month: "long", day: "numeric" }) : undefined} key={cell.key} style={styles.monthCell}>
+              <View accessibilityLabel={date ? `${formatCalendarDate(locale, date, { month: "long", day: "numeric" })}${custodyParent ? `, ${custodyScheduleText(locale, custodyParent === "you" ? "yourTime" : "otherTime")}` : ""}` : undefined} key={cell.key} style={[styles.monthCell, custodyParent === "you" ? styles.yourTimeCell : custodyParent === "other" ? styles.otherTimeCell : null]}>
                 {cell.day ? <Text style={styles.dayNumber}>{cell.day}</Text> : null}
+                {custodyParent ? <Text numberOfLines={1} style={styles.custodyCellLabel}>{custodyParent === "you" ? "You" : "Other"}</Text> : null}
                 {dayEvents.slice(0, 1).map((event) => (
                   <Text key={event.id} numberOfLines={1} style={styles.monthEvent}>{event.title}</Text>
                 ))}
@@ -83,20 +147,24 @@ function CalendarViewPanel({
   }
 
   if (calendarView === "week") {
+    const firstDay = startOfUtcWeek(anchorDate);
+    const week = Array.from({ length: 7 }, (_, index) => addUtcDays(firstDay, index));
     return (
       <View accessibilityLabel={`${calendarText(locale, "week")} ${calendarText(locale, "title")}`.toLocaleLowerCase(locale)} style={styles.calendarCanvas}>
-        <Text style={styles.calendarMonth}>{formatCalendarDate(locale, "2026-08-01T00:00:00.000Z", { month: "short", day: "numeric" })}–7</Text>
+        <Text style={styles.calendarMonth}>{formatCalendarDate(locale, firstDay, { month: "short", day: "numeric" })}–{formatCalendarDate(locale, week[6], { day: "numeric" })}</Text>
         <View style={styles.scheduleList}>
-          {august2026Week.map((day) => {
-            const dayEvents = events.filter((event) => eventDay(event) === day);
+          {week.map((date) => {
+            const dayEvents = events.filter((event) => eventOccursOnDay(event, date));
+            const custodyParent = custodyParentForDate(date, custodySchedule, custodyOverrides);
             return (
-              <View key={day} style={styles.scheduleRow}>
-                <Text style={styles.scheduleDate}>{formatCalendarDay(locale, day)}</Text>
+              <View key={date.toISOString()} style={styles.scheduleRow}>
+                <Text style={styles.scheduleDate}>{formatCalendarDay(locale, date)}</Text>
                 <View style={styles.scheduleContent}>
+                  {custodyParent ? <Text style={[styles.custodyLabel, custodyParent === "you" ? styles.yourTimeText : styles.otherTimeText]}>{custodyScheduleText(locale, custodyParent === "you" ? "yourTime" : "otherTime")}</Text> : null}
                   {dayEvents.length ? dayEvents.map((event) => (
                     <View key={event.id} style={styles.scheduleEvent}>
                       <Text style={styles.actionTitle}>{event.title}</Text>
-                      <Text style={styles.caption}>{layerName(event.calendarLayerId)}</Text>
+                      <Text style={styles.caption}>{layerName(event.calendarLayerId)} - {calendarStatusText(locale, event.status)}</Text>
                     </View>
                   )) : <Text style={styles.caption}>{calendarText(locale, "noEvents")}</Text>}
                 </View>
@@ -108,15 +176,17 @@ function CalendarViewPanel({
     );
   }
 
-  const dayEvents = events.filter((event) => eventDay(event) === 1);
+  const dayEvents = events.filter((event) => eventOccursOnDay(event, anchorDate));
+  const custodyParent = custodyParentForDate(anchorDate, custodySchedule, custodyOverrides);
   return (
     <View accessibilityLabel={`${calendarText(locale, "day")} ${calendarText(locale, "title")}`.toLocaleLowerCase(locale)} style={styles.calendarCanvas}>
-      <Text style={styles.calendarMonth}>{formatCalendarDate(locale, "2026-08-01T00:00:00.000Z", { weekday: "long", month: "long", day: "numeric" })}</Text>
+      <Text style={styles.calendarMonth}>{formatCalendarDate(locale, anchorDate, { weekday: "long", month: "long", day: "numeric" })}</Text>
       <View style={styles.scheduleList}>
+        {custodyParent ? <Text style={[styles.custodyLabel, custodyParent === "you" ? styles.yourTimeText : styles.otherTimeText]}>{custodyScheduleText(locale, custodyParent === "you" ? "yourTime" : "otherTime")}</Text> : null}
         {dayEvents.length ? dayEvents.map((event) => (
           <View key={event.id} style={styles.scheduleEvent}>
             <Text style={styles.actionTitle}>{event.title}</Text>
-            <Text style={styles.caption}>{layerName(event.calendarLayerId)}</Text>
+            <Text style={styles.caption}>{layerName(event.calendarLayerId)} - {calendarStatusText(locale, event.status)}</Text>
           </View>
         )) : <Text style={styles.calendarEmpty}>{calendarText(locale, "noEventsYet")}</Text>}
       </View>
@@ -125,63 +195,136 @@ function CalendarViewPanel({
 }
 
 export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
-  const largeText = usesLargeTextLayout(useWindowDimensions().fontScale);
   const { locale } = useOptionalLocalization();
   const h = (key: Parameters<typeof homeText>[1]) => homeText(locale, key);
-  const { events, invitationGrant, sentMessages } = useCoordinationState();
-
-  const actions: readonly { label: string; detail: string; route: CoordinationScreen }[] = [
-    { label: h("send"), detail: h("sendBody"), route: "messages" },
-    { label: h("event"), detail: h("eventBody"), route: "calendar" },
-    { label: h("invite"), detail: h("inviteBody"), route: "invite" },
-    { label: h("record"), detail: h("recordBody"), route: "records" },
-    { label: callText(locale, "title"), detail: callText(locale, "body"), route: "calls" }
-  ];
+  const task = taskCopy(locale);
+  const { connected, events, invitationGrant } = useCoordinationState();
+  const accountActions = useOptionalStagingAccountActions();
+  const firstName = accountActions?.displayName?.trim().split(/\s+/)[0];
+  const nextEvent = [...events].sort((left, right) => left.startsAt.localeCompare(right.startsAt))[0];
+  const nextEventDate = nextEvent
+    ? formatLocalizedDate(locale, nextEvent.startsAt, { weekday: "short", month: "short", day: "numeric" })
+    : undefined;
+  const nextEventTime = nextEvent
+    ? formatLocalizedDate(locale, nextEvent.startsAt, { hour: "numeric", minute: "2-digit" })
+    : undefined;
 
   return (
     <View style={styles.stack}>
       <View style={styles.brandHero}>
-        <Image accessibilityLabel={h("logo")} source={require("../foundation/peacepad-conch.png")} style={styles.logo} />
+        <View style={styles.heroSun} />
+        <View style={styles.heroBubble} />
         <View style={styles.brandHeroCopy}>
-          <AccessibleHeading style={styles.title}>{h("title")}</AccessibleHeading>
-          <Text style={styles.body}>{h("body")}</Text>
+          <View accessibilityLabel="PeacePad Native V2" style={styles.brandLockup}>
+            <Image accessibilityLabel={h("logo")} source={require("../../assets/icon-production.png")} style={styles.logo} />
+            <View>
+              <Text style={styles.brandName}>PeacePad</Text>
+              <Text style={styles.brandVersion}>Native V2</Text>
+            </View>
+          </View>
+          <Text style={styles.heroEyebrow}>YOUR FAMILY, YOUR PACE</Text>
+          <AccessibleHeading style={styles.heroTitle}>{homeHeroText(locale, firstName ? "greetingNamed" : "greeting", firstName)}</AccessibleHeading>
+          <Text style={styles.heroBody}>{homeHeroText(locale, "impact")}</Text>
         </View>
+        <View accessible={false} style={styles.heroDoodle}><PeacePadIcon name="sunny-outline" size={38} color={colors.warning} /><PeacePadIcon name="heart-outline" size={27} color={colors.coral} /></View>
       </View>
 
-      <View style={[styles.actionGrid, largeText ? styles.stack : null]}>
-        {actions.map((action) => (
-          <Pressable
-            accessibilityLabel={action.label}
-            accessibilityRole="button"
-            key={action.label}
-            onPress={() => setScreen(action.route)}
-            style={({ pressed }) => [styles.actionCard, largeText ? styles.actionCardLargeText : null, pressed ? styles.pressed : null]}
-          >
-            <Text style={styles.actionTitle}>{action.label}</Text>
-            <Text style={styles.caption}>{action.detail}</Text>
-          </Pressable>
-        ))}
+      <View style={styles.datePill}>
+        <Text style={styles.datePillText}>{formatLocalizedDate(locale, new Date(), { weekday: "long", month: "long", day: "numeric" })}</Text>
       </View>
 
-      <View style={styles.summaryCard}>
+      <View style={styles.todayLine}>
         <Text accessibilityRole="header" style={styles.heading}>{h("today")}</Text>
-        <SummaryRow label={h("upcoming")} value={String(events.length)} />
-        <SummaryRow label={h("saved")} value="0" />
-        <SummaryRow label={h("sent")} value={String(sentMessages.length)} />
-        <SummaryRow label={h("family")} value={h(invitationGrant ? "connected" : "notConnected")} />
+        <Text style={styles.connectionStatus}>{h(invitationGrant ? "connected" : "notConnected")}</Text>
       </View>
+
+      {nextEvent ? (
+        <View accessibilityLabel={h("upcoming")} style={styles.planCard}>
+          <View style={styles.planAccent} />
+          <View style={styles.planCopy}>
+            <Text style={styles.planEyebrow}>{h("upcoming")}</Text>
+            <Text style={styles.planTitle}>{nextEvent.title}</Text>
+            <Text style={styles.body}>{[nextEventDate, nextEventTime].filter(Boolean).join(" • ")}</Text>
+            <Text style={styles.caption}>{h("event")}</Text>
+          </View>
+        </View>
+      ) : (
+        <Pressable accessibilityLabel={h("event")} accessibilityRole="button" onPress={() => setScreen("calendar")} style={({ pressed }) => [styles.planCard, styles.planCardEmpty, pressed ? styles.pressed : null]}>
+          <View style={[styles.planAccent, styles.planAccentSun]} />
+          <View style={styles.planCopy}>
+            <Text style={styles.planEyebrow}>{h("upcoming")}</Text>
+            <Text style={styles.planTitle}>{h("event")}</Text>
+            <Text style={styles.body}>{h("eventBody")}</Text>
+          </View>
+        </Pressable>
+      )}
+
+      <Pressable accessibilityHint="Shows weather-aware ideas for time with your children." accessibilityRole="button" accessibilityLabel="Activity ideas" onPress={() => setScreen("activities")} style={({ pressed }) => [styles.activityCard, pressed ? styles.pressed : null]}>
+        <View style={styles.activityDot}><PeacePadIcon name="sunny-outline" size={23} color={colors.text} /></View>
+        <View style={styles.activityCopy}>
+          <Text style={styles.activityTitle}>Activity ideas</Text>
+          <Text style={styles.caption}>Find weather-aware ideas for the time you have together.</Text>
+        </View>
+      </Pressable>
+
+      <Pressable accessibilityRole="button" accessibilityLabel={task.title} onPress={() => setScreen("tasks")} style={({ pressed }) => [styles.taskCard, pressed ? styles.pressed : null]}>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="checkmark-circle-outline" size={23} color={colors.warning} /><Text style={styles.taskTitle}>{task.title}</Text></View>
+        <Text style={styles.caption}>{task.body}</Text>
+      </Pressable>
+
+      <Pressable accessibilityHint="Opens a private place to speak or type and prepare calm, child-focused wording." accessibilityRole="button" accessibilityLabel="Open PeaceBot Coach" onPress={() => setScreen("coach")} style={({ pressed }) => [styles.activityCard, { backgroundColor: colors.cream, borderColor: colors.warningBorder }, pressed ? styles.pressed : null]}>
+        <View style={[styles.activityDot, { backgroundColor: "#FFD9CF" }]}><PeacePadIcon name="heart-circle-outline" size={23} color={colors.coral} /></View>
+        <View style={styles.activityCopy}>
+          <Text style={styles.activityTitle}>PeaceBot Coach</Text>
+          <Text style={styles.caption}>Talk it through privately, prepare calm wording, and choose what to share.</Text>
+        </View>
+      </Pressable>
+
+      <Pressable accessibilityRole="button" accessibilityLabel="Family tools" onPress={() => setScreen("family")} style={({ pressed }) => [styles.activityCard, { backgroundColor: "#FFE4D6", borderColor: "#F2A791" }, pressed ? styles.pressed : null]}>
+        <View style={[styles.activityDot, { backgroundColor: colors.sun }]}><PeacePadIcon name="heart-circle-outline" size={23} color={colors.text} /></View>
+        <View style={styles.activityCopy}>
+          <Text style={styles.activityTitle}>Family tools</Text>
+          <Text style={styles.caption}>Children, shared costs, support, call plans and Conch.</Text>
+        </View>
+      </Pressable>
+
+      {connected ? <Pressable accessibilityRole="button" accessibilityLabel="Open Conch mode" onPress={() => setScreen("conch")} style={({ pressed }) => [styles.activityCard, { backgroundColor: "#DDF6F0", borderColor: "#76CCBE" }, pressed ? styles.pressed : null]}>
+        <View style={[styles.activityDot, { backgroundColor: "#BEEAE2" }]}><PeacePadIcon name="people-circle-outline" size={23} color={colors.successText} /></View>
+        <View style={styles.activityCopy}>
+          <Text style={styles.activityTitle}>Conch mode</Text>
+          <Text style={styles.caption}>A consent-based audio or video conversation where each parent gets a calm turn.</Text>
+        </View>
+      </Pressable> : null}
+
+      <Pressable accessibilityRole="button" accessibilityLabel={h("record")} onPress={() => setScreen("records")} style={({ pressed }) => [styles.recordCard, pressed ? styles.pressed : null]}>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="attach-outline" size={23} color={colors.accent} /><Text style={styles.recordTitle}>{h("record")}</Text></View>
+        <Text style={styles.caption}>{h("recordBody")}</Text>
+      </Pressable>
+
+      <Pressable accessibilityRole="button" accessibilityLabel={h("send")} onPress={() => setScreen("messages")} style={({ pressed }) => [styles.messageCta, pressed ? styles.pressed : null]}>
+        <View style={styles.messageCtaCopy}>
+          <Text style={styles.messageCtaTitle}>{h("send")}</Text>
+          <Text style={styles.messageCtaBody}>{h("sendBody")}</Text>
+        </View>
+        <View style={styles.messageCtaIcon}><PeacePadIcon name="chatbubble-ellipses-outline" size={27} color={colors.onBrand} /></View>
+      </Pressable>
+
+      {connected ? <Pressable accessibilityLabel={callText(locale, "title")} accessibilityRole="button" onPress={() => setScreen("calls")} style={({ pressed }) => [styles.callCard, pressed ? styles.pressed : null]}>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="call-outline" size={23} color={colors.brand} /><Text style={styles.callTitle}>{callText(locale, "title")}</Text></View>
+        <Text style={styles.caption}>{callText(locale, "body")}</Text>
+      </Pressable> : null}
+
+      <Pressable accessibilityLabel={h("invite")} accessibilityRole="button" onPress={() => setScreen("invite")} style={({ pressed }) => [styles.inviteCard, pressed ? styles.pressed : null]}>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="people-outline" size={23} color={colors.successText} /><Text style={styles.inviteTitle}>{h("invite")}</Text></View>
+        <Text style={styles.caption}>{h("inviteBody")}</Text>
+      </Pressable>
+
     </View>
   );
 }
 
-function SummaryRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.summaryRow}>
-      <Text style={styles.body}>{label}</Text>
-      <Text style={styles.summaryValue}>{value}</Text>
-    </View>
-  );
-}
+export { ActivitySuggestionsScreen };
+export { ParentingTasksScreen };
 
 export function InvitationScreen({ initialCode }: { initialCode?: string }) {
   const { t } = useLocalization();
@@ -354,7 +497,7 @@ export function InvitationScreen({ initialCode }: { initialCode?: string }) {
   );
 }
 
-export function CalendarScreen() {
+export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: string }) {
   const largeText = usesLargeTextLayout(useWindowDimensions().fontScale);
   const { locale } = useOptionalLocalization();
   const w = (key: Parameters<typeof workflowText>[1], values?: Readonly<Record<string, string>>) => workflowText(locale, key, values);
@@ -367,24 +510,56 @@ export function CalendarScreen() {
     setCalendarView,
     setLayerShared,
     toggleLayerFilter,
-    visibleLayerIds
+    visibleLayerIds,
+    connected,
+    parentingSchedulePlan,
+    saveParentingSchedulePlan,
+    actorIdentityId,
+    parentingScheduleExceptions,
+    createParentingScheduleException,
+    resolveParentingScheduleException
   } = useCoordinationState();
   const [eventTitle, setEventTitle] = useState("");
   const [selectedLayerId, setSelectedLayerId] = useState(layers[0]?.id ?? "");
+  const [calendarAnchorDate, setCalendarAnchorDate] = useState(() => atUtcDay(new Date()));
+  const [eventStartsAt, setEventStartsAt] = useState(() => calendarDateTimeInput(new Date()));
+  const [eventEndsAt, setEventEndsAt] = useState(() => calendarDateTimeInput(new Date(Date.now() + 60 * 60 * 1000)));
+  const [eventTimeError, setEventTimeError] = useState(false);
   const [pendingShareLayerId, setPendingShareLayerId] = useState<string>();
   const [pendingDeleteEventId, setPendingDeleteEventId] = useState<string>();
+  const [eventType, setEventType] = useState<"parenting-time" | "appointment" | "change-request">("parenting-time");
+  const [custodySchedule, setCustodySchedule] = useState<CustodySchedule>();
+  const [exceptionStartDate, setExceptionStartDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [exceptionEndDate, setExceptionEndDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [exceptionNote, setExceptionNote] = useState("");
+  const [exceptionKind, setExceptionKind] = useState<"holiday" | "vacation" | "swap" | "other">("swap");
+  const [exceptionAssignedParent, setExceptionAssignedParent] = useState<"you" | "other">("you");
+  const [exceptionBusy, setExceptionBusy] = useState(false);
+  const [exceptionError, setExceptionError] = useState<string>();
 
   const visibleEvents = events.filter((event) => visibleLayerIds.includes(event.calendarLayerId));
+  const custodyOverrides: readonly CustodyOverride[] = parentingScheduleExceptions
+    .filter((item) => item.status === "accepted")
+    .map((item) => ({ startDate: item.startDate, endDate: item.endDate, parent: item.assignedParentIdentityId === actorIdentityId ? "you" : "other" }));
   const views: readonly CalendarView[] = ["month", "week", "day"];
+  const moveCalendar = (amount: number) => setCalendarAnchorDate((current) => calendarView === "month"
+    ? addUtcMonths(current, amount)
+    : addUtcDays(current, amount * (calendarView === "week" ? 7 : 1)));
+
+  useEffect(() => {
+    if (initialEventTitle?.trim()) setEventTitle(initialEventTitle);
+  }, [initialEventTitle]);
 
   return (
     <View style={styles.stack}>
-      <View style={styles.titleRow}>
-        <View>
-          <AccessibleHeading style={styles.title}>{calendarText(locale, "title")}</AccessibleHeading>
-          <Text style={styles.body}>{calendarText(locale, "body")}</Text>
-        </View>
-      </View>
+      <ScreenHeader
+        accent={colors.coral}
+        icon="calendar-outline"
+        kicker="Shared plans"
+        softBackground={colors.cream}
+        subtitle={calendarText(locale, "body")}
+        title={calendarText(locale, "title")}
+      />
 
       <View accessibilityLabel={calendarText(locale, "view")} accessibilityRole="tablist" style={styles.segmented}>
         {views.map((view) => (
@@ -403,7 +578,95 @@ export function CalendarScreen() {
         ))}
       </View>
 
-      <CalendarViewPanel calendarView={calendarView} events={visibleEvents} layers={layers} locale={locale} />
+      <View style={styles.calendarNavigation}>
+        <LabButton label={calendarNavigationText(locale, "previous")} onPress={() => moveCalendar(-1)} variant="secondary" />
+        <LabButton label={calendarNavigationText(locale, "today")} onPress={() => setCalendarAnchorDate(atUtcDay(new Date()))} variant="secondary" />
+        <LabButton label={calendarNavigationText(locale, "next")} onPress={() => moveCalendar(1)} variant="secondary" />
+      </View>
+
+      <CalendarViewPanel anchorDate={calendarAnchorDate} calendarView={calendarView} custodyOverrides={custodyOverrides} custodySchedule={custodySchedule} events={visibleEvents} layers={layers} locale={locale} />
+
+      <CustodySchedulePlanner
+        initialSchedule={parentingSchedulePlan ? {
+          enabled: parentingSchedulePlan.status === "active",
+          pattern: parentingSchedulePlan.pattern,
+          startDate: parentingSchedulePlan.startDate,
+          primaryParent: parentingSchedulePlan.primaryParentIdentityId === actorIdentityId ? "you" : "other"
+        } : undefined}
+        locale={locale}
+        onAddBlocks={async (blocks: readonly CustodyBlock[]) => {
+          if (!selectedLayerId) return;
+          const existingKeys = new Set(events
+            .filter((event) => event.eventType === "parenting-time" && event.title.startsWith("Parenting time - "))
+            .map((event) => `${event.startsAt.slice(0, 10)}-${event.endsAt.slice(0, 10)}`));
+          for (const block of blocks) {
+            const parentLabel = block.parent === "you"
+              ? custodyScheduleText(locale, "yourTime")
+              : custodyScheduleText(locale, "otherTime");
+            const title = `Parenting time - ${parentLabel}`;
+            const key = `${block.startDate}-${block.endDate}`;
+            if (existingKeys.has(key)) continue;
+            await addEvent({
+              layerId: selectedLayerId,
+              title,
+              startsAt: `${block.startDate}T00:00:00.000Z`,
+              endsAt: `${block.endDate}T00:00:00.000Z`,
+              eventType: "parenting-time"
+            });
+            existingKeys.add(key);
+          }
+        }}
+        onScheduleChange={setCustodySchedule}
+        onSave={(schedule) => saveParentingSchedulePlan({
+          calendarLayerId: selectedLayerId,
+          pattern: schedule.pattern,
+          startDate: schedule.startDate,
+          primaryParent: schedule.primaryParent,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+          status: schedule.enabled ? "active" : "paused"
+        })}
+        selectedLayerId={selectedLayerId}
+      />
+
+      <LabButton label="Share calendar" onPress={() => void Share.share({
+        title: "PeacePad parenting calendar",
+        message: buildPeacePadCalendar({ schedule: custodySchedule, scheduleEvents: visibleEvents, exceptions: parentingScheduleExceptions, actorIdentityId })
+      })} variant="secondary" />
+
+      <View style={styles.card}>
+        <Text style={styles.heading}>Changes, holidays and swaps</Text>
+        <Text style={styles.body}>Propose a one-off change without rewriting the regular parenting plan. Both parents can see and respond to it.</Text>
+        <View accessibilityRole="radiogroup" style={styles.rowWrap}>
+          {(["holiday", "vacation", "swap", "other"] as const).map((kind) => <Pressable accessibilityLabel={kind} accessibilityRole="radio" accessibilityState={{ checked: exceptionKind === kind }} key={kind} onPress={() => setExceptionKind(kind)} style={[styles.chip, exceptionKind === kind ? styles.chipActive : null]}><Text style={[styles.chipText, exceptionKind === kind ? styles.chipTextActive : null]}>{kind}</Text></Pressable>)}
+        </View>
+        <View accessibilityRole="radiogroup" style={styles.rowWrap}>
+          {(["you", "other"] as const).map((parent) => { const label = parent === "you" ? "Your time" : "Other parent's time"; return <Pressable accessibilityLabel={label} accessibilityRole="radio" accessibilityState={{ checked: exceptionAssignedParent === parent }} key={parent} onPress={() => setExceptionAssignedParent(parent)} style={[styles.chip, exceptionAssignedParent === parent ? styles.chipActive : null]}><Text style={[styles.chipText, exceptionAssignedParent === parent ? styles.chipTextActive : null]}>{label}</Text></Pressable>; })}
+        </View>
+        <TextInput accessibilityLabel="Change start date" onChangeText={setExceptionStartDate} placeholder="YYYY-MM-DD" style={styles.input} value={exceptionStartDate} />
+        <TextInput accessibilityLabel="Change end date" onChangeText={setExceptionEndDate} placeholder="YYYY-MM-DD" style={styles.input} value={exceptionEndDate} />
+        <TextInput accessibilityLabel="Change note" maxLength={500} multiline onChangeText={setExceptionNote} placeholder="Holiday, school closure, travel, or swap details" style={[styles.input, styles.multilineInput]} value={exceptionNote} />
+        {exceptionError ? <Text accessibilityRole="alert" style={styles.error}>{exceptionError}</Text> : null}
+        <LabButton disabled={!parentingSchedulePlan || exceptionBusy} label={exceptionBusy ? "Sending proposal..." : "Propose change"} onPress={() => {
+          setExceptionBusy(true);
+          setExceptionError(undefined);
+          void createParentingScheduleException({ assignedParent: exceptionAssignedParent, kind: exceptionKind, startDate: exceptionStartDate, endDate: exceptionEndDate, note: exceptionNote.trim() || null })
+            .then(() => setExceptionNote(""))
+            .catch((error) => setExceptionError(error instanceof Error ? error.message : "PeacePad could not save that change."))
+            .finally(() => setExceptionBusy(false));
+        }} />
+        {parentingScheduleExceptions.map((item) => (
+          <View key={item.id} style={styles.listItem}>
+            <View style={styles.flexOne}>
+              <Text style={styles.actionTitle}>{item.startDate} - {item.endDate}</Text>
+              <Text style={styles.caption}>{item.note || "Parenting-time change"} · {item.status}</Text>
+            </View>
+            {item.status === "proposed" ? <View style={styles.rowWrap}>
+              <LabButton label="Accept" onPress={() => void resolveParentingScheduleException(item.id, "accepted")} variant="secondary" />
+              <LabButton label="Decline" onPress={() => void resolveParentingScheduleException(item.id, "declined")} variant="secondary" />
+            </View> : null}
+          </View>
+        ))}
+      </View>
 
       <View style={styles.card}>
         <Text style={styles.heading}>{calendarText(locale, "calendars")}</Text>
@@ -453,6 +716,11 @@ export function CalendarScreen() {
       <View style={styles.card}>
         <Text style={styles.heading}>{w("addEvent")}</Text>
         <TextInput accessibilityLabel={w("eventTitle")} onChangeText={setEventTitle} placeholder={w("eventTitle")} style={styles.input} value={eventTitle} />
+        <Text style={styles.fieldLabel}>{calendarNavigationText(locale, "startsAt")}</Text>
+        <TextInput accessibilityLabel={calendarNavigationText(locale, "startsAt")} autoCapitalize="none" keyboardType="numbers-and-punctuation" onChangeText={setEventStartsAt} placeholder="YYYY-MM-DD HH:MM" style={styles.input} value={eventStartsAt} />
+        <Text style={styles.fieldLabel}>{calendarNavigationText(locale, "endsAt")}</Text>
+        <TextInput accessibilityLabel={calendarNavigationText(locale, "endsAt")} autoCapitalize="none" keyboardType="numbers-and-punctuation" onChangeText={setEventEndsAt} placeholder="YYYY-MM-DD HH:MM" style={styles.input} value={eventEndsAt} />
+        {eventTimeError ? <Text accessibilityRole="alert" style={styles.errorText}>{calendarNavigationText(locale, "invalidTime")}</Text> : null}
         <Text style={styles.fieldLabel}>{w("calendar")}</Text>
         <View style={styles.wrap}>
           {layers.map((layer) => (
@@ -468,12 +736,43 @@ export function CalendarScreen() {
             </Pressable>
           ))}
         </View>
+        <Text style={styles.fieldLabel}>{w("eventMode")}</Text>
+        <View accessibilityRole="tablist" style={styles.wrap}>
+          <Pressable
+            accessibilityLabel={w("planTime")}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: eventType === "parenting-time" }}
+            onPress={() => setEventType("parenting-time")}
+            style={[styles.chip, eventType === "parenting-time" ? styles.chipActive : null]}
+          >
+            <Text style={[styles.chipText, eventType === "parenting-time" ? styles.chipTextActive : null]}>{w("planTime")}</Text>
+          </Pressable>
+          {connected ? (
+            <Pressable
+              accessibilityLabel={w("requestChange")}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: eventType === "change-request" }}
+              onPress={() => setEventType("change-request")}
+              style={[styles.chip, eventType === "change-request" ? styles.chipActive : null]}
+            >
+              <Text style={[styles.chipText, eventType === "change-request" ? styles.chipTextActive : null]}>{w("requestChange")}</Text>
+            </Pressable>
+          ) : null}
+        </View>
         <LabButton label={w("saveEvent")} disabled={!eventTitle.trim()} onPress={() => {
+          const startsAt = parseCalendarDateTime(eventStartsAt);
+          const endsAt = parseCalendarDateTime(eventEndsAt);
+          if (!startsAt || !endsAt || new Date(endsAt).getTime() <= new Date(startsAt).getTime()) {
+            setEventTimeError(true);
+            return;
+          }
+          setEventTimeError(false);
           void addEvent({
             layerId: selectedLayerId,
             title: eventTitle,
-            startsAt: "2026-08-01T14:00:00.000Z",
-            endsAt: "2026-08-01T15:00:00.000Z"
+            startsAt,
+            endsAt,
+            eventType
           });
           setEventTitle("");
         }} />
@@ -482,7 +781,7 @@ export function CalendarScreen() {
       {visibleEvents.map((event) => (
         <View key={event.id} style={styles.card}>
           <Text style={styles.actionTitle}>{event.title}</Text>
-          <Text style={styles.caption}>{layers.find((layer) => layer.id === event.calendarLayerId)?.name}</Text>
+          <Text style={styles.caption}>{layers.find((layer) => layer.id === event.calendarLayerId)?.name} - {calendarStatusText(locale, event.status)}</Text>
           {pendingDeleteEventId === event.id ? (
             <View style={styles.stackTight}>
               <Text style={styles.body}>{w("deleteWarning")}</Text>
@@ -514,6 +813,9 @@ export function MessagesScreen() {
     messageCheckHydrated,
     messageDraft,
     messageError,
+    messageAttachments,
+    attachmentBusy,
+    attachmentError,
     messagePreview,
     messageSearchBusy,
     messageSearchError,
@@ -530,6 +832,10 @@ export function MessagesScreen() {
     setCorrectionDraft,
     setMessageCheckEnabled,
     setMessageDraft,
+    uploadMessageAttachment,
+    openMessageAttachment,
+    transcribeCoachAudio,
+    coachConversationTurn,
     setMessageSearchQuery,
     startCorrection
   } = useCoordinationState();
@@ -538,8 +844,40 @@ export function MessagesScreen() {
 
   return (
     <View style={styles.stack}>
-      <AccessibleHeading style={styles.title}>{m("title")}</AccessibleHeading>
-      <Text style={styles.body}>{m("body")}</Text>
+      <ScreenHeader
+        accent={colors.aqua}
+        icon="chatbubble-ellipses-outline"
+        kicker="Communication"
+        softBackground={colors.successSurface}
+        subtitle={m("body")}
+        title={m("title")}
+      />
+
+      <CoachConversation onTranscribe={transcribeCoachAudio} onConversationTurn={coachConversationTurn} onUseDraft={setMessageDraft} />
+
+      <View style={[styles.card, { backgroundColor: colors.successSurface, borderColor: colors.successBorder }]}>
+        <Text style={styles.heading}>Photos, files, and voice notes</Text>
+        <Text style={styles.body}>Share only what you choose. Files are private to this connected conversation and use short-lived links.</Text>
+        <ConversationVoiceNote busy={attachmentBusy} onUpload={uploadMessageAttachment} />
+        <LabButton disabled={!messageCheckHydrated || attachmentBusy} label={attachmentBusy ? "Sharing securely..." : "Choose a file to share"} onPress={() => void (async () => {
+          try {
+            const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false, type: ["image/jpeg", "image/png", "application/pdf", "text/plain", "audio/mp4", "audio/m4a", "audio/webm"] });
+            if (result.canceled) return;
+            const selected = result.assets[0];
+            const allowed = ["image/jpeg", "image/png", "application/pdf", "text/plain", "audio/mp4", "audio/m4a", "audio/webm"] as const;
+            const mediaType = allowed.find((type) => type === selected.mimeType);
+            if (!mediaType) throw new Error("Choose a JPEG, PNG, PDF, text file, or voice note.");
+            const bytes = await new File(selected.uri).arrayBuffer();
+            await uploadMessageAttachment({ originalFileName: selected.name, mediaType, bytes });
+          } catch { /* State exposes a privacy-safe error below. */ }
+        })()} />
+        {attachmentError ? <Text accessibilityRole="alert" style={styles.error}>{attachmentError}</Text> : null}
+        {messageAttachments.map((attachment) => <View key={attachment.id} style={styles.searchResult}>
+          <Text style={styles.actionTitle}>{attachment.originalFileName}</Text>
+          <Text style={styles.caption}>{attachment.mediaType} · {attachment.byteLength} bytes</Text>
+          <LabButton label="Open attachment" onPress={() => void openMessageAttachment(attachment.id).then((url) => Linking.openURL(url)).catch(() => undefined)} variant="secondary" />
+        </View>)}
+      </View>
 
       <View style={styles.card}>
         <Text style={styles.heading}>{m("find")}</Text>
@@ -548,6 +886,7 @@ export function MessagesScreen() {
           autoCapitalize="none"
           onChangeText={setMessageSearchQuery}
           placeholder={m("searchPlaceholder")}
+          placeholderTextColor={colors.muted}
           returnKeyType="search"
           onSubmitEditing={() => void searchMessages()}
           style={styles.input}
@@ -760,12 +1099,19 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
   const eventCandidate = events.find((event) => !linkedSourceIds.has(event.id));
   return (
     <View style={styles.stack}>
-      <AccessibleHeading style={styles.title}>{w("records")}</AccessibleHeading>
+      <ScreenHeader
+        accent={colors.accent}
+        icon="document-text-outline"
+        kicker="Private by default"
+        softBackground={colors.successSurface}
+        subtitle={w("binderBody")}
+        title={w("records")}
+      />
       {loading ? <View style={styles.card}><Text style={styles.heading}>{w("opening")}</Text><Text style={styles.body}>{w("loading")}</Text></View> : null}
       {!loading && binders.length > 1 ? <View style={styles.card}>
         <Text style={styles.heading}>{w("binders")}</Text>
         {binders.filter((candidate) => candidate.status === "active").map((candidate) => (
-          <Pressable accessibilityRole="button" key={candidate.id} onPress={() => selectBinder(candidate.id)} style={styles.actionCard}>
+          <Pressable accessibilityHint={w("private")} accessibilityLabel={`${candidate.name}, ${candidate.childLabel}`} accessibilityRole="button" key={candidate.id} onPress={() => selectBinder(candidate.id)} style={styles.actionCard}>
             <Text style={styles.actionTitle}>{candidate.name}</Text>
             <Text style={styles.caption}>{candidate.childLabel} · {w("private")}</Text>
           </Pressable>
@@ -774,7 +1120,9 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
       {!loading && !binder ? <View style={styles.card}>
         <Text style={styles.heading}>{w("createBinder")}</Text>
         <Text style={styles.body}>{w("binderBody")}</Text>
+        <Text style={styles.fieldLabel}>{w("binderName")}</Text>
         <TextInput accessibilityLabel={w("binderName")} onChangeText={setBinderName} placeholder={w("binderName")} style={styles.input} value={binderName} />
+        <Text style={styles.fieldLabel}>{w("childLabel")}</Text>
         <TextInput accessibilityLabel={w("childLabel")} onChangeText={setChildLabel} placeholder={w("childLabel")} style={styles.input} value={childLabel} />
         <LabButton disabled={busy} label={busy ? w("creating") : w("create")} onPress={() => void saveBinder()} />
       </View> : !loading && binder ? <View style={styles.card}>
@@ -806,7 +1154,7 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
       </View> : null}
       {error || recordsError ? <Text accessibilityRole="alert" style={styles.error}>{error ?? recordsError}</Text> : null}
       {recordsError && !loading ? <LabButton label={w("tryAgain")} onPress={() => void reload()} variant="secondary" /> : null}
-      <Pressable accessibilityRole="button" onPress={() => setScreen("home")} style={styles.actionCard}>
+      <Pressable accessibilityHint={w("anotherTask")} accessibilityLabel={w("returnHome")} accessibilityRole="button" onPress={() => setScreen("home")} style={styles.actionCard}>
         <Text style={styles.actionTitle}>{w("returnHome")}</Text>
         <Text style={styles.caption}>{w("anotherTask")}</Text>
       </Pressable>
@@ -823,31 +1171,48 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
   const [showSupport, setShowSupport] = useState(false);
   const [profileName, setProfileName] = useState(accountActions?.displayName ?? "");
   const [profileSaved, setProfileSaved] = useState(false);
+  const [exportManifest, setExportManifest] = useState<AccountExportManifest>();
   useEffect(() => setProfileName(accountActions?.displayName ?? ""), [accountActions?.displayName]);
   if (replayIntroduction) {
     return <PublicOnboardingSlides compact onComplete={() => setReplayIntroduction(false)} />;
   }
   return (
     <View style={styles.stack}>
-      <AccessibleHeading style={styles.title}>{t("more.title")}</AccessibleHeading>
-      <Pressable accessibilityRole="button" onPress={() => setScreen("invite")} style={styles.actionCard}>
-        <Text style={styles.actionTitle}>{t("more.family.title")}</Text>
+      <ScreenHeader
+        accent={colors.brand}
+        icon="sparkles-outline"
+        kicker="Your PeacePad"
+        softBackground={colors.brandSoft}
+        subtitle={t("more.support.body")}
+        title={t("more.title")}
+      />
+      <Pressable accessibilityHint={t("more.family.body")} accessibilityLabel={t("more.family.title")} accessibilityRole="button" onPress={() => setScreen("invite")} style={[styles.actionCard, styles.moreFamilyCard]}>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="people-outline" size={23} color={colors.successText} /><Text style={styles.actionTitle}>{t("more.family.title")}</Text></View>
         <Text style={styles.caption}>{t("more.family.body")}</Text>
       </Pressable>
-      <View style={styles.actionCard}>
-        <Text style={styles.actionTitle}>{t("more.privacy.title")}</Text>
+      <Pressable accessibilityHint="Manage child updates, expenses, local support, scheduled calls and Conch." accessibilityLabel="Family tools" accessibilityRole="button" onPress={() => setScreen("family")} style={[styles.actionCard, styles.morePrivacyCard]}>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="heart-circle-outline" size={23} color={colors.aqua} /><Text style={styles.actionTitle}>Family tools</Text></View>
+        <Text style={styles.caption}>Manage child updates, expenses, local support, scheduled calls and Conch.</Text>
+      </Pressable>
+      <Pressable accessibilityHint="Open a consent-based conversation where each parent gets a calm turn to speak." accessibilityLabel="Open Conch mode" accessibilityRole="button" onPress={() => setScreen("conch")} style={[styles.actionCard, styles.moreSupportCard]}>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="people-circle-outline" size={23} color={colors.aqua} /><Text style={styles.actionTitle}>Conch mode</Text></View>
+        <Text style={styles.caption}>Take turns, listen carefully, and agree on a child-focused next step—without recording the call.</Text>
+      </Pressable>
+      <View style={[styles.actionCard, styles.morePrivacyCard]}>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="shield-checkmark-outline" size={23} color={colors.accent} /><Text style={styles.actionTitle}>{t("more.privacy.title")}</Text></View>
         <Text style={styles.caption}>{t("more.privacy.body")}</Text>
       </View>
-      <Pressable accessibilityRole="button" onPress={() => setShowSupport((current) => !current)} style={styles.actionCard}>
-        <Text style={styles.actionTitle}>{t("more.support.title")}</Text>
+      <Pressable accessibilityHint={t("more.support.body")} accessibilityLabel={t("more.support.title")} accessibilityRole="button" accessibilityState={{ expanded: showSupport }} onPress={() => setShowSupport((current) => !current)} style={[styles.actionCard, styles.moreSupportCard]}>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="heart-outline" size={23} color={colors.coral} /><Text style={styles.actionTitle}>{t("more.support.title")}</Text></View>
         <Text style={styles.caption}>{t("more.support.body")}</Text>
       </Pressable>
       {showSupport ? <View style={styles.actionCardLargeText}><SupportPanel /></View> : null}
-      <Pressable accessibilityRole="button" onPress={() => setReplayIntroduction(true)} style={styles.actionCard}>
-        <Text style={styles.actionTitle}>{t("more.introduction.title")}</Text>
+      <Pressable accessibilityHint={t("more.introduction.body")} accessibilityLabel={t("more.introduction.title")} accessibilityRole="button" onPress={() => setReplayIntroduction(true)} style={[styles.actionCard, styles.moreIntroCard]}>
+        <View style={styles.cardHeadingRow}><PeacePadIcon name="sparkles-outline" size={23} color={colors.brand} /><Text style={styles.actionTitle}>{t("more.introduction.title")}</Text></View>
         <Text style={styles.caption}>{t("more.introduction.body")}</Text>
       </Pressable>
       <LinkedSignInMethods />
+      <PersonalityProfilePanel />
       {accountActions?.updateProfile ? <View style={styles.actionCardLargeText}>
         <Text accessibilityRole="header" style={styles.actionTitle}>{t("profile.title")}</Text>
         <Text style={styles.caption}>{t("profile.body")}</Text>
@@ -869,6 +1234,33 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
         />
         {profileSaved ? <Text accessibilityLiveRegion="polite" style={styles.success}>{t("profile.saved")}</Text> : null}
         {accountActions.profileError ? <Text accessibilityRole="alert" style={styles.error}>{accountActions.profileError}</Text> : null}
+      </View> : null}
+      {accountActions?.exportAccount ? <View style={styles.actionCardLargeText}>
+        <Text accessibilityRole="header" style={styles.actionTitle}>{t("account.exportTitle")}</Text>
+        <Text style={styles.caption}>{t("account.exportBody")}</Text>
+        <LabButton
+          disabled={accountActions.exporting}
+          label={accountActions.exporting ? t("account.exporting") : t("account.exportAction")}
+          onPress={() => {
+            setExportManifest(undefined);
+            void accountActions.exportAccount!()
+              .then(setExportManifest)
+              .catch(() => setExportManifest(undefined));
+          }}
+        />
+        {exportManifest ? <View accessibilityLiveRegion="polite" style={styles.successCard}>
+          <Text style={styles.success}>{t("account.exportReady")}</Text>
+          <Text style={styles.caption}>{t("account.exportCounts", {
+            families: String(exportManifest.counts.families),
+            conversations: String(exportManifest.counts.conversations),
+            messageEvents: String(exportManifest.counts.messageEvents),
+            calendarEvents: String(exportManifest.counts.calendarEvents),
+            privateRecords: String(exportManifest.counts.privateRecords),
+            privateAttachments: String(exportManifest.counts.privateAttachments)
+          })}</Text>
+          <Text style={styles.caption}>{t("account.exportMetadataOnly")}</Text>
+        </View> : null}
+        {accountActions.exportError ? <Text accessibilityRole="alert" style={styles.error}>{accountActions.exportError}</Text> : null}
       </View> : null}
       {accountActions?.enableNotifications ? <Pressable
         accessibilityRole="button"
@@ -940,55 +1332,101 @@ export function MoreScreen({ setScreen }: { setScreen: Navigate }) {
 }
 
 const styles = StyleSheet.create({
-  stack: { gap: spacing.lg },
+  stack: { gap: spacing.md },
   stackTight: { gap: spacing.sm },
   title: { ...typography.title, color: colors.text },
   heading: { ...typography.subheading, color: colors.text },
   body: { ...typography.body, color: colors.muted },
   caption: { ...typography.caption, color: colors.muted },
   fieldLabel: { ...typography.caption, color: colors.text, fontWeight: "800", marginTop: spacing.sm, textTransform: "uppercase" },
-  brandHero: { alignItems: "center", flexDirection: "row", gap: spacing.md, paddingVertical: spacing.sm },
-  brandHeroCopy: { flex: 1, gap: spacing.xs },
-  logo: { height: 64, width: 64 },
+  brandHero: { backgroundColor: colors.cream, borderColor: colors.border, borderRadius: 30, borderWidth: 1, minHeight: 230, overflow: "hidden", padding: spacing.lg, position: "relative" },
+  brandHeroCopy: { gap: spacing.sm, maxWidth: "88%", zIndex: 2 },
+  brandLockup: { alignItems: "center", flexDirection: "row", gap: spacing.md, marginBottom: spacing.md },
+  brandName: { color: colors.text, fontSize: 25, fontWeight: "900", lineHeight: 29 },
+  brandVersion: { ...typography.body, color: colors.brand, fontWeight: "800" },
+  heroEyebrow: { ...typography.caption, color: colors.coral, fontWeight: "900", letterSpacing: 1.1 },
+  heroTitle: { ...typography.title, color: colors.text, maxWidth: 285 },
+  heroBody: { ...typography.subheading, color: colors.text, fontWeight: "500", maxWidth: 300 },
+  heroDoodle: { alignItems: "center", gap: spacing.xs, position: "absolute", right: spacing.lg, top: spacing.lg },
+  heroSun: { backgroundColor: "#F7C948", borderRadius: 999, height: 120, opacity: 0.26, position: "absolute", right: -35, top: -35, width: 120 },
+  heroBubble: { backgroundColor: "#72D7C9", borderRadius: 999, bottom: -48, height: 132, opacity: 0.22, position: "absolute", right: -18, width: 132 },
+  logo: { borderRadius: 18, height: 56, width: 56, zIndex: 2 },
   actionGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
-  actionCard: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 22, borderWidth: 1, gap: spacing.sm, justifyContent: "center", minHeight: 88, minWidth: "46%", padding: spacing.lg, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 1 },
+  actionCard: { backgroundColor: "#FFF1DF", borderColor: "#F2C8B5", borderRadius: 22, borderWidth: 1, gap: spacing.sm, justifyContent: "center", minHeight: 76, minWidth: "46%", padding: spacing.md, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 1 },
+  moreFamilyCard: { backgroundColor: "#EAF6CF", borderColor: "#BBD781" },
+  morePrivacyCard: { backgroundColor: "#DDF6F0", borderColor: "#76CCBE" },
+  moreSupportCard: { backgroundColor: "#FFF1B8", borderColor: "#F0C940" },
+  moreIntroCard: { backgroundColor: "#FFE4D6", borderColor: "#F2A791" },
   actionCardLargeText: { minWidth: "100%", width: "100%" },
   actionTitle: { ...typography.subheading, color: colors.text },
   languageOptions: { gap: spacing.sm, marginTop: spacing.sm },
   languageOption: { borderColor: colors.border, borderRadius: 14, borderWidth: 1, justifyContent: "center", minHeight: 48, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   languageOptionSelected: { backgroundColor: colors.brandSoft, borderColor: colors.brand },
   pressed: { opacity: 0.72 },
-  summaryCard: { backgroundColor: colors.brand, borderRadius: 24, gap: spacing.sm, padding: spacing.lg },
-  summaryRow: { alignItems: "center", borderTopColor: "rgba(255,255,255,0.16)", borderTopWidth: 1, flexDirection: "row", justifyContent: "space-between", paddingTop: spacing.sm },
-  summaryValue: { ...typography.body, color: colors.onBrand, fontWeight: "800" },
-  card: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 22, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
+  datePill: { alignSelf: "flex-start", backgroundColor: colors.cream, borderColor: colors.border, borderRadius: 999, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  datePillText: { ...typography.body, color: colors.text, fontWeight: "700" },
+  todayLine: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
+  connectionStatus: { ...typography.caption, color: colors.muted, fontWeight: "700" },
+  planCard: { backgroundColor: "#FFFDF8", borderColor: "#F2C8B5", borderRadius: 22, borderWidth: 1, flexDirection: "row", gap: spacing.md, minHeight: 116, overflow: "hidden", paddingRight: spacing.md, shadowColor: colors.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 1 },
+  planCardEmpty: { minHeight: 112 },
+  planAccent: { backgroundColor: colors.coral, width: 10 },
+  planAccentSun: { backgroundColor: colors.sun },
+  planCopy: { flex: 1, gap: spacing.xs, justifyContent: "center", paddingVertical: spacing.md },
+  planEyebrow: { ...typography.caption, color: colors.coral, fontWeight: "800", textTransform: "uppercase" },
+  planTitle: { ...typography.heading, color: colors.text },
+  activityCard: { alignItems: "center", backgroundColor: colors.warningSurface, borderColor: colors.warningBorder, borderRadius: 22, borderWidth: 1, flexDirection: "row", gap: spacing.md, padding: spacing.md },
+  activityDot: { alignItems: "center", backgroundColor: colors.sun, borderRadius: 999, height: 44, justifyContent: "center", width: 44 },
+  activityCopy: { flex: 1, gap: spacing.xs },
+  activityTitle: { ...typography.body, color: colors.text, fontWeight: "800" },
+  cardHeadingRow: { alignItems: "center", flexDirection: "row", gap: spacing.sm },
+  taskCard: { backgroundColor: "#FFF1B8", borderColor: "#F0C940", borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.md },
+  taskTitle: { ...typography.subheading, color: colors.warning },
+  recordCard: { backgroundColor: "#DDF6F0", borderColor: "#76CCBE", borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.md },
+  recordTitle: { ...typography.subheading, color: colors.accent },
+  messageCta: { alignItems: "center", backgroundColor: colors.coral, borderRadius: 26, flexDirection: "row", gap: spacing.md, justifyContent: "space-between", padding: spacing.lg },
+  messageCtaCopy: { flex: 1, gap: spacing.xs },
+  messageCtaIcon: { alignItems: "center", backgroundColor: "rgba(255,255,255,0.22)", borderRadius: 999, height: 54, justifyContent: "center", width: 54 },
+  messageCtaTitle: { ...typography.heading, color: colors.onBrand },
+  messageCtaBody: { ...typography.body, color: colors.onBrand },
+  callCard: { backgroundColor: "#E8E0FA", borderColor: "#B8A4E4", borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg },
+  callTitle: { ...typography.subheading, color: colors.brand },
+  inviteCard: { backgroundColor: "#EAF6CF", borderColor: "#BBD781", borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg },
+  inviteTitle: { ...typography.subheading, color: colors.successText },
+  card: { backgroundColor: "#FFFDF8", borderColor: "#E7C8BD", borderRadius: 24, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
   successCard: { backgroundColor: colors.successSurface, borderColor: colors.successBorder, borderRadius: 22, borderWidth: 1, gap: spacing.sm, padding: spacing.lg },
   confirmCard: { backgroundColor: colors.warningSurface, borderColor: colors.warningBorder, borderRadius: 22, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
-  assistCard: { backgroundColor: colors.brandSoft, borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
-  codeInput: { ...typography.title, backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 20, borderWidth: 1, color: colors.text, letterSpacing: 12, padding: spacing.lg, textAlign: "center" },
+  assistCard: { backgroundColor: "#FFE4D6", borderColor: "#F2A791", borderRadius: 24, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
+  codeInput: { ...typography.title, backgroundColor: colors.surface, borderColor: "#76CCBE", borderRadius: 22, borderWidth: 2, color: colors.text, letterSpacing: 12, padding: spacing.lg, textAlign: "center" },
   invitationCode: { ...typography.heading, color: colors.brand, letterSpacing: 8, textAlign: "center" },
   qrCard: { alignItems: "center", alignSelf: "center", backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: spacing.sm, padding: spacing.md },
   qrLabel: { ...typography.caption, color: colors.text, fontWeight: "800" },
   error: { ...typography.body, color: colors.dangerText, fontWeight: "700" },
+  errorText: { ...typography.caption, color: colors.dangerText, fontWeight: "700" },
   success: { ...typography.body, color: colors.successText, fontWeight: "700" },
-  titleRow: { flexDirection: "row", justifyContent: "space-between" },
-  segmented: { backgroundColor: colors.brandSoft, borderRadius: 18, flexDirection: "row", padding: spacing.xs },
+  segmented: { backgroundColor: colors.cream, borderRadius: 18, flexDirection: "row", padding: spacing.xs },
   segment: { alignItems: "center", borderRadius: 14, flex: 1, justifyContent: "center", minHeight: 48, paddingVertical: spacing.md },
   segmentActive: { backgroundColor: colors.surface },
   segmentText: { ...typography.body, color: colors.muted, fontWeight: "700" },
   segmentTextActive: { color: colors.brand },
-  calendarCanvas: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: spacing.md, minHeight: 180, padding: spacing.lg },
+  calendarNavigation: { flexDirection: "row", gap: spacing.sm, justifyContent: "space-between" },
+  calendarCanvas: { backgroundColor: "#FFFDF8", borderColor: "#F0C940", borderRadius: 24, borderWidth: 1, gap: spacing.md, minHeight: 180, padding: spacing.lg },
   calendarMonth: { ...typography.heading, color: colors.text },
   calendarEmpty: { ...typography.body, color: colors.muted },
   monthGrid: { flexDirection: "row", flexWrap: "wrap" },
   weekday: { ...typography.caption, color: colors.muted, fontWeight: "800", textAlign: "center", width: "14.2857%" },
   monthCell: { borderTopColor: colors.border, borderTopWidth: 1, gap: 2, minHeight: 54, paddingHorizontal: 3, paddingTop: spacing.xs, width: "14.2857%" },
+  yourTimeCell: { backgroundColor: "rgba(139,92,246,0.10)" },
+  otherTimeCell: { backgroundColor: "rgba(98,180,75,0.10)" },
   dayNumber: { ...typography.caption, color: colors.text, fontWeight: "800" },
+  custodyCellLabel: { color: colors.brand, fontSize: 8, fontWeight: "800", overflow: "hidden" },
   monthEvent: { backgroundColor: colors.brandSoft, borderRadius: 6, color: colors.brand, fontSize: 9, fontWeight: "700", overflow: "hidden", paddingHorizontal: 3, paddingVertical: 2 },
   scheduleList: { gap: spacing.sm },
   scheduleRow: { borderTopColor: colors.border, borderTopWidth: 1, flexDirection: "row", gap: spacing.md, paddingTop: spacing.sm },
   scheduleDate: { ...typography.caption, color: colors.text, fontWeight: "800", width: 48 },
   scheduleContent: { flex: 1, gap: spacing.xs },
+  custodyLabel: { ...typography.caption, fontWeight: "800" },
+  yourTimeText: { color: colors.brand },
+  otherTimeText: { color: colors.successText },
   scheduleEvent: { backgroundColor: colors.brandSoft, borderLeftColor: colors.brand, borderLeftWidth: 3, borderRadius: 12, gap: 2, padding: spacing.sm },
   layerRow: { alignItems: "center", borderTopColor: colors.border, borderTopWidth: 1, flexDirection: "row", gap: spacing.sm, paddingTop: spacing.md },
   layerRowLargeText: { alignItems: "stretch", flexDirection: "column" },
@@ -997,7 +1435,11 @@ const styles = StyleSheet.create({
   layerDot: { borderRadius: 999, height: 16, width: 16 },
   smallButton: { alignItems: "center", backgroundColor: colors.brandSoft, borderRadius: 999, justifyContent: "center", minHeight: 44, minWidth: 64, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   smallButtonText: { ...typography.caption, color: colors.brand, fontWeight: "800" },
-  input: { ...typography.body, backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 18, borderWidth: 1, color: colors.text, minHeight: 52, padding: spacing.md },
+  input: { ...typography.body, backgroundColor: colors.surface, borderColor: "#E7C8BD", borderRadius: 18, borderWidth: 1, color: colors.text, minHeight: 52, padding: spacing.md },
+  multilineInput: { minHeight: 96, textAlignVertical: "top" },
+  listItem: { alignItems: "center", backgroundColor: colors.cream, borderRadius: 18, flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, padding: spacing.md },
+  flexOne: { flex: 1, minWidth: 180 },
+  rowWrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   messageInput: { minHeight: 120, textAlignVertical: "top" },
   wrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   chip: { alignItems: "center", backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 999, borderWidth: 1, justifyContent: "center", minHeight: 44, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },

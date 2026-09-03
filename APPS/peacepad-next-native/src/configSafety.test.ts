@@ -19,6 +19,7 @@ describe("lab-only configuration", () => {
       "lab-simulator",
       "playstore-internal",
       "playstore-production",
+      "production-device-apk",
       "staging-device-ca",
       "staging-device-us",
       "staging-simulator-ca",
@@ -112,6 +113,18 @@ describe("lab-only configuration", () => {
         PEACEPAD_ANDROID_RELEASE_MODE: "playstore-production"
       },
       android: { buildType: "app-bundle", credentialsSource: "local" }
+    });
+
+    expect(easConfig.build["production-device-apk"]).toMatchObject({
+      distribution: "internal",
+      environment: "production",
+      env: {
+        EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS: "false",
+        EXPO_PUBLIC_PEACEPAD_ENV: "production",
+        EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED: "true",
+        PEACEPAD_ANDROID_RELEASE_MODE: "playstore-production"
+      },
+      android: { buildType: "apk", credentialsSource: "local" }
     });
   });
 });

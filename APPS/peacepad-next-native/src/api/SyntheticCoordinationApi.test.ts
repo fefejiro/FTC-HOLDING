@@ -98,6 +98,22 @@ describe("SyntheticCoordinationApi safety behavior", () => {
     });
   });
 
+  it("stores only the current parent's optional communication profile with version checks", async () => {
+    const api = new SyntheticCoordinationApi();
+    await expect(api.getPersonalityPreference()).resolves.toMatchObject({
+      identityId: "identity-current",
+      region: "ca",
+      personalityType: null,
+      version: 0
+    });
+    const saved = await api.setPersonalityPreference("INFP", { ...context, expectedVersion: 0 });
+    expect(saved).toMatchObject({ personalityType: "INFP", version: 1 });
+    await expect(api.setPersonalityPreference("INTP", { ...context, expectedVersion: 0 }))
+      .rejects.toMatchObject({ status: 409 });
+    await expect(api.setPersonalityPreference(null, { ...context, expectedVersion: 1 }))
+      .resolves.toMatchObject({ personalityType: null, version: 2 });
+  });
+
   it("keeps originals immutable while search returns the latest correction", async () => {
     const api = new SyntheticCoordinationApi();
     const original = await api.sendMessage({ familyCircleId: "family-current", conversationId: "conversation-1", body: "Pickup at five." }, context);
@@ -361,5 +377,162 @@ describe("SyntheticCoordinationApi safety behavior", () => {
       source: { kind: "schedule-event", sourceId: event.id, eventType: "appointment", sourceVersion: 1 }
     });
     await expect(api.listPrivateTimeline(binder.id)).resolves.toHaveLength(2);
+  });
+
+  it("supports the full parent-core contract without requiring a connected family name", async () => {
+    const api = new SyntheticCoordinationApi();
+    const familyCircleId = "family-current";
+    const child = await api.createChildProfile({ familyCircleId, displayName: "Kid A" }, context);
+    expect(child).toMatchObject({ displayName: "Kid A", directLoginEnabled: false, version: 1 });
+    await expect(api.createChildUpdate({
+      familyCircleId,
+      childProfileId: child.id,
+      kind: "school",
+      title: "School update",
+      body: "Parent-teacher meeting is next week.",
+      occurredAt: "2026-09-01T14:00:00.000Z",
+      visibility: { scope: "private" }
+    }, context)).resolves.toMatchObject({ childProfileId: child.id, kind: "school" });
+
+    const expense = await api.createExpense({
+      familyCircleId,
+      childProfileIds: [child.id],
+      title: "School supplies",
+      description: null,
+      category: "education",
+      amountMinor: 10000,
+      currency: "CAD",
+      incurredAt: "2026-09-01T14:00:00.000Z",
+      splits: [
+        { identityId: context.actor.identityId, shareType: "percentage", shareValue: 50 },
+        { identityId: "identity-coparent", shareType: "percentage", shareValue: 50 }
+      ],
+      receiptAttachmentId: null
+    }, context);
+    const settlement = await api.requestSettlement({
+      familyCircleId,
+      expenseId: expense.id,
+      requestedFromIdentityId: "identity-coparent",
+      amountMinor: 5000,
+      currency: "CAD"
+    }, context);
+    expect(settlement).toMatchObject({ status: "pending", amountMinor: 5000 });
+    await expect(api.resolveSettlement(settlement.id, { resolution: "confirmed" }, { ...context, actor: { ...context.actor, identityId: "identity-coparent" }, expectedVersion: settlement.version }))
+      .resolves.toMatchObject({ status: "confirmed", version: 2 });
+
+    const scheduled = await api.createScheduledCall({
+      familyCircleId,
+      conversationId: "conversation-primary",
+      participantIdentityIds: [context.actor.identityId, "identity-coparent"],
+      mediaType: "video",
+      startsAt: "2026-09-02T18:00:00.000Z",
+      durationMinutes: 30,
+      note: "Weekly call"
+    }, context);
+    expect(scheduled).toMatchObject({ mediaType: "video", status: "scheduled" });
+
+    const video = await api.createMediaCall("conversation-primary", "video", context);
+    expect(video).toMatchObject({ type: "video", status: "ringing" });
+    await expect(api.getCurrentMediaCall("conversation-primary")).resolves.toEqual(video);
+
+    const conch = await api.createConchSession({
+      familyCircleId,
+      conversationId: "conversation-primary",
+      mediaType: "audio",
+      turnDurationSeconds: 120
+    }, context);
+    expect(conch).toMatchObject({ status: "invited", recordingEnabled: false, transcriptEnabled: false });
+    const active = await api.respondToConchSession(conch.id, "accept", { ...context, expectedVersion: conch.version });
+    expect(active).toMatchObject({ status: "active", currentSpeakerIdentityId: context.actor.identityId });
+    const passed = await api.passConchTurn(active.id, { ...context, expectedVersion: active.version });
+    expect(passed.turn).toMatchObject({ outcome: "passed", speakerIdentityId: context.actor.identityId });
+    await expect(api.endConchSession(active.id, { ...context, expectedVersion: passed.session.version }))
+      .resolves.toMatchObject({ status: "ended", currentSpeakerIdentityId: null });
+  });
+
+  it("keeps a receipt private until it is attached to its expense", async () => {
+    const api = new SyntheticCoordinationApi();
+    const intent = await api.createAttachmentUploadIntent({
+      familyCircleId: "family-current",
+      target: { kind: "expense-receipt" },
+      originalFileName: "school-fee.pdf",
+      mediaType: "application/pdf",
+      byteLength: 3
+    }, context);
+    await api.uploadPrivateAttachment(intent, new Uint8Array([1, 2, 3]).buffer);
+    const receipt = await api.completeExpenseReceipt(intent.id, context);
+    expect(receipt).toMatchObject({ status: "available", linkedExpenseId: null, target: { kind: "expense-receipt" } });
+
+    const expense = await api.createExpense({
+      familyCircleId: "family-current", childProfileIds: [], title: "School fee", description: null,
+      category: "education", amountMinor: 5000, currency: "CAD", incurredAt: "2026-09-01T14:00:00.000Z",
+      splits: [{ identityId: context.actor.identityId, shareType: "percentage", shareValue: 100 }], receiptAttachmentId: receipt.id
+    }, context);
+    expect(expense.receiptAttachmentId).toBe(receipt.id);
+    await expect(api.getExpenseReceiptDownload(receipt.id)).resolves.toMatchObject({ attachment: { linkedExpenseId: expense.id } });
+  });
+
+  it("reveals a Conch summary only after both parents consent and deletes it on withdrawal", async () => {
+    const api = new SyntheticCoordinationApi();
+    const conch = await api.createConchSession({
+      familyCircleId: "family-current",
+      conversationId: "conversation-primary",
+      mediaType: "audio",
+      turnDurationSeconds: 120
+    }, context);
+    const currentConsent = await api.consentToConchSession(conch.id, true, { ...context, expectedVersion: conch.version });
+    await expect(api.getConchSummary(conch.id)).resolves.toBeNull();
+    const otherContext = { ...context, actor: { ...context.actor, identityId: "identity-coparent" }, expectedVersion: currentConsent.version };
+    const bothConsent = await api.consentToConchSession(conch.id, true, otherContext);
+    const summary = await api.saveConchSummary(conch.id, " We agreed to confirm Sunday pickup by Friday evening. ", { ...context, expectedVersion: null });
+    expect(summary).toMatchObject({ body: "We agreed to confirm Sunday pickup by Friday evening.", version: 1 });
+    await expect(api.getConchSummary(conch.id)).resolves.toEqual(summary);
+    await api.consentToConchSession(conch.id, false, { ...otherContext, expectedVersion: bothConsent.version });
+    await expect(api.getConchSummary(conch.id)).resolves.toBeNull();
+  });
+
+  it("requires and preserves a reason when a settlement is disputed", async () => {
+    const api = new SyntheticCoordinationApi();
+    const expense = await api.createExpense({
+      familyCircleId: "family-current", childProfileIds: [], title: "Activity fee", description: null,
+      category: "activity", amountMinor: 8000, currency: "CAD", incurredAt: "2026-09-01T14:00:00.000Z",
+      splits: [{ identityId: context.actor.identityId, shareType: "percentage", shareValue: 50 }, { identityId: "identity-coparent", shareType: "percentage", shareValue: 50 }],
+      receiptAttachmentId: null
+    }, context);
+    const settlement = await api.requestSettlement({ familyCircleId: "family-current", expenseId: expense.id, requestedFromIdentityId: "identity-coparent", amountMinor: 4000, currency: "CAD" }, context);
+    const respondingContext = { ...context, actor: { ...context.actor, identityId: "identity-coparent" }, expectedVersion: settlement.version };
+    await expect(api.resolveSettlement(settlement.id, { resolution: "disputed" }, respondingContext)).rejects.toMatchObject({ status: 400 });
+    await expect(api.resolveSettlement(settlement.id, { resolution: "disputed", resolutionNote: "Receipt total does not match." }, respondingContext))
+      .resolves.toMatchObject({ status: "disputed", resolutionNote: "Receipt total does not match.", version: 2 });
+  });
+
+  it("persists one shared parenting plan and versioned change requests", async () => {
+    const api = new SyntheticCoordinationApi();
+    const plan = await api.saveParentingSchedulePlan({
+      familyCircleId: "family-current",
+      calendarLayerId: "layer-parenting",
+      pattern: "two_two_three",
+      startDate: "2026-09-01",
+      primaryParentIdentityId: context.actor.identityId,
+      secondaryParentIdentityId: "identity-coparent",
+      timezone: "America/Toronto",
+      status: "active"
+    }, context);
+    await expect(api.getParentingSchedulePlan("family-current")).resolves.toEqual(plan);
+    await expect(api.saveParentingSchedulePlan({ ...plan, pattern: "week_on_off" }, context)).rejects.toMatchObject({ status: 409 });
+
+    const proposed = await api.createParentingScheduleException({
+      familyCircleId: "family-current",
+      parentingSchedulePlanId: plan.id,
+      assignedParentIdentityId: "identity-coparent",
+      kind: "holiday",
+      startDate: "2026-12-24",
+      endDate: "2026-12-26",
+      note: "Holiday handover"
+    }, context);
+    expect(proposed).toMatchObject({ status: "proposed", version: 1 });
+    await expect(api.resolveParentingScheduleException(proposed.id, "accepted", { ...context, expectedVersion: proposed.version }))
+      .resolves.toMatchObject({ status: "accepted", version: 2 });
+    await expect(api.listParentingScheduleExceptions("family-current")).resolves.toHaveLength(1);
   });
 });

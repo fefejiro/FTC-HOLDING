@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       authorization:
-        description: Type I_CONFIRM_PRODUCTION_BUILD_6_UPLOAD
+        description: Type I_CONFIRM_PRODUCTION_BUILD_10_UPLOAD
         required: true
         type: string
 
@@ -21,8 +21,9 @@ concurrency:
 
 jobs:
   build-and-upload:
-    name: Build and upload production 2.0.1 (6)
+    name: Build and upload production 2.0.1 (10)
     runs-on: macos-26-intel
+    environment: peacepad-v2-staging-ca
     timeout-minutes: 120
     env:
       APP_PATH: APPS/peacepad-next-native
@@ -32,6 +33,9 @@ jobs:
       EAS_NO_VCS: "1"
       FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: "30"
       FASTLANE_XCODEBUILD_SETTINGS_RETRIES: "6"
+      PEACEPAD_PRODUCTION_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_PEACEPAD_SUPABASE_URL }}
+      PEACEPAD_PRODUCTION_API_BASE_URL: ${{ vars.EXPO_PUBLIC_PEACEPAD_API_BASE_URL }}
+      PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY }}
 
     steps:
       - name: Checkout exact reviewed source
@@ -46,7 +50,7 @@ jobs:
           set -euo pipefail
           [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-          test "${{ inputs.authorization }}" = "I_CONFIRM_PRODUCTION_BUILD_6_UPLOAD"
+          test "${{ inputs.authorization }}" = "I_CONFIRM_PRODUCTION_BUILD_10_UPLOAD"
           git merge-base --is-ancestor "$PRODUCTION_BASELINE" "$EXPECTED_SHA"
           git diff --check "$EXPECTED_SHA"
           test -z "$(git status --porcelain)"
@@ -90,11 +94,11 @@ jobs:
           test -s assets/icon.png
           config_path="$RUNNER_TEMP/peacepad-production-config.json"
           npx --yes eas-cli@21.8.0 env:exec production \
-            "PEACEPAD_IOS_RELEASE_MODE=appstore-production EXPO_PUBLIC_PEACEPAD_ENV=production EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED=true npx --yes eas-cli@21.8.0 config --platform ios --profile appstore-production --json --non-interactive > '$config_path'" \
+            "PEACEPAD_IOS_RELEASE_MODE=appstore-production EXPO_PUBLIC_PEACEPAD_ENV=production EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_URL='$PEACEPAD_PRODUCTION_SUPABASE_URL' EXPO_PUBLIC_PEACEPAD_PRODUCTION_API_BASE_URL='$PEACEPAD_PRODUCTION_API_BASE_URL' EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY='$PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY' EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED=true npx --yes eas-cli@21.8.0 config --platform ios --profile appstore-production --json --non-interactive > '$config_path'" \
             --non-interactive
           jq -e '
             .appConfig.version == "2.0.1"
-            and .appConfig.ios.buildNumber == "6"
+            and .appConfig.ios.buildNumber == "10"
             and .appConfig.ios.bundleIdentifier == "ca.peacepad.family"
             and .appConfig.extra.appStoreId == "6793350735"
             and .appConfig.extra.environment == "production"
@@ -111,7 +115,7 @@ jobs:
         run: |
           set -euo pipefail
           health="$(curl --fail --location --retry 3 --connect-timeout 20 --max-time 60 \
-            https://qzekqjewpugdotskrtni.supabase.co/functions/v1/peacepad-v2-api/health)"
+            https://rohvkyuxbnqzglaromms.supabase.co/functions/v1/peacepad-v2-api/health)"
           node -e 'const health=JSON.parse(process.argv[1]); if(health.status!=="ok"||health.environment!=="production"||health.region!=="ca"||health.writesEnabled!==true) process.exit(1)' "$health"
 
       - name: Build signed production IPA locally
@@ -124,6 +128,9 @@ jobs:
             set -eu
             export PEACEPAD_IOS_RELEASE_MODE=appstore-production
             export EXPO_PUBLIC_PEACEPAD_ENV=production
+            export EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_URL="$PEACEPAD_PRODUCTION_SUPABASE_URL"
+            export EXPO_PUBLIC_PEACEPAD_PRODUCTION_API_BASE_URL="$PEACEPAD_PRODUCTION_API_BASE_URL"
+            export EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY="$PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY"
             export EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED=true
             EAS_SKIP_AUTO_FINGERPRINT=1 npx --yes eas-cli@21.8.0 build \
               --platform ios \
@@ -131,11 +138,11 @@ jobs:
               --local \
               --non-interactive \
               --freeze-credentials \
-              --output "$RUNNER_TEMP/peacepad-v2-production-2.0.1-6.ipa"
+              --output "$RUNNER_TEMP/peacepad-v2-production-2.0.1-10.ipa"
           EOF
           )
           npx --yes eas-cli@21.8.0 env:exec production "$release_command" --non-interactive
-          shasum -a 256 "$RUNNER_TEMP/peacepad-v2-production-2.0.1-6.ipa" > "$RUNNER_TEMP/peacepad-v2-production-2.0.1-6.sha256"
+          shasum -a 256 "$RUNNER_TEMP/peacepad-v2-production-2.0.1-10.ipa" > "$RUNNER_TEMP/peacepad-v2-production-2.0.1-10.sha256"
 
       - name: Upload exact IPA to App Store Connect
         id: submit
@@ -150,7 +157,7 @@ jobs:
           npx --yes eas-cli@21.8.0 submit \
             --platform ios \
             --profile appstore-production \
-            --path "$RUNNER_TEMP/peacepad-v2-production-2.0.1-6.ipa" \
+            --path "$RUNNER_TEMP/peacepad-v2-production-2.0.1-10.ipa" \
             --non-interactive \
             --wait | tee "$RUNNER_TEMP/peacepad-v2-production-submit.txt"
 
@@ -165,7 +172,7 @@ jobs:
           evidence="$RUNNER_TEMP/peacepad-v2-production-evidence"
           mkdir -p "$evidence"
           cp "$RUNNER_TEMP/peacepad-v2-xcode-version.txt" "$evidence/" 2>/dev/null || true
-          cp "$RUNNER_TEMP/peacepad-v2-production-2.0.1-6.sha256" "$evidence/" 2>/dev/null || true
+          cp "$RUNNER_TEMP/peacepad-v2-production-2.0.1-10.sha256" "$evidence/" 2>/dev/null || true
           cp "$RUNNER_TEMP/peacepad-v2-production-submit.txt" "$evidence/" 2>/dev/null || true
           jq -n \
             --arg result "$(test "$BUILD_OUTCOME" = success && test "$SUBMIT_OUTCOME" = success && echo APP_STORE_CONNECT_UPLOAD_VERIFIED || echo PRODUCTION_UPLOAD_NOT_VERIFIED)" \
@@ -182,7 +189,7 @@ jobs:
               appStoreId: "6793350735",
               bundleIdentifier: "ca.peacepad.family",
               version: "2.0.1",
-              buildNumber: "6",
+              buildNumber: "10",
               runtime: "production-ca",
               productionApiWritesEnabled: true,
               buildOutcome: $buildOutcome,
@@ -207,4 +214,4 @@ jobs:
           name: peacepad-v2-ios-production-ipa-${{ inputs.source_sha }}
           if-no-files-found: error
           retention-days: 1
-          path: ${{ runner.temp }}/peacepad-v2-production-2.0.1-6.ipa
+          path: ${{ runner.temp }}/peacepad-v2-production-2.0.1-10.ipa

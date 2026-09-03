@@ -22,15 +22,51 @@ const accessToken = async () => "a".repeat(48);
 function response(status: number, payload: unknown): Response {
   return {
     json: jest.fn(async () => payload),
+    headers: { get: jest.fn(() => undefined) },
     ok: status >= 200 && status < 300,
     status
   } as unknown as Response;
 }
 
 describe("HttpPeacePadCoordinationApi", () => {
+  it("rejects an empty bootstrap display name before making a request", async () => {
+    const fetcher = jest.fn(async () => response(201, {}));
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
+
+    await expect(api.bootstrapIdentity("   ", "ca")).rejects.toMatchObject({ status: 400 });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("bootstraps a newly authenticated identity through the existing idempotent endpoint", async () => {
+    const fetcher = jest.fn(async () => response(201, {
+      identityId: context.actor.identityId,
+      region: "ca",
+      displayName: "New Parent"
+    }));
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
+
+    await expect(api.bootstrapIdentity("New Parent", "ca")).resolves.toEqual({
+      identityId: context.actor.identityId,
+      region: "ca",
+      displayName: "New Parent"
+    });
+    expect(fetcher).toHaveBeenCalledWith(
+      `${config.apiBaseUrl}/api/v2/session/bootstrap`,
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          Authorization: "Bearer " + "a".repeat(48),
+          "X-PeacePad-Region": "ca",
+          "X-PeacePad-Schema-Version": "2.0",
+          "Idempotency-Key": expect.stringMatching(/^identity-bootstrap-/)
+        }),
+        body: JSON.stringify({ displayName: "New Parent" })
+      })
+    );
+  });
+
   it.each([
-    ["rohvkyuxbnqzglaromms", "ca-central-1"],
-    ["spmpndalcvwmygznihec", "us-east-1"]
+    ["rohvkyuxbnqzglaromms", "ca-central-1"]
   ])("pins approved project %s to Edge region %s", async (projectRef, functionRegion) => {
     const fetcher = jest.fn(async () => response(200, []));
     const api = new HttpPeacePadCoordinationApi({
@@ -63,6 +99,13 @@ describe("HttpPeacePadCoordinationApi", () => {
         displayName: "Calm Parent",
         region: context.region,
         version: 5
+      } : input.endsWith("/api/v2/account/personality-preference") ? {
+        identityId: context.actor.identityId,
+        region: context.region,
+        personalityType: "INTP",
+        updatedAt: "2026-08-27T12:00:00.000Z",
+        version: 5,
+        schemaVersion: "2.0"
       } : input.endsWith("/api/v2/account/export") ? {
         identityId: context.actor.identityId,
         region: context.region,
@@ -136,6 +179,8 @@ describe("HttpPeacePadCoordinationApi", () => {
 
     await api.createFamily("Fictional Family", context);
     await api.updateProfile(" Calm Parent ", context);
+    await api.getPersonalityPreference();
+    await api.setPersonalityPreference("INTP", context);
     await api.leaveFamily("family-current", context);
     await api.deleteAccount(context);
     await api.listCaseBinders("family-current");
@@ -404,6 +449,30 @@ describe("HttpPeacePadCoordinationApi", () => {
     expect(request.headers).toMatchObject({ "If-Match": "4" });
   });
 
+  it("reads and updates the optional communication profile with optimistic concurrency", async () => {
+    const preference = {
+      identityId: context.actor.identityId,
+      region: context.region,
+      personalityType: "INTP" as const,
+      updatedAt: "2026-08-27T12:00:00.000Z",
+      version: 5,
+      schemaVersion: "2.0" as const
+    };
+    const fetcher = jest.fn(async (_input: string, _init?: RequestInit) => response(200, preference));
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
+
+    await expect(api.getPersonalityPreference()).resolves.toEqual(preference);
+    await expect(api.setPersonalityPreference("INTP", context)).resolves.toEqual(preference);
+
+    expect(fetcher.mock.calls[0]?.[0]).toBe(
+      "https://staging-api.peacepad.test/api/v2/account/personality-preference"
+    );
+    expect(fetcher.mock.calls[1]?.[1]).toEqual(expect.objectContaining({ method: "PUT" }));
+    const request = fetcher.mock.calls[1]?.[1] as RequestInit;
+    expect(JSON.parse(request.body as string)).toEqual({ personalityType: "INTP" });
+    expect(request.headers).toMatchObject({ "If-Match": "4" });
+  });
+
   it.each(["", "   ", "Parent\nName", "x".repeat(121)])(
     "rejects an invalid profile name before a network request",
     async (displayName) => {
@@ -523,7 +592,7 @@ describe("HttpPeacePadCoordinationApi", () => {
       "https://staging-api.peacepad.test/api/v2/calls/call%2Fcurrent/turn-credentials",
       "https://staging-api.peacepad.test/api/v2/calls/call%2Fcurrent/signals"
     ]);
-    expect(JSON.parse((fetcher.mock.calls[1]?.[1] as RequestInit).body as string)).toEqual({ conversationId: "conversation/current" });
+    expect(JSON.parse((fetcher.mock.calls[1]?.[1] as RequestInit).body as string)).toEqual({ conversationId: "conversation/current", mediaType: "audio" });
     expect((fetcher.mock.calls[5]?.[1] as RequestInit).headers).toMatchObject({
       "If-Match": "4",
       "X-PeacePad-Region": "ca",
@@ -648,5 +717,37 @@ describe("HttpPeacePadCoordinationApi", () => {
         status: 502
       });
     }
+  });
+
+  it("sends private and conversation-scoped PeaceBot turns with an explicit context boundary", async () => {
+    const fetcher = jest.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => response(200, {
+      reply: "Let us focus on one clear pickup detail.",
+      draft: "Could we confirm Saturday's pickup time?",
+      note: null,
+      provider: "configured"
+    }));
+    const api = new HttpPeacePadCoordinationApi(config, fetcher, accessToken);
+    const turn = {
+      topic: "Saturday pickup",
+      feeling: "anxious" as const,
+      entryMode: "sending" as const,
+      messages: [{ role: "parent" as const, content: "Saturday pickup" }]
+    };
+
+    await api.coachConversationTurn(turn);
+    await api.coachConversationTurn({ ...turn, conversationId: "conversation-current" });
+
+    expect(fetcher.mock.calls.map(([url]) => url)).toEqual([
+      "https://staging-api.peacepad.test/api/v2/coach/conversation",
+      "https://staging-api.peacepad.test/api/v2/coach/conversation"
+    ]);
+    expect(JSON.parse((fetcher.mock.calls[0]?.[1] as RequestInit).body as string)).toMatchObject({
+      conversationId: null,
+      topic: "Saturday pickup"
+    });
+    expect(JSON.parse((fetcher.mock.calls[1]?.[1] as RequestInit).body as string)).toMatchObject({
+      conversationId: "conversation-current",
+      topic: "Saturday pickup"
+    });
   });
 });

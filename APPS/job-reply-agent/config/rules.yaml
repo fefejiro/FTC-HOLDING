@@ -33,6 +33,47 @@ filters:
     resume_generated: JOB AGENT/Resume Generated
     error: JOB AGENT/Error
 
+deduplication:
+  enabled: true
+  requisition_id_is_primary_key: true
+  requisition_id_patterns:
+    - "RQ[0-9]+"
+    - "JP[0-9]+"
+    - "GOAPRDJP[0-9]+"
+    - "Req ID[-: ]*[A-Za-z0-9_-]+"
+  fuzzy_fingerprint_when_no_requisition: true
+  fuzzy_fields:
+    - client
+    - role_title
+    - location
+    - distinctive_jd_text
+  fuzzy_similarity_threshold: 0.88
+  check_sent_mail_before_draft: true
+  check_prior_applications_before_send: true
+  same_requisition_action: skip_duplicate
+  same_fuzzy_job_action: needs_review
+  automated_repeat_solicitation_action: skip_duplicate
+  recruiter_repeat_without_new_information_action: skip_duplicate
+  allow_single_follow_up: true
+  follow_up_after_business_days: 5
+  follow_up_latest_business_days: 7
+  max_follow_ups_without_response: 1
+  materially_new_information_required_after_follow_up: true
+  buckets:
+    apply: "new requisition or clearly unique opportunity"
+    review: "same general opportunity but identity is uncertain, or one follow-up is due"
+    skip_duplicate: "same requisition, prior submission, repeated automated solicitation, or no-new-information recruiter blast"
+
+right_to_represent:
+  hard_lock_enabled: true
+  match_scope:
+    - requisition_id
+    - client_and_role
+  if_existing_rtr_found: block_competing_submission
+  if_rtr_status_unclear: needs_review
+  never_grant_exclusive_rtr_automatically: true
+  require_confirmation_not_previously_submitted: true
+
 risk_controls:
   block_keywords:
     - sin

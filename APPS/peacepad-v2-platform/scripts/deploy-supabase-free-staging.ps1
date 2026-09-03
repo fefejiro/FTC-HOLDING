@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [Parameter(Mandatory)] [ValidateSet('ca', 'us')] [string] $Region,
+  [Parameter(Mandatory)] [ValidateSet('ca')] [string] $Region,
   [Parameter(Mandatory)] [string] $ProjectRef,
   [Parameter(Mandatory)] [string] $FunctionRegion,
   [string] $SupabaseCli = 'supabase',
@@ -11,7 +11,6 @@ $ErrorActionPreference = 'Stop'
 $platformRoot = Split-Path -Parent $PSScriptRoot
 $expectedProjects = @{
   ca = @{ ProjectRef = 'rohvkyuxbnqzglaromms'; DatabaseRegion = 'ca-central-1'; FunctionRegion = 'ca-central-1' }
-  us = @{ ProjectRef = 'spmpndalcvwmygznihec'; DatabaseRegion = 'us-east-2'; FunctionRegion = 'us-east-1' }
 }
 
 function Invoke-Supabase([string[]] $Arguments) {
@@ -64,6 +63,19 @@ if (-not $SkipDeploy) {
   if ([string]::IsNullOrWhiteSpace($idempotencySecret) -or $idempotencySecret.Length -lt 32) {
     throw 'PEACEPAD_IDEMPOTENCY_SECRET must be supplied through the process environment and contain at least 32 characters.'
   }
+  & (Join-Path $PSScriptRoot 'validate-protected-provider-config.ps1')
+  $pushTokenSecret = [Environment]::GetEnvironmentVariable('PEACEPAD_PUSH_TOKEN_SECRET')
+  $turnUrls = [Environment]::GetEnvironmentVariable('PEACEPAD_TURN_URLS')
+  $turnSharedSecret = [Environment]::GetEnvironmentVariable('PEACEPAD_TURN_SHARED_SECRET')
+  $cloudflareTurnKeyId = [Environment]::GetEnvironmentVariable('PEACEPAD_CLOUDFLARE_TURN_KEY_ID')
+  $cloudflareTurnApiToken = [Environment]::GetEnvironmentVariable('PEACEPAD_CLOUDFLARE_TURN_API_TOKEN')
+  $supportDiscoveryUrl = [Environment]::GetEnvironmentVariable('PEACEPAD_SUPPORT_DISCOVERY_URL')
+  $supportDiscoveryToken = [Environment]::GetEnvironmentVariable('PEACEPAD_SUPPORT_DISCOVERY_TOKEN')
+  $coachTranscriptionUrl = [Environment]::GetEnvironmentVariable('PEACEPAD_COACH_TRANSCRIPTION_URL')
+  $coachTranscriptionToken = [Environment]::GetEnvironmentVariable('PEACEPAD_COACH_TRANSCRIPTION_TOKEN')
+  $geminiApiKey = [Environment]::GetEnvironmentVariable('PEACEPAD_GEMINI_API_KEY')
+  $coachConversationUrl = [Environment]::GetEnvironmentVariable('PEACEPAD_COACH_CONVERSATION_URL')
+  $coachConversationToken = [Environment]::GetEnvironmentVariable('PEACEPAD_COACH_CONVERSATION_TOKEN')
 }
 
 if ($SkipDeploy) {
@@ -71,16 +83,34 @@ if ($SkipDeploy) {
   return
 }
 
-Invoke-Supabase @(
+$secretArguments = @(
   'secrets', 'set',
   "PEACEPAD_REGION=$Region",
   "PEACEPAD_PROJECT_REF=$ProjectRef",
   "PEACEPAD_FUNCTION_REGION=$FunctionRegion",
   "PEACEPAD_MAINTENANCE_SECRET=$maintenanceSecret",
   "PEACEPAD_IDEMPOTENCY_SECRET=$idempotencySecret",
-  '--project-ref', $ProjectRef,
-  '--agent', 'no'
+  "PEACEPAD_PUSH_TOKEN_SECRET=$pushTokenSecret"
 )
+if (-not [string]::IsNullOrWhiteSpace($cloudflareTurnKeyId)) {
+  $secretArguments += "PEACEPAD_CLOUDFLARE_TURN_KEY_ID=$cloudflareTurnKeyId", "PEACEPAD_CLOUDFLARE_TURN_API_TOKEN=$cloudflareTurnApiToken"
+} else {
+  $secretArguments += "PEACEPAD_TURN_URLS=$turnUrls", "PEACEPAD_TURN_SHARED_SECRET=$turnSharedSecret"
+}
+if (-not [string]::IsNullOrWhiteSpace($geminiApiKey)) {
+  $secretArguments += "PEACEPAD_GEMINI_API_KEY=$geminiApiKey"
+} else {
+  $secretArguments += "PEACEPAD_COACH_TRANSCRIPTION_URL=$coachTranscriptionUrl", "PEACEPAD_COACH_TRANSCRIPTION_TOKEN=$coachTranscriptionToken"
+}
+if (-not [string]::IsNullOrWhiteSpace($supportDiscoveryUrl)) {
+  $secretArguments += "PEACEPAD_SUPPORT_DISCOVERY_URL=$supportDiscoveryUrl", "PEACEPAD_SUPPORT_DISCOVERY_TOKEN=$supportDiscoveryToken"
+}
+if (-not [string]::IsNullOrWhiteSpace($coachConversationUrl)) {
+  $secretArguments += "PEACEPAD_COACH_CONVERSATION_URL=$coachConversationUrl", "PEACEPAD_COACH_CONVERSATION_TOKEN=$coachConversationToken"
+}
+$secretArguments += '--project-ref', $ProjectRef, '--agent', 'no'
+
+Invoke-Supabase $secretArguments
 
 Invoke-Supabase @(
   'functions', 'deploy', 'peacepad-v2-api',

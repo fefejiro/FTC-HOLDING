@@ -3,20 +3,23 @@ import { Pressable, StyleSheet, Text } from "react-native";
 import { colors, spacing, typography } from "../theme";
 
 type Props = {
+  accessibilityHint?: string;
   disabled?: boolean;
   label: string;
   onPress: () => void;
   variant?: "primary" | "secondary";
 };
 
-export function LabButton({ disabled = false, label, onPress, variant = "primary" }: Props) {
+export function LabButton({ accessibilityHint, disabled = false, label, onPress, variant = "primary" }: Props) {
   return (
     <Pressable
       accessible
       accessibilityLabel={label}
+      accessibilityHint={accessibilityHint}
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       disabled={disabled}
+      hitSlop={4}
       onPress={onPress}
       style={({ pressed }: { pressed: boolean }) => [
         styles.base,
@@ -40,10 +43,17 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md
   },
   primary: {
-    backgroundColor: colors.brand
+    backgroundColor: colors.coral,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 2
   },
   secondary: {
-    backgroundColor: colors.brandSoft
+    backgroundColor: colors.cream,
+    borderColor: colors.border,
+    borderWidth: 1
   },
   pressed: {
     opacity: 0.78
@@ -57,6 +67,6 @@ const styles = StyleSheet.create({
   },
   secondaryText: {
     ...typography.subheading,
-    color: colors.brand
+    color: colors.text
   }
 });

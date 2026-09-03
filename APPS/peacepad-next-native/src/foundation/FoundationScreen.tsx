@@ -195,7 +195,7 @@ export function FoundationScreen({
       <View style={styles.brandRow}>
         <Image
           accessibilityLabel={t("foundation.logo")}
-          source={require("./peacepad-conch.png")}
+          source={require("../../assets/icon-production.png")}
           style={styles.conchMark}
         />
         <View style={styles.brandCopy}>
@@ -380,6 +380,7 @@ function PrimaryButton({
 }) {
   return (
     <Pressable
+      accessibilityLabel={label}
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       disabled={disabled}
@@ -398,6 +399,7 @@ function PrimaryButton({
 function SecondaryButton({ label, onPress }: { label: string; onPress: () => void }) {
   return (
     <Pressable
+      accessibilityLabel={label}
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [
@@ -440,7 +442,10 @@ const styles = StyleSheet.create({
   brandRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md
+    backgroundColor: "#FFE4D6",
+    borderRadius: 24,
+    gap: spacing.md,
+    padding: spacing.md
   },
   conchMark: {
     width: 54,
@@ -458,7 +463,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     ...typography.caption,
-    color: colors.accent,
+    color: colors.coral,
     fontWeight: "800",
     textTransform: "uppercase"
   },
@@ -467,8 +472,8 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface
+    borderColor: "#F2C8B5",
+    backgroundColor: "#FFFDF8"
   },
   title: {
     ...typography.title,
@@ -494,7 +499,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.background
+    backgroundColor: colors.cream
   },
   choiceCopy: {
     flex: 1,
@@ -531,7 +536,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
-    backgroundColor: colors.brand
+    backgroundColor: colors.coral
   },
   primaryButtonText: {
     ...typography.subheading,
@@ -544,11 +549,13 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
-    backgroundColor: colors.brandSoft
+    backgroundColor: colors.cream,
+    borderColor: colors.border,
+    borderWidth: 1
   },
   secondaryButtonText: {
     ...typography.subheading,
-    color: colors.brand
+    color: colors.text
   },
   disabled: {
     opacity: 0.45

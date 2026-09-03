@@ -8,3 +8,14 @@ const copy = {
 
 export type HomeKey = keyof typeof copy.en;
 export function homeText(locale: SupportedLocale, key: HomeKey): string { return copy[locale][key]; }
+
+const heroCopy = {
+  en: { greeting: "Ready for today?", greetingNamed: "Ready for today, {name}?", impact: "Small steps. Kind words. Big impact—for your kids." },
+  fr: { greeting: "Prêt pour aujourd’hui?", greetingNamed: "Prêt pour aujourd’hui, {name}?", impact: "Petits pas. Mots bienveillants. Grand impact pour vos enfants." },
+  es: { greeting: "¿Listo para hoy?", greetingNamed: "¿Listo para hoy, {name}?", impact: "Pequeños pasos. Palabras amables. Un gran impacto para tus hijos." }
+} as const;
+
+export type HomeHeroKey = keyof typeof heroCopy.en;
+export function homeHeroText(locale: SupportedLocale, key: HomeHeroKey, name?: string): string {
+  return heroCopy[locale][key].replace("{name}", name ?? "");
+}

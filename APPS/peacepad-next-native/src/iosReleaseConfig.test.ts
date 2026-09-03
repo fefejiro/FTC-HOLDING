@@ -59,7 +59,7 @@ describe("PeacePad iOS release variant", () => {
         "expo-apple-authentication",
         ["@react-native-google-signin/google-signin", { iosUrlScheme: "com.googleusercontent.apps.123456789-ios" }]
       ]),
-      ios: { buildNumber: "3", bundleIdentifier: "ca.peacepad.family" },
+      ios: { buildNumber: "9", bundleIdentifier: "ca.peacepad.family" },
       extra: {
         appStoreId: "6793350735",
         productionApiWritesEnabled: false,
@@ -100,7 +100,7 @@ describe("PeacePad iOS release variant", () => {
       version: "2.0.1",
       scheme: "peacepad",
       plugins: expect.arrayContaining(["expo-apple-authentication"]),
-      ios: { buildNumber: "6", bundleIdentifier: "ca.peacepad.family", usesAppleSignIn: true },
+        ios: { buildNumber: "10", bundleIdentifier: "ca.peacepad.family", usesAppleSignIn: true },
       extra: {
         appStoreId: "6793350735",
         environment: "production",
@@ -133,7 +133,7 @@ describe("PeacePad iOS release variant", () => {
           "android.permission.WRITE_EXTERNAL_STORAGE"
         ],
         package: "ca.peacepad.family",
-        versionCode: 43
+        versionCode: 49
       },
       plugins: expect.arrayContaining([
         ["@react-native-google-signin/google-signin", { iosUrlScheme: "com.googleusercontent.apps.123456789-ios" }]
@@ -178,7 +178,7 @@ describe("PeacePad iOS release variant", () => {
       version: "2.0.1",
       android: {
         package: "ca.peacepad.family",
-        versionCode: 44
+        versionCode: 50
       },
       extra: {
         environment: "production",

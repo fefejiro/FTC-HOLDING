@@ -29,9 +29,6 @@ for (const key of [
   "EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_URL",
   "EXPO_PUBLIC_PEACEPAD_CA_API_BASE_URL",
   "EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_PUBLISHABLE_KEY",
-  "EXPO_PUBLIC_PEACEPAD_US_SUPABASE_URL",
-  "EXPO_PUBLIC_PEACEPAD_US_API_BASE_URL",
-  "EXPO_PUBLIC_PEACEPAD_US_SUPABASE_PUBLISHABLE_KEY",
   "EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS"
 ]) {
   if (!environmentSource.includes(`process.env.${key}`)) {
@@ -90,7 +87,7 @@ if (!iosInfoPlist.NSMicrophoneUsageDescription) {
   failures.push("iOS microphone usage disclosure is required for foreground audio calls.");
 }
 
-if (iosInfoPlist.NSCameraUsageDescription !== "PeacePad uses camera APIs to support optional video calling; this release uses microphone-only calls.") {
+if (iosInfoPlist.NSCameraUsageDescription !== "PeacePad uses the camera only when you choose a private video call or take a photo for a message or record.") {
   failures.push("iOS camera purpose string is required because the WebRTC binary references camera APIs.");
 }
 
@@ -121,8 +118,10 @@ const playStoreInternalProfileName = "playstore-internal";
 allowedEasProfiles.push(playStoreInternalProfileName);
 const playStoreProductionProfileName = "playstore-production";
 allowedEasProfiles.push(playStoreProductionProfileName);
+const productionDeviceApkProfileName = "production-device-apk";
+allowedEasProfiles.push(productionDeviceApkProfileName);
 if (Object.keys(easBuildProfiles).some((profile) => !allowedEasProfiles.includes(profile))) {
-  failures.push("EAS must remain limited to approved lab, regional staging, and internal TestFlight profiles before Gate 6.");
+  failures.push("EAS must remain limited to the reviewed lab, staging, physical-device, and store release profiles.");
 }
 for (const profile of labEasProfiles) {
   const config = easBuildProfiles[profile];
@@ -220,6 +219,19 @@ if (
 ) {
   failures.push("The Android Play production profile must remain an exact, signed AAB backed by the authorized Canada production runtime.");
 }
+const productionDeviceApkProfile = easBuildProfiles[productionDeviceApkProfileName];
+if (
+  productionDeviceApkProfile?.distribution !== "internal"
+  || productionDeviceApkProfile?.environment !== "production"
+  || productionDeviceApkProfile?.env?.PEACEPAD_ANDROID_RELEASE_MODE !== playStoreProductionProfileName
+  || productionDeviceApkProfile?.env?.EXPO_PUBLIC_PEACEPAD_ENV !== "production"
+  || productionDeviceApkProfile?.env?.EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED !== "true"
+  || productionDeviceApkProfile?.env?.EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS !== "false"
+  || productionDeviceApkProfile?.android?.buildType !== "apk"
+  || productionDeviceApkProfile?.android?.credentialsSource !== "local"
+) {
+  failures.push("The production device APK must be internal-distribution packaging of the exact signed Canada production runtime.");
+}
 const submitProfiles = Object.keys(easJson.submit || {});
 if (
   submitProfiles.length !== 2
@@ -230,7 +242,7 @@ if (
 ) {
   failures.push("EAS Submit must target only the reviewed internal and production profiles for App Store record 6793350735.");
 }
-for (const expectedReleaseValue of ["ca.peacepad.family", "6793350735", "2.0.1", "43", "testflight-internal", "appstore-production", "staging-simulator-dual", "playstore-internal", "playstore-production"]) {
+for (const expectedReleaseValue of ["ca.peacepad.family", "6793350735", "2.0.1", "9", "10", "49", "50", "testflight-internal", "appstore-production", "staging-simulator-dual", "playstore-internal", "playstore-production"]) {
   if (!dynamicAppConfigSource.includes(expectedReleaseValue)) {
     failures.push(`Dynamic app config is missing the reviewed TestFlight value ${expectedReleaseValue}.`);
   }

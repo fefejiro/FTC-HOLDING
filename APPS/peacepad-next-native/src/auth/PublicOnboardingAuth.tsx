@@ -33,9 +33,9 @@ const slideImages = [
 const copy = {
   en: {
     slides: [
-      { title: "A calmer space for co-parenting", body: "Communicate with care, even when the moment is difficult." },
+      { title: "A calmer way to coordinate parenting", body: "Communicate with care, even when the moment is difficult." },
       { title: "Pause before you send", body: "Check your words and choose a clearer way forward." },
-      { title: "Keep family plans together", body: "Messages, calendars and shared records stay in one private place." }
+      { title: "Keep parenting plans organized", body: "Messages, schedules and important records stay in one secure place." }
     ],
     next: "Next", skip: "Skip", start: "Get started", create: "Create account", signIn: "Sign in", or: "or",
     createTitle: "Create your PeacePad account", signInTitle: "Welcome back", email: "Email", password: "Password",
@@ -51,9 +51,9 @@ const copy = {
   },
   fr: {
     slides: [
-      { title: "Un espace plus calme pour la coparentalité", body: "Communiquez avec soin, même dans les moments difficiles." },
+      { title: "Une façon plus calme de coordonner la parentalité", body: "Communiquez avec soin, même dans les moments difficiles." },
       { title: "Faites une pause avant d’envoyer", body: "Relisez vos mots et choisissez une voie plus claire." },
-      { title: "Gardez les projets familiaux ensemble", body: "Messages, calendriers et dossiers partagés restent dans un espace privé." }
+      { title: "Organisez les plans parentaux", body: "Messages, horaires et dossiers importants restent dans un espace sécurisé." }
     ],
     next: "Suivant", skip: "Passer", start: "Commencer", create: "Créer un compte", signIn: "Se connecter", or: "ou",
     createTitle: "Créez votre compte PeacePad", signInTitle: "Bon retour", email: "Courriel", password: "Mot de passe",
@@ -69,9 +69,9 @@ const copy = {
   },
   es: {
     slides: [
-      { title: "Un espacio más tranquilo para la crianza compartida", body: "Comunícate con cuidado, incluso en momentos difíciles." },
+      { title: "Una forma más tranquila de coordinar la crianza", body: "Comunícate con cuidado, incluso en momentos difíciles." },
       { title: "Haz una pausa antes de enviar", body: "Revisa tus palabras y elige una forma más clara de avanzar." },
-      { title: "Mantén unidos los planes familiares", body: "Mensajes, calendarios y registros compartidos permanecen en un espacio privado." }
+      { title: "Organiza los planes de crianza", body: "Mensajes, horarios y registros importantes permanecen en un espacio seguro." }
     ],
     next: "Siguiente", skip: "Omitir", start: "Empezar", create: "Crear cuenta", signIn: "Iniciar sesión", or: "o",
     createTitle: "Crea tu cuenta de PeacePad", signInTitle: "Te damos la bienvenida", email: "Correo", password: "Contraseña",
@@ -91,7 +91,13 @@ function localized(locale: SupportedLocale) {
   return copy[locale] ?? copy.en;
 }
 
-export function PublicOnboardingAuth() {
+type AuthEnvironmentNotice = Readonly<{
+  label: string;
+  body: string;
+  labelTestID?: string;
+}>;
+
+export function PublicOnboardingAuth({ environmentNotice }: { environmentNotice?: AuthEnvironmentNotice } = {}) {
   const { locale } = useOptionalLocalization();
   const auth = useSupabaseSession();
   const strings = localized(locale);
@@ -107,6 +113,7 @@ export function PublicOnboardingAuth() {
   const [error, setError] = useState<string>();
   const [appleAvailable, setAppleAvailable] = useState(false);
   const passwordInput = useRef<TextInput>(null);
+  const submissionInFlight = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -126,7 +133,8 @@ export function PublicOnboardingAuth() {
 
   const submit = async () => {
     const normalizedEmail = email.trim();
-    if (busy || !normalizedEmail || password.length < 8) return;
+    if (busy || submissionInFlight.current || !normalizedEmail || password.length < 8) return;
+    submissionInFlight.current = true;
     setBusy(true); setError(undefined); setMessage(undefined);
     try {
       if (mode === "create") {
@@ -137,7 +145,7 @@ export function PublicOnboardingAuth() {
       }
     } catch {
       setError(auth.error ?? strings.unavailable);
-    } finally { setBusy(false); }
+    } finally { submissionInFlight.current = false; setBusy(false); }
   };
 
   const signInWithApple = async () => {
@@ -193,7 +201,8 @@ export function PublicOnboardingAuth() {
     return (
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.keyboard}>
         <ScrollView contentContainerStyle={styles.auth} keyboardShouldPersistTaps="handled">
-          <View style={styles.logoRow}><Image source={require("../foundation/peacepad-conch.png")} style={styles.logo} /><Text style={styles.brand}>PeacePad</Text></View>
+          <View style={styles.logoRow}><Image source={require("../../assets/icon-production.png")} style={styles.logo} /><Text style={styles.brand}>PeacePad</Text></View>
+          {environmentNotice ? <EnvironmentNotice notice={environmentNotice} /> : null}
           <AccessibleHeading style={styles.title}>{strings.resetTitle}</AccessibleHeading>
           <Text style={styles.body}>{strings.resetBody}</Text>
           <TextInput accessibilityLabel={strings.newPassword} autoComplete="new-password" onChangeText={setNewPassword} onSubmitEditing={() => void updatePassword()} placeholder={strings.newPassword} returnKeyType="done" secureTextEntry style={styles.input} textContentType="newPassword" value={newPassword} />
@@ -213,7 +222,8 @@ export function PublicOnboardingAuth() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.keyboard}>
       <ScrollView contentContainerStyle={styles.auth} keyboardShouldPersistTaps="handled">
-        <View style={styles.logoRow}><Image source={require("../foundation/peacepad-conch.png")} style={styles.logo} /><Text style={styles.brand}>PeacePad</Text></View>
+        <View style={styles.logoRow}><Image source={require("../../assets/icon-production.png")} style={styles.logo} /><Text style={styles.brand}>PeacePad</Text></View>
+        {environmentNotice ? <EnvironmentNotice notice={environmentNotice} /> : null}
         <AccessibleHeading style={styles.title}>{mode === "create" ? strings.createTitle : strings.signInTitle}</AccessibleHeading>
         {appleAvailable ? <AppleAuthentication.AppleAuthenticationButton
           accessibilityLabel={strings.apple}
@@ -245,6 +255,15 @@ export function PublicOnboardingAuth() {
   );
 }
 
+function EnvironmentNotice({ notice }: { notice: AuthEnvironmentNotice }) {
+  return (
+    <View accessibilityRole="summary" style={styles.environmentNotice}>
+      <Text testID={notice.labelTestID} style={styles.environmentNoticeLabel}>{notice.label}</Text>
+      <Text style={styles.environmentNoticeBody}>{notice.body}</Text>
+    </View>
+  );
+}
+
 export function PublicOnboardingSlides({ compact = false, onComplete }: { compact?: boolean; onComplete: () => void | Promise<void> }) {
   const { locale } = useOptionalLocalization();
   const strings = localized(locale);
@@ -272,29 +291,32 @@ export function PublicOnboardingSlides({ compact = false, onComplete }: { compac
 const styles = StyleSheet.create({
   keyboard: { backgroundColor: colors.background, flex: 1 },
   center: { alignItems: "center", backgroundColor: colors.background, flex: 1, justifyContent: "center" },
-  intro: { backgroundColor: colors.background, flex: 1 },
+  intro: { backgroundColor: "#FFF8F2", flex: 1 },
   introCompact: { borderColor: colors.border, borderRadius: 22, borderWidth: 1, overflow: "hidden" },
-  hero: { height: "45%", resizeMode: "cover", width: "100%" },
-  heroCompact: { height: 220, resizeMode: "cover", width: "100%" },
-  introCopy: { flex: 1, gap: spacing.md, justifyContent: "center", padding: spacing.xl },
+  hero: { borderBottomLeftRadius: 42, borderBottomRightRadius: 42, height: "45%", resizeMode: "cover", width: "100%" },
+  heroCompact: { borderBottomLeftRadius: 28, borderBottomRightRadius: 28, height: 220, resizeMode: "cover", width: "100%" },
+  introCopy: { backgroundColor: "#FFF8F2", flex: 1, gap: spacing.md, justifyContent: "center", padding: spacing.xl },
   introCopyCompact: { padding: spacing.lg },
-  auth: { flexGrow: 1, gap: spacing.md, justifyContent: "center", padding: spacing.xl },
+  auth: { backgroundColor: "#FFF8F2", flexGrow: 1, gap: spacing.md, justifyContent: "center", padding: spacing.xl },
   logoRow: { alignItems: "center", flexDirection: "row", gap: spacing.sm },
-  logo: { height: 48, width: 48 },
-  brand: { color: colors.brand, fontSize: 25, fontWeight: "800" },
+  logo: { borderRadius: 16, height: 48, width: 48 },
+  brand: { color: colors.accent, fontSize: 25, fontWeight: "900", letterSpacing: 0.2 },
   title: { ...typography.title, color: colors.text },
   body: { ...typography.body, color: colors.muted },
-  input: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 14, borderWidth: 1, color: colors.text, fontSize: 16, minHeight: 52, padding: spacing.md },
+  input: { backgroundColor: colors.surface, borderColor: "#E7C8BD", borderRadius: 18, borderWidth: 1, color: colors.text, fontSize: 16, minHeight: 54, padding: spacing.md },
   hint: { ...typography.caption, color: colors.muted },
   link: { ...typography.body, color: colors.brand, fontWeight: "700", textAlign: "center" },
   dots: { alignItems: "center", flexDirection: "row", gap: spacing.sm, justifyContent: "center", minHeight: 24 },
   dot: { backgroundColor: colors.border, borderRadius: 4, height: 8, width: 8 },
-  dotActive: { backgroundColor: colors.brand, width: 24 },
+  dotActive: { backgroundColor: colors.coral, width: 24 },
   appleButton: { height: 52, width: "100%" },
   or: { color: colors.muted, textAlign: "center" },
   error: { color: colors.dangerText, fontSize: 14 },
   success: { backgroundColor: colors.successSurface, borderColor: colors.successBorder, borderRadius: 14, borderWidth: 1, gap: spacing.xs, padding: spacing.md },
   successTitle: { color: colors.successText, fontSize: 16, fontWeight: "700" },
+  environmentNotice: { backgroundColor: colors.successSurface, borderColor: colors.successBorder, borderRadius: 16, borderWidth: 1, gap: spacing.xs, padding: spacing.md },
+  environmentNoticeLabel: { ...typography.caption, color: colors.successText, fontWeight: "800", textTransform: "uppercase" },
+  environmentNoticeBody: { ...typography.body, color: colors.text },
   switch: { color: colors.muted, textAlign: "center" },
   switchAction: { color: colors.brand, fontWeight: "700" },
   legal: { ...typography.caption, color: colors.muted, textAlign: "center" },

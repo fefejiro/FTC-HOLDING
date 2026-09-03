@@ -194,6 +194,53 @@ export type ScheduleEvent = VersionedEntity &
     visibilityOverride: LayerVisibility | null;
   }>;
 
+export type ParentingSchedulePattern = "week_on_off" | "every_other_weekend" | "two_two_three";
+
+/** The single shared parenting-time rule currently active for a family. */
+export type ParentingSchedulePlan = VersionedEntity & Readonly<{
+  familyCircleId: EntityId;
+  calendarLayerId: EntityId;
+  createdByIdentityId: EntityId;
+  pattern: ParentingSchedulePattern;
+  startDate: string;
+  primaryParentIdentityId: EntityId;
+  secondaryParentIdentityId: EntityId | null;
+  timezone: string;
+  status: "active" | "paused";
+  updatedAt: IsoUtcTimestamp;
+}>;
+
+export type ParentingScheduleException = VersionedEntity & Readonly<{
+  familyCircleId: EntityId;
+  parentingSchedulePlanId: EntityId;
+  requestedByIdentityId: EntityId;
+  assignedParentIdentityId: EntityId;
+  kind: "holiday" | "vacation" | "swap" | "other";
+  startDate: string;
+  endDate: string;
+  note: string | null;
+  status: "proposed" | "accepted" | "declined" | "cancelled";
+  resolvedByIdentityId: EntityId | null;
+  resolvedAt: IsoUtcTimestamp | null;
+}>;
+
+/**
+ * A practical item a parent can keep private or explicitly share.  This is a
+ * native V2 record, not a client-side checklist or a migrated legacy shell.
+ */
+export type ParentingTask = VersionedEntity &
+  Readonly<{
+    familyCircleId: EntityId;
+    createdByIdentityId: EntityId;
+    assignedToIdentityId: EntityId | null;
+    title: string;
+    dueAt: IsoUtcTimestamp | null;
+    status: "open" | "completed";
+    visibility: LayerVisibility;
+    completedAt: IsoUtcTimestamp | null;
+    completedByIdentityId: EntityId | null;
+  }>;
+
 export type CaseBinder = VersionedEntity &
   Readonly<{
     familyCircleId: EntityId;
@@ -225,10 +272,14 @@ export type AttachmentMediaType =
   | "image/jpeg"
   | "image/png"
   | "application/pdf"
-  | "text/plain";
+  | "text/plain"
+  | "audio/m4a"
+  | "audio/mp4"
+  | "audio/webm";
 
 export type AttachmentTarget =
   | Readonly<{ kind: "conversation"; conversationId: EntityId }>
+  | Readonly<{ kind: "expense-receipt" }>
   | Readonly<{ kind: "private-binder"; binderId: EntityId }>;
 
 export type AttachmentUploadIntent = VersionedEntity &
@@ -259,6 +310,40 @@ export type PrivateAttachment = VersionedEntity &
 
 export type PrivateAttachmentDownload = Readonly<{
   attachment: PrivateAttachment;
+  downloadUrl: string;
+  expiresAt: IsoUtcTimestamp;
+}>;
+
+export type ConversationAttachment = VersionedEntity & Readonly<{
+  familyCircleId: EntityId;
+  ownerIdentityId: EntityId;
+  target: Readonly<{ kind: "conversation"; conversationId: EntityId }>;
+  originalFileName: string;
+  mediaType: AttachmentMediaType;
+  byteLength: number;
+  status: "available";
+  occurredAt: IsoUtcTimestamp;
+}>;
+
+export type ExpenseReceiptAttachment = VersionedEntity & Readonly<{
+  familyCircleId: EntityId;
+  ownerIdentityId: EntityId;
+  target: Readonly<{ kind: "expense-receipt" }>;
+  originalFileName: string;
+  mediaType: "image/jpeg" | "image/png" | "application/pdf";
+  byteLength: number;
+  status: "available";
+  linkedExpenseId: EntityId | null;
+}>;
+
+export type ExpenseReceiptDownload = Readonly<{
+  attachment: ExpenseReceiptAttachment;
+  downloadUrl: string;
+  expiresAt: IsoUtcTimestamp;
+}>;
+
+export type ConversationAttachmentDownload = Readonly<{
+  attachment: ConversationAttachment;
   downloadUrl: string;
   expiresAt: IsoUtcTimestamp;
 }>;

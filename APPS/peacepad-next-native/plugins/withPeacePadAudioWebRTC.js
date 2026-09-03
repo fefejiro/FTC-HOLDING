@@ -8,14 +8,17 @@ const {
 const pkg = require("../package.json");
 
 const MICROPHONE_USAGE =
-  "PeacePad uses the microphone only while you are in a foreground audio call.";
+  "PeacePad uses the microphone only when you choose a private audio or video call, voice note, or Coach voice conversation.";
 const CAMERA_USAGE =
-  "PeacePad uses camera APIs to support optional video calling; this release uses microphone-only calls.";
+  "PeacePad uses the camera only when you choose a private video call or take a photo for a message or record.";
 
 function withPeacePadAudioWebRTC(config) {
   config = withInfoPlist(config, (nextConfig) => {
     nextConfig.modResults.NSMicrophoneUsageDescription = MICROPHONE_USAGE;
     nextConfig.modResults.NSCameraUsageDescription = CAMERA_USAGE;
+    nextConfig.modResults.UIBackgroundModes = [
+      ...new Set([...(nextConfig.modResults.UIBackgroundModes || []), "audio", "remote-notification"]),
+    ];
     return nextConfig;
   });
 
@@ -35,6 +38,7 @@ function withPeacePadAudioWebRTC(config) {
     "android.permission.RECORD_AUDIO",
     "android.permission.WAKE_LOCK",
     "android.permission.BLUETOOTH",
+    "android.permission.CAMERA",
   ]);
 }
 

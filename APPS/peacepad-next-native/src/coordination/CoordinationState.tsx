@@ -6,6 +6,8 @@ import {
   InvitationError,
   type CreatedInvitation,
   type MessageSearchResult,
+  type CoachConversationTurn,
+  type CoachConversationTurnInput,
   type PeacePadCoordinationApi
 } from "../api/CoordinationApi";
 import { defaultCalendarLayers, SyntheticCoordinationApi } from "../api/SyntheticCoordinationApi";
@@ -27,10 +29,15 @@ import {
   createWriteContext,
   type AcceptedInvitation,
   type CalendarLayer,
+  type AttachmentMediaType,
+  type ConversationAttachment,
   type EntityId,
   type InvitationPreview,
   type MessageCheckPreference,
   type MessageEvent,
+  type ParentingTask,
+  type ParentingScheduleException,
+  type ParentingSchedulePlan,
   type ParticipantGrant,
   type ScheduleEvent
 } from "../domain/v2";
@@ -66,6 +73,7 @@ export type SentMessage = Readonly<{
 
 type CoordinationStateValue = {
   coordinationHydrated: boolean;
+  connected: boolean;
   invitationCode: string;
   createdInvitation?: CreatedInvitation;
   invitationPreview?: InvitationPreview;
@@ -77,6 +85,10 @@ type CoordinationStateValue = {
   layers: readonly CalendarLayer[];
   visibleLayerIds: readonly string[];
   events: readonly ScheduleEvent[];
+  tasks: readonly ParentingTask[];
+  parentingSchedulePlan: ParentingSchedulePlan | null;
+  parentingScheduleExceptions: readonly ParentingScheduleException[];
+  actorIdentityId?: EntityId;
   messageCheckEnabled: boolean;
   messageCheckHydrated: boolean;
   messageDraft: string;
@@ -84,6 +96,9 @@ type CoordinationStateValue = {
   messageCheckBusy: boolean;
   messageError?: string;
   sentMessages: readonly SentMessage[];
+  messageAttachments: readonly ConversationAttachment[];
+  attachmentBusy: boolean;
+  attachmentError?: string;
   queuedActionBusyIds: readonly string[];
   queuedActionError?: string;
   messageSearchQuery: string;
@@ -103,9 +118,38 @@ type CoordinationStateValue = {
   setCalendarView: (view: CalendarView) => void;
   toggleLayerFilter: (layerId: string) => void;
   setLayerShared: (layerId: string, shared: boolean) => Promise<void>;
-  addEvent: (input: { layerId: string; title: string; startsAt: string; endsAt: string }) => Promise<void>;
+  saveParentingSchedulePlan: (input: Readonly<{
+    calendarLayerId: EntityId;
+    pattern: import("../domain/v2").ParentingSchedulePattern;
+    startDate: string;
+    primaryParent: "you" | "other";
+    timezone: string;
+    status: "active" | "paused";
+  }>) => Promise<void>;
+  createParentingScheduleException: (input: Readonly<{
+    assignedParent: "you" | "other";
+    kind: ParentingScheduleException["kind"];
+    startDate: string;
+    endDate: string;
+    note: string | null;
+  }>) => Promise<void>;
+  resolveParentingScheduleException: (exceptionId: EntityId, resolution: "accepted" | "declined" | "cancelled") => Promise<void>;
+  addEvent: (input: {
+    layerId: string;
+    title: string;
+    startsAt: string;
+    endsAt: string;
+    eventType?: "parenting-time" | "appointment" | "holiday" | "change-request";
+  }) => Promise<void>;
   deleteEvent: (eventId: string) => Promise<void>;
+  addTask: (input: { title: string; dueAt?: string; shared: boolean }) => Promise<ParentingTask | undefined>;
+  setTaskCompleted: (taskId: string, completed: boolean) => Promise<void>;
+  deleteTask: (taskId: string) => Promise<void>;
   setMessageDraft: (draft: string) => void;
+  uploadMessageAttachment: (input: Readonly<{ originalFileName: string; mediaType: AttachmentMediaType; bytes: ArrayBuffer }>) => Promise<void>;
+  openMessageAttachment: (attachmentId: string) => Promise<string>;
+  transcribeCoachAudio: (bytes: ArrayBuffer, mediaType: "audio/m4a" | "audio/mp4" | "audio/webm") => Promise<string>;
+  coachConversationTurn: (input: Omit<CoachConversationTurnInput, "conversationId">) => Promise<CoachConversationTurn>;
   setMessageCheckEnabled: (enabled: boolean) => Promise<void>;
   checkMessage: () => Promise<void>;
   sendMessage: (useSuggestion: boolean) => Promise<void>;
@@ -128,18 +172,19 @@ export type CoordinationRuntime = Readonly<{
   familyCircleId: EntityId;
   participantGrantId: EntityId;
   participantGrantVersion: number;
-  conversationId: EntityId;
+  /** A private space deliberately has no message/call conversation yet. */
+  conversationId?: EntityId;
   region: "ca" | "us";
 }>;
 
 const DEMO_RUNTIME: CoordinationRuntime = {
-  actorIdentityId: "identity-current",
+  actorIdentityId: "11111111-1111-4111-8111-111111111111",
   identityVersion: 1,
-  sessionId: "verified-device-session",
-  familyCircleId: "family-current",
-  participantGrantId: "grant-current",
+  sessionId: "22222222-2222-4222-8222-222222222222",
+  familyCircleId: "33333333-3333-4333-8333-333333333333",
+  participantGrantId: "44444444-4444-4444-8444-444444444444",
   participantGrantVersion: 1,
-  conversationId: "conversation-primary",
+  conversationId: "55555555-5555-4555-8555-555555555555",
   region: "ca"
 };
 
@@ -155,8 +200,12 @@ export function isValidCoordinationRuntime(runtime?: CoordinationRuntime | null)
     && UUID_PATTERN.test(runtime.participantGrantId)
     && Number.isInteger(runtime.participantGrantVersion)
     && runtime.participantGrantVersion >= 1
-    && UUID_PATTERN.test(runtime.conversationId)
+    && (runtime.conversationId === undefined || UUID_PATTERN.test(runtime.conversationId))
     && (runtime.region === "ca" || runtime.region === "us"));
+}
+
+export function hasConnectedConversation(runtime?: CoordinationRuntime | null): runtime is CoordinationRuntime & Readonly<{ conversationId: EntityId }> {
+  return Boolean(runtime && isValidCoordinationRuntime(runtime) && runtime.conversationId && UUID_PATTERN.test(runtime.conversationId));
 }
 
 const seededInvitation: InvitationPreview = {
@@ -188,6 +237,7 @@ function invitationMessage(error: unknown): string {
 }
 
 function messageOutboxScope(runtime: CoordinationRuntime): MessageOutboxScope {
+  if (!hasConnectedConversation(runtime)) throw new Error("Connect another parent before using shared messages.");
   return {
     actorIdentityId: runtime.actorIdentityId,
     sessionId: runtime.sessionId,
@@ -280,6 +330,9 @@ export function CoordinationStateProvider({
   const [layers, setLayers] = useState<readonly CalendarLayer[]>(demoMode ? defaultCalendarLayers : []);
   const [visibleLayerIds, setVisibleLayerIds] = useState<readonly string[]>(demoMode ? defaultCalendarLayers.map((layer) => layer.id) : []);
   const [events, setEvents] = useState<readonly ScheduleEvent[]>([]);
+  const [tasks, setTasks] = useState<readonly ParentingTask[]>([]);
+  const [parentingSchedulePlan, setParentingSchedulePlan] = useState<ParentingSchedulePlan | null>(null);
+  const [parentingScheduleExceptions, setParentingScheduleExceptions] = useState<readonly ParentingScheduleException[]>([]);
   const [messageCheckEnabled, setMessageCheckEnabledState] = useState(false);
   const [messageCheckHydrated, setMessageCheckHydrated] = useState(demoMode);
   const [messageCheckPreference, setMessageCheckPreference] = useState<MessageCheckPreference>();
@@ -288,6 +341,9 @@ export function CoordinationStateProvider({
   const [messageCheckBusy, setMessageCheckBusy] = useState(false);
   const [messageError, setMessageError] = useState<string>();
   const [sentMessages, setSentMessages] = useState<readonly SentMessage[]>([]);
+  const [messageAttachments, setMessageAttachments] = useState<readonly ConversationAttachment[]>([]);
+  const [attachmentBusy, setAttachmentBusy] = useState(false);
+  const [attachmentError, setAttachmentError] = useState<string>();
   const [queuedActionBusyIds, setQueuedActionBusyIds] = useState<readonly string[]>([]);
   const [queuedActionError, setQueuedActionError] = useState<string>();
   const [outboxScheduleVersion, setOutboxScheduleVersion] = useState(0);
@@ -333,7 +389,12 @@ export function CoordinationStateProvider({
     setLayers(demoMode ? defaultCalendarLayers : []);
     setVisibleLayerIds(demoMode ? defaultCalendarLayers.map((layer) => layer.id) : []);
     setEvents([]);
+    setTasks([]);
+    setParentingSchedulePlan(null);
+    setParentingScheduleExceptions([]);
     setSentMessages([]);
+    setMessageAttachments([]);
+    setAttachmentError(undefined);
     setMessageSearchResults([]);
     setMessageSearchQueryState("");
     setCorrectingMessageId(undefined);
@@ -356,10 +417,13 @@ export function CoordinationStateProvider({
       return;
     }
 
-    setMessageCheckHydrated(false);
-    const outboxScope = messageOutboxScope(activeRuntime);
-    const retryScopeKey = [outboxScope.actorIdentityId, outboxScope.sessionId, outboxScope.region, outboxScope.familyCircleId, outboxScope.conversationId].join(":");
-    const retry = retriedRuntimeScopes.current.has(retryScopeKey)
+    const connectedRuntime = hasConnectedConversation(activeRuntime) ? activeRuntime : undefined;
+    setMessageCheckHydrated(!connectedRuntime);
+    const outboxScope = connectedRuntime ? messageOutboxScope(connectedRuntime) : undefined;
+    const retryScopeKey = outboxScope
+      ? [outboxScope.actorIdentityId, outboxScope.sessionId, outboxScope.region, outboxScope.familyCircleId, outboxScope.conversationId].join(":")
+      : undefined;
+    const retry = !outboxScope || !retryScopeKey || retriedRuntimeScopes.current.has(retryScopeKey)
       ? Promise.resolve()
       : connectivity.getCurrent().catch(() => undefined).then((snapshot) => {
         if (snapshot && usableConnectivity(snapshot) === false) return;
@@ -372,21 +436,42 @@ export function CoordinationStateProvider({
           () => !cancelled && hydrationGeneration.current === generation
         ).then(() => undefined);
       });
+    const parentingTasks = typeof (resolvedApi as Partial<PeacePadCoordinationApi>).listParentingTasks === "function"
+      ? resolvedApi.listParentingTasks(activeRuntime.familyCircleId)
+      : Promise.resolve([] as readonly ParentingTask[]);
+    const conversationAttachments = connectedRuntime
+      && typeof (resolvedApi as Partial<PeacePadCoordinationApi>).listConversationAttachments === "function"
+      ? resolvedApi.listConversationAttachments(connectedRuntime.conversationId)
+      : Promise.resolve([] as readonly ConversationAttachment[]);
+    const parentingSchedule = typeof (resolvedApi as Partial<PeacePadCoordinationApi>).getParentingSchedulePlan === "function"
+      ? resolvedApi.getParentingSchedulePlan(activeRuntime.familyCircleId)
+      : Promise.resolve(null);
+    const parentingScheduleExceptionsRequest = typeof (resolvedApi as Partial<PeacePadCoordinationApi>).listParentingScheduleExceptions === "function"
+      ? resolvedApi.listParentingScheduleExceptions(activeRuntime.familyCircleId)
+      : Promise.resolve([] as readonly ParentingScheduleException[]);
     void retry.then(() => Promise.all([
       resolvedApi.listCalendarLayers(activeRuntime.familyCircleId),
       resolvedApi.listScheduleEvents(activeRuntime.familyCircleId),
-      resolvedApi.listMessages(activeRuntime.conversationId),
-      resolvedApi.getMessageCheckPreference(activeRuntime.conversationId),
-      outbox.list()
-    ])).then(([nextLayers, nextEvents, nextMessages, preference, queuedMessages]) => {
+      parentingTasks,
+      connectedRuntime ? resolvedApi.listMessages(connectedRuntime.conversationId) : Promise.resolve([]),
+      conversationAttachments,
+      connectedRuntime ? resolvedApi.getMessageCheckPreference(connectedRuntime.conversationId) : Promise.resolve(undefined),
+      connectedRuntime ? outbox.list() : Promise.resolve([]),
+      parentingSchedule,
+      parentingScheduleExceptionsRequest
+    ])).then(([nextLayers, nextEvents, nextTasks, nextMessages, nextAttachments, preference, queuedMessages, nextParentingSchedule, nextScheduleExceptions]) => {
         if (cancelled || hydrationGeneration.current !== generation) return;
         setLayers(nextLayers);
         setVisibleLayerIds(nextLayers.map((layer) => layer.id));
         setEvents(nextEvents);
-        const waitingMessages = queuedVisibleMessages(queuedMessages, outboxScope);
+        setTasks(nextTasks);
+        setParentingSchedulePlan(nextParentingSchedule);
+        setParentingScheduleExceptions(nextScheduleExceptions);
+        const waitingMessages = outboxScope ? queuedVisibleMessages(queuedMessages, outboxScope) : [];
         setSentMessages([...visibleMessages(nextMessages, activeRuntime.actorIdentityId), ...waitingMessages]);
+        setMessageAttachments(nextAttachments);
         setMessageCheckPreference(preference);
-        setMessageCheckEnabledState(preference.enabled);
+        setMessageCheckEnabledState(preference?.enabled ?? false);
         setMessageCheckHydrated(true);
         setCoordinationHydrated(true);
       })
@@ -402,7 +487,7 @@ export function CoordinationStateProvider({
   }, [activeRuntime?.conversationId, activeRuntime?.familyCircleId, activeRuntime?.actorIdentityId, activeRuntime?.region, activeRuntime?.sessionId, connectivity, demoMode, outbox, resolvedApi]);
 
   useEffect(() => {
-    if (demoMode || !activeRuntime || !coordinationHydrated || !networkAvailable) return;
+    if (demoMode || !hasConnectedConversation(activeRuntime) || !coordinationHydrated || !networkAvailable) return;
     const generation = hydrationGeneration.current;
     const scope = messageOutboxScope(activeRuntime);
     const scopeKey = [scope.actorIdentityId, scope.sessionId, scope.region, scope.familyCircleId, scope.conversationId].join(":");
@@ -469,6 +554,7 @@ export function CoordinationStateProvider({
 
   const value = useMemo<CoordinationStateValue>(() => ({
     coordinationHydrated,
+    connected: hasConnectedConversation(activeRuntime),
     invitationCode,
     createdInvitation,
     invitationPreview,
@@ -480,6 +566,10 @@ export function CoordinationStateProvider({
     layers,
     visibleLayerIds,
     events,
+    tasks,
+    parentingSchedulePlan,
+    parentingScheduleExceptions,
+    actorIdentityId: activeRuntime?.actorIdentityId,
     messageCheckEnabled,
     messageCheckHydrated,
     messageDraft,
@@ -487,6 +577,9 @@ export function CoordinationStateProvider({
     messageCheckBusy,
     messageError,
     sentMessages,
+    messageAttachments,
+    attachmentBusy,
+    attachmentError,
     queuedActionBusyIds,
     queuedActionError,
     messageSearchQuery,
@@ -596,20 +689,73 @@ export function CoordinationStateProvider({
       );
       setLayers((current) => current.map((item) => (item.id === updated.id ? updated : item)));
     },
-    addEvent: async ({ layerId, title, startsAt, endsAt }) => {
+    saveParentingSchedulePlan: async (input) => {
+      if (!activeRuntime) throw new Error("Sign in to save a parenting schedule.");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(input.startDate) || Number.isNaN(Date.parse(`${input.startDate}T00:00:00.000Z`))) throw new Error("Enter a valid schedule start date.");
+      const conversations = await resolvedApi.listConversations(activeRuntime.familyCircleId);
+      const participants = conversations.find((item) => item.id === activeRuntime.conversationId)?.participantIdentityIds ?? [];
+      const otherIdentityId = participants.find((identityId) => identityId !== activeRuntime.actorIdentityId) ?? null;
+      if (input.primaryParent === "other" && !otherIdentityId) throw new Error("Connect the other parent before assigning their first parenting block.");
+      const saved = await resolvedApi.saveParentingSchedulePlan(
+        {
+          familyCircleId: activeRuntime.familyCircleId,
+          calendarLayerId: input.calendarLayerId,
+          pattern: input.pattern,
+          startDate: input.startDate,
+          primaryParentIdentityId: input.primaryParent === "you" ? activeRuntime.actorIdentityId : otherIdentityId!,
+          secondaryParentIdentityId: input.primaryParent === "you" ? otherIdentityId : activeRuntime.actorIdentityId,
+          timezone: input.timezone,
+          status: input.status
+        },
+        writeContext(activeRuntime, parentingSchedulePlan?.version ?? null)
+      );
+      setParentingSchedulePlan(saved);
+    },
+    createParentingScheduleException: async (input) => {
+      if (!activeRuntime || !parentingSchedulePlan) throw new Error("Save the shared parenting plan before adding an exception.");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(input.startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(input.endDate)
+        || Number.isNaN(Date.parse(`${input.startDate}T00:00:00.000Z`)) || Number.isNaN(Date.parse(`${input.endDate}T00:00:00.000Z`))
+        || input.endDate < input.startDate) throw new Error("Enter a valid date range for this change.");
+      const conversations = await resolvedApi.listConversations(activeRuntime.familyCircleId);
+      const participants = conversations.find((item) => item.id === activeRuntime.conversationId)?.participantIdentityIds ?? [];
+      const otherIdentityId = participants.find((identityId) => identityId !== activeRuntime.actorIdentityId) ?? null;
+      if (input.assignedParent === "other" && !otherIdentityId) throw new Error("Connect the other parent before assigning this exception.");
+      const created = await resolvedApi.createParentingScheduleException({
+        familyCircleId: activeRuntime.familyCircleId,
+        parentingSchedulePlanId: parentingSchedulePlan.id,
+        assignedParentIdentityId: input.assignedParent === "you" ? activeRuntime.actorIdentityId : otherIdentityId!,
+        kind: input.kind,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        note: input.note
+      }, writeContext(activeRuntime));
+      setParentingScheduleExceptions((current) => [created, ...current]);
+    },
+    resolveParentingScheduleException: async (exceptionId, resolution) => {
+      if (!activeRuntime) throw new Error("Sign in to respond to this schedule request.");
+      const current = parentingScheduleExceptions.find((item) => item.id === exceptionId);
+      if (!current) return;
+      const updated = await resolvedApi.resolveParentingScheduleException(exceptionId, resolution, writeContext(activeRuntime, current.version));
+      setParentingScheduleExceptions((items) => items.map((item) => item.id === updated.id ? updated : item));
+    },
+    addEvent: async ({ layerId, title, startsAt, endsAt, eventType }) => {
       const layer = layers.find((item) => item.id === layerId);
       if (!layer || !title.trim()) return;
       if (!activeRuntime) throw new Error("Sign in to use family coordination.");
+      const resolvedEventType = eventType ?? (layer.kind === "parenting-time" ? "parenting-time" : "appointment");
+      if (resolvedEventType === "change-request" && !hasConnectedConversation(activeRuntime)) {
+        throw new Error("Connect another parent before requesting a schedule change.");
+      }
       const event = await resolvedApi.createScheduleEvent({
         familyCircleId: layer.familyCircleId,
         calendarLayerId: layer.id,
         childProfileIds: [],
-        eventType: layer.kind === "parenting-time" ? "parenting-time" : "appointment",
+        eventType: resolvedEventType,
         title: title.trim(),
         description: null,
         startsAt,
         endsAt,
-        status: "planned",
+        status: resolvedEventType === "change-request" ? "requested" : "planned",
         recurrence: null,
         visibilityOverride: null
       }, writeContext(activeRuntime));
@@ -622,13 +768,82 @@ export function CoordinationStateProvider({
       await resolvedApi.deleteScheduleEvent(eventId, writeContext(activeRuntime, event.version));
       setEvents((current) => current.filter((event) => event.id !== eventId));
     },
+    addTask: async ({ title, dueAt, shared }) => {
+      const normalizedTitle = title.trim();
+      if (!normalizedTitle) return undefined;
+      if (!activeRuntime) throw new Error("Sign in to use PeacePad tasks.");
+      const task = await resolvedApi.createParentingTask({
+        familyCircleId: activeRuntime.familyCircleId,
+        title: normalizedTitle,
+        dueAt: dueAt?.trim() || null,
+        assignedToIdentityId: null,
+        visibility: shared && hasConnectedConversation(activeRuntime) ? { scope: "family" } : { scope: "private" }
+      }, writeContext(activeRuntime));
+      setTasks((current) => [...current, task]);
+      return task;
+    },
+    setTaskCompleted: async (taskId, completed) => {
+      const task = tasks.find((item) => item.id === taskId);
+      if (!task) return;
+      if (!activeRuntime) throw new Error("Sign in to use PeacePad tasks.");
+      const updated = await resolvedApi.updateParentingTask(
+        { ...task, status: completed ? "completed" : "open" },
+        writeContext(activeRuntime, task.version)
+      );
+      setTasks((current) => current.map((item) => item.id === updated.id ? updated : item));
+    },
+    deleteTask: async (taskId) => {
+      const task = tasks.find((item) => item.id === taskId);
+      if (!task) return;
+      if (!activeRuntime) throw new Error("Sign in to use PeacePad tasks.");
+      await resolvedApi.deleteParentingTask(task.id, writeContext(activeRuntime, task.version));
+      setTasks((current) => current.filter((item) => item.id !== task.id));
+    },
     setMessageDraft: (draft) => {
       setMessageDraftState(draft);
       setMessagePreview(undefined);
       setMessageError(undefined);
     },
+    uploadMessageAttachment: async ({ originalFileName, mediaType, bytes }) => {
+      if (!hasConnectedConversation(activeRuntime)) throw new Error("Connect another parent before sharing a file.");
+      setAttachmentBusy(true);
+      setAttachmentError(undefined);
+      try {
+        const context = writeContext(activeRuntime);
+        const intent = await resolvedApi.createAttachmentUploadIntent({
+          familyCircleId: activeRuntime.familyCircleId,
+          target: { kind: "conversation", conversationId: activeRuntime.conversationId },
+          originalFileName,
+          mediaType,
+          byteLength: bytes.byteLength
+        }, context);
+        await resolvedApi.uploadPrivateAttachment(intent, bytes);
+        const attachment = await resolvedApi.completeConversationAttachment(intent.id, { ...context, expectedVersion: intent.version });
+        setMessageAttachments((current) => [attachment, ...current.filter((item) => item.id !== attachment.id)]);
+      } catch (cause) {
+        const message = cause instanceof Error ? cause.message : "PeacePad could not share that attachment.";
+        setAttachmentError(message);
+        throw cause;
+      } finally {
+        setAttachmentBusy(false);
+      }
+    },
+    openMessageAttachment: async (attachmentId) => {
+      const result = await resolvedApi.getConversationAttachmentDownload(attachmentId);
+      return result.downloadUrl;
+    },
+    transcribeCoachAudio: async (bytes, mediaType) => {
+      const result = await resolvedApi.transcribeCoachAudio(bytes, mediaType);
+      return result.transcript;
+    },
+    coachConversationTurn: async (input) => {
+      return resolvedApi.coachConversationTurn({
+        ...input,
+        conversationId: hasConnectedConversation(activeRuntime) ? activeRuntime.conversationId : undefined
+      });
+    },
     setMessageCheckEnabled: async (enabled) => {
-      if (!activeRuntime || (!demoMode && !messageCheckHydrated)) return;
+      if (!hasConnectedConversation(activeRuntime) || (!demoMode && !messageCheckHydrated)) return;
       setMessageCheckBusy(true);
       setMessageError(undefined);
       try {
@@ -650,7 +865,7 @@ export function CoordinationStateProvider({
       }
     },
     checkMessage: async () => {
-      if (!activeRuntime || !messageCheckHydrated || !messageCheckEnabled) return;
+      if (!hasConnectedConversation(activeRuntime) || !messageCheckHydrated || !messageCheckEnabled) return;
       setMessageCheckBusy(true);
       setMessageError(undefined);
       try {
@@ -669,7 +884,11 @@ export function CoordinationStateProvider({
         : originalBody;
       setMessageCheckBusy(true);
       setMessageError(undefined);
-      if (!activeRuntime) return;
+      if (!hasConnectedConversation(activeRuntime)) {
+        setMessageError("Connect another parent before sending a shared message.");
+        setMessageCheckBusy(false);
+        return;
+      }
       const context = writeContext(activeRuntime);
       try {
         const message = await resolvedApi.sendMessage({
@@ -720,7 +939,7 @@ export function CoordinationStateProvider({
       }
     },
     retryQueuedMessage: async (messageId) => {
-      if (!activeRuntime || queuedActionLocks.current.has(messageId)) return;
+      if (!hasConnectedConversation(activeRuntime) || queuedActionLocks.current.has(messageId)) return;
       const message = sentMessages.find((item) => item.id === messageId);
       if (!message?.queued || message.status !== "needs-action") return;
       const generation = hydrationGeneration.current;
@@ -764,7 +983,7 @@ export function CoordinationStateProvider({
       }
     },
     removeQueuedMessage: async (messageId) => {
-      if (!activeRuntime || queuedActionLocks.current.has(messageId)) return;
+      if (!hasConnectedConversation(activeRuntime) || queuedActionLocks.current.has(messageId)) return;
       const message = sentMessages.find((item) => item.id === messageId);
       if (!message?.queued || message.status !== "needs-action") return;
       const generation = hydrationGeneration.current;
@@ -820,7 +1039,7 @@ export function CoordinationStateProvider({
       setMessageSearchBusy(true);
       setMessageSearchError(undefined);
       try {
-        if (!activeRuntime) throw new Error("Sign in to search family messages.");
+        if (!hasConnectedConversation(activeRuntime)) throw new Error("Connect another parent before searching shared messages.");
         setMessageSearchResults(await resolvedApi.searchMessages(activeRuntime.conversationId, query));
       } catch (error) {
         setMessageSearchError(error instanceof Error ? error.message : "PeacePad could not search messages.");
@@ -855,7 +1074,7 @@ export function CoordinationStateProvider({
       setCorrectionBusy(true);
       setCorrectionError(undefined);
       try {
-        if (!activeRuntime) throw new Error("Sign in to correct family messages.");
+        if (!hasConnectedConversation(activeRuntime)) throw new Error("Connect another parent before correcting shared messages.");
         const correction = await resolvedApi.correctMessage({
           familyCircleId: activeRuntime.familyCircleId,
           conversationId: activeRuntime.conversationId,
@@ -910,6 +1129,12 @@ export function CoordinationStateProvider({
     outbox,
     resolvedApi,
     sentMessages,
+    messageAttachments,
+    attachmentBusy,
+    attachmentError,
+    tasks,
+    parentingSchedulePlan,
+    parentingScheduleExceptions,
     visibleLayerIds
   ]);
 

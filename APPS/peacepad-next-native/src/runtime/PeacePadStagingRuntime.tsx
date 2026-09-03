@@ -1,7 +1,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import type { CreatedInvitation, PeacePadCoordinationApi } from "../api/CoordinationApi";
+import * as SecureStore from "expo-secure-store";
+import { ActivityIndicator, Image, Linking, ScrollView, Share, StyleSheet, Text, TextInput, View } from "react-native";
+import type { CreatedInvitation, PeacePadCoordinationApi, PersonalityPreference, PersonalityType } from "../api/CoordinationApi";
 import { RecordsStateProvider } from "../records/RecordsState";
+import { ParentCoreStateProvider } from "../parentCore/ParentCoreState";
 import { createStagingCoordinationClient } from "../staging/StagingCoordinationClient";
 import type { CoordinationRuntime } from "../coordination/CoordinationState";
 import { CoordinationStateProvider } from "../coordination/CoordinationState";
@@ -17,6 +19,7 @@ import { colors, spacing, typography } from "../theme";
 import { removeQueuedMessagesForFamily, secureMessageOutboxStore } from "../messaging/secureMessageOutbox";
 import { useOptionalLocalization } from "../localization/LocalizationProvider";
 import { PublicOnboardingAuth } from "../auth/PublicOnboardingAuth";
+import { CoachConversation } from "../coach/CoachConversation";
 import {
   currentDeviceNotificationState,
   disableDeviceNotifications,
@@ -25,6 +28,12 @@ import {
 } from "../notifications/DevicePushRegistration";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+// The API keeps its historical family record for authorization and data compatibility.
+// New customers should not have to label their relationship or household to use PeacePad.
+const DEFAULT_PARENTING_SPACE_NAME = "PeacePad parenting space";
+const soloWorkspaceStorageKey = (identityId: string, familyCircleId: string) => `peacepad_v2_solo:${identityId}:${familyCircleId}`;
+const soloOnboardingStorageKey = (identityId: string) => `peacepad_v2_solo_onboarding:${identityId}`;
+const soloDraftStorageKey = (identityId: string, familyCircleId?: string) => `peacepad_v2_solo_draft:${identityId}:${familyCircleId ?? "private"}`;
 export function invitationCodeFromStagingUrl(url?: string | null, expectedProtocol = "peacepadnextlab:"): string | undefined {
   if (!url || url.trim() !== url) return undefined;
   try {
@@ -62,11 +71,25 @@ type VerifiedSessionContext = Readonly<{
   schemaVersion: "2.0";
 }>;
 
+function supportsPrivateWorkspace(api: PeacePadCoordinationApi): boolean {
+  return typeof api.listCalendarLayers === "function"
+    && typeof api.listScheduleEvents === "function"
+    && typeof api.listCaseBinders === "function";
+}
+
+class VerifiedSessionRequestError extends Error {
+  constructor(readonly status: number, readonly code: string | undefined, production: boolean) {
+    super(production ? "PeacePad could not restore your session. Please sign in again." : "PeacePad could not restore this regional staging session.");
+    this.name = "VerifiedSessionRequestError";
+  }
+}
+
 type RuntimeState =
   | { status: "loading" }
   | { status: "membership-empty"; api: PeacePadCoordinationApi; verified: VerifiedSessionContext }
   | { status: "membership-selection"; api: PeacePadCoordinationApi; memberships: readonly Membership[]; verified: VerifiedSessionContext }
   | { status: "conversation-empty"; api: PeacePadCoordinationApi; membership: Membership; verified: VerifiedSessionContext }
+  | { status: "solo"; api: PeacePadCoordinationApi; membership?: Membership; verified: VerifiedSessionContext }
   | { status: "ready"; api: PeacePadCoordinationApi; runtime: CoordinationRuntime; verified: VerifiedSessionContext }
   | { status: "error"; message: string };
 
@@ -163,7 +186,12 @@ async function fetchVerifiedSession(
       signal: controller.signal
     });
     const payload = await response.json().catch(() => null);
-    if (!response.ok) throw new Error("PeacePad could not restore this regional staging session.");
+    if (!response.ok) {
+      const errorCode = payload && typeof payload === "object" && "error" in payload
+        && payload.error && typeof payload.error === "object" && "code" in payload.error
+        && typeof payload.error.code === "string" ? payload.error.code : undefined;
+      throw new VerifiedSessionRequestError(response.status, errorCode, config.environment === "production");
+    }
     return validateVerifiedSessionContext(payload, expectedIdentityId, config.region);
   } finally {
     clearTimeout(timeout);
@@ -186,16 +214,11 @@ export function PeacePadStagingRuntime({
   const audioMediaRuntime = useMemo<AudioCallMediaRuntime | undefined>(() => auth.realtimeClient ? {
     getAccessToken: auth.getAccessToken,
     realtimeClient: auth.realtimeClient,
-    createMedia: async (iceServers, callbacks) => {
+    createMedia: async (iceServers, callbacks, mediaType) => {
       const { NativeAudioMediaSession } = await import("../calls/NativeAudioMedia");
-      return NativeAudioMediaSession.create(iceServers, callbacks);
+      return NativeAudioMediaSession.create(iceServers, callbacks, mediaType);
     }
   } : undefined, [auth.getAccessToken, auth.realtimeClient]);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [signInBusy, setSignInBusy] = useState(false);
-  const signInInFlight = useRef(false);
-  const passwordInput = useRef<TextInput>(null);
   const [runtimeState, setRuntimeState] = useState<RuntimeState>({ status: "loading" });
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string>();
@@ -203,20 +226,13 @@ export function PeacePadStagingRuntime({
   const [leaveFamilyError, setLeaveFamilyError] = useState<string>();
   const [profileBusy, setProfileBusy] = useState(false);
   const [profileError, setProfileError] = useState<string>();
+  const [personalityPreference, setPersonalityPreference] = useState<PersonalityPreference>();
+  const [personalityBusy, setPersonalityBusy] = useState(false);
+  const [personalityError, setPersonalityError] = useState<string>();
   const [notificationStatus, setNotificationStatus] = useState<DeviceNotificationState | "busy">("not-enabled");
+  const [exportBusy, setExportBusy] = useState(false);
+  const [exportError, setExportError] = useState<string>();
 
-  const submitSignIn = useCallback(() => {
-    const normalizedEmail = email.trim();
-    if (signInInFlight.current || !normalizedEmail || !password) return;
-    signInInFlight.current = true;
-    setSignInBusy(true);
-    void auth.signInWithPassword(normalizedEmail, password)
-      .catch(() => undefined)
-      .finally(() => {
-        signInInFlight.current = false;
-        setSignInBusy(false);
-      });
-  }, [auth, email, password]);
   const [reloadVersion, setReloadVersion] = useState(0);
   const [incomingInvitationCode, setIncomingInvitationCode] = useState<string>();
   const [selectedFamilyCircleId, setSelectedFamilyCircleId] = useState<string>();
@@ -238,6 +254,44 @@ export function PeacePadStagingRuntime({
     await secureMessageOutboxStore.clear().catch(() => undefined);
     await auth.signOut();
   }, [auth.signOut, runtimeState]);
+
+  const enterSoloWorkspace = useCallback((api: PeacePadCoordinationApi, membership: Membership, verified: VerifiedSessionContext) => {
+    // This marker is scoped to the verified identity and family. It contains no
+    // family content and only remembers that this user chose to continue alone.
+    void SecureStore.setItemAsync(soloWorkspaceStorageKey(verified.actor.identityId, membership.familyCircleId), "enabled").catch(() => undefined);
+    setIncomingInvitationCode(undefined);
+    setRuntimeState({ status: "solo", api, membership, verified });
+  }, []);
+
+  const enterSoloOnboarding = useCallback(async (api: PeacePadCoordinationApi, verified: VerifiedSessionContext) => {
+    // A private parenting space is a real, signed-in person's data boundary.
+    // It is intentionally named internally; customers are never asked to label
+    // a household or relationship before they can use their own calendar/files.
+    if (typeof api.createFamily !== "function") {
+      // A stale client must not fabricate cloud coordination. It can still
+      // provide the device-only private draft while the signed-in client is
+      // refreshed; current production clients always expose createFamily.
+      void SecureStore.setItemAsync(soloOnboardingStorageKey(verified.actor.identityId), "enabled").catch(() => undefined);
+      setIncomingInvitationCode(undefined);
+      setRuntimeState({ status: "solo", api, verified });
+      return;
+    }
+    await api.createFamily(DEFAULT_PARENTING_SPACE_NAME, runtimeWriteContext(verified));
+    void SecureStore.deleteItemAsync(soloOnboardingStorageKey(verified.actor.identityId)).catch(() => undefined);
+    setIncomingInvitationCode(undefined);
+    setRuntimeState({ status: "loading" });
+    setReloadVersion((value) => value + 1);
+  }, []);
+
+  const leaveSoloWorkspace = useCallback(async (api: PeacePadCoordinationApi, membership: Membership | undefined, verified: VerifiedSessionContext) => {
+    if (membership) {
+      await SecureStore.deleteItemAsync(soloWorkspaceStorageKey(verified.actor.identityId, membership.familyCircleId)).catch(() => undefined);
+      setRuntimeState({ status: "conversation-empty", api, membership, verified });
+    } else {
+      await SecureStore.deleteItemAsync(soloOnboardingStorageKey(verified.actor.identityId)).catch(() => undefined);
+      setRuntimeState({ status: "membership-empty", api, verified });
+    }
+  }, []);
 
   const leaveVerifiedFamily = async (api: PeacePadCoordinationApi, runtime: CoordinationRuntime) => {
     if (leaveFamilyInFlight.current) return;
@@ -279,6 +333,34 @@ export function PeacePadStagingRuntime({
       .catch(() => { if (active) setNotificationStatus("unavailable"); });
     return () => { active = false; };
   }, [runtimeState]);
+
+  useEffect(() => {
+    if (runtimeState.status !== "ready") {
+      setPersonalityPreference(undefined);
+      setPersonalityError(undefined);
+      setPersonalityBusy(false);
+      return;
+    }
+    // Keep the runtime compatible with older/mocked coordination clients while
+    // the personality preference contract rolls out. A missing optional method
+    // must not tear down an otherwise verified session.
+    if (typeof runtimeState.api.getPersonalityPreference !== "function") {
+      setPersonalityPreference(undefined);
+      setPersonalityError(undefined);
+      setPersonalityBusy(false);
+      return;
+    }
+    let active = true;
+    setPersonalityBusy(true);
+    setPersonalityError(undefined);
+    void runtimeState.api.getPersonalityPreference()
+      .then((preference) => { if (active) setPersonalityPreference(preference); })
+      .catch((cause) => {
+        if (active) setPersonalityError(cause instanceof Error ? cause.message : t("personality.error"));
+      })
+      .finally(() => { if (active) setPersonalityBusy(false); });
+    return () => { active = false; };
+  }, [runtimeState, t]);
 
   useEffect(() => {
     let mounted = true;
@@ -358,14 +440,34 @@ export function PeacePadStagingRuntime({
     }
     if (!pendingActivation) setRuntimeState({ status: "loading" });
     void auth.getAccessToken().then(async (token) => {
-      if (!token) throw new Error("The staging session expired.");
-      const verified = await fetchVerifiedSession(supabase, auth.session!.user.id, token, fetcher);
-      if (currentGeneration !== generation.current) return;
+      if (!token) throw new Error(supabase.environment === "production" ? "Your PeacePad session expired. Sign in again." : "The staging session expired.");
       const api = createStagingCoordinationClient(environment, auth.getAccessToken, fetcher);
+      let verified: VerifiedSessionContext;
+      try {
+        verified = await fetchVerifiedSession(supabase, auth.session!.user.id, token, fetcher);
+      } catch (error) {
+        if (supabase.environment === "production" && error instanceof VerifiedSessionRequestError
+          && error.status === 409 && error.code === "IDENTITY_NOT_BOUND") {
+          if (!api.bootstrapIdentity) throw error;
+          const metadata = auth.session!.user.user_metadata as Record<string, unknown> | undefined;
+          const displayName = typeof metadata?.full_name === "string" ? metadata.full_name
+            : typeof metadata?.name === "string" ? metadata.name
+            : auth.session!.user.email?.split("@")[0] ?? "PeacePad member";
+          await api.bootstrapIdentity(displayName, "ca");
+          verified = await fetchVerifiedSession(supabase, auth.session!.user.id, token, fetcher);
+        } else {
+          throw error;
+        }
+      }
+      if (currentGeneration !== generation.current) return;
       const memberships = [...verified.memberships].sort((left, right) => left.familyName.localeCompare(right.familyName) || left.familyCircleId.localeCompare(right.familyCircleId));
       if (!memberships.length) {
         if (pendingActivation) throw new Error("The accepted family access is not present in the refreshed session.");
-        setRuntimeState({ status: "membership-empty", api, verified });
+        const soloChoice = await SecureStore.getItemAsync(soloOnboardingStorageKey(verified.actor.identityId)).catch(() => null);
+        if (currentGeneration !== generation.current) return;
+        setRuntimeState(soloChoice === "enabled"
+          ? { status: "solo", api, verified }
+          : { status: "membership-empty", api, verified });
         return;
       }
       const requestedFamilyId = pendingActivation?.familyCircleId ?? selectedFamilyCircleId;
@@ -386,7 +488,11 @@ export function PeacePadStagingRuntime({
         throw new Error("PeacePad could not verify the newly accepted family conversation.");
       }
       if (!conversation) {
-        setRuntimeState({ status: "conversation-empty", api, membership, verified });
+        const soloChoice = await SecureStore.getItemAsync(soloWorkspaceStorageKey(verified.actor.identityId, membership.familyCircleId)).catch(() => null);
+        if (currentGeneration !== generation.current) return;
+        setRuntimeState(soloChoice === "enabled"
+          ? { status: "solo", api, membership, verified }
+          : { status: "conversation-empty", api, membership, verified });
         return;
       }
       setRuntimeState({
@@ -428,60 +534,28 @@ export function PeacePadStagingRuntime({
 
   if (auth.status === "loading") return <GateMessage busy title={t("runtime.restoringSession")} body={t("runtime.checkingDevice")} />;
   if (auth.status === "error") return <GateMessage title={t("runtime.sessionUnavailable")} body={auth.error ?? t("runtime.restoreError")} />;
-  if (supabase.environment === "production" && auth.authIntent === "password-recovery") return <PublicOnboardingAuth />;
+  if (auth.authIntent === "password-recovery") return <PublicOnboardingAuth environmentNotice={supabase.environment === "staging" ? {
+    label: t(supabase.region === "ca" ? "runtime.regionCanada" : "runtime.regionUnitedStates"),
+    body: t("runtime.signInBody"),
+    labelTestID: "staging-region-label"
+  } : undefined} />;
   if (auth.status === "signed-out") {
-    if (supabase.environment === "production") return <PublicOnboardingAuth />;
-    return (
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.signInKeyboard}>
-        <ScrollView
-          contentContainerStyle={styles.signInContent}
-          keyboardDismissMode="interactive"
-          keyboardShouldPersistTaps="handled"
-          testID="staging-sign-in-scroll"
-        >
-          <Brand />
-          <AccessibleHeading style={styles.title}>{t("runtime.signInTitle")}</AccessibleHeading>
-          <Text accessibilityRole="text" testID="staging-region-label" style={styles.regionLabel}>
-            {t(supabase.region === "ca" ? "runtime.regionCanada" : "runtime.regionUnitedStates")}
-          </Text>
-          <Text style={styles.body}>{t("runtime.signInBody")}</Text>
-          <TextInput
-            accessibilityLabel={t("runtime.email")}
-            autoCapitalize="none"
-            autoComplete="username"
-            keyboardType="email-address"
-            onChangeText={setEmail}
-            onSubmitEditing={() => passwordInput.current?.focus()}
-            placeholder={t("runtime.emailPlaceholder")}
-            returnKeyType="next"
-            style={styles.input}
-            textContentType="username"
-            value={email}
-          />
-          <TextInput
-            accessibilityLabel={t("runtime.password")}
-            autoComplete="current-password"
-            onChangeText={setPassword}
-            onSubmitEditing={submitSignIn}
-            placeholder={t("runtime.passwordPlaceholder")}
-            ref={passwordInput}
-            returnKeyType="done"
-            secureTextEntry
-            style={styles.input}
-            submitBehavior="submit"
-            textContentType="password"
-            value={password}
-          />
-          <LabButton disabled={signInBusy || !email.trim() || !password} label={signInBusy ? t("runtime.signingIn") : t("runtime.signIn")} onPress={submitSignIn} />
-          {auth.error ? <Text accessibilityRole="alert" style={styles.error}>{auth.error}</Text> : null}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    );
+    return <PublicOnboardingAuth environmentNotice={supabase.environment === "staging" ? {
+      label: t(supabase.region === "ca" ? "runtime.regionCanada" : "runtime.regionUnitedStates"),
+      body: t("runtime.signInBody"),
+      labelTestID: "staging-region-label"
+    } : undefined} />;
   }
   if (runtimeState.status === "loading") return <GateMessage busy title={t("runtime.opening")} body={t("runtime.loadingAuthorized")} />;
-  if (runtimeState.status === "membership-empty") return <FamilySetup accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} initialInvitationCode={incomingInvitationCode} onInvitationCodeConsumed={() => setIncomingInvitationCode(undefined)} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={signOutSafely} verified={runtimeState.verified} />;
+  if (runtimeState.status === "membership-empty") return <FamilySetup accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} initialInvitationCode={incomingInvitationCode} onContinueSolo={() => void enterSoloOnboarding(runtimeState.api, runtimeState.verified)} onInvitationCodeConsumed={() => setIncomingInvitationCode(undefined)} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={signOutSafely} verified={runtimeState.verified} />;
   if (runtimeState.status === "membership-selection") return <FamilySelection accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} memberships={runtimeState.memberships} onSelect={(familyCircleId) => setSelectedFamilyCircleId(familyCircleId)} onSignOut={signOutSafely} />;
-  if (runtimeState.status === "conversation-empty") return <ConversationSetup accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} membership={runtimeState.membership} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={signOutSafely} verified={runtimeState.verified} />;
+  if (runtimeState.status === "conversation-empty") return supportsPrivateWorkspace(runtimeState.api)
+    ? <PrivateCoordinationWorkspace api={runtimeState.api} deleteAccount={() => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region)} deleting={deleteBusy} deleteError={deleteError} membership={runtimeState.membership} onInvitationAccepted={() => setReloadVersion((value) => value + 1)} onSignOut={signOutSafely} verified={runtimeState.verified}>{children}</PrivateCoordinationWorkspace>
+    : <ConversationSetup accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} membership={runtimeState.membership} onContinueSolo={() => enterSoloWorkspace(runtimeState.api, runtimeState.membership, runtimeState.verified)} onReload={() => setReloadVersion((value) => value + 1)} onSignOut={signOutSafely} verified={runtimeState.verified} />;
+  if (runtimeState.status === "solo" && runtimeState.membership) return supportsPrivateWorkspace(runtimeState.api)
+    ? <PrivateCoordinationWorkspace api={runtimeState.api} deleteAccount={() => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region)} deleting={deleteBusy} deleteError={deleteError} membership={runtimeState.membership} onInvitationAccepted={() => setReloadVersion((value) => value + 1)} onSignOut={signOutSafely} verified={runtimeState.verified}>{children}</PrivateCoordinationWorkspace>
+    : <SoloWorkspace accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} draftStorageKey={soloDraftStorageKey(runtimeState.verified.actor.identityId, runtimeState.membership.familyCircleId)} familyName={runtimeState.membership.familyName} onConnect={() => void leaveSoloWorkspace(runtimeState.api, runtimeState.membership, runtimeState.verified)} onSignOut={signOutSafely} />;
+  if (runtimeState.status === "solo") return <SoloWorkspace accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} draftStorageKey={soloDraftStorageKey(runtimeState.verified.actor.identityId)} onConnect={() => void leaveSoloWorkspace(runtimeState.api, runtimeState.membership, runtimeState.verified)} onSignOut={signOutSafely} />;
   if (runtimeState.status === "error") return <GateMessage title={t("runtime.unavailable")} body={runtimeState.message} />;
   const accountActions = {
     signOut: signOutSafely,
@@ -510,6 +584,26 @@ export function PeacePadStagingRuntime({
         setProfileBusy(false);
       }
     },
+    personalityPreference,
+    updatingPersonality: personalityBusy,
+    personalityError,
+    updatePersonality: async (personalityType: PersonalityType | null) => {
+      setPersonalityBusy(true);
+      setPersonalityError(undefined);
+      try {
+        const updated = await runtimeState.api.setPersonalityPreference(
+          personalityType,
+          runtimeWriteContext(runtimeState.verified, personalityPreference?.version ?? 0)
+        );
+        setPersonalityPreference(updated);
+      } catch (cause) {
+        const message = cause instanceof Error ? cause.message : t("personality.error");
+        setPersonalityError(message);
+        throw cause;
+      } finally {
+        setPersonalityBusy(false);
+      }
+    },
     leaveFamily: () => leaveVerifiedFamily(runtimeState.api, runtimeState.runtime),
     leavingFamily: leaveFamilyBusy,
     leaveFamilyError,
@@ -528,6 +622,20 @@ export function PeacePadStagingRuntime({
         setNotificationStatus(await disableDeviceNotifications(runtimeState.api, runtimeState.runtime));
       } catch {
         setNotificationStatus("unavailable");
+      }
+    },
+    exporting: exportBusy,
+    exportError,
+    exportAccount: async () => {
+      setExportBusy(true);
+      setExportError(undefined);
+      try {
+        return await runtimeState.api.prepareAccountExport(runtimeWriteContext(runtimeState.verified, runtimeState.runtime.identityVersion));
+      } catch (cause) {
+        setExportError(cause instanceof Error ? cause.message : t("account.exportError"));
+        throw cause;
+      } finally {
+        setExportBusy(false);
       }
     }
   };
@@ -550,9 +658,11 @@ export function PeacePadStagingRuntime({
           setIncomingInvitationCode(undefined);
         }} runtime={runtimeState.runtime}>
           <AudioCallStateProvider api={runtimeState.api} mediaRuntime={audioMediaRuntime} runtime={runtimeState.runtime}>
-            <RecordsStateProvider api={runtimeState.api} runtime={runtimeState.runtime}>
-              {children}
-            </RecordsStateProvider>
+            <ParentCoreStateProvider api={runtimeState.api} runtime={runtimeState.runtime}>
+              <RecordsStateProvider api={runtimeState.api} runtime={runtimeState.runtime}>
+                {children}
+              </RecordsStateProvider>
+            </ParentCoreStateProvider>
           </AudioCallStateProvider>
         </CoordinationStateProvider>
       </StagingAccountActionsProvider>
@@ -584,6 +694,62 @@ function assertAcceptedInvitation(result: AcceptedInvitation, identityId: string
   ) throw new Error("PeacePad could not verify the accepted family access.");
 }
 
+function PrivateCoordinationWorkspace({
+  api,
+  children,
+  deleteAccount,
+  deleteError,
+  deleting,
+  membership,
+  onInvitationAccepted,
+  onSignOut,
+  verified
+}: {
+  api: PeacePadCoordinationApi;
+  children: React.ReactNode;
+  deleteAccount: () => Promise<void>;
+  deleteError?: string;
+  deleting: boolean;
+  membership: Membership;
+  onInvitationAccepted: () => void;
+  onSignOut: () => Promise<void>;
+  verified: VerifiedSessionContext;
+}) {
+  const privateRuntime = useMemo<CoordinationRuntime>(() => ({
+    actorIdentityId: verified.actor.identityId,
+    identityVersion: verified.actor.version,
+    sessionId: verified.actor.sessionId,
+    familyCircleId: membership.familyCircleId,
+    participantGrantId: membership.participantGrantId,
+    participantGrantVersion: membership.version,
+    region: verified.region
+  }), [membership.familyCircleId, membership.participantGrantId, membership.version, verified.actor.identityId, verified.actor.sessionId, verified.actor.version, verified.region]);
+  const accountActions = useMemo(() => ({
+    signOut: onSignOut,
+    deleteAccount,
+    deleting,
+    error: deleteError,
+    displayName: verified.actor.displayName ?? ""
+  }), [deleteAccount, deleteError, deleting, onSignOut, verified.actor.displayName]);
+
+  return (
+    <PendingStagingInvitationProvider onConsumed={() => undefined}>
+      <StagingAccountActionsProvider value={accountActions}>
+        <CoordinationStateProvider api={api} onInvitationAccepted={async (result) => {
+          assertAcceptedInvitation(result, privateRuntime.actorIdentityId, privateRuntime.region);
+          onInvitationAccepted();
+        }} runtime={privateRuntime}>
+          <ParentCoreStateProvider api={api} runtime={privateRuntime}>
+            <RecordsStateProvider api={api} runtime={privateRuntime}>
+              {children}
+            </RecordsStateProvider>
+          </ParentCoreStateProvider>
+        </CoordinationStateProvider>
+      </StagingAccountActionsProvider>
+    </PendingStagingInvitationProvider>
+  );
+}
+
 function FamilySelection({ accountDeletion, memberships, onSelect, onSignOut }: {
   accountDeletion: { deleteAccount: () => Promise<void>; deleting: boolean; error?: string };
   memberships: readonly Membership[];
@@ -610,17 +776,17 @@ function FamilySelection({ accountDeletion, memberships, onSelect, onSignOut }: 
   );
 }
 
-function FamilySetup({ accountDeletion, api, initialInvitationCode, onInvitationCodeConsumed, onReload, onSignOut, verified }: {
+function FamilySetup({ accountDeletion, api, initialInvitationCode, onContinueSolo, onInvitationCodeConsumed, onReload, onSignOut, verified }: {
   accountDeletion: { deleteAccount: () => Promise<void>; deleting: boolean; error?: string };
   api: PeacePadCoordinationApi;
   initialInvitationCode?: string;
+  onContinueSolo: () => void;
   onInvitationCodeConsumed: () => void;
   onReload: () => void;
   onSignOut: () => Promise<void>;
   verified: VerifiedSessionContext;
 }) {
   const { t } = useOptionalLocalization();
-  const [familyName, setFamilyName] = useState("");
   const [invitationCode, setInvitationCode] = useState(initialInvitationCode ?? "");
   const [preview, setPreview] = useState<InvitationPreview>();
   const [busy, setBusy] = useState(false);
@@ -643,12 +809,7 @@ function FamilySetup({ accountDeletion, api, initialInvitationCode, onInvitation
       <Brand />
       <AccessibleHeading style={styles.title}>{t("runtime.createJoin")}</AccessibleHeading>
       <Text style={styles.body}>{t("runtime.createJoinBody")}</Text>
-      <Text style={styles.sectionTitle}>{t("runtime.createFamilyTitle")}</Text>
-      <TextInput accessibilityLabel={t("runtime.familyName")} maxLength={120} onChangeText={setFamilyName} placeholder={t("runtime.familyName")} style={styles.input} value={familyName} />
-      <LabButton disabled={busy || !familyName.trim()} label={t("runtime.createFamily")} onPress={() => void run(async () => {
-        await api.createFamily(familyName, runtimeWriteContext(verified));
-        onReload();
-      })} />
+      <LabButton disabled={busy} label={t("runtime.continueSolo")} onPress={onContinueSolo} />
       <Text style={styles.sectionTitle}>{t("runtime.enterInvite")}</Text>
       <TextInput accessibilityLabel={t("invite.code")} autoCapitalize="characters" maxLength={6} onChangeText={(value) => {
         setInvitationCode(value.replace(/[^a-z0-9]/gi, "").toUpperCase());
@@ -673,6 +834,12 @@ function FamilySetup({ accountDeletion, api, initialInvitationCode, onInvitation
         setPreview(await api.resolveInvitation(invitationCode));
         onInvitationCodeConsumed();
       })} variant="secondary" />}
+      <Text style={styles.sectionTitle}>{t("runtime.createFamilyTitle")}</Text>
+      <Text style={styles.body}>{t("runtime.createConnectionBody")}</Text>
+      <LabButton disabled={busy} label={t("runtime.createFamily")} onPress={() => void run(async () => {
+        await api.createFamily(DEFAULT_PARENTING_SPACE_NAME, runtimeWriteContext(verified));
+        onReload();
+      })} variant="secondary" />
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
       <LabButton disabled={busy} label={t("account.signOut")} onPress={() => void onSignOut()} variant="secondary" />
       <AccountDeletionControls value={accountDeletion} />
@@ -680,10 +847,11 @@ function FamilySetup({ accountDeletion, api, initialInvitationCode, onInvitation
   );
 }
 
-function ConversationSetup({ accountDeletion, api, membership, onReload, onSignOut, verified }: {
+function ConversationSetup({ accountDeletion, api, membership, onContinueSolo, onReload, onSignOut, verified }: {
   accountDeletion: { deleteAccount: () => Promise<void>; deleting: boolean; error?: string };
   api: PeacePadCoordinationApi;
   membership: Membership;
+  onContinueSolo: () => void;
   onReload: () => void;
   onSignOut: () => Promise<void>;
   verified: VerifiedSessionContext;
@@ -692,6 +860,7 @@ function ConversationSetup({ accountDeletion, api, membership, onReload, onSignO
   const [busy, setBusy] = useState(false);
   const [createdInvitation, setCreatedInvitation] = useState<CreatedInvitation>();
   const [error, setError] = useState<string>();
+  const [shareError, setShareError] = useState<string>();
   const createInvitation = async () => {
     setBusy(true);
     setError(undefined);
@@ -707,12 +876,28 @@ function ConversationSetup({ accountDeletion, api, membership, onReload, onSignO
       setError(cause instanceof Error ? cause.message : t("runtime.requestError"));
     } finally { setBusy(false); }
   };
+  const shareInvitation = async () => {
+    if (!createdInvitation) return;
+    setShareError(undefined);
+    try {
+      await Share.share({
+        message: [
+          t("runtime.shareInvitationTitle"),
+          t("runtime.shareInvitationBody"),
+          t("runtime.shareInvitationCode", { code: createdInvitation.code }),
+          createdInvitation.deepLink
+        ].join("\n\n")
+      });
+    } catch {
+      setShareError(t("runtime.shareInvitationError"));
+    }
+  };
   return (
     <View style={styles.page}>
       <Brand />
       <AccessibleHeading style={styles.title}>{t("invite.createTitle")}</AccessibleHeading>
       <Text style={styles.body}>{t("runtime.connectionReady", { family: membership.familyName })}</Text>
-      {createdInvitation ? <View style={styles.codeCard}><Text accessibilityLabel={t("invite.code")} selectable style={styles.code}>{createdInvitation.code}</Text><Text style={styles.body}>{t("runtime.inviteExpiry")}</Text></View> : null}
+      {createdInvitation ? <View style={styles.codeCard}><Text accessibilityLabel={t("invite.code")} selectable style={styles.code}>{createdInvitation.code}</Text><Text style={styles.body}>{t("runtime.inviteExpiry")}</Text><LabButton disabled={busy} label={t("runtime.shareInvitation")} onPress={() => void shareInvitation()} /></View> : null}
       {createdInvitation ? <LabButton disabled={busy} label={t("invite.cancel")} onPress={() => void (async () => {
         setBusy(true);
         setError(undefined);
@@ -723,9 +908,86 @@ function ConversationSetup({ accountDeletion, api, membership, onReload, onSignO
           setError(cause instanceof Error ? cause.message : t("runtime.requestError"));
         } finally { setBusy(false); }
       })()} variant="secondary" /> : <LabButton disabled={busy} label={t("invite.create")} onPress={() => void createInvitation()} />}
+      <LabButton disabled={busy} label={t("runtime.continueSolo")} onPress={onContinueSolo} variant="secondary" />
       <LabButton disabled={busy} label={t("runtime.checkConnection")} onPress={onReload} variant="secondary" />
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
+      {shareError ? <Text accessibilityRole="alert" style={styles.error}>{shareError}</Text> : null}
       <LabButton disabled={busy} label={t("account.signOut")} onPress={() => void onSignOut()} variant="secondary" />
+      <AccountDeletionControls value={accountDeletion} />
+    </View>
+  );
+}
+
+function SoloWorkspace({ accountDeletion, api, draftStorageKey, familyName, onConnect, onSignOut }: {
+  accountDeletion: { deleteAccount: () => Promise<void>; deleting: boolean; error?: string };
+  api: PeacePadCoordinationApi;
+  draftStorageKey: string;
+  familyName?: string;
+  onConnect: () => void;
+  onSignOut: () => Promise<void>;
+}) {
+  const { t } = useOptionalLocalization();
+  const [draft, setDraft] = useState("");
+  const [draftReady, setDraftReady] = useState(false);
+  const [shareError, setShareError] = useState<string>();
+
+  useEffect(() => {
+    let active = true;
+    setDraftReady(false);
+    SecureStore.getItemAsync(draftStorageKey)
+      .then((stored) => { if (active && stored) setDraft(stored); })
+      .catch(() => undefined)
+      .finally(() => { if (active) setDraftReady(true); });
+    return () => { active = false; };
+  }, [draftStorageKey]);
+
+  const saveDraft = (value: string) => {
+    setDraft(value);
+    void SecureStore.setItemAsync(draftStorageKey, value, { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY }).catch(() => undefined);
+  };
+
+  const shareDraft = async () => {
+    if (!draft.trim()) return;
+    setShareError(undefined);
+    try {
+      await Share.share({ message: draft.trim(), title: "PeacePad" });
+    } catch {
+      setShareError(t("runtime.soloShareError"));
+    }
+  };
+
+  return (
+    <View style={styles.page} testID="solo-workspace">
+      <Brand />
+      <AccessibleHeading style={styles.title}>{t("runtime.soloTitle")}</AccessibleHeading>
+      <Text style={styles.body}>{familyName ? t("runtime.soloBody", { family: familyName }) : t("runtime.soloOnboardingBody")}</Text>
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>{t("runtime.soloPrivateTitle")}</Text>
+        <Text style={styles.body}>{t("runtime.soloPrivateBody")}</Text>
+      </View>
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>{t("runtime.soloPauseTitle")}</Text>
+        <Text style={styles.body}>{t("runtime.soloPauseBody")}</Text>
+        <TextInput
+          accessibilityLabel={t("runtime.soloDraftLabel")}
+          editable={draftReady}
+          multiline
+          onChangeText={saveDraft}
+          placeholder={t("runtime.soloDraftPlaceholder")}
+          style={[styles.input, styles.soloDraftInput]}
+          textAlignVertical="top"
+          value={draft}
+        />
+        <LabButton disabled={!draftReady || !draft.trim()} label={t("runtime.soloShareDraft")} onPress={() => void shareDraft()} />
+        {shareError ? <Text accessibilityRole="alert" style={styles.error}>{shareError}</Text> : null}
+      </View>
+      <CoachConversation
+        onConversationTurn={(input) => api.coachConversationTurn(input)}
+        onTranscribe={async (bytes, mediaType) => (await api.transcribeCoachAudio(bytes, mediaType)).transcript}
+        onUseDraft={saveDraft}
+      />
+      <LabButton label={familyName ? t("runtime.inviteLater") : t("runtime.createFamilyWhenReady")} onPress={onConnect} variant="secondary" />
+      <LabButton label={t("account.signOut")} onPress={() => void onSignOut()} variant="secondary" />
       <AccountDeletionControls value={accountDeletion} />
     </View>
   );
@@ -752,7 +1014,7 @@ function AccountDeletionControls({ value }: {
 
 function Brand() {
   const { t } = useOptionalLocalization();
-  return <View style={styles.brand}><Image accessibilityLabel={t("runtime.logo")} source={require("../foundation/peacepad-conch.png")} style={styles.logo} /><Text style={styles.brandName}>PeacePad</Text></View>;
+  return <View style={styles.brand}><Image accessibilityLabel={t("runtime.logo")} source={require("../../assets/icon-production.png")} style={styles.logo} /><Text style={styles.brandName}>PeacePad</Text></View>;
 }
 
 function GateMessage({ busy = false, body, onSignOut, title }: { busy?: boolean; body: string; onSignOut?: () => Promise<void>; title: string }) {
@@ -762,16 +1024,15 @@ function GateMessage({ busy = false, body, onSignOut, title }: { busy?: boolean;
 
 const styles = StyleSheet.create({
   page: { backgroundColor: colors.background, flex: 1, justifyContent: "center", padding: spacing.xl, gap: spacing.md },
-  signInKeyboard: { backgroundColor: colors.background, flex: 1 },
-  signInContent: { flexGrow: 1, gap: spacing.md, justifyContent: "center", padding: spacing.xl },
   brand: { alignItems: "center", flexDirection: "row", gap: spacing.sm },
-  logo: { height: 52, width: 52 },
+  logo: { borderRadius: 17, height: 52, width: 52 },
   brandName: { color: colors.text, fontSize: 24, fontWeight: "800" },
   title: { color: colors.text, fontSize: 32, fontWeight: "700" },
   regionLabel: { color: colors.brand, fontSize: 16, fontWeight: "700" },
   sectionTitle: { color: colors.text, fontSize: 18, fontWeight: "700", marginTop: spacing.sm },
   body: { color: colors.muted, fontSize: 16, lineHeight: 24 },
   input: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 14, borderWidth: 1, color: colors.text, fontSize: 16, padding: spacing.md },
+  soloDraftInput: { minHeight: 136 },
   error: { color: colors.dangerText, fontSize: 14 },
   card: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 16, borderWidth: 1, gap: spacing.sm, padding: spacing.md },
   cardTitle: { color: colors.text, fontSize: 18, fontWeight: "700" },

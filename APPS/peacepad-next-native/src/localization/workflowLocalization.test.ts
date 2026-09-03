@@ -4,4 +4,5 @@ it("translates calendar and records actions without changing inserted domain lab
   expect(workflowText("fr", "confirmShare")).toBe("Confirmer le partage");
   expect(workflowText("es", "noUpload")).toBe("No se subió ningún archivo.");
   expect(workflowText("en", "useCalendar", { name: "Parenting Time" })).toBe("Use Parenting Time calendar");
+  expect(workflowText("en", "useCalendar", {})).toBe("Use {name} calendar");
 });

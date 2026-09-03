@@ -4,26 +4,24 @@ const { spawnSync } = require("child_process");
 
 const root = path.resolve(__dirname, "..");
 const readJson = (name) => JSON.parse(fs.readFileSync(path.join(root, name), "utf8"));
+const appConfigModule = require(path.join(root, "app.config.js"));
+const releaseContract = appConfigModule.releaseContract;
 const expected = {
   appStoreId: "6793350735",
   bundleIdentifier: "ca.peacepad.family",
   easOwner: "official_fejiro",
   easProjectId: "a4ecee72-ebae-483d-8553-035847ebb3d3",
-  mode: "testflight-internal",
-  version: "2.0.0",
-  buildNumber: "3"
+  mode: releaseContract.mode,
+  version: releaseContract.version,
+  buildNumber: releaseContract.buildNumber
 };
 const requiredRegionalNames = [
   "EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_URL",
   "EXPO_PUBLIC_PEACEPAD_CA_API_BASE_URL",
-  "EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_PUBLISHABLE_KEY",
-  "EXPO_PUBLIC_PEACEPAD_US_SUPABASE_URL",
-  "EXPO_PUBLIC_PEACEPAD_US_API_BASE_URL",
-  "EXPO_PUBLIC_PEACEPAD_US_SUPABASE_PUBLISHABLE_KEY"
+  "EXPO_PUBLIC_PEACEPAD_CA_SUPABASE_PUBLISHABLE_KEY"
 ];
 const regionalProjectRefs = {
-  ca: "rohvkyuxbnqzglaromms",
-  us: "spmpndalcvwmygznihec"
+  ca: "rohvkyuxbnqzglaromms"
 };
 const configuredEasCli = process.env.PEACEPAD_EAS_CLI_PATH?.trim();
 const cachedEasCli = configuredEasCli || (process.platform === "win32"
@@ -156,7 +154,7 @@ async function verifyOnlineContract() {
   const productionEnvironment = runEas(["env:list", "production", "--format", "long"]);
   const configuredNames = new Set(productionEnvironment.match(/EXPO_PUBLIC_PEACEPAD_[A-Z0-9_]+/g) ?? []);
   const missing = requiredRegionalNames.filter((name) => !configuredNames.has(name));
-  check(missing.length === 0, `EAS production is missing ${missing.length} required dual-region public variable name(s): ${missing.join(", ")}`);
+  check(missing.length === 0, `EAS production is missing ${missing.length} required Canadian staging public variable name(s): ${missing.join(", ")}`);
   assert(blockers.length === 0, blockers.join(" "));
 }
 
