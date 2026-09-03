@@ -4,7 +4,7 @@
 
 - Worktree: `D:\FTC-GAMES\worktrees\jci-ios-1.1-main2`
 - Branch: `codex/jci-ios-1.1-main2`
-- Release-fix commit: `02d4d2844` (pushed to `origin/codex/jci-ios-1.1-main2`)
+- Release-fix commit: `644078e42` (pushed to `origin/codex/jci-ios-1.1-main2`)
 - Unity: `6000.4.5f1`
 - Product package/bundle: `com.ftcholding.justcheckingin` / `com.ftcholding.justcheckingin`
 - Marketing version: `1.2.0`
@@ -39,7 +39,7 @@ not staged or changed by the hardening commit.
 ## Android candidate evidence
 
 The APK and AAB were built from the same working-tree contents as commit
-`02d4d2844` using the verified keystore and Unity 6000.4.5f1. The APK was
+`644078e42` using the verified keystore and Unity 6000.4.5f1. The APK was
 installed on the connected Google Pixel 7 (`2B260DLH2000C8`).
 
 - Device APK:
@@ -86,13 +86,18 @@ installed on the connected Google Pixel 7 (`2B260DLH2000C8`).
   Data Safety preview is “no data collected” / “no data shared”; verify it
   again against the final artifact before submitting.
 - iOS workflow `33723296767` failed before export on commit `0b5b969...` due
-  the Mac compiler not finding `AndroidExternalToolsSettings`. It is invalid
-  for this release; rerun `jci-ios-publish.yml` from `02d4d2844` after the
-  corrected Android candidate is accepted.
+  the Mac compiler not finding `AndroidExternalToolsSettings`; that run is
+  invalid for this release. Workflow `33727325337` succeeded from
+  `644078e42`: Unity export, Xcode archive, IPA validation, and App Store
+  Connect upload all completed (Delivery UUID
+  `e5404466-5989-4750-a0ba-04174c5f8767`). App Store Connect read-only check
+  `33728714863` still showed no processed build 6 at check time; processing
+  must be rechecked before TestFlight or review actions.
 - Upload, review submission, TestFlight processing, and public release are
   separate states. No public Android release is claimed by this handover.
 
 ## Release verdict at handover
 
 - Android: **candidate verified locally; Play resubmission pending**.
-- iOS: **existing public 1.1.0 remains unchanged; build 6 rerun pending**.
+- iOS: **build 6 uploaded successfully; processing/TestFlight and review
+  actions pending; existing public 1.1.0 remains unchanged**.
