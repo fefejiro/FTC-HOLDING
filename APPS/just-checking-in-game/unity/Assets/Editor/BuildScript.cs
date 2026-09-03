@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -16,13 +17,15 @@ namespace Jci.Editor
     /// </summary>
     public static class BuildScript
     {
-        private const string MarketingVersion = "1.1.0";
-        private const int AndroidVersionCode = 3;
-        private const string IosBuildNumber = "4";
+        // 1.2.0/build 4/5 are already consumed. This shared correction is
+        // intentionally versioned as Android code 6 and iOS build 6.
+        private const string MarketingVersion = "1.2.0";
+        private const int AndroidVersionCode = 6;
+        private const string IosBuildNumber = "6";
         private const string AndroidOutputPath = "Builds/Android/JustCheckingIn.aab";
         private const string IosOutputPath = "Builds/iOS/JustCheckingIn";
         private const string BootScenePath = "Assets/_Game/Scenes/Boot.unity";
-        private const string AppIconPath = "Assets/_Game/Art/jci-icon.png";
+        private const string AppIconPath = "Assets/_Game/Art/jci-sun-icon.png";
 
         [MenuItem("JCI/Build Android AAB")]
         public static void BuildAndroid()
@@ -30,10 +33,10 @@ namespace Jci.Editor
             ConfigureCommonPlayerSettings();
             ConfigureAndroidPlayerSettings();
 
-            string keystorePath = RequireEnv("KEYSTORE_PATH");
-            string keystorePass = RequireEnv("KEYSTORE_PASS");
-            string keyAlias = RequireEnv("KEY_ALIAS");
-            string keyPass = RequireEnv("KEY_PASS");
+            string keystorePath = ResolveKeystorePath(RequireEnvAny("KEYSTORE_PATH", "ANDROID_KEYSTORE_NAME"));
+            string keystorePass = RequireEnvAny("KEYSTORE_PASS", "ANDROID_KEYSTORE_PASS");
+            string keyAlias = RequireEnvAny("KEY_ALIAS", "ANDROID_KEYALIAS_NAME");
+            string keyPass = RequireEnvAny("KEY_PASS", "ANDROID_KEYALIAS_PASS");
 
             if (!File.Exists(keystorePath))
             {
@@ -70,6 +73,57 @@ namespace Jci.Editor
             }
 
             Debug.Log($"[JCI] Android build succeeded: {AndroidOutputPath}");
+        }
+
+        [MenuItem("JCI/Build Android APK For Device")]
+        public static void BuildAndroidApkForDevice()
+        {
+            EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Android, BuildTarget.Android);
+            ConfigureCommonPlayerSettings();
+            ConfigureAndroidPlayerSettings();
+            // Use the canonical IL2CPP backend; Android ARM64 is not supported by Mono.
+            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
+            // Re-apply ARM64 immediately before BuildPlayer after backend selection.
+            PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
+
+            string keystorePath = ResolveKeystorePath(RequireEnvAny("KEYSTORE_PATH", "ANDROID_KEYSTORE_NAME"));
+            string keystorePass = RequireEnvAny("KEYSTORE_PASS", "ANDROID_KEYSTORE_PASS");
+            string keyAlias = RequireEnvAny("KEY_ALIAS", "ANDROID_KEYALIAS_NAME");
+            string keyPass = RequireEnvAny("KEY_PASS", "ANDROID_KEYALIAS_PASS");
+
+            if (!File.Exists(keystorePath))
+            {
+                Fail($"KEYSTORE_PATH does not exist: {keystorePath}");
+                return;
+            }
+
+            PlayerSettings.Android.useCustomKeystore = true;
+            PlayerSettings.Android.keystoreName = keystorePath;
+            PlayerSettings.Android.keystorePass = keystorePass;
+            PlayerSettings.Android.keyaliasName = keyAlias;
+            PlayerSettings.Android.keyaliasPass = keyPass;
+
+            const string outputPath = "Builds/Android/JustCheckingIn-device.apk";
+            Directory.CreateDirectory("Builds/Android");
+            EditorUserBuildSettings.buildAppBundle = false;
+            EditorUserBuildSettings.androidBuildSystem = AndroidBuildSystem.Gradle;
+
+            BuildReport report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+            {
+                scenes = EnsureBuildScenes(),
+                locationPathName = outputPath,
+                target = BuildTarget.Android,
+                options = BuildOptions.None,
+                targetGroup = BuildTargetGroup.Android
+            });
+
+            if (report.summary.result != BuildResult.Succeeded)
+            {
+                Fail($"Android device APK build failed: {report.summary.result}");
+                return;
+            }
+
+            Debug.Log($"[JCI] Android device APK build succeeded: {outputPath}");
         }
 
         [MenuItem("JCI/Export iOS Xcode")]
@@ -136,17 +190,92 @@ namespace Jci.Editor
                 return;
             }
 
-            PlayerSettings.SetIcons(NamedBuildTarget.Android, new[] { icon }, IconKind.Application);
-            PlayerSettings.SetIcons(NamedBuildTarget.iOS, new[] { icon }, IconKind.Application);
+            ConfigureLegacyIcons(NamedBuildTarget.Android, icon);
+            ConfigureLegacyIcons(NamedBuildTarget.iOS, icon);
+            ConfigurePlatformIcons(NamedBuildTarget.Android, icon);
+            ConfigurePlatformIcons(NamedBuildTarget.iOS, icon);
+        }
+
+        private static void ConfigureLegacyIcons(NamedBuildTarget target, Texture2D icon)
+        {
+            int requiredSlots = PlayerSettings.GetIconSizes(target, IconKind.Application).Length;
+            if (requiredSlots < 1)
+            {
+                requiredSlots = 1;
+            }
+
+            var icons = new Texture2D[requiredSlots];
+            for (int index = 0; index < icons.Length; index++)
+            {
+                icons[index] = icon;
+            }
+
+            PlayerSettings.SetIcons(target, icons, IconKind.Application);
+        }
+
+        private static void ConfigurePlatformIcons(NamedBuildTarget target, Texture2D icon)
+        {
+            foreach (PlatformIconKind kind in PlayerSettings.GetSupportedIconKinds(target))
+            {
+                PlatformIcon[] slots = PlayerSettings.GetPlatformIcons(target, kind);
+                if (slots == null || slots.Length == 0)
+                {
+                    continue;
+                }
+
+                foreach (PlatformIcon slot in slots)
+                {
+                    int layers = Math.Max(1, slot.maxLayerCount);
+                    var textures = new Texture2D[layers];
+                    for (int layer = 0; layer < textures.Length; layer++)
+                    {
+                        textures[layer] = icon;
+                    }
+
+                    slot.SetTextures(textures);
+                }
+
+                PlayerSettings.SetPlatformIcons(target, kind, slots);
+            }
         }
 
         private static void ConfigureAndroidPlayerSettings()
         {
+            ConfigureAndroidToolchain();
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
             // Just Checking In is intentionally offline. Do not request network access
             // that the game does not need.
             PlayerSettings.Android.forceInternetPermission = false;
             PlayerSettings.Android.forceSDCardPermission = false;
+        }
+
+        private static void ConfigureAndroidToolchain()
+        {
+            // Unity otherwise falls back to the per-user C: SDK, which is easy to
+            // exhaust on this host. Respect the verified D:-backed toolchain when
+            // the caller provides it, while retaining Unity's configured defaults.
+            string sdkRoot = Environment.GetEnvironmentVariable("JCI_ANDROID_SDK_ROOT");
+            string ndkRoot = Environment.GetEnvironmentVariable("JCI_ANDROID_NDK_ROOT");
+            string jdkRoot = Environment.GetEnvironmentVariable("JCI_ANDROID_JDK_ROOT");
+
+            // The iOS-only Unity editor may not have the Android module loaded.
+            // Use reflection so the shared build script compiles on both hosts;
+            // Android builds still receive the verified toolchain overrides.
+            SetAndroidToolPath("sdkRootPath", sdkRoot);
+            SetAndroidToolPath("ndkRootPath", ndkRoot);
+            SetAndroidToolPath("jdkRootPath", jdkRoot);
+        }
+
+        private static void SetAndroidToolPath(string propertyName, string path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+            {
+                return;
+            }
+
+            Type settingsType = Type.GetType("UnityEditor.Android.AndroidExternalToolsSettings, UnityEditor.Android.Extensions");
+            PropertyInfo property = settingsType?.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Static);
+            property?.SetValue(null, path);
         }
 
         private static void ConfigureIosPlayerSettings()
@@ -190,6 +319,39 @@ namespace Jci.Editor
 
             Fail($"Missing required environment variable: {name}");
             return string.Empty;
+        }
+
+        private static string RequireEnvAny(string name, params string[] aliases)
+        {
+            string value = Environment.GetEnvironmentVariable(name);
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+
+            foreach (string alias in aliases)
+            {
+                value = Environment.GetEnvironmentVariable(alias);
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    return value;
+                }
+            }
+
+            Fail($"Missing required environment variable: {name}");
+            return string.Empty;
+        }
+
+        private static string ResolveKeystorePath(string configuredPath)
+        {
+            if (Path.IsPathRooted(configuredPath) || File.Exists(configuredPath))
+            {
+                return configuredPath;
+            }
+
+            string projectRoot = Path.GetDirectoryName(UnityEngine.Application.dataPath) ?? Directory.GetCurrentDirectory();
+            string projectRelativePath = Path.Combine(projectRoot, configuredPath);
+            return File.Exists(projectRelativePath) ? projectRelativePath : configuredPath;
         }
 
         private static void Fail(string message)

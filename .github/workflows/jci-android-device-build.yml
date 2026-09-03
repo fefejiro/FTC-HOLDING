@@ -2,6 +2,15 @@ name: Just Checking In Android device build
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Build the Pixel QA APK or the signed Play candidate AAB
+        required: true
+        default: device
+        type: choice
+        options:
+          - device
+          - play
 
 permissions:
   contents: read
@@ -16,6 +25,7 @@ env:
 
 jobs:
   build:
+    if: github.event_name == 'workflow_dispatch' && (inputs.mode == 'device' || inputs.mode == '')
     name: Build signed JCI Android APK for device QA
     runs-on: ubuntu-latest
     timeout-minutes: 180
@@ -28,10 +38,10 @@ jobs:
         run: |
           set -euo pipefail
           test -f "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
-          grep -q 'MarketingVersion = "1.1.0"' "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
-          grep -q 'AndroidVersionCode = 3' "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
+          grep -q 'MarketingVersion = "1.2.0"' "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
+          grep -q 'AndroidVersionCode = 6' "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
           grep -q 'BuildAndroidApkForDevice' "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
-          grep -q 'bundleVersion: 1.1.0' "$JCI_PROJECT/ProjectSettings/ProjectSettings.asset"
+          grep -q 'bundleVersion: 1.2.0' "$JCI_PROJECT/ProjectSettings/ProjectSettings.asset"
 
       - name: Validate Android signing secrets
         shell: bash
@@ -63,33 +73,24 @@ jobs:
             exit 1
           fi
 
-      - name: Materialize ephemeral Android signing key
-        shell: bash
-        env:
-          KEYSTORE_BASE64: ${{ secrets.JCI_ANDROID_KEYSTORE_BASE64 }}
-        run: |
-          set -euo pipefail
-          mkdir -p .ci
-          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > .ci/jci-upload.keystore
-          chmod 600 .ci/jci-upload.keystore
-
       - name: Build signed Android APK with Unity 6000.4.5f1
         uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.JCI_UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.JCI_UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.JCI_UNITY_PASSWORD }}
-          KEYSTORE_PATH: /github/workspace/.ci/jci-upload.keystore
-          KEYSTORE_PASS: ${{ secrets.JCI_ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.JCI_ANDROID_KEY_ALIAS }}
-          KEY_PASS: ${{ secrets.JCI_ANDROID_KEY_PASSWORD }}
         with:
           projectPath: ${{ env.JCI_PROJECT }}
           unityVersion: ${{ env.JCI_UNITY_VERSION }}
           targetPlatform: Android
           buildMethod: Jci.Editor.BuildScript.BuildAndroidApkForDevice
           allowDirtyBuild: true
-          customParameters: -nographics
+          customParameters: -nographics -burst-disable-compilation
+          androidKeystoreName: jci-upload.keystore
+          androidKeystoreBase64: ${{ secrets.JCI_ANDROID_KEYSTORE_BASE64 }}
+          androidKeystorePass: ${{ secrets.JCI_ANDROID_KEYSTORE_PASSWORD }}
+          androidKeyaliasName: ${{ secrets.JCI_ANDROID_KEY_ALIAS }}
+          androidKeyaliasPass: ${{ secrets.JCI_ANDROID_KEY_PASSWORD }}
 
       - name: Verify APK and publish device artifact
         shell: bash
@@ -98,7 +99,7 @@ jobs:
           apk="$JCI_PROJECT/Builds/Android/JustCheckingIn-device.apk"
           test -s "$apk"
           sha256sum "$apk" | tee jci-android-device.sha256
-          printf '{"source":"%s","unity":"%s","package":"com.ftcholding.justcheckingin","version":"1.1.0","versionCode":3,"artifact":"%s"}\n' \
+          printf '{"source":"%s","unity":"%s","package":"com.ftcholding.justcheckingin","version":"1.2.0","versionCode":6,"artifact":"%s"}\n' \
             "$GITHUB_SHA" "$JCI_UNITY_VERSION" "$(sha256sum "$apk" | awk '{print $1}')" > jci-android-device-manifest.json
 
       - name: Upload signed APK for Pixel QA
@@ -115,4 +116,98 @@ jobs:
       - name: Remove ephemeral signing key
         if: always()
         shell: bash
-        run: rm -f .ci/jci-upload.keystore
+        run: rm -f "$JCI_PROJECT/jci-upload.keystore" .ci/jci-upload.keystore
+
+  play:
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'play'
+    name: Build signed JCI Android AAB for Play
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout canonical JCI source
+        uses: actions/checkout@v4
+
+      - name: Verify canonical JCI source and release settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
+          grep -q 'MarketingVersion = "1.2.0"' "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
+          grep -q 'AndroidVersionCode = 6' "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
+          grep -q 'BuildAndroid()' "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
+          grep -q 'bundleVersion: 1.2.0' "$JCI_PROJECT/ProjectSettings/ProjectSettings.asset"
+
+      - name: Validate Android signing secrets
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.JCI_ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.JCI_ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.JCI_ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.JCI_ANDROID_KEY_PASSWORD }}
+          UNITY_LICENSE: ${{ secrets.JCI_UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.JCI_UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.JCI_UNITY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          missing=()
+          for pair in \
+            JCI_ANDROID_KEYSTORE_BASE64:"$KEYSTORE_BASE64" \
+            JCI_ANDROID_KEYSTORE_PASSWORD:"$KEYSTORE_PASSWORD" \
+            JCI_ANDROID_KEY_ALIAS:"$KEY_ALIAS" \
+            JCI_ANDROID_KEY_PASSWORD:"$KEY_PASSWORD" \
+            JCI_UNITY_LICENSE:"$UNITY_LICENSE" \
+            JCI_UNITY_EMAIL:"$UNITY_EMAIL" \
+            JCI_UNITY_PASSWORD:"$UNITY_PASSWORD"; do
+            name="${pair%%:*}"
+            value="${pair#*:}"
+            [[ -n "$value" ]] || missing+=("$name")
+          done
+          if (( ${#missing[@]} )); then
+            printf '[JCI][FAIL] Missing GitHub Actions secrets: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
+
+      - name: Build signed Android AAB with Unity 6000.4.5f1
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.JCI_UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.JCI_UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.JCI_UNITY_PASSWORD }}
+        with:
+          projectPath: ${{ env.JCI_PROJECT }}
+          unityVersion: ${{ env.JCI_UNITY_VERSION }}
+          targetPlatform: Android
+          buildMethod: Jci.Editor.BuildScript.BuildAndroid
+          allowDirtyBuild: true
+          customParameters: -nographics -burst-disable-compilation
+          androidKeystoreName: jci-upload.keystore
+          androidKeystoreBase64: ${{ secrets.JCI_ANDROID_KEYSTORE_BASE64 }}
+          androidKeystorePass: ${{ secrets.JCI_ANDROID_KEYSTORE_PASSWORD }}
+          androidKeyaliasName: ${{ secrets.JCI_ANDROID_KEY_ALIAS }}
+          androidKeyaliasPass: ${{ secrets.JCI_ANDROID_KEY_PASSWORD }}
+
+      - name: Verify and publish signed AAB artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          aab="$JCI_PROJECT/Builds/Android/JustCheckingIn.aab"
+          test -s "$aab"
+          sha256sum "$aab" | tee jci-android-play.sha256
+          printf '{"source":"%s","unity":"%s","package":"com.ftcholding.justcheckingin","version":"1.2.0","versionCode":6,"artifact":"%s"}\n' \
+            "$GITHUB_SHA" "$JCI_UNITY_VERSION" "$(sha256sum "$aab" | awk '{print $1}')" > jci-android-play-manifest.json
+
+      - name: Upload signed AAB for Play review
+        uses: actions/upload-artifact@v4
+        with:
+          name: jci-android-play-${{ github.sha }}
+          path: |
+            APPS/just-checking-in-game/unity/Builds/Android/JustCheckingIn.aab
+            jci-android-play.sha256
+            jci-android-play-manifest.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Remove ephemeral signing key
+        if: always()
+        shell: bash
+        run: rm -f "$JCI_PROJECT/jci-upload.keystore" .ci/jci-upload.keystore
