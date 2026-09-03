@@ -65,6 +65,8 @@ namespace Jci.Tests.PlayMode
             Assert.That(FindButton("Draw a card"), Is.Null);
             Assert.That(FindButton("Drained"), Is.Not.Null);
             Click("Drained");
+            var activeJson = File.ReadAllText(Path.Combine(UnityEngine.Application.persistentDataPath, "jci-local-v1.json"));
+            Assert.That(activeJson, Does.Contain("\"MoodId\":\"drained\""));
             Assert.That(FindButton("Draw another card"), Is.Not.Null);
             Assert.That(FindButton("Skip this one"), Is.Not.Null);
             Assert.That(FindButton("End check-in"), Is.Not.Null);

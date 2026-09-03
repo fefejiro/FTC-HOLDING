@@ -303,7 +303,11 @@ namespace Jci.Presentation
             ClearBody();
             AddText(body, "Solo check-in", 25, Parse(Ink), FontStyle.Bold, 48);
             AddCardText(body, "How are you feeling today?", 23, 126, Parse(Teal));
-            foreach (var mood in JciContent.Moods) AddButton(body, mood.Label, () => SelectMood(mood), Parse(Teal));
+            foreach (var mood in JciContent.Moods)
+            {
+                var capturedMood = mood;
+                AddButton(body, capturedMood.Label, () => SelectMood(capturedMood), Parse(Teal));
+            }
             AddButton(body, "Back", ShowHome, Parse(Card), Parse(Ink));
         }
 
