@@ -46,7 +46,7 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$SUPABASE_ACCESS_TOKEN"
-          api="https://api.supabase.com/v0/auth/$PROJECT_REF/config"
+          api="https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth"
           before="$(mktemp)"
           after="$(mktemp)"
           trap 'rm -f "$before" "$after"' EXIT
@@ -56,10 +56,10 @@ jobs:
             --connect-timeout 20 --max-time 60 \
             --header "$auth_header" --header 'accept: application/json' \
             "$api" --output "$before"
-          jq -e 'has("SITE_URL") and has("URI_ALLOW_LIST")' "$before" >/dev/null
+          jq -e 'has("site_url") and has("uri_allow_list")' "$before" >/dev/null
 
           payload="$(jq -cn \
-            '{SITE_URL:"https://peacepad.ca", URI_ALLOW_LIST:"peacepad://auth/confirm,peacepad://auth/reset-password,https://peacepad.ca"}')"
+            '{site_url:"https://peacepad.ca", uri_allow_list:"peacepad://auth/confirm,peacepad://auth/reset-password,https://peacepad.ca"}')"
           curl --fail --silent --show-error --retry 3 --retry-delay 2 \
             --connect-timeout 20 --max-time 60 --request PATCH \
             --header "$auth_header" --header 'accept: application/json' \
@@ -67,10 +67,10 @@ jobs:
             --data "$payload" "$api" --output "$after"
 
           jq -e '
-            .SITE_URL == "https://peacepad.ca" and
-            (.URI_ALLOW_LIST | split(",") | index("peacepad://auth/confirm")) and
-            (.URI_ALLOW_LIST | split(",") | index("peacepad://auth/reset-password")) and
-            (.URI_ALLOW_LIST | split(",") | index("https://peacepad.ca")) and
-            (.URI_ALLOW_LIST | contains("localhost") | not)
+            .site_url == "https://peacepad.ca" and
+            (.uri_allow_list | split(",") | index("peacepad://auth/confirm")) and
+            (.uri_allow_list | split(",") | index("peacepad://auth/reset-password")) and
+            (.uri_allow_list | split(",") | index("https://peacepad.ca")) and
+            (.uri_allow_list | contains("localhost") | not)
           ' "$after" >/dev/null
           echo 'PeacePad Auth URL configuration verified: production site plus native confirmation and recovery redirects.'
