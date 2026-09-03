@@ -4,13 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Build the Pixel QA APK or the signed Play candidate AAB
+        description: Build the Pixel QA APK, retain a signed AAB, or upload it only to Play Internal Testing
         required: true
         default: device
         type: choice
         options:
           - device
           - play
+          - play-internal
 
 permissions:
   contents: read
@@ -119,7 +120,7 @@ jobs:
         run: rm -f "$JCI_PROJECT/jci-upload.keystore" .ci/jci-upload.keystore
 
   play:
-    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'play'
+    if: github.event_name == 'workflow_dispatch' && (inputs.mode == 'play' || inputs.mode == 'play-internal')
     name: Build signed JCI Android AAB for Play
     runs-on: ubuntu-latest
     timeout-minutes: 180
@@ -206,6 +207,16 @@ jobs:
             jci-android-play-manifest.json
           if-no-files-found: error
           retention-days: 30
+
+      - name: Upload only to Google Play Internal Testing
+        if: inputs.mode == 'play-internal'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PEACEPAD_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.ftcholding.justcheckingin
+          releaseFiles: ${{ env.JCI_PROJECT }}/Builds/Android/JustCheckingIn.aab
+          track: internal
+          status: completed
 
       - name: Remove ephemeral signing key
         if: always()
