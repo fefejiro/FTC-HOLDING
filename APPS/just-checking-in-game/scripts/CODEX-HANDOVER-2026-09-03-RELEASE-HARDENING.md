@@ -124,3 +124,37 @@ code-7 APK was installed on the connected Google Pixel 7 (`2B260DLH2000C8`).
 - Android: **candidate verified locally; Play resubmission pending**.
 - iOS: **build 6 uploaded successfully; processing/TestFlight and review
   actions pending; existing public 1.1.0 remains unchanged**.
+
+## 2026-09-03 release continuation
+
+- Play Console owner access was used to add the existing deployment service
+  account `play-store-deploy@saywetin-ba452.iam.gserviceaccount.com` to
+  `com.ftcholding.justcheckingin`. The app-level record shows the release,
+  testing-track, store-presence, policy, and required read permissions.
+- Workflow `33810091023` then built the signed Android code-7 AAB from main
+  commit `305fda646345ce260b6f9734d5a5f39d6fa6b344`, uploaded its retained
+  artifact `jci-android-play-305fda646345ce260b6f9734d5a5f39d6fa6b344`
+  (artifact id `9914888924`), and reached Google Play. Its AAB SHA-256 is
+  `e63da5464b8a4c9d98ba7858e6e31baf21d3b03813588909bd76c348c0a85f16`.
+  Google accepted the artifact upload but rejected the edit commit because the
+  Play account requires changes to be submitted for review from the Console:
+  `Changes cannot be sent for review automatically. Please set the query
+  parameter changesNotSentForReview to true.`
+- The `play-internal` workflow now sets `changesNotSentForReview: true`. Its
+  next run will commit the code-7 internal-track edit without pretending to
+  submit it. The owner must then review the truthful policy/data-safety changes
+  and use Play Console to send the committed change for review; do not claim a
+  public Android release until Google accepts and the production rollout is
+  completed.
+- iOS workflow `33805046268` submitted App Store version `1.2.0` / build `6`
+  with automatic release enabled. Submission
+  `9e418a46-3e57-4a06-8f67-e4815b9d4dc6` is `WAITING_FOR_REVIEW`. It is not
+  public until Apple approves and releases it.
+
+### Current verdict
+
+- Android: **DO NOT APPROVE AS PUBLIC** -- corrected code-7 AAB is built and
+  verified; commit the internal edit after this workflow fix, then submit the
+  Play Console change for Google review and promote only after approval.
+- iOS: **WAITING FOR APPLE REVIEW** -- automatic release is configured; public
+  verification remains pending Apple approval.

@@ -217,6 +217,9 @@ jobs:
           releaseFiles: ${{ env.JCI_PROJECT }}/Builds/Android/JustCheckingIn.aab
           track: internal
           status: completed
+          # Google requires this account's owner to send the committed edit for
+          # review from Play Console; do not make the action fail after upload.
+          changesNotSentForReview: true
 
       - name: Remove ephemeral signing key
         if: always()
