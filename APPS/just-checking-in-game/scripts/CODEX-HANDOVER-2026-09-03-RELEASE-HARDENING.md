@@ -4,11 +4,13 @@
 
 - Worktree: `D:\FTC-GAMES\worktrees\jci-ios-1.1-main2`
 - Branch: `codex/jci-ios-1.1-main2`
-- Release-fix commit: `644078e42` (pushed to `origin/codex/jci-ios-1.1-main2`)
+- iOS release commit: `644078e42`
+- Android code-7 candidate commit: `5130c04da`
+- Android code-7 merge: PR #347, merge commit `fc4c8609f12d9639a6dcb242c3a3e71a2b7daebd`
 - Unity: `6000.4.5f1`
 - Product package/bundle: `com.ftcholding.justcheckingin` / `com.ftcholding.justcheckingin`
 - Marketing version: `1.2.0`
-- Android version code: `6`; iOS build number: `6`
+- Android version code: `7`; iOS build number: `6`
 
 The only pre-existing dirty path intentionally preserved is
 `scripts/NEXT-GAME-RELEASE-PLAN.md`; it is unrelated to this release and was
@@ -30,34 +32,35 @@ not staged or changed by the hardening commit.
 
 ## Automated evidence
 
-- EditMode: `D:\FTC-GAMES\jci-test-editmode-20260903-inputfix.xml` — 10/10
+- EditMode: `D:\FTC-GAMES\jci-test-editmode-20260903-code7.xml` — 10/10
   passed, 0 failed.
-- PlayMode: `D:\FTC-GAMES\jci-test-playmode-20260903-inputfix.xml` — 7/7
+- PlayMode: `D:\FTC-GAMES\jci-test-playmode-20260903-code7-fix.xml` — 7/7
   passed, 0 failed.
 - Both suites ran in normal Unity Package Manager mode; `-noUpm` was not used.
 
 ## Android candidate evidence
 
-The APK and AAB were built from the same working-tree contents as commit
-`644078e42` using the verified keystore and Unity 6000.4.5f1. The APK was
-installed on the connected Google Pixel 7 (`2B260DLH2000C8`).
+The APK and AAB were built from commit `5130c04da` using the verified keystore
+and Unity 6000.4.5f1. Android code 6 was already consumed by the rejected Play
+draft and is superseded; it must not be relabelled or uploaded again. The
+code-7 APK was installed on the connected Google Pixel 7 (`2B260DLH2000C8`).
 
 - Device APK:
-  `D:\FTC-HOLDING-releases\just-checking-in\android-20260903\JustCheckingIn-device-inputfix.apk`
-  - size: 33,503,158 bytes
-  - SHA-256: `64C044CFEA8B0C5F580F931B3C0F032794DC595CD399FAC44995A85D475D7DA3`
+  `D:\FTC-HOLDING-releases\just-checking-in\android-20260903-code7\JustCheckingIn-1.2.0-code7-device.apk`
+  - size: 33,503,222 bytes
+  - SHA-256: `4FAB377FA084D0115B6EF05DC3B897FC2D95254071EDB823DC3AD212923CAF15`
 - Play AAB:
-  `D:\FTC-HOLDING-releases\just-checking-in\android-20260903\JustCheckingIn-1.2.0-code6-play-inputfix.aab`
-  - size: 33,412,625 bytes
-  - SHA-256: `186606E1743C593C3FA4F10A70B01E69E478C885128A570442422AA83C0E7F66`
+  `D:\FTC-HOLDING-releases\just-checking-in\android-20260903-code7\JustCheckingIn-1.2.0-code7-play.aab`
+  - size: 33,412,684 bytes
+  - SHA-256: `B0BD56EDB008F3172EA2B873341EEE534CB2258BF615478779C10A349D0A258C`
 - Package/version from APK and AAB manifest: `com.ftcholding.justcheckingin`;
-  `versionName 1.2.0`; `versionCode 6`; min SDK 25; target/compile SDK 36;
+  `versionName 1.2.0`; `versionCode 7`; min SDK 25; target/compile SDK 36;
   launcher `com.unity3d.player.UnityPlayerGameActivity`.
 - Signing certificate SHA-256:
   `3f57ea45405524c9cf9a38ce0774e7dc56b80cf3481696adc04577b77c6825b3`.
   APK v2 verification passed; AAB `jarsigner -verify` passed (the local
   upload keystore is self-signed, as expected for this Play upload key).
-- AAB manifest was inspected with bundletool 1.17.2. It includes only the
+- AAB manifest was inspected with bundletool 1.18.3. It includes only the
   Unity-generated INTERNET/VIBRATE and dynamic receiver permissions; no
   microphone, camera, location, recording, or tracking permission is present.
 
@@ -65,9 +68,14 @@ installed on the connected Google Pixel 7 (`2B260DLH2000C8`).
 
 - Install: `adb install -r` returned `Success`.
 - Fresh launch after `pm clear`: process remained alive (`pidof` returned a
-  live PID), package reports version code 6/name 1.2.0.
-- Screenshot: `D:\FTC-HOLDING-releases\just-checking-in\android-20260903\pixel7-inputfix.png`.
-- Full log: `D:\FTC-HOLDING-releases\just-checking-in\android-20260903\pixel7-inputfix-logcat.txt`.
+  live PID), package reports version code 7/name 1.2.0.
+- Screenshots: `D:\FTC-HOLDING-releases\just-checking-in\android-20260903-code7\pixel7-jci-1.2.0-code7-relaunch.png`,
+  `pixel7-jci-1.2.0-code7-solo-mood.png`, `pixel7-jci-1.2.0-code7-solo-card.png`,
+  and `pixel7-jci-1.2.0-code7-system-back.png`.
+- Focused runtime log:
+  `D:\FTC-HOLDING-releases\just-checking-in\android-20260903-code7\pixel7-jci-1.2.0-code7-runtime-logcat.txt`.
+- Home, solo mood selection, the physical prompt card, and Android system Back
+  were exercised on device. Back returned from the card to the mood screen.
 - No JCI `Could not produce class with ID 115`, `FATAL EXCEPTION`, or `ANR in`
   entries were present. Remaining `gralloc5`/WindowManager lines are Pixel
   system noise, not JCI process failures.
