@@ -43,7 +43,7 @@ jobs:
           sed -i '' $'s/\r$//' APPS/just-checking-in-game/scripts/*.sh
           chmod +x APPS/just-checking-in-game/scripts/*.sh
           grep -q 'bundleVersion: 1.2.0' "$JCI_PROJECT/ProjectSettings/ProjectSettings.asset"
-          grep -q 'iPhone: 5' "$JCI_PROJECT/ProjectSettings/ProjectSettings.asset"
+          grep -q 'iPhone: 6' "$JCI_PROJECT/ProjectSettings/ProjectSettings.asset"
           grep -q 'iPhone: com.ftcholding.justcheckingin' "$JCI_PROJECT/ProjectSettings/ProjectSettings.asset"
 
       - name: Fail fast if release credentials are not configured

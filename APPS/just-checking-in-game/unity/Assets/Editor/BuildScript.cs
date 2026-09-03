@@ -190,8 +190,53 @@ namespace Jci.Editor
                 return;
             }
 
-            PlayerSettings.SetIcons(NamedBuildTarget.Android, new[] { icon }, IconKind.Application);
-            PlayerSettings.SetIcons(NamedBuildTarget.iOS, new[] { icon }, IconKind.Application);
+            ConfigureLegacyIcons(NamedBuildTarget.Android, icon);
+            ConfigureLegacyIcons(NamedBuildTarget.iOS, icon);
+            ConfigurePlatformIcons(NamedBuildTarget.Android, icon);
+            ConfigurePlatformIcons(NamedBuildTarget.iOS, icon);
+        }
+
+        private static void ConfigureLegacyIcons(NamedBuildTarget target, Texture2D icon)
+        {
+            int requiredSlots = PlayerSettings.GetIconSizes(target, IconKind.Application).Length;
+            if (requiredSlots < 1)
+            {
+                requiredSlots = 1;
+            }
+
+            var icons = new Texture2D[requiredSlots];
+            for (int index = 0; index < icons.Length; index++)
+            {
+                icons[index] = icon;
+            }
+
+            PlayerSettings.SetIcons(target, icons, IconKind.Application);
+        }
+
+        private static void ConfigurePlatformIcons(NamedBuildTarget target, Texture2D icon)
+        {
+            foreach (PlatformIconKind kind in PlayerSettings.GetSupportedIconKinds(target))
+            {
+                PlatformIcon[] slots = PlayerSettings.GetPlatformIcons(target, kind);
+                if (slots == null || slots.Length == 0)
+                {
+                    continue;
+                }
+
+                foreach (PlatformIcon slot in slots)
+                {
+                    int layers = Math.Max(1, slot.maxLayerCount);
+                    var textures = new Texture2D[layers];
+                    for (int layer = 0; layer < textures.Length; layer++)
+                    {
+                        textures[layer] = icon;
+                    }
+
+                    slot.SetTextures(textures);
+                }
+
+                PlayerSettings.SetPlatformIcons(target, kind, slots);
+            }
         }
 
         private static void ConfigureAndroidPlayerSettings()
