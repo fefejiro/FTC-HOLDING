@@ -1,0 +1,76 @@
+name: PeacePad V2 Auth URL Configuration
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_ref:
+        description: Approved PeacePad production Supabase project ref
+        required: true
+        default: rohvkyuxbnqzglaromms
+        type: string
+      confirmation:
+        description: Type CONFIGURE PEACEPAD AUTH URLS to apply the production redirect contract
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: peacepad-v2-auth-url-config
+  cancel-in-progress: false
+
+jobs:
+  configure-auth-urls:
+    if: inputs.confirmation == 'CONFIGURE PEACEPAD AUTH URLS'
+    name: Configure and verify PeacePad production Auth URLs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: peacepad-v2-staging-ca
+    steps:
+      - name: Validate the approved project and confirmation
+        shell: bash
+        env:
+          PROJECT_REF: ${{ inputs.project_ref }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          test "$PROJECT_REF" = "rohvkyuxbnqzglaromms"
+          test "$CONFIRMATION" = "CONFIGURE PEACEPAD AUTH URLS"
+
+      - name: Apply and read back the native redirect contract
+        shell: bash
+        env:
+          PROJECT_REF: ${{ inputs.project_ref }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          api="https://api.supabase.com/v0/auth/$PROJECT_REF/config"
+          before="$(mktemp)"
+          after="$(mktemp)"
+          trap 'rm -f "$before" "$after"'
+          auth_header="Authorization: Bearer $SUPABASE_ACCESS_TOKEN"
+
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+            --connect-timeout 20 --max-time 60 \
+            --header "$auth_header" --header 'accept: application/json' \
+            "$api" --output "$before"
+          jq -e 'has("SITE_URL") and has("URI_ALLOW_LIST")' "$before" >/dev/null
+
+          payload="$(jq -cn \
+            '{SITE_URL:"https://peacepad.ca", URI_ALLOW_LIST:"peacepad://auth/confirm,peacepad://auth/reset-password,https://peacepad.ca"}')"
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+            --connect-timeout 20 --max-time 60 --request PATCH \
+            --header "$auth_header" --header 'accept: application/json' \
+            --header 'content-type: application/json' \
+            --data "$payload" "$api" --output "$after"
+
+          jq -e '
+            .SITE_URL == "https://peacepad.ca" and
+            (.URI_ALLOW_LIST | split(",") | index("peacepad://auth/confirm")) and
+            (.URI_ALLOW_LIST | split(",") | index("peacepad://auth/reset-password")) and
+            (.URI_ALLOW_LIST | split(",") | index("https://peacepad.ca")) and
+            (.URI_ALLOW_LIST | contains("localhost") | not)
+          ' "$after" >/dev/null
+          echo 'PeacePad Auth URL configuration verified: production site plus native confirmation and recovery redirects.'
