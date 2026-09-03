@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 
-// Idempotently prepares the JCI 1.2.0 candidate for review. Build 5 must be
+// Idempotently prepares the JCI 1.2.0 candidate for review. Build 6 must be
 // VALID before this script changes the store record.
 const required = ["JCI_APPLE_API_KEY_ID", "JCI_APPLE_API_ISSUER_ID", "JCI_APPLE_API_PRIVATE_KEY"];
 for (const name of required) if (!process.env[name]) throw new Error(`Missing ${name}`);
@@ -32,8 +32,8 @@ const request = async (path, options = {}) => {
 
 const app = await request("apps/6799443182?fields[apps]=name,bundleId&include=appStoreVersions");
 const builds = await request("builds?filter[app]=6799443182&sort=-uploadedDate&limit=20&fields[builds]=version,processingState,uploadedDate");
-const build = (builds.data ?? []).find((item) => item.attributes?.version === "5" && item.attributes?.processingState === "VALID");
-if (!build) throw new Error("No VALID JCI build 5 is available in App Store Connect");
+const build = (builds.data ?? []).find((item) => item.attributes?.version === "6" && item.attributes?.processingState === "VALID");
+if (!build) throw new Error("No VALID JCI build 6 is available in App Store Connect");
 
 let version = (app.included ?? []).find((item) => item.type === "appStoreVersions" && item.attributes?.versionString === "1.2.0");
 if (!version) {
@@ -50,7 +50,7 @@ if (!version) {
 await request(`appStoreVersions/${version.id}/relationships/build`, { method: "PATCH", body: JSON.stringify({ data: null }) });
 await request(`appStoreVersions/${version.id}/relationships/build`, { method: "PATCH", body: JSON.stringify({ data: { type: "builds", id: build.id } }) });
 await request(`builds/${build.id}`, { method: "PATCH", body: JSON.stringify({ data: { type: "builds", id: build.id, attributes: { usesNonExemptEncryption: false } } }) });
-console.log(`Attached build ${build.id} (5) with no exempt encryption to version ${version.id}`);
+console.log(`Attached build ${build.id} (6) with no exempt encryption to version ${version.id}`);
 
 const localization = {
   description: "Make room for a conversation that matters.\n\nJust Checking In is a warm, offline card experience for a quiet moment alone or a more meaningful moment together. Draw a prompt, take your time, and let the conversation go where it needs to go.\n\nWAYS TO CHECK IN\n\n- With myself: choose a mood and reflect at your own pace.\n- Together: pass the phone, take turns, and get to know each other beyond small talk.\n- Connection journey: revisit the small moments that add up over time.\n\nMADE FOR REAL LIFE\n\nUse it on date night, with family, on a road trip, with new friends, or whenever 'How are you?' deserves a better answer. There are no scores and no pressure - just a gentle structure for being present.\n\nPRIVATE BY DESIGN\n\nJust Checking In works offline. It requires no account, has no ads or in-app purchases, and does not collect personal data.\n\nSlow down. Draw a card. Feel a little closer.",
@@ -72,4 +72,4 @@ if (enUs) {
   console.log("Created en-US version localization");
 }
 
-console.log(JSON.stringify({ appId: "6799443182", bundleId: app.data?.attributes?.bundleId, versionId: version.id, version: "1.2.0", buildId: build.id, build: "5" }, null, 2));
+console.log(JSON.stringify({ appId: "6799443182", bundleId: app.data?.attributes?.bundleId, versionId: version.id, version: "1.2.0", buildId: build.id, build: "6" }, null, 2));
