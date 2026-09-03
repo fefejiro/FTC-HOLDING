@@ -91,8 +91,11 @@ installed on the connected Google Pixel 7 (`2B260DLH2000C8`).
   `644078e42`: Unity export, Xcode archive, IPA validation, and App Store
   Connect upload all completed (Delivery UUID
   `e5404466-5989-4750-a0ba-04174c5f8767`). App Store Connect read-only check
-  `33728714863` still showed no processed build 6 at check time; processing
-  must be rechecked before TestFlight or review actions.
+  `33728925841` confirmed build 6 `VALID` in App Store Connect. Preparation
+  workflow `33728986205` created version `1.2.0`, attached build 6, and set
+  the truthful en-US metadata; version ID is
+  `930d1e47-8373-4877-b73a-649881b470ec`. The version is prepared but has
+  not been submitted for review.
 - Upload, review submission, TestFlight processing, and public release are
   separate states. No public Android release is claimed by this handover.
 
