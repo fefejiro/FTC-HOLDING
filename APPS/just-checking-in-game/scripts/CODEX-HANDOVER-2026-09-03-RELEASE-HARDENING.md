@@ -84,6 +84,18 @@ code-7 APK was installed on the connected Google Pixel 7 (`2B260DLH2000C8`).
 
 ## Provider state and next action
 
+- Workflow `33803033023` rebuilt the signed code-7 AAB from `main` commit
+  `38df869113115a54fa5f3f971efef159ddd217e1`; its source/version/signing
+  checks and the signed artifact publication all succeeded. The final upload to
+  Play Internal Testing failed with the exact Google Play API response:
+  `The caller does not have permission`. The existing
+  `PEACEPAD_PLAY_SERVICE_ACCOUNT_JSON` credential is valid but is not assigned
+  to this JCI Play Console app. Do not rebuild: grant that service account
+  release access for `com.ftcholding.justcheckingin` in Play Console, then
+  rerun only workflow `jci-android-device-build.yml` with `mode=play-internal`.
+  The retained cloud artifact is
+  `jci-android-play-38df869113115a54fa5f3f971efef159ddd217e1` (run artifact
+  id `9912258560`).
 - The previous Play internal-test draft contains the earlier **bad** AAB and
   must be removed/replaced before any save or submission. Do not submit that
   draft. The corrected AAB above is ready for upload.
