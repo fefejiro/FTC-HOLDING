@@ -1,6 +1,6 @@
 # PeacePad Native V2 — 2.0.2 cloud-only release handover
 
-Updated: 2026-09-01
+Updated: 2026-09-03
 
 This is the resume ledger for the current PeacePad release. It is deliberately
 cloud-first: do not create a new local checkout, native build, dependency tree,
