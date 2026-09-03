@@ -100,11 +100,84 @@ export interface CaseStudyContent {
   liveUrl: string;
   heroStats: StatItem[];
   heroVisual: VisualKey;
+  platforms?: PlatformStatus[];
   challenge: NarrativeBlock;
   shipped: FeatureItem[];
   impact: NarrativeBlock;
   related: RelatedCard[];
 }
+
+export interface PlatformStatus {
+  platform: string;
+  status: string;
+  detail: string;
+  href?: string;
+}
+
+export interface ShippedProduct {
+  slug: string;
+  name: string;
+  icon: string;
+  description: string;
+  maturity: 'Live' | 'Available' | 'Improving' | 'Preview' | 'Store submission pending';
+  web?: PlatformStatus;
+  ios?: PlatformStatus;
+  android?: PlatformStatus;
+  liveUrl?: string;
+  appStoreUrl?: string;
+  playStoreUrl?: string;
+  demoUrl?: string;
+  caseStudyUrl?: string;
+}
+
+/** Public product registry. Store states are intentionally conservative and evidence-led. */
+export const shippedProducts: ShippedProduct[] = [
+  {
+    slug: 'peacepad', name: 'PeacePad', icon: '◌',
+    description: 'Calmer co-parenting tools for messages, shared plans, and family coordination.',
+    maturity: 'Improving',
+    web: { platform: 'Web', status: 'Live', detail: 'Open the current public product.', href: 'https://peacepad.ca' },
+    ios: { platform: 'iOS', status: 'Release track', detail: 'App Store release work is in progress; public availability is tracked separately.' },
+    android: { platform: 'Android', status: 'Available', detail: 'Current Google Play listing.', href: 'https://play.google.com/store/apps/details?id=ca.peacepad.family' },
+    liveUrl: 'https://peacepad.ca', playStoreUrl: 'https://play.google.com/store/apps/details?id=ca.peacepad.family', caseStudyUrl: '/products/peacepad',
+  },
+  {
+    slug: 'just-checking-in-game', name: 'Just Checking In', icon: '♥',
+    description: 'A small, warm check-in game designed for quick moments of connection.',
+    maturity: 'Store submission pending',
+    ios: { platform: 'iOS', status: 'Release track', detail: 'The iOS store workflow is maintained through App Store Connect.' },
+    android: { platform: 'Android', status: 'Release track', detail: 'Android release operations are maintained in Play Console.' },
+    caseStudyUrl: '/products/just-checking-in-game',
+  },
+  {
+    slug: 'dispatch', name: 'Dispatch', icon: '↗',
+    description: 'Real-time roadside service coordination from request to resolution.',
+    maturity: 'Live',
+    web: { platform: 'Web', status: 'Live', detail: 'Open the operational product.', href: 'https://dispatch.unalabs.cloud' },
+    liveUrl: 'https://dispatch.unalabs.cloud', caseStudyUrl: '/products/dispatch',
+  },
+  {
+    slug: 'saywetin', name: 'SayWetin', icon: '◎',
+    description: 'Culture-aware language and voice tools that make AI feel more local.',
+    maturity: 'Available',
+    web: { platform: 'Web', status: 'Live', detail: 'Explore the current product surface.', href: 'https://saywetin.app' },
+    liveUrl: 'https://saywetin.app', caseStudyUrl: '/products/saywetin',
+  },
+  {
+    slug: 'unascout', name: 'UnaScout', icon: '⌕',
+    description: 'An evidence-led job search workflow for discovery, tailoring, and approval.',
+    maturity: 'Improving',
+    ios: { platform: 'iOS', status: 'Release track', detail: 'The iOS listing and review workflow are managed in App Store Connect.' },
+    web: { platform: 'Web', status: 'Product operations', detail: 'The workflow is operated with explicit approval boundaries.' },
+    caseStudyUrl: '/products/unascout',
+  },
+  {
+    slug: 'jobagent', name: 'JobAgent', icon: '✦',
+    description: 'A controlled application workspace that keeps discovery, drafting, and proof together.',
+    maturity: 'Preview',
+    web: { platform: 'Web', status: 'Preview', detail: 'Available for qualified workflow reviews.' },
+  },
+];
 
 export interface DemoModule {
   slug: string;
@@ -1000,6 +1073,25 @@ export const caseStudies: Record<string, CaseStudyContent> = {
     primaryAction: { label: 'Visit PeacePad', href: 'https://peacepad.ca', external: true },
     secondaryAction: { label: 'Commission a similar build', href: '/start?source=case_study_peacepad&product=peacepad' },
     liveUrl: 'https://peacepad.ca',
+    platforms: [
+      {
+        platform: 'iOS',
+        status: '2.0.0 distribution track',
+        detail: 'The iOS release is managed through App Store Connect; public availability is tracked separately from this portfolio page.',
+      },
+      {
+        platform: 'Android',
+        status: 'Google Play production',
+        detail: 'The current Android listing is available on Google Play.',
+        href: 'https://play.google.com/store/apps/details?id=ca.peacepad.family',
+      },
+      {
+        platform: 'Web',
+        status: 'Live',
+        detail: 'The public PeacePad web surface is available now.',
+        href: 'https://peacepad.ca',
+      },
+    ],
     heroStats: [
       { value: 'Web + mobile', label: 'Multi-surface product', detail: 'The experience has to survive beyond a single marketing page.' },
       { value: 'Trust-sensitive', label: 'User journey', detail: 'Calm, guided experience matters as much as the underlying logic.' },
@@ -1135,6 +1227,132 @@ export const caseStudies: Record<string, CaseStudyContent> = {
         href: '/product/reporting',
         hrefLabel: 'View reporting',
       },
+    ],
+  },
+  'just-checking-in-game': {
+    slug: 'just-checking-in-game',
+    title: 'Just Checking In Game',
+    metaTitle: 'Just Checking In Game | Una Labs',
+    metaDescription:
+      'A focused mobile game product from Una Labs, with a repeatable release track across Android and iOS.',
+    eyebrow: 'Product release',
+    headline: 'Just Checking In Game turns a small idea into a shippable mobile product',
+    subheadline:
+      'A compact game release built for fast, repeatable iteration: clear identity, mobile-first interaction, and a release process that keeps the signed artifact and store record aligned.',
+    primaryAction: { label: 'Back to Una Labs products', href: '/product' },
+    secondaryAction: { label: 'Start a similar build', href: '/start?source=case_study_just_checking_in_game&product=just-checking-in-game' },
+    liveUrl: 'https://unalabs.cloud/products/just-checking-in-game',
+    platforms: [
+      {
+        platform: 'iOS',
+        status: 'Release track',
+        detail: 'The iOS store record and review state are maintained in App Store Connect; this page does not imply public availability.',
+      },
+      {
+        platform: 'Android',
+        status: 'Release operations',
+        detail: 'The signed Android package and Play Console release workflow are maintained as the primary game-release rail.',
+      },
+    ],
+    heroStats: [
+      { value: 'Mobile', label: 'Product surface', detail: 'Designed around short sessions and clear touch interaction.' },
+      { value: 'Repeatable', label: 'Release path', detail: 'Build, sign, upload, and store verification are treated as one workflow.' },
+      { value: 'Focused', label: 'Game scope', detail: 'A small, understandable product is easier to polish and maintain.' },
+    ],
+    heroVisual: 'delivery',
+    challenge: {
+      eyebrow: 'What mattered',
+      title: 'Small games still need serious release discipline',
+      body:
+        'A game can be simple for the player while still requiring careful packaging, identity, store metadata, and repeatable release evidence behind the scenes.',
+      points: [
+        'Touch-first play needs a clear, low-friction interaction model.',
+        'Store packaging and signing must stay aligned with the intended listing.',
+        'The release rail should be reusable for the next iteration, not rebuilt from scratch.',
+      ],
+    },
+    shipped: [
+      { icon: '🎮', title: 'Mobile-first loop', description: 'A focused game loop designed for quick sessions and direct touch input.' },
+      { icon: '📦', title: 'Release packaging', description: 'Signed mobile artifacts and store metadata are treated as part of the product.' },
+      { icon: '🧭', title: 'Repeatable operations', description: 'The next build has a documented path instead of relying on one-off manual steps.' },
+    ],
+    impact: {
+      eyebrow: 'Why it matters for Una Labs',
+      title: 'The product proves the studio can ship beyond SaaS dashboards',
+      body:
+        'Just Checking In Game broadens the Una Labs portfolio with a compact consumer product and a release workflow that can scale to other mobile titles.',
+      points: [
+        'It shows range across product categories and interaction patterns.',
+        'It keeps store readiness visible instead of treating it as an afterthought.',
+        'It gives future game iterations a concrete operating baseline.',
+      ],
+    },
+    related: [
+      { eyebrow: 'Related product', title: 'PeacePad', description: 'A trust-sensitive mobile product where calm UX and release discipline matter together.', href: '/products/peacepad', hrefLabel: 'See PeacePad' },
+      { eyebrow: 'Related path', title: 'Start a product', description: 'Bring a focused mobile product from brief to a release-ready plan.', href: '/start', hrefLabel: 'Start a project' },
+    ],
+  },
+  unascout: {
+    slug: 'unascout',
+    title: 'UnaScout',
+    metaTitle: 'UnaScout | Una Labs',
+    metaDescription:
+      'UnaScout is Una Labs’ AI-assisted job-search product, with a mobile release track and a controlled application workflow.',
+    eyebrow: 'Product release',
+    headline: 'UnaScout brings a clearer operating layer to the job search',
+    subheadline:
+      'UnaScout helps job seekers organize discovery, tailoring, approvals, and application evidence without turning automation into an opaque promise.',
+    primaryAction: { label: 'Back to Una Labs products', href: '/product' },
+    secondaryAction: { label: 'Start a similar build', href: '/start?source=case_study_unascout&product=unascout' },
+    liveUrl: 'https://unalabs.cloud/products/unascout',
+    platforms: [
+      {
+        platform: 'iOS',
+        status: 'Release track',
+        detail: 'The iOS listing and review workflow are managed through App Store Connect; public availability is confirmed separately.',
+      },
+      {
+        platform: 'Web',
+        status: 'Product operations',
+        detail: 'The job-search workflow is operated with explicit approval and evidence boundaries.',
+      },
+    ],
+    heroStats: [
+      { value: 'AI-assisted', label: 'Job search', detail: 'Matching and drafting support without hiding the user’s decisions.' },
+      { value: 'Evidence-led', label: 'Applications', detail: 'Submission state is only counted when it is actually verified.' },
+      { value: 'Mobile', label: 'Release path', detail: 'The iOS track is maintained alongside the operational web product.' },
+    ],
+    heroVisual: 'dashboard',
+    challenge: {
+      eyebrow: 'What mattered',
+      title: 'Job-search automation needs trust built into every step',
+      body:
+        'People need help finding and preparing applications, but they also need to know what was drafted, what was approved, and what was actually submitted.',
+      points: [
+        'Recommendations should be relevant without pretending to be certainty.',
+        'Human approval must remain clear before any external submission.',
+        'Evidence should distinguish discovered, prepared, and applied states.',
+      ],
+    },
+    shipped: [
+      { icon: '🔎', title: 'Focused discovery', description: 'Surface relevant roles while keeping targeting and answer quality visible.' },
+      { icon: '✍️', title: 'Controlled drafting', description: 'Generate tailored application material without silently sending it.' },
+      { icon: '✅', title: 'Proof-backed state', description: 'Keep application claims tied to observable submission evidence.' },
+    ],
+    impact: {
+      eyebrow: 'Why it matters for Una Labs',
+      title: 'UnaScout turns responsible automation into a product surface',
+      body:
+        'The work demonstrates how Una Labs can apply AI to a sensitive workflow while preserving user control, truthful status, and a clear mobile release path.',
+      points: [
+        'It makes approval and evidence part of the user experience.',
+        'It shows how AI can accelerate work without overclaiming outcomes.',
+        'It adds a practical productivity product to the Una Labs portfolio.',
+      ],
+    },
+    related: [
+      { eyebrow: 'Related product', title: 'PeacePad', description: 'Another trust-sensitive product where clear user control is central to the experience.', href: '/products/peacepad', hrefLabel: 'See PeacePad' },
+      { eyebrow: 'Related path', title: 'Start a product', description: 'Bring an AI-assisted workflow from rough idea to a clear release plan.', href: '/start', hrefLabel: 'Start a project' },
     ],
   },
   'garden-cleaners': {
@@ -1322,16 +1540,16 @@ export const demoModules: DemoModule[] = [
   },
   {
     slug: 'peacepad',
-    label: 'AI Automation',
+    label: 'Shared Family Tools',
     product: 'PeacePad',
-    title: 'AI-backed analysis built for high-trust decisions',
+    title: 'Calmer coordination for co-parents',
     description:
       'PeacePad walks users through sensitive residential data analysis with calm, guided UX — showing how AI can feel trustworthy in emotionally loaded contexts.',
     placeholder: 'Walkthrough coming soon.',
     bullets: [
-      'Structured data capture that reduces user anxiety.',
-      'AI-generated insights surfaced at the right moment.',
-      'Built for repeat use, not just a one-time demo.',
+      'A focused place for shared family coordination.',
+      'Clear updates without a noisy project-management layer.',
+      'Built for repeat use and everyday trust.',
     ],
     cta: { label: 'See PeacePad case study', href: '/products/peacepad' },
   },
@@ -1354,9 +1572,9 @@ export const demoModules: DemoModule[] = [
 
 export const proofHighlights = [
   {
-    value: '4',
-    label: 'Live products',
-    note: 'Una Labs, Dispatch, PeacePad, and Saywetin — all deployed, all real.',
+    value: '6',
+    label: 'Product proofs',
+    note: 'Dispatch, PeacePad, Saywetin, Just Checking In Game, UnaScout, and the Una Labs platform.',
   },
   {
     value: '< 5 min',

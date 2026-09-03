@@ -229,9 +229,6 @@ export function IntakeForm() {
               <Field label="Full name" id="name" value={form.name} onChange={set('name')} placeholder="Jane Smith" required />
               <Field label="Work email" id="email" type="email" value={form.email} onChange={set('email')} placeholder="you@company.com" required />
               <Field label="Company / firm name" id="company" value={form.company} onChange={set('company')} placeholder="Acme Consulting" />
-              <Field label="Your role" id="role" value={form.role} onChange={set('role')} placeholder="Managing Director" />
-              <Field label="Client domain" id="domain" value={form.domain} onChange={set('domain')} placeholder="clientdomain.ca" />
-              <Field label="Timeline" id="timeline" value={form.timeline} onChange={set('timeline')} placeholder="2-4 weeks" />
             </div>
 
             <TextAreaField
@@ -243,47 +240,28 @@ export function IntakeForm() {
               required
             />
 
-            <div>
-              <label className="block text-body font-medium text-tx-heading mb-1">Budget range</label>
-              <div className="flex flex-wrap gap-2">
-                {BUDGET_RANGES.map((budget) => (
-                  <button
-                    key={budget}
-                    type="button"
-                    onClick={() => setForm((previous) => ({ ...previous, budgetRange: budget }))}
-                    className={[
-                      'px-4 py-2 rounded-lg border text-body-sm font-medium transition-colors',
-                      form.budgetRange === budget
-                        ? 'bg-brand-teal text-white border-brand-teal'
-                        : 'border-border text-tx-secondary hover:border-brand-teal hover:text-brand-teal',
-                    ].join(' ')}
-                  >
-                    {budget}
-                  </button>
-                ))}
+            <details className="rounded-xl border border-border bg-bg-offwhite px-4 py-3">
+              <summary className="cursor-pointer text-body-sm font-semibold text-tx-heading">Add context (optional)</summary>
+              <div className="mt-4 grid gap-5">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <Field label="Your role" id="role" value={form.role} onChange={set('role')} placeholder="Managing Director" />
+                  <Field label="Client domain" id="domain" value={form.domain} onChange={set('domain')} placeholder="clientdomain.ca" />
+                  <Field label="Timeline" id="timeline" value={form.timeline} onChange={set('timeline')} placeholder="2–4 weeks" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-body font-medium text-tx-heading">Budget range</label>
+                  <div className="flex flex-wrap gap-2">
+                    {BUDGET_RANGES.map((budget) => <button key={budget} type="button" onClick={() => setForm((previous) => ({ ...previous, budgetRange: budget }))} className={['rounded-lg border px-4 py-2 text-body-sm font-medium transition-colors', form.budgetRange === budget ? 'border-brand-teal bg-brand-teal text-white' : 'border-border text-tx-secondary hover:border-brand-teal hover:text-brand-teal'].join(' ')}>{budget}</button>)}
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-body font-medium text-tx-heading">Team size</label>
+                  <div className="flex flex-wrap gap-2">
+                    {TEAM_SIZES.map((size) => <button key={size} type="button" onClick={() => setForm((previous) => ({ ...previous, teamSize: size }))} className={['rounded-lg border px-4 py-2 text-body-sm font-medium transition-colors', form.teamSize === size ? 'border-brand-teal bg-brand-teal text-white' : 'border-border text-tx-secondary hover:border-brand-teal hover:text-brand-teal'].join(' ')}>{size}</button>)}
+                  </div>
+                </div>
               </div>
-            </div>
-
-            <div>
-              <label className="block text-body font-medium text-tx-heading mb-1">Team size</label>
-              <div className="flex flex-wrap gap-2">
-                {TEAM_SIZES.map(s => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setForm(f => ({ ...f, teamSize: s }))}
-                    className={[
-                      'px-4 py-2 rounded-lg border text-body-sm font-medium transition-colors',
-                      form.teamSize === s
-                        ? 'bg-brand-teal text-white border-brand-teal'
-                        : 'border-border text-tx-secondary hover:border-brand-teal hover:text-brand-teal',
-                    ].join(' ')}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
+            </details>
 
             <button
               type="submit"

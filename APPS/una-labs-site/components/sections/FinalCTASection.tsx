@@ -11,28 +11,22 @@ export function FinalCTASection() {
         </div>
 
         <h2 className="text-display-sm text-tx-heading mb-6 max-w-tight mx-auto">
-          Deliver with confidence, starting today
+          Have something worth making?
         </h2>
 
         <p className="text-body-lg text-tx-secondary mb-10 max-w-narrow mx-auto">
-          Start with activation. Get a scoped brief. Approve the plan. Move into build with proof.
-          Clear phases, clear payment, no ambiguity.
+          Tell us what you are trying to accomplish. We will help shape the next step.
         </p>
 
         <div className="flex flex-wrap justify-center gap-4">
-          <Button href="/start-project" variant="primary" size="lg">
+          <Button href="/start" variant="primary" size="lg">
             Start Your Project
           </Button>
-          <Button href="/how-it-works" variant="secondary" size="lg">
-            See How It Works
-          </Button>
-          <Button href="/pricing" variant="ghost" size="lg">
-            View Pricing
-          </Button>
+          <Button href="/demo" variant="secondary" size="lg">See Una Labs in action</Button>
         </div>
 
         <p className="mt-6 text-caption text-tx-muted">
-          Activation covers scope and planning. Build deposit comes after approval.
+          Start with the essentials. We will progressively add the detail we need.
         </p>
 
       </div>

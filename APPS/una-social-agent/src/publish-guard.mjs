@@ -1,0 +1,186 @@
+import { humanizeCaption, selectUniqueAssets, validateSlideCopy } from './editorial-quality.mjs'
+
+const REQUIRED_REGIONS = ['africa', 'north-america', 'rest-of-world']
+
+function key(value = '') {
+  return String(value).trim().toLowerCase().replace(/[_\s]+/g, '-')
+}
+
+export function prepareCarouselForPublish(run, { recentFingerprints = [] } = {}) {
+  const failures = []
+  const slides = Array.isArray(run?.slides) ? run.slides : []
+
+  const regionMap = new Map(slides.map((slide) => [key(slide.region), slide]))
+  for (const region of REQUIRED_REGIONS) {
+    if (!regionMap.has(region)) failures.push(`missing_region:${region}`)
+  }
+  if (slides.length !== 3) failures.push(`expected_3_slides:received_${slides.length}`)
+
+  const candidateAssets = slides.map((slide) => ({
+    ...slide.asset,
+    region: slide.region,
+    qualityScore: slide.asset?.qualityScore ?? slide.imageEvaluation?.overallScore,
+    storyAlignment: slide.asset?.storyAlignment ?? slide.imageEvaluation?.storyAlignment,
+    editorialCredibility: slide.asset?.editorialCredibility ?? slide.imageEvaluation?.editorialCredibility,
+    genericStockRisk: slide.asset?.genericStockRisk ?? slide.imageEvaluation?.genericStockRisk,
+    aiArtifactRisk: slide.asset?.aiArtifactRisk ?? slide.imageEvaluation?.aiArtifactRisk,
+    fallbackUsed: slide.asset?.fallbackUsed ?? slide.fallbackUsed,
+    imageModel: slide.asset?.imageModel ?? slide.imageModel,
+  }))
+  const assetResult = selectUniqueAssets(candidateAssets, { required: 3, recentFingerprints })
+  if (!assetResult.ok) failures.push(`insufficient_unique_assets:${assetResult.missing}`)
+
+  const normalizedSlides = slides.map((slide) => {
+    const copy = validateSlideCopy(slide)
+    if (!copy.ok) failures.push(...copy.errors.map((error) => `${key(slide.region)}:${error}`))
+    return {
+      ...slide,
+      headline: copy.headline,
+      deck: copy.deck,
+      summary: copy.deck,
+      copyValidation: {
+        headline: copy.headline,
+        deck: copy.deck,
+        errors: copy.errors,
+      },
+    }
+  })
+
+  const instagramCaption = humanizeCaption(run?.captions?.instagram || '')
+  const linkedinCaption = humanizeCaption(run?.captions?.linkedin || '')
+  if (!instagramCaption) failures.push('instagram_caption_missing')
+  if (!linkedinCaption) failures.push('linkedin_caption_missing')
+
+  return {
+    publishable: failures.length === 0,
+    failures: [...new Set(failures)],
+    slides: normalizedSlides,
+    assets: assetResult.selected,
+    rejectedAssets: assetResult.rejected,
+    captions: {
+      instagram: instagramCaption,
+      linkedin: linkedinCaption,
+    },
+  }
+}
+
+export function assertPublishable(run, options) {
+  const result = prepareCarouselForPublish(run, options)
+  if (!result.publishable) {
+    const error = new Error(`Publish blocked: ${result.failures.join(', ')}`)
+    error.code = 'UNA_SOCIAL_PUBLISH_BLOCKED'
+    error.details = result
+    throw error
+  }
+  return result
+}
+
+export function prepareSingleSlideForPublish(run, { recentFingerprints = [] } = {}) {
+  const failures = []
+  const slides = Array.isArray(run?.slides) ? run.slides : []
+
+  const instagramCaption = humanizeCaption(run?.captions?.instagram || '')
+  const linkedinCaption = humanizeCaption(run?.captions?.linkedin || '')
+  if (!instagramCaption) failures.push('instagram_caption_missing')
+  if (!linkedinCaption) failures.push('linkedin_caption_missing')
+
+  const candidates = []
+  const rejectedAssets = []
+  const rejectedSlides = []
+
+  for (const slide of slides) {
+    const copy = validateSlideCopy(slide)
+    const normalizedSlide = {
+      ...slide,
+      headline: copy.headline,
+      deck: copy.deck,
+      summary: copy.deck,
+      copyValidation: {
+        headline: copy.headline,
+        deck: copy.deck,
+        errors: copy.errors,
+      },
+    }
+
+    if (!copy.ok) {
+      rejectedSlides.push({
+        region: slide.region,
+        storyId: slide.storyId,
+        rejectionReasons: copy.errors,
+      })
+      continue
+    }
+
+    const candidateAsset = {
+      ...slide.asset,
+      region: slide.region,
+      qualityScore: slide.asset?.qualityScore ?? slide.imageEvaluation?.overallScore,
+      storyAlignment: slide.asset?.storyAlignment ?? slide.imageEvaluation?.storyAlignment,
+      editorialCredibility: slide.asset?.editorialCredibility ?? slide.imageEvaluation?.editorialCredibility,
+      genericStockRisk: slide.asset?.genericStockRisk ?? slide.imageEvaluation?.genericStockRisk,
+      aiArtifactRisk: slide.asset?.aiArtifactRisk ?? slide.imageEvaluation?.aiArtifactRisk,
+      fallbackUsed: slide.asset?.fallbackUsed ?? slide.fallbackUsed,
+      imageModel: slide.asset?.imageModel ?? slide.imageModel,
+    }
+    const assetResult = selectUniqueAssets([candidateAsset], { required: 1, recentFingerprints })
+    if (!assetResult.ok) {
+      rejectedAssets.push(...assetResult.rejected)
+      continue
+    }
+
+    candidates.push({
+      slide: normalizedSlide,
+      asset: assetResult.selected[0],
+      score:
+        Number(candidateAsset.qualityScore || 0) +
+        Number(candidateAsset.storyAlignment || 0) +
+        Number(candidateAsset.editorialCredibility || 0) -
+        Number(candidateAsset.genericStockRisk || 0) -
+        Number(candidateAsset.aiArtifactRisk || 0),
+    })
+  }
+
+  candidates.sort((a, b) => b.score - a.score)
+  if (!candidates.length) failures.push('no_single_slide_rescue_candidate')
+
+  const selected = candidates[0]
+  return {
+    publishable: failures.length === 0,
+    mode: 'single_slide_rescue',
+    failures: [...new Set(failures)],
+    slides: selected ? [selected.slide] : [],
+    assets: selected ? [selected.asset] : [],
+    rejectedAssets,
+    rejectedSlides,
+    captions: {
+      instagram: instagramCaption,
+      linkedin: linkedinCaption,
+    },
+  }
+}
+
+export function assertSingleSlidePublishable(run, options) {
+  const result = prepareSingleSlideForPublish(run, options)
+  if (!result.publishable) {
+    const error = new Error(`Single-slide rescue blocked: ${result.failures.join(', ')}`)
+    error.code = 'UNA_SOCIAL_PUBLISH_BLOCKED'
+    error.details = result
+    throw error
+  }
+  return result
+}
+
+export async function publishApprovedRun(run, options = {}) {
+  const approved = assertPublishable(run, { recentFingerprints: options.recentFingerprints || [] })
+  await options.publishInstagram?.({
+    slides: approved.slides,
+    assets: approved.assets,
+    caption: approved.captions.instagram,
+  })
+  await options.publishLinkedIn?.({
+    slides: approved.slides,
+    assets: approved.assets,
+    caption: approved.captions.linkedin,
+  })
+  return approved
+}

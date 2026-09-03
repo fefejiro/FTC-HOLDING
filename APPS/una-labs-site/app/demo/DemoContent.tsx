@@ -164,10 +164,9 @@ export function DemoContent() {
         <div className="max-w-content mx-auto px-6 pt-16 pb-20">
           <div className="max-w-3xl">
             <Badge variant="teal">Product walkthroughs</Badge>
-            <h1 className="mt-4 text-display text-tx-heading">Watch the real systems work</h1>
+            <h1 className="mt-4 text-display text-tx-heading">See Una Labs in action</h1>
             <p className="mt-6 text-body-lg leading-relaxed text-tx-secondary">
-              Every walkthrough below shows a live, deployed product, not a mockup or a slide deck.
-              Choose a workflow and see exactly how Una Labs delivers.
+              Choose a walkthrough, try a safe preview, or open a live product. Each mode is labelled so you know what you are seeing.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
               {demoModules.map((item) => (
@@ -192,6 +191,7 @@ export function DemoContent() {
             <div className="rounded-[28px] border border-border bg-bg-offwhite p-6 shadow-sm">
               <div className="flex flex-wrap items-center gap-3">
                 <Badge variant="muted">{demoModule.product}</Badge>
+                <Badge variant="teal">{demoModule.loomUrl ? 'Watch · product footage' : 'Try · synthetic preview'}</Badge>
               </div>
               <h2 className="mt-4 text-h2 text-tx-heading">{demoModule.title}</h2>
               <p className="mt-4 text-body-lg leading-relaxed text-tx-secondary">
@@ -221,6 +221,7 @@ export function DemoContent() {
                   </li>
                 ))}
               </ul>
+              <p className="mt-5 text-caption text-tx-muted">No private customer data or production actions are used in this preview.</p>
             </div>
 
             <div className="rounded-[28px] border border-border bg-white p-6 shadow-sm flex flex-col">
@@ -239,10 +240,9 @@ export function DemoContent() {
         <div className="max-w-content mx-auto px-6">
           <div className="max-w-3xl">
             <Badge variant="teal">Shipped products</Badge>
-            <h2 className="mt-4 text-h2 text-tx-heading">The companies behind the walkthroughs</h2>
+            <h2 className="mt-4 text-h2 text-tx-heading">Products and workflows to explore</h2>
             <p className="mt-4 text-body-lg leading-relaxed text-tx-secondary">
-              Each walkthrough above is drawn from one of these live products. Read the case study to
-              understand the problem, the build, and the outcome.
+              Explore a product surface or read the case study for the story behind it.
             </p>
           </div>
           <div className="mt-10 grid gap-5 md:grid-cols-3">
