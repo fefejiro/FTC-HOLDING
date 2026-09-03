@@ -99,18 +99,22 @@ and the production Expo config registers the `peacepad` scheme. Therefore this
 is a hosted Supabase Auth URL configuration/stale-provider issue, not evidence
 that the native redirect code is missing.
 
-Before another store build, the provider owner must verify the production
-Supabase Auth URL configuration: use `https://peacepad.ca` as the site URL and
-allow the exact native redirects `peacepad://auth/confirm` and
+The production Supabase Auth URL configuration uses `https://peacepad.ca` as
+the site URL and allows the exact native redirects `peacepad://auth/confirm` and
 `peacepad://auth/reset-password` (plus any explicitly approved web fallback).
 Then send a new disposable confirmation email and prove that it opens the
 PeacePad app. Do not use a `localhost` site URL in production. Google and Apple
 provider settings must likewise be enabled for the production project and
 matched to the native client IDs; keep their secrets out of source and logs.
 
-The old email must not be treated as a valid test result after the provider
-fix; request a fresh confirmation link because Auth links are single-use and
-may carry the old redirect target.
+The Auth URL contract was applied and read back successfully by the guarded
+workflow run
+`33699657066 <https://github.com/fefejiro/FTC-HOLDING/actions/runs/33699657066>`:
+site URL `https://peacepad.ca`, native confirmation and recovery redirects,
+and no `localhost` entry. The old email must not be treated as a valid test
+result; request a fresh confirmation link because Auth links are single-use
+and may carry the old redirect target. A physical iPhone retest is still
+required before calling the login journey verified.
 
 ## Safe resume checklist
 
