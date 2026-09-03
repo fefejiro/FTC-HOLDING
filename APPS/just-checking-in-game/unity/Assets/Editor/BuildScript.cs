@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using UnityEditor;
-using UnityEditor.Android;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
@@ -258,20 +258,24 @@ namespace Jci.Editor
             string ndkRoot = Environment.GetEnvironmentVariable("JCI_ANDROID_NDK_ROOT");
             string jdkRoot = Environment.GetEnvironmentVariable("JCI_ANDROID_JDK_ROOT");
 
-            if (!string.IsNullOrWhiteSpace(sdkRoot) && Directory.Exists(sdkRoot))
+            // The iOS-only Unity editor may not have the Android module loaded.
+            // Use reflection so the shared build script compiles on both hosts;
+            // Android builds still receive the verified toolchain overrides.
+            SetAndroidToolPath("sdkRootPath", sdkRoot);
+            SetAndroidToolPath("ndkRootPath", ndkRoot);
+            SetAndroidToolPath("jdkRootPath", jdkRoot);
+        }
+
+        private static void SetAndroidToolPath(string propertyName, string path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
             {
-                AndroidExternalToolsSettings.sdkRootPath = sdkRoot;
+                return;
             }
 
-            if (!string.IsNullOrWhiteSpace(ndkRoot) && Directory.Exists(ndkRoot))
-            {
-                AndroidExternalToolsSettings.ndkRootPath = ndkRoot;
-            }
-
-            if (!string.IsNullOrWhiteSpace(jdkRoot) && Directory.Exists(jdkRoot))
-            {
-                AndroidExternalToolsSettings.jdkRootPath = jdkRoot;
-            }
+            Type settingsType = Type.GetType("UnityEditor.Android.AndroidExternalToolsSettings, UnityEditor.Android.Extensions");
+            PropertyInfo property = settingsType?.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Static);
+            property?.SetValue(null, path);
         }
 
         private static void ConfigureIosPlayerSettings()
