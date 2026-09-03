@@ -126,7 +126,7 @@ Before enabling Supabase in production:
 3. Run `npm run migrate:workflow:postgres -- --source-http` or `npm run storage:cutover`.
 4. Redeploy the ATEAM runtime and confirm `/health` reports `storage.backend = postgres`.
 5. Optional REST path: authenticate the Supabase CLI, set `SUPABASE_PROJECT_REF`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY`, then use `npm run supabase:cutover`.
-6. Keep the legacy reference copy in [Docs/SUPABASE_WORKFLOW_SCHEMA.sql](/c:/FTC%20HOLDING/APPS/ATEAM/Docs/SUPABASE_WORKFLOW_SCHEMA.sql) for manual SQL fallback only.
+6. Keep the legacy reference copy in [Docs/SUPABASE_WORKFLOW_SCHEMA.sql](Docs/SUPABASE_WORKFLOW_SCHEMA.sql) for manual SQL fallback only.
 7. Optional: migrate existing workflow state:
 
 ```powershell
