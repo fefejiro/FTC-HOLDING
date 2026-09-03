@@ -18,9 +18,9 @@ namespace Jci.Editor
     public static class BuildScript
     {
         // 1.2.0/build 4/5 are already consumed. This shared correction is
-        // intentionally versioned as Android code 6 and iOS build 6.
+        // Android code 6 was consumed by the rejected Play draft; iOS build 6 remains valid.
         private const string MarketingVersion = "1.2.0";
-        private const int AndroidVersionCode = 6;
+        private const int AndroidVersionCode = 7;
         private const string IosBuildNumber = "6";
         private const string AndroidOutputPath = "Builds/Android/JustCheckingIn.aab";
         private const string IosOutputPath = "Builds/iOS/JustCheckingIn";

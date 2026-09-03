@@ -39,7 +39,7 @@ jobs:
           set -euo pipefail
           test -f "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
           grep -q 'MarketingVersion = "1.2.0"' "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
-          grep -q 'AndroidVersionCode = 6' "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
+          grep -q 'AndroidVersionCode = 7' "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
           grep -q 'BuildAndroidApkForDevice' "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
           grep -q 'bundleVersion: 1.2.0' "$JCI_PROJECT/ProjectSettings/ProjectSettings.asset"
 
@@ -99,7 +99,7 @@ jobs:
           apk="$JCI_PROJECT/Builds/Android/JustCheckingIn-device.apk"
           test -s "$apk"
           sha256sum "$apk" | tee jci-android-device.sha256
-          printf '{"source":"%s","unity":"%s","package":"com.ftcholding.justcheckingin","version":"1.2.0","versionCode":6,"artifact":"%s"}\n' \
+          printf '{"source":"%s","unity":"%s","package":"com.ftcholding.justcheckingin","version":"1.2.0","versionCode":7,"artifact":"%s"}\n' \
             "$GITHUB_SHA" "$JCI_UNITY_VERSION" "$(sha256sum "$apk" | awk '{print $1}')" > jci-android-device-manifest.json
 
       - name: Upload signed APK for Pixel QA
@@ -133,7 +133,7 @@ jobs:
           set -euo pipefail
           test -f "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
           grep -q 'MarketingVersion = "1.2.0"' "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
-          grep -q 'AndroidVersionCode = 6' "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
+          grep -q 'AndroidVersionCode = 7' "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
           grep -q 'BuildAndroid()' "$JCI_PROJECT/Assets/Editor/BuildScript.cs"
           grep -q 'bundleVersion: 1.2.0' "$JCI_PROJECT/ProjectSettings/ProjectSettings.asset"
 
@@ -193,7 +193,7 @@ jobs:
           aab="$JCI_PROJECT/Builds/Android/JustCheckingIn.aab"
           test -s "$aab"
           sha256sum "$aab" | tee jci-android-play.sha256
-          printf '{"source":"%s","unity":"%s","package":"com.ftcholding.justcheckingin","version":"1.2.0","versionCode":6,"artifact":"%s"}\n' \
+          printf '{"source":"%s","unity":"%s","package":"com.ftcholding.justcheckingin","version":"1.2.0","versionCode":7,"artifact":"%s"}\n' \
             "$GITHUB_SHA" "$JCI_UNITY_VERSION" "$(sha256sum "$aab" | awk '{print $1}')" > jci-android-play-manifest.json
 
       - name: Upload signed AAB for Play review
