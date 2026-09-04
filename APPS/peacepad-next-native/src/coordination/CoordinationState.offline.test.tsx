@@ -7,7 +7,7 @@ import { createWriteContext, type MessageCheckPreference, type MessageEvent } fr
 import type { MessageOutboxStore, QueuedMessage } from "../messaging/secureMessageOutbox";
 import type { ConnectivityMonitor, ConnectivitySnapshot } from "../connectivity/ConnectivityMonitor";
 import { MessagesScreen } from "./CoordinationScreens";
-import { CoordinationStateProvider, type CoordinationRuntime, useCoordinationState } from "./CoordinationState";
+import { CoordinationStateProvider, type CoordinationRuntime, useCoordinationState, visibleMessages } from "./CoordinationState";
 
 const ACTOR = "11111111-1111-4111-8111-111111111111";
 const SESSION = "22222222-2222-4222-8222-222222222222";
@@ -148,6 +148,22 @@ function Probe() {
 }
 
 describe("authenticated offline message recovery", () => {
+  it("marks incoming and outgoing bubbles from the canonical actor identity", () => {
+    const incoming: MessageEvent = {
+      ...canonicalMessage,
+      id: "88888888-8888-4888-8888-888888888888",
+      body: "A reply from the other parent.",
+      provenance: {
+        ...canonicalMessage.provenance,
+        createdBy: { identityId: "99999999-9999-4999-8999-999999999999", sessionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }
+      }
+    };
+    expect(visibleMessages([canonicalMessage, incoming], ACTOR)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ sentBody: "Clear suggested message.", isMine: true, canCorrect: true }),
+      expect.objectContaining({ sentBody: "A reply from the other parent.", isMine: false, canCorrect: false })
+    ]));
+  });
+
   it("does not spend a retry while offline and resumes the exact queue after reconnect", async () => {
     const connectivity = new TestConnectivityMonitor({ isConnected: false, isInternetReachable: false });
     const outbox = new MemoryOutbox([queued()]);

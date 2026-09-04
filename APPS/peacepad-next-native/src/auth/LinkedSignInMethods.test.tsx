@@ -7,7 +7,7 @@ import { requestGoogleIdentityCredential } from "./GoogleNativeAuth";
 import { LinkedSignInMethods } from "./LinkedSignInMethods";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as Crypto from "expo-crypto";
-import Constants from "expo-constants";
+import { useAuthCapabilities } from "./AuthCapabilities";
 
 jest.mock("../session/SupabaseSessionProvider", () => ({
   useOptionalSupabaseSession: jest.fn()
@@ -15,10 +15,7 @@ jest.mock("../session/SupabaseSessionProvider", () => ({
 jest.mock("./GoogleNativeAuth", () => ({
   requestGoogleIdentityCredential: jest.fn()
 }));
-jest.mock("expo-constants", () => ({
-  __esModule: true,
-  default: { expoConfig: { extra: { googleSignInEnabled: true } } }
-}));
+jest.mock("./AuthCapabilities", () => ({ useAuthCapabilities: jest.fn() }));
 jest.mock("expo-apple-authentication", () => ({
   AppleAuthenticationScope: { EMAIL: 0 },
   signInAsync: jest.fn()
@@ -30,6 +27,13 @@ jest.mock("expo-crypto", () => ({
 }));
 
 const credential = { idToken: "google-id", accessToken: "google-access", providerSubject: "google-subject" };
+const enabledCapabilities = () => ({
+  status: "ready",
+  email: { nativeAvailable: true, appConfigured: true, backend: "enabled", available: true },
+  google: { nativeAvailable: true, appConfigured: true, backend: "enabled", available: true },
+  apple: { nativeAvailable: false, appConfigured: false, backend: "enabled", available: false },
+  refresh: jest.fn(async () => undefined)
+});
 
 describe("LinkedSignInMethods", () => {
   const previousPlatform = Platform.OS;
@@ -39,7 +43,7 @@ describe("LinkedSignInMethods", () => {
     Object.defineProperty(Platform, "OS", { configurable: true, value: "android" });
     (requestGoogleIdentityCredential as jest.Mock).mockResolvedValue(credential);
     (AppleAuthentication.signInAsync as jest.Mock).mockResolvedValue({ identityToken: "apple-id", user: "apple-subject" });
-    (Constants.expoConfig!.extra as Record<string, unknown>).googleSignInEnabled = true;
+    (useAuthCapabilities as jest.Mock).mockReturnValue(enabledCapabilities());
   });
 
   afterAll(() => {
@@ -75,8 +79,11 @@ describe("LinkedSignInMethods", () => {
     expect(screen.queryByText("Sign-in methods")).toBeNull();
   });
 
-  it("hides Google provider controls when OAuth is unavailable", async () => {
-    (Constants.expoConfig!.extra as Record<string, unknown>).googleSignInEnabled = false;
+  it("hides Google provider controls when the backend provider is unavailable", async () => {
+    (useAuthCapabilities as jest.Mock).mockReturnValue({
+      ...enabledCapabilities(),
+      google: { nativeAvailable: true, appConfigured: true, backend: "disabled", available: false }
+    });
     (useOptionalSupabaseSession as jest.Mock).mockReturnValue({
       status: "ready",
       getLinkedProviders: jest.fn(async () => ["email"]),
@@ -90,6 +97,10 @@ describe("LinkedSignInMethods", () => {
 
   it("links Apple on iOS only after a fresh nonce-bound Apple challenge", async () => {
     Object.defineProperty(Platform, "OS", { configurable: true, value: "ios" });
+    (useAuthCapabilities as jest.Mock).mockReturnValue({
+      ...enabledCapabilities(),
+      apple: { nativeAvailable: true, appConfigured: true, backend: "enabled", available: true }
+    });
     let linked = false;
     const auth = {
       status: "ready",

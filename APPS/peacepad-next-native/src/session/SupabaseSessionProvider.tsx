@@ -3,6 +3,7 @@ import * as SecureStore from "expo-secure-store";
 import { AppState, Linking } from "react-native";
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 import type { PeacePadSupabaseConfig } from "../config/environment";
+import { AuthCapabilitiesProvider } from "../auth/AuthCapabilities";
 import { useOptionalLocalization, type MessageKey } from "../localization/LocalizationProvider";
 import type { PeacePadRealtimeClient, PeacePadRealtimeChannel } from "../calls/PrivateCallSignalSubscription";
 
@@ -112,10 +113,12 @@ export function sessionTokensFromAuthUrl(url?: string | null): { accessToken: st
 
 export function SupabaseSessionProvider({
   children,
-  client
+  client,
+  config
 }: {
   children: ReactNode;
   client: SupabaseRuntimeClient;
+  config?: PeacePadSupabaseConfig;
 }) {
   const { t } = useOptionalLocalization();
   const [status, setStatus] = useState<SupabaseSessionStatus>("loading");
@@ -393,7 +396,8 @@ export function SupabaseSessionProvider({
     }
   }), [authIntent, client, error, getAccessToken, realtimeClient, session, status, t]);
 
-  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
+  const content = <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
+  return config ? <AuthCapabilitiesProvider config={config}>{content}</AuthCapabilitiesProvider> : content;
 }
 
 export function useSupabaseSession(): SupabaseSessionValue {

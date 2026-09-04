@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
-import Constants from "expo-constants";
 import {
   ActivityIndicator,
   Image,
@@ -21,6 +20,7 @@ import { LabButton } from "../components/LabButton";
 import { useOptionalLocalization, type SupportedLocale } from "../localization/LocalizationProvider";
 import { useSupabaseSession } from "../session/SupabaseSessionProvider";
 import { requestGoogleIdentityToken } from "./GoogleNativeAuth";
+import { useAuthCapabilities } from "./AuthCapabilities";
 import { colors, spacing, typography } from "../theme";
 
 const ONBOARDING_KEY = "peacepad.v2.public-onboarding.complete.v1";
@@ -49,7 +49,7 @@ const copy = {
     terms: "Terms", privacy: "Privacy", unavailable: "PeacePad could not complete that request. Try again.",
     invalidEmail: "Enter a valid email address.", serviceUnavailable: "PeacePad sign-in is temporarily unavailable. Please try again shortly.",
     invalidCredentials: "That email or password did not match. Check it and try again.", confirmEmailFirst: "Confirm your email before signing in.",
-    appleUnavailable: "Sign in with Apple is not available right now.", googleUnavailable: "Sign in with Google is not available right now.", passwordHint: "Use at least 8 characters."
+    appleUnavailable: "Sign in with Apple is not available right now.", googleUnavailable: "Sign in with Google is not available right now.", checkingProviders: "Checking sign-in options…", retryProviders: "Retry sign-in options", passwordHint: "Use at least 8 characters."
   },
   fr: {
     slides: [
@@ -69,7 +69,7 @@ const copy = {
     terms: "Conditions", privacy: "Confidentialité", unavailable: "PeacePad n’a pas pu effectuer cette demande. Réessayez.",
     invalidEmail: "Entrez une adresse courriel valide.", serviceUnavailable: "La connexion à PeacePad est temporairement indisponible. Réessayez bientôt.",
     invalidCredentials: "Ce courriel ou mot de passe ne correspond pas. Vérifiez-le et réessayez.", confirmEmailFirst: "Confirmez votre courriel avant de vous connecter.",
-    appleUnavailable: "La connexion avec Apple est indisponible pour le moment.", googleUnavailable: "La connexion avec Google est indisponible pour le moment.", passwordHint: "Utilisez au moins 8 caractères."
+    appleUnavailable: "La connexion avec Apple est indisponible pour le moment.", googleUnavailable: "La connexion avec Google est indisponible pour le moment.", checkingProviders: "Vérification des options de connexion…", retryProviders: "Réessayer les options de connexion", passwordHint: "Utilisez au moins 8 caractères."
   },
   es: {
     slides: [
@@ -89,7 +89,7 @@ const copy = {
     terms: "Términos", privacy: "Privacidad", unavailable: "PeacePad no pudo completar la solicitud. Inténtalo de nuevo.",
     invalidEmail: "Ingresa una dirección de correo válida.", serviceUnavailable: "El inicio de sesión de PeacePad no está disponible temporalmente. Inténtalo de nuevo pronto.",
     invalidCredentials: "El correo o la contraseña no coinciden. Revísalos e inténtalo de nuevo.", confirmEmailFirst: "Confirma tu correo antes de iniciar sesión.",
-    appleUnavailable: "Iniciar sesión con Apple no está disponible ahora.", googleUnavailable: "Iniciar sesión con Google no está disponible ahora.", passwordHint: "Usa al menos 8 caracteres."
+    appleUnavailable: "Iniciar sesión con Apple no está disponible ahora.", googleUnavailable: "Iniciar sesión con Google no está disponible ahora.", checkingProviders: "Comprobando opciones de inicio de sesión…", retryProviders: "Reintentar opciones de inicio de sesión", passwordHint: "Usa al menos 8 caracteres."
   }
 } as const;
 
@@ -127,8 +127,10 @@ type AuthEnvironmentNotice = Readonly<{
 export function PublicOnboardingAuth({ environmentNotice }: { environmentNotice?: AuthEnvironmentNotice } = {}) {
   const { locale } = useOptionalLocalization();
   const auth = useSupabaseSession();
+  const capabilities = useAuthCapabilities();
   const strings = localized(locale);
-  const googleSignInEnabled = Constants.expoConfig?.extra?.googleSignInEnabled === true;
+  const emailSignInEnabled = capabilities.email.available;
+  const googleSignInEnabled = capabilities.google.available;
   const [restoring, setRestoring] = useState(true);
   const [introComplete, setIntroComplete] = useState(false);
   const [mode, setMode] = useState<"create" | "sign-in">("create");
@@ -138,7 +140,6 @@ export function PublicOnboardingAuth({ environmentNotice }: { environmentNotice?
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
   const [error, setError] = useState<string>();
-  const [appleAvailable, setAppleAvailable] = useState(false);
   const passwordInput = useRef<TextInput>(null);
   const submissionInFlight = useRef(false);
 
@@ -147,9 +148,6 @@ export function PublicOnboardingAuth({ environmentNotice }: { environmentNotice?
     void SecureStore.getItemAsync(ONBOARDING_KEY).then((value) => {
       if (active) setIntroComplete(value === "true");
     }).catch(() => undefined).finally(() => { if (active) setRestoring(false); });
-    void AppleAuthentication.isAvailableAsync().then((available) => {
-      if (active) setAppleAvailable(available);
-    }).catch(() => undefined);
     return () => { active = false; };
   }, []);
 
@@ -160,7 +158,7 @@ export function PublicOnboardingAuth({ environmentNotice }: { environmentNotice?
 
   const submit = async () => {
     const normalizedEmail = email.trim();
-    if (busy || submissionInFlight.current || !normalizedEmail || password.length < 8) return;
+    if (busy || submissionInFlight.current || !emailSignInEnabled || !normalizedEmail || password.length < 8) return;
     submissionInFlight.current = true;
     setBusy(true); setError(undefined); setMessage(undefined);
     try {
@@ -177,7 +175,7 @@ export function PublicOnboardingAuth({ environmentNotice }: { environmentNotice?
   };
 
   const signInWithApple = async () => {
-    if (busy || !appleAvailable) return;
+    if (busy || !capabilities.apple.available) return;
     setBusy(true); setError(undefined); setMessage(undefined);
     try {
       const rawNonce = Crypto.randomUUID();
@@ -199,7 +197,7 @@ export function PublicOnboardingAuth({ environmentNotice }: { environmentNotice?
   };
 
   const signInWithGoogle = async () => {
-    if (busy || !googleSignInEnabled) return;
+    if (busy || !capabilities.google.available) return;
     setBusy(true); setError(undefined); setMessage(undefined);
     try {
       const identityToken = await requestGoogleIdentityToken();
@@ -211,7 +209,7 @@ export function PublicOnboardingAuth({ environmentNotice }: { environmentNotice?
   };
 
   const resetPassword = async () => {
-    if (busy || !email.trim()) return;
+    if (busy || !emailSignInEnabled || !email.trim()) return;
     setBusy(true); setError(undefined); setMessage(undefined);
     try {
       await auth.sendPasswordReset(email.trim());
@@ -257,7 +255,7 @@ export function PublicOnboardingAuth({ environmentNotice }: { environmentNotice?
         <View style={styles.logoRow}><Image source={require("../../assets/icon-production.png")} style={styles.logo} /><Text style={styles.brand}>PeacePad</Text></View>
         {environmentNotice ? <EnvironmentNotice notice={environmentNotice} /> : null}
         <AccessibleHeading style={styles.title}>{mode === "create" ? strings.createTitle : strings.signInTitle}</AccessibleHeading>
-        {appleAvailable ? <AppleAuthentication.AppleAuthenticationButton
+        {capabilities.apple.available ? <AppleAuthentication.AppleAuthenticationButton
           accessibilityLabel={strings.apple}
           buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
           buttonType={mode === "create" ? AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP : AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
@@ -266,12 +264,17 @@ export function PublicOnboardingAuth({ environmentNotice }: { environmentNotice?
           style={styles.appleButton}
         /> : null}
         {googleSignInEnabled ? <LabButton disabled={busy} label={strings.google} onPress={() => void signInWithGoogle()} /> : null}
-        {appleAvailable || googleSignInEnabled ? <Text style={styles.or}>{strings.or}</Text> : null}
+        {capabilities.status === "loading" ? <Text accessibilityLiveRegion="polite" style={styles.providerStatus}>{strings.checkingProviders}</Text> : null}
+        {capabilities.status === "error" ? <Pressable accessibilityRole="button" disabled={busy} onPress={() => void capabilities.refresh()}><Text style={styles.link}>{strings.retryProviders}</Text></Pressable> : null}
+        {capabilities.google.backend === "disabled" && capabilities.google.nativeAvailable && capabilities.google.appConfigured ? <Text accessibilityRole="alert" style={styles.providerStatus}>{strings.googleUnavailable}</Text> : null}
+        {capabilities.apple.backend === "disabled" && capabilities.apple.nativeAvailable && capabilities.apple.appConfigured ? <Text accessibilityRole="alert" style={styles.providerStatus}>{strings.appleUnavailable}</Text> : null}
+        {capabilities.apple.available || googleSignInEnabled ? <Text style={styles.or}>{strings.or}</Text> : null}
         <View style={styles.field}><Text style={styles.inputLabel}>{strings.email}</Text><TextInput accessibilityLabel={strings.email} autoCapitalize="none" autoComplete="email" keyboardType="email-address" onChangeText={setEmail} onSubmitEditing={() => passwordInput.current?.focus()} placeholder={strings.email} placeholderTextColor={colors.muted} returnKeyType="next" style={styles.input} textContentType="emailAddress" value={email} /></View>
         <View style={styles.field}><Text style={styles.inputLabel}>{strings.password}</Text><TextInput accessibilityLabel={strings.password} autoComplete={mode === "create" ? "new-password" : "current-password"} onChangeText={setPassword} onSubmitEditing={() => void submit()} placeholder={strings.password} placeholderTextColor={colors.muted} ref={passwordInput} returnKeyType="done" secureTextEntry style={styles.input} textContentType={mode === "create" ? "newPassword" : "password"} value={password} /></View>
         {mode === "create" ? <Text style={styles.hint}>{strings.passwordHint}</Text> : null}
-        <LabButton disabled={busy || !email.trim() || password.length < 8} label={busy ? strings.working : mode === "create" ? strings.createAction : strings.signInAction} onPress={() => void submit()} />
-        {mode === "sign-in" ? <Pressable accessibilityRole="button" disabled={busy || !email.trim()} onPress={() => void resetPassword()}><Text style={styles.link}>{strings.forgot}</Text></Pressable> : null}
+        <LabButton disabled={busy || !emailSignInEnabled || !email.trim() || password.length < 8} label={busy ? strings.working : mode === "create" ? strings.createAction : strings.signInAction} onPress={() => void submit()} />
+        {capabilities.email.backend === "disabled" ? <Text accessibilityRole="alert" style={styles.providerStatus}>{strings.serviceUnavailable}</Text> : null}
+        {mode === "sign-in" ? <Pressable accessibilityRole="button" disabled={busy || !emailSignInEnabled || !email.trim()} onPress={() => void resetPassword()}><Text style={styles.link}>{strings.forgot}</Text></Pressable> : null}
         {message ? <View accessibilityRole="alert" style={styles.success}><Text style={styles.successTitle}>{mode === "create" ? strings.confirmTitle : message}</Text>{mode === "create" ? <Text style={styles.body}>{message}</Text> : null}</View> : null}
         {error || auth.error ? <Text accessibilityRole="alert" style={styles.error}>{error ?? auth.error}</Text> : null}
         <Pressable accessibilityRole="button" onPress={() => { setMode(mode === "create" ? "sign-in" : "create"); setError(undefined); setMessage(undefined); }}>
@@ -339,6 +342,7 @@ const styles = StyleSheet.create({
   field: { gap: spacing.xs },
   inputLabel: { ...typography.caption, color: colors.text, fontWeight: "700" },
   hint: { ...typography.caption, color: colors.muted },
+  providerStatus: { ...typography.caption, color: colors.muted, textAlign: "center" },
   link: { ...typography.body, color: colors.brand, fontWeight: "700", textAlign: "center" },
   dots: { alignItems: "center", flexDirection: "row", gap: spacing.sm, justifyContent: "center", minHeight: 24 },
   dot: { backgroundColor: colors.border, borderRadius: 4, height: 8, width: 8 },

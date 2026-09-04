@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Image, Linking, Pressable, Share, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { FlatList, Image, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import { InvitationQr } from "../components/InvitationQr";
@@ -21,7 +21,7 @@ import { colors, spacing, typography, usesLargeTextLayout } from "../theme";
 import { useRecordsState } from "../records/RecordsState";
 import type { AttachmentMediaType } from "../domain/v2";
 import { useOptionalStagingAccountActions } from "../session/StagingAccountActions";
-import { useCoordinationState, type CalendarView } from "./CoordinationState";
+import { useCoordinationState, type CalendarView, type SentMessage } from "./CoordinationState";
 import { ActivitySuggestionsScreen } from "../activities/ActivitySuggestionsScreen";
 import { ParentingTasksScreen } from "../tasks/ParentingTasksScreen";
 import { taskCopy } from "../tasks/taskLocalization";
@@ -373,6 +373,7 @@ export function InvitationScreen({ initialCode }: { initialCode?: string }) {
   } = useCoordinationState();
   const [mode, setMode] = useState<"create" | "join">("create");
   const [shareError, setShareError] = useState<string>();
+  const invitationInputRef = useRef<TextInput>(null);
   const permissionLabels: Readonly<Record<string, string>> = {
     messages: t("invite.permissionMessages"), calendar: t("invite.permissionCalendar"),
     "shared-records": t("invite.permissionSharedRecords"), "message.write": t("invite.permissionMessageWrite"),
@@ -384,6 +385,12 @@ export function InvitationScreen({ initialCode }: { initialCode?: string }) {
     setMode("join");
     setInvitationCode(initialCode);
   }, [initialCode]);
+
+  useEffect(() => {
+    if (mode !== "join") return;
+    const focusHandle = requestAnimationFrame(() => invitationInputRef.current?.focus());
+    return () => cancelAnimationFrame(focusHandle);
+  }, [mode]);
 
   const shareCreatedInvitation = async () => {
     if (!createdInvitation) return;
@@ -472,16 +479,22 @@ export function InvitationScreen({ initialCode }: { initialCode?: string }) {
       ) : (
         <>
           <Text style={styles.body}>{t("invite.joinBody")}</Text>
-          <TextInput
-            accessibilityLabel={t("invite.code")}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            maxLength={6}
-            onChangeText={setInvitationCode}
-            placeholder="ABC123"
-            style={styles.codeInput}
-            value={invitationCode}
-          />
+           {!invitationPreview ? <Text style={styles.caption}>{t("invite.privateUntilAccepted")}</Text> : null}
+          <View style={styles.codeEntry}>
+            {Array.from({ length: 6 }, (_, index) => <View key={index} style={[styles.codeCell, invitationCode[index] ? styles.codeCellFilled : null]}><Text accessible={false} style={styles.codeCellText}>{invitationCode[index] ?? ""}</Text></View>)}
+            <TextInput
+              ref={invitationInputRef}
+              accessibilityLabel={t("invite.code")}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={6}
+              onChangeText={setInvitationCode}
+              placeholder="ABC123"
+              style={styles.codeInputOverlay}
+              textContentType="oneTimeCode"
+              value={invitationCode}
+            />
+          </View>
           <LabButton
             disabled={invitationCode.length !== 6 || invitationBusy}
             label={invitationBusy ? t("invite.checking") : t("invite.review")}
@@ -572,6 +585,9 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
   const [exceptionAssignedParent, setExceptionAssignedParent] = useState<"you" | "other">("you");
   const [exceptionBusy, setExceptionBusy] = useState(false);
   const [exceptionError, setExceptionError] = useState<string>();
+  const [showPlanningTools, setShowPlanningTools] = useState(false);
+  const [showCalendarManager, setShowCalendarManager] = useState(false);
+  const [showEventSheet, setShowEventSheet] = useState(false);
 
   const visibleEvents = events.filter((event) => visibleLayerIds.includes(event.calendarLayerId));
   const custodyOverrides: readonly CustodyOverride[] = parentingScheduleExceptions
@@ -583,7 +599,10 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
     : addUtcDays(current, amount * (calendarView === "week" ? 7 : 1)));
 
   useEffect(() => {
-    if (initialEventTitle?.trim()) setEventTitle(initialEventTitle);
+    if (initialEventTitle?.trim()) {
+      setEventTitle(initialEventTitle);
+      setShowEventSheet(true);
+    }
   }, [initialEventTitle]);
 
   return (
@@ -622,6 +641,21 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
 
       <CalendarViewPanel anchorDate={calendarAnchorDate} calendarView={calendarView} custodyOverrides={custodyOverrides} custodySchedule={custodySchedule} events={visibleEvents} layers={layers} locale={locale} />
 
+      <Pressable
+        accessibilityLabel={calendarText(locale, showPlanningTools ? "hidePlanningTools" : "showPlanningTools")}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: showPlanningTools }}
+        onPress={() => setShowPlanningTools((current) => !current)}
+        style={({ pressed }) => [styles.planningDisclosure, pressed ? styles.pressed : null]}
+      >
+        <View style={styles.planningDisclosureCopy}>
+          <Text style={styles.planningDisclosureTitle}>{calendarText(locale, "planningTools")}</Text>
+          <Text style={styles.caption}>{calendarText(locale, "planningToolsBody")}</Text>
+        </View>
+        <PeacePadIcon name={showPlanningTools ? "chevron-up" : "chevron-down"} size={22} color={colors.brand} />
+      </Pressable>
+
+      {showPlanningTools ? <>
       <CustodySchedulePlanner
         initialSchedule={parentingSchedulePlan ? {
           enabled: parentingSchedulePlan.status === "active",
@@ -637,8 +671,8 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
             .map((event) => `${event.startsAt.slice(0, 10)}-${event.endsAt.slice(0, 10)}`));
           for (const block of blocks) {
             const parentLabel = block.parent === "you"
-              ? custodyScheduleText(locale, "yourTime")
-              : custodyScheduleText(locale, "otherTime");
+              ? calendarText(locale, "yourTime")
+              : calendarText(locale, "otherTime");
             const title = `Parenting time - ${parentLabel}`;
             const key = `${block.startDate}-${block.endDate}`;
             if (existingKeys.has(key)) continue;
@@ -664,25 +698,25 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
         selectedLayerId={selectedLayerId}
       />
 
-      <LabButton label="Share calendar" onPress={() => void Share.share({
+      <LabButton label={calendarText(locale, "shareCalendarAction")} onPress={() => void Share.share({
         title: "PeacePad parenting calendar",
         message: buildPeacePadCalendar({ schedule: custodySchedule, scheduleEvents: visibleEvents, exceptions: parentingScheduleExceptions, actorIdentityId })
       })} variant="secondary" />
 
       <View style={styles.card}>
-        <Text style={styles.heading}>Changes, holidays and swaps</Text>
-        <Text style={styles.body}>Propose a one-off change without rewriting the regular parenting plan. Both parents can see and respond to it.</Text>
+        <Text style={styles.heading}>{calendarText(locale, "changesTitle")}</Text>
+        <Text style={styles.body}>{calendarText(locale, "changesBody")}</Text>
         <View accessibilityRole="radiogroup" style={styles.rowWrap}>
           {(["holiday", "vacation", "swap", "other"] as const).map((kind) => <Pressable accessibilityLabel={kind} accessibilityRole="radio" accessibilityState={{ checked: exceptionKind === kind }} key={kind} onPress={() => setExceptionKind(kind)} style={[styles.chip, exceptionKind === kind ? styles.chipActive : null]}><Text style={[styles.chipText, exceptionKind === kind ? styles.chipTextActive : null]}>{kind}</Text></Pressable>)}
         </View>
         <View accessibilityRole="radiogroup" style={styles.rowWrap}>
-          {(["you", "other"] as const).map((parent) => { const label = parent === "you" ? "Your time" : "Other parent's time"; return <Pressable accessibilityLabel={label} accessibilityRole="radio" accessibilityState={{ checked: exceptionAssignedParent === parent }} key={parent} onPress={() => setExceptionAssignedParent(parent)} style={[styles.chip, exceptionAssignedParent === parent ? styles.chipActive : null]}><Text style={[styles.chipText, exceptionAssignedParent === parent ? styles.chipTextActive : null]}>{label}</Text></Pressable>; })}
+          {(["you", "other"] as const).map((parent) => { const label = parent === "you" ? calendarText(locale, "yourTime") : calendarText(locale, "otherTime"); return <Pressable accessibilityLabel={label} accessibilityRole="radio" accessibilityState={{ checked: exceptionAssignedParent === parent }} key={parent} onPress={() => setExceptionAssignedParent(parent)} style={[styles.chip, exceptionAssignedParent === parent ? styles.chipActive : null]}><Text style={[styles.chipText, exceptionAssignedParent === parent ? styles.chipTextActive : null]}>{label}</Text></Pressable>; })}
         </View>
-        <TextInput accessibilityLabel="Change start date" onChangeText={setExceptionStartDate} placeholder="YYYY-MM-DD" style={styles.input} value={exceptionStartDate} />
-        <TextInput accessibilityLabel="Change end date" onChangeText={setExceptionEndDate} placeholder="YYYY-MM-DD" style={styles.input} value={exceptionEndDate} />
-        <TextInput accessibilityLabel="Change note" maxLength={500} multiline onChangeText={setExceptionNote} placeholder="Holiday, school closure, travel, or swap details" style={[styles.input, styles.multilineInput]} value={exceptionNote} />
+        <TextInput accessibilityLabel={calendarText(locale, "changeStart")} onChangeText={setExceptionStartDate} placeholder="YYYY-MM-DD" style={styles.input} value={exceptionStartDate} />
+        <TextInput accessibilityLabel={calendarText(locale, "changeEnd")} onChangeText={setExceptionEndDate} placeholder="YYYY-MM-DD" style={styles.input} value={exceptionEndDate} />
+        <TextInput accessibilityLabel={calendarText(locale, "changeNote")} maxLength={500} multiline onChangeText={setExceptionNote} placeholder={calendarText(locale, "changesBody")} style={[styles.input, styles.multilineInput]} value={exceptionNote} />
         {exceptionError ? <Text accessibilityRole="alert" style={styles.error}>{exceptionError}</Text> : null}
-        <LabButton disabled={!parentingSchedulePlan || exceptionBusy} label={exceptionBusy ? "Sending proposal..." : "Propose change"} onPress={() => {
+        <LabButton disabled={!parentingSchedulePlan || exceptionBusy} label={exceptionBusy ? calendarText(locale, "sendingProposal") : calendarText(locale, "proposeChange")} onPress={() => {
           setExceptionBusy(true);
           setExceptionError(undefined);
           void createParentingScheduleException({ assignedParent: exceptionAssignedParent, kind: exceptionKind, startDate: exceptionStartDate, endDate: exceptionEndDate, note: exceptionNote.trim() || null })
@@ -694,47 +728,28 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
           <View key={item.id} style={styles.listItem}>
             <View style={styles.flexOne}>
               <Text style={styles.actionTitle}>{item.startDate} - {item.endDate}</Text>
-              <Text style={styles.caption}>{item.note || "Parenting-time change"} · {item.status}</Text>
+              <Text style={styles.caption}>{item.note || calendarText(locale, "parentingChange")} · {item.status}</Text>
             </View>
             {item.status === "proposed" ? <View style={styles.rowWrap}>
-              <LabButton label="Accept" onPress={() => void resolveParentingScheduleException(item.id, "accepted")} variant="secondary" />
-              <LabButton label="Decline" onPress={() => void resolveParentingScheduleException(item.id, "declined")} variant="secondary" />
+              <LabButton label={calendarText(locale, "accept")} onPress={() => void resolveParentingScheduleException(item.id, "accepted")} variant="secondary" />
+              <LabButton label={calendarText(locale, "decline")} onPress={() => void resolveParentingScheduleException(item.id, "declined")} variant="secondary" />
             </View> : null}
           </View>
         ))}
       </View>
+      </> : null}
 
       <View style={styles.card}>
-        <Text style={styles.heading}>{calendarText(locale, "calendars")}</Text>
-        {layers.map((layer) => {
-          const visible = visibleLayerIds.includes(layer.id);
-          const shared = layer.visibility.scope !== "private";
-          return (
-            <View key={layer.id} style={[styles.layerRow, largeText ? styles.layerRowLargeText : null]}>
-              <Pressable
-                accessibilityLabel={`${w(visible ? "hide" : "show")} ${layer.name}`}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: visible }}
-                onPress={() => toggleLayerFilter(layer.id)}
-                style={styles.layerIdentity}
-              >
-                <View style={[styles.layerDot, { backgroundColor: layerColors[layer.colorToken] }]} />
-                <View style={styles.layerCopy}>
-                  <Text style={styles.actionTitle}>{layer.name}</Text>
-                  <Text style={styles.caption}>{w(shared ? "shared" : "private")}</Text>
-                </View>
-              </Pressable>
-              <Pressable
-                accessibilityLabel={`${w(shared ? "makePrivate" : "share")} ${layer.name}`}
-                accessibilityRole="button"
-                onPress={() => shared ? void setLayerShared(layer.id, false) : setPendingShareLayerId(layer.id)}
-                style={styles.smallButton}
-              >
-                <Text style={styles.smallButtonText}>{w(shared ? "private" : "share")}</Text>
-              </Pressable>
-            </View>
-          );
-        })}
+        <View style={styles.cardHeadingRow}>
+          <Text style={styles.heading}>{calendarText(locale, "calendars")}</Text>
+          <Pressable accessibilityLabel={calendarText(locale, "manageCalendars")} accessibilityRole="button" onPress={() => setShowCalendarManager(true)} style={styles.smallButton}>
+            <Text style={styles.smallButtonText}>{calendarText(locale, "manageCalendars")}</Text>
+          </Pressable>
+        </View>
+        <View style={styles.calendarSummaryRow}>
+          <View style={styles.calendarDots}>{layers.filter((layer) => visibleLayerIds.includes(layer.id)).map((layer) => <View key={layer.id} style={[styles.layerDot, { backgroundColor: layerColors[layer.colorToken] }]} />)}</View>
+          <Text style={styles.caption}>{visibleLayerIds.length} {calendarText(locale, "visibleCalendars")}</Text>
+        </View>
       </View>
 
       {pendingShareLayerId ? (
@@ -749,7 +764,15 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
         </View>
       ) : null}
 
-      <View style={styles.card}>
+      <Pressable accessibilityLabel={w("addEvent")} accessibilityRole="button" onPress={() => setShowEventSheet(true)} style={({ pressed }) => [styles.addEventCta, pressed ? styles.pressed : null]}>
+        <View style={styles.addEventCtaCopy}><Text style={styles.actionTitle}>{w("addEvent")}</Text><Text style={styles.caption}>{w("eventTitle")}</Text></View>
+        <PeacePadIcon name="add-circle-outline" size={28} color={colors.brand} />
+      </Pressable>
+
+      <Modal animationType="slide" onRequestClose={() => setShowEventSheet(false)} transparent visible={showEventSheet}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.messageCheckBackdrop}>
+        <View accessibilityViewIsModal accessibilityLabel={w("addEvent")} style={styles.eventSheet}>
+        <View style={styles.coachModalHeader}><Text accessibilityRole="header" style={styles.coachModalTitle}>{w("addEvent")}</Text><Pressable accessibilityLabel={w("cancel")} accessibilityRole="button" onPress={() => setShowEventSheet(false)} style={styles.iconButton}><PeacePadIcon name="close" size={23} color={colors.muted} /></Pressable></View>
         <Text style={styles.heading}>{w("addEvent")}</Text>
         <TextInput accessibilityLabel={w("eventTitle")} onChangeText={setEventTitle} placeholder={w("eventTitle")} style={styles.input} value={eventTitle} />
         <Text style={styles.fieldLabel}>{calendarNavigationText(locale, "startsAt")}</Text>
@@ -796,7 +819,7 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
           ) : null}
         </View>
         {eventSaveError ? <Text accessibilityRole="alert" style={styles.errorText}>{eventSaveError}</Text> : null}
-        <LabButton label={eventSaveBusy ? "Saving event..." : w("saveEvent")} disabled={!eventTitle.trim() || !selectedLayerId || eventSaveBusy} onPress={() => {
+        <LabButton label={eventSaveBusy ? calendarText(locale, "savingEvent") : w("saveEvent")} disabled={!eventTitle.trim() || !selectedLayerId || eventSaveBusy} onPress={() => {
           const startsAt = parseCalendarDateTime(eventStartsAt);
           const endsAt = parseCalendarDateTime(eventEndsAt);
           if (!startsAt || !endsAt || new Date(endsAt).getTime() <= new Date(startsAt).getTime()) {
@@ -813,11 +836,14 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
             endsAt,
             eventType
           })
-            .then(() => setEventTitle(""))
+            .then(() => { setEventTitle(""); setShowEventSheet(false); })
             .catch((error) => setEventSaveError(error instanceof Error ? error.message : "PeacePad could not save that event."))
             .finally(() => setEventSaveBusy(false));
         }} />
+        <LabButton disabled={eventSaveBusy} label={w("cancel")} onPress={() => setShowEventSheet(false)} variant="secondary" />
       </View>
+      </KeyboardAvoidingView>
+      </Modal>
 
       {visibleEvents.map((event) => (
         <View key={event.id} style={styles.card}>
@@ -834,258 +860,197 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
           )}
         </View>
       ))}
+
+      <Modal animationType="slide" onRequestClose={() => setShowCalendarManager(false)} transparent visible={showCalendarManager}>
+        <View style={styles.messageCheckBackdrop}>
+          <View accessibilityViewIsModal accessibilityLabel={calendarText(locale, "manageCalendars")} style={styles.calendarManagerSheet}>
+            <View style={styles.coachModalHeader}>
+              <Text accessibilityRole="header" style={styles.coachModalTitle}>{calendarText(locale, "manageCalendars")}</Text>
+              <Pressable accessibilityLabel={calendarText(locale, "closeCalendarManager")} accessibilityRole="button" onPress={() => setShowCalendarManager(false)} style={styles.iconButton}>
+                <PeacePadIcon name="close" size={23} color={colors.muted} />
+              </Pressable>
+            </View>
+            <Text style={styles.body}>{calendarText(locale, "calendarManagerBody")}</Text>
+            {layers.map((layer) => {
+              const visible = visibleLayerIds.includes(layer.id);
+              const shared = layer.visibility.scope !== "private";
+              return (
+                <View key={layer.id} style={styles.layerRow}>
+                  <Pressable accessibilityLabel={`${w(visible ? "hide" : "show")} ${layer.name}`} accessibilityRole="checkbox" accessibilityState={{ checked: visible }} onPress={() => toggleLayerFilter(layer.id)} style={styles.layerIdentity}>
+                    <View style={[styles.layerDot, { backgroundColor: layerColors[layer.colorToken] }]} />
+                    <View style={styles.layerCopy}><Text style={styles.actionTitle}>{layer.name}</Text><Text style={styles.caption}>{w(shared ? "shared" : "private")}</Text></View>
+                  </Pressable>
+                  <Pressable accessibilityLabel={`${w(shared ? "makePrivate" : "share")} ${layer.name}`} accessibilityRole="button" onPress={() => { setShowCalendarManager(false); shared ? void setLayerShared(layer.id, false) : setPendingShareLayerId(layer.id); }} style={styles.smallButton}>
+                    <Text style={styles.smallButtonText}>{w(shared ? "private" : "share")}</Text>
+                  </Pressable>
+                </View>
+              );
+            })}
+            <LabButton label={calendarText(locale, "doneManagingCalendars")} onPress={() => setShowCalendarManager(false)} variant="secondary" />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
-export function MessagesScreen() {
+/**
+ * The chat surface deliberately keeps the conversation, not the tools, at the
+ * centre of Messages. Secondary tools stay behind the conversation-options
+ * button so the first thing a parent sees is the conversation itself.
+ */
+export function MessagesScreen({ onOpenCalls }: { onOpenCalls?: (mediaType: "audio" | "video") => void } = {}) {
   const largeText = usesLargeTextLayout(useWindowDimensions().fontScale);
   const { locale } = useOptionalLocalization();
   const m = (key: Parameters<typeof messageText>[1]) => messageText(locale, key);
   const {
-    cancelCorrection,
-    checkMessage,
-    correctingMessageId,
-    correctionBusy,
-    correctionDraft,
-    correctionError,
-    messageCheckBusy,
-    messageCheckEnabled,
-    messageCheckHydrated,
-    messageDraft,
-    messageError,
-    messageAttachments,
-    attachmentBusy,
-    attachmentError,
-    messagePreview,
-    messageSearchBusy,
-    messageSearchError,
-    messageSearchQuery,
-    messageSearchResults,
-    queuedActionBusyIds,
-    queuedActionError,
-    removeQueuedMessage,
-    retryQueuedMessage,
-    searchMessages,
-    saveCorrection,
-    sendMessage,
-    sentMessages,
-    setCorrectionDraft,
-    setMessageCheckEnabled,
-    setMessageDraft,
-    uploadMessageAttachment,
-    openMessageAttachment,
-    transcribeCoachAudio,
-    coachConversationTurn,
-    setMessageSearchQuery,
-    startCorrection
+    cancelCorrection, checkMessage, correctingMessageId, correctionBusy, correctionDraft, correctionError,
+    messageCheckBusy, messageCheckEnabled, messageCheckHydrated, messageDraft, messageError,
+    messageAttachments, attachmentBusy, attachmentError, messagePreview, messageSearchBusy,
+    messageSearchError, messageSearchQuery, messageSearchResults, queuedActionBusyIds, queuedActionError,
+    removeQueuedMessage, retryQueuedMessage, searchMessages, saveCorrection, sendMessage, sentMessages,
+    setCorrectionDraft, setMessageDraft, setMessageCheckEnabled, setMessageSearchQuery, startCorrection,
+    transcribeCoachAudio, coachConversationTurn, uploadMessageAttachment, openMessageAttachment
   } = useCoordinationState();
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [removeQueuedMessageId, setRemoveQueuedMessageId] = useState<string>();
+  const [showSearch, setShowSearch] = useState(false);
+  const [showUtilities, setShowUtilities] = useState(false);
+  const [showVoiceNote, setShowVoiceNote] = useState(false);
+  const [showAttachments, setShowAttachments] = useState(false);
+  const [coachOpen, setCoachOpen] = useState(false);
+  const [showMessageCheckSheet, setShowMessageCheckSheet] = useState(false);
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+  const timelineRef = useRef<FlatList<SentMessage>>(null);
+  const keepAtLatest = useRef(true);
 
-  return (
-    <View style={styles.stack}>
-      <ScreenHeader
-        accent={colors.aqua}
-        icon="chatbubble-ellipses-outline"
-        kicker="Communication"
-        softBackground={colors.successSurface}
-        subtitle={m("body")}
-        title={m("title")}
-      />
+  const messageClock = (value: string) => {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "" : date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  };
+  const statusText = (status: SentMessage["status"]) => status === "waiting" ? m("waiting") : status === "needs-action" ? m("attention") : status === "sent" ? m("statusSent") : status === "delivered" ? m("statusDelivered") : m("statusViewed");
+  const messageDay = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const now = new Date();
+    if (date.toDateString() === now.toDateString()) return m("today");
+    return date.toLocaleDateString(locale, { month: "short", day: "numeric", year: date.getFullYear() === now.getFullYear() ? undefined : "numeric" });
+  };
+  const scrollToLatest = () => requestAnimationFrame(() => timelineRef.current?.scrollToEnd({ animated: true }));
+  const openAttachmentPicker = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false, type: ["image/jpeg", "image/png", "application/pdf", "text/plain", "audio/mp4", "audio/m4a", "audio/webm"] });
+      if (result.canceled) return;
+      const selected = result.assets[0];
+      const allowed = ["image/jpeg", "image/png", "application/pdf", "text/plain", "audio/mp4", "audio/m4a", "audio/webm"] as const;
+      const mediaType = allowed.find((type) => type === selected.mimeType);
+      if (!mediaType) throw new Error("Choose a JPEG, PNG, PDF, text file, or voice note.");
+      await uploadMessageAttachment({ originalFileName: selected.name, mediaType, bytes: await new File(selected.uri).arrayBuffer() });
+      setShowAttachments(true);
+    } catch {
+      // The state layer exposes a privacy-safe attachment error.
+    }
+  };
+  const sendFromComposer = async () => {
+    if (!messageDraft.trim()) return;
+    if (messageCheckEnabled) {
+      await checkMessage();
+      return;
+    }
+    await sendMessage(false);
+  };
 
-      <CoachConversation onTranscribe={transcribeCoachAudio} onConversationTurn={coachConversationTurn} onUseDraft={setMessageDraft} />
+  const messageListHeader = <View>
+    <View style={styles.privacyNotice}><PeacePadIcon name="lock-closed-outline" size={15} color={colors.accent} /><Text style={styles.privacyNoticeText}>{m("privacyNotice")}</Text></View>
+    {showUtilities ? <>
+      <View style={styles.utilityTray}><Pressable accessibilityLabel={showSearch ? m("hideMessageSearch") : m("searchMessages")} accessibilityRole="button" onPress={() => setShowSearch((current) => !current)} style={styles.utilityAction}><PeacePadIcon name="search-outline" size={17} color={colors.brand} /><Text style={styles.utilityActionText}>{showSearch ? m("hideSearch") : m("find")}</Text></Pressable><Text style={styles.utilityHint}>{m("utilityHint")}</Text></View>
+      {showSearch ? <View style={styles.searchBar}><PeacePadIcon name="search-outline" size={18} color={colors.muted} /><TextInput accessibilityLabel={m("searchLabel")} autoCapitalize="none" onChangeText={setMessageSearchQuery} onSubmitEditing={() => void searchMessages()} placeholder={m("searchPlaceholder")} placeholderTextColor={colors.muted} returnKeyType="search" style={styles.searchInput} value={messageSearchQuery} /><Pressable accessibilityLabel={m("search")} accessibilityRole="button" accessibilityState={{ disabled: messageSearchQuery.trim().length < 2 || messageSearchBusy }} disabled={messageSearchQuery.trim().length < 2 || messageSearchBusy} onPress={() => void searchMessages()} style={styles.searchButton}><Text style={styles.searchButtonText}>{messageSearchBusy ? m("searching") : m("search")}</Text></Pressable></View> : null}
+      {messageSearchError ? <Text accessibilityRole="alert" style={styles.error}>{messageSearchError}</Text> : null}
+      {messageSearchResults.map((result) => <View accessibilityLabel={m("searchResult")} key={result.originalMessageEventId} style={styles.searchResult}><Text style={styles.body}>{result.body}</Text>{result.corrected ? <Text style={styles.caption}>{m("corrected")}</Text> : null}</View>)}
+      {!messageCheckEnabled ? <View style={styles.messageCheckRow}><View style={styles.messageCheckCopy}><Text style={styles.messageCheckTitle}>{m("check")}</Text><Text style={styles.messageCheckBody}>{m("checkBody")}</Text></View><LabButton disabled={!messageCheckHydrated || messageCheckBusy} label={!messageCheckHydrated ? m("unavailable") : messageCheckBusy ? m("updating") : m("turnOn")} onPress={() => setShowMessageCheckSheet(true)} /><Pressable accessibilityLabel={m("howLabel")} accessibilityRole="button" accessibilityState={{ expanded: showHowItWorks }} onPress={() => setShowHowItWorks((current) => !current)} style={styles.linkButton}><Text style={styles.link}>{m("how")}</Text></Pressable>{showHowItWorks ? <Text style={styles.caption}>{m("howBody")}</Text> : null}</View> : <View style={styles.messageCheckEnabled}><View style={styles.messageCheckCopy}><Text style={styles.successText}>{m("checkOn")}</Text><Text style={styles.caption}>{m("checkOnBody")}</Text></View><Pressable accessibilityLabel={m("turnOffLabel")} accessibilityRole="button" accessibilityState={{ disabled: !messageCheckHydrated || messageCheckBusy }} disabled={!messageCheckHydrated || messageCheckBusy} onPress={() => void setMessageCheckEnabled(false)} style={styles.linkButton}><Text style={styles.link}>{m("turnOff")}</Text></Pressable></View>}
+    </> : null}
+  </View>;
 
-      <View style={[styles.card, { backgroundColor: colors.successSurface, borderColor: colors.successBorder }]}>
-        <Text style={styles.heading}>Photos, files, and voice notes</Text>
-        <Text style={styles.body}>Share only what you choose. Files are private to this connected conversation and use short-lived links.</Text>
-        <ConversationVoiceNote busy={attachmentBusy} onUpload={uploadMessageAttachment} />
-        <LabButton disabled={!messageCheckHydrated || attachmentBusy} label={attachmentBusy ? "Sharing securely..." : "Choose a file to share"} onPress={() => void (async () => {
-          try {
-            const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false, type: ["image/jpeg", "image/png", "application/pdf", "text/plain", "audio/mp4", "audio/m4a", "audio/webm"] });
-            if (result.canceled) return;
-            const selected = result.assets[0];
-            const allowed = ["image/jpeg", "image/png", "application/pdf", "text/plain", "audio/mp4", "audio/m4a", "audio/webm"] as const;
-            const mediaType = allowed.find((type) => type === selected.mimeType);
-            if (!mediaType) throw new Error("Choose a JPEG, PNG, PDF, text file, or voice note.");
-            const bytes = await new File(selected.uri).arrayBuffer();
-            await uploadMessageAttachment({ originalFileName: selected.name, mediaType, bytes });
-          } catch { /* State exposes a privacy-safe error below. */ }
-        })()} />
-        {attachmentError ? <Text accessibilityRole="alert" style={styles.error}>{attachmentError}</Text> : null}
-        {messageAttachments.map((attachment) => <View key={attachment.id} style={styles.searchResult}>
-          <Text style={styles.actionTitle}>{attachment.originalFileName}</Text>
-          <Text style={styles.caption}>{attachment.mediaType} · {attachment.byteLength} bytes</Text>
-          <LabButton label="Open attachment" onPress={() => void openMessageAttachment(attachment.id).then((url) => Linking.openURL(url)).catch(() => undefined)} variant="secondary" />
-        </View>)}
+  const renderMessage = ({ item: message, index }: { item: SentMessage; index: number }) => {
+    const mine = (message.isMine ?? message.canCorrect) || message.queued;
+    const previous = sentMessages[index - 1];
+    const showDay = !previous || messageDay(previous.sentAt) !== messageDay(message.sentAt);
+    return <React.Fragment key={message.id}>
+      {showDay ? <View accessibilityRole="header" style={styles.dateSeparator}><Text style={styles.dateSeparatorText}>{messageDay(message.sentAt)}</Text></View> : null}
+      <View accessibilityLabel={m("sent")} style={[styles.messageRow, mine ? styles.messageRowMine : styles.messageRowOther]}><View style={[styles.messageBubble, mine ? styles.messageBubbleMine : styles.messageBubbleOther]}><Text style={styles.messageBubbleText}>{message.sentBody}</Text><View style={styles.messageMeta}><Text style={styles.messageTime}>{messageClock(message.sentAt)}</Text>{mine ? <><PeacePadIcon name={message.status === "waiting" ? "time-outline" : message.status === "needs-action" ? "alert-circle-outline" : message.status === "sent" ? "checkmark-outline" : "checkmark-done-outline"} size={14} color={message.status === "needs-action" ? colors.warning : colors.brand} /><Text style={styles.messageStatus}>{message.corrected ? `${m("corrected")} · ` : ""}{statusText(message.status)}</Text></> : null}</View>{message.canCorrect && message.status !== "waiting" && correctingMessageId !== message.id ? <LabButton label={m("correct")} onPress={() => startCorrection(message.id)} variant="secondary" /> : null}{correctingMessageId === message.id ? <View accessibilityLabel={m("correctionEditor")} style={styles.correctionEditor}><Text style={styles.caption}>{m("originalRemains")}</Text><TextInput accessibilityLabel={m("correctionWording")} multiline onChangeText={setCorrectionDraft} style={[styles.input, styles.correctionInput]} value={correctionDraft} />{correctionError ? <Text accessibilityRole="alert" style={styles.error}>{correctionError}</Text> : null}<LabButton disabled={correctionBusy} label={correctionBusy ? m("saving") : m("saveCorrection")} onPress={() => void saveCorrection()} /><LabButton disabled={correctionBusy} label={m("cancelCorrection")} onPress={cancelCorrection} variant="secondary" /></View> : null}{message.queued && message.status === "needs-action" ? <View accessibilityLabel={m("recovery")} style={styles.recoveryBlock}><Text style={styles.caption}>{m("recoveryBody")}</Text><LabButton disabled={queuedActionBusyIds.includes(message.id)} label={queuedActionBusyIds.includes(message.id) ? m("trying") : m("tryAgain")} onPress={() => void retryQueuedMessage(message.id)} />{removeQueuedMessageId === message.id ? <View accessibilityLiveRegion="assertive" accessibilityRole="alert" style={styles.confirmCard}><Text style={styles.body}>{m("removeWarning")}</Text><LabButton disabled={queuedActionBusyIds.includes(message.id)} label={m("remove")} onPress={() => { setRemoveQueuedMessageId(undefined); void removeQueuedMessage(message.id); }} /><LabButton label={m("keep")} onPress={() => setRemoveQueuedMessageId(undefined)} variant="secondary" /></View> : <LabButton disabled={queuedActionBusyIds.includes(message.id)} label={m("remove")} onPress={() => setRemoveQueuedMessageId(message.id)} variant="secondary" />}</View> : null}</View></View>
+    </React.Fragment>;
+  };
+
+  const messageListFooter = <View>
+    {queuedActionError ? <Text accessibilityRole="alert" style={styles.error}>{queuedActionError}</Text> : null}
+    {messagePreview ? <View accessibilityLabel={m("result")} style={styles.previewCard}><Text style={styles.heading}>{messagePreview.tone}</Text><Text style={styles.body}>{messagePreview.summary}</Text>{messagePreview.rewordingSuggestion ? <><Text style={styles.fieldLabel}>{m("suggested")}</Text><Text style={styles.body}>{messagePreview.rewordingSuggestion}</Text><LabButton label={m("sendSuggested")} onPress={() => void sendMessage(true)} /></> : null}<LabButton label={m("sendOriginal")} onPress={() => void sendMessage(false)} variant="secondary" /></View> : null}
+     {messageError && !showMessageCheckSheet ? <View accessibilityRole="alert" style={styles.confirmCard}><Text style={styles.error}>{messageError}</Text>{messageCheckEnabled && messageDraft.trim() ? <LabButton label={m("checkAgain")} onPress={() => void checkMessage()} /> : null}{messageDraft.trim() ? <LabButton label={m("sendOriginal")} onPress={() => void sendMessage(false)} variant="secondary" /> : null}</View> : null}
+  </View>;
+
+  return <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.chatScreen}>
+    <View style={styles.chatHeader}>
+         <View style={styles.chatIdentity}>
+         <View style={styles.coParentAvatar}><PeacePadIcon name="person-outline" size={22} color={colors.brand} /></View>
+         <View style={styles.chatIdentityCopy}><Text accessibilityRole="header" style={styles.chatTitle}>{m("conversationTitle")}</Text><Text style={styles.chatSubtitle}>{m("connectedStatus")}</Text></View>
       </View>
-
-      <View style={styles.card}>
-        <Text style={styles.heading}>{m("find")}</Text>
-        <TextInput
-          accessibilityLabel={m("searchLabel")}
-          autoCapitalize="none"
-          onChangeText={setMessageSearchQuery}
-          placeholder={m("searchPlaceholder")}
-          placeholderTextColor={colors.muted}
-          returnKeyType="search"
-          onSubmitEditing={() => void searchMessages()}
-          style={styles.input}
-          value={messageSearchQuery}
-        />
-        <LabButton
-          disabled={messageSearchQuery.trim().length < 2 || messageSearchBusy}
-          label={messageSearchBusy ? m("searching") : m("search")}
-          onPress={() => void searchMessages()}
-          variant="secondary"
-        />
-        {messageSearchError ? <Text accessibilityRole="alert" style={styles.error}>{messageSearchError}</Text> : null}
-        {messageSearchResults.map((result) => (
-          <View accessibilityLabel={m("searchResult")} key={result.originalMessageEventId} style={styles.searchResult}>
-            <Text style={styles.body}>{result.body}</Text>
-            {result.corrected ? <Text style={styles.caption}>{m("corrected")}</Text> : null}
-          </View>
-        ))}
+      <View style={styles.chatHeaderActions}>
+         <Pressable accessibilityLabel={m("startAudioCall")} accessibilityRole="button" disabled={!onOpenCalls} onPress={() => onOpenCalls?.("audio")} style={styles.iconButton}><PeacePadIcon name="call-outline" size={21} color={colors.brand} /></Pressable>
+         <Pressable accessibilityLabel={m("startVideoCall")} accessibilityRole="button" disabled={!onOpenCalls} onPress={() => onOpenCalls?.("video")} style={styles.iconButton}><PeacePadIcon name="videocam-outline" size={23} color={colors.brand} /></Pressable>
+         <Pressable accessibilityLabel={m("conversationOptions")} accessibilityRole="button" accessibilityState={{ expanded: showUtilities }} onPress={() => setShowUtilities((current) => !current)} style={styles.iconButton}><PeacePadIcon name="ellipsis-vertical" size={22} color={colors.muted} /></Pressable>
       </View>
-
-      {!messageCheckEnabled ? (
-        <View style={styles.assistCard}>
-          <Text style={styles.heading}>{m("check")}</Text>
-          <Text style={styles.body}>{m("checkBody")}</Text>
-          <LabButton
-            disabled={!messageCheckHydrated || messageCheckBusy}
-            label={!messageCheckHydrated ? m("unavailable") : messageCheckBusy ? m("updating") : m("turnOn")}
-            onPress={() => void setMessageCheckEnabled(true)}
-          />
-          <LabButton label={m("notNow")} onPress={() => setShowHowItWorks(false)} variant="secondary" />
-          <Pressable
-            accessibilityLabel={m("howLabel")}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: showHowItWorks }}
-            onPress={() => setShowHowItWorks((current) => !current)}
-            style={styles.linkButton}
-          >
-            <Text style={styles.link}>{m("how")}</Text>
-          </Pressable>
-          {showHowItWorks ? (
-            <Text style={styles.caption}>{m("howBody")}</Text>
-          ) : null}
-        </View>
-      ) : (
-        <View style={[styles.enabledRow, largeText ? styles.enabledRowLargeText : null]}>
-          <Text style={styles.successText}>{m("checkOn")}</Text>
-          <Pressable
-            accessibilityLabel={m("turnOffLabel")}
-            accessibilityRole="button"
-            accessibilityState={{ disabled: !messageCheckHydrated || messageCheckBusy }}
-            disabled={!messageCheckHydrated || messageCheckBusy}
-            onPress={() => void setMessageCheckEnabled(false)}
-            style={styles.linkButton}
-          >
-            <Text style={styles.link}>{m("turnOff")}</Text>
-          </Pressable>
-        </View>
-      )}
-
-      {sentMessages.map((message) => (
-        <View accessibilityLabel={m("sent")} key={message.id} style={styles.sentBubble}>
-          <Text style={styles.body}>{message.sentBody}</Text>
-          {message.canCorrect && message.status !== "waiting" && correctingMessageId !== message.id ? (
-            <LabButton label={m("correct")} onPress={() => startCorrection(message.id)} variant="secondary" />
-          ) : null}
-          {correctingMessageId === message.id ? (
-            <View accessibilityLabel={m("correctionEditor")} style={styles.stack}>
-              <Text style={styles.caption}>{m("originalRemains")}</Text>
-              <TextInput
-                accessibilityLabel={m("correctionWording")}
-                multiline
-                onChangeText={setCorrectionDraft}
-                style={[styles.input, styles.messageInput]}
-                value={correctionDraft}
-              />
-              {correctionError ? <Text accessibilityRole="alert" style={styles.error}>{correctionError}</Text> : null}
-              <LabButton disabled={correctionBusy} label={correctionBusy ? m("saving") : m("saveCorrection")} onPress={() => void saveCorrection()} />
-              <LabButton disabled={correctionBusy} label={m("cancelCorrection")} onPress={cancelCorrection} variant="secondary" />
-            </View>
-          ) : null}
-          {message.queued && message.status === "needs-action" ? (
-            <View accessibilityLabel={m("recovery")} style={styles.stack}>
-              <Text style={styles.caption}>{m("recoveryBody")}</Text>
-              <LabButton
-                disabled={queuedActionBusyIds.includes(message.id)}
-                label={queuedActionBusyIds.includes(message.id) ? m("trying") : m("tryAgain")}
-                onPress={() => void retryQueuedMessage(message.id)}
-              />
-              {removeQueuedMessageId === message.id ? (
-                <View accessibilityLiveRegion="assertive" accessibilityRole="alert" style={styles.confirmCard}>
-                  <Text style={styles.body}>{m("removeWarning")}</Text>
-                  <LabButton
-                    disabled={queuedActionBusyIds.includes(message.id)}
-                    label={m("remove")}
-                    onPress={() => {
-                      setRemoveQueuedMessageId(undefined);
-                      void removeQueuedMessage(message.id);
-                    }}
-                  />
-                  <LabButton label={m("keep")} onPress={() => setRemoveQueuedMessageId(undefined)} variant="secondary" />
-                </View>
-              ) : (
-                <LabButton
-                  disabled={queuedActionBusyIds.includes(message.id)}
-                  label={m("remove")}
-                  onPress={() => setRemoveQueuedMessageId(message.id)}
-                  variant="secondary"
-                />
-              )}
-            </View>
-          ) : null}
-          <Text style={styles.caption}>{message.corrected ? `${m("corrected")} · ` : ""}{message.status === "waiting" ? m("waiting") : message.status === "needs-action" ? m("attention") : message.status}</Text>
-        </View>
-      ))}
-
-      {queuedActionError ? <Text accessibilityRole="alert" style={styles.error}>{queuedActionError}</Text> : null}
-
-      <TextInput
-        accessibilityLabel={m("draft")}
-        multiline
-        onChangeText={setMessageDraft}
-        placeholder={m("draftPlaceholder")}
-        style={[styles.input, styles.messageInput]}
-        value={messageDraft}
-      />
-
-      {messageCheckEnabled ? (
-        <LabButton disabled={!messageDraft.trim() || messageCheckBusy} label={messageCheckBusy ? m("checking") : m("checkMessage")} onPress={() => void checkMessage()} />
-      ) : null}
-
-      {messagePreview ? (
-        <View accessibilityLabel={m("result")} style={styles.assistCard}>
-          <Text style={styles.heading}>{messagePreview.tone}</Text>
-          <Text style={styles.body}>{messagePreview.summary}</Text>
-          {messagePreview.rewordingSuggestion ? (
-            <>
-              <Text style={styles.fieldLabel}>{m("suggested")}</Text>
-              <Text style={styles.body}>{messagePreview.rewordingSuggestion}</Text>
-              <LabButton label={m("sendSuggested")} onPress={() => void sendMessage(true)} />
-            </>
-          ) : null}
-          <LabButton label={m("sendOriginal")} onPress={() => void sendMessage(false)} variant="secondary" />
-        </View>
-      ) : null}
-
-      {messageError ? (
-        <View accessibilityRole="alert" style={styles.confirmCard}>
-          <Text style={styles.error}>{messageError}</Text>
-          {messageCheckEnabled && messageDraft.trim() ? <LabButton label={m("checkAgain")} onPress={() => void checkMessage()} /> : null}
-          {messageDraft.trim() ? <LabButton label={m("sendOriginal")} onPress={() => void sendMessage(false)} variant="secondary" /> : null}
-        </View>
-      ) : null}
-
-      {!messageCheckEnabled && messageDraft.trim() ? (
-        <LabButton label={m("send")} onPress={() => void sendMessage(false)} />
-      ) : null}
     </View>
-  );
+
+    <View style={styles.timelineShell}>
+    <FlatList
+      ref={timelineRef}
+      data={sentMessages}
+      keyExtractor={(message) => message.id}
+      keyboardShouldPersistTaps="handled"
+      initialNumToRender={20}
+      maxToRenderPerBatch={12}
+      windowSize={7}
+      removeClippedSubviews={Platform.OS === "android"}
+      ListHeaderComponent={messageListHeader}
+      ListEmptyComponent={<View style={styles.emptyConversation}><PeacePadIcon name="chatbubble-ellipses-outline" size={30} color={colors.brand} /><Text style={styles.emptyConversationTitle}>{m("emptyTitle")}</Text><Text style={styles.emptyConversationBody}>{m("emptyBody")}</Text></View>}
+      ListFooterComponent={messageListFooter}
+      onContentSizeChange={() => { if (keepAtLatest.current) scrollToLatest(); }}
+      onScroll={(event) => {
+        const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+        const distanceFromLatest = contentSize.height - (contentOffset.y + layoutMeasurement.height);
+        keepAtLatest.current = distanceFromLatest < 80;
+        setShowJumpToLatest(distanceFromLatest > 160);
+      }}
+      renderItem={renderMessage}
+      scrollEventThrottle={16}
+      style={styles.messageTimelineScroll}
+      contentContainerStyle={[styles.messageTimeline, largeText ? styles.messageTimelineLargeText : null]}
+    />
+    {showJumpToLatest ? <Pressable accessibilityLabel={m("jumpToLatest")} accessibilityRole="button" onPress={() => { keepAtLatest.current = true; setShowJumpToLatest(false); scrollToLatest(); }} style={styles.jumpToLatest}><PeacePadIcon name="arrow-down" size={17} color={colors.onBrand} /><Text style={styles.jumpToLatestText}>{m("jumpToLatest")}</Text></Pressable> : null}
+    </View>
+
+    <View style={styles.composerDock}>
+       <View style={styles.composerTools}><Pressable accessibilityLabel={m("openCoach")} accessibilityRole="button" onPress={() => setCoachOpen(true)} style={styles.toolChip}><PeacePadIcon name="sparkles-outline" size={16} color={colors.brand} /><Text style={styles.toolChipText}>{m("coachLabel")}</Text></Pressable><Pressable accessibilityLabel={m("attachFile")} accessibilityRole="button" disabled={attachmentBusy || !messageCheckHydrated} onPress={() => void openAttachmentPicker()} style={styles.toolIcon}><PeacePadIcon name="attach-outline" size={19} color={colors.brand} /></Pressable><Pressable accessibilityLabel={showVoiceNote ? m("hideVoiceNote") : m("recordVoiceNote")} accessibilityRole="button" onPress={() => setShowVoiceNote((current) => !current)} style={styles.toolIcon}><PeacePadIcon name="mic-outline" size={19} color={colors.brand} /></Pressable><Pressable accessibilityLabel={showAttachments ? m("hideSharedFiles") : m("showSharedFiles")} accessibilityRole="button" onPress={() => setShowAttachments((current) => !current)} style={styles.toolIcon}><PeacePadIcon name="folder-open-outline" size={18} color={colors.brand} /></Pressable></View>
+      <View style={styles.composerRow}><TextInput accessibilityLabel={m("draft")} multiline onChangeText={setMessageDraft} placeholder={m("draftPlaceholder")} placeholderTextColor={colors.muted} style={[styles.composerInput, largeText ? styles.composerInputLargeText : null]} value={messageDraft} />{messageCheckEnabled && messageDraft.trim() ? <Pressable accessibilityLabel={m("checkMessage")} accessibilityRole="button" disabled={messageCheckBusy} onPress={() => void checkMessage()} style={styles.composerSend}><PeacePadIcon name="shield-checkmark-outline" size={20} color={colors.onBrand} /></Pressable> : <Pressable accessibilityLabel={m("send")} accessibilityRole="button" accessibilityState={{ disabled: !messageDraft.trim() || messageCheckBusy }} disabled={!messageDraft.trim() || messageCheckBusy} onPress={() => void sendFromComposer()} style={[styles.composerSend, !messageDraft.trim() ? styles.composerSendDisabled : null]}><PeacePadIcon name="send" size={20} color={colors.onBrand} /></Pressable>}</View>
+       {messageCheckEnabled && messageDraft.trim() ? <Text style={styles.composerHint}>{messageCheckBusy ? m("checking") : m("messageCheckHint")}</Text> : null}
+      {showVoiceNote ? <ConversationVoiceNote busy={attachmentBusy} onUpload={uploadMessageAttachment} /> : null}
+       {showAttachments ? <View style={styles.attachmentsTray}><Text style={styles.attachmentsTitle}>{m("attachmentsTitle")}</Text><Text style={styles.attachmentsBody}>{m("attachmentsBody")}</Text>{attachmentError ? <Text accessibilityRole="alert" style={styles.error}>{attachmentError}</Text> : null}{messageAttachments.length === 0 ? <Text style={styles.caption}>{m("nothingShared")}</Text> : messageAttachments.map((attachment) => <View key={attachment.id} style={styles.attachmentItem}><View style={styles.attachmentCopy}><Text style={styles.actionTitle}>{attachment.originalFileName}</Text><Text style={styles.caption}>{attachment.mediaType} · {attachment.byteLength} bytes</Text></View><LabButton label={m("openAttachment")} onPress={() => void openMessageAttachment(attachment.id).then((url) => Linking.openURL(url)).catch(() => undefined)} variant="secondary" /></View>)}</View> : null}
+    </View>
+
+    <Modal animationType="slide" onRequestClose={() => setCoachOpen(false)} visible={coachOpen}><View accessibilityViewIsModal style={styles.coachModal}><View style={styles.coachModalHeader}><Text accessibilityRole="header" style={styles.coachModalTitle}>{m("coachLabel")}</Text><Pressable accessibilityLabel={m("closeCoach")} accessibilityRole="button" onPress={() => setCoachOpen(false)} style={styles.iconButton}><PeacePadIcon name="close" size={23} color={colors.muted} /></Pressable></View><CoachConversation initiallyOpen onTranscribe={transcribeCoachAudio} onConversationTurn={coachConversationTurn} onUseDraft={(draft) => { setMessageDraft(draft); setCoachOpen(false); }} /></View></Modal>
+    <Modal animationType="slide" onRequestClose={() => setShowMessageCheckSheet(false)} visible={showMessageCheckSheet} transparent>
+      <View style={styles.messageCheckBackdrop}>
+        <View accessibilityViewIsModal accessibilityLabel={m("check")} style={styles.messageCheckSheet}>
+          <View style={styles.sheetHandle} />
+           <Text accessibilityRole="header" style={styles.sheetTitle}>{m("checkSheetTitle")}</Text>
+           <Text style={styles.body}>{m("checkSheetBody")}</Text>
+           <Text style={styles.caption}>{m("checkSheetClarification")}</Text>
+           {messageError ? <Text accessibilityRole="alert" style={styles.error}>{messageError}</Text> : null}
+           <LabButton disabled={!messageCheckHydrated || messageCheckBusy} label={messageCheckBusy ? m("updating") : m("checkSheetTurnOn")} onPress={() => void setMessageCheckEnabled(true).then((enabled) => { if (enabled) setShowMessageCheckSheet(false); })} />
+          <LabButton disabled={messageCheckBusy} label={m("checkSheetNotNow")} onPress={() => setShowMessageCheckSheet(false)} variant="secondary" />
+        </View>
+      </View>
+    </Modal>
+  </KeyboardAvoidingView>;
 }
 
 export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
@@ -1444,10 +1409,20 @@ const styles = StyleSheet.create({
   inviteCard: { backgroundColor: "#EAF6CF", borderColor: "#BBD781", borderRadius: 22, borderWidth: 1, gap: spacing.xs, padding: spacing.lg },
   inviteTitle: { ...typography.subheading, color: colors.successText },
   card: { backgroundColor: "#FFFDF8", borderColor: "#E7C8BD", borderRadius: 24, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
+  addEventCta: { alignItems: "center", backgroundColor: colors.brandSoft, borderColor: colors.brand, borderRadius: 20, borderWidth: 1, flexDirection: "row", justifyContent: "space-between", minHeight: 64, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  addEventCtaCopy: { flex: 1, gap: spacing.xs },
+  eventSheet: { backgroundColor: colors.surface, borderRadius: 28, gap: spacing.md, maxHeight: "92%", padding: spacing.lg, width: "100%" },
+  calendarSummaryRow: { alignItems: "center", flexDirection: "row", gap: spacing.sm, minHeight: 44 },
+  calendarDots: { flexDirection: "row", gap: spacing.xs },
   successCard: { backgroundColor: colors.successSurface, borderColor: colors.successBorder, borderRadius: 22, borderWidth: 1, gap: spacing.sm, padding: spacing.lg },
   confirmCard: { backgroundColor: colors.warningSurface, borderColor: colors.warningBorder, borderRadius: 22, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
   assistCard: { backgroundColor: "#FFE4D6", borderColor: "#F2A791", borderRadius: 24, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
   codeInput: { ...typography.title, backgroundColor: colors.surface, borderColor: "#76CCBE", borderRadius: 22, borderWidth: 2, color: colors.text, letterSpacing: 12, padding: spacing.lg, textAlign: "center" },
+  codeEntry: { alignItems: "center", flexDirection: "row", gap: spacing.sm, justifyContent: "center", minHeight: 62, position: "relative" },
+  codeCell: { alignItems: "center", backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 14, borderWidth: 2, height: 58, justifyContent: "center", width: 44 },
+  codeCellFilled: { backgroundColor: colors.brandSoft, borderColor: colors.brand },
+  codeCellText: { ...typography.heading, color: colors.text },
+  codeInputOverlay: { bottom: 0, color: "transparent", left: 0, opacity: 0.02, position: "absolute", right: 0, top: 0, width: "100%", zIndex: 2 },
   invitationCode: { ...typography.heading, color: colors.brand, letterSpacing: 8, textAlign: "center" },
   qrCard: { alignItems: "center", alignSelf: "center", backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: spacing.sm, padding: spacing.md },
   qrLabel: { ...typography.caption, color: colors.text, fontWeight: "800" },
@@ -1460,6 +1435,9 @@ const styles = StyleSheet.create({
   segmentText: { ...typography.body, color: colors.muted, fontWeight: "700" },
   segmentTextActive: { color: colors.brand },
   calendarNavigation: { flexDirection: "row", gap: spacing.sm, justifyContent: "space-between" },
+  planningDisclosure: { alignItems: "center", backgroundColor: colors.brandSoft, borderColor: colors.brand, borderRadius: 20, borderWidth: 1, flexDirection: "row", gap: spacing.md, justifyContent: "space-between", padding: spacing.md },
+  planningDisclosureCopy: { flex: 1, gap: spacing.xs },
+  planningDisclosureTitle: { ...typography.body, color: colors.text, fontWeight: "900" },
   calendarCanvas: { backgroundColor: "#FFFDF8", borderColor: "#F0C940", borderRadius: 24, borderWidth: 1, gap: spacing.md, minHeight: 180, padding: spacing.lg },
   calendarMonth: { ...typography.heading, color: colors.text },
   calendarEmpty: { ...typography.body, color: colors.muted },
@@ -1503,5 +1481,80 @@ const styles = StyleSheet.create({
   link: { ...typography.body, color: colors.brand, fontWeight: "800", textAlign: "center" },
   linkButton: { alignItems: "center", justifyContent: "center", minHeight: 44, paddingHorizontal: spacing.sm },
   sentBubble: { alignSelf: "flex-end", backgroundColor: colors.brandSoft, borderRadius: 20, maxWidth: "86%", padding: spacing.md },
-  searchResult: { borderTopColor: colors.border, borderTopWidth: 1, gap: spacing.xs, paddingTop: spacing.sm }
+  searchResult: { borderTopColor: colors.border, borderTopWidth: 1, gap: spacing.xs, paddingTop: spacing.sm },
+  chatScreen: { backgroundColor: colors.background, flex: 1 },
+  chatHeader: { alignItems: "center", backgroundColor: colors.surface, borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: "row", justifyContent: "space-between", minHeight: 72, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  chatIdentity: { alignItems: "center", flex: 1, flexDirection: "row", gap: spacing.sm },
+  chatIdentityCopy: { flex: 1, gap: 2 },
+  chatTitle: { ...typography.subheading, color: colors.text },
+  chatSubtitle: { ...typography.caption, color: colors.muted },
+  coParentAvatar: { alignItems: "center", backgroundColor: colors.brandSoft, borderColor: colors.brand, borderRadius: 999, borderWidth: 1, height: 44, justifyContent: "center", width: 44 },
+  coParentAvatarText: { color: colors.brand, fontSize: 13, fontWeight: "900" },
+  chatHeaderActions: { alignItems: "center", flexDirection: "row", gap: spacing.xs },
+  iconButton: { alignItems: "center", borderRadius: 22, justifyContent: "center", minHeight: 44, minWidth: 44 },
+  timelineShell: { flex: 1, position: "relative" },
+  messageTimelineScroll: { flex: 1 },
+  messageTimeline: { gap: spacing.sm, padding: spacing.md, paddingBottom: spacing.lg },
+  messageTimelineLargeText: { paddingHorizontal: spacing.sm },
+  privacyNotice: { alignItems: "center", alignSelf: "center", backgroundColor: colors.successSurface, borderColor: colors.successBorder, borderRadius: 999, borderWidth: 1, flexDirection: "row", gap: spacing.xs, maxWidth: "94%", paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
+  privacyNoticeText: { ...typography.caption, color: colors.accent, flexShrink: 1, textAlign: "center" },
+  utilityTray: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 16, borderWidth: 1, gap: spacing.xs, padding: spacing.sm },
+  utilityAction: { alignItems: "center", flexDirection: "row", gap: spacing.xs, minHeight: 40 },
+  utilityActionText: { ...typography.caption, color: colors.brand, fontWeight: "800" },
+  utilityHint: { ...typography.caption, color: colors.muted },
+  searchBar: { alignItems: "center", backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 18, borderWidth: 1, flexDirection: "row", gap: spacing.xs, minHeight: 52, paddingHorizontal: spacing.sm },
+  searchInput: { ...typography.body, color: colors.text, flex: 1, minHeight: 44, paddingHorizontal: spacing.xs },
+  searchButton: { alignItems: "center", borderRadius: 12, justifyContent: "center", minHeight: 40, paddingHorizontal: spacing.sm },
+  searchButtonText: { ...typography.caption, color: colors.brand, fontWeight: "900" },
+  messageCheckRow: { backgroundColor: colors.warningSurface, borderColor: colors.warningBorder, borderRadius: 16, borderWidth: 1, gap: spacing.xs, padding: spacing.sm },
+  messageCheckCopy: { flex: 1, gap: 2 },
+  messageCheckTitle: { ...typography.body, color: colors.text, fontWeight: "900" },
+  messageCheckBody: { ...typography.caption, color: colors.muted },
+  messageCheckEnabled: { alignItems: "center", backgroundColor: colors.successSurface, borderColor: colors.successBorder, borderRadius: 16, borderWidth: 1, flexDirection: "row", gap: spacing.sm, padding: spacing.sm },
+  messageList: { gap: spacing.xs, minHeight: 180 },
+  dateSeparator: { alignItems: "center", paddingVertical: spacing.sm },
+  dateSeparatorText: { ...typography.caption, backgroundColor: colors.cream, borderRadius: 999, color: colors.muted, fontWeight: "800", overflow: "hidden", paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
+  emptyConversation: { alignItems: "center", alignSelf: "center", gap: spacing.xs, justifyContent: "center", maxWidth: 280, paddingVertical: spacing.xl },
+  emptyConversationTitle: { ...typography.subheading, color: colors.text, textAlign: "center" },
+  emptyConversationBody: { ...typography.caption, color: colors.muted, textAlign: "center" },
+  messageRow: { flexDirection: "row", width: "100%" },
+  messageRowMine: { justifyContent: "flex-end" },
+  messageRowOther: { justifyContent: "flex-start" },
+  messageBubble: { borderRadius: 18, gap: spacing.xs, maxWidth: "82%", paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  messageBubbleMine: { backgroundColor: colors.brandSoft, borderBottomRightRadius: 5 },
+  messageBubbleOther: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderBottomLeftRadius: 5 },
+  messageBubbleText: { ...typography.body, color: colors.text },
+  messageMeta: { alignItems: "center", flexDirection: "row", gap: spacing.xs, justifyContent: "flex-end" },
+  messageTime: { ...typography.caption, color: colors.muted },
+  messageStatus: { ...typography.caption, color: colors.brand, fontWeight: "700" },
+  correctionEditor: { gap: spacing.sm, marginTop: spacing.xs },
+  correctionInput: { minHeight: 80 },
+  recoveryBlock: { gap: spacing.sm, marginTop: spacing.xs },
+  previewCard: { backgroundColor: colors.brandSoft, borderColor: colors.brand, borderRadius: 18, borderWidth: 1, gap: spacing.sm, padding: spacing.md },
+  composerDock: { backgroundColor: colors.surface, borderTopColor: colors.border, borderTopWidth: 1, gap: spacing.xs, paddingHorizontal: spacing.sm, paddingTop: spacing.sm },
+  composerTools: { alignItems: "center", flexDirection: "row", gap: spacing.xs },
+  toolChip: { alignItems: "center", backgroundColor: colors.brandSoft, borderRadius: 999, flexDirection: "row", gap: spacing.xs, minHeight: 38, paddingHorizontal: spacing.md },
+  toolChipText: { ...typography.caption, color: colors.brand, fontWeight: "900" },
+  toolIcon: { alignItems: "center", borderRadius: 20, justifyContent: "center", minHeight: 40, minWidth: 40 },
+  composerRow: { alignItems: "flex-end", flexDirection: "row", gap: spacing.xs },
+  composerInput: { ...typography.body, backgroundColor: colors.background, borderColor: colors.border, borderRadius: 20, borderWidth: 1, color: colors.text, flex: 1, maxHeight: 112, minHeight: 48, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  composerInputLargeText: { maxHeight: 150 },
+  composerSend: { alignItems: "center", backgroundColor: colors.brand, borderRadius: 999, height: 48, justifyContent: "center", width: 48 },
+  composerSendDisabled: { backgroundColor: colors.muted, opacity: 0.45 },
+  composerHint: { ...typography.caption, color: colors.muted, paddingHorizontal: spacing.sm },
+  attachmentsTray: { backgroundColor: colors.cream, borderColor: colors.warningBorder, borderRadius: 16, borderWidth: 1, gap: spacing.xs, padding: spacing.sm },
+  attachmentsTitle: { ...typography.body, color: colors.text, fontWeight: "900" },
+  attachmentsBody: { ...typography.caption, color: colors.muted },
+  attachmentItem: { alignItems: "center", borderTopColor: colors.border, borderTopWidth: 1, flexDirection: "row", gap: spacing.sm, paddingTop: spacing.xs },
+  attachmentCopy: { flex: 1 },
+  coachModal: { backgroundColor: colors.background, flex: 1, padding: spacing.md },
+  coachModalHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", minHeight: 52 },
+  coachModalTitle: { ...typography.heading, color: colors.text },
+  jumpToLatest: { alignItems: "center", alignSelf: "center", backgroundColor: colors.brand, borderRadius: 999, bottom: spacing.md, flexDirection: "row", gap: spacing.xs, minHeight: 44, paddingHorizontal: spacing.md, position: "absolute", shadowColor: colors.text, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.18, shadowRadius: 8, elevation: 3 },
+  jumpToLatestText: { ...typography.caption, color: colors.onBrand, fontWeight: "800" },
+  messageCheckBackdrop: { backgroundColor: "rgba(28, 21, 37, 0.32)", flex: 1, justifyContent: "flex-end" },
+  messageCheckSheet: { backgroundColor: colors.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28, gap: spacing.md, padding: spacing.lg, paddingBottom: spacing.xl },
+  calendarManagerSheet: { backgroundColor: colors.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28, gap: spacing.md, maxHeight: "82%", padding: spacing.lg, paddingBottom: spacing.xl },
+  sheetHandle: { alignSelf: "center", backgroundColor: colors.border, borderRadius: 999, height: 5, width: 42 },
+  sheetTitle: { ...typography.heading, color: colors.text }
 });

@@ -24,6 +24,7 @@ import { PeacePadStagingRuntime, usePendingStagingInvitation } from "./runtime/P
 import { createPeacePadSupabaseClient, SupabaseSessionProvider } from "./session/SupabaseSessionProvider";
 import { colors, spacing } from "./theme";
 import { AudioCallScreen } from "./calls/AudioCallScreen";
+import type { CallMediaType } from "./domain/parentCore";
 import { AudioCallStateProvider } from "./calls/AudioCallState";
 import * as Notifications from "expo-notifications";
 import { isIncomingCallNotificationResponse } from "./notifications/NotificationNavigation";
@@ -33,7 +34,7 @@ import { CoachScreen } from "./coach/CoachScreen";
 import { SupportFinderScreen } from "./support/SupportFinderScreen";
 
 export type AppScreen = "foundation" | CoordinationScreen;
-type RootStackParamList = Record<AppScreen, { activityTitle?: string; code?: string } | undefined>;
+type RootStackParamList = Record<AppScreen, { activityTitle?: string; code?: string; mediaType?: CallMediaType } | undefined>;
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export const peacePadLinking: LinkingOptions<RootStackParamList> = {
@@ -56,7 +57,7 @@ export function PeacePadCoordinationApp({ startScreen, wrapLocalization = true, 
       <Stack.Navigator initialRouteName={resolveStartScreen(startScreen ?? process.env?.EXPO_PUBLIC_PEACEPAD_LAB_START_SCREEN)} screenOptions={{ headerShown: false }}>
         {(["foundation", "home", "coach", "messages", "calendar", "activities", "tasks", "invite", "records", "calls", "family", "support", "conch", "more"] as const).map((name) => (
           <Stack.Screen key={name} name={name}>
-            {({ route }) => <CoordinationRoute activeScreen={name} activityTitle={route.params?.activityTitle} invitationCode={route.params?.code} />}
+            {({ route }) => <CoordinationRoute activeScreen={name} activityTitle={route.params?.activityTitle} invitationCode={route.params?.code} mediaType={route.params?.mediaType} />}
           </Stack.Screen>
         ))}
       </Stack.Navigator>
@@ -139,7 +140,7 @@ function SelectedPeacePadStagingApp({ staging }: { staging: PeacePadSupabaseConf
   const client = useMemo(() => createPeacePadSupabaseClient(staging), [staging]);
   const selectedEnvironment = useMemo(() => ({ ...environmentConfig, apiBaseUrl: staging.apiBaseUrl }), [staging]);
   return (
-    <SupabaseSessionProvider client={client}>
+    <SupabaseSessionProvider client={client} config={staging}>
       <PeacePadStagingRuntime environment={selectedEnvironment} supabase={staging}>
         <PeacePadCoordinationApp startScreen="home" wrapLocalization={false} wrapRecordsProvider={false} wrapAudioCallProvider={false} wrapParentCoreProvider={false} />
       </PeacePadStagingRuntime>
@@ -147,9 +148,13 @@ function SelectedPeacePadStagingApp({ staging }: { staging: PeacePadSupabaseConf
   );
 }
 
-function CoordinationRoute({ activeScreen, activityTitle, invitationCode }: { activeScreen: AppScreen; activityTitle?: string; invitationCode?: string }) {
-  const { connected, invitationGrant } = useCoordinationState();
-  const hasCoParent = Boolean(invitationGrant);
+function CoordinationRoute({ activeScreen, activityTitle, invitationCode, mediaType }: { activeScreen: AppScreen; activityTitle?: string; invitationCode?: string; mediaType?: CallMediaType }) {
+  const { connected, hasVerifiedCoParent } = useCoordinationState();
+  // A verified coordination runtime already represents an accepted participant.
+  // invitationGrant is only the transient result of accepting an invitation in
+  // this session, so gating calls/Conch on it made linked parents look
+  // disconnected after a cold start.
+  const hasCoParent = hasVerifiedCoParent;
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const scrollRef = useRef<ScrollView>(null);
   const pendingScrollReset = useRef(false);
@@ -166,26 +171,27 @@ function CoordinationRoute({ activeScreen, activityTitle, invitationCode }: { ac
     scrollRef.current?.scrollTo({ animated: false, y: 0 });
   }, []);
   const primary: PrimaryTaskScreen = activeScreen === "coach" || activeScreen === "activities" || activeScreen === "tasks" || activeScreen === "invite" || activeScreen === "foundation" || activeScreen === "calls" || activeScreen === "family" || activeScreen === "support" || activeScreen === "conch" || (!connected && activeScreen === "messages") ? "home" : activeScreen;
+  const connectedMessages = activeScreen === "messages" && connected;
   return (
     <SafeAreaView style={styles.safe}>
       <PendingInvitationNavigation />
       <View style={styles.shell}>
-        <ScrollView ref={scrollRef} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" onContentSizeChange={settleScrollReset}>
+        {connectedMessages ? <View style={styles.chatRoute}><MessagesScreen onOpenCalls={(requestedMediaType) => navigation.navigate("calls", { mediaType: requestedMediaType })} /></View> : <ScrollView ref={scrollRef} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" onContentSizeChange={settleScrollReset}>
           {activeScreen === "foundation" ? <FoundationScreen onOpenLab={() => setScreen("home")} onPhaseChange={resetScroll} /> : null}
           {activeScreen === "home" ? <CoordinationHomeScreen setScreen={setScreen} /> : null}
           {activeScreen === "coach" ? <CoachScreen onOpenMessages={connected ? () => setScreen("messages") : undefined} /> : null}
-          {activeScreen === "messages" ? connected ? <MessagesScreen /> : <ConnectionRequiredScreen setScreen={setScreen} /> : null}
+          {activeScreen === "messages" ? <ConnectionRequiredScreen setScreen={setScreen} /> : null}
           {activeScreen === "calendar" ? <CalendarScreen initialEventTitle={activityTitle} /> : null}
           {activeScreen === "activities" ? <ActivitySuggestionsScreen onPlanActivity={(title) => navigation.navigate("calendar", { activityTitle: title })} /> : null}
           {activeScreen === "tasks" ? <ParentingTasksScreen /> : null}
           {activeScreen === "invite" ? <InvitationScreen initialCode={invitationCode} /> : null}
           {activeScreen === "records" ? <RecordsHomeScreen setScreen={setScreen} /> : null}
-          {activeScreen === "calls" ? hasCoParent ? <AudioCallScreen /> : <ConnectionRequiredScreen setScreen={setScreen} /> : null}
+          {activeScreen === "calls" ? hasCoParent ? <AudioCallScreen initialMediaType={mediaType} /> : <ConnectionRequiredScreen setScreen={setScreen} /> : null}
           {activeScreen === "family" ? <ParentCoreHubScreen /> : null}
           {activeScreen === "support" ? <SupportFinderScreen /> : null}
           {activeScreen === "conch" ? hasCoParent ? <ParentCoreHubScreen initialSection="conch" /> : <ConnectionRequiredScreen setScreen={setScreen} /> : null}
           {activeScreen === "more" ? <MoreScreen setScreen={setScreen} /> : null}
-        </ScrollView>
+        </ScrollView>}
         {activeScreen !== "foundation" ? <TaskNavigation active={primary} available={connected ? undefined : ["home", "calendar", "records", "more"]} onSelect={setScreen} /> : null}
       </View>
     </SafeAreaView>
@@ -230,6 +236,7 @@ function ConnectionRequiredScreen({ setScreen }: { setScreen: (screen: Coordinat
 const styles = StyleSheet.create({
   safe: { backgroundColor: colors.background, flex: 1 },
   shell: { flex: 1 },
+  chatRoute: { flex: 1 },
   content: { flexGrow: 1, padding: spacing.lg },
   unavailable: { backgroundColor: colors.background, flex: 1, justifyContent: "center", padding: spacing.xl },
   unavailableTitle: { color: colors.text, fontSize: 28, fontWeight: "800", marginBottom: spacing.sm },

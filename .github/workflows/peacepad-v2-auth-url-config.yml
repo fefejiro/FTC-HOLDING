@@ -3,13 +3,21 @@ name: PeacePad V2 Auth URL Configuration
 on:
   workflow_dispatch:
     inputs:
+      operation:
+        description: Read provider status or apply the native redirect contract
+        required: true
+        default: auth-urls
+        type: choice
+        options:
+          - auth-urls
+          - provider-status
       project_ref:
         description: Approved PeacePad production Supabase project ref
         required: true
         default: rohvkyuxbnqzglaromms
         type: string
       confirmation:
-        description: Type CONFIGURE PEACEPAD AUTH URLS to apply the production redirect contract
+        description: Type the exact authorization for the selected operation
         required: true
         type: string
 
@@ -22,7 +30,7 @@ concurrency:
 
 jobs:
   configure-auth-urls:
-    if: inputs.confirmation == 'CONFIGURE PEACEPAD AUTH URLS'
+    if: inputs.operation == 'auth-urls' && inputs.confirmation == 'CONFIGURE PEACEPAD AUTH URLS'
     name: Configure and verify PeacePad production Auth URLs
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -74,3 +82,52 @@ jobs:
             (.uri_allow_list | contains("localhost") | not)
           ' "$after" >/dev/null
           echo 'PeacePad Auth URL configuration verified: production site plus native confirmation and recovery redirects.'
+
+  provider-status:
+    if: inputs.operation == 'provider-status' && inputs.confirmation == 'READ PEACEPAD AUTH PROVIDER STATUS'
+    name: Read PeacePad production Auth provider status
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: peacepad-v2-staging-ca
+    steps:
+      - name: Validate the approved project and read-only authorization
+        shell: bash
+        env:
+          PROJECT_REF: ${{ inputs.project_ref }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          test "$PROJECT_REF" = "rohvkyuxbnqzglaromms"
+          test "$CONFIRMATION" = "READ PEACEPAD AUTH PROVIDER STATUS"
+
+      - name: Read and redact provider configuration
+        shell: bash
+        env:
+          PROJECT_REF: ${{ inputs.project_ref }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          api="https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth"
+          response="$(curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+            --connect-timeout 20 --max-time 60 \
+            --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            --header 'accept: application/json' "$api")"
+          jq -e 'type == "object"' <<<"$response" >/dev/null
+          jq -n \
+            --argjson email "$(jq -c '.external_email_enabled // false' <<<"$response")" \
+            --argjson google "$(jq -c '.external_google_enabled // false' <<<"$response")" \
+            --argjson apple "$(jq -c '.external_apple_enabled // false' <<<"$response")" \
+            --argjson manualLinking "$(jq -c '.security_manual_linking_enabled // false' <<<"$response")" \
+            --argjson googleClientIds "$(jq -c '(.external_google_client_id // "") | split(",") | map(select(length > 0)) | length > 0' <<<"$response")" \
+            --argjson appleClientIds "$(jq -c '(.external_apple_client_id // "") | split(",") | map(select(length > 0)) | length > 0' <<<"$response")" \
+            '{
+              providerStatus: "read-only",
+              emailEnabled: $email,
+              googleEnabled: $google,
+              appleEnabled: $apple,
+              manualLinkingEnabled: $manualLinking,
+              googleClientAudiencePresent: $googleClientIds,
+              appleClientAudiencePresent: $appleClientIds,
+              secretsPrinted: false
+            }'

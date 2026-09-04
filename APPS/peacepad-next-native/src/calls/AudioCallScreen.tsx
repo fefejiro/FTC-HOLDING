@@ -6,11 +6,15 @@ import { useOptionalLocalization } from "../localization/LocalizationProvider";
 import { callText } from "../localization/callLocalization";
 import { colors, spacing, typography } from "../theme";
 import { useAudioCallState } from "./AudioCallState";
+import type { CallMediaType } from "../domain/parentCore";
 
-export function AudioCallScreen() {
+export function AudioCallScreen({ initialMediaType }: { initialMediaType?: CallMediaType } = {}) {
   const { locale } = useOptionalLocalization();
   const text = (key: Parameters<typeof callText>[1]) => callText(locale, key);
   const state = useAudioCallState();
+  React.useEffect(() => {
+    if (initialMediaType) state.setSelectedMediaType(initialMediaType);
+  }, [initialMediaType]);
   const terminal = state.call && ["declined", "ended", "expired"].includes(state.call.status);
   const title = !state.call ? text("noCall")
     : state.call.status === "ringing" ? text(state.incoming ? "ringingIn" : "ringingOut")
@@ -31,13 +35,13 @@ export function AudioCallScreen() {
     />
     <View accessibilityLiveRegion="polite" style={styles.callCard}>
       {!state.call || terminal ? <View accessibilityRole="radiogroup" style={styles.mediaChoices}>
-        {(["audio", "video"] as const).map((type) => <Pressable accessibilityRole="radio" accessibilityState={{ checked: state.selectedMediaType === type }} key={type} onPress={() => state.setSelectedMediaType(type)} style={[styles.mediaChoice, state.selectedMediaType === type ? styles.mediaChoiceActive : null]}><Text style={[styles.mediaChoiceText, state.selectedMediaType === type ? styles.mediaChoiceTextActive : null]}>{type === "video" ? "Video call" : "Audio call"}</Text></Pressable>)}
+        {(["audio", "video"] as const).map((type) => <Pressable accessibilityLabel={type === "video" ? text("videoChoice") : text("audioChoice")} accessibilityRole="radio" accessibilityState={{ checked: state.selectedMediaType === type }} key={type} onPress={() => state.setSelectedMediaType(type)} style={[styles.mediaChoice, state.selectedMediaType === type ? styles.mediaChoiceActive : null]}><Text style={[styles.mediaChoiceText, state.selectedMediaType === type ? styles.mediaChoiceTextActive : null]}>{type === "video" ? text("videoChoice") : text("audioChoice")}</Text></Pressable>)}
       </View> : null}
       <Text accessibilityRole="header" style={styles.heading}>{title}</Text>
       <Text style={styles.body}>{statusBody}</Text>
       {state.call?.type === "video" && state.call.status === "active" ? <VideoStage cameraEnabled={state.cameraEnabled} localStreamUrl={state.localStreamUrl} remoteStreamUrl={state.remoteStreamUrl} /> : null}
       {state.call?.status === "active" ? <Text accessibilityLabel={`${text("duration")} ${duration}`} style={styles.duration}>{duration}</Text> : null}
-      {!state.call || terminal ? <LabButton disabled={state.busy || !state.hydrated} label={state.selectedMediaType === "video" ? "Start video call" : text("start")} onPress={() => void state.start()} /> : null}
+      {!state.call || terminal ? <LabButton disabled={state.busy || !state.hydrated} label={state.selectedMediaType === "video" ? text("startVideo") : text("start")} onPress={() => void state.start()} /> : null}
       {state.call?.status === "ringing" && state.incoming ? <>
         <LabButton disabled={state.busy} label={text("accept")} onPress={() => void state.accept()} />
         <LabButton disabled={state.busy} label={text("decline")} onPress={() => void state.decline()} variant="secondary" />
@@ -45,7 +49,7 @@ export function AudioCallScreen() {
       {state.call?.status === "ringing" && !state.incoming ? <LabButton disabled={state.busy} label={text("cancel")} onPress={() => void state.end()} variant="secondary" /> : null}
       {state.call?.status === "active" ? <>
         <LabButton disabled={state.busy || state.mediaState === "unavailable"} label={text(state.muted ? "unmute" : "mute")} onPress={state.toggleMute} variant="secondary" />
-        {state.call.type === "video" ? <View style={styles.videoActions}><LabButton disabled={state.busy || state.mediaState === "unavailable"} label={state.cameraEnabled ? "Turn camera off" : "Turn camera on"} onPress={state.toggleCamera} variant="secondary" /><LabButton disabled={state.busy || !state.cameraEnabled} label="Switch camera" onPress={state.switchCamera} variant="secondary" /></View> : null}
+        {state.call.type === "video" ? <View style={styles.videoActions}><LabButton disabled={state.busy || state.mediaState === "unavailable"} label={state.cameraEnabled ? text("cameraOff") : text("cameraOn")} onPress={state.toggleCamera} variant="secondary" /><LabButton disabled={state.busy || !state.cameraEnabled} label={text("switchCamera")} onPress={state.switchCamera} variant="secondary" /></View> : null}
         {state.mediaState === "failed" ? <LabButton disabled={state.busy} label={text("reconnect")} onPress={state.retryMedia} variant="secondary" /> : null}
         <LabButton disabled={state.busy} label={text("end")} onPress={() => void state.end()} />
       </> : null}
@@ -57,9 +61,11 @@ export function AudioCallScreen() {
 
 export function VideoStage({ cameraEnabled, localStreamUrl, remoteStreamUrl }: { cameraEnabled: boolean; localStreamUrl: string | null; remoteStreamUrl: string | null }) {
   const { RTCView } = require("react-native-webrtc") as { RTCView: React.ComponentType<{ mirror?: boolean; objectFit?: "cover" | "contain"; streamURL: string; style: object; zOrder?: number }> };
+  const { locale } = useOptionalLocalization();
+  const text = (key: Parameters<typeof callText>[1]) => callText(locale, key);
   return <View accessibilityLabel="Private video call" style={styles.videoStage}>
-    {remoteStreamUrl ? <RTCView objectFit="cover" streamURL={remoteStreamUrl} style={styles.remoteVideo} /> : <View style={styles.videoWaiting}><Text style={styles.videoWaitingText}>Waiting for private video...</Text></View>}
-    {cameraEnabled && localStreamUrl ? <RTCView mirror objectFit="cover" streamURL={localStreamUrl} style={styles.localVideo} zOrder={1} /> : <View style={styles.cameraOff}><Text style={styles.cameraOffText}>Camera off</Text></View>}
+    {remoteStreamUrl ? <RTCView objectFit="cover" streamURL={remoteStreamUrl} style={styles.remoteVideo} /> : <View style={styles.videoWaiting}><Text style={styles.videoWaitingText}>{text("waitingVideo")}</Text></View>}
+    {cameraEnabled && localStreamUrl ? <RTCView mirror objectFit="cover" streamURL={localStreamUrl} style={styles.localVideo} zOrder={1} /> : <View style={styles.cameraOff}><Text style={styles.cameraOffText}>{text("cameraOff")}</Text></View>}
   </View>;
 }
 

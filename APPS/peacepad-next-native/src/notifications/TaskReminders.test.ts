@@ -4,11 +4,17 @@ import { cancelScheduledCallReminder, cancelTaskReminder, scheduledCallReminderD
 
 describe("task reminders", () => {
   beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-09-01T00:00:00.000Z"));
     jest.clearAllMocks();
     (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null);
     (SecureStore.setItemAsync as jest.Mock).mockResolvedValue(undefined);
     (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({ status: "granted" });
     (Notifications.scheduleNotificationAsync as jest.Mock).mockResolvedValue("task-reminder-1");
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it("uses 9 AM local time only for a future due date", () => {

@@ -34,6 +34,7 @@ APPS/una-labs-site/out/
 **/android/.gradle/
 **/android/app/build/
 **/ios/Pods/
+**/supabase/.temp/
 
 # keep SayWetin trackable in monorepo, but ignore local nested git backup artifacts
 APPS/saywetin/.git.backup-*/

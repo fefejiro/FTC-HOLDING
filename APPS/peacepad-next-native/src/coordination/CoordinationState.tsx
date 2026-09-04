@@ -43,6 +43,7 @@ import {
   type ScheduleEvent
 } from "../domain/v2";
 import { colors, spacing } from "../theme";
+import { invitationErrorText } from "../localization/invitationLocalization";
 import {
   expoConnectivityMonitor,
   usableConnectivity,
@@ -84,6 +85,8 @@ export type SentMessage = Readonly<{
   originalBody: string;
   sentBody: string;
   sentAt: string;
+  /** True when the authenticated parent authored the message. */
+  isMine?: boolean;
   status: "waiting" | "needs-action" | "sent" | "delivered" | "viewed";
   corrected: boolean;
   canCorrect: boolean;
@@ -94,6 +97,8 @@ export type SentMessage = Readonly<{
 type CoordinationStateValue = {
   coordinationHydrated: boolean;
   connected: boolean;
+  /** True only when the conversation is backed by a verified co-parent link. */
+  hasVerifiedCoParent: boolean;
   invitationCode: string;
   createdInvitation?: CreatedInvitation;
   invitationPreview?: InvitationPreview;
@@ -170,7 +175,7 @@ type CoordinationStateValue = {
   openMessageAttachment: (attachmentId: string) => Promise<string>;
   transcribeCoachAudio: (bytes: ArrayBuffer, mediaType: "audio/m4a" | "audio/mp4" | "audio/webm") => Promise<string>;
   coachConversationTurn: (input: Omit<CoachConversationTurnInput, "conversationId">) => Promise<CoachConversationTurn>;
-  setMessageCheckEnabled: (enabled: boolean) => Promise<void>;
+  setMessageCheckEnabled: (enabled: boolean) => Promise<boolean>;
   checkMessage: () => Promise<void>;
   sendMessage: (useSuggestion: boolean) => Promise<void>;
   retryQueuedMessage: (messageId: string) => Promise<void>;
@@ -251,8 +256,8 @@ function writeContext(runtime: CoordinationRuntime, expectedVersion: number | nu
   });
 }
 
-function invitationMessage(error: unknown): string {
-  if (error instanceof InvitationError) return error.message;
+function invitationMessage(error: unknown, locale: Parameters<typeof invitationErrorText>[0]): string {
+  if (error instanceof InvitationError) return invitationErrorText(locale, error.reason);
   return "PeacePad could not verify that invitation. Try again.";
 }
 
@@ -300,6 +305,7 @@ export function visibleMessages(events: readonly MessageEvent[], actorIdentityId
       originalBody: message.body ?? "",
       sentBody: effective.body ?? "",
       sentAt: message.occurredAt,
+      isMine: message.provenance.createdBy.identityId === actorIdentityId,
       status,
       corrected: effective.id !== message.id,
       canCorrect: message.provenance.createdBy.identityId === actorIdentityId,
@@ -325,7 +331,7 @@ export function CoordinationStateProvider({
   outbox?: MessageOutboxStore;
   runtime?: CoordinationRuntime | null;
 }) {
-  const { t } = useOptionalLocalization();
+  const { locale, t } = useOptionalLocalization();
   // A runtime identity is only issued by the verified network-backed session.
   // Never silently fall back to seeded synthetic data when a runtime is present:
   // doing so would make a miswired production screen look healthy while
@@ -578,6 +584,7 @@ export function CoordinationStateProvider({
   const value = useMemo<CoordinationStateValue>(() => ({
     coordinationHydrated,
     connected: hasConnectedConversation(activeRuntime),
+    hasVerifiedCoParent: Boolean(invitationGrant) || (!demoMode && hasConnectedConversation(activeRuntime)),
     invitationCode,
     createdInvitation,
     invitationPreview,
@@ -625,7 +632,7 @@ export function CoordinationStateProvider({
           expiresInHours: 72
         }, writeContext(activeRuntime)));
       } catch (error) {
-        setInvitationError(invitationMessage(error));
+        setInvitationError(invitationMessage(error, locale));
       } finally {
         setInvitationBusy(false);
       }
@@ -639,7 +646,7 @@ export function CoordinationStateProvider({
         await resolvedApi.revokeInvitation(createdInvitation.invitation.id, writeContext(activeRuntime, createdInvitation.invitation.version));
         setCreatedInvitation(undefined);
       } catch (error) {
-        setInvitationError(invitationMessage(error));
+        setInvitationError(invitationMessage(error, locale));
       } finally {
         setInvitationBusy(false);
       }
@@ -656,7 +663,7 @@ export function CoordinationStateProvider({
       try {
         setInvitationPreview(await resolvedApi.resolveInvitation(invitationCode));
       } catch (error) {
-        setInvitationError(invitationMessage(error));
+        setInvitationError(invitationMessage(error, locale));
       } finally {
         setInvitationBusy(false);
       }
@@ -678,7 +685,7 @@ export function CoordinationStateProvider({
         setInvitationGrant(result.grant);
         setInvitationPreview(undefined);
       } catch (error) {
-        setInvitationError(invitationMessage(error));
+        setInvitationError(invitationMessage(error, locale));
       } finally {
         setInvitationBusy(false);
       }
@@ -693,7 +700,7 @@ export function CoordinationStateProvider({
         setInvitationPreview(undefined);
         setInvitationCodeState("");
       } catch (error) {
-        setInvitationError(invitationMessage(error));
+        setInvitationError(invitationMessage(error, locale));
       } finally {
         setInvitationBusy(false);
       }
@@ -868,7 +875,7 @@ export function CoordinationStateProvider({
       });
     },
     setMessageCheckEnabled: async (enabled) => {
-      if (!hasConnectedConversation(activeRuntime) || (!demoMode && !messageCheckHydrated)) return;
+      if (!hasConnectedConversation(activeRuntime) || (!demoMode && !messageCheckHydrated)) return false;
       setMessageCheckBusy(true);
       setMessageError(undefined);
       try {
@@ -883,8 +890,10 @@ export function CoordinationStateProvider({
         setMessageCheckEnabledState(updated.enabled);
         setMessageCheckHydrated(true);
         if (!updated.enabled) setMessagePreview(undefined);
+        return true;
       } catch (error) {
         setMessageError(error instanceof Error ? error.message : "Message Check is unavailable.");
+        return false;
       } finally {
         setMessageCheckBusy(false);
       }
@@ -926,6 +935,7 @@ export function CoordinationStateProvider({
           originalBody,
           sentBody: message.body ?? sentBody,
           sentAt: message.occurredAt,
+          isMine: true,
           status: "sent",
           corrected: false,
           canCorrect: true,

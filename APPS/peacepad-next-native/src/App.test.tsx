@@ -9,6 +9,16 @@ import { CoordinationStateProvider, resolveCalendarStartView, type CoordinationR
 import { PendingStagingInvitationProvider } from "./runtime/PeacePadStagingRuntime";
 
 const currentCalendarMonth = new Intl.DateTimeFormat("en", { month: "long", timeZone: "UTC", year: "numeric" }).format(new Date());
+const verifiedRuntime: CoordinationRuntime = {
+  actorIdentityId: "11111111-1111-4111-8111-111111111111",
+  identityVersion: 1,
+  sessionId: "10000000-0000-4000-8000-000000000002",
+  familyCircleId: "33333333-3333-4333-8333-333333333333",
+  participantGrantId: "10000000-0000-4000-8000-000000000004",
+  participantGrantVersion: 1,
+  conversationId: "55555555-5555-4555-8555-555555555555",
+  region: "ca"
+};
 
 function createTestApi() {
   return new SyntheticCoordinationApi([{
@@ -87,7 +97,7 @@ describe("PeacePad coordination shell", () => {
   });
 
   it.each([
-    ["Messages", "Get suggestions for clarity and tone before you send. You choose what changes."],
+    ["Messages", "Your conversation starts here"],
     ["Calendar", currentCalendarMonth],
     ["Records", "Create a Case Binder"],
     ["More", "Family connection"]
@@ -160,6 +170,7 @@ describe("PeacePad coordination shell", () => {
     const tabs = screen.getAllByRole("tab").filter((tab) => ["Home", "Messages", "Calendar", "Records", "More"].includes(tab.props.accessibilityLabel));
     expect(tabs.filter((tab) => tab.props.accessibilityState?.selected)).toHaveLength(1);
     fireEvent.press(screen.getByRole("button", { name: "Send a message" }));
+    fireEvent.press(screen.getByRole("button", { name: "Conversation options" }));
     expect(screen.getByText("Message Check")).toBeOnTheScreen();
   });
 
@@ -207,13 +218,14 @@ describe("PeacePad coordination shell", () => {
   });
 
   it.each([
-    ["Français", "Messages", "Écrivez à votre coparent. PeacePad n’envoie jamais sans votre confirmation.", "Vérification du message", "Activer"],
-    ["Español", "Mensajes", "Escribe a tu copadre. PeacePad nunca envía nada sin tu confirmación.", "Revisión del mensaje", "Activar"]
-  ])("localizes the default-off Message Check surface after selecting %s", (language, messagesTab, body, checkTitle, turnOn) => {
+    ["Français", "Messages", "Votre conversation commence ici", "Vérification du message", "Activer", "Options de conversation"],
+    ["Español", "Mensajes", "Tu conversación empieza aquí", "Revisión del mensaje", "Activar", "Opciones de conversación"]
+  ])("localizes the default-off Message Check surface after selecting %s", (language, messagesTab, body, checkTitle, turnOn, conversationOptions) => {
     renderApp("more");
     fireEvent.press(screen.getByRole("radio", { name: language }));
     fireEvent.press(screen.getByRole("tab", { name: messagesTab }));
     expect(screen.getByText(body)).toBeOnTheScreen();
+    fireEvent.press(screen.getByRole("button", { name: conversationOptions }));
     expect(screen.getByText(checkTitle)).toBeOnTheScreen();
     expect(screen.getByRole("button", { name: turnOn })).toBeOnTheScreen();
     expect(screen.queryByRole("button", { name: /vérifier le message|revisar mensaje/i })).not.toBeOnTheScreen();
@@ -226,6 +238,7 @@ describe("PeacePad coordination shell", () => {
     renderApp("more");
     fireEvent.press(screen.getByRole("radio", { name: language }));
     fireEvent.press(screen.getByRole("tab", { name: calendarTab }));
+    fireEvent.press(screen.getByRole("button", { name: /Gérer les calendriers|Gestionar calendarios/ }));
     expect(screen.getByRole("button", { name: shareLayer })).toBeOnTheScreen();
     fireEvent.press(screen.getByRole("tab", { name: recordsTab }));
     expect(screen.getByRole("header", { name: recordsTab })).toBeOnTheScreen();
@@ -283,7 +296,7 @@ describe("secure invitation flow", () => {
     fireEvent.press(screen.getByText("Enter a code"));
     fireEvent.changeText(screen.getByLabelText("Invitation code"), "ABC123");
     fireEvent.press(screen.getByText("Review invitation"));
-    expect(await screen.findByText("Check the code and try again.")).toBeOnTheScreen();
+    expect(await screen.findByText("That code does not look right. Check all six characters and try again.")).toBeOnTheScreen();
     expect(screen.queryByText("Shared parenting space")).not.toBeOnTheScreen();
   });
 
@@ -327,16 +340,7 @@ describe("secure invitation flow", () => {
 });
 
 describe("layered calendar", () => {
-  const connectedRuntime: CoordinationRuntime = {
-    actorIdentityId: "11111111-1111-4111-8111-111111111111",
-    identityVersion: 1,
-    sessionId: "10000000-0000-4000-8000-000000000002",
-    familyCircleId: "33333333-3333-4333-8333-333333333333",
-    participantGrantId: "10000000-0000-4000-8000-000000000004",
-    participantGrantVersion: 1,
-    conversationId: "55555555-5555-4555-8555-555555555555",
-    region: "ca"
-  };
+  const connectedRuntime = verifiedRuntime;
 
   it("lets a connected parent submit a schedule-change request with an awaiting-response state", async () => {
     const synthetic = new SyntheticCoordinationApi();
@@ -349,7 +353,9 @@ describe("layered calendar", () => {
       }
     });
     renderApp("calendar", undefined, api, connectedRuntime);
-    expect(await screen.findByRole("tab", { name: "Request a schedule change" })).toBeOnTheScreen();
+    expect(await screen.findByRole("header", { name: "Calendar" })).toBeOnTheScreen();
+    fireEvent.press(screen.getByRole("button", { name: "Show planning tools" }));
+    fireEvent.press(screen.getByRole("button", { name: "Add event" }));
     fireEvent.changeText(screen.getByLabelText("Event title"), "Weekend visit");
     fireEvent.press(screen.getByRole("tab", { name: "Request a schedule change" }));
     fireEvent.press(screen.getByRole("button", { name: "Save event" }));
@@ -359,16 +365,19 @@ describe("layered calendar", () => {
 
   it("starts private, confirms sharing, switches views, and creates an event", async () => {
     renderApp("calendar");
+    expect(await screen.findByRole("header", { name: "Calendar" })).toBeOnTheScreen();
     expect(screen.getByLabelText("month calendar")).toBeOnTheScreen();
-    expect(screen.getAllByText("Private")).toHaveLength(4);
+    fireEvent.press(screen.getByRole("button", { name: "Manage calendars" }));
     fireEvent.press(screen.getByLabelText("Share Parenting Time"));
     expect(screen.getByText("Share this calendar?")).toBeOnTheScreen();
     fireEvent.press(screen.getByText("Confirm sharing"));
+    fireEvent.press(screen.getByRole("button", { name: "Manage calendars" }));
     expect(await screen.findByText("Shared with family")).toBeOnTheScreen();
     fireEvent.press(screen.getByText("Week"));
     expect(screen.getByLabelText("week calendar")).toBeOnTheScreen();
     fireEvent.press(screen.getByText("Day"));
     expect(screen.getByLabelText("day calendar")).toBeOnTheScreen();
+    fireEvent.press(screen.getByRole("button", { name: "Add event" }));
     fireEvent.changeText(screen.getByLabelText("Event title"), "School pickup");
     fireEvent.press(screen.getByText("Save event"));
     expect((await screen.findAllByText("School pickup")).length).toBeGreaterThanOrEqual(2);
@@ -380,9 +389,30 @@ describe("layered calendar", () => {
     expect(resolveCalendarStartView("unsupported")).toBe("month");
   });
 
-  it("uses named controls so colour is never the only layer signal", () => {
+  it("keeps advanced parenting planning behind an explicit disclosure", () => {
+    renderApp("calendar");
+    expect(screen.queryByText("Changes, holidays and swaps")).not.toBeOnTheScreen();
+    fireEvent.press(screen.getByRole("button", { name: "Show planning tools" }));
+    expect(screen.getByText("Changes, holidays and swaps")).toBeOnTheScreen();
+    fireEvent.press(screen.getByRole("button", { name: "Hide planning tools" }));
+    expect(screen.queryByText("Changes, holidays and swaps")).not.toBeOnTheScreen();
+  });
+
+  it("opens calendar management in a focused sheet", async () => {
+    renderApp("calendar");
+    expect(await screen.findByRole("header", { name: "Calendar" })).toBeOnTheScreen();
+    fireEvent.press(screen.getByRole("button", { name: "Manage calendars" }));
+    expect(screen.getByRole("header", { name: "Manage calendars" })).toBeOnTheScreen();
+    expect(screen.getByText("Choose what appears here. Sharing always asks first.")).toBeOnTheScreen();
+    fireEvent.press(screen.getByRole("button", { name: "Close calendar manager" }));
+    expect(screen.queryByRole("header", { name: "Manage calendars" })).not.toBeOnTheScreen();
+  });
+
+  it("uses named controls so colour is never the only layer signal", async () => {
     renderApp("calendar", "week");
+    expect(await screen.findByRole("header", { name: "Calendar" })).toBeOnTheScreen();
     expect(screen.getByLabelText("week calendar")).toBeOnTheScreen();
+    fireEvent.press(screen.getByRole("button", { name: "Manage calendars" }));
     expect(screen.getByRole("checkbox", { name: "Hide Parenting Time" })).toBeOnTheScreen();
     fireEvent.press(screen.getByRole("checkbox", { name: "Hide Parenting Time" }));
     expect(screen.getByRole("checkbox", { name: "Show Parenting Time" })).toBeOnTheScreen();
@@ -390,9 +420,14 @@ describe("layered calendar", () => {
 
   it("cancels expanded sharing and deletes an explicitly created event", async () => {
     renderApp("calendar");
+    expect(await screen.findByRole("header", { name: "Calendar" })).toBeOnTheScreen();
+    fireEvent.press(screen.getByRole("button", { name: "Manage calendars" }));
     fireEvent.press(screen.getByLabelText("Share Parenting Time"));
     fireEvent.press(screen.getByText("Keep private"));
+    fireEvent.press(screen.getByRole("button", { name: "Manage calendars" }));
     expect(screen.getAllByText("Private").length).toBeGreaterThan(0);
+    fireEvent.press(screen.getByRole("button", { name: "Close calendar manager" }));
+    fireEvent.press(screen.getByRole("button", { name: "Add event" }));
     fireEvent.changeText(screen.getByLabelText("Event title"), "Dentist appointment");
     fireEvent.press(screen.getByText("Save event"));
     expect((await screen.findAllByText("Dentist appointment")).length).toBeGreaterThanOrEqual(2);
@@ -400,6 +435,30 @@ describe("layered calendar", () => {
     expect(screen.getByText("Delete this event? Shared participants may lose access to it.")).toBeOnTheScreen();
     fireEvent.press(screen.getByText("Confirm delete"));
     await waitFor(() => expect(screen.queryByText("Dentist appointment")).not.toBeOnTheScreen());
+  });
+
+  it("carries audio/video call intent and preserves the unsent draft", async () => {
+    const synthetic = new SyntheticCoordinationApi();
+    const api = new Proxy({} as unknown as PeacePadCoordinationApi, {
+      get(target, property) {
+        const value = (target as unknown as Record<PropertyKey, unknown>)[property];
+        if (value !== undefined) return value;
+        const syntheticValue = (synthetic as unknown as Record<PropertyKey, unknown>)[property];
+        return typeof syntheticValue === "function" ? syntheticValue.bind(synthetic) : syntheticValue;
+      }
+    });
+    renderApp("messages", undefined, api, verifiedRuntime);
+    expect(await screen.findByRole("header", { name: "Co-parent" })).toBeOnTheScreen();
+    fireEvent.changeText(screen.getByLabelText("Message draft"), "Please confirm the pickup time.");
+    fireEvent.press(screen.getByRole("button", { name: "Start audio call" }));
+    expect(await screen.findByRole("header", { name: "No call in progress" })).toBeOnTheScreen();
+    expect(screen.getByRole("radio", { name: "Audio call" }).props.accessibilityState).toEqual({ checked: true });
+    expect(screen.queryByRole("button", { name: "Start audio call" })).toBeOnTheScreen();
+    fireEvent.press(screen.getByRole("tab", { name: "Messages" }));
+    expect(screen.getByLabelText("Message draft")).toHaveProp("value", "Please confirm the pickup time.");
+    fireEvent.press(screen.getByRole("button", { name: "Start video call" }));
+    expect(await screen.findByRole("header", { name: "No call in progress" })).toBeOnTheScreen();
+    expect(screen.getByRole("radio", { name: "Video call" }).props.accessibilityState).toEqual({ checked: true });
   });
 
   it("uses entered dates, rejects an invalid time range, and lets a parent return to today", async () => {
@@ -410,6 +469,7 @@ describe("layered calendar", () => {
     fireEvent.press(screen.getByRole("button", { name: "Today" }));
     expect(screen.getByText(thisMonth)).toBeOnTheScreen();
 
+    fireEvent.press(screen.getByRole("button", { name: "Add event" }));
     fireEvent.changeText(screen.getByLabelText("Event title"), "Parenting time request");
     fireEvent.changeText(screen.getByLabelText("Starts"), "2026-08-15 14:00");
     fireEvent.changeText(screen.getByLabelText("Ends"), "2026-08-15 13:00");
@@ -424,24 +484,99 @@ describe("layered calendar", () => {
 });
 
 describe("per-chat Message Check", () => {
+  it("keeps secondary tools collapsed and exposes one primary composer action", () => {
+    renderApp("messages");
+    expect(screen.queryByText("Message Check")).not.toBeOnTheScreen();
+    expect(screen.queryByText("Find a message")).not.toBeOnTheScreen();
+    fireEvent.changeText(screen.getByLabelText("Message draft"), "A calm update for today.");
+    expect(screen.getAllByRole("button", { name: "Send message" })).toHaveLength(1);
+    expect(screen.queryByText("Send message")).not.toBeOnTheScreen();
+  });
+
+  it("opens the Conch Coach in a focused modal from the composer", () => {
+    renderApp("messages");
+    fireEvent.press(screen.getByRole("button", { name: "Open Conch Coach" }));
+    expect(screen.getByRole("header", { name: "Conch Coach" })).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: "Close Conch Coach" })).toBeOnTheScreen();
+    fireEvent.press(screen.getByRole("button", { name: "Close Conch Coach" }));
+    expect(screen.queryByRole("button", { name: "Close Conch Coach" })).not.toBeOnTheScreen();
+  });
+
+  it("keeps an empty composer ready for a voice note", () => {
+    renderApp("messages");
+    expect(screen.getAllByRole("button", { name: "Record a voice note" })).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Send message" }).props.accessibilityState).toEqual({ disabled: true });
+  });
+
+  it("returns a reviewed Coach draft to the composer without sending it", () => {
+    renderApp("messages");
+    fireEvent.press(screen.getByRole("button", { name: "Open Conch Coach" }));
+    fireEvent.changeText(screen.getByLabelText("Coach conversation"), "the school pickup plan");
+    fireEvent.press(screen.getByRole("button", { name: "Create a calm draft without AI" }));
+
+    const draft = screen.getByLabelText("Edit Coach draft").props.value;
+    expect(draft).toContain("the school pickup plan");
+    fireEvent.press(screen.getByRole("button", { name: "Use in message" }));
+
+    expect(screen.queryByRole("button", { name: "Close Conch Coach" })).not.toBeOnTheScreen();
+    expect(screen.getByLabelText("Message draft")).toHaveProp("value", draft);
+    expect(screen.queryByLabelText("Sent message")).not.toBeOnTheScreen();
+  });
+
+  it("routes the audio call control through the existing connection gate", () => {
+    renderApp("messages");
+    fireEvent.press(screen.getByRole("button", { name: "Start audio call" }));
+    expect(screen.getByRole("header", { name: "Connect another parent first" })).toBeOnTheScreen();
+  });
+
   it("is off by default and requires an explicit send", async () => {
     renderApp("messages");
     expect(screen.queryByText("Check message")).not.toBeOnTheScreen();
+    fireEvent.press(screen.getByRole("button", { name: "Conversation options" }));
     fireEvent.press(screen.getByText("Turn on"));
+    fireEvent.press(screen.getByRole("button", { name: "Turn on Message Check" }));
     await waitFor(() => expect(screen.getByText("Message Check on")).toBeOnTheScreen());
     fireEvent.changeText(screen.getByLabelText("Message draft"), "You never confirm anything!!");
-    fireEvent.press(screen.getByText("Check message"));
+    fireEvent.press(screen.getByRole("button", { name: "Check message" }));
     expect(await screen.findByText("Please confirm the practical details when you can.")).toBeOnTheScreen();
     expect(screen.queryByLabelText("Sent message")).not.toBeOnTheScreen();
     fireEvent.press(screen.getByText("Send original"));
     await waitFor(() => expect(screen.getByText("You never confirm anything!!")).toBeOnTheScreen());
   });
 
+  it("keeps the Message Check sheet open and retryable when enabling fails", async () => {
+    const synthetic = new SyntheticCoordinationApi();
+    jest.spyOn(synthetic, "setMessageCheckPreference")
+      .mockRejectedValueOnce(new Error("Message Check preference unavailable."));
+    const api = new Proxy({} as unknown as PeacePadCoordinationApi, {
+      get(target, property) {
+        const value = (target as unknown as Record<PropertyKey, unknown>)[property];
+        if (value !== undefined) return value;
+        const syntheticValue = (synthetic as unknown as Record<PropertyKey, unknown>)[property];
+        return typeof syntheticValue === "function" ? syntheticValue.bind(synthetic) : syntheticValue;
+      }
+    });
+    renderApp("messages", undefined, api, verifiedRuntime);
+    expect(await screen.findByRole("header", { name: "Co-parent" })).toBeOnTheScreen();
+    fireEvent.press(screen.getByRole("button", { name: "Conversation options" }));
+    fireEvent.press(screen.getByText("Turn on"));
+    fireEvent.press(screen.getByRole("button", { name: "Turn on Message Check" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Message Check preference unavailable.");
+    expect(screen.getByLabelText("Message Check")).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: "Turn on Message Check" })).toBeOnTheScreen();
+
+    fireEvent.press(screen.getByRole("button", { name: "Turn on Message Check" }));
+    await waitFor(() => expect(screen.getByText("Message Check on")).toBeOnTheScreen());
+  });
+
   it("searches only after an explicit send", async () => {
     renderApp("messages");
     fireEvent.changeText(screen.getByLabelText("Message draft"), "School pickup is at 6 PM.");
-    fireEvent.press(screen.getByText("Send message"));
+    fireEvent.press(screen.getByRole("button", { name: "Send message" }));
     await waitFor(() => expect(screen.getByText("School pickup is at 6 PM.")).toBeOnTheScreen());
+    fireEvent.press(screen.getByRole("button", { name: "Conversation options" }));
+    fireEvent.press(screen.getByRole("button", { name: "Search messages" }));
     fireEvent.changeText(screen.getByLabelText("Search messages"), "pickup");
     fireEvent.press(screen.getByText("Search"));
     expect(await screen.findByLabelText("Message search result")).toHaveTextContent("School pickup is at 6 PM.");
@@ -449,12 +584,13 @@ describe("per-chat Message Check", () => {
 
   it("explains opt-in and preserves the original when a correction is saved", async () => {
     renderApp("messages");
+    fireEvent.press(screen.getByRole("button", { name: "Conversation options" }));
     const disclosure = screen.getByRole("button", { name: "How Message Check works" });
     expect(disclosure.props.accessibilityState).toEqual({ expanded: false });
     fireEvent.press(disclosure);
     expect(screen.getByRole("button", { name: "How Message Check works" }).props.accessibilityState).toEqual({ expanded: true });
     fireEvent.changeText(screen.getByLabelText("Message draft"), "Pickup is at 5 PM.");
-    fireEvent.press(screen.getByText("Send message"));
+    fireEvent.press(screen.getByRole("button", { name: "Send message" }));
     await waitFor(() => expect(screen.getByText("Pickup is at 5 PM.")).toBeOnTheScreen());
     fireEvent.press(screen.getByText("Correct message"));
     expect(screen.getByText("The original remains in the record.")).toBeOnTheScreen();
@@ -465,10 +601,13 @@ describe("per-chat Message Check", () => {
 
   it("supports explicit opt-out and validates short searches", async () => {
     renderApp("messages");
+    fireEvent.press(screen.getByRole("button", { name: "Conversation options" }));
     fireEvent.press(screen.getByText("Turn on"));
+    fireEvent.press(screen.getByRole("button", { name: "Turn on Message Check" }));
     expect(await screen.findByText("Message Check on")).toBeOnTheScreen();
     fireEvent.press(screen.getByRole("button", { name: "Turn off Message Check" }));
     await waitFor(() => expect(screen.queryByText("Message Check on")).not.toBeOnTheScreen());
+    fireEvent.press(screen.getByRole("button", { name: "Search messages" }));
     fireEvent.changeText(screen.getByLabelText("Search messages"), "x");
     expect(screen.getByRole("button", { name: "Search" }).props.accessibilityState).toEqual({ disabled: true });
     fireEvent.changeText(screen.getByLabelText("Search messages"), "");
@@ -479,10 +618,12 @@ describe("per-chat Message Check", () => {
     const api = createTestApi();
     jest.spyOn(api, "previewMessage").mockRejectedValueOnce(new Error("Preview unavailable."));
     renderApp("messages", undefined, api);
+    fireEvent.press(screen.getByRole("button", { name: "Conversation options" }));
     fireEvent.press(screen.getByText("Turn on"));
+    fireEvent.press(screen.getByRole("button", { name: "Turn on Message Check" }));
     await waitFor(() => expect(screen.getByText("Message Check on")).toBeOnTheScreen());
     fireEvent.changeText(screen.getByLabelText("Message draft"), "Please confirm pickup.");
-    fireEvent.press(screen.getByText("Check message"));
+    fireEvent.press(screen.getByRole("button", { name: "Check message" }));
     expect(await screen.findByText("Preview unavailable.")).toBeOnTheScreen();
     expect(screen.queryByLabelText("Sent message")).not.toBeOnTheScreen();
   });
