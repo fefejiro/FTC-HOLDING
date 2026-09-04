@@ -378,3 +378,42 @@ Next operator step: apply migration 013 in a controlled environment, run the
 authenticated journey from analysis through package review, verify the usage
 ledger and approval state, then run the Stripe test lifecycle before enabling
 any live checkout flag.
+
+## Current Live Release Receipt - 2026-09-04
+
+The release candidate is now deployed from code commit
+`13e120d18e447eee306d4bb1bfe0b8395d07c135` on
+`release/unascout-store-completion`. PR `#352` and complete CI run
+`33906159955` passed before deployment.
+
+- **Deployed:** Railway `una-jobagent` production environment
+  `d2157870-91e1-4452-a5c6-2f2eb8792b9c`. Successful deployment IDs are
+  migration `2e073df2-e972-48db-ad41-8531c4e3b50a`, worker
+  `e84cd969-13e9-424c-8bc4-4a637f905ab1`, web
+  `1c75c52c-5cb5-4748-80b7-eaecf4e3cbf8`, and backup
+  `0d59a320-6f52-481a-9178-9ded4cc91f8e`.
+- **Externally verified:** hosted health, readiness, edge, plans, and release
+  endpoints return 200. `/api/v1/release` reports the exact code SHA and
+  schema `013_product_application_packages`.
+- **Externally verified:** Cloudflare version
+  `18d54293-3f94-41f9-a76e-d20d41212a4e` serves both mobile association files;
+  the Digital Asset Links API confirms the Android package and signing
+  fingerprint.
+- **Published:** Android versionCode `3` was uploaded and committed to the
+  Google Play production track by CI run `33908327749`. The AAB SHA-256 is
+  `4b796588f4814e6d9129fb6665a24e05efe131b9f4982ad6c749c819972ca420`, and
+  the public listing resolves.
+- **Built but not submitted:** iOS build `3` archive/export passed in CI
+  run `33907913859`; IPA SHA-256 is
+  `0CD5D245E2BD6B200E036880301FD98824A15E3887695D1681494214E623B5D2`.
+  Upload is paused for missing protected ASC API credentials and the known
+  App Store Connect review/account-holder gates.
+- **Externally verified:** public live Playwright smoke at `390x844` and
+  `1440x1000` passed. Evidence is stored under
+  `D:\FTC-HOLDING-releases\unascout\store-completion-smoke-2026-09-04`.
+- **Paused:** authenticated live smoke, physical-device deep links, full
+  two-tenant PostgreSQL proof, and Stripe lifecycle proof. Billing remains
+  fail-closed.
+
+Do not report iOS publication, authenticated live customer coverage, or live
+revenue readiness until those separate receipts exist.

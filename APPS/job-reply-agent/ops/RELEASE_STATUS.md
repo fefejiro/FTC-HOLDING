@@ -259,3 +259,17 @@ needs a deployment with migration 012 applied.
 - **Blocked:** no source implementation blocker. Full-repository verification
   and live proof require the complete dependency/deployment environment noted in
   the earlier repair entry.
+
+## Live Release Reconciliation - 2026-09-04
+
+This current receipt supersedes the historical pre-deployment notes above.
+
+- **Implemented and approved:** release commit `13e120d18e447eee306d4bb1bfe0b8395d07c135` is on branch `release/unascout-store-completion`, with PR `#352` and complete JobAgent CI run `33906159955` passing.
+- **Deployed:** Railway project `una-jobagent`, production environment `d2157870-91e1-4452-a5c6-2f2eb8792b9c`. Migration deployment `2e073df2-e972-48db-ad41-8531c4e3b50a`, worker deployment `e84cd969-13e9-424c-8bc4-4a637f905ab1`, web deployment `1c75c52c-5cb5-4748-80b7-eaecf4e3cbf8`, and backup deployment `0d59a320-6f52-481a-9178-9ded4cc91f8e` succeeded. PostgreSQL and private object storage are online and reported by readiness.
+- **Externally verified:** `https://jobagent.unalabs.cloud/healthz`, `/readyz`, `/api/v1/release`, `/api/v1/plans`, and `/edgez` returned 200. The live release response reports SHA `13e120d18e447eee306d4bb1bfe0b8395d07c135` and schema `013_product_application_packages`.
+- **Externally verified:** Cloudflare worker `una-jobagent-edge` version `18d54293-3f94-41f9-a76e-d20d41212a4e` serves Android `assetlinks.json` and Apple `apple-app-site-association`; the Digital Asset Links API returned one matching statement for package `cloud.unalabs.jobagent` and the exact Play fingerprint.
+- **Published:** the signed Android versionCode `3` AAB was uploaded and committed to the Google Play production track by CI run `33908327749`; artifact SHA-256 is `4b796588f4814e6d9129fb6665a24e05efe131b9f4982ad6c749c819972ca420`. The public listing resolves at `https://play.google.com/store/apps/details?id=cloud.unalabs.jobagent`.
+- **Built but not submitted:** iOS archive/export succeeded in CI run `33907913859` and produced build `3`, IPA SHA-256 `0CD5D245E2BD6B200E036880301FD98824A15E3887695D1681494214E623B5D2`; it was not uploaded because protected App Store Connect API credentials are absent. App Store Connect's prior version remains rejected under Guideline 2.1(a) pending a review demo account and account-holder agreement action.
+- **Externally verified:** live public customer smoke passed at `390x844` and `1440x1000`, including landing and unauthenticated app entry, with no horizontal overflow. Redacted screenshots and a Playwright trace are in `D:\FTC-HOLDING-releases\unascout\store-completion-smoke-2026-09-04`.
+- **Paused:** authenticated live customer journeys, physical-device checks, two-tenant PostgreSQL isolation proof, and the complete Stripe test/live lifecycle remain unclaimed. `BILLING_CHECKOUT_ENABLED` remains disabled.
+- **Blocked:** iOS upload and resubmission require the account-holder-controlled Apple agreement/demo-account gates and protected `JOBAGENT_ASC_KEY_ID`, `JOBAGENT_ASC_ISSUER_ID`, and `JOBAGENT_ASC_PRIVATE_KEY_BASE64` values. No store readiness or iOS publication claim is made.

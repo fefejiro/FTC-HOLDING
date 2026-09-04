@@ -93,3 +93,80 @@
    the missing Apple API credentials before upload/resubmission.
 6. Keep billing fail-closed until the complete Stripe test-mode lifecycle and
    no-charge live Checkout creation are evidenced.
+
+## Live Deployment and Store Receipt - 2026-09-04
+
+The following is the current release state. The earlier sections preserve the
+pre-deployment baseline for auditability.
+
+### Source and CI
+
+- Release branch: `release/unascout-store-completion`
+- Release code commit: `13e120d18e447eee306d4bb1bfe0b8395d07c135`
+- Source PR: `#352`
+- Complete JobAgent CI: run `33906159955`, passed
+- Android release workflow: run `33908327749`, passed
+- iOS release workflow: run `33907913859`, passed archive/export with upload
+  deliberately false
+
+### Hosted deployment
+
+- Hosted origin: `https://jobagent.unalabs.cloud`
+- Railway project: `una-jobagent` (`344d231d-66f8-4777-9286-b3e4452e3fa6`)
+- Railway production environment: `d2157870-91e1-4452-a5c6-2f2eb8792b9c`
+- Migration deployment: `2e073df2-e972-48db-ad41-8531c4e3b50a`
+- Worker deployment: `e84cd969-13e9-424c-8bc4-4a637f905ab1`
+- Web deployment: `1c75c52c-5cb5-4748-80b7-eaecf4e3cbf8`
+- Backup deployment: `0d59a320-6f52-481a-9178-9ded4cc91f8e`
+- `/healthz`, `/readyz`, `/api/v1/release`, `/api/v1/plans`, and `/edgez`:
+  HTTP 200
+- Live release body reports commit SHA
+  `13e120d18e447eee306d4bb1bfe0b8395d07c135`, environment `production`, and
+  schema `013_product_application_packages`.
+- Readiness reports PostgreSQL connectivity, enforced tenant isolation, and S3
+  private object storage.
+
+### Edge association proof
+
+- Cloudflare worker: `una-jobagent-edge`
+- Cloudflare version: `18d54293-3f94-41f9-a76e-d20d41212a4e`
+- Android and Apple association endpoints: HTTP 200
+- Google Digital Asset Links API: HTTP 200 with one statement matching package
+  `cloud.unalabs.jobagent` and the exact Play App Signing fingerprint.
+- Apple app ID: `G6UNC88GQ5.cloud.unalabs.jobagent`
+
+### Store receipts
+
+- Google Play versionCode `3` AAB upload was accepted and committed to the
+  production track. AAB SHA-256:
+  `4b796588f4814e6d9129fb6665a24e05efe131b9f4982ad6c749c819972ca420`.
+- Google Play public listing resolves at
+  `https://play.google.com/store/apps/details?id=cloud.unalabs.jobagent`.
+- iOS build `3` archive/export succeeded and produced IPA SHA-256:
+  `0CD5D245E2BD6B200E036880301FD98824A15E3887695D1681494214E623B5D2`.
+- iOS was not uploaded or submitted. App Store Connect's prior submission is
+  rejected under Guideline 2.1(a) because review access was unavailable. The
+  account-holder agreement, review demo account, and protected ASC API values
+  remain required. No iOS public listing is claimed.
+
+### External customer proof
+
+- Public live Playwright smoke passed at `390x844` and `1440x1000` for the
+  landing page and unauthenticated app entry, with no horizontal overflow.
+- Redacted screenshots and trace:
+  `D:\FTC-HOLDING-releases\unascout\store-completion-smoke-2026-09-04`
+- Authenticated live customer journeys were not run because no dedicated
+  customer smoke credentials were supplied. The public smoke is not a
+  substitute for authentication, tenant, or payment proof.
+
+### Paused and blocked gates
+
+- **Paused:** authenticated live authentication/onboarding/invitation/export/
+  pause/revocation/deletion/session tests, physical Android/iOS checks,
+  two-tenant hosted isolation, and Stripe lifecycle proof.
+- **Paused:** `BILLING_CHECKOUT_ENABLED` remains false; no customer checkout or
+  revenue readiness is claimed.
+- **Blocked:** iOS upload/resubmission needs account-holder Apple agreement and
+  review-demo action plus protected `JOBAGENT_ASC_KEY_ID`,
+  `JOBAGENT_ASC_ISSUER_ID`, and `JOBAGENT_ASC_PRIVATE_KEY_BASE64`. These are
+  external gates, not invented source credentials.

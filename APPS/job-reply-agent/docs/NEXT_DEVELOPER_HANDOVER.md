@@ -309,3 +309,35 @@ staging area.
 
 See `docs/PRODUCT_RELEASE_EVIDENCE_2026-09-04.md` for the complete evidence
 and exact state separation.
+
+## Current Live Handover - 2026-09-04
+
+The approved release code is `13e120d18e447eee306d4bb1bfe0b8395d07c135` on
+`release/unascout-store-completion`. PR `#352` and CI run `33906159955` passed.
+
+- **Live:** Railway web, worker, migration, and backup deployments succeeded in
+  project `una-jobagent`; PostgreSQL and private storage are online. The hosted
+  release endpoint reports SHA `13e120d18e447eee306d4bb1bfe0b8395d07c135` and
+  schema `013_product_application_packages`.
+- **Live edge:** Cloudflare worker version
+  `18d54293-3f94-41f9-a76e-d20d41212a4e` serves both association documents for
+  `jobagent.unalabs.cloud`. Android Digital Asset Links is externally matched.
+- **Google Play:** production upload completed from CI run `33908327749` for
+  versionCode `3`; AAB SHA-256 is
+  `4b796588f4814e6d9129fb6665a24e05efe131b9f4982ad6c749c819972ca420`.
+  Public listing: `https://play.google.com/store/apps/details?id=cloud.unalabs.jobagent`.
+- **Apple:** signed iOS build `3` exists from CI run `33907913859` with IPA
+  SHA-256 `0CD5D245E2BD6B200E036880301FD98824A15E3887695D1681494214E623B5D2`,
+  but it is not uploaded. Protected ASC API credentials, account-holder
+  agreement action, and a review demo account are still required. The app is
+  not publicly available on the App Store.
+- **Evidence:** public smoke screenshots and trace are in
+  `D:\FTC-HOLDING-releases\unascout\store-completion-smoke-2026-09-04`.
+- **Still paused:** authenticated live customer smoke, physical devices,
+  two-tenant isolation proof, and Stripe test/live lifecycle proof. Keep
+  `BILLING_CHECKOUT_ENABLED` disabled.
+
+The next operator should obtain the protected Apple values through the normal
+account-holder path, upload and attach build 3, complete metadata and review
+demo access, then separately run authenticated live and payment evidence. Do
+not reuse PeacePad or JCI credentials.

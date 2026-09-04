@@ -435,3 +435,23 @@ and App Store Connect reports the previous iOS submission rejected because the
 review team lacked a demo account. Stripe checkout remains fail-closed until
 its complete lifecycle evidence exists. See
 `docs/PRODUCT_RELEASE_EVIDENCE_2026-09-04.md` for release receipts and gates.
+
+### Live release reconciliation - 2026-09-04
+
+The current hosted JobAgent release is code commit
+`13e120d18e447eee306d4bb1bfe0b8395d07c135` and schema
+`013_product_application_packages`. Railway production hosts the web, worker,
+migration, backup, PostgreSQL, and private-storage topology; the live readiness
+response reports database, tenant-isolation role, and S3 object storage.
+
+Cloudflare worker version `18d54293-3f94-41f9-a76e-d20d41212a4e` is the edge
+front door for `jobagent.unalabs.cloud`, including exact Android and Apple deep
+link association responses. Android versionCode `3` is uploaded to the Google
+Play production track. iOS build `3` is signed and exported but not uploaded,
+so the App Store remains a separate blocked publication gate.
+
+The public brand remains `UnaScout`; internal service, repository, package, and
+database identity remains `JobAgent`. Stripe checkout stays fail-closed until
+the payment lifecycle is independently tested and evidenced. Authenticated
+customer, physical-device, and two-tenant hosted proofs are not implied by the
+public smoke receipt.
