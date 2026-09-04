@@ -64,30 +64,7 @@ jobs:
           test "$(git -C "$release_root" rev-parse HEAD^{tree})" = "$(cat "$RUNNER_TEMP/peacepad-native-tree")"
           npm --prefix "$release_root" ci --ignore-scripts --no-audit --no-fund --workspaces=false
 
-      - name: Write ephemeral Android signing credentials
-        working-directory: ${{ runner.temp }}/peacepad-next-native-production-apk
-        shell: bash
-        env:
-          KEYSTORE_BASE64: ${{ secrets.PEACEPAD_ANDROID_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.PEACEPAD_ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.PEACEPAD_ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.PEACEPAD_ANDROID_KEY_PASSWORD }}
-        run: |
-          set -euo pipefail
-          test -n "$KEYSTORE_BASE64" && test -n "$KEYSTORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD"
-          umask 077
-          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/peacepad-upload.keystore"
-          node - <<'NODE'
-          const fs = require('fs');
-          fs.writeFileSync('credentials.json', JSON.stringify({android:{keystore:{
-            keystorePath: process.env.RUNNER_TEMP + '/peacepad-upload.keystore',
-            keystorePassword: process.env.KEYSTORE_PASSWORD,
-            keyAlias: process.env.KEY_ALIAS,
-            keyPassword: process.env.KEY_PASSWORD
-          }}}));
-          NODE
-
-      - name: Validate production UX contract and build signed APK on the GitHub runner
+      - name: Validate production UX contract and build signed APK with EAS
         working-directory: ${{ runner.temp }}/peacepad-next-native-production-apk
         shell: bash
         env:
@@ -99,7 +76,6 @@ jobs:
           PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY }}
         run: |
           set -euo pipefail
-          trap 'rm -f credentials.json "$RUNNER_TEMP/peacepad-upload.keystore"' EXIT
           release_command=$(cat <<'EOF'
             set -eu
             export EXPO_PUBLIC_PEACEPAD_ENV=production
@@ -111,14 +87,17 @@ jobs:
             export PEACEPAD_ANDROID_RELEASE_MODE=playstore-production
             node scripts/check-lab-guardrails.cjs
             node scripts/check-secrets.cjs
-            node -e 'const cfg=require("./app.config.js")({config:require("./app.json").expo}); if(cfg.android.package!=="ca.peacepad.family"||cfg.version!=="2.0.2"||cfg.android.versionCode!==51||cfg.extra.environment!=="production"||cfg.extra.productionApiWritesEnabled!==true||cfg.extra.googleSignInEnabled!==true) process.exit(1);'
-            npx --yes eas-cli@21.8.0 build --platform android --profile production-device-apk --local --non-interactive --output "$RUNNER_TEMP/PeacePad-2.0.2-51-production.apk"
+            node -e 'const cfg=require("./app.config.js")({config:require("./app.json").expo}); if(cfg.android.package!=="ca.peacepad.family"||cfg.version!=="2.0.3"||cfg.android.versionCode!==52||cfg.extra.environment!=="production"||cfg.extra.productionApiWritesEnabled!==true||cfg.extra.googleSignInEnabled!==true) process.exit(1);'
+            npx --yes eas-cli@21.8.0 build --platform android --profile production-device-apk --non-interactive --wait --json > "$RUNNER_TEMP/peacepad-v2-android-production-apk-build.json"
           EOF
           )
           npx --yes eas-cli@21.8.0 env:exec production "$release_command" --non-interactive
-          test -s "$RUNNER_TEMP/PeacePad-2.0.2-51-production.apk"
-          sha256sum "$RUNNER_TEMP/PeacePad-2.0.2-51-production.apk" > "$RUNNER_TEMP/PeacePad-2.0.2-51-production.apk.sha256"
-          node -e 'const fs=require("fs");fs.writeFileSync(process.env.RUNNER_TEMP+"/peacepad-v2-production-apk.manifest",`source_sha=${process.env.EXPECTED_SHA}\npackage=ca.peacepad.family\nversion=2.0.2\nversion_code=51\nruntime=production\nstore_submission_attempted=false\n`);'
+          artifact_url="$(node -e 'const fs=require("fs");const raw=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/peacepad-v2-android-production-apk-build.json","utf8"));const b=Array.isArray(raw)?raw[0]:raw;if(!b?.id||b.status!=="FINISHED"||b.platform!=="ANDROID"||b.distribution!=="INTERNAL"||b.buildProfile!=="production-device-apk"||b.appVersion!=="2.0.3"||String(b.appBuildVersion)!=="52"||typeof b.artifacts?.buildUrl!=="string")process.exit(1);process.stdout.write(b.artifacts.buildUrl);')"
+          curl --fail --location --retry 3 --retry-all-errors --connect-timeout 30 --max-time 600 "$artifact_url" -o "$RUNNER_TEMP/PeacePad-2.0.3-52-production.apk"
+          test -s "$RUNNER_TEMP/PeacePad-2.0.3-52-production.apk"
+          sha256sum "$RUNNER_TEMP/PeacePad-2.0.3-52-production.apk" > "$RUNNER_TEMP/PeacePad-2.0.3-52-production.apk.sha256"
+          keytool -printcert -jarfile "$RUNNER_TEMP/PeacePad-2.0.3-52-production.apk" > "$RUNNER_TEMP/PeacePad-2.0.3-52-production.apk.certificate.txt"
+          node -e 'const fs=require("fs");const raw=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/peacepad-v2-android-production-apk-build.json","utf8"));const b=Array.isArray(raw)?raw[0]:raw;fs.writeFileSync(process.env.RUNNER_TEMP+"/peacepad-v2-production-apk.manifest",`source_sha=${process.env.EXPECTED_SHA}\nbuild_id=${b.id}\npackage=ca.peacepad.family\nversion=2.0.3\nversion_code=52\nruntime=production\nstore_submission_attempted=false\n`);'
 
       - name: Upload non-secret APK build evidence
         if: always()
@@ -128,6 +107,8 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
           path: |
-            ${{ runner.temp }}/PeacePad-2.0.2-51-production.apk
-            ${{ runner.temp }}/PeacePad-2.0.2-51-production.apk.sha256
+            ${{ runner.temp }}/PeacePad-2.0.3-52-production.apk
+            ${{ runner.temp }}/PeacePad-2.0.3-52-production.apk.sha256
+            ${{ runner.temp }}/PeacePad-2.0.3-52-production.apk.certificate.txt
+            ${{ runner.temp }}/peacepad-v2-android-production-apk-build.json
             ${{ runner.temp }}/peacepad-v2-production-apk.manifest

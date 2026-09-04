@@ -71,34 +71,6 @@ jobs:
           test "$(git -C "$release_root" rev-parse HEAD^{tree})" = "$(cat "$RUNNER_TEMP/peacepad-native-tree")"
           npm --prefix "$release_root" ci --ignore-scripts --no-audit --no-fund --workspaces=false
 
-      - name: Write ephemeral local Android signing credentials
-        working-directory: ${{ runner.temp }}/peacepad-next-native-release
-        shell: bash
-        env:
-          KEYSTORE_BASE64: ${{ secrets.PEACEPAD_ANDROID_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.PEACEPAD_ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.PEACEPAD_ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.PEACEPAD_ANDROID_KEY_PASSWORD }}
-        run: |
-          set -euo pipefail
-          test -n "$KEYSTORE_BASE64"
-          test -n "$KEYSTORE_PASSWORD"
-          test -n "$KEY_ALIAS"
-          test -n "$KEY_PASSWORD"
-          umask 077
-          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/peacepad-upload.keystore"
-          node - <<'NODE'
-          const fs = require('fs');
-          fs.writeFileSync('credentials.json', JSON.stringify({
-            android: { keystore: {
-              keystorePath: process.env.RUNNER_TEMP + '/peacepad-upload.keystore',
-              keystorePassword: process.env.KEYSTORE_PASSWORD,
-              keyAlias: process.env.KEY_ALIAS,
-              keyPassword: process.env.KEY_PASSWORD
-            } }
-          }));
-          NODE
-
       - name: Require the Canada production write boundary
         shell: bash
         run: |
@@ -122,7 +94,6 @@ jobs:
           PEACEPAD_ANDROID_RELEASE_MODE: playstore-production
         run: |
           set -euo pipefail
-          trap 'rm -f credentials.json "$RUNNER_TEMP/peacepad-upload.keystore"' EXIT
           release_command=$(cat <<'EOF'
             set -eu
             test -s assets/icon.png
@@ -133,12 +104,13 @@ jobs:
             export EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED=true
             export PEACEPAD_ANDROID_RELEASE_MODE=playstore-production
             node scripts/check-lab-guardrails.cjs
-            node -e 'const cfg=require("./app.config.js")({config:require("./app.json").expo}); if(cfg.android.package!=="ca.peacepad.family"||cfg.version!=="2.0.2"||cfg.android.versionCode!==51||cfg.extra.productionApiWritesEnabled!==true||cfg.extra.googleSignInEnabled!==true) process.exit(1);'
+            node scripts/check-secrets.cjs
+            node -e 'const cfg=require("./app.config.js")({config:require("./app.json").expo}); if(cfg.android.package!=="ca.peacepad.family"||cfg.version!=="2.0.3"||cfg.android.versionCode!==52||cfg.extra.productionApiWritesEnabled!==true||cfg.extra.googleSignInEnabled!==true) process.exit(1);'
             npx --yes eas-cli@21.8.0 build --platform android --profile playstore-production --non-interactive --wait --json > "$RUNNER_TEMP/peacepad-v2-android-production-build.json"
           EOF
           )
           npx --yes eas-cli@21.8.0 env:exec production "$release_command" --non-interactive
-          node -e 'const fs=require("fs"); const b=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/peacepad-v2-android-production-build.json","utf8")); const first=Array.isArray(b)?b[0]:b; if(!first?.id||!first?.artifacts?.buildUrl) process.exit(1); fs.writeFileSync(process.env.RUNNER_TEMP+"/peacepad-v2-android-production-build.manifest", `source_sha=${process.env.EXPECTED_SHA||""}\nprofile=playstore-production\npackage=ca.peacepad.family\nversion=2.0.2\nversion_code=51\nproduction_writes_enabled=true\nplay_submission_attempted=false\nbuild_id=${first.id}\nartifact_url=${first.artifacts.buildUrl}\n`);'
+          node -e 'const fs=require("fs"); const b=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/peacepad-v2-android-production-build.json","utf8")); const first=Array.isArray(b)?b[0]:b; if(!first?.id||first.status!=="FINISHED"||first.platform!=="ANDROID"||first.distribution!=="STORE"||first.buildProfile!=="playstore-production"||first.appVersion!=="2.0.3"||String(first.appBuildVersion)!=="52"||!first?.artifacts?.buildUrl) process.exit(1); fs.writeFileSync(process.env.RUNNER_TEMP+"/peacepad-v2-android-production-build.manifest", `source_sha=${process.env.EXPECTED_SHA||""}\nprofile=playstore-production\npackage=ca.peacepad.family\nversion=2.0.3\nversion_code=52\nproduction_writes_enabled=true\nplay_submission_attempted=false\nbuild_id=${first.id}\nartifact_url=${first.artifacts.buildUrl}\n`);'
 
       - name: Upload production AAB build evidence without Play submission
         if: always()
