@@ -136,7 +136,7 @@ describe("PeacePad iOS release variant", () => {
         package: "ca.peacepad.family",
         versionCode: 52
       },
-      plugins: expect.arrayContaining([
+      plugins: expect.not.arrayContaining([
         ["@react-native-google-signin/google-signin", { iosUrlScheme: "com.googleusercontent.apps.123456789-ios" }]
       ]),
       extra: {
@@ -189,6 +189,9 @@ describe("PeacePad iOS release variant", () => {
         submittedBundleId: "ca.peacepad.family"
       }
     });
+    expect(resolveConfig({ config: structuredClone(appJson.expo) }).plugins).not.toContainEqual(
+      ["@react-native-google-signin/google-signin", { iosUrlScheme: "com.googleusercontent.apps.123456789-ios" }]
+    );
     expect(easJson.build["playstore-production"]).toMatchObject({
       distribution: "store",
       environment: "production",
@@ -197,7 +200,8 @@ describe("PeacePad iOS release variant", () => {
         EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED: "true",
         PEACEPAD_ANDROID_RELEASE_MODE: "playstore-production"
       },
-      android: { buildType: "app-bundle", credentialsSource: "local" }
+      android: { buildType: "app-bundle", credentialsSource: "remote" }
     });
   });
+
 });

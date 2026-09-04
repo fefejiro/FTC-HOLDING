@@ -95,7 +95,7 @@
       },
       "android": {
         "buildType": "app-bundle",
-        "credentialsSource": "local"
+        "credentialsSource": "remote"
       }
     },
     "playstore-production": {
@@ -109,7 +109,7 @@
       },
       "android": {
         "buildType": "app-bundle",
-        "credentialsSource": "local"
+        "credentialsSource": "remote"
       }
     },
     "production-device-apk": {
@@ -123,7 +123,7 @@
       },
       "android": {
         "buildType": "apk",
-        "credentialsSource": "local"
+        "credentialsSource": "remote"
       }
     }
   },

@@ -34,12 +34,15 @@ function googleSignInPlugin() {
   return [GOOGLE_SIGN_IN_PLUGIN, { iosUrlScheme }];
 }
 
-function storePlugins(config, includeApple = false) {
+function storePlugins(config, includeApple = false, includeGoogle = false) {
   const googlePlugin = googleSignInPlugin();
   return [
     ...(config.plugins || []),
     ...(includeApple ? ["expo-apple-authentication"] : []),
-    ...(googlePlugin ? [googlePlugin] : [])
+    // The Google Expo plugin only configures the iOS URL scheme. Android uses
+    // the native module directly, so omitting it avoids monorepo plugin lookup
+    // failures without changing Android Google sign-in capability.
+    ...(includeGoogle && googlePlugin ? [googlePlugin] : [])
   ];
 }
 
@@ -117,7 +120,7 @@ module.exports = ({ config }) => {
       scheme: "peacepad",
       version: TESTFLIGHT_VERSION,
       plugins: [
-        ...storePlugins(config, true)
+        ...storePlugins(config, true, true)
       ],
       ios: {
         ...config.ios,
@@ -145,7 +148,7 @@ module.exports = ({ config }) => {
   return {
     ...config,
     version: TESTFLIGHT_VERSION,
-    plugins: storePlugins(config, true),
+    plugins: storePlugins(config, true, true),
     ios: {
       ...config.ios,
       buildNumber: TESTFLIGHT_BUILD_NUMBER,

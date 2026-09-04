@@ -101,7 +101,7 @@ describe("lab-only configuration", () => {
         EXPO_PUBLIC_PEACEPAD_ENV: "staging",
         PEACEPAD_ANDROID_RELEASE_MODE: "playstore-internal"
       },
-      android: { buildType: "app-bundle", credentialsSource: "local" }
+      android: { buildType: "app-bundle", credentialsSource: "remote" }
     });
 
     expect(easConfig.build["playstore-production"]).toMatchObject({
@@ -112,7 +112,7 @@ describe("lab-only configuration", () => {
         EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED: "true",
         PEACEPAD_ANDROID_RELEASE_MODE: "playstore-production"
       },
-      android: { buildType: "app-bundle", credentialsSource: "local" }
+      android: { buildType: "app-bundle", credentialsSource: "remote" }
     });
 
     expect(easConfig.build["production-device-apk"]).toMatchObject({
@@ -124,7 +124,7 @@ describe("lab-only configuration", () => {
         EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED: "true",
         PEACEPAD_ANDROID_RELEASE_MODE: "playstore-production"
       },
-      android: { buildType: "apk", credentialsSource: "local" }
+      android: { buildType: "apk", credentialsSource: "remote" }
     });
   });
 });
