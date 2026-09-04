@@ -1,8 +1,8 @@
 import crypto from "node:crypto";
 
 const APP_ID = "6793350735";
-const VERSION = "2.0.2";
-const BUILD = "12";
+const VERSION = "2.0.3";
+const BUILD = "13";
 const mode = process.argv[2] ?? "status";
 
 for (const name of ["ASC_API_KEY_ID", "ASC_API_ISSUER_ID", "ASC_API_PRIVATE_KEY"]) {
@@ -94,7 +94,7 @@ if (mode === "prepare") {
     await request(`appStoreVersionLocalizations/${localization.id}`, {
       method: "PATCH",
       body: JSON.stringify({ data: { type: "appStoreVersionLocalizations", id: localization.id, attributes: {
-        whatsNew: "PeacePad 2.0.2 adds clearer real-world support resources, improved location-based help, Coach voice guidance, and more reliable family coordination.",
+        whatsNew: "PeacePad 2.0.3 makes sign-in and account recovery more reliable, with improved Google and Apple sign-in safeguards.",
       } } }),
     });
   }

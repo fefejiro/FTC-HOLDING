@@ -202,7 +202,7 @@ if (
   || playStoreInternalProfile?.env?.EXPO_PUBLIC_PEACEPAD_ENV !== "staging"
   || playStoreInternalProfile?.env?.EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS !== "false"
   || playStoreInternalProfile?.android?.buildType !== "app-bundle"
-  || playStoreInternalProfile?.android?.credentialsSource !== "local"
+  || playStoreInternalProfile?.android?.credentialsSource !== "remote"
 ) {
   failures.push("The Android internal Play profile must remain a signed AAB backed by fictional staging.");
 }
@@ -215,7 +215,7 @@ if (
   || playStoreProductionProfile?.env?.EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED !== "true"
   || playStoreProductionProfile?.env?.EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS !== "false"
   || playStoreProductionProfile?.android?.buildType !== "app-bundle"
-  || playStoreProductionProfile?.android?.credentialsSource !== "local"
+  || playStoreProductionProfile?.android?.credentialsSource !== "remote"
 ) {
   failures.push("The Android Play production profile must remain an exact, signed AAB backed by the authorized Canada production runtime.");
 }
@@ -228,7 +228,7 @@ if (
   || productionDeviceApkProfile?.env?.EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED !== "true"
   || productionDeviceApkProfile?.env?.EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS !== "false"
   || productionDeviceApkProfile?.android?.buildType !== "apk"
-  || productionDeviceApkProfile?.android?.credentialsSource !== "local"
+  || productionDeviceApkProfile?.android?.credentialsSource !== "remote"
 ) {
   failures.push("The production device APK must be internal-distribution packaging of the exact signed Canada production runtime.");
 }
@@ -242,7 +242,7 @@ if (
 ) {
   failures.push("EAS Submit must target only the reviewed internal and production profiles for App Store record 6793350735.");
 }
-for (const expectedReleaseValue of ["ca.peacepad.family", "6793350735", "2.0.2", "12", "51", "testflight-internal", "appstore-production", "staging-simulator-dual", "playstore-internal", "playstore-production"]) {
+for (const expectedReleaseValue of ["ca.peacepad.family", "6793350735", "2.0.3", "13", "52", "testflight-internal", "appstore-production", "staging-simulator-dual", "playstore-internal", "playstore-production"]) {
   if (!dynamicAppConfigSource.includes(expectedReleaseValue)) {
     failures.push(`Dynamic app config is missing the reviewed TestFlight value ${expectedReleaseValue}.`);
   }
