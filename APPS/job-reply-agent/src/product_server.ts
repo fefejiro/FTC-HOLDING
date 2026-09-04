@@ -30,6 +30,7 @@ import {
 } from "./product_gmail_oauth.js";
 import {
   completeProductObjectDeletion,
+  createProductApplicationPackage,
   deleteProductAccount,
   deleteProductResume,
   decideProductApproval,
@@ -38,11 +39,13 @@ import {
   getCareerTruthBank,
   getProductJobInsight,
   getProductApplicationEvidenceObject,
+  getProductApplicationPackage,
   getProductOnboarding,
   getProductResumeBySha,
   getProductResumeFactProposal,
   getProductResumeObject,
   listProductConnections,
+  listProductApplicationPackages,
   listProductInterviewPrep,
   listProductPrivateStorageObjects,
   listProductResumes,
@@ -62,6 +65,7 @@ import {
   saveProductResumeFactProposal,
   transitionProductResumeFactProposal,
   saveProductResume,
+  updateProductApplicationPackage,
   setProductAccountStatus
 } from "./product_repository.js";
 import {
@@ -164,7 +168,8 @@ const registrationSchema = z.object({
 });
 
 const billingCheckoutSchema = z.object({
-  planCode: z.enum(["sprint_weekly", "jobagent_monthly", "jobagent_annual"])
+  planCode: z.enum(["sprint_weekly", "jobagent_monthly", "jobagent_annual"]),
+  returnJobMatchId: z.string().uuid().optional()
 });
 
 const loginSchema = z.object({
@@ -360,6 +365,18 @@ const connectorCertificationSchema = z.object({
 
 const trustAnalysisSchema = z.object({
   jobDescription: z.string().min(50).max(100_000)
+});
+
+const tailoredPackageSchema = z.object({
+  interest: z.string().trim().min(10).max(1000),
+  emphasis: z.string().trim().min(10).max(1000),
+  avoid: z.string().trim().max(1000).optional()
+});
+
+const packageEditSchema = z.object({
+  resumeSummary: z.string().trim().min(1).max(3000),
+  coverLetter: z.string().trim().min(1).max(10_000),
+  recruiterFollowUp: z.string().trim().min(1).max(3000)
 });
 
 const outcomeSchema = z.object({
@@ -967,7 +984,7 @@ export async function createProductServer(storage: ProductObjectStorage = create
           await client.query(
             `INSERT INTO product_funnel_events
                (user_id, event_key, event_name, properties)
-             VALUES ($1,'signup','signup',$2::jsonb)`,
+             VALUES ($1,'registration_started','registration_started',$2::jsonb)`,
             [
               inserted.rows[0].id,
               JSON.stringify({ registrationSource: invitation ? "invitation" : "public", ...input.acquisition })
@@ -1046,6 +1063,7 @@ export async function createProductServer(storage: ProductObjectStorage = create
         const verified = await verifyProductEmail(db, input.token);
         if (verified) {
           await recordFunnelEvent(db, verified.id, "email_verified", {}, "email_verified");
+          await recordFunnelEvent(db, verified.id, "registration_verified", {}, "registration_verified");
         }
         return verified
           ? json(res, 200, { verified: true, email: verified.email })
@@ -1227,13 +1245,16 @@ export async function createProductServer(storage: ProductObjectStorage = create
         if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
         const body = await readJson(req);
         const input = billingCheckoutSchema.parse(body);
+        if (input.returnJobMatchId && !await productJobMatchExists(db, user.id, input.returnJobMatchId)) {
+          return json(res, 404, { error: "The requested opportunity was not found." });
+        }
         return idempotentMutation(req, res, {
           db, userId: user.id, requestPath: url.pathname, body,
           action: async () => {
             const key = normalizeIdempotencyKey(
               req.headers["idempotency-key"] || req.headers["x-idempotency-key"]
             );
-            const checkout = await createBillingCheckout(db, user, input.planCode, key);
+            const checkout = await createBillingCheckout(db, user, input.planCode, key, input.returnJobMatchId);
             return { status: 201, body: checkout };
           }
         });
@@ -1405,6 +1426,31 @@ export async function createProductServer(storage: ProductObjectStorage = create
       }
       if (req.method === "GET" && url.pathname === "/api/v1/onboarding") {
         return json(res, 200, { onboarding: await getProductOnboarding(db, user.id) });
+      }
+      if (req.method === "GET" && url.pathname === "/api/v1/application-packages") {
+        return json(res, 200, { packages: await listProductApplicationPackages(db, user.id) });
+      }
+      const applicationPackage = url.pathname.match(/^\/api\/v1\/application-packages\/([0-9a-f-]{36})$/i);
+      if (req.method === "GET" && applicationPackage) {
+        const packageRecord = await getProductApplicationPackage(db, user.id, applicationPackage[1]);
+        return packageRecord
+          ? json(res, 200, { package: packageRecord })
+          : json(res, 404, { error: "Application package was not found." });
+      }
+      if (req.method === "PUT" && applicationPackage) {
+        if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
+        if (!user.emailVerifiedAt) return json(res, 403, { error: "Verify your email before editing a tailored package." });
+        const body = await readJson(req);
+        const input = packageEditSchema.parse(body);
+        return idempotentMutation(req, res, {
+          db, userId: user.id, requestPath: url.pathname, body,
+          action: async () => {
+            const packageRecord = await updateProductApplicationPackage(db, user.id, applicationPackage[1], input);
+            return packageRecord
+              ? { status: 200, body: { package: packageRecord } }
+              : { status: 404, body: { error: "Application package was not found." } };
+          }
+        });
       }
       if (req.method === "GET" && url.pathname === "/api/v1/resumes") {
         return json(res, 200, { resumes: await listProductResumes(db, user.id) });
@@ -1734,10 +1780,80 @@ export async function createProductServer(storage: ProductObjectStorage = create
                 { feature: "fit_analysis" },
                 "first_value"
               );
+              await recordFunnelEvent(
+                db,
+                user.id,
+                "first_fit_analysis",
+                { feature: "fit_analysis", jobMatchId: jobInsight[1] },
+                `first_fit_analysis:${jobInsight[1]}`
+              );
             }
             return insight
               ? { status: 200, body: { insight } }
               : { status: 404, body: { error: "Job match was not found." } };
+          }
+        });
+      }
+      const jobPackage = url.pathname.match(/^\/api\/v1\/jobs\/([0-9a-f-]{36})\/package$/i);
+      if (req.method === "POST" && jobPackage) {
+        if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
+        if (!user.emailVerifiedAt) return json(res, 403, { error: "Verify your email before creating a tailored package." });
+        const body = await readJson(req);
+        const input = tailoredPackageSchema.parse(body);
+        if (!await productJobMatchExists(db, user.id, jobPackage[1])) {
+          return json(res, 404, { error: "Job match was not found." });
+        }
+        return idempotentMutation(req, res, {
+          db, userId: user.id, requestPath: url.pathname, body,
+          action: async () => {
+            const existing = await getProductApplicationPackage(db, user.id, jobPackage[1]);
+            if (existing) return { status: 200, body: { package: existing, reused: true } };
+            const usageKey = normalizeIdempotencyKey(
+              req.headers["idempotency-key"] || req.headers["x-idempotency-key"]
+            );
+            const usage = await consumePlanUsage(
+              db,
+              user.id,
+              "tailored_package",
+              1,
+              usageKey,
+              { jobMatchId: jobPackage[1] }
+            );
+            if (!usage.allowed) {
+              await recordFunnelEvent(
+                db,
+                user.id,
+                "paywall_viewed",
+                { feature: "tailored_package", jobMatchId: jobPackage[1] },
+                `paywall:tailored_package:${jobPackage[1]}`
+              );
+              return {
+                status: 402,
+                body: {
+                  code: "PLAN_LIMIT",
+                  error: "Your tailored-package allowance is used for this period.",
+                  usage,
+                  plans: publicPlans()
+                }
+              };
+            }
+            const packageRecord = await createProductApplicationPackage(db, user.id, jobPackage[1], input);
+            if (!packageRecord) return { status: 404, body: { error: "Job match was not found." } };
+            await recordFunnelEvent(
+              db,
+              user.id,
+              "first_package_created",
+              { feature: "tailored_package", jobMatchId: jobPackage[1] },
+              `first_package_created:${jobPackage[1]}`
+            );
+            await recordFunnelEvent(
+              db,
+              user.id,
+              "first_value_reached",
+              { feature: "tailored_package", jobMatchId: jobPackage[1] },
+              `first_value_reached:${jobPackage[1]}`
+            );
+            return { status: 201, body: { package: packageRecord, usage } };
           }
         });
       }
@@ -1921,6 +2037,13 @@ export async function createProductServer(storage: ProductObjectStorage = create
                     "onboarding_step_saved",
                     { step: patch.data.step },
                     `onboarding_step_saved:${patch.data.step}`
+                  );
+                  await recordFunnelEvent(
+                    db,
+                    user.id,
+                    "onboarding_step_completed",
+                    { step: patch.data.step },
+                    `onboarding_step_completed:${patch.data.step}`
                   );
                 }
                 return onboarding;

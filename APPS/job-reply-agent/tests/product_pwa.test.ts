@@ -53,6 +53,10 @@ describe("public beta PWA", () => {
       "resume-upload-form",
       "truth-form",
       "connection-grid",
+      "package-list",
+      "package-brief-form",
+      "package-review-dialog",
+      "package-edit-form",
       "approval-list",
       "application-list",
       "pause-account",
@@ -67,6 +71,10 @@ describe("public beta PWA", () => {
     expect(app).toContain('cookie("jobagent_csrf")');
     expect(app).toContain('"idempotency-key"');
     expect(app).toContain("Verification evidence not recorded");
+    expect(app).toContain("/api/v1/jobs/${encodeURIComponent(data.get(\"jobMatchId\"))}/package");
+    expect(app).toContain('method: "PUT"');
+    expect(app).toContain("interviewPreparation");
+    expect(app).toContain("Choose a plan to continue preparing applications.");
   });
 
   it("publishes all required legal and Google-data disclosures", () => {

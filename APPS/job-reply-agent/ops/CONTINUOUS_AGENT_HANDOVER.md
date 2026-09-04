@@ -311,3 +311,43 @@ This repair supersedes the seven-step description above. It is source-only on
 - **Blocked:** full-repository Vitest/typecheck verification is blocked by
   incomplete local dependency hydration (`googleapis`, `date-fns`, and AWS SDK
   transitive manifests). No dependency metadata was changed.
+
+## Guided Value-to-Payment Journey - 2026-09-03
+
+Branch: `agent/unascout-customer-intelligence`.
+
+- **Implemented:** a job-specific customer brief now follows fit analysis and
+  produces a truthful application package containing resume focus, cover letter,
+  recruiter follow-up, and application answers. The package is grounded only in
+  approved Career Truth facts and the server-selected resume/version.
+- **Implemented:** product-scoped package persistence in migration
+  `013_product_application_packages.sql`, forced tenant RLS, idempotent
+  package creation, application linkage, audit evidence, and export inclusion.
+- **Implemented:** customer UI for Application packages, package review, Review
+  and Assisted behavior, and a contextual plan prompt when the tailored-package
+  allowance is exhausted. Review mode creates an explicit approval request;
+  Assisted mode prepares the package without enabling sensitive submission.
+- **Implemented:** each package includes grounded interview preparation prompts;
+  customers can edit package copy without changing Career Truth, and edits move
+  the package back to approval-required with an audit record.
+- **Implemented:** `GET /api/v1/application-packages`,
+  `GET /api/v1/application-packages/:id`, and
+  `POST /api/v1/jobs/:id/package`. The POST route returns real public plan data
+  with `402 PLAN_LIMIT` and records the paywall funnel event.
+- **Verified locally:** JavaScript syntax checks, focused product domain/PWA/
+  security/billing tests (`4` files, `59` passed), and `npm run build`.
+- **Deployed:** no. Migration 013, package routes, and UI changes are not in
+  the hosted release and have no deployment identifier or live SHA evidence.
+- **Externally verified:** none for the package journey, payment prompt, or
+  migration. Local screenshots are not live-release evidence.
+- **Paused:** Stripe checkout activation, live customer payment lifecycle,
+  hosted Playwright, and two-tenant PostgreSQL proof remain separate release
+  gates. No customer is charged by this source-only increment.
+- **Blocked:** no implementation blocker. Full-repository verification and live
+  acceptance still require a complete deployed environment; the prior isolated
+  dependency-hydration note remains applicable.
+
+Next operator step: apply migration 013 in a controlled environment, run the
+authenticated journey from analysis through package review, verify the usage
+ledger and approval state, then run the Stripe test lifecycle before enabling
+any live checkout flag.

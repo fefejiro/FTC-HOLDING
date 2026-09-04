@@ -247,3 +247,38 @@ completed, deployed, verified, paused, and blocked states separately.
   this isolated tree has unresolved `googleapis`, `date-fns`, and AWS SDK
   transitive package manifests. Do not change package metadata to work around
   it.
+
+## Guided Value-to-Payment Journey - 2026-09-03
+
+Continue from branch `agent/unascout-customer-intelligence` in the isolated D:
+worktree. This increment is source-only and does not claim deployment.
+
+- The customer path is now: choose a ranked role -> run fit/ATS analysis ->
+  answer interest, emphasis, and avoid questions -> receive a tailored package
+  -> review the resume focus, cover letter, recruiter follow-up, answers, and
+  interview prompts and evidence gaps -> edit if needed -> approve or reject in
+  Review mode.
+- `Assisted` prepares the same package but does not authorize sensitive or
+  submission actions. `Review` creates `application.package_review` and keeps
+  the linked application in `needs_approval` until approved.
+- Package output is grounded only in approved facts and the server-owned default
+  resume ID/version. Proposed or rejected facts cannot enter the generated
+  materials. Unsupported requirements are shown as evidence gaps.
+- New data boundary: migration
+  `APPS/job-reply-agent/migrations/013_product_application_packages.sql`.
+  It adds forced-RLS `product_application_packages` with one package per tenant
+  and job match, plus the funnel event names used by the route.
+- New API surface: `GET /api/v1/application-packages`,
+  `GET /api/v1/application-packages/:id`, and
+  `POST /api/v1/jobs/:id/package`; `PUT /api/v1/application-packages/:id`
+  edits package copy only and returns it to approval-required. Package creation uses the existing
+  `tailored_package` entitlement and returns `402 PLAN_LIMIT` with public plans
+  when the allowance is exhausted.
+- Local proof: `4` focused test files and `59` tests passed; JavaScript syntax
+  checks and `npm run build` passed. No new hosted, Stripe, or PostgreSQL
+  evidence exists for this increment.
+
+Before release, apply migration 013, verify the full journey against the hosted
+domain, prove tenant isolation and idempotency, run the Stripe test-mode
+lifecycle, and capture redacted live evidence. Do not enable billing or claim a
+paid customer from the local package proof alone.

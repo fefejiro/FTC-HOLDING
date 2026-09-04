@@ -9,7 +9,9 @@
     plans: [],
     billing: null,
     checkoutEnabled: false,
-    onboardingStep: 0
+    onboardingStep: 0,
+    currentPackage: null,
+    pendingPackageJobMatchId: null
   };
 
   const onboardingSteps = [
@@ -715,6 +717,73 @@
     );
   }
 
+  function addPackageText(parent, label, value) {
+    const block = document.createElement("div");
+    const heading = document.createElement("strong");
+    heading.textContent = label;
+    const content = document.createElement("p");
+    content.textContent = text(value, "Not provided.");
+    block.append(heading, content);
+    parent.append(block);
+  }
+
+  function showPackageReview(packageRecord) {
+    state.currentPackage = packageRecord;
+    const output = packageRecord?.output || {};
+    $("#package-review-title").textContent = `${text(packageRecord?.title, "Role")} at ${text(packageRecord?.company, "Company")}`;
+    const content = $("#package-review-content");
+    content.replaceChildren();
+    const status = document.createElement("p");
+    status.className = "status-chip neutral";
+    status.textContent = `${statusLabel(packageRecord?.status)} | Resume version ${text(packageRecord?.sourceResumeVersion, "not recorded").slice(0, 12)}`;
+    content.append(status);
+    addPackageText(content, "Resume focus", output.resumeFocus?.summary);
+    addPackageText(content, "Supported requirements", (output.resumeFocus?.supportedRequirements || []).join(", "));
+    addPackageText(content, "Evidence gaps", (output.resumeFocus?.unsupportedRequirements || []).join(", ") || "None detected.");
+    addPackageText(content, "Cover letter", output.coverLetter);
+    addPackageText(content, "Recruiter follow-up", output.recruiterFollowUp);
+    addPackageText(content, "Interview preparation", (output.interviewPreparation || [])
+      .map((item) => `${item.competency}: ${item.prompt}`)
+      .join("\n\n"));
+    const questions = document.createElement("div");
+    addPackageText(questions, "Your package answers", (output.applicationQuestions || [])
+      .map((item) => `${item.question} ${item.answer}`)
+      .join("\n\n"));
+    content.append(questions);
+    addPackageText(content, "Truth guard", output.truthGuard);
+    const editButton = $("#edit-package");
+    editButton.hidden = !packageRecord?.id || ["approved", "rejected", "blocked"].includes(packageRecord.status);
+    editButton.dataset.value = packageRecord?.id || "";
+    $("#package-review-dialog").showModal();
+  }
+
+  function renderPackages(packages) {
+    clearAndFill(
+      $("#package-list"),
+      packages,
+      (packageRecord) => {
+        const actions = document.createElement("div");
+        actions.className = "actions";
+        actions.append(actionButton("Open package", "package-view", packageRecord.id, "primary"));
+        return recordItem(
+          `${packageRecord.title || "Role"} at ${packageRecord.company || "Company"}`,
+          [
+            `${statusLabel(packageRecord.status)} | ${dateLabel(packageRecord.updatedAt)}`,
+            `${(packageRecord.output?.resumeFocus?.supportedRequirements || []).length} supported requirements | ${(packageRecord.output?.missingInformationFlags || []).length} evidence gaps`,
+            packageRecord.status === "approval_required" ? "Review this package before using it." : "Ready for your review."
+          ],
+          { actions }
+        );
+      },
+      "Your first tailored package will appear here after fit analysis."
+    );
+  }
+
+  async function loadPackages() {
+    const { packages } = await api("/api/v1/application-packages");
+    renderPackages(packages || []);
+  }
+
   async function loadDashboard() {
     const [dashboard, readiness, capabilityData, analytics, prep] = await Promise.all([
       api("/api/v1/dashboard"),
@@ -863,6 +932,7 @@
     await Promise.all([
       loadResumes(),
       loadDashboard(),
+      loadPackages(),
       loadAudit(),
       loadOperator(),
       loadBilling()
@@ -875,11 +945,15 @@
       if (billingState === "success") {
         setResult(
           "#billing-result",
-          "Payment received. Your plan will update as soon as Stripe confirms the subscription.",
+          "Checkout returned. Your plan will update after Stripe confirms the subscription.",
           "good"
         );
       } else if (billingState === "cancelled") {
         setResult("#billing-result", "Checkout was cancelled. Your current plan is unchanged.");
+      }
+      if (entry.get("package_job_id")) {
+        state.pendingPackageJobMatchId = entry.get("package_job_id");
+        $("[data-view='packages']")?.click();
       }
       history.replaceState({}, "", "/app");
     }
@@ -1224,7 +1298,7 @@
         method: "POST",
         body: JSON.stringify({ decision })
       });
-      await Promise.all([loadDashboard(), loadAudit()]);
+      await Promise.all([loadDashboard(), loadPackages(), loadAudit()]);
     } catch (error) {
       showNotice("#account-banner", error.message, "danger");
     }
@@ -1239,6 +1313,8 @@
       form.reset();
       form.elements.jobMatchId.value = jobMatchId;
       setResult("#job-insight-result", "");
+      $("#build-package-from-insight").hidden = true;
+      delete $("#build-package-from-insight").dataset.value;
       $("#job-insight-dialog").showModal();
       return;
     }
@@ -1310,8 +1386,110 @@
         ].join("\n\n"),
         "good"
       );
+      $("#build-package-from-insight").hidden = false;
+      $("#build-package-from-insight").dataset.value = form.elements.jobMatchId.value;
     } catch (error) {
       setResult("#job-insight-result", error.message, "danger");
+    }
+  });
+
+  $("#build-package-from-insight").addEventListener("click", () => {
+    const form = $("#package-brief-form");
+    form.reset();
+    form.elements.jobMatchId.value = $("#build-package-from-insight").dataset.value;
+    setResult("#package-result", "");
+    $("#job-insight-dialog").close();
+    $("#package-brief-dialog").showModal();
+  });
+
+  $("#package-brief-form").addEventListener("submit", async (event) => {
+    if (event.submitter?.value === "cancel") return;
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    try {
+      const response = await api(
+        `/api/v1/jobs/${encodeURIComponent(data.get("jobMatchId"))}/package`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            interest: data.get("interest"),
+            emphasis: data.get("emphasis"),
+            avoid: data.get("avoid")
+          })
+        }
+      );
+      $("#package-brief-dialog").close();
+      showPackageReview(response.package);
+      showNotice("#account-banner", "Your tailored package is ready for review.", "good");
+      await Promise.all([loadPackages(), loadDashboard(), loadAudit(), loadBilling()]);
+    } catch (error) {
+      if (error.status === 402) {
+        $("#package-brief-dialog").close();
+        state.pendingPackageJobMatchId = data.get("jobMatchId");
+        showNotice("#account-banner", "Your free package allowance is used. Choose a plan to continue preparing applications.", "warning");
+        $("[data-view='plan']")?.click();
+      } else {
+        setResult("#package-result", error.message, "danger");
+      }
+    }
+  });
+
+  $("#package-list").addEventListener("click", async (event) => {
+    const button = event.target.closest('[data-action="package-view"]');
+    if (!button) return;
+    try {
+      const { package: packageRecord } = await api(
+        `/api/v1/application-packages/${encodeURIComponent(button.dataset.value)}`
+      );
+      showPackageReview(packageRecord);
+    } catch (error) {
+      showNotice("#account-banner", error.message, "danger");
+    }
+  });
+
+  $("#package-review-dialog").addEventListener("click", (event) => {
+    if (event.target.closest('[data-action="view-packages"]')) {
+      $("#package-review-dialog").close();
+      $("[data-view='packages']")?.click();
+    }
+  });
+
+  $("#edit-package").addEventListener("click", () => {
+    const packageRecord = state.currentPackage;
+    const output = packageRecord?.output || {};
+    const form = $("#package-edit-form");
+    form.elements.packageId.value = packageRecord?.id || "";
+    form.elements.resumeSummary.value = output.resumeFocus?.summary || "";
+    form.elements.coverLetter.value = output.coverLetter || "";
+    form.elements.recruiterFollowUp.value = output.recruiterFollowUp || "";
+    setResult("#package-edit-result", "");
+    $("#package-review-dialog").close();
+    $("#package-edit-dialog").showModal();
+  });
+
+  $("#package-edit-form").addEventListener("submit", async (event) => {
+    if (event.submitter?.value === "cancel") return;
+    event.preventDefault();
+    const form = event.currentTarget;
+    try {
+      const { package: packageRecord } = await api(
+        `/api/v1/application-packages/${encodeURIComponent(form.elements.packageId.value)}`,
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            resumeSummary: form.elements.resumeSummary.value,
+            coverLetter: form.elements.coverLetter.value,
+            recruiterFollowUp: form.elements.recruiterFollowUp.value
+          })
+        }
+      );
+      $("#package-edit-dialog").close();
+      showPackageReview(packageRecord);
+      showNotice("#account-banner", "Package edits saved. Review is required before this package can be used.", "good");
+      await Promise.all([loadPackages(), loadDashboard(), loadAudit()]);
+    } catch (error) {
+      setResult("#package-edit-result", error.message, "danger");
     }
   });
 
@@ -1569,7 +1747,10 @@
     try {
       const checkout = await api("/api/v1/billing/checkout", {
         method: "POST",
-        body: JSON.stringify({ planCode: button.dataset.value })
+        body: JSON.stringify({
+          planCode: button.dataset.value,
+          returnJobMatchId: state.pendingPackageJobMatchId || undefined
+        })
       });
       if (!checkout.url) throw new Error("Secure checkout is temporarily unavailable.");
       location.assign(checkout.url);

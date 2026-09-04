@@ -372,6 +372,38 @@ The resume proposal endpoint deliberately treats extracted or entered facts as
 generation, job answers, or recruiter replies until a customer-approved fact
 path is connected and verified.
 
+### Guided value-to-payment journey - 2026-09-03
+
+UnaScout's customer value path is now an explicit, bounded sequence over the
+existing product engines:
+
+`approved profile + default resume` -> `job fit/ATS analysis` -> `customer job
+brief` -> `tailored application package` -> `Review or Assisted policy` ->
+`approval and tracking`.
+
+The package is stored in `product_application_packages` (migration 013) and is
+owned by the same tenant as its job match, resume, application, evidence facts,
+usage event, and approval request. Its output records the source resume ID and
+version, approved evidence IDs, supported requirements, missing-information
+flags, and a truth guard. This is intentionally a product-scoped table because
+the older package tables use a different job graph.
+
+Generated output also contains interview preparation prompts tied to approved
+fact IDs. Customer edits are limited to package copy, are separately audited,
+and force approval-required status; they never rewrite the normalized Career
+Truth records or provenance.
+
+The package route consumes the existing `tailored_package` entitlement only
+after authentication, verification, pause, ownership, and idempotency checks.
+Exhausted allowances return `402 PLAN_LIMIT` with the public plan catalog and a
+tenant-scoped `paywall_viewed` event. No browser connector, Gmail credential,
+job-board session, or autonomous submission worker is moved into the client.
+
+The customer-facing promise is therefore truthful: UnaScout prepares a
+reviewable, role-specific application package from verified customer material;
+it does not claim an autonomous submission occurred merely because a package was
+generated.
+
 ### Repair state
 
 The 2026-09-03 repair expands the journey to nine stages and makes consent,

@@ -71,6 +71,7 @@ describe("product security", () => {
     const policies = new Map([
       ["product_onboarding", "product_onboarding_tenant_policy"],
       ["product_connections", "product_connections_tenant_policy"],
+      ["product_application_packages", "product_application_packages_tenant_policy"],
       ["product_audit_logs", "product_audit_tenant_policy"],
       ["product_resumes", "product_resumes_tenant_policy"],
       ["product_career_truth_banks", "product_career_truth_banks_tenant_policy"],

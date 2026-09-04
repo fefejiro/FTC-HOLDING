@@ -65,6 +65,7 @@
         <button class="nav-item" type="button" data-view="resumes">Resumes</button>
         <button class="nav-item" type="button" data-view="connections">Connections</button>
         <button class="nav-item" type="button" data-view="opportunities">Opportunities</button>
+        <button class="nav-item" type="button" data-view="packages">Application packages</button>
         <button class="nav-item" type="button" data-view="approvals">Approvals</button>
         <button class="nav-item" type="button" data-view="interview">Interview prep</button>
         <button class="nav-item" type="button" data-view="activity">Activity</button>
@@ -275,6 +276,12 @@
         <ul id="job-list" class="record-list detailed"></ul>
       </section>
 
+      <section class="view" data-view-panel="packages">
+        <div class="page-heading"><div><p class="eyebrow">Your application materials</p><h1>Tailored packages</h1></div></div>
+        <p class="field-help">Each package is grounded in your approved career facts and prepared for one specific opportunity.</p>
+        <ul id="package-list" class="record-list detailed"></ul>
+      </section>
+
       <section class="view" data-view-panel="approvals">
         <div class="page-heading"><div><p class="eyebrow">Human gates</p><h1>Approvals</h1></div></div>
         <ul id="approval-list" class="record-list detailed"></ul>
@@ -357,8 +364,42 @@
       <h2>Evidence-based fit analysis</h2>
       <input name="jobMatchId" type="hidden">
       <label>Complete job description<textarea name="jobDescription" class="tall" minlength="50" required></textarea></label>
-      <div class="actions"><button class="button primary" value="analyze" type="submit">Analyze</button><button class="button secondary" value="cancel" formmethod="dialog">Cancel</button></div>
+      <div class="actions"><button class="button primary" value="analyze" type="submit">Analyze</button><button id="build-package-from-insight" class="button secondary" type="button" hidden>Create tailored package</button><button class="button secondary" value="cancel" formmethod="dialog">Cancel</button></div>
       <div id="job-insight-result" class="analysis-result" aria-live="polite"></div>
+    </form>
+  </dialog>
+
+  <dialog id="package-brief-dialog">
+    <form id="package-brief-form" class="section-form" method="dialog">
+      <h2>Shape this application</h2>
+      <p class="field-help">Your answers guide the package. UnaScout will only use approved career facts for professional claims.</p>
+      <input name="jobMatchId" type="hidden">
+      <label>Why are you interested in this role?<textarea name="interest" minlength="10" maxlength="1000" required></textarea></label>
+      <label>What should the application emphasize?<textarea name="emphasis" minlength="10" maxlength="1000" required></textarea></label>
+      <label>What should be left out or handled carefully?<textarea name="avoid" maxlength="1000"></textarea></label>
+      <div class="actions"><button class="button primary" value="generate" type="submit">Prepare my package</button><button class="button secondary" value="cancel" formmethod="dialog">Cancel</button></div>
+      <p id="package-result" class="form-result" aria-live="polite"></p>
+    </form>
+  </dialog>
+
+  <dialog id="package-review-dialog">
+    <div class="section-form">
+      <h2 id="package-review-title">Tailored application package</h2>
+      <div id="package-review-content" class="analysis-result"></div>
+      <div class="actions"><button id="edit-package" class="button secondary" type="button">Edit package</button><button class="button secondary" type="button" data-close-dialog="package-review-dialog">Close</button><button class="button primary" type="button" data-action="view-packages">View all packages</button></div>
+    </div>
+  </dialog>
+
+  <dialog id="package-edit-dialog">
+    <form id="package-edit-form" class="section-form" method="dialog">
+      <h2>Edit tailored package</h2>
+      <p class="field-help">Edits change this package only. They never change your Career Truth.</p>
+      <input name="packageId" type="hidden">
+      <label>Resume focus<textarea name="resumeSummary" class="tall" maxlength="3000" required></textarea></label>
+      <label>Cover letter<textarea name="coverLetter" class="tall" maxlength="10000" required></textarea></label>
+      <label>Recruiter follow-up<textarea name="recruiterFollowUp" maxlength="3000" required></textarea></label>
+      <div class="actions"><button class="button primary" value="save" type="submit">Save package edits</button><button class="button secondary" value="cancel" formmethod="dialog">Cancel</button></div>
+      <p id="package-edit-result" class="form-result" aria-live="polite"></p>
     </form>
   </dialog>
 

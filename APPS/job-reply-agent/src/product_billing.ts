@@ -408,7 +408,7 @@ export async function applyBillingEvent(
       : entitlementStatus === "active"
         ? "subscription_activated"
         : entitlementStatus === "canceled"
-          ? "subscription_canceled"
+          ? "subscription_cancelled"
           : null;
     if (funnelEvent) {
       await client.query(
@@ -476,7 +476,8 @@ export async function createBillingCheckout(
   db: pg.Pool,
   user: { id: string; email: string },
   planCode: Exclude<PlanCode, "free_preview">,
-  idempotencyKey: string
+  idempotencyKey: string,
+  returnJobMatchId?: string
 ) {
   const appOrigin = String(process.env.APP_ORIGIN || "").replace(/\/+$/, "");
   if (!appOrigin.startsWith("https://") && process.env.NODE_ENV === "production") {
@@ -489,8 +490,8 @@ export async function createBillingCheckout(
     customerId,
     planCode,
     idempotencyKey,
-    successUrl: `${appOrigin}/app?billing=success&session_id={CHECKOUT_SESSION_ID}`,
-    cancelUrl: `${appOrigin}/app?billing=cancelled`
+    successUrl: `${appOrigin}/app?billing=success&session_id={CHECKOUT_SESSION_ID}${returnJobMatchId ? `&package_job_id=${encodeURIComponent(returnJobMatchId)}` : ""}`,
+    cancelUrl: `${appOrigin}/app?billing=cancelled${returnJobMatchId ? `&package_job_id=${encodeURIComponent(returnJobMatchId)}` : ""}`
   });
   if (payload.customerId) {
     await saveBillingCustomer(db, user.id, String(payload.customerId), Boolean(payload.livemode));

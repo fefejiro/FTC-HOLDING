@@ -203,3 +203,31 @@ This repair is source-only and is not part of the deployed release SHA above.
 - **Blocked:** full suite and TypeScript verification were attempted but the
   isolated dependency tree lacks resolvable `googleapis`, `date-fns`, and AWS
   SDK transitive manifests. No dependency metadata was changed.
+
+## Guided Value-to-Payment Journey - 2026-09-03
+
+This is a source-only increment on `agent/unascout-customer-intelligence`; it
+is not part of the deployed release SHA documented above.
+
+- **Completed in source:** a guided customer path from fit analysis through a
+  three-question job brief and a reviewable tailored package. The package uses
+  only approved Career Truth facts and the server-owned default resume/version,
+  includes grounded interview prompts, and records truthful evidence gaps
+  instead of filling them with guesses.
+- **Completed in source:** authenticated package-only edits force re-review and
+  are audited without changing Career Truth or provenance.
+- **Completed in source:** product package persistence and forced tenant RLS in
+  migration `013_product_application_packages.sql`, Review/Assisted policy
+  handling, approval linkage, usage metering, idempotency, export inclusion,
+  audit evidence, package list/detail routes, and contextual `402 PLAN_LIMIT`
+  plan output.
+- **Locally verified:** JavaScript syntax, focused domain/PWA/security/billing
+  tests (`4` files, `59` passed), and `npm run build`.
+- **Deployed:** no. Existing hosted SHA, migration state, and provider receipts
+  remain unchanged.
+- **Externally verified:** none for this journey. No live payment, hosted
+  package, tenant-isolation, or store evidence is implied by local tests.
+- **Paused:** hosted migration, live customer smoke, Stripe lifecycle, and
+  two-tenant PostgreSQL proof await a deliberate deployment run.
+- **Blocked:** no implementation blocker; complete environment hydration and
+  hosted deployment are required for the remaining release proof.

@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import type pg from "pg";
 import { withTenant } from "./product_db.js";
 import {
+  buildTailoredApplicationPackage,
   buildGroundedInterviewQuestions,
   buildTrustAnalysis,
   type CareerFact,
@@ -752,7 +753,8 @@ export async function exportProductAccount(db: pg.Pool, userId: string): Promise
       client.query("SELECT id, application_id AS \"applicationId\", evidence_type AS \"evidenceType\", mime_type AS \"mimeType\", filename, sha256, captured_at AS \"capturedAt\", provenance, created_at AS \"createdAt\" FROM product_application_evidence WHERE user_id=$1 ORDER BY captured_at", [userId]),
       client.query("SELECT job_match_id AS \"jobMatchId\", match_explanation AS \"matchExplanation\", ats_gap_report AS \"atsGapReport\", updated_at AS \"updatedAt\" FROM product_job_insights WHERE user_id=$1 ORDER BY updated_at", [userId]),
       client.query("SELECT id, job_match_id AS \"jobMatchId\", application_id AS \"applicationId\", status, questions, rehearsal, created_at AS \"createdAt\", updated_at AS \"updatedAt\" FROM product_interview_prep_sessions WHERE user_id=$1 ORDER BY created_at", [userId]),
-      client.query("SELECT id, application_id AS \"applicationId\", outcome_type AS \"outcomeType\", metadata, occurred_at AS \"occurredAt\" FROM product_outcome_events WHERE user_id=$1 ORDER BY occurred_at", [userId])
+      client.query("SELECT id, application_id AS \"applicationId\", outcome_type AS \"outcomeType\", metadata, occurred_at AS \"occurredAt\" FROM product_outcome_events WHERE user_id=$1 ORDER BY occurred_at", [userId]),
+      client.query("SELECT id, job_match_id AS \"jobMatchId\", resume_id AS \"resumeId\", source_resume_version AS \"sourceResumeVersion\", status, customer_answers AS \"customerAnswers\", output, evidence_fact_ids AS \"evidenceFactIds\", missing_information_flags AS \"missingInformationFlags\", created_at AS \"createdAt\", updated_at AS \"updatedAt\" FROM product_application_packages WHERE user_id=$1 ORDER BY updated_at", [userId])
     ]);
     return {
       exportedAt: new Date().toISOString(),
@@ -777,7 +779,8 @@ export async function exportProductAccount(db: pg.Pool, userId: string): Promise
       applicationEvidence: queries[18].rows,
       jobInsights: queries[19].rows,
       interviewPrepSessions: queries[20].rows,
-      outcomeEvents: queries[21].rows
+      outcomeEvents: queries[21].rows,
+      applicationPackages: queries[22].rows
     };
   }, db);
 }
@@ -915,6 +918,29 @@ export async function decideProductApproval(
     let runnerTaskId: string | null = null;
     let manualGate: string | null = null;
     const approval = result.rows[0];
+    if (approval.action === "application.package_review") {
+      const packageId = approval.payload && typeof approval.payload === "object"
+        ? String((approval.payload as Record<string, unknown>).packageId || "")
+        : "";
+      const applicationId = approval.payload && typeof approval.payload === "object"
+        ? String((approval.payload as Record<string, unknown>).applicationId || "")
+        : "";
+      if (packageId) {
+        await client.query(
+          `UPDATE product_application_packages
+              SET status=$3, output=jsonb_set(output, '{status}', to_jsonb($3::text), true), updated_at=now()
+            WHERE user_id=$1 AND id=$2`,
+          [userId, packageId, decision]
+        );
+      }
+      if (applicationId) {
+        await client.query(
+          `UPDATE product_applications SET status=$3, updated_at=now()
+            WHERE user_id=$1 AND id=$2`,
+          [userId, applicationId, decision === "approved" ? "package_ready" : "rejected_by_policy"]
+        );
+      }
+    }
     if (decision === "approved"
         && ["application.submit", "application.assist_submit", "assist_submit"].includes(approval.action)
         && approval.jobMatchId) {
@@ -1128,6 +1154,290 @@ export async function getProductJobInsight(
       [userId, jobMatchId]
     );
     return result.rows[0] || null;
+  }, db);
+}
+
+export async function listProductApplicationPackages(db: pg.Pool, userId: string): Promise<unknown[]> {
+  return withTenant(userId, async (client) => {
+    const result = await client.query(
+      `SELECT p.id, p.job_match_id AS "jobMatchId", p.resume_id AS "resumeId",
+              p.source_resume_version AS "sourceResumeVersion", p.status,
+              p.customer_answers AS "customerAnswers", p.output,
+              p.evidence_fact_ids AS "evidenceFactIds",
+              p.missing_information_flags AS "missingInformationFlags",
+              p.created_at AS "createdAt", p.updated_at AS "updatedAt",
+              j.title, j.company, j.source, j.job_url AS "jobUrl"
+         FROM product_application_packages p
+         JOIN product_job_matches j ON j.user_id=p.user_id AND j.id=p.job_match_id
+        WHERE p.user_id=$1 ORDER BY p.updated_at DESC LIMIT 50`,
+      [userId]
+    );
+    return result.rows;
+  }, db);
+}
+
+export async function getProductApplicationPackage(
+  db: pg.Pool,
+  userId: string,
+  packageId: string
+): Promise<unknown | null> {
+  return withTenant(userId, async (client) => {
+    const result = await client.query(
+      `SELECT p.id, p.job_match_id AS "jobMatchId", p.resume_id AS "resumeId",
+              p.source_resume_version AS "sourceResumeVersion", p.status,
+              p.customer_answers AS "customerAnswers", p.output,
+              p.evidence_fact_ids AS "evidenceFactIds",
+              p.missing_information_flags AS "missingInformationFlags",
+              p.created_at AS "createdAt", p.updated_at AS "updatedAt",
+              j.title, j.company, j.source, j.job_url AS "jobUrl"
+         FROM product_application_packages p
+         JOIN product_job_matches j ON j.user_id=p.user_id AND j.id=p.job_match_id
+        WHERE p.user_id=$1 AND p.id=$2`,
+      [userId, packageId]
+    );
+    return result.rows[0] || null;
+  }, db);
+}
+
+export async function updateProductApplicationPackage(
+  db: pg.Pool,
+  userId: string,
+  packageId: string,
+  input: { resumeSummary: string; coverLetter: string; recruiterFollowUp: string }
+): Promise<unknown | null> {
+  return withTenant(userId, async (client) => {
+    const existingResult = await client.query(
+      `SELECT p.id, p.job_match_id AS "jobMatchId", p.resume_id AS "resumeId",
+              p.source_resume_version AS "sourceResumeVersion", p.status,
+              p.output, j.title, j.company, j.source, j.job_url AS "jobUrl",
+              a.id AS "applicationId"
+         FROM product_application_packages p
+         JOIN product_job_matches j ON j.user_id=p.user_id AND j.id=p.job_match_id
+         LEFT JOIN product_applications a
+           ON a.user_id=p.user_id AND a.job_match_id=p.job_match_id
+        WHERE p.user_id=$1 AND p.id=$2
+        FOR UPDATE OF p`,
+      [userId, packageId]
+    );
+    const existing = existingResult.rows[0];
+    if (!existing) return null;
+    if (!["package_ready", "approval_required"].includes(existing.status)) {
+      throw new Error("Only packages awaiting review can be edited.");
+    }
+    const currentOutput = existing.output && typeof existing.output === "object"
+      ? existing.output as Record<string, unknown>
+      : {};
+    const currentFocus = currentOutput.resumeFocus && typeof currentOutput.resumeFocus === "object"
+      ? currentOutput.resumeFocus as Record<string, unknown>
+      : {};
+    const updatedOutput = {
+      ...currentOutput,
+      status: "approval_required",
+      resumeFocus: { ...currentFocus, summary: input.resumeSummary.trim() },
+      coverLetter: input.coverLetter.trim(),
+      recruiterFollowUp: input.recruiterFollowUp.trim(),
+      customerEditedAt: new Date().toISOString(),
+      truthGuard: "Customer-edited package content is separate from Career Truth and requires review before use."
+    };
+    const updated = await client.query(
+      `UPDATE product_application_packages
+          SET status='approval_required', output=$3::jsonb, updated_at=now()
+        WHERE user_id=$1 AND id=$2
+        RETURNING id, job_match_id AS "jobMatchId", resume_id AS "resumeId",
+                  source_resume_version AS "sourceResumeVersion", status,
+                  customer_answers AS "customerAnswers", output,
+                  evidence_fact_ids AS "evidenceFactIds",
+                  missing_information_flags AS "missingInformationFlags",
+                  created_at AS "createdAt", updated_at AS "updatedAt"`,
+      [userId, packageId, JSON.stringify(updatedOutput)]
+    );
+    if (existing.applicationId) {
+      await client.query(
+        `UPDATE product_applications SET status='needs_approval', updated_at=now()
+          WHERE user_id=$1 AND id=$2`,
+        [userId, existing.applicationId]
+      );
+    }
+    if (existing.status !== "approval_required") {
+      await client.query(
+        `INSERT INTO product_approval_requests
+           (user_id, job_match_id, action, reason, payload)
+         SELECT $1,$2,'application.package_review','Review the edited tailored package before using it',$3::jsonb
+          WHERE NOT EXISTS (
+            SELECT 1 FROM product_approval_requests
+             WHERE user_id=$1 AND job_match_id=$2
+               AND action='application.package_review' AND status='pending'
+          )`,
+        [userId, existing.jobMatchId, JSON.stringify({ packageId, applicationId: existing.applicationId || null })]
+      );
+    }
+    await client.query(
+      `INSERT INTO product_audit_logs
+         (user_id, actor_user_id, action, target_type, target_id, metadata)
+       VALUES ($1,$1,'application.package_edited','application_package',$2,$3::jsonb)`,
+      [userId, packageId, JSON.stringify({ jobMatchId: existing.jobMatchId, sourceResumeVersion: existing.sourceResumeVersion })]
+    );
+    return {
+      ...updated.rows[0],
+      title: existing.title,
+      company: existing.company,
+      source: existing.source,
+      jobUrl: existing.jobUrl,
+      applicationId: existing.applicationId || null
+    };
+  }, db);
+}
+
+export async function createProductApplicationPackage(
+  db: pg.Pool,
+  userId: string,
+  jobMatchId: string,
+  input: { interest: string; emphasis: string; avoid?: string }
+): Promise<unknown | null> {
+  return withTenant(userId, async (client) => {
+    const [jobResult, onboardingResult, resumeResult, truthResult, insightResult, policyResult, existingResult] = await Promise.all([
+      client.query(
+        `SELECT id, title, company, source, job_url AS "jobUrl", description_text AS "descriptionText",
+                score, reasons, status
+           FROM product_job_matches WHERE user_id=$1 AND id=$2`,
+        [userId, jobMatchId]
+      ),
+      client.query(
+        `SELECT completed, record FROM product_onboarding WHERE user_id=$1`,
+        [userId]
+      ),
+      client.query(
+        `SELECT id, sha256 FROM product_resumes
+          WHERE user_id=$1 AND is_default=true ORDER BY created_at DESC LIMIT 1`,
+        [userId]
+      ),
+      client.query("SELECT facts FROM product_career_truth_banks WHERE user_id=$1", [userId]),
+      client.query(
+        `SELECT match_explanation AS "matchExplanation", ats_gap_report AS "atsGapReport"
+           FROM product_job_insights WHERE user_id=$1 AND job_match_id=$2`,
+        [userId, jobMatchId]
+      ),
+      client.query("SELECT mode FROM product_automation_policies WHERE user_id=$1", [userId]),
+      client.query(
+        `SELECT id, job_match_id AS "jobMatchId", resume_id AS "resumeId",
+                source_resume_version AS "sourceResumeVersion", status,
+                customer_answers AS "customerAnswers", output,
+                evidence_fact_ids AS "evidenceFactIds",
+                missing_information_flags AS "missingInformationFlags",
+                created_at AS "createdAt", updated_at AS "updatedAt"
+           FROM product_application_packages WHERE user_id=$1 AND job_match_id=$2`,
+        [userId, jobMatchId]
+      )
+    ]);
+    const existing = existingResult.rows[0];
+    if (existing) return existing;
+    const job = jobResult.rows[0];
+    if (!job) return null;
+    if (job.status === "rejected") throw new Error("This opportunity is no longer available for preparation.");
+    const onboarding = onboardingResult.rows[0];
+    const record = onboarding?.record && typeof onboarding.record === "object"
+      ? onboarding.record as Record<string, unknown>
+      : {};
+    const consent = record.consent && typeof record.consent === "object"
+      ? record.consent as Record<string, unknown>
+      : {};
+    if (onboarding?.completed !== true || consent.truthConfirmed !== true) {
+      throw new Error("Complete and confirm your profile before creating a tailored package.");
+    }
+    const resume = resumeResult.rows[0];
+    if (!resume) throw new Error("Choose a default resume before creating a tailored package.");
+    const approvedFacts = approvedProductFacts(userId, truthResult.rows[0]?.facts);
+    if (!approvedFacts.length) throw new Error("Approve at least one career fact before creating a tailored package.");
+    const insight = insightResult.rows[0];
+    if (!insight) throw new Error("Run the fit analysis before creating a tailored package.");
+    const description = String(job.descriptionText || "").trim();
+    if (!description) throw new Error("A complete job description is required before creating a tailored package.");
+    const packageStatus = policyResult.rows[0]?.mode === "assist" ? "package_ready" : "approval_required";
+    const applicationStatus = packageStatus === "approval_required" ? "needs_approval" : "package_ready";
+    const output = buildTailoredApplicationPackage({
+      jobMatchId,
+      title: job.title,
+      company: job.company,
+      jobUrl: job.jobUrl,
+      description,
+      sourceResumeId: resume.id,
+      sourceResumeVersion: resume.sha256,
+      match: insight.matchExplanation,
+      ats: insight.atsGapReport,
+      approvedFacts,
+      interest: input.interest,
+      emphasis: input.emphasis,
+      avoid: input.avoid
+    });
+    const customerAnswers = {
+      interest: input.interest.trim(),
+      emphasis: input.emphasis.trim(),
+      avoid: input.avoid?.trim() || ""
+    };
+    const saved = await client.query(
+      `INSERT INTO product_application_packages
+         (user_id, job_match_id, resume_id, source_resume_version, status,
+          customer_answers, output, evidence_fact_ids, missing_information_flags)
+       VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::jsonb,$9::jsonb)
+       RETURNING id, job_match_id AS "jobMatchId", resume_id AS "resumeId",
+                 source_resume_version AS "sourceResumeVersion", status,
+                 customer_answers AS "customerAnswers", output,
+                 evidence_fact_ids AS "evidenceFactIds",
+                 missing_information_flags AS "missingInformationFlags",
+                 created_at AS "createdAt", updated_at AS "updatedAt"`,
+      [
+        userId, jobMatchId, resume.id, resume.sha256, packageStatus,
+        JSON.stringify(customerAnswers), JSON.stringify({ ...output, status: packageStatus }),
+        JSON.stringify(output.resumeFocus.evidenceFactIds),
+        JSON.stringify(output.missingInformationFlags)
+      ]
+    );
+    const packageRecord = saved.rows[0];
+    const application = await client.query(
+      `INSERT INTO product_applications (user_id, job_match_id, resume_id, status, answers)
+       VALUES ($1,$2,$3,$4,$5::jsonb)
+       ON CONFLICT (user_id, job_match_id) DO UPDATE SET
+         resume_id=COALESCE(product_applications.resume_id, excluded.resume_id),
+         status=CASE WHEN product_applications.status IN
+           ('submitted_verified','submitted_unverified','submission_attempted','withdrawn')
+           THEN product_applications.status ELSE excluded.status END,
+         answers=excluded.answers, updated_at=now()
+       RETURNING id`,
+      [userId, jobMatchId, resume.id, applicationStatus, JSON.stringify({ packageId: packageRecord.id })]
+    );
+    await client.query(
+      `UPDATE product_job_matches SET status='package_ready', updated_at=now()
+        WHERE user_id=$1 AND id=$2`,
+      [userId, jobMatchId]
+    );
+    if (packageStatus === "approval_required") {
+      await client.query(
+        `INSERT INTO product_approval_requests
+           (user_id, job_match_id, action, reason, payload)
+         VALUES ($1,$2,'application.package_review','Review the tailored package before using it',$3::jsonb)`,
+        [userId, jobMatchId, JSON.stringify({ packageId: packageRecord.id, applicationId: application.rows[0]?.id || null })]
+      );
+    }
+    await client.query(
+      `INSERT INTO product_audit_logs
+         (user_id, actor_user_id, action, target_type, target_id, metadata)
+       VALUES ($1,$1,'application.package_created','application_package',$2,$3::jsonb)`,
+      [userId, packageRecord.id, JSON.stringify({
+        jobMatchId,
+        resumeId: resume.id,
+        sourceResumeVersion: resume.sha256,
+        evidenceFactIds: output.resumeFocus.evidenceFactIds,
+        status: packageStatus
+      })]
+    );
+    return {
+      ...packageRecord,
+      title: job.title,
+      company: job.company,
+      source: job.source,
+      jobUrl: job.jobUrl,
+      applicationId: application.rows[0]?.id || null
+    };
   }, db);
 }
 

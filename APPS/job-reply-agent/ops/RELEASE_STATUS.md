@@ -203,3 +203,30 @@ needs a deployment with migration 012 applied.
 - **Blocked:** full-repository Vitest/typecheck could not complete because the
   isolated worktree dependency tree is incomplete (`googleapis`, `date-fns`,
   and AWS SDK transitive manifests). Package metadata was not changed.
+
+## Guided Value-to-Payment Journey - 2026-09-03
+
+- **Implemented:** customer questions now lead from a selected fit analysis to
+  a persisted, truthful tailored package with resume focus, cover letter,
+  recruiter follow-up, application answers, grounded interview prompts,
+  approved-fact evidence, and missing-information flags.
+- **Implemented:** package-only edits are supported through the authenticated
+  update route and force a fresh approval without changing Career Truth.
+- **Implemented:** package review is wired to the existing Review/Assisted
+  policy. Review creates an approval request; Assisted prepares only and keeps
+  sensitive/submission actions gated. Usage is metered by the existing
+  `tailored_package` entitlement and duplicate requests are idempotent.
+- **Implemented:** migration `013_product_application_packages.sql`, package
+  list/detail routes, package creation route, paywall response, and funnel/audit
+  evidence.
+- **Locally verified:** `4` focused test files with `59` passing tests,
+  JavaScript syntax checks, and the TypeScript production build.
+- **Deployed:** no. The current hosted release remains unchanged; no migration
+  receipt, deployment ID, or hosted release SHA is claimed for this increment.
+- **Externally verified:** none. Live payment, hosted customer flow, and
+  PostgreSQL tenant proof are still outstanding.
+- **Paused:** Stripe checkout enablement and commercial acceptance remain paused
+  until the hosted package path and full test-mode lifecycle pass.
+- **Blocked:** no source implementation blocker. Full-repository verification
+  and live proof require the complete dependency/deployment environment noted in
+  the earlier repair entry.
