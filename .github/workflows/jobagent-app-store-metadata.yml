@@ -33,9 +33,16 @@ jobs:
         env:
           REVIEW_EMAIL: ${{ secrets.JOBAGENT_APP_REVIEW_EMAIL }}
           REVIEW_PASSWORD: ${{ secrets.JOBAGENT_APP_REVIEW_PASSWORD }}
+          REVIEW_DATABASE_URL: ${{ secrets.JOBAGENT_REVIEW_DATABASE_URL }}
         run: |
           test -n "$REVIEW_EMAIL" || { echo "Missing JOBAGENT_APP_REVIEW_EMAIL"; exit 1; }
           test -n "$REVIEW_PASSWORD" || { echo "Missing JOBAGENT_APP_REVIEW_PASSWORD"; exit 1; }
+          test -n "$REVIEW_DATABASE_URL" || { echo "Missing JOBAGENT_REVIEW_DATABASE_URL"; exit 1; }
+          npm run build
+          DATABASE_PUBLIC_URL="$REVIEW_DATABASE_URL" \
+            JOBAGENT_APP_REVIEW_EMAIL="$REVIEW_EMAIL" \
+            JOBAGENT_APP_REVIEW_PASSWORD="$REVIEW_PASSWORD" \
+            node scripts/rotate-app-review-credential.mjs
           mkdir -p "$RUNNER_TEMP/metadata/en-US/review_information"
           cp -R store/metadata/apple/en-US/. "$RUNNER_TEMP/metadata/en-US/"
           printf '%s' 'Fejiro' > "$RUNNER_TEMP/metadata/en-US/review_information/first_name.txt"
