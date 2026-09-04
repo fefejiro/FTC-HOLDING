@@ -279,6 +279,7 @@ This current receipt supersedes the historical pre-deployment notes above.
 
 - **Uploaded and processed:** GitHub Actions run `33915985274` uploaded signed build `1.0.1 (3)` to App Store Connect. IPA SHA-256: `0CD5D245E2BD6B200E036880301FD98824A15E3887695D1681494214E623B5D2`.
 - **Submitted:** App Store Connect has metadata, five iPhone screenshots, build `1.0.1 (3)`, and automatic release selected. Its authenticated state is **Waiting for Review**, submitted Sep 4, 2026 at 4:50 PM EDT, submission `0083ab51-caa4-43c4-97ba-06ed1bdfeac0`.
+- **Review access synchronized:** metadata workflow `33918457718` passed after the production reviewer-account reset, writing the protected review information without exposing its credentials.
 - **Published:** Android only. The Google Play listing remains public at `https://play.google.com/store/apps/details?id=cloud.unalabs.jobagent`.
 - **Not yet published:** iOS. Apple approval and an independently resolving App Store listing are required before claiming public availability.
 - **Paused:** authenticated customer, device, tenant-isolation, and payment-lifecycle proof remain separate gates. `BILLING_CHECKOUT_ENABLED` remains disabled.
