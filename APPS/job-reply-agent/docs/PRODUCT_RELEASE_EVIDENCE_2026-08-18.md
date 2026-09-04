@@ -158,3 +158,76 @@ This evidence claims a live backend and responsive customer proof for the exact
 deployed SHA stated above. It does not claim active customer billing, a genuine
 paid transaction, TestFlight availability, Play testing, store review, or public
 store availability.
+
+## Customer Intelligence Increment - 2026-09-03
+
+This is a repository increment on `agent/unascout-customer-intelligence`; it is
+not part of the deployed SHA above.
+
+Pushed source commit: `c56c6f193`.
+
+- **Completed:** customer-intelligence onboarding wizard, resumable progress,
+  preference and eligibility capture, review-required resume fact proposals,
+  recommendation explanations and feedback, funnel instrumentation, export
+  inclusion, and forced-RLS migration `012_customer_intelligence.sql`.
+- **Locally verified:** full Vitest (`32` passed files, `1` skipped; `234`
+  passed tests, `11` skipped), TypeScript, JavaScript syntax, and deterministic
+  customer smoke at `390x844` and `1440x1000`. Screenshots are retained under
+  `D:\FTC-HOLDING-worktrees\unascout-customer-intelligence\APPS\job-reply-agent\.local\qa-revenue-launch`.
+- **Deployed:** not deployed. The production SHA and hosted evidence in this
+  document remain unchanged.
+- **Externally verified:** none for this increment.
+- **Paused:** provider-neutral PDF/DOCX fact extraction is deferred until an
+  approved parser can preserve source provenance and customer review.
+- **Blocked:** no code blocker; live verification awaits migration/deployment
+and a fully materialized test environment.
+
+## Customer Intelligence Repair - 2026-09-03
+
+This repair is source-only and is not part of the deployed release SHA above.
+
+- **Completed:** nine-stage resumable onboarding; explicit Review/Assisted
+  policy mapping; consent-preserving ordinary edits and fail-closed revocation;
+  normalized Career Truth proposal lifecycle with server-owned provenance;
+  tenant-owned deterministic recommendation learning; and approved-only
+  generation inputs.
+- **Locally tested:** focused customer-intelligence/mobile/release tests (`18`
+  passed), store metadata checks, and customer smoke passed at `390x844` and
+  `1440x1000` after a real review-renderer fix. Redacted screenshots are in
+  `D:\FTC-HOLDING-worktrees\unascout-customer-intelligence\APPS\job-reply-agent\.local\qa-revenue-launch`.
+- **Deployed:** not deployed; hosted SHA and provider evidence above are
+  unchanged.
+- **Externally verified:** none for this repair.
+- **Paused:** live tenant isolation, PostgreSQL/RLS proof, queue audit, and
+  hosted smoke require a deliberate migration/deployment run.
+- **Blocked:** full suite and TypeScript verification were attempted but the
+  isolated dependency tree lacks resolvable `googleapis`, `date-fns`, and AWS
+  SDK transitive manifests. No dependency metadata was changed.
+
+## Guided Value-to-Payment Journey - 2026-09-03
+
+This is a source-only increment on `agent/unascout-customer-intelligence`; it
+is not part of the deployed release SHA documented above.
+
+- **Completed in source:** a guided customer path from fit analysis through a
+  three-question job brief and a reviewable tailored package. The package uses
+  only approved Career Truth facts and the server-owned default resume/version,
+  includes grounded interview prompts, and records truthful evidence gaps
+  instead of filling them with guesses.
+- **Completed in source:** authenticated package-only edits force re-review and
+  are audited without changing Career Truth or provenance.
+- **Completed in source:** product package persistence and forced tenant RLS in
+  migration `013_product_application_packages.sql`, Review/Assisted policy
+  handling, approval linkage, usage metering, idempotency, export inclusion,
+  audit evidence, package list/detail routes, and contextual `402 PLAN_LIMIT`
+  plan output.
+- **Locally verified:** JavaScript syntax, focused domain/PWA/security/billing
+  tests (`4` files, `59` passed), and `npm run build`.
+- **Deployed:** no. Existing hosted SHA, migration state, and provider receipts
+  remain unchanged.
+- **Externally verified:** none for this journey. No live payment, hosted
+  package, tenant-isolation, or store evidence is implied by local tests.
+- **Paused:** hosted migration, live customer smoke, Stripe lifecycle, and
+  two-tenant PostgreSQL proof await a deliberate deployment run.
+- **Blocked:** no implementation blocker; complete environment hydration and
+  hosted deployment are required for the remaining release proof.

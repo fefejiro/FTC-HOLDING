@@ -55,7 +55,7 @@ const appleNotes = read("store/metadata/apple/en-US/release_notes.txt");
 const googleTitle = read("store/metadata/google/en-US/title.txt");
 const googleShort = read("store/metadata/google/en-US/short_description.txt");
 const googleDescription = read("store/metadata/google/en-US/full_description.txt");
-const googleNotes = read("store/metadata/google/en-US/changelogs/2.txt");
+const googleNotes = read("store/metadata/google/en-US/changelogs/3.txt");
 
 chars("Apple name", appleName, 30);
 chars("Apple subtitle", appleSubtitle, 30);
@@ -102,11 +102,11 @@ const iosProject = read("ios/App/App.xcodeproj/project.pbxproj");
 for (const [label, source] of [["Capacitor", capacitor], ["Android", androidGradle], ["iOS", iosProject]]) {
   if (!source.includes("cloud.unalabs.jobagent")) throw new Error(`${label} application identity drifted`);
 }
-if (!androidGradle.includes("versionCode 2") || !androidGradle.includes('versionName "1.0.1"')) {
-  throw new Error("Android release version must remain 1.0.1 (2) for this submission set");
+if (!androidGradle.includes("versionCode 3") || !androidGradle.includes('versionName "1.0.1"')) {
+	throw new Error("Android release version must remain 1.0.1 (3) for this submission set");
 }
-if (!iosProject.includes("CURRENT_PROJECT_VERSION = 2;") || !iosProject.includes("MARKETING_VERSION = 1.0.1;")) {
-  throw new Error("iOS release version must remain 1.0.1 (2) for this submission set");
+if (!iosProject.includes("CURRENT_PROJECT_VERSION = 3;") || !iosProject.includes("MARKETING_VERSION = 1.0.1;")) {
+	throw new Error("iOS release version must remain 1.0.1 (3) for this submission set");
 }
 if (!iosProject.includes("TARGETED_DEVICE_FAMILY = 1;")) {
   throw new Error("The first iOS release must remain iPhone-only until iPad is separately validated");

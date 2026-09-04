@@ -207,6 +207,86 @@ export interface CareerFact {
   provenance: Record<string, unknown>;
 }
 
+export interface TailoredApplicationPackageInput {
+  jobMatchId: string;
+  title: string;
+  company: string;
+  jobUrl: string;
+  description: string;
+  sourceResumeId: string;
+  sourceResumeVersion: string;
+  match: MatchExplanation;
+  ats: AtsGapReport;
+  approvedFacts: CareerFact[];
+  interest: string;
+  emphasis: string;
+  avoid?: string;
+  generatedAt?: string;
+}
+
+export function buildTailoredApplicationPackage(input: TailoredApplicationPackageInput) {
+  const generatedAt = input.generatedAt || new Date().toISOString();
+  const approvedFacts = selectApprovedCareerFacts(input.approvedFacts).approvedFacts;
+  const facts = approvedFacts.slice(0, 8).map((fact) => ({
+    id: fact.id,
+    category: fact.category,
+    statement: fact.statement,
+    provenance: fact.provenance
+  }));
+  const role = input.title.trim() || "this role";
+  const company = input.company.trim() || "the organization";
+  const interest = input.interest.trim();
+  const emphasis = input.emphasis.trim();
+  const avoid = input.avoid?.trim() || "";
+  const strengths = input.match.matchedRequirements.length
+    ? input.match.matchedRequirements.join(", ")
+    : "the approved experience in the source resume";
+  const coverLetter = [
+    `Dear ${company} hiring team,`,
+    "",
+    `I am interested in the ${role} opportunity because ${interest}`,
+    "",
+    `My application emphasizes ${emphasis}. The role's supported alignment includes ${strengths}.`,
+    "",
+    "I would welcome the opportunity to discuss how my verified experience could support your team.",
+    "",
+    "Sincerely,",
+    "The candidate"
+  ].join("\n");
+  return {
+    jobMatchId: input.jobMatchId,
+    role,
+    company,
+    jobUrl: input.jobUrl,
+    sourceResumeId: input.sourceResumeId,
+    sourceResumeVersion: input.sourceResumeVersion,
+    status: "approval_required" as const,
+    resumeFocus: {
+      headline: `${role} | ${company}`,
+      summary: `Position the candidate around ${strengths}.`,
+      evidenceFactIds: facts.map((fact) => fact.id),
+      supportedRequirements: input.match.matchedRequirements,
+      unsupportedRequirements: input.ats.unsupportedTerms
+    },
+    coverLetter,
+    recruiterFollowUp: `Hello ${company} team, I have applied for the ${role} position and would be glad to discuss the role and my verified experience.`,
+    applicationQuestions: [
+      { question: "Why are you interested in this role?", answer: interest, source: "customer_input" },
+      { question: "What should this application emphasize?", answer: emphasis, source: "customer_input" },
+      { question: "What should be left out or handled carefully?", answer: avoid || "No additional exclusions provided.", source: "customer_input" }
+    ],
+    interviewPreparation: buildGroundedInterviewQuestions({
+      title: role,
+      company,
+      careerFacts: approvedFacts
+    }),
+    approvedFacts: facts,
+    missingInformationFlags: input.match.missingRequirements,
+    truthGuard: "No unapproved facts or unsupported claims were added.",
+    generatedAt
+  };
+}
+
 export interface GenerationFactSelection {
   approvedFacts: CareerFact[];
   reviewFlags: Array<{ factId: string; reason: string }>;

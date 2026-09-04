@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   assertMailboxOwnership,
+  buildTailoredApplicationPackage,
   buildGroundedInterviewQuestions,
   buildTrustAnalysis,
   isDuplicateJob,
@@ -123,6 +124,61 @@ describe("SaaS product domain safeguards", () => {
     expect(questions[0].approvedFactIds).toEqual(["approved-delivery"]);
     expect(questions.at(-1)?.approvedFactIds).toEqual([]);
   });
+
+  it("builds a role-specific package from customer answers and approved facts only", () => {
+    const packageRecord = buildTailoredApplicationPackage({
+      jobMatchId: "job-a",
+      title: "Business Analyst",
+      company: "Example",
+      jobUrl: "https://example.test/jobs/a",
+      description: "Requirements, stakeholder management and UAT delivery.",
+      sourceResumeId: "resume-a",
+      sourceResumeVersion: "sha-a",
+      match: {
+        score: 82,
+        matchedRequirements: ["requirements", "uat"],
+        missingRequirements: ["sql"],
+        policyConflicts: [],
+        evidenceFactIds: ["fact-a"],
+        generatedAt: "2026-09-03T12:00:00.000Z"
+      },
+      ats: {
+        coveredTerms: ["requirements", "uat"],
+        missingTerms: ["sql"],
+        unsupportedTerms: ["sql"],
+        structuralFindings: [],
+        generatedAt: "2026-09-03T12:00:00.000Z"
+      },
+      approvedFacts: [{
+        id: "fact-a",
+        userId: "user-a",
+        category: "experience",
+        statement: "Led requirements and UAT delivery.",
+        verificationStatus: "approved",
+        provenance: { resumeId: "resume-a" }
+      }, {
+        id: "fact-unapproved",
+        userId: "user-a",
+        category: "skill",
+        statement: "SQL",
+        verificationStatus: "review_required",
+        provenance: {}
+      }],
+      interest: "I want to help improve delivery outcomes for this team.",
+      emphasis: "Requirements discovery and UAT coordination.",
+      avoid: "Do not claim SQL experience."
+    });
+
+    expect(packageRecord.status).toBe("approval_required");
+    expect(packageRecord.sourceResumeVersion).toBe("sha-a");
+    expect(packageRecord.resumeFocus.evidenceFactIds).toEqual(["fact-a"]);
+    expect(packageRecord.coverLetter).toContain("Requirements discovery and UAT coordination.");
+    expect(packageRecord.coverLetter).not.toContain("SQL");
+    expect(packageRecord.applicationQuestions).toHaveLength(3);
+    expect(packageRecord.interviewPreparation).toHaveLength(5);
+    expect(packageRecord.interviewPreparation[0].approvedFactIds).toEqual(["fact-a"]);
+    expect(packageRecord.truthGuard).toContain("No unapproved facts");
+  });
 });
 
 describe("trust-first pilot schema", () => {
@@ -138,6 +194,24 @@ describe("trust-first pilot schema", () => {
       expect(sql).toContain(`ALTER TABLE ${table} FORCE ROW LEVEL SECURITY`);
       expect(sql).toContain(`CREATE POLICY ${table}_tenant_policy`);
     }
+  });
+});
+
+describe("customer package schema", () => {
+  const sql = fs.readFileSync(path.resolve("migrations/013_product_application_packages.sql"), "utf8");
+
+  it("keeps packages tenant-owned and reviewable", () => {
+    expect(sql).toMatch(/CREATE TABLE IF NOT EXISTS product_application_packages[\s\S]*?user_id uuid NOT NULL REFERENCES product_users\(id\)/i);
+    expect(sql).toContain("source_resume_version text NOT NULL");
+    expect(sql).toContain("customer_answers jsonb NOT NULL");
+    expect(sql).toContain("output jsonb NOT NULL");
+    expect(sql).toContain("ALTER TABLE product_application_packages FORCE ROW LEVEL SECURITY");
+    expect(sql).toContain("CREATE POLICY product_application_packages_tenant_policy");
+    expect(sql).toContain("first_package_created");
+    expect(sql).toContain("paywall_viewed");
+    expect(sql).toContain("registration_started");
+    expect(sql).toContain("first_value_reached");
+    expect(sql).toContain("subscription_cancelled");
   });
 });
 

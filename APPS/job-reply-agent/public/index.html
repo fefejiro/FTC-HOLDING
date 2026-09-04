@@ -65,6 +65,7 @@
         <button class="nav-item" type="button" data-view="resumes">Resumes</button>
         <button class="nav-item" type="button" data-view="connections">Connections</button>
         <button class="nav-item" type="button" data-view="opportunities">Opportunities</button>
+        <button class="nav-item" type="button" data-view="packages">Application packages</button>
         <button class="nav-item" type="button" data-view="approvals">Approvals</button>
         <button class="nav-item" type="button" data-view="interview">Interview prep</button>
         <button class="nav-item" type="button" data-view="activity">Activity</button>
@@ -101,36 +102,114 @@
 
       <section class="view" data-view-panel="profile">
         <div class="page-heading"><div><p class="eyebrow">Candidate record</p><h1>Profile and policy</h1></div></div>
-        <form id="onboarding-form" class="section-form">
-          <div class="form-grid">
-            <label>Full name<input name="fullName" required></label>
-            <label>Phone<input name="phone" autocomplete="tel" required></label>
-            <label>Location<input name="location" required></label>
-            <label>Time zone<input name="timeZone" value="America/Toronto" required></label>
-            <label class="wide">LinkedIn URL<input name="linkedIn" type="url" required></label>
-            <label>Target titles<textarea name="targetTitles" required></textarea></label>
-            <label>Excluded titles<textarea name="excludedTitles"></textarea></label>
-            <label>Preferred locations<textarea name="locations" required></textarea></label>
-            <label>Employment types<textarea name="employmentTypes" required></textarea></label>
-            <fieldset><legend>Work modes</legend><label class="check"><input name="workModes" value="remote" type="checkbox">Remote</label><label class="check"><input name="workModes" value="hybrid" type="checkbox">Hybrid</label><label class="check"><input name="workModes" value="onsite" type="checkbox">Onsite</label></fieldset>
-            <label>Minimum compensation<input name="compensationFloor" required></label>
-            <label class="wide">Work authorization<input name="workAuthorization" required></label>
-            <label>Sponsorship<select name="sponsorshipRequired"><option value="false">Not required</option><option value="true">Required</option></select></label>
+        <form id="onboarding-form" class="section-form" data-wizard novalidate>
+          <div class="wizard-heading">
+            <div><p class="eyebrow">Personalized setup</p><h2 id="onboarding-step-title">Your goals</h2></div>
+            <span id="onboarding-step-count" class="status-chip neutral">Step 1 of 9</span>
           </div>
-          <fieldset class="consent-block"><legend>Consent</legend>
-            <label class="check"><input name="truthConfirmed" type="checkbox" required>My professional information is truthful.</label>
-            <label class="check"><input name="recruiterDrafts" type="checkbox">Prepare recruiter drafts.</label>
-            <label class="check"><input name="recruiterSends" type="checkbox">Send only approved recruiter replies.</label>
-            <label class="check"><input name="assistedApplications" type="checkbox">Prepare and assist with applications.</label>
-            <label class="check"><input name="controlledSubmissions" type="checkbox">Submit only when every answer and channel rule is covered.</label>
+          <div class="progress-track" aria-hidden="true"><span id="onboarding-progress"></span></div>
+          <p id="onboarding-step-help" class="field-help">Tell UnaScout what a good next role looks like.</p>
+
+          <fieldset data-onboarding-panel="goals">
+            <legend>About you and the roles you want</legend>
+            <div class="form-grid">
+              <label>Full name<input name="fullName" autocomplete="name"></label>
+              <label>Phone<input name="phone" autocomplete="tel"></label>
+              <label class="wide">LinkedIn URL<input name="linkedIn" type="url" autocomplete="url"></label>
+              <label>Target titles<textarea name="targetTitles" placeholder="Business Analyst&#10;IT Manager"></textarea></label>
+              <label>Adjacent titles<textarea name="adjacentTitles" placeholder="Business Systems Analyst"></textarea></label>
+              <label>Titles to exclude<textarea name="excludedTitles"></textarea></label>
+            </div>
           </fieldset>
-          <button class="button primary" type="submit">Save profile</button>
+
+          <fieldset data-onboarding-panel="location" hidden>
+            <legend>Where and how you want to work</legend>
+            <div class="form-grid">
+              <label>Current location<input name="location" autocomplete="address-level2"></label>
+              <label>Time zone<input name="timeZone" value="America/Toronto"></label>
+              <label>Preferred locations<textarea name="locations" placeholder="Toronto, ON&#10;Remote - Canada"></textarea></label>
+              <fieldset><legend>Work modes</legend><label class="check"><input name="workModes" value="remote" type="checkbox">Remote</label><label class="check"><input name="workModes" value="hybrid" type="checkbox">Hybrid</label><label class="check"><input name="workModes" value="onsite" type="checkbox">Onsite</label></fieldset>
+              <label>Relocation<select name="relocation"><option value="">No preference</option><option value="not_open">Not open to relocation</option><option value="open">Open to relocation</option><option value="supported_only">Only with relocation support</option></select></label>
+            </div>
+          </fieldset>
+
+          <fieldset data-onboarding-panel="employment" hidden>
+            <legend>Employment preferences</legend>
+            <div class="form-grid">
+              <label>Employment types<textarea name="employmentTypes" placeholder="Permanent&#10;Contract"></textarea></label>
+              <label>Search urgency<select name="urgency"><option value="">No preference</option><option value="exploring">Exploring</option><option value="active">Actively searching</option><option value="urgent">Urgent transition</option></select></label>
+              <label>Target volume<select name="desiredVolume"><option value="">No preference</option><option value="focused">1-3 strong matches weekly</option><option value="steady">4-10 matches weekly</option><option value="high_intent">More opportunities, more review</option></select></label>
+            </div>
+          </fieldset>
+
+          <fieldset data-onboarding-panel="compensation" hidden>
+            <legend>Compensation</legend>
+            <div class="form-grid">
+              <label>Minimum compensation<input name="compensationFloor" placeholder="100000"></label>
+              <label>Currency<select name="compensationCurrency"><option value="CAD">CAD</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option></select></label>
+              <label>Compensation basis<select name="compensationBasis"><option value="annual">Annual</option><option value="hourly">Hourly</option><option value="monthly">Monthly</option></select></label>
+              <label class="check"><input name="compensationPrivate" type="checkbox" checked>Keep compensation preferences private.</label>
+            </div>
+          </fieldset>
+
+          <fieldset data-onboarding-panel="eligibility" hidden>
+            <legend>Work eligibility</legend>
+            <div class="form-grid">
+              <label class="wide">Work authorization<input name="workAuthorization" placeholder="Countries where you can work and any conditions"></label>
+              <label>Sponsorship<select name="sponsorshipRequired"><option value="false">Not required</option><option value="true">Required</option></select></label>
+            </div>
+          </fieldset>
+
+          <fieldset data-onboarding-panel="strengths" hidden>
+            <legend>Strengths and industries</legend>
+            <div class="form-grid">
+              <label>Industries<textarea name="industries" placeholder="Retail, logistics, public sector"></textarea></label>
+              <label>Industries to exclude<textarea name="excludedIndustries"></textarea></label>
+              <label>Seniority<input name="seniority" placeholder="Manager / Senior / Director"></label>
+              <label>Core skills<textarea name="skills" placeholder="ERP, requirements, stakeholder delivery"></textarea></label>
+              <label>Certifications<textarea name="certifications"></textarea></label>
+              <label>Languages<textarea name="languages" placeholder="English"></textarea></label>
+            </div>
+          </fieldset>
+
+          <fieldset data-onboarding-panel="resume" hidden>
+            <legend>Resumes and notifications</legend>
+            <div class="content-band inset-band"><strong>Keep the source of truth clear.</strong><p>Upload one or more resumes here. UnaScout keeps the original and lets you choose a default before matching.</p></div>
+            <div class="form-grid">
+              <label>Upload a resume<input name="onboardingResume" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></label>
+              <label class="check"><input name="onboardingResumeDefault" type="checkbox">Make this the default resume.</label>
+              <label>Resume strategy<select name="resumeStrategy"><option value="one_truthful_base_resume">One truthful base resume</option><option value="role_variants">Role-specific truthful variants</option><option value="review_each_package">Review every tailored package</option></select></label>
+              <fieldset><legend>Notifications</legend><label class="check"><input name="notificationChannels" value="email" type="checkbox">Email</label><label class="check"><input name="notificationChannels" value="in_app" type="checkbox">In app</label><label class="check"><input name="notificationChannels" value="none" type="checkbox">Only when I open UnaScout</label></fieldset>
+            </div>
+          </fieldset>
+
+          <fieldset data-onboarding-panel="control" hidden>
+            <legend>Choose your level of control</legend>
+            <div class="form-grid">
+              <fieldset><legend>Mode</legend><label class="check"><input name="controlMode" value="review" type="radio" checked>Review: approve every package.</label><label class="check"><input name="controlMode" value="assisted" type="radio">Assisted: prepare analysis and packages; sensitive and submission actions still require approval.</label></fieldset>
+              <label>Daily application limit<input name="dailyApplicationLimit" type="number" min="0" max="10" value="5"></label>
+              <label>Quiet hours start<input name="quietHoursStart" type="number" min="0" max="23" value="23"></label>
+              <label>Quiet hours end<input name="quietHoursEnd" type="number" min="0" max="23" value="7"></label>
+              <label class="check"><input name="recruiterDrafts" type="checkbox">Prepare recruiter drafts.</label>
+              <label class="check"><input name="recruiterSends" type="checkbox">Send only approved recruiter replies.</label>
+              <input name="assistedApplications" type="hidden" value="false"><input name="controlledSubmissions" type="hidden" value="false">
+            </div>
+          </fieldset>
+
+          <fieldset data-onboarding-panel="review" hidden>
+            <legend>Review your setup</legend>
+            <div id="onboarding-review" class="content-band inset-band"></div>
+            <label class="check"><input name="truthConfirmed" type="checkbox">I confirm my profile and will approve the professional facts UnaScout uses.</label>
+            <p class="field-help">Edit links return you to the relevant step. Unapproved resume facts stay out of analysis.</p>
+          </fieldset>
+
+          <div class="wizard-actions"><button id="onboarding-back" class="button secondary" type="submit" name="wizardAction" value="back" hidden>Back</button><button id="onboarding-next" class="button primary" type="submit" name="wizardAction" value="next">Continue</button><button id="onboarding-complete" class="button primary" type="submit" name="wizardAction" value="complete" hidden>Complete setup</button></div>
           <p id="profile-result" class="form-result" aria-live="polite"></p>
         </form>
         <form id="policy-form" class="section-form compact-form">
           <h2>Automation policy</h2>
           <div class="form-grid">
-            <label>Mode<select name="mode"><option value="assist">Assist</option><option value="approval_required">Approval required</option><option value="controlled_autopilot">Controlled autopilot</option></select></label>
+            <label>Mode<select name="mode"><option value="approval_required">Review</option><option value="assist">Assisted</option></select></label>
             <label>Time zone<input name="timeZone" required></label>
             <label>Draft cap<input name="maxDraftsPerDay" type="number" min="0" max="50" required></label>
             <label>Recruiter send cap<input name="maxRecruiterSendsPerDay" type="number" min="0" max="10" required></label>
@@ -157,6 +236,17 @@
         </form>
         <p id="resume-result" class="form-result" aria-live="polite"></p>
         <div id="resume-list" class="vault-list"></div>
+        <section id="fact-proposal-panel" class="content-band" hidden>
+          <h2>Review proposed facts</h2>
+          <p class="field-help">These statements remain unverified until you approve them below.</p>
+          <form id="fact-proposal-form" class="section-form compact-form">
+            <input name="resumeId" type="hidden">
+            <label>Proposed facts, one per line<textarea name="facts" class="tall"></textarea></label>
+            <button class="button secondary" type="submit">Save for review</button>
+            <p id="fact-proposal-result" class="form-result" aria-live="polite"></p>
+          </form>
+          <div id="proposal-facts-list" class="vault-list" aria-live="polite"></div>
+        </section>
         <form id="truth-form" class="section-form">
           <h2>Approved career facts</h2>
           <label>One verified fact per line<textarea name="facts" class="tall" required></textarea></label>
@@ -184,6 +274,12 @@
       <section class="view" data-view-panel="opportunities">
         <div class="page-heading"><div><p class="eyebrow">Ranked queue</p><h1>Opportunities</h1></div></div>
         <ul id="job-list" class="record-list detailed"></ul>
+      </section>
+
+      <section class="view" data-view-panel="packages">
+        <div class="page-heading"><div><p class="eyebrow">Your application materials</p><h1>Tailored packages</h1></div></div>
+        <p class="field-help">Each package is grounded in your approved career facts and prepared for one specific opportunity.</p>
+        <ul id="package-list" class="record-list detailed"></ul>
       </section>
 
       <section class="view" data-view-panel="approvals">
@@ -268,8 +364,55 @@
       <h2>Evidence-based fit analysis</h2>
       <input name="jobMatchId" type="hidden">
       <label>Complete job description<textarea name="jobDescription" class="tall" minlength="50" required></textarea></label>
-      <div class="actions"><button class="button primary" value="analyze" type="submit">Analyze</button><button class="button secondary" value="cancel" formmethod="dialog">Cancel</button></div>
+      <div class="actions"><button class="button primary" value="analyze" type="submit">Analyze</button><button id="build-package-from-insight" class="button secondary" type="button" hidden>Create tailored package</button><button class="button secondary" value="cancel" formmethod="dialog">Cancel</button></div>
       <div id="job-insight-result" class="analysis-result" aria-live="polite"></div>
+    </form>
+  </dialog>
+
+  <dialog id="package-brief-dialog">
+    <form id="package-brief-form" class="section-form" method="dialog">
+      <h2>Shape this application</h2>
+      <p class="field-help">Your answers guide the package. UnaScout will only use approved career facts for professional claims.</p>
+      <input name="jobMatchId" type="hidden">
+      <label>Why are you interested in this role?<textarea name="interest" minlength="10" maxlength="1000" required></textarea></label>
+      <label>What should the application emphasize?<textarea name="emphasis" minlength="10" maxlength="1000" required></textarea></label>
+      <label>What should be left out or handled carefully?<textarea name="avoid" maxlength="1000"></textarea></label>
+      <div class="actions"><button class="button primary" value="generate" type="submit">Prepare my package</button><button class="button secondary" value="cancel" formmethod="dialog">Cancel</button></div>
+      <p id="package-result" class="form-result" aria-live="polite"></p>
+    </form>
+  </dialog>
+
+  <dialog id="package-review-dialog">
+    <div class="section-form">
+      <h2 id="package-review-title">Tailored application package</h2>
+      <div id="package-review-content" class="analysis-result"></div>
+      <div class="actions"><button id="edit-package" class="button secondary" type="button">Edit package</button><button class="button secondary" type="button" data-close-dialog="package-review-dialog">Close</button><button class="button primary" type="button" data-action="view-packages">View all packages</button></div>
+    </div>
+  </dialog>
+
+  <dialog id="package-edit-dialog">
+    <form id="package-edit-form" class="section-form" method="dialog">
+      <h2>Edit tailored package</h2>
+      <p class="field-help">Edits change this package only. They never change your Career Truth.</p>
+      <input name="packageId" type="hidden">
+      <label>Resume focus<textarea name="resumeSummary" class="tall" maxlength="3000" required></textarea></label>
+      <label>Cover letter<textarea name="coverLetter" class="tall" maxlength="10000" required></textarea></label>
+      <label>Recruiter follow-up<textarea name="recruiterFollowUp" maxlength="3000" required></textarea></label>
+      <div class="actions"><button class="button primary" value="save" type="submit">Save package edits</button><button class="button secondary" value="cancel" formmethod="dialog">Cancel</button></div>
+      <p id="package-edit-result" class="form-result" aria-live="polite"></p>
+    </form>
+  </dialog>
+
+  <dialog id="feedback-dialog">
+    <form id="feedback-form" class="section-form" method="dialog">
+      <h2>Improve this recommendation</h2>
+      <input name="jobMatchId" type="hidden">
+      <label>Why is this not a fit?<select name="reason">
+        <option value="company">Company</option><option value="location">Location</option><option value="salary">Salary</option><option value="title">Title</option><option value="seniority">Seniority</option><option value="industry">Industry</option><option value="skills">Skills</option><option value="work_arrangement">Work arrangement</option><option value="authorization">Work authorization</option><option value="already_applied">Already applied</option><option value="not_interested">Not interested</option><option value="other">Other</option>
+      </select></label>
+      <label>Optional note<textarea name="note" maxlength="500"></textarea></label>
+      <div class="actions"><button class="button primary" value="save" type="submit">Save feedback</button><button class="button secondary" value="cancel" formmethod="dialog">Cancel</button></div>
+      <p id="feedback-result" class="form-result" aria-live="polite"></p>
     </form>
   </dialog>
 

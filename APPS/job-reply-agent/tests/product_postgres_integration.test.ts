@@ -12,6 +12,7 @@ import { executeIdempotentMutation } from "../src/product_idempotency.js";
 import {
   applyBillingEvent,
   consumePlanUsage,
+  consumePlanUsageInTransaction,
   ensureFreeEntitlement,
   getBillingEntitlement
 } from "../src/product_billing.js";
@@ -207,6 +208,33 @@ describeDatabase("PostgreSQL tenant isolation", () => {
     ]);
     expect(results.filter((result) => result.allowed)).toHaveLength(1);
     expect(results.filter((result) => !result.allowed)).toHaveLength(1);
+  });
+
+  it("rolls back an in-transaction usage reservation when package persistence fails", async () => {
+    if (!appPool) return;
+    await ensureFreeEntitlement(appPool, userA);
+    const before = await withTenant(userA, async (client) => {
+      const result = await client.query(
+        "SELECT count(*)::integer AS count FROM usage_ledger WHERE user_id=$1 AND idempotency_key=$2",
+        [userA, "package-rollback-proof"]
+      );
+      return result.rows[0].count;
+    }, appPool);
+    await expect(withTenant(userA, async (client) => {
+      const usage = await consumePlanUsageInTransaction(
+        client, userA, "tailored_package", 1, "package-rollback-proof", { jobMatchId: "rollback-proof" }
+      );
+      expect(usage.allowed).toBe(true);
+      throw new Error("forced package persistence failure");
+    }, appPool)).rejects.toThrow("forced package persistence failure");
+    const after = await withTenant(userA, async (client) => {
+      const result = await client.query(
+        "SELECT count(*)::integer AS count FROM usage_ledger WHERE user_id=$1 AND idempotency_key=$2",
+        [userA, "package-rollback-proof"]
+      );
+      return result.rows[0].count;
+    }, appPool);
+    expect(after).toBe(before);
   });
 
   it("reconciles the Stripe lifecycle idempotently and keeps its records tenant-private", async () => {

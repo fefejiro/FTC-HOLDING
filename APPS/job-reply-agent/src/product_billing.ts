@@ -47,6 +47,21 @@ export interface BillingEntitlement {
   stripeSubscriptionId: string | null;
 }
 
+export interface PlanUsageResult {
+  allowed: boolean;
+  replayed: boolean;
+  used: number;
+  limit: number;
+  remaining: number;
+}
+
+export class PlanUsageLimitError extends Error {
+  constructor(public readonly usage: PlanUsageResult) {
+    super("The requested plan allowance is used for this period.");
+    this.name = "PlanUsageLimitError";
+  }
+}
+
 function defaultPeriod(code: PlanCode, now = new Date()): { start: Date; end: Date } {
   const start = new Date(now);
   start.setUTCHours(0, 0, 0, 0);
@@ -102,32 +117,44 @@ export async function ensureFreeEntitlement(
   ), db);
 }
 
+async function getBillingEntitlementForClient(
+  client: pg.PoolClient,
+  userId: string
+): Promise<BillingEntitlement> {
+  const period = defaultPeriod("free_preview");
+  await client.query(
+    `INSERT INTO plan_entitlements
+       (user_id, plan_code, status, allowances, source, period_start, period_end)
+     VALUES ($1,'free_preview',$2::text,$3::jsonb,'system',$4,$5)
+     ON CONFLICT (user_id) DO NOTHING`,
+    [userId, "active", JSON.stringify(planAllowances("free_preview")), period.start, period.end]
+  );
+  const result = await client.query(
+    `SELECT plan_code AS "planCode", status, allowances,
+            period_start AS "periodStart", period_end AS "periodEnd",
+            source, stripe_subscription_id AS "stripeSubscriptionId"
+       FROM plan_entitlements WHERE user_id=$1`,
+    [userId]
+  );
+  const row = result.rows[0];
+  const planCode = isPlanCode(row?.planCode) ? row.planCode : "free_preview";
+  const status = entitlementStatuses.includes(row?.status) ? row.status : "suspended";
+  return {
+    planCode,
+    status,
+    allowances: status === "active" ? row.allowances : planAllowances("free_preview"),
+    periodStart: new Date(row.periodStart).toISOString(),
+    periodEnd: new Date(row.periodEnd).toISOString(),
+    source: row.source,
+    stripeSubscriptionId: row.stripeSubscriptionId || null
+  } as BillingEntitlement;
+}
+
 export async function getBillingEntitlement(
   db: pg.Pool,
   userId: string
 ): Promise<BillingEntitlement> {
-  await ensureFreeEntitlement(db, userId);
-  return withTenant(userId, async (client) => {
-    const result = await client.query(
-      `SELECT plan_code AS "planCode", status, allowances,
-              period_start AS "periodStart", period_end AS "periodEnd",
-              source, stripe_subscription_id AS "stripeSubscriptionId"
-         FROM plan_entitlements WHERE user_id=$1`,
-      [userId]
-    );
-    const row = result.rows[0];
-    const planCode = isPlanCode(row?.planCode) ? row.planCode : "free_preview";
-    const status = entitlementStatuses.includes(row?.status) ? row.status : "suspended";
-    return {
-      planCode,
-      status,
-      allowances: status === "active" ? row.allowances : planAllowances("free_preview"),
-      periodStart: new Date(row.periodStart).toISOString(),
-      periodEnd: new Date(row.periodEnd).toISOString(),
-      source: row.source,
-      stripeSubscriptionId: row.stripeSubscriptionId || null
-    } as BillingEntitlement;
-  }, db);
+  return withTenant(userId, (client) => getBillingEntitlementForClient(client, userId), db);
 }
 
 export async function getBillingCustomerId(db: pg.Pool, userId: string): Promise<string | null> {
@@ -200,53 +227,62 @@ export async function consumePlanUsage(
   quantity: number,
   idempotencyKey: string,
   metadata: Record<string, unknown> = {}
-): Promise<{ allowed: boolean; replayed: boolean; used: number; limit: number; remaining: number }> {
+): Promise<PlanUsageResult> {
   if (!Number.isInteger(quantity) || quantity < 1) throw new Error("Usage quantity must be positive.");
-  const entitlement = await getBillingEntitlement(db, userId);
+  return withTenant(userId, (client) => consumePlanUsageInTransaction(
+    client, userId, usageKey, quantity, idempotencyKey, metadata
+  ), db);
+}
+
+export async function consumePlanUsageInTransaction(
+  client: pg.PoolClient,
+  userId: string,
+  usageKey: UsageKey,
+  quantity: number,
+  idempotencyKey: string,
+  metadata: Record<string, unknown> = {}
+): Promise<PlanUsageResult> {
+  if (!Number.isInteger(quantity) || quantity < 1) throw new Error("Usage quantity must be positive.");
+  const entitlement = await getBillingEntitlementForClient(client, userId);
   const limit = entitlement.allowances[usageKey];
-  return withTenant(userId, async (client) => {
-    await client.query(
-      "SELECT pg_advisory_xact_lock(hashtext($1))",
-      [`jobagent-usage:${userId}:${usageKey}:${entitlement.periodStart}`]
-    );
-    const replay = await client.query(
-      `SELECT quantity FROM usage_ledger WHERE user_id=$1 AND idempotency_key=$2`,
-      [userId, idempotencyKey]
-    );
-    const total = await client.query<{ used: number }>(
-      `SELECT COALESCE(sum(quantity),0)::integer AS used
-         FROM usage_ledger
-        WHERE user_id=$1 AND usage_key=$2 AND occurred_at >= $3 AND occurred_at < $4`,
-      [userId, usageKey, entitlement.periodStart, entitlement.periodEnd]
-    );
-    const used = Number(total.rows[0]?.used || 0);
-    if (replay.rows[0]) {
-      return { allowed: true, replayed: true, used, limit, remaining: Math.max(0, limit - used) };
-    }
-    if (used + quantity > limit) {
-      return { allowed: false, replayed: false, used, limit, remaining: Math.max(0, limit - used) };
-    }
-    await client.query(
-      `INSERT INTO usage_ledger
-         (user_id, usage_key, quantity, idempotency_key, period_start, metadata)
-       VALUES ($1,$2,$3,$4,$5,$6::jsonb)`,
-      [
-        userId,
-        usageKey,
-        quantity,
-        idempotencyKey,
-        entitlement.periodStart,
-        JSON.stringify(metadata)
-      ]
-    );
-    return {
-      allowed: true,
-      replayed: false,
-      used: used + quantity,
-      limit,
-      remaining: Math.max(0, limit - used - quantity)
-    };
-  }, db);
+  await client.query(
+    "SELECT pg_advisory_xact_lock(hashtext($1))",
+    [`jobagent-usage:${userId}:${usageKey}:${entitlement.periodStart}`]
+  );
+  const replay = await client.query<{ usageKey: UsageKey; quantity: number }>(
+    `SELECT usage_key AS "usageKey", quantity
+       FROM usage_ledger WHERE user_id=$1 AND idempotency_key=$2`,
+    [userId, idempotencyKey]
+  );
+  if (replay.rows[0] && replay.rows[0].usageKey !== usageKey) {
+    throw new Error("Usage idempotency key was already used for a different feature.");
+  }
+  const total = await client.query<{ used: number }>(
+    `SELECT COALESCE(sum(quantity),0)::integer AS used
+       FROM usage_ledger
+      WHERE user_id=$1 AND usage_key=$2 AND occurred_at >= $3 AND occurred_at < $4`,
+    [userId, usageKey, entitlement.periodStart, entitlement.periodEnd]
+  );
+  const used = Number(total.rows[0]?.used || 0);
+  if (replay.rows[0]) {
+    return { allowed: true, replayed: true, used, limit, remaining: Math.max(0, limit - used) };
+  }
+  if (used + quantity > limit) {
+    return { allowed: false, replayed: false, used, limit, remaining: Math.max(0, limit - used) };
+  }
+  await client.query(
+    `INSERT INTO usage_ledger
+       (user_id, usage_key, quantity, idempotency_key, period_start, metadata)
+     VALUES ($1,$2,$3,$4,$5,$6::jsonb)`,
+    [userId, usageKey, quantity, idempotencyKey, entitlement.periodStart, JSON.stringify(metadata)]
+  );
+  return {
+    allowed: true,
+    replayed: false,
+    used: used + quantity,
+    limit,
+    remaining: Math.max(0, limit - used - quantity)
+  };
 }
 
 function normalizedSubscriptionStatus(value: unknown): string {
@@ -408,7 +444,7 @@ export async function applyBillingEvent(
       : entitlementStatus === "active"
         ? "subscription_activated"
         : entitlementStatus === "canceled"
-          ? "subscription_canceled"
+          ? "subscription_cancelled"
           : null;
     if (funnelEvent) {
       await client.query(
@@ -476,7 +512,8 @@ export async function createBillingCheckout(
   db: pg.Pool,
   user: { id: string; email: string },
   planCode: Exclude<PlanCode, "free_preview">,
-  idempotencyKey: string
+  idempotencyKey: string,
+  returnJobMatchId?: string
 ) {
   const appOrigin = String(process.env.APP_ORIGIN || "").replace(/\/+$/, "");
   if (!appOrigin.startsWith("https://") && process.env.NODE_ENV === "production") {
@@ -489,8 +526,8 @@ export async function createBillingCheckout(
     customerId,
     planCode,
     idempotencyKey,
-    successUrl: `${appOrigin}/app?billing=success&session_id={CHECKOUT_SESSION_ID}`,
-    cancelUrl: `${appOrigin}/app?billing=cancelled`
+    successUrl: `${appOrigin}/app?billing=success&session_id={CHECKOUT_SESSION_ID}${returnJobMatchId ? `&package_job_id=${encodeURIComponent(returnJobMatchId)}` : ""}`,
+    cancelUrl: `${appOrigin}/app?billing=cancelled${returnJobMatchId ? `&package_job_id=${encodeURIComponent(returnJobMatchId)}` : ""}`
   });
   if (payload.customerId) {
     await saveBillingCustomer(db, user.id, String(payload.customerId), Boolean(payload.livemode));

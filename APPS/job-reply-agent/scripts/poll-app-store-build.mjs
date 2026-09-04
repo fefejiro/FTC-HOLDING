@@ -5,7 +5,7 @@ const issuerId = String(process.env.ASC_ISSUER_ID || "").trim();
 const keyId = String(process.env.ASC_KEY_ID || "").trim();
 const privateKeyPath = String(process.env.ASC_PRIVATE_KEY_PATH || "").trim();
 const bundleId = String(process.env.ASC_BUNDLE_ID || "cloud.unalabs.jobagent").trim();
-const buildNumber = String(process.env.ASC_BUILD_NUMBER || "2").trim();
+const buildNumber = String(process.env.ASC_BUILD_NUMBER || "3").trim();
 const timeoutSeconds = Number(process.env.ASC_POLL_TIMEOUT_SECONDS || 1800);
 
 if (!issuerId || !keyId || !privateKeyPath) {

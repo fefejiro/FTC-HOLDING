@@ -180,6 +180,8 @@ try {
       fullPage: true
     });
     await page.goto(`${baseUrl}/app`, { waitUntil: "networkidle" });
+    const pageErrors = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
     if (liveBaseUrl) {
       await page.locator('#login-form input[name="email"]').fill(process.env.CUSTOMER_SMOKE_EMAIL);
       await page.locator('#login-form input[name="password"]').fill(process.env.CUSTOMER_SMOKE_PASSWORD || "");
@@ -188,6 +190,24 @@ try {
       const releaseResponse = await page.request.get(`${baseUrl}/api/v1/release`);
       if (!releaseResponse.ok()) throw new Error(`live release endpoint returned ${releaseResponse.status()}`);
     }
+    await page.locator("#app-shell").waitFor({ state: "visible", timeout: 20_000 }).catch(async () => {
+      const authMessage = await page.locator("#auth-message").innerText().catch(() => "");
+      throw new Error(`${viewport.name}: application shell unavailable: ${authMessage || pageErrors.join("; ") || "session initialization failed"}`);
+    });
+    const profileNav = page.locator('[data-view="profile"]');
+    await profileNav.waitFor({ state: "visible", timeout: 20_000 }).catch(async () => {
+      const authMessage = await page.locator("#auth-message").innerText().catch(() => "");
+      throw new Error(`${viewport.name}: profile navigation unavailable: ${authMessage || pageErrors.join("; ") || "application shell did not finish loading"}`);
+    });
+    await profileNav.click();
+    await page.locator("#onboarding-form").waitFor({ state: "visible" });
+    if (!(await page.locator("#onboarding-step-title").innerText()).length) {
+      throw new Error(`${viewport.name}: guided onboarding did not render`);
+    }
+    await page.screenshot({
+      path: path.join(artifactRoot, `${viewport.name}-onboarding.png`),
+      fullPage: true
+    });
     await page.locator('[data-view="opportunities"]').click();
     await page.getByRole("button", { name: "Analyze fit" }).click();
     await page.locator("#job-insight-form textarea").fill("Requirements discovery, UAT, and stakeholder delivery.");
@@ -203,6 +223,9 @@ try {
     }
     if (!(await page.locator("#job-insight-result").innerText()).includes("Fit score: 88%")) throw new Error(`${viewport.name}: fit analysis was not rendered`);
     await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    await page.getByRole("button", { name: "Not a fit" }).click();
+    await page.locator("#feedback-form select[name=reason]").selectOption("location");
+    await page.getByRole("button", { name: "Save feedback" }).click();
     await page.locator('[data-view="activity"]').click();
     await page.getByRole("button", { name: "Timeline" }).click();
     await page.locator("#timeline-list").waitFor({ state: "visible" });

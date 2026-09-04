@@ -119,7 +119,7 @@ jobs:
           ASC_KEY_ID: ${{ secrets.JOBAGENT_ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.JOBAGENT_ASC_ISSUER_ID }}
           ASC_BUNDLE_ID: cloud.unalabs.jobagent
-          ASC_BUILD_NUMBER: 2
+          ASC_BUILD_NUMBER: 3
         run: |
           export ASC_PRIVATE_KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
           node scripts/poll-app-store-build.mjs

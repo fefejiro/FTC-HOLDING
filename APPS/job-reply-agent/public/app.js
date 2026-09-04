@@ -8,8 +8,23 @@
     dashboard: null,
     plans: [],
     billing: null,
-    checkoutEnabled: false
+    checkoutEnabled: false,
+    onboardingStep: 0,
+    currentPackage: null,
+    pendingPackageJobMatchId: null
   };
+
+  const onboardingSteps = [
+    { key: "goals", title: "Your goals", help: "Tell UnaScout what a good next role looks like." },
+    { key: "location", title: "Location and work style", help: "Set the places and work arrangements that fit your life." },
+    { key: "employment", title: "Employment preferences", help: "Tell UnaScout how you want your search paced." },
+    { key: "compensation", title: "Compensation", help: "Set a private compensation floor and pay basis." },
+    { key: "eligibility", title: "Work eligibility", help: "Keep authorization and sponsorship requirements country-scoped." },
+    { key: "strengths", title: "Strengths", help: "Give recommendations enough context to stay relevant." },
+    { key: "resume", title: "Resumes and notifications", help: "Choose your source resume and how updates should arrive." },
+    { key: "control", title: "Your control", help: "Choose what UnaScout may prepare and what always needs your approval." },
+    { key: "review", title: "Review your setup", help: "Check the profile before UnaScout starts ranking opportunities." }
+  ];
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
@@ -219,6 +234,131 @@
     setStatus(navigator.onLine ? "Signed out" : "Offline", "neutral");
   }
 
+  function collectOnboardingRecord(form) {
+    const data = new FormData(form);
+    const list = (name) => name === "locations"
+      ? String(data.get(name) || "").split(/\r?\n/).map((item) => item.trim()).filter(Boolean)
+      : splitLines(data.get(name));
+    return {
+      fullName: text(data.get("fullName")),
+      phone: text(data.get("phone")),
+      location: text(data.get("location")),
+      timeZone: text(data.get("timeZone"), "UTC"),
+      linkedIn: text(data.get("linkedIn")),
+      targetTitles: list("targetTitles"),
+      adjacentTitles: list("adjacentTitles"),
+      excludedTitles: list("excludedTitles"),
+      industries: list("industries"),
+      excludedIndustries: list("excludedIndustries"),
+      locations: list("locations"),
+      workModes: data.getAll("workModes"),
+      employmentTypes: list("employmentTypes"),
+      seniority: text(data.get("seniority")),
+      relocation: text(data.get("relocation")),
+      compensationFloor: text(data.get("compensationFloor")),
+      compensationCurrency: text(data.get("compensationCurrency"), "CAD"),
+      compensationBasis: text(data.get("compensationBasis"), "annual"),
+      compensationPrivate: data.has("compensationPrivate"),
+      workAuthorization: text(data.get("workAuthorization")),
+      sponsorshipRequired: data.get("sponsorshipRequired") === "true",
+      skills: list("skills"),
+      certifications: list("certifications"),
+      languages: list("languages"),
+      urgency: text(data.get("urgency")),
+      desiredVolume: text(data.get("desiredVolume")),
+      resumeStrategy: text(data.get("resumeStrategy"), "one_truthful_base_resume"),
+      notificationChannels: data.getAll("notificationChannels"),
+      controlMode: data.get("controlMode") || "review",
+      quietHoursStart: Number(data.get("quietHoursStart") || 23),
+      quietHoursEnd: Number(data.get("quietHoursEnd") || 7),
+      dailyApplicationLimit: Number(data.get("dailyApplicationLimit") || 5),
+      consent: {
+        truthConfirmed: data.has("truthConfirmed"),
+        recruiterDrafts: data.has("recruiterDrafts"),
+        recruiterSends: data.has("recruiterSends"),
+        assistedApplications: data.get("assistedApplications") === "true",
+        controlledSubmissions: data.get("controlledSubmissions") === "true"
+      }
+    };
+  }
+
+  const onboardingFieldMap = {
+    goals: ["fullName", "phone", "linkedIn", "targetTitles", "adjacentTitles", "excludedTitles"],
+    location: ["location", "timeZone", "locations", "workModes", "relocation"],
+    employment: ["employmentTypes", "urgency", "desiredVolume"],
+    compensation: ["compensationFloor", "compensationCurrency", "compensationBasis", "compensationPrivate"],
+    eligibility: ["workAuthorization", "sponsorshipRequired"],
+    strengths: ["industries", "excludedIndustries", "seniority", "skills", "certifications", "languages"],
+    resume: ["resumeStrategy", "notificationChannels"],
+    control: ["controlMode", "quietHoursStart", "quietHoursEnd", "dailyApplicationLimit", "consent"],
+    review: ["consent"]
+  };
+
+  function onboardingStepData(record, key) {
+    const data = {};
+    for (const field of onboardingFieldMap[key] || []) if (record[field] !== undefined) data[field] = record[field];
+    return data;
+  }
+
+  async function uploadOnboardingResume(form) {
+    const file = form.elements.onboardingResume?.files?.[0];
+    if (!file) return;
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(",")[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    await api("/api/v1/resumes", {
+      method: "POST",
+      body: JSON.stringify({
+        filename: file.name,
+        mimeType: file.type || (/\.pdf$/i.test(file.name) ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+        base64,
+        isDefault: form.elements.onboardingResumeDefault.checked
+      })
+    });
+    form.elements.onboardingResume.value = "";
+    form.elements.onboardingResumeDefault.checked = false;
+  }
+
+  function renderOnboardingReview(record) {
+    const review = $("#onboarding-review");
+    if (!review) return;
+    review.replaceChildren();
+    const rows = [
+      ["Target roles", (record.targetTitles || []).join(", ")],
+      ["Locations", (record.locations || []).join(", ")],
+      ["Work modes", (record.workModes || []).join(", ")],
+      ["Employment", (record.employmentTypes || []).join(", ")],
+      ["Compensation", [record.compensationFloor, record.compensationCurrency, record.compensationBasis].filter(Boolean).join(" ")],
+      ["Control", record.controlMode === "assisted" ? "Assisted preparation" : "Review required"]
+    ];
+    for (const [index, [label, value]] of rows.entries()) {
+      const row = document.createElement("p");
+      const strong = document.createElement("strong");
+      strong.textContent = `${label}: `;
+      row.append(strong, document.createTextNode(value || "Not set"));
+      const edit = actionButton("Edit", "onboarding-edit", onboardingSteps[index]?.key || "goals", "subtle");
+      row.append(document.createTextNode(" "), edit);
+      review.append(row);
+    }
+  }
+
+  function setOnboardingStep(index, record = collectOnboardingRecord($("#onboarding-form"))) {
+    state.onboardingStep = Math.min(Math.max(index, 0), onboardingSteps.length - 1);
+    const step = onboardingSteps[state.onboardingStep];
+    for (const panel of $$('[data-onboarding-panel]')) panel.hidden = panel.dataset.onboardingPanel !== step.key;
+    $("#onboarding-step-title").textContent = step.title;
+    $("#onboarding-step-help").textContent = step.help;
+    $("#onboarding-step-count").textContent = `Step ${state.onboardingStep + 1} of ${onboardingSteps.length}`;
+    $("#onboarding-progress").style.width = `${((state.onboardingStep + 1) / onboardingSteps.length) * 100}%`;
+    $("#onboarding-back").hidden = state.onboardingStep === 0;
+    $("#onboarding-next").hidden = state.onboardingStep === onboardingSteps.length - 1;
+    $("#onboarding-complete").hidden = state.onboardingStep !== onboardingSteps.length - 1;
+    if (state.onboardingStep === onboardingSteps.length - 1) renderOnboardingReview(record);
+  }
+
   function populateOnboarding(onboarding) {
     const form = $("#onboarding-form");
     const record = onboarding?.record || {};
@@ -229,18 +369,39 @@
       "timeZone",
       "linkedIn",
       "compensationFloor",
-      "workAuthorization"
+      "workAuthorization",
+      "seniority",
+      "relocation",
+      "compensationCurrency",
+      "compensationBasis",
+      "quietHoursStart",
+      "quietHoursEnd",
+      "dailyApplicationLimit",
+      "urgency",
+      "desiredVolume",
+      "resumeStrategy"
     ]) {
-      if (record[key] !== undefined) form.elements[key].value = record[key];
+      if (record[key] !== undefined && form.elements[key]) form.elements[key].value = record[key];
     }
-    for (const key of ["targetTitles", "excludedTitles", "locations", "employmentTypes"]) {
-      if (Array.isArray(record[key])) form.elements[key].value = record[key].join("\n");
+    for (const key of [
+      "targetTitles", "adjacentTitles", "excludedTitles", "industries", "excludedIndustries",
+      "locations", "employmentTypes", "skills", "certifications", "languages"
+    ]) {
+      if (Array.isArray(record[key]) && form.elements[key]) form.elements[key].value = record[key].join("\n");
     }
-    for (const checkbox of $$('input[name="workModes"]', form)) {
-      checkbox.checked = Array.isArray(record.workModes) && record.workModes.includes(checkbox.value);
+    for (const name of ["workModes", "notificationChannels"]) {
+      for (const checkbox of $$(`input[name="${name}"]`, form)) {
+        checkbox.checked = Array.isArray(record[name]) && record[name].includes(checkbox.value);
+      }
     }
-    if (record.sponsorshipRequired !== undefined) {
+    if (record.sponsorshipRequired !== undefined && form.elements.sponsorshipRequired) {
       form.elements.sponsorshipRequired.value = String(record.sponsorshipRequired);
+    }
+    if (record.compensationPrivate !== undefined && form.elements.compensationPrivate) {
+      form.elements.compensationPrivate.checked = Boolean(record.compensationPrivate);
+    }
+    for (const radio of $$('input[name="controlMode"]', form)) {
+      radio.checked = radio.value === (record.controlMode || "review");
     }
     const consent = record.consent || {};
     for (const key of [
@@ -252,6 +413,11 @@
     ]) {
       form.elements[key].checked = Boolean(consent[key]);
     }
+    const progress = record._progress?.currentStep;
+    const completedSteps = new Set(record._progress?.completedSteps || []);
+    const nextIncomplete = onboardingSteps.findIndex((step) => !completedSteps.has(step.key));
+    const savedIndex = onboarding?.completed ? onboardingSteps.length - 1 : nextIncomplete >= 0 ? nextIncomplete : 0;
+    setOnboardingStep(savedIndex >= 0 ? savedIndex : 0, record);
   }
 
   function populatePolicy(policy) {
@@ -272,6 +438,48 @@
       "controlledSubmissions"
     ]) {
       if (policy[key] !== undefined) form.elements[key].value = String(policy[key]);
+    }
+  }
+
+  async function loadFactProposal(resumeId) {
+    const panel = $("#fact-proposal-panel");
+    const form = $("#fact-proposal-form");
+    if (!panel || !form) return;
+    if (!resumeId) {
+      panel.hidden = true;
+      return;
+    }
+    form.elements.resumeId.value = resumeId;
+    try {
+      const { proposal } = await api(`/api/v1/resumes/${encodeURIComponent(resumeId)}/fact-proposal`);
+      panel.hidden = false;
+      const facts = proposal?.facts || [];
+      form.elements.facts.value = facts
+        .map((fact) => fact.statement)
+        .join("\n");
+      const list = $("#proposal-facts-list");
+      if (list) {
+        list.replaceChildren();
+        for (const fact of facts) {
+          const item = document.createElement("div");
+          item.className = "vault-row";
+          const copy = document.createElement("span");
+          copy.textContent = `${fact.statement} (${statusLabel(fact.status)})`;
+          item.append(copy);
+          if (["proposed", "rejected"].includes(fact.status)) {
+            item.append(actionButton("Approve", "fact-transition", `${resumeId}:${fact.id}:approve`, "secondary"));
+            item.append(actionButton("Reject", "fact-transition", `${resumeId}:${fact.id}:reject`, "subtle"));
+            item.append(actionButton("Edit", "fact-edit", `${resumeId}:${fact.id}`, "subtle"));
+          }
+          list.append(item);
+        }
+      }
+      setResult(
+        "#fact-proposal-result",
+        proposal ? `Status: ${statusLabel(proposal.status)}. Approve facts below only after review.` : "No proposal has been saved for this resume yet."
+      );
+    } catch {
+      panel.hidden = true;
     }
   }
 
@@ -312,6 +520,8 @@
         vault.append(row);
       }
     }
+    const selectedResume = resumes.find((resume) => resume.isDefault) || resumes[0];
+    await loadFactProposal(selectedResume?.id);
     $("#truth-form").elements.facts.value = (truth.truthBank?.facts || [])
       .map((fact) => fact.statement)
       .join("\n");
@@ -439,13 +649,15 @@
         actions.className = "actions";
         actions.append(
           actionButton("Analyze fit", "job-insight", job.id),
-          actionButton("Prepare interview", "interview-prep", job.id)
+          actionButton("Prepare interview", "interview-prep", job.id),
+          actionButton("Not a fit", "feedback", job.id, "subtle")
         );
         return recordItem(
           job.title || "Opportunity",
           [
+            `Why: ${Array.isArray(job.reasons) && job.reasons.length ? job.reasons.slice(0, 3).join("; ") : "Ranked from your approved profile"}`,
             [job.company, job.location, job.source].filter(Boolean).join(" · "),
-            `${Number(job.score || 0)}% match · ${statusLabel(job.status)}`
+            `${Number(job.adjustedScore ?? job.score ?? 0)}% match · ${statusLabel(job.status)}${job.learningApplied ? " · adjusted from your feedback" : ""}`
           ],
           { url: job.jobUrl, actions }
         );
@@ -503,6 +715,73 @@
       },
       "No application attempts are recorded."
     );
+  }
+
+  function addPackageText(parent, label, value) {
+    const block = document.createElement("div");
+    const heading = document.createElement("strong");
+    heading.textContent = label;
+    const content = document.createElement("p");
+    content.textContent = text(value, "Not provided.");
+    block.append(heading, content);
+    parent.append(block);
+  }
+
+  function showPackageReview(packageRecord) {
+    state.currentPackage = packageRecord;
+    const output = packageRecord?.output || {};
+    $("#package-review-title").textContent = `${text(packageRecord?.title, "Role")} at ${text(packageRecord?.company, "Company")}`;
+    const content = $("#package-review-content");
+    content.replaceChildren();
+    const status = document.createElement("p");
+    status.className = "status-chip neutral";
+    status.textContent = `${statusLabel(packageRecord?.status)} | Resume version ${text(packageRecord?.sourceResumeVersion, "not recorded").slice(0, 12)}`;
+    content.append(status);
+    addPackageText(content, "Resume focus", output.resumeFocus?.summary);
+    addPackageText(content, "Supported requirements", (output.resumeFocus?.supportedRequirements || []).join(", "));
+    addPackageText(content, "Evidence gaps", (output.resumeFocus?.unsupportedRequirements || []).join(", ") || "None detected.");
+    addPackageText(content, "Cover letter", output.coverLetter);
+    addPackageText(content, "Recruiter follow-up", output.recruiterFollowUp);
+    addPackageText(content, "Interview preparation", (output.interviewPreparation || [])
+      .map((item) => `${item.competency}: ${item.prompt}`)
+      .join("\n\n"));
+    const questions = document.createElement("div");
+    addPackageText(questions, "Your package answers", (output.applicationQuestions || [])
+      .map((item) => `${item.question} ${item.answer}`)
+      .join("\n\n"));
+    content.append(questions);
+    addPackageText(content, "Truth guard", output.truthGuard);
+    const editButton = $("#edit-package");
+    editButton.hidden = !packageRecord?.id || ["approved", "rejected", "blocked"].includes(packageRecord.status);
+    editButton.dataset.value = packageRecord?.id || "";
+    $("#package-review-dialog").showModal();
+  }
+
+  function renderPackages(packages) {
+    clearAndFill(
+      $("#package-list"),
+      packages,
+      (packageRecord) => {
+        const actions = document.createElement("div");
+        actions.className = "actions";
+        actions.append(actionButton("Open package", "package-view", packageRecord.id, "primary"));
+        return recordItem(
+          `${packageRecord.title || "Role"} at ${packageRecord.company || "Company"}`,
+          [
+            `${statusLabel(packageRecord.status)} | ${dateLabel(packageRecord.updatedAt)}`,
+            `${(packageRecord.output?.resumeFocus?.supportedRequirements || []).length} supported requirements | ${(packageRecord.output?.missingInformationFlags || []).length} evidence gaps`,
+            packageRecord.status === "approval_required" ? "Review this package before using it." : "Ready for your review."
+          ],
+          { actions }
+        );
+      },
+      "Your first tailored package will appear here after fit analysis."
+    );
+  }
+
+  async function loadPackages() {
+    const { packages } = await api("/api/v1/application-packages");
+    renderPackages(packages || []);
   }
 
   async function loadDashboard() {
@@ -653,6 +932,7 @@
     await Promise.all([
       loadResumes(),
       loadDashboard(),
+      loadPackages(),
       loadAudit(),
       loadOperator(),
       loadBilling()
@@ -665,11 +945,15 @@
       if (billingState === "success") {
         setResult(
           "#billing-result",
-          "Payment received. Your plan will update as soon as Stripe confirms the subscription.",
+          "Checkout returned. Your plan will update after Stripe confirms the subscription.",
           "good"
         );
       } else if (billingState === "cancelled") {
         setResult("#billing-result", "Checkout was cancelled. Your current plan is unchanged.");
+      }
+      if (entry.get("package_job_id")) {
+        state.pendingPackageJobMatchId = entry.get("package_job_id");
+        $("[data-view='packages']")?.click();
       }
       history.replaceState({}, "", "/app");
     }
@@ -776,39 +1060,47 @@
   $("#onboarding-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = event.currentTarget;
-    const data = new FormData(form);
-    const payload = {
-      fullName: data.get("fullName"),
-      phone: data.get("phone"),
-      location: data.get("location"),
-      timeZone: data.get("timeZone"),
-      linkedIn: data.get("linkedIn"),
-      targetTitles: splitLines(data.get("targetTitles")),
-      excludedTitles: splitLines(data.get("excludedTitles")),
-      locations: splitLines(data.get("locations")),
-      workModes: data.getAll("workModes"),
-      employmentTypes: splitLines(data.get("employmentTypes")),
-      compensationFloor: data.get("compensationFloor"),
-      workAuthorization: data.get("workAuthorization"),
-      sponsorshipRequired: data.get("sponsorshipRequired") === "true",
-      consent: {
-        truthConfirmed: data.has("truthConfirmed"),
-        recruiterDrafts: data.has("recruiterDrafts"),
-        recruiterSends: data.has("recruiterSends"),
-        assistedApplications: data.has("assistedApplications"),
-        controlledSubmissions: data.has("controlledSubmissions")
+    const action = event.submitter?.value || "next";
+    if (action === "back") {
+      setOnboardingStep(state.onboardingStep - 1);
+      return;
+    }
+    const record = collectOnboardingRecord(form);
+    if (action === "next") {
+      try {
+        if (onboardingSteps[state.onboardingStep].key === "resume") await uploadOnboardingResume(form);
+        await api("/api/v1/onboarding", {
+          method: "PUT",
+          body: JSON.stringify({
+            step: onboardingSteps[state.onboardingStep].key,
+            data: onboardingStepData(record, onboardingSteps[state.onboardingStep].key),
+            final: false
+          })
+        });
+        setResult("#profile-result", "Progress saved.", "good");
+        setOnboardingStep(state.onboardingStep + 1, record);
+      } catch (error) {
+        setResult("#profile-result", error.message, "danger");
       }
-    };
+      return;
+    }
     try {
       await api("/api/v1/onboarding", {
         method: "PUT",
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ step: "review", data: onboardingStepData(record, "review"), final: true })
       });
-      setResult("#profile-result", "Profile and consent saved.", "good");
-      await loadDashboard();
+      setResult("#profile-result", "Setup complete. UnaScout can now rank opportunities against your preferences.", "good");
+      await loadWorkspace();
     } catch (error) {
       setResult("#profile-result", error.message, "danger");
     }
+  });
+
+  $("#onboarding-review")?.addEventListener("click", (event) => {
+    const button = event.target.closest('[data-action="onboarding-edit"]');
+    if (!button) return;
+    const index = onboardingSteps.findIndex((step) => step.key === button.dataset.value);
+    if (index >= 0) setOnboardingStep(index, collectOnboardingRecord($("#onboarding-form")));
   });
 
   $("#policy-form").addEventListener("submit", async (event) => {
@@ -858,7 +1150,7 @@
           ? "application/pdf"
           : "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
       );
-      await api("/api/v1/resumes", {
+      const uploaded = await api("/api/v1/resumes", {
         method: "POST",
         body: JSON.stringify({
           filename: file.name,
@@ -868,7 +1160,8 @@
         })
       });
       form.reset();
-      setResult("#resume-result", "Resume stored in the private vault.", "good");
+      setResult("#resume-result", "Resume stored in the private vault. Review proposed facts before using it for analysis.", "good");
+      await loadFactProposal(uploaded.resume?.id);
       await Promise.all([loadResumes(), loadDashboard()]);
     } catch (error) {
       setResult("#resume-result", error.message, "danger");
@@ -888,6 +1181,52 @@
       await Promise.all([loadResumes(), loadDashboard()]);
     } catch (error) {
       setResult("#resume-result", error.message, "danger");
+    }
+  });
+
+  $("#fact-proposal-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const facts = splitLines(new FormData(form).get("facts")).map((statement) => ({
+      category: "resume",
+      statement,
+      provenance: { source: "user_reviewed_resume_proposal" }
+    }));
+    if (!facts.length) {
+      setResult("#fact-proposal-result", "Add at least one proposed fact.", "danger");
+      return;
+    }
+    try {
+      await api(`/api/v1/resumes/${encodeURIComponent(form.elements.resumeId.value)}/fact-proposal`, {
+        method: "POST",
+        body: JSON.stringify({ facts })
+      });
+      setResult("#fact-proposal-result", "Saved as review required. Approve accurate facts below.", "good");
+    } catch (error) {
+      setResult("#fact-proposal-result", error.message, "danger");
+    }
+  });
+
+  $("#proposal-facts-list")?.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-action]");
+    if (!button) return;
+    const parts = button.dataset.value.split(":");
+    const resumeId = parts[0];
+    const factId = parts[1];
+    const action = button.dataset.action === "fact-edit" ? "edit" : parts[2];
+    let statement;
+    if (action === "edit") {
+      statement = prompt("Edit this fact while keeping the original extraction:", button.parentElement?.querySelector("span")?.textContent?.replace(/ \([^)]*\)$/, ""));
+      if (statement === null) return;
+    }
+    try {
+      await api(`/api/v1/resumes/${encodeURIComponent(resumeId)}/fact-proposal/${encodeURIComponent(factId)}`, {
+        method: "PATCH", body: JSON.stringify({ action, ...(statement ? { statement } : {}) })
+      });
+      await loadFactProposal(resumeId);
+      await Promise.all([loadResumes(), loadDashboard()]);
+    } catch (error) {
+      setResult("#fact-proposal-result", error.message, "danger");
     }
   });
 
@@ -959,7 +1298,7 @@
         method: "POST",
         body: JSON.stringify({ decision })
       });
-      await Promise.all([loadDashboard(), loadAudit()]);
+      await Promise.all([loadDashboard(), loadPackages(), loadAudit()]);
     } catch (error) {
       showNotice("#account-banner", error.message, "danger");
     }
@@ -974,6 +1313,8 @@
       form.reset();
       form.elements.jobMatchId.value = jobMatchId;
       setResult("#job-insight-result", "");
+      $("#build-package-from-insight").hidden = true;
+      delete $("#build-package-from-insight").dataset.value;
       $("#job-insight-dialog").showModal();
       return;
     }
@@ -988,6 +1329,34 @@
       } catch (error) {
         showNotice("#account-banner", error.message, "danger");
       }
+      return;
+    }
+    if (button.dataset.action === "feedback") {
+      const form = $("#feedback-form");
+      form.reset();
+      form.elements.jobMatchId.value = jobMatchId;
+      setResult("#feedback-result", "");
+      $("#feedback-dialog").showModal();
+    }
+  });
+
+  $("#feedback-form").addEventListener("submit", async (event) => {
+    if (event.submitter?.value === "cancel") return;
+    event.preventDefault();
+    const form = event.currentTarget;
+    try {
+      await api(`/api/v1/recommendations/${encodeURIComponent(form.elements.jobMatchId.value)}/feedback`, {
+        method: "PUT",
+        body: JSON.stringify({
+          reason: form.elements.reason.value,
+          note: form.elements.note.value
+        })
+      });
+      $("#feedback-dialog").close();
+      showNotice("#account-banner", "Feedback saved. Matching for your workspace has been updated.", "good");
+      await Promise.all([loadDashboard(), loadAudit()]);
+    } catch (error) {
+      setResult("#feedback-result", error.message, "danger");
     }
   });
 
@@ -1017,8 +1386,110 @@
         ].join("\n\n"),
         "good"
       );
+      $("#build-package-from-insight").hidden = false;
+      $("#build-package-from-insight").dataset.value = form.elements.jobMatchId.value;
     } catch (error) {
       setResult("#job-insight-result", error.message, "danger");
+    }
+  });
+
+  $("#build-package-from-insight").addEventListener("click", () => {
+    const form = $("#package-brief-form");
+    form.reset();
+    form.elements.jobMatchId.value = $("#build-package-from-insight").dataset.value;
+    setResult("#package-result", "");
+    $("#job-insight-dialog").close();
+    $("#package-brief-dialog").showModal();
+  });
+
+  $("#package-brief-form").addEventListener("submit", async (event) => {
+    if (event.submitter?.value === "cancel") return;
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    try {
+      const response = await api(
+        `/api/v1/jobs/${encodeURIComponent(data.get("jobMatchId"))}/package`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            interest: data.get("interest"),
+            emphasis: data.get("emphasis"),
+            avoid: data.get("avoid")
+          })
+        }
+      );
+      $("#package-brief-dialog").close();
+      showPackageReview(response.package);
+      showNotice("#account-banner", "Your tailored package is ready for review.", "good");
+      await Promise.all([loadPackages(), loadDashboard(), loadAudit(), loadBilling()]);
+    } catch (error) {
+      if (error.status === 402) {
+        $("#package-brief-dialog").close();
+        state.pendingPackageJobMatchId = data.get("jobMatchId");
+        showNotice("#account-banner", "Your free package allowance is used. Choose a plan to continue preparing applications.", "warning");
+        $("[data-view='plan']")?.click();
+      } else {
+        setResult("#package-result", error.message, "danger");
+      }
+    }
+  });
+
+  $("#package-list").addEventListener("click", async (event) => {
+    const button = event.target.closest('[data-action="package-view"]');
+    if (!button) return;
+    try {
+      const { package: packageRecord } = await api(
+        `/api/v1/application-packages/${encodeURIComponent(button.dataset.value)}`
+      );
+      showPackageReview(packageRecord);
+    } catch (error) {
+      showNotice("#account-banner", error.message, "danger");
+    }
+  });
+
+  $("#package-review-dialog").addEventListener("click", (event) => {
+    if (event.target.closest('[data-action="view-packages"]')) {
+      $("#package-review-dialog").close();
+      $("[data-view='packages']")?.click();
+    }
+  });
+
+  $("#edit-package").addEventListener("click", () => {
+    const packageRecord = state.currentPackage;
+    const output = packageRecord?.output || {};
+    const form = $("#package-edit-form");
+    form.elements.packageId.value = packageRecord?.id || "";
+    form.elements.resumeSummary.value = output.resumeFocus?.summary || "";
+    form.elements.coverLetter.value = output.coverLetter || "";
+    form.elements.recruiterFollowUp.value = output.recruiterFollowUp || "";
+    setResult("#package-edit-result", "");
+    $("#package-review-dialog").close();
+    $("#package-edit-dialog").showModal();
+  });
+
+  $("#package-edit-form").addEventListener("submit", async (event) => {
+    if (event.submitter?.value === "cancel") return;
+    event.preventDefault();
+    const form = event.currentTarget;
+    try {
+      const { package: packageRecord } = await api(
+        `/api/v1/application-packages/${encodeURIComponent(form.elements.packageId.value)}`,
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            resumeSummary: form.elements.resumeSummary.value,
+            coverLetter: form.elements.coverLetter.value,
+            recruiterFollowUp: form.elements.recruiterFollowUp.value
+          })
+        }
+      );
+      $("#package-edit-dialog").close();
+      showPackageReview(packageRecord);
+      showNotice("#account-banner", "Package edits saved. Review is required before this package can be used.", "good");
+      await Promise.all([loadPackages(), loadDashboard(), loadAudit()]);
+    } catch (error) {
+      setResult("#package-edit-result", error.message, "danger");
     }
   });
 
@@ -1276,7 +1747,10 @@
     try {
       const checkout = await api("/api/v1/billing/checkout", {
         method: "POST",
-        body: JSON.stringify({ planCode: button.dataset.value })
+        body: JSON.stringify({
+          planCode: button.dataset.value,
+          returnJobMatchId: state.pendingPackageJobMatchId || undefined
+        })
       });
       if (!checkout.url) throw new Error("Secure checkout is temporarily unavailable.");
       location.assign(checkout.url);

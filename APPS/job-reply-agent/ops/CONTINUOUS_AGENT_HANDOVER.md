@@ -24,6 +24,33 @@ This file is a resumable evidence record, not a claim that every external
 connector or production release gate is complete. Verify drift-prone runtime
 facts before changing them.
 
+## Current Candidate Handover - 2026-09-04
+
+Work is continuing in the isolated `D:\FTC-HOLDING-worktrees\unascout-revenue-release`
+worktree on `release/unascout-store-completion`, starting from exact source SHA
+`e6c76cf674b32f6d6e3e46a0a97b8ba2ac4f978c`. The source branch matches that SHA
+and is based on the current `origin/main` ancestry. The parent customer-
+intelligence worktree remains dirty with unrelated deletions and must not be
+used for release staging.
+
+- **Implemented:** package usage reservation rollback, product schema 013
+  release metadata, exact edge-served Android/Apple association documents, and
+  native version/build 3 release automation.
+- **Locally tested:** `240` passing tests, `12` skipped; build, lint, metadata,
+  edge, static release checks, and both responsive customer smoke viewports pass.
+- **Externally verified:** Play App Signing supplied the exact certificate
+  fingerprint for `cloud.unalabs.jobagent`. App Store Connect reports the prior
+  iOS submission rejected under Guideline 2.1(a) because no review demo account
+  was available.
+- **Deployed:** no. Do not report schema 013, candidate SHA, or the repaired
+  assetlinks response as live until Railway and Cloudflare deployment receipts
+  plus public probes exist.
+- **Paused:** Stripe checkout and native purchase flows remain fail-closed.
+- **Blocked:** Apple upload/resubmission needs account-holder API credentials
+  and protected review demo credentials; physical-device proof is outstanding.
+
+The complete dated evidence is in `docs/PRODUCT_RELEASE_EVIDENCE_2026-09-04.md`.
+
 ## Live Production Proof - 2026-08-18
 
 - Railway CLI and browser access now resolve to `Michael Fejiro's Projects` on
@@ -251,3 +278,153 @@ Every interactive or scheduled product-engineering run must update this file
 before its final commit. Replace stale evidence rather than stacking optimistic
 claims. Keep completed, deployed, externally verified, paused, and blocked
 states distinct.
+
+## Customer Intelligence Increment - 2026-09-03
+
+Branch: `agent/unascout-customer-intelligence`, based on `origin/main`
+`00839080c09d26677ca7d7db232c1b22331800fb`.
+
+Pushed source commit: `c56c6f193`.
+
+- **Completed in the repository:** guided seven-step onboarding for goals,
+  preferences, eligibility, resume, Career Truth review, control, and final
+  review; resumable progress; tenant-scoped resume fact proposals with
+  `review_required` provenance; explainable recommendation feedback and
+  rejection; funnel events; export coverage for fact proposals; and forced-RLS
+  feedback/proposal tables in migration `012_customer_intelligence.sql`.
+- **Verified locally:** changed-file syntax checks, focused customer-intelligence
+  tests, full Vitest (`32` passed files, `1` skipped; `234` passed tests,
+  `11` skipped), TypeScript, and deterministic customer smoke at `390x844` and
+  `1440x1000`.
+  Redacted local artifacts are under this worktree's `.local/qa-revenue-launch`.
+- **Deployed:** no deployment was performed by this increment. The existing
+  hosted image remains the separate production evidence recorded above.
+- **Externally verified:** none for these new routes, migration, or UI states.
+- **Paused by design:** binary PDF/DOCX extraction and provider-specific resume
+  parsing are not introduced here; the review-required proposal contract is
+  ready for a trusted parser/provider in the next increment.
+- **Blocked:** no implementation blocker. Full-repository verification in this
+  partial worktree needs root-level fixtures and the shared `date-fns`
+  dependency; the changed product files and focused suite are independently
+  covered.
+
+Next developer: run the full materialized-worktree suite, apply migration 012
+in a disposable tenant, connect the approved parser to the proposal endpoint,
+then deploy and repeat live tenant-isolation and customer smoke evidence before
+calling this increment externally verified.
+
+## Customer Intelligence Repair - 2026-09-03
+
+This repair supersedes the seven-step description above. It is source-only on
+`agent/unascout-customer-intelligence`.
+
+- **Implemented:** nine onboarding stages with active-step-only saves,
+  resumable progress, resume upload/default selection, authorization,
+  compensation privacy, quiet hours, daily limits, and Review/Assisted
+  controls. Ordinary edits preserve consent; explicit final confirmation is
+  required for consent changes; revocation fails closed.
+- **Implemented:** normalized migration-012 Career Truth proposals with
+  server-owned resume/document/version provenance, proposed/approved/rejected/
+  superseded transitions, preserved originals, and approved-only generation
+  inputs. Recommendation feedback is deterministic and tenant-owned.
+- **Verified locally:** focused repair/mobile/release tests (`18` passed), store
+  metadata checks, and customer smoke at `390x844` and `1440x1000`. Redacted
+  screenshots are under `.local/qa-revenue-launch`.
+- **Deployed:** not deployed; no migration receipt, hosted SHA, or deployment
+  identifier is claimed.
+- **Externally verified:** none for this repair.
+- **Paused:** PostgreSQL two-tenant proof and hosted acceptance await a
+  controlled migration/deployment run.
+- **Blocked:** full-repository Vitest/typecheck verification is blocked by
+  incomplete local dependency hydration (`googleapis`, `date-fns`, and AWS SDK
+  transitive manifests). No dependency metadata was changed.
+
+## Guided Value-to-Payment Journey - 2026-09-03
+
+Branch: `agent/unascout-customer-intelligence`.
+
+- **Implemented:** a job-specific customer brief now follows fit analysis and
+  produces a truthful application package containing resume focus, cover letter,
+  recruiter follow-up, and application answers. The package is grounded only in
+  approved Career Truth facts and the server-selected resume/version.
+- **Implemented:** product-scoped package persistence in migration
+  `013_product_application_packages.sql`, forced tenant RLS, idempotent
+  package creation, application linkage, audit evidence, and export inclusion.
+- **Implemented:** customer UI for Application packages, package review, Review
+  and Assisted behavior, and a contextual plan prompt when the tailored-package
+  allowance is exhausted. Review mode creates an explicit approval request;
+  Assisted mode prepares the package without enabling sensitive submission.
+- **Implemented:** each package includes grounded interview preparation prompts;
+  customers can edit package copy without changing Career Truth, and edits move
+  the package back to approval-required with an audit record.
+- **Implemented:** `GET /api/v1/application-packages`,
+  `GET /api/v1/application-packages/:id`, and
+  `POST /api/v1/jobs/:id/package`. The POST route returns real public plan data
+  with `402 PLAN_LIMIT` and records the paywall funnel event.
+- **Verified locally:** JavaScript syntax checks, focused product domain/PWA/
+  security/billing tests (`4` files, `59` passed), and `npm run build`.
+- **Deployed:** no. Migration 013, package routes, and UI changes are not in
+  the hosted release and have no deployment identifier or live SHA evidence.
+- **Externally verified:** none for the package journey, payment prompt, or
+  migration. Local screenshots are not live-release evidence.
+- **Paused:** Stripe checkout activation, live customer payment lifecycle,
+  hosted Playwright, and two-tenant PostgreSQL proof remain separate release
+  gates. No customer is charged by this source-only increment.
+- **Blocked:** no implementation blocker. Full-repository verification and live
+  acceptance still require a complete deployed environment; the prior isolated
+  dependency-hydration note remains applicable.
+
+Next operator step: apply migration 013 in a controlled environment, run the
+authenticated journey from analysis through package review, verify the usage
+ledger and approval state, then run the Stripe test lifecycle before enabling
+any live checkout flag.
+
+## Current Live Release Receipt - 2026-09-04
+
+The release candidate is now deployed from code commit
+`13e120d18e447eee306d4bb1bfe0b8395d07c135` on
+`release/unascout-store-completion`. PR `#352` and complete CI run
+`33906159955` passed before deployment.
+
+- **Deployed:** Railway `una-jobagent` production environment
+  `d2157870-91e1-4452-a5c6-2f2eb8792b9c`. Successful deployment IDs are
+  migration `2e073df2-e972-48db-ad41-8531c4e3b50a`, worker
+  `e84cd969-13e9-424c-8bc4-4a637f905ab1`, web
+  `1c75c52c-5cb5-4748-80b7-eaecf4e3cbf8`, and backup
+  `0d59a320-6f52-481a-9178-9ded4cc91f8e`.
+- **Externally verified:** hosted health, readiness, edge, plans, and release
+  endpoints return 200. `/api/v1/release` reports the exact code SHA and
+  schema `013_product_application_packages`.
+- **Externally verified:** Cloudflare version
+  `18d54293-3f94-41f9-a76e-d20d41212a4e` serves both mobile association files;
+  the Digital Asset Links API confirms the Android package and signing
+  fingerprint.
+- **Published:** Android versionCode `3` was uploaded and committed to the
+  Google Play production track by CI run `33908327749`. The AAB SHA-256 is
+  `4b796588f4814e6d9129fb6665a24e05efe131b9f4982ad6c749c819972ca420`, and
+  the public listing resolves.
+- **Built but not submitted:** iOS build `3` archive/export passed in CI
+  run `33907913859`; IPA SHA-256 is
+  `0CD5D245E2BD6B200E036880301FD98824A15E3887695D1681494214E623B5D2`.
+  Upload is paused for missing protected ASC API credentials and the known
+  App Store Connect review/account-holder gates.
+- **Upload attempt receipt:** workflow run `33914372796` rebuilt and signed,
+  then stopped before transfer with `Missing JOBAGENT_ASC_KEY_ID`; the issuer
+  ID and private key inputs were also empty.
+- **Externally verified:** public live Playwright smoke at `390x844` and
+  `1440x1000` passed. Evidence is stored under
+  `D:\FTC-HOLDING-releases\unascout\store-completion-smoke-2026-09-04`.
+- **Paused:** authenticated live smoke, physical-device deep links, full
+  two-tenant PostgreSQL proof, and Stripe lifecycle proof. Billing remains
+  fail-closed.
+
+Do not report iOS publication, authenticated live customer coverage, or live
+revenue readiness until those separate receipts exist.
+
+## iOS Review Submission - 2026-09-04
+
+- App Store Connect processed signed build `1.0.1 (3)` through CI run `33915985274`.
+- The release has its product metadata, five iPhone screenshots, build `3`, reviewer instructions, and automatic release selected.
+- The authenticated provider receipt is **Waiting for Review** at Sep 4, 2026 4:50 PM EDT, submission `0083ab51-caa4-43c4-97ba-06ed1bdfeac0`.
+- Android is published. iOS remains submitted until Apple approves it and the public storefront resolves.
+- The reviewer credential was reset against production and synchronized to GitHub secrets without logging it. The temporary database secret used for investigation was removed.

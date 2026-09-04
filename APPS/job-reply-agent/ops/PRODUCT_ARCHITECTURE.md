@@ -349,3 +349,109 @@ Before public onboarding:
 6. Complete iOS and Android device validation, signing, store assets, privacy
    declarations, internal testing, and store review for the implemented native
    source foundation.
+
+## Customer Intelligence Increment - 2026-09-03
+
+UnaScout remains the customer-facing command centre over the existing
+Opportunity Engine -> Application Engine -> Response Engine. This increment
+adds customer guidance and review boundaries without moving job-board sessions,
+Gmail credentials, or browser automation into the client.
+
+| Area | Status | Evidence boundary |
+|---|---|---|
+| Guided onboarding and saved progress | Implemented | Seven steps persist through the existing product API; final consent remains explicit. |
+| Resume fact review | Partial | Migration and review-required proposal contract are implemented; trusted PDF/DOCX extraction is the next increment. |
+| Recommendation explanation and feedback | Implemented | Customer-language reasons and tenant-owned rejection feedback are stored without changing verified facts. |
+| Review and Assisted control | Implemented | Existing approval policy is retained; Auto remains unavailable/controlled. |
+| Privacy-conscious funnel events | Implemented | New events store step/decision metadata only, not resume text or credentials. |
+| Live migration/deployment proof | Not deployed | Migration 012 and routes require hosted rollout and live tenant proof. |
+| Store submission | Out of scope | Native clients remain thin hosted-product clients; no store claim is made here. |
+
+The resume proposal endpoint deliberately treats extracted or entered facts as
+`review_required`. Proposed and rejected facts must not be consumed by package
+generation, job answers, or recruiter replies until a customer-approved fact
+path is connected and verified.
+
+### Guided value-to-payment journey - 2026-09-03
+
+UnaScout's customer value path is now an explicit, bounded sequence over the
+existing product engines:
+
+`approved profile + default resume` -> `job fit/ATS analysis` -> `customer job
+brief` -> `tailored application package` -> `Review or Assisted policy` ->
+`approval and tracking`.
+
+The package is stored in `product_application_packages` (migration 013) and is
+owned by the same tenant as its job match, resume, application, evidence facts,
+usage event, and approval request. Its output records the source resume ID and
+version, approved evidence IDs, supported requirements, missing-information
+flags, and a truth guard. This is intentionally a product-scoped table because
+the older package tables use a different job graph.
+
+Generated output also contains interview preparation prompts tied to approved
+fact IDs. Customer edits are limited to package copy, are separately audited,
+and force approval-required status; they never rewrite the normalized Career
+Truth records or provenance.
+
+The package route consumes the existing `tailored_package` entitlement only
+after authentication, verification, pause, ownership, and idempotency checks.
+Exhausted allowances return `402 PLAN_LIMIT` with the public plan catalog and a
+tenant-scoped `paywall_viewed` event. No browser connector, Gmail credential,
+job-board session, or autonomous submission worker is moved into the client.
+
+The customer-facing promise is therefore truthful: UnaScout prepares a
+reviewable, role-specific application package from verified customer material;
+it does not claim an autonomous submission occurred merely because a package was
+generated.
+
+### Repair state
+
+The 2026-09-03 repair expands the journey to nine stages and makes consent,
+proposal, feedback, and control-mode contracts explicit. It is implemented in
+source and locally smoke-tested, but is **not deployed** and has no external
+verification receipt. Migration 012 is the normalized proposal model for this
+branch; no deployed-migration receipt was found requiring a follow-up 013.
+PostgreSQL isolation, queue behavior, and hosted release proof remain paused
+until a controlled deployment. Full local suite/typecheck are blocked by
+incomplete dependency hydration in the isolated worktree.
+
+### Release reconciliation - 2026-09-04
+
+The current candidate keeps `JobAgent` as the internal service identity and
+`UnaScout` as the public brand. It adds no new connector or autonomous-submit
+surface. Package creation now reserves `tailored_package` usage inside the same
+tenant transaction as package persistence, so a failed write cannot consume a
+customer allowance. Source release metadata targets migration schema 013.
+
+The exact Play App Signing identity is public configuration used by the
+Cloudflare edge to serve Android Digital Asset Links. Apple association data
+continues to use the verified prefix `G6UNC88GQ5` and bundle
+`cloud.unalabs.jobagent`. Native artifacts move to build number 3 while keeping
+the existing product identity and hosted-origin architecture.
+
+This candidate is locally tested but not deployed. The current hosted image
+still reports schema 011, Android `1.0.1 (2)` remains the public Play release,
+and App Store Connect reports the previous iOS submission rejected because the
+review team lacked a demo account. Stripe checkout remains fail-closed until
+its complete lifecycle evidence exists. See
+`docs/PRODUCT_RELEASE_EVIDENCE_2026-09-04.md` for release receipts and gates.
+
+### Live release reconciliation - 2026-09-04
+
+The current hosted JobAgent release is code commit
+`13e120d18e447eee306d4bb1bfe0b8395d07c135` and schema
+`013_product_application_packages`. Railway production hosts the web, worker,
+migration, backup, PostgreSQL, and private-storage topology; the live readiness
+response reports database, tenant-isolation role, and S3 object storage.
+
+Cloudflare worker version `18d54293-3f94-41f9-a76e-d20d41212a4e` is the edge
+front door for `jobagent.unalabs.cloud`, including exact Android and Apple deep
+link association responses. Android versionCode `3` is uploaded to the Google
+Play production track. iOS build `3` is signed and exported but not uploaded,
+so the App Store remains a separate blocked publication gate.
+
+The public brand remains `UnaScout`; internal service, repository, package, and
+database identity remains `JobAgent`. Stripe checkout stays fail-closed until
+the payment lifecycle is independently tested and evidenced. Authenticated
+customer, physical-device, and two-tenant hosted proofs are not implied by the
+public smoke receipt.
