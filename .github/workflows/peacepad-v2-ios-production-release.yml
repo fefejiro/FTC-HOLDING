@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: Build/upload, read App Store status, prepare build 13, or submit 2.0.3
+        description: Build/upload, read App Store status, prepare build 14, or submit 2.0.3
         required: true
         default: build-upload
         type: choice
@@ -18,7 +18,7 @@ on:
         required: true
         type: string
       authorization:
-        description: Type I_CONFIRM_PRODUCTION_BUILD_13_UPLOAD
+        description: Type I_CONFIRM_PRODUCTION_BUILD_14_UPLOAD
         required: true
         type: string
 
@@ -32,7 +32,7 @@ concurrency:
 jobs:
   build-and-upload:
     if: inputs.operation == 'build-upload'
-    name: Build and upload production 2.0.3 (13)
+    name: Build and upload production 2.0.3 (14)
     # Apple requires Xcode 26 / the iOS 26 SDK for uploads from April 28, 2026.
     # The standard macos-26 arm64 image is available to this repository; do not
     # use the unprovisioned macos-26-intel larger-runner label.
@@ -64,7 +64,7 @@ jobs:
           set -euo pipefail
           [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-          test "${{ inputs.authorization }}" = "I_CONFIRM_PRODUCTION_BUILD_13_UPLOAD"
+          test "${{ inputs.authorization }}" = "I_CONFIRM_PRODUCTION_BUILD_14_UPLOAD"
           git merge-base --is-ancestor "$PRODUCTION_BASELINE" "$EXPECTED_SHA"
           git diff --check "$EXPECTED_SHA"
           test -z "$(git status --porcelain)"
@@ -116,7 +116,7 @@ jobs:
             --non-interactive
           jq -e '
             .appConfig.version == "2.0.3"
-            and .appConfig.ios.buildNumber == "13"
+            and .appConfig.ios.buildNumber == "14"
             and .appConfig.ios.bundleIdentifier == "ca.peacepad.family"
             and .appConfig.extra.appStoreId == "6793350735"
             and .appConfig.extra.environment == "production"
@@ -156,11 +156,11 @@ jobs:
               --local \
               --non-interactive \
               --freeze-credentials \
-              --output "$RUNNER_TEMP/peacepad-v2-production-2.0.3-13.ipa"
+              --output "$RUNNER_TEMP/peacepad-v2-production-2.0.3-14.ipa"
           EOF
           )
           npx --yes eas-cli@21.8.0 env:exec production "$release_command" --non-interactive
-          shasum -a 256 "$RUNNER_TEMP/peacepad-v2-production-2.0.3-13.ipa" > "$RUNNER_TEMP/peacepad-v2-production-2.0.3-13.sha256"
+          shasum -a 256 "$RUNNER_TEMP/peacepad-v2-production-2.0.3-14.ipa" > "$RUNNER_TEMP/peacepad-v2-production-2.0.3-14.sha256"
 
       - name: Upload exact IPA to App Store Connect
         id: submit
@@ -175,7 +175,7 @@ jobs:
           npx --yes eas-cli@21.8.0 submit \
             --platform ios \
             --profile appstore-production \
-            --path "$RUNNER_TEMP/peacepad-v2-production-2.0.3-13.ipa" \
+            --path "$RUNNER_TEMP/peacepad-v2-production-2.0.3-14.ipa" \
             --non-interactive \
             --wait | tee "$RUNNER_TEMP/peacepad-v2-production-submit.txt"
 
@@ -190,7 +190,7 @@ jobs:
           evidence="$RUNNER_TEMP/peacepad-v2-production-evidence"
           mkdir -p "$evidence"
           cp "$RUNNER_TEMP/peacepad-v2-xcode-version.txt" "$evidence/" 2>/dev/null || true
-          cp "$RUNNER_TEMP/peacepad-v2-production-2.0.3-13.sha256" "$evidence/" 2>/dev/null || true
+          cp "$RUNNER_TEMP/peacepad-v2-production-2.0.3-14.sha256" "$evidence/" 2>/dev/null || true
           cp "$RUNNER_TEMP/peacepad-v2-production-submit.txt" "$evidence/" 2>/dev/null || true
           jq -n \
             --arg result "$(test "$BUILD_OUTCOME" = success && test "$SUBMIT_OUTCOME" = success && echo APP_STORE_CONNECT_UPLOAD_VERIFIED || echo PRODUCTION_UPLOAD_NOT_VERIFIED)" \
@@ -207,7 +207,7 @@ jobs:
               appStoreId: "6793350735",
               bundleIdentifier: "ca.peacepad.family",
               version: "2.0.3",
-              buildNumber: "13",
+              buildNumber: "14",
               runtime: "production-ca",
               productionApiWritesEnabled: true,
               buildOutcome: $buildOutcome,
@@ -232,7 +232,7 @@ jobs:
           name: peacepad-v2-ios-production-ipa-${{ inputs.source_sha }}
           if-no-files-found: error
           retention-days: 1
-          path: ${{ runner.temp }}/peacepad-v2-production-2.0.3-13.ipa
+          path: ${{ runner.temp }}/peacepad-v2-production-2.0.3-14.ipa
 
   app-store-release:
     if: inputs.operation != 'build-upload'

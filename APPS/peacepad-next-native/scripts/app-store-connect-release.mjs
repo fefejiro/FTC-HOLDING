@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 
 const APP_ID = "6793350735";
 const VERSION = "2.0.3";
-const BUILD = "13";
+const BUILD = "14";
 const mode = process.argv[2] ?? "status";
 
 for (const name of ["ASC_API_KEY_ID", "ASC_API_ISSUER_ID", "ASC_API_PRIVATE_KEY"]) {
