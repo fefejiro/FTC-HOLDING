@@ -414,3 +414,24 @@ branch; no deployed-migration receipt was found requiring a follow-up 013.
 PostgreSQL isolation, queue behavior, and hosted release proof remain paused
 until a controlled deployment. Full local suite/typecheck are blocked by
 incomplete dependency hydration in the isolated worktree.
+
+### Release reconciliation - 2026-09-04
+
+The current candidate keeps `JobAgent` as the internal service identity and
+`UnaScout` as the public brand. It adds no new connector or autonomous-submit
+surface. Package creation now reserves `tailored_package` usage inside the same
+tenant transaction as package persistence, so a failed write cannot consume a
+customer allowance. Source release metadata targets migration schema 013.
+
+The exact Play App Signing identity is public configuration used by the
+Cloudflare edge to serve Android Digital Asset Links. Apple association data
+continues to use the verified prefix `G6UNC88GQ5` and bundle
+`cloud.unalabs.jobagent`. Native artifacts move to build number 3 while keeping
+the existing product identity and hosted-origin architecture.
+
+This candidate is locally tested but not deployed. The current hosted image
+still reports schema 011, Android `1.0.1 (2)` remains the public Play release,
+and App Store Connect reports the previous iOS submission rejected because the
+review team lacked a demo account. Stripe checkout remains fail-closed until
+its complete lifecycle evidence exists. See
+`docs/PRODUCT_RELEASE_EVIDENCE_2026-09-04.md` for release receipts and gates.

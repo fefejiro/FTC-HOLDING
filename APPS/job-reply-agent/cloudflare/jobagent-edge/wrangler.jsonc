@@ -11,7 +11,9 @@
     }
   ],
   "vars": {
-    "JOBAGENT_ORIGIN": "https://jobagent-web-production.up.railway.app"
+    "JOBAGENT_ORIGIN": "https://jobagent-web-production.up.railway.app",
+    "JOBAGENT_APPLE_APP_ID_PREFIX": "G6UNC88GQ5",
+    "JOBAGENT_PLAY_APP_SIGNING_SHA256": "44:01:43:0D:08:16:50:11:86:87:48:F4:2D:B6:2C:F5:B6:8B:55:8B:D7:BA:2D:FC:FA:03:ED:5B:F2:8D:F8:AE"
   },
   "observability": {
     "enabled": true,

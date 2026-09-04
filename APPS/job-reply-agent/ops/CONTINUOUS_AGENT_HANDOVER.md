@@ -24,6 +24,33 @@ This file is a resumable evidence record, not a claim that every external
 connector or production release gate is complete. Verify drift-prone runtime
 facts before changing them.
 
+## Current Candidate Handover - 2026-09-04
+
+Work is continuing in the isolated `D:\FTC-HOLDING-worktrees\unascout-revenue-release`
+worktree on `release/unascout-store-completion`, starting from exact source SHA
+`e6c76cf674b32f6d6e3e46a0a97b8ba2ac4f978c`. The source branch matches that SHA
+and is based on the current `origin/main` ancestry. The parent customer-
+intelligence worktree remains dirty with unrelated deletions and must not be
+used for release staging.
+
+- **Implemented:** package usage reservation rollback, product schema 013
+  release metadata, exact edge-served Android/Apple association documents, and
+  native version/build 3 release automation.
+- **Locally tested:** `240` passing tests, `12` skipped; build, lint, metadata,
+  edge, static release checks, and both responsive customer smoke viewports pass.
+- **Externally verified:** Play App Signing supplied the exact certificate
+  fingerprint for `cloud.unalabs.jobagent`. App Store Connect reports the prior
+  iOS submission rejected under Guideline 2.1(a) because no review demo account
+  was available.
+- **Deployed:** no. Do not report schema 013, candidate SHA, or the repaired
+  assetlinks response as live until Railway and Cloudflare deployment receipts
+  plus public probes exist.
+- **Paused:** Stripe checkout and native purchase flows remain fail-closed.
+- **Blocked:** Apple upload/resubmission needs account-holder API credentials
+  and protected review demo credentials; physical-device proof is outstanding.
+
+The complete dated evidence is in `docs/PRODUCT_RELEASE_EVIDENCE_2026-09-04.md`.
+
 ## Live Production Proof - 2026-08-18
 
 - Railway CLI and browser access now resolve to `Michael Fejiro's Projects` on

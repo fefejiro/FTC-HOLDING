@@ -2,6 +2,11 @@ import crypto from "node:crypto";
 import type pg from "pg";
 import { withTenant } from "./product_db.js";
 import {
+  consumePlanUsageInTransaction,
+  PlanUsageLimitError,
+  type PlanUsageResult
+} from "./product_billing.js";
+import {
   buildTailoredApplicationPackage,
   buildGroundedInterviewQuestions,
   buildTrustAnalysis,
@@ -1292,8 +1297,9 @@ export async function createProductApplicationPackage(
   db: pg.Pool,
   userId: string,
   jobMatchId: string,
-  input: { interest: string; emphasis: string; avoid?: string }
-): Promise<unknown | null> {
+  input: { interest: string; emphasis: string; avoid?: string },
+  usageIdempotencyKey: string
+): Promise<{ package: unknown; usage: PlanUsageResult; reused: boolean } | null> {
   return withTenant(userId, async (client) => {
     const [jobResult, onboardingResult, resumeResult, truthResult, insightResult, policyResult, existingResult] = await Promise.all([
       client.query(
@@ -1330,7 +1336,19 @@ export async function createProductApplicationPackage(
       )
     ]);
     const existing = existingResult.rows[0];
-    if (existing) return existing;
+    if (existing) {
+      return {
+        package: existing,
+        usage: {
+          allowed: true,
+          replayed: true,
+          used: 0,
+          limit: 0,
+          remaining: 0
+        },
+        reused: true
+      };
+    }
     const job = jobResult.rows[0];
     if (!job) return null;
     if (job.status === "rejected") throw new Error("This opportunity is no longer available for preparation.");
@@ -1374,6 +1392,17 @@ export async function createProductApplicationPackage(
       emphasis: input.emphasis.trim(),
       avoid: input.avoid?.trim() || ""
     };
+    const usage = await consumePlanUsageInTransaction(
+      client,
+      userId,
+      "tailored_package",
+      1,
+      usageIdempotencyKey,
+      { jobMatchId }
+    );
+    if (!usage.allowed) {
+      throw new PlanUsageLimitError(usage);
+    }
     const saved = await client.query(
       `INSERT INTO product_application_packages
          (user_id, job_match_id, resume_id, source_resume_version, status,
@@ -1431,12 +1460,16 @@ export async function createProductApplicationPackage(
       })]
     );
     return {
-      ...packageRecord,
-      title: job.title,
-      company: job.company,
-      source: job.source,
-      jobUrl: job.jobUrl,
-      applicationId: application.rows[0]?.id || null
+      package: {
+        ...packageRecord,
+        title: job.title,
+        company: job.company,
+        source: job.source,
+        jobUrl: job.jobUrl,
+        applicationId: application.rows[0]?.id || null
+      },
+      usage,
+      reused: false
     };
   }, db);
 }

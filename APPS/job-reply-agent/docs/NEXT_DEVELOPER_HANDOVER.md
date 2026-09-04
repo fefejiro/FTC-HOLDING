@@ -282,3 +282,30 @@ Before release, apply migration 013, verify the full journey against the hosted
 domain, prove tenant isolation and idempotency, run the Stripe test-mode
 lifecycle, and capture redacted live evidence. Do not enable billing or claim a
 paid customer from the local package proof alone.
+
+## Release Reconciliation - 2026-09-04
+
+Use the clean D: worktree `D:\FTC-HOLDING-worktrees\unascout-revenue-release`
+and branch `release/unascout-store-completion`. It starts at the exact remote
+customer-intelligence head `e6c76cf674b32f6d6e3e46a0a97b8ba2ac4f978c`; the
+customer-intelligence worktree has unrelated deletions and is not a release
+staging area.
+
+- **Implemented:** atomic package usage reservation rollback, source schema 013
+  release reporting, exact Cloudflare association responses, and Android/iOS
+  build number 3 automation.
+- **Locally verified:** full Vitest `240` passed and `12` skipped, build, lint,
+  store metadata, edge tests, static release checks, and smoke at `390x844` and
+  `1440x1000`.
+- **Externally verified:** Play supplied the exact App Signing fingerprint;
+  App Store Connect reports the prior iOS submission `Rejected` under 2.1(a)
+  and requests a demo account.
+- **Not deployed:** hosted production remains SHA `22db89fb...` and schema
+  `011_revenue_launch`; no candidate live proof exists yet.
+- **Paused:** Stripe checkout, hosted migration/isolation proof, and physical
+  device checks remain separate gates.
+- **Blocked:** Apple upload needs protected ASC API credentials and review demo
+  credentials. Do not invent or reuse credentials from PeacePad or JCI.
+
+See `docs/PRODUCT_RELEASE_EVIDENCE_2026-09-04.md` for the complete evidence
+and exact state separation.

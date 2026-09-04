@@ -75,6 +75,8 @@ for (const required of [
   "migrations/009_application_evidence.sql",
   "migrations/010_trust_first_pilot.sql",
   "migrations/011_revenue_launch.sql",
+  "migrations/012_customer_intelligence.sql",
+  "migrations/013_product_application_packages.sql",
   "scripts/install-trusted-runner.ps1",
   "scripts/provision-railway-database.mjs",
   "src/product_runner_client.ts",

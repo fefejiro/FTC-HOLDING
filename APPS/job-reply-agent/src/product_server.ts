@@ -141,6 +141,7 @@ import {
   consumePlanUsage,
   createBillingCheckout,
   createBillingPortal,
+  PlanUsageLimitError,
   recordFunnelEvent,
   verifyBillingPayloadSignature
 } from "./product_billing.js";
@@ -1811,15 +1812,12 @@ export async function createProductServer(storage: ProductObjectStorage = create
             const usageKey = normalizeIdempotencyKey(
               req.headers["idempotency-key"] || req.headers["x-idempotency-key"]
             );
-            const usage = await consumePlanUsage(
-              db,
-              user.id,
-              "tailored_package",
-              1,
-              usageKey,
-              { jobMatchId: jobPackage[1] }
-            );
-            if (!usage.allowed) {
+            let created;
+            try {
+              created = await createProductApplicationPackage(db, user.id, jobPackage[1], input, usageKey);
+            } catch (error) {
+              if (!(error instanceof PlanUsageLimitError)) throw error;
+              const usage = error.usage;
               await recordFunnelEvent(
                 db,
                 user.id,
@@ -1837,8 +1835,13 @@ export async function createProductServer(storage: ProductObjectStorage = create
                 }
               };
             }
-            const packageRecord = await createProductApplicationPackage(db, user.id, jobPackage[1], input);
-            if (!packageRecord) return { status: 404, body: { error: "Job match was not found." } };
+            if (!created) return { status: 404, body: { error: "Job match was not found." } };
+            if (created.reused) {
+              return {
+                status: 200,
+                body: { package: created.package, reused: true, usage: await billingUsageSummary(db, user.id) }
+              };
+            }
             await recordFunnelEvent(
               db,
               user.id,
@@ -1853,7 +1856,7 @@ export async function createProductServer(storage: ProductObjectStorage = create
               { feature: "tailored_package", jobMatchId: jobPackage[1] },
               `first_value_reached:${jobPackage[1]}`
             );
-            return { status: 201, body: { package: packageRecord, usage } };
+            return { status: 201, body: { package: created.package, usage: created.usage } };
           }
         });
       }

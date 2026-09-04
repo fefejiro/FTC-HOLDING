@@ -89,6 +89,35 @@ work is deliberately narrow:
    must retain explicit release-SHA verification.
    `BILLING_CHECKOUT_ENABLED=true` or taking a genuine payment.
 
+## Release Reconciliation - 2026-09-04
+
+The current candidate is documented in
+`docs/PRODUCT_RELEASE_EVIDENCE_2026-09-04.md`. It starts from source SHA
+`e6c76cf674b32f6d6e3e46a0a97b8ba2ac4f978c` on the clean
+`release/unascout-store-completion` worktree. The customer-intelligence source
+branch and that SHA match; `origin/main` is an ancestor.
+
+- **Implemented:** atomic package/usage reservation rollback, idempotency-key
+  guardrails, source release schema 013, direct Cloudflare association handling,
+  exact Play signing identity, and native build number 3.
+- **Locally verified:** full Vitest (`240` passed, `12` skipped), TypeScript,
+  lint, store metadata, edge tests, production static checks, and customer smoke
+  at `390x844` and `1440x1000`.
+- **Externally verified:** Play App Signing provided the exact SHA-256 needed for
+  Digital Asset Links. App Store Connect reports iOS version 1.0 `Rejected`
+  under Guideline 2.1(a), requesting a review demo account.
+- **Deployed:** no candidate deployment yet. Hosted production remains SHA
+  `22db89fb9a58bbb07e3be64919f08f9bd0b5c6d8`, schema `011_revenue_launch`.
+- **Submitted:** existing Android `1.0.1 (2)` remains the public release. No
+  candidate Play upload or iOS resubmission is claimed.
+- **Published:** Android existing release is public; the candidate iOS listing
+  is not public.
+- **Paused:** Stripe checkout activation remains disabled pending full payment
+  lifecycle evidence.
+- **Blocked:** Apple requires protected App Store Connect API credentials and a
+  real demo username/password for App Review. Device checks and hosted
+  migration/isolation proof remain release gates.
+
 ## Cloud-First Storage Model
 
 - GitHub is the source-of-truth for code, migrations, runbooks, and release tags.

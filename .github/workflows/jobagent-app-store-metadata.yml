@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       submit_for_review:
-        description: Attach build 2 and submit version 1.0 for App Review
+        description: Attach build 3 and submit version 1.0 for App Review
         required: true
         default: false
         type: boolean
@@ -67,7 +67,7 @@ jobs:
             --api_key_path "$RUNNER_TEMP/app-store-api-key.json" \
             --app_identifier cloud.unalabs.jobagent \
             --app_version 1.0 \
-            --build_number 2 \
+            --build_number 3 \
             --metadata_path "$RUNNER_TEMP/metadata" \
             --screenshots_path store/assets/apple/screenshots \
             --skip_binary_upload true \
