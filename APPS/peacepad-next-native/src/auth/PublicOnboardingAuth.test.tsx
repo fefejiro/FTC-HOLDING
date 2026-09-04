@@ -167,7 +167,7 @@ describe("PublicOnboardingAuth", () => {
     const refresh = jest.fn(async () => undefined);
     (useAuthCapabilities as jest.Mock).mockReturnValue({
       status: "error",
-      email: { nativeAvailable: true, appConfigured: true, backend: "unknown", available: true },
+      email: { nativeAvailable: true, appConfigured: true, backend: "unknown", available: false },
       google: { nativeAvailable: true, appConfigured: true, backend: "unknown", available: false },
       apple: { nativeAvailable: true, appConfigured: true, backend: "unknown", available: false },
       refresh

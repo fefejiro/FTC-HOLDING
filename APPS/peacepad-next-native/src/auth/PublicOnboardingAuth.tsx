@@ -129,7 +129,9 @@ export function PublicOnboardingAuth({ environmentNotice }: { environmentNotice?
   const auth = useSupabaseSession();
   const capabilities = useAuthCapabilities();
   const strings = localized(locale);
-  const emailSignInEnabled = capabilities.email.available;
+  // Email is the safe fallback while the capability probe is loading or
+  // temporarily unknown. An explicit backend-disabled response still gates it.
+  const emailPathAvailable = capabilities.email.backend !== "disabled";
   const googleSignInEnabled = capabilities.google.available;
   const [restoring, setRestoring] = useState(true);
   const [introComplete, setIntroComplete] = useState(false);
@@ -158,7 +160,7 @@ export function PublicOnboardingAuth({ environmentNotice }: { environmentNotice?
 
   const submit = async () => {
     const normalizedEmail = email.trim();
-    if (busy || submissionInFlight.current || !emailSignInEnabled || !normalizedEmail || password.length < 8) return;
+    if (busy || submissionInFlight.current || !emailPathAvailable || !normalizedEmail || password.length < 8) return;
     submissionInFlight.current = true;
     setBusy(true); setError(undefined); setMessage(undefined);
     try {
@@ -209,7 +211,7 @@ export function PublicOnboardingAuth({ environmentNotice }: { environmentNotice?
   };
 
   const resetPassword = async () => {
-    if (busy || !emailSignInEnabled || !email.trim()) return;
+    if (busy || !emailPathAvailable || !email.trim()) return;
     setBusy(true); setError(undefined); setMessage(undefined);
     try {
       await auth.sendPasswordReset(email.trim());
@@ -272,9 +274,9 @@ export function PublicOnboardingAuth({ environmentNotice }: { environmentNotice?
         <View style={styles.field}><Text style={styles.inputLabel}>{strings.email}</Text><TextInput accessibilityLabel={strings.email} autoCapitalize="none" autoComplete="email" keyboardType="email-address" onChangeText={setEmail} onSubmitEditing={() => passwordInput.current?.focus()} placeholder={strings.email} placeholderTextColor={colors.muted} returnKeyType="next" style={styles.input} textContentType="emailAddress" value={email} /></View>
         <View style={styles.field}><Text style={styles.inputLabel}>{strings.password}</Text><TextInput accessibilityLabel={strings.password} autoComplete={mode === "create" ? "new-password" : "current-password"} onChangeText={setPassword} onSubmitEditing={() => void submit()} placeholder={strings.password} placeholderTextColor={colors.muted} ref={passwordInput} returnKeyType="done" secureTextEntry style={styles.input} textContentType={mode === "create" ? "newPassword" : "password"} value={password} /></View>
         {mode === "create" ? <Text style={styles.hint}>{strings.passwordHint}</Text> : null}
-        <LabButton disabled={busy || !emailSignInEnabled || !email.trim() || password.length < 8} label={busy ? strings.working : mode === "create" ? strings.createAction : strings.signInAction} onPress={() => void submit()} />
+        <LabButton disabled={busy || !emailPathAvailable || !email.trim() || password.length < 8} label={busy ? strings.working : mode === "create" ? strings.createAction : strings.signInAction} onPress={() => void submit()} />
         {capabilities.email.backend === "disabled" ? <Text accessibilityRole="alert" style={styles.providerStatus}>{strings.serviceUnavailable}</Text> : null}
-        {mode === "sign-in" ? <Pressable accessibilityRole="button" disabled={busy || !emailSignInEnabled || !email.trim()} onPress={() => void resetPassword()}><Text style={styles.link}>{strings.forgot}</Text></Pressable> : null}
+        {mode === "sign-in" ? <Pressable accessibilityRole="button" disabled={busy || !emailPathAvailable || !email.trim()} onPress={() => void resetPassword()}><Text style={styles.link}>{strings.forgot}</Text></Pressable> : null}
         {message ? <View accessibilityRole="alert" style={styles.success}><Text style={styles.successTitle}>{mode === "create" ? strings.confirmTitle : message}</Text>{mode === "create" ? <Text style={styles.body}>{message}</Text> : null}</View> : null}
         {error || auth.error ? <Text accessibilityRole="alert" style={styles.error}>{error ?? auth.error}</Text> : null}
         <Pressable accessibilityRole="button" onPress={() => { setMode(mode === "create" ? "sign-in" : "create"); setError(undefined); setMessage(undefined); }}>
