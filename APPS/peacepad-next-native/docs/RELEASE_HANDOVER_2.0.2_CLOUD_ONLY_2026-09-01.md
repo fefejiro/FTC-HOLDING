@@ -172,6 +172,56 @@ accounts; no connected Android or iPhone was available during this transition.
 
 ## Scope guard
 
-There were no open PeacePad pull requests in `fefejiro/FTC-HOLDING`,
-`fefejiro/PeacePad-`, or `fefejiro/fefejiro-PeacePadAI` when this handover was
-closed. Do not close unrelated FTC pull requests.
+On 2026-09-04, PR #343, the only open FTC-HOLDING pull request explicitly
+scoped to PeacePad, was closed. The remaining open FTC pull requests are
+unrelated product work and must not be closed as part of this release.
+
+## Latest production transition — 2026-09-04
+
+This section supersedes older current-state statements above; earlier entries
+remain as historical evidence for the 2.0.2 release.
+
+- Google and Apple providers are enabled in the production Supabase project,
+  with email sign-in and manual identity linking retained. Read-only provider
+  audit: https://github.com/fefejiro/FTC-HOLDING/actions/runs/33843234903
+- Release-control commits aligned the native production redirect identity and
+  store controllers to `2.0.3` / Android `52` / iOS `13`. The exact reviewed
+  source for the current release run is
+  `a6d58fe62c8df2927b59471df81265eb322c9a77`.
+- The signed iOS build-and-upload workflow completed successfully:
+  https://github.com/fefejiro/FTC-HOLDING/actions/runs/33851836370 . App Store
+  Connect accepted build `13` with processing state `VALID`; read-only status
+  evidence: https://github.com/fefejiro/FTC-HOLDING/actions/runs/33854594121 .
+  The 2.0.3 App Store version is still absent, so the build is not prepared,
+  submitted for review, or public.
+- iOS build `13` was produced from `a6d58fe62c8df2927b59471df81265eb322c9a77`.
+  The later app commit `a731a7f66f899170fb913e01e825e40a17ac070f`
+  keeps email authentication available when the social-provider probe is
+  unavailable and is not contained in build `13`. Do not submit build `13`
+  publicly without explicitly accepting that source difference or replacing
+  it with a new iOS build number from the latest reviewed app source.
+- Android `2.0.3` / version code `52` device candidate build
+  `35a0362d-60df-48dc-909c-8132c1e3a620` failed before producing an artifact.
+  EAS treated the Native app as an FTC root npm workspace and ran `npm ci`
+  against the wrong package/lockfile boundary. No Play mutation occurred.
+- Commit `c3e4de7086c11a416eba68db55f4f5cae639c6c3` repairs the two canonical
+  Android build workflows. They now archive the exact Native subtree into an
+  isolated Git repository, validate `2.0.3` / `52`, use EAS remote signing,
+  and reject any returned artifact whose identity or profile does not match.
+  The isolated archive tree matched the reviewed source and its clean
+  `npm ci --dry-run --workspaces=false` preflight passed. No replacement EAS
+  build had been dispatched when this entry was written.
+
+### Remaining release gate
+
+Before any public App Store submission or Google Play production promotion:
+
+1. Verify the iOS upload reaches a valid TestFlight/App Store Connect build.
+2. Run fresh Android and iOS physical-device journeys, including native
+   confirmation/recovery deep links, restart persistence, and provider sign-in
+   with fictional disposable accounts only.
+3. Record redacted device evidence and provider state. Do not use a personal
+   Google or Apple account as a test identity.
+4. Obtain separate exact authorization phrases for App Store prepare, App
+   Store submit, and Play production upload. An uploaded or accepted artifact
+   is not public-store proof.
