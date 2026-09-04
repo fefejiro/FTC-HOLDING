@@ -420,3 +420,11 @@ The release candidate is now deployed from code commit
 
 Do not report iOS publication, authenticated live customer coverage, or live
 revenue readiness until those separate receipts exist.
+
+## iOS Review Submission - 2026-09-04
+
+- App Store Connect processed signed build `1.0.1 (3)` through CI run `33915985274`.
+- The release has its product metadata, five iPhone screenshots, build `3`, reviewer instructions, and automatic release selected.
+- The authenticated provider receipt is **Waiting for Review** at Sep 4, 2026 4:50 PM EDT, submission `0083ab51-caa4-43c4-97ba-06ed1bdfeac0`.
+- Android is published. iOS remains submitted until Apple approves it and the public storefront resolves.
+- The reviewer credential was reset against production and synchronized to GitHub secrets without logging it. The temporary database secret used for investigation was removed.

@@ -274,3 +274,11 @@ This current receipt supersedes the historical pre-deployment notes above.
 - **Externally verified:** live public customer smoke passed at `390x844` and `1440x1000`, including landing and unauthenticated app entry, with no horizontal overflow. Redacted screenshots and a Playwright trace are in `D:\FTC-HOLDING-releases\unascout\store-completion-smoke-2026-09-04`.
 - **Paused:** authenticated live customer journeys, physical-device checks, two-tenant PostgreSQL isolation proof, and the complete Stripe test/live lifecycle remain unclaimed. `BILLING_CHECKOUT_ENABLED` remains disabled.
 - **Blocked:** iOS upload and resubmission require the account-holder-controlled Apple agreement/demo-account gates and protected `JOBAGENT_ASC_KEY_ID`, `JOBAGENT_ASC_ISSUER_ID`, and `JOBAGENT_ASC_PRIVATE_KEY_BASE64` values. No store readiness or iOS publication claim is made.
+
+## iOS Submission Receipt - 2026-09-04
+
+- **Uploaded and processed:** GitHub Actions run `33915985274` uploaded signed build `1.0.1 (3)` to App Store Connect. IPA SHA-256: `0CD5D245E2BD6B200E036880301FD98824A15E3887695D1681494214E623B5D2`.
+- **Submitted:** App Store Connect has metadata, five iPhone screenshots, build `1.0.1 (3)`, and automatic release selected. Its authenticated state is **Waiting for Review**, submitted Sep 4, 2026 at 4:50 PM EDT, submission `0083ab51-caa4-43c4-97ba-06ed1bdfeac0`.
+- **Published:** Android only. The Google Play listing remains public at `https://play.google.com/store/apps/details?id=cloud.unalabs.jobagent`.
+- **Not yet published:** iOS. Apple approval and an independently resolving App Store listing are required before claiming public availability.
+- **Paused:** authenticated customer, device, tenant-isolation, and payment-lifecycle proof remain separate gates. `BILLING_CHECKOUT_ENABLED` remains disabled.

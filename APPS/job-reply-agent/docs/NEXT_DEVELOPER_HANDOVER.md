@@ -344,3 +344,9 @@ The next operator should obtain the protected Apple values through the normal
 account-holder path, upload and attach build 3, complete metadata and review
 demo access, then separately run authenticated live and payment evidence. Do
 not reuse PeacePad or JCI credentials.
+
+## Current Store Follow-up - 2026-09-04
+
+The Apple credential and review-access gates are complete. App Store Connect processed `1.0.1 (3)` and accepted the resubmission; the current status is **Waiting for Review** under submission `0083ab51-caa4-43c4-97ba-06ed1bdfeac0` at Sep 4, 2026 4:50 PM EDT. Do not resubmit or cancel it unless Apple requests a correction. Poll App Store Connect and independently check the public storefront after approval.
+
+Google Play versionCode `3` remains published at `https://play.google.com/store/apps/details?id=cloud.unalabs.jobagent`. Authenticated live customer proof, physical device checks, hosted two-tenant isolation proof, and Stripe lifecycle proof remain separate gates; billing stays disabled.

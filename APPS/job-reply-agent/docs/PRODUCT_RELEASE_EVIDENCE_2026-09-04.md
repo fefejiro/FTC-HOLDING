@@ -173,3 +173,10 @@ pre-deployment baseline for auditability.
   review-demo action plus protected `JOBAGENT_ASC_KEY_ID`,
   `JOBAGENT_ASC_ISSUER_ID`, and `JOBAGENT_ASC_PRIVATE_KEY_BASE64`. These are
   external gates, not invented source credentials.
+
+### iOS submission update
+
+- **Uploaded and processed:** CI run `33915985274` uploaded signed `1.0.1 (3)` IPA with SHA-256 `0CD5D245E2BD6B200E036880301FD98824A15E3887695D1681494214E623B5D2`.
+- **Externally verified:** App Store Connect shows the active `1.0.1` version with build `3`, full metadata, and five iPhone screenshots.
+- **Submitted:** App Store Connect status is **Waiting for Review**, submitted Sep 4, 2026 at 4:50 PM EDT; submission `0083ab51-caa4-43c4-97ba-06ed1bdfeac0`.
+- **Not externally verified:** public App Store availability. Apple approval and an independently resolving listing remain required before an iOS publication claim.
