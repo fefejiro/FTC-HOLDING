@@ -122,6 +122,7 @@ jobs:
             --argjson apple "$(jq -c '.external_apple_enabled // false' <<<"$response")" \
             --argjson manualLinking "$(jq -c '.security_manual_linking_enabled // false' <<<"$response")" \
             --argjson googleClientIds "$(jq -c '(.external_google_client_id // "") | split(",") | map(select(length > 0)) | length > 0' <<<"$response")" \
+            --argjson googleAdditionalClientIds "$(jq -c '(.external_google_additional_client_ids // "") | if type == "array" then length > 0 else split(",") | map(select(length > 0)) | length > 0 end' <<<"$response")" \
             --argjson appleClientIds "$(jq -c '(.external_apple_client_id // "") | split(",") | map(select(length > 0)) | length > 0' <<<"$response")" \
             '{
               providerStatus: "read-only",
@@ -130,6 +131,7 @@ jobs:
               appleEnabled: $apple,
               manualLinkingEnabled: $manualLinking,
               googleClientAudiencePresent: $googleClientIds,
+              googleAdditionalAudiencesPresent: $googleAdditionalClientIds,
               appleClientAudiencePresent: $appleClientIds,
               secretsPrinted: false
             }'
@@ -276,8 +278,10 @@ jobs:
               .external_email_enabled == true and
               (.disable_signup // false) == false and
               .external_google_enabled == true and
-              .external_google_client_id == $googleClient and
-              ((.external_google_additional_client_ids // "") | length > 0) and
+              ((.external_google_client_id // "") | split(",") | index($googleClient)) and
+              ((.external_google_additional_client_ids // "") |
+                if type == "array" then length > 0
+                else split(",") | map(select(length > 0)) | length > 0 end) and
               .external_apple_enabled == true and
               ((.external_apple_client_id // "") | split(",") | index($appleNative)) and
               .security_manual_linking_enabled == true
