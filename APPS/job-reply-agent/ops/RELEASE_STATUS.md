@@ -156,5 +156,27 @@ own evidence.
   record exists as Apple ID `6802774371`; the uploaded build and review remain
   pending final console actions.
 - Both native shells still depend on the hosted origin. The origin is now live;
-  store rollout remains gated by exact-image redeployment, association identities,
-  physical-device proof, publisher records, signing, and store review.
+store rollout remains gated by exact-image redeployment, association identities,
+physical-device proof, publisher records, signing, and store review.
+
+## Customer Intelligence Increment - 2026-09-03
+
+Branch: `agent/unascout-customer-intelligence` based on `origin/main`
+`00839080c09d26677ca7d7db232c1b22331800fb`.
+
+- **Completed in source:** guided resumable onboarding, expanded customer
+  preferences and eligibility, review-required resume fact proposals with
+  provenance, explainable recommendation feedback/rejection, funnel events,
+  export inclusion, and migration `012_customer_intelligence.sql` with forced
+  RLS.
+- **Verified locally:** focused customer-intelligence tests, changed-file
+  syntax checks, and deterministic smoke at `390x844` and `1440x1000`.
+- **Deployed:** no. No hosted release SHA, migration receipt, or deployment
+  identifier is claimed for this increment.
+- **Externally verified:** none for the new onboarding, proposal, feedback, or
+  migration behavior.
+- **Paused:** provider-specific binary resume extraction is intentionally
+  deferred; proposals remain review-required until customer approval.
+- **Blocked:** no implementation blocker. Full-repository checks need the
+  complete materialized worktree and shared `date-fns` dependency; live proof
+  needs a deployment with migration 012 applied.

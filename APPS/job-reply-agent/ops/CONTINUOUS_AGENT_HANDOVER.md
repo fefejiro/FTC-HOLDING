@@ -251,3 +251,33 @@ Every interactive or scheduled product-engineering run must update this file
 before its final commit. Replace stale evidence rather than stacking optimistic
 claims. Keep completed, deployed, externally verified, paused, and blocked
 states distinct.
+
+## Customer Intelligence Increment - 2026-09-03
+
+Branch: `agent/unascout-customer-intelligence`, based on `origin/main`
+`00839080c09d26677ca7d7db232c1b22331800fb`.
+
+- **Completed in the repository:** guided seven-step onboarding for goals,
+  preferences, eligibility, resume, Career Truth review, control, and final
+  review; resumable progress; tenant-scoped resume fact proposals with
+  `review_required` provenance; explainable recommendation feedback and
+  rejection; funnel events; export coverage for fact proposals; and forced-RLS
+  feedback/proposal tables in migration `012_customer_intelligence.sql`.
+- **Verified locally:** changed-file syntax checks, focused customer-intelligence
+  tests, and deterministic customer smoke at `390x844` and `1440x1000`.
+  Redacted local artifacts are under this worktree's `.local/qa-revenue-launch`.
+- **Deployed:** no deployment was performed by this increment. The existing
+  hosted image remains the separate production evidence recorded above.
+- **Externally verified:** none for these new routes, migration, or UI states.
+- **Paused by design:** binary PDF/DOCX extraction and provider-specific resume
+  parsing are not introduced here; the review-required proposal contract is
+  ready for a trusted parser/provider in the next increment.
+- **Blocked:** no implementation blocker. Full-repository verification in this
+  partial worktree needs root-level fixtures and the shared `date-fns`
+  dependency; the changed product files and focused suite are independently
+  covered.
+
+Next developer: run the full materialized-worktree suite, apply migration 012
+in a disposable tenant, connect the approved parser to the proposal endpoint,
+then deploy and repeat live tenant-isolation and customer smoke evidence before
+calling this increment externally verified.

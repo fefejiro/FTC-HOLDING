@@ -40,6 +40,7 @@ import {
   getProductApplicationEvidenceObject,
   getProductOnboarding,
   getProductResumeBySha,
+  getProductResumeFactProposal,
   getProductResumeObject,
   listProductConnections,
   listProductInterviewPrep,
@@ -51,12 +52,14 @@ import {
   productConversionAnalytics,
   productDashboard,
   productJobMatchExists,
+  recordProductRecommendationFeedback,
   createProductInterviewPrep,
   recordProductOutcome,
   requestProductConnection,
   revokeProductConnection,
   saveCareerTruthBank,
   saveProductOnboarding,
+  saveProductResumeFactProposal,
   saveProductResume,
   setProductAccountStatus
 } from "./product_repository.js";
@@ -111,6 +114,15 @@ import {
   verifyResendWebhook
 } from "./product_email.js";
 import type { ApplicationProof, ConnectorSource, ConnectorStatus } from "./product_domain.js";
+import {
+  CUSTOMER_ONBOARDING_STEPS,
+  RECOMMENDATION_FEEDBACK_REASONS,
+  mergeCustomerOnboardingRecord
+} from "./product_customer_intelligence.js";
+import type {
+  CustomerOnboardingStep,
+  RecommendationFeedbackReason
+} from "./product_customer_intelligence.js";
 import { connectorStatusSurface } from "./product_release_gates.js";
 import { validateResumeUpload } from "./product_resume.js";
 import { productSecretKeyring } from "./product_secret_crypto.js";
@@ -171,6 +183,20 @@ const onboardingSchema = z.object({
   workAuthorization: z.string().min(2).max(500),
   sponsorshipRequired: z.boolean(),
   timeZone: z.string().min(1).max(80).default("UTC"),
+  adjacentTitles: z.array(z.string().min(2).max(150)).max(30).default([]),
+  industries: z.array(z.string().min(2).max(120)).max(30).default([]),
+  excludedIndustries: z.array(z.string().max(120)).max(30).default([]),
+  seniority: z.string().max(100).default(""),
+  relocation: z.string().max(120).default(""),
+  compensationCurrency: z.string().max(20).default("CAD"),
+  compensationBasis: z.string().max(40).default("annual"),
+  skills: z.array(z.string().min(2).max(120)).max(60).default([]),
+  certifications: z.array(z.string().max(120)).max(30).default([]),
+  languages: z.array(z.string().max(80)).max(20).default([]),
+  urgency: z.string().max(80).default(""),
+  desiredVolume: z.string().max(80).default(""),
+  resumeStrategy: z.string().max(120).default("one_truthful_base_resume"),
+  notificationChannels: z.array(z.string().max(40)).max(10).default([]),
   consent: z.object({
     truthConfirmed: z.literal(true),
     recruiterDrafts: z.boolean(),
@@ -178,6 +204,16 @@ const onboardingSchema = z.object({
     assistedApplications: z.boolean(),
     controlledSubmissions: z.boolean()
   })
+});
+
+const onboardingStepSchema = z.string().refine(
+  (value): value is CustomerOnboardingStep => CUSTOMER_ONBOARDING_STEPS.includes(value as CustomerOnboardingStep)
+);
+
+const onboardingPatchSchema = z.object({
+  step: onboardingStepSchema,
+  data: z.record(z.unknown()),
+  final: z.boolean().default(false)
 });
 
 const resumeUploadSchema = z.object({
@@ -196,6 +232,21 @@ const careerTruthSchema = z.object({
     verificationStatus: z.literal("approved").optional(),
     provenance: z.record(z.string(), z.unknown()).optional()
   })).min(1).max(300)
+});
+
+const factProposalSchema = z.object({
+  facts: z.array(z.object({
+    category: z.string().min(2).max(80),
+    statement: z.string().min(3).max(1000),
+    provenance: z.record(z.string(), z.unknown()).optional()
+  })).min(1).max(300)
+});
+
+const recommendationFeedbackSchema = z.object({
+  reason: z.string().refine(
+    (value): value is RecommendationFeedbackReason => RECOMMENDATION_FEEDBACK_REASONS.includes(value as RecommendationFeedbackReason)
+  ),
+  note: z.string().max(500).optional()
 });
 
 const connectionSchema = z.object({
@@ -1375,13 +1426,58 @@ export async function createProductServer(storage: ProductObjectStorage = create
                 storageDriver: storage.driver,
                 isDefault: input.isDefault
               });
-              return { status: 201, body: { resume: saved } };
+              await recordFunnelEvent(
+                db,
+                user.id,
+                "resume_uploaded",
+                { mimeType: resume.mimeType },
+                `resume_uploaded:${String((saved as { id?: string }).id || resume.sha256)}`
+              );
+              return {
+                status: 201,
+                body: {
+                  resume: saved,
+                  nextAction: "review_resume_facts",
+                  factProposalStatus: "review_required"
+                }
+              };
             } catch (error) {
               if (!existing?.storageKey) {
                 await storage.deleteObject(storageKey).catch(() => undefined);
               }
               throw error;
             }
+          }
+        });
+      }
+      const resumeFactProposal = url.pathname.match(/^\/api\/v1\/resumes\/([0-9a-f-]{36})\/fact-proposal$/i);
+      if (req.method === "GET" && resumeFactProposal) {
+        return json(res, 200, {
+          proposal: await getProductResumeFactProposal(db, user.id, resumeFactProposal[1])
+        });
+      }
+      if (req.method === "POST" && resumeFactProposal) {
+        if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
+        const body = await readJson(req);
+        const input = factProposalSchema.parse(body);
+        return idempotentMutation(req, res, {
+          db, userId: user.id, requestPath: url.pathname, body,
+          action: async () => {
+            const proposal = await saveProductResumeFactProposal(
+              db,
+              user.id,
+              resumeFactProposal[1],
+              input.facts
+            );
+            if (!proposal) return { status: 404, body: { error: "Resume not found." } };
+            await recordFunnelEvent(
+              db,
+              user.id,
+              "career_facts_reviewed",
+              { status: "review_required" },
+              `career_facts_reviewed:${resumeFactProposal[1]}`
+            );
+            return { status: 201, body: { proposal } };
           }
         });
       }
@@ -1533,6 +1629,38 @@ export async function createProductServer(storage: ProductObjectStorage = create
       if (req.method === "GET" && url.pathname === "/api/v1/interview-prep") {
         return json(res, 200, { sessions: await listProductInterviewPrep(db, user.id) });
       }
+      const recommendationFeedback = url.pathname.match(
+        /^\/api\/v1\/recommendations\/([0-9a-f-]{36})\/feedback$/i
+      );
+      if (req.method === "PUT" && recommendationFeedback) {
+        if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
+        const body = await readJson(req);
+        const input = recommendationFeedbackSchema.parse(body);
+        if (!await productJobMatchExists(db, user.id, recommendationFeedback[1])) {
+          return json(res, 404, { error: "Recommendation was not found." });
+        }
+        return idempotentMutation(req, res, {
+          db, userId: user.id, requestPath: url.pathname, body,
+          action: async () => {
+            const feedback = await recordProductRecommendationFeedback(
+              db,
+              user.id,
+              recommendationFeedback[1],
+              input.reason,
+              input.note
+            );
+            if (!feedback) return { status: 404, body: { error: "Recommendation was not found." } };
+            await recordFunnelEvent(
+              db,
+              user.id,
+              "recommendation_rejected",
+              { reason: input.reason },
+              `recommendation_rejected:${recommendationFeedback[1]}`
+            );
+            return { status: 200, body: { feedback } };
+          }
+        });
+      }
       const jobInsight = url.pathname.match(/^\/api\/v1\/jobs\/([0-9a-f-]{36})\/insights$/i);
       if (req.method === "GET" && jobInsight) {
         const insight = await getProductJobInsight(db, user.id, jobInsight[1]);
@@ -1658,50 +1786,79 @@ export async function createProductServer(storage: ProductObjectStorage = create
       if (req.method === "PUT" && url.pathname === "/api/v1/onboarding") {
         if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
         const body = await readJson(req);
-        const record = onboardingSchema.parse(body);
-        const completed = record.consent.truthConfirmed;
+        const patch = onboardingPatchSchema.safeParse(body);
+        const existing = patch.success ? await getProductOnboarding(db, user.id) : null;
+        let record: z.infer<typeof onboardingSchema> | Record<string, unknown>;
+        let completed = false;
+        if (patch.success) {
+          const merged = mergeCustomerOnboardingRecord(
+            existing?.record || {},
+            patch.data.step,
+            patch.data.data
+          );
+          if (patch.data.final) {
+            record = onboardingSchema.parse(merged);
+            completed = true;
+          } else {
+            record = merged;
+            completed = Boolean(existing?.completed);
+          }
+        } else {
+          record = onboardingSchema.parse(body);
+          completed = Boolean((record as z.infer<typeof onboardingSchema>).consent.truthConfirmed);
+        }
         return idempotentMutation(req, res, {
           db, userId: user.id, requestPath: url.pathname, body,
           action: async () => ({
             status: 200,
             body: {
               onboarding: await (async () => {
+                const consent = (record as Record<string, any>).consent || {};
                 const onboarding = await saveProductOnboarding(db, user.id, {
                   record,
                   completed,
-                  consentVersion: CONSENT_VERSION,
-                  consentedAt: new Date().toISOString()
+                  consentVersion: completed ? CONSENT_VERSION : existing?.consentVersion || null,
+                  consentedAt: completed ? new Date().toISOString() : existing?.consentedAt || null
                 });
-                const policy = await saveAutomationPolicy(db, user.id, {
-                  mode: "approval_required",
-                  recruiterDrafts: record.consent.recruiterDrafts,
-                  recruiterSends: record.consent.recruiterSends,
-                  assistedApplications: record.consent.assistedApplications,
-                  controlledSubmissions: record.consent.controlledSubmissions,
-                  maxDraftsPerDay: 50,
-                  maxRecruiterSendsPerDay: 10,
-                  maxApplicationsPerDay: 10,
-                  maxApplicationsPerBoard: 5,
-                  quietHoursStart: 23,
-                  quietHoursEnd: 7,
-                  timeZone: record.timeZone
-                });
-                await recordConsentSnapshot(db, user.id, {
-                  career_truth: record.consent.truthConfirmed,
-                  recruiter_drafts: record.consent.recruiterDrafts,
-                  recruiter_sends: record.consent.recruiterSends,
-                  assisted_applications: record.consent.assistedApplications,
-                  controlled_submissions: record.consent.controlledSubmissions,
-                  google_data: false
-                }, policy as unknown as Record<string, unknown>);
-                await ensureConnectorCapabilities(db, user.id);
                 if (completed) {
+                  const policy = await saveAutomationPolicy(db, user.id, {
+                    mode: "approval_required",
+                    recruiterDrafts: Boolean(consent.recruiterDrafts),
+                    recruiterSends: Boolean(consent.recruiterSends),
+                    assistedApplications: Boolean(consent.assistedApplications),
+                    controlledSubmissions: Boolean(consent.controlledSubmissions),
+                    maxDraftsPerDay: 50,
+                    maxRecruiterSendsPerDay: 10,
+                    maxApplicationsPerDay: 10,
+                    maxApplicationsPerBoard: 5,
+                    quietHoursStart: 23,
+                    quietHoursEnd: 7,
+                    timeZone: String((record as Record<string, unknown>).timeZone || "UTC")
+                  });
+                  await recordConsentSnapshot(db, user.id, {
+                    career_truth: Boolean(consent.truthConfirmed),
+                    recruiter_drafts: Boolean(consent.recruiterDrafts),
+                    recruiter_sends: Boolean(consent.recruiterSends),
+                    assisted_applications: Boolean(consent.assistedApplications),
+                    controlled_submissions: Boolean(consent.controlledSubmissions),
+                    google_data: false
+                  }, policy as unknown as Record<string, unknown>);
+                  await ensureConnectorCapabilities(db, user.id);
                   await recordFunnelEvent(
                     db,
                     user.id,
                     "onboarding_completed",
                     {},
                     "onboarding_completed"
+                  );
+                }
+                if (patch.success) {
+                  await recordFunnelEvent(
+                    db,
+                    user.id,
+                    "onboarding_step_saved",
+                    { step: patch.data.step },
+                    `onboarding_step_saved:${patch.data.step}`
                   );
                 }
                 return onboarding;

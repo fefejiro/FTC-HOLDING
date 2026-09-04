@@ -8,8 +8,19 @@
     dashboard: null,
     plans: [],
     billing: null,
-    checkoutEnabled: false
+    checkoutEnabled: false,
+    onboardingStep: 0
   };
+
+  const onboardingSteps = [
+    { key: "goals", title: "Your goals", help: "Tell UnaScout what a good next role looks like." },
+    { key: "preferences", title: "Work preferences", help: "Set the locations, work style, and compensation that fit your life." },
+    { key: "eligibility", title: "Eligibility and strengths", help: "Give recommendations enough context to stay relevant and truthful." },
+    { key: "resume", title: "Resume and notifications", help: "Choose how your resume and updates should be handled." },
+    { key: "truth", title: "Career truth", help: "Your approval is the line between a useful suggestion and a claim." },
+    { key: "control", title: "Your control", help: "Choose what UnaScout may prepare and what always needs your approval." },
+    { key: "review", title: "Review your setup", help: "Check the profile before UnaScout starts ranking opportunities." }
+  ];
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
@@ -219,6 +230,84 @@
     setStatus(navigator.onLine ? "Signed out" : "Offline", "neutral");
   }
 
+  function collectOnboardingRecord(form) {
+    const data = new FormData(form);
+    const list = (name) => name === "locations"
+      ? String(data.get(name) || "").split(/\r?\n/).map((item) => item.trim()).filter(Boolean)
+      : splitLines(data.get(name));
+    return {
+      fullName: text(data.get("fullName")),
+      phone: text(data.get("phone")),
+      location: text(data.get("location")),
+      timeZone: text(data.get("timeZone"), "UTC"),
+      linkedIn: text(data.get("linkedIn")),
+      targetTitles: list("targetTitles"),
+      adjacentTitles: list("adjacentTitles"),
+      excludedTitles: list("excludedTitles"),
+      industries: list("industries"),
+      excludedIndustries: list("excludedIndustries"),
+      locations: list("locations"),
+      workModes: data.getAll("workModes"),
+      employmentTypes: list("employmentTypes"),
+      seniority: text(data.get("seniority")),
+      relocation: text(data.get("relocation")),
+      compensationFloor: text(data.get("compensationFloor")),
+      compensationCurrency: text(data.get("compensationCurrency"), "CAD"),
+      compensationBasis: text(data.get("compensationBasis"), "annual"),
+      workAuthorization: text(data.get("workAuthorization")),
+      sponsorshipRequired: data.get("sponsorshipRequired") === "true",
+      skills: list("skills"),
+      certifications: list("certifications"),
+      languages: list("languages"),
+      urgency: text(data.get("urgency")),
+      desiredVolume: text(data.get("desiredVolume")),
+      resumeStrategy: text(data.get("resumeStrategy"), "one_truthful_base_resume"),
+      notificationChannels: data.getAll("notificationChannels"),
+      consent: {
+        truthConfirmed: data.has("truthConfirmed"),
+        recruiterDrafts: data.has("recruiterDrafts"),
+        recruiterSends: data.has("recruiterSends"),
+        assistedApplications: data.has("assistedApplications"),
+        controlledSubmissions: data.has("controlledSubmissions")
+      }
+    };
+  }
+
+  function renderOnboardingReview(record) {
+    const review = $("#onboarding-review");
+    if (!review) return;
+    review.replaceChildren();
+    const rows = [
+      ["Target roles", (record.targetTitles || []).join(", ")],
+      ["Locations", (record.locations || []).join(", ")],
+      ["Work modes", (record.workModes || []).join(", ")],
+      ["Employment", (record.employmentTypes || []).join(", ")],
+      ["Compensation", [record.compensationFloor, record.compensationCurrency, record.compensationBasis].filter(Boolean).join(" ")],
+      ["Control", record.consent?.controlledSubmissions ? "Controlled submissions enabled" : "Approval required"]
+    ];
+    for (const [label, value] of rows) {
+      const row = document.createElement("p");
+      const strong = document.createElement("strong");
+      strong.textContent = `${label}: `;
+      row.append(strong, document.createTextNode(value || "Not set"));
+      review.append(row);
+    }
+  }
+
+  function setOnboardingStep(index, record = collectOnboardingRecord($("#onboarding-form"))) {
+    state.onboardingStep = Math.min(Math.max(index, 0), onboardingSteps.length - 1);
+    const step = onboardingSteps[state.onboardingStep];
+    for (const panel of $$('[data-onboarding-panel]')) panel.hidden = panel.dataset.onboardingPanel !== step.key;
+    $("#onboarding-step-title").textContent = step.title;
+    $("#onboarding-step-help").textContent = step.help;
+    $("#onboarding-step-count").textContent = `Step ${state.onboardingStep + 1} of ${onboardingSteps.length}`;
+    $("#onboarding-progress").style.width = `${((state.onboardingStep + 1) / onboardingSteps.length) * 100}%`;
+    $("#onboarding-back").hidden = state.onboardingStep === 0;
+    $("#onboarding-next").hidden = state.onboardingStep === onboardingSteps.length - 1;
+    $("#onboarding-complete").hidden = state.onboardingStep !== onboardingSteps.length - 1;
+    if (state.onboardingStep === onboardingSteps.length - 1) renderOnboardingReview(record);
+  }
+
   function populateOnboarding(onboarding) {
     const form = $("#onboarding-form");
     const record = onboarding?.record || {};
@@ -229,17 +318,29 @@
       "timeZone",
       "linkedIn",
       "compensationFloor",
-      "workAuthorization"
+      "workAuthorization",
+      "seniority",
+      "relocation",
+      "compensationCurrency",
+      "compensationBasis",
+      "urgency",
+      "desiredVolume",
+      "resumeStrategy"
     ]) {
-      if (record[key] !== undefined) form.elements[key].value = record[key];
+      if (record[key] !== undefined && form.elements[key]) form.elements[key].value = record[key];
     }
-    for (const key of ["targetTitles", "excludedTitles", "locations", "employmentTypes"]) {
-      if (Array.isArray(record[key])) form.elements[key].value = record[key].join("\n");
+    for (const key of [
+      "targetTitles", "adjacentTitles", "excludedTitles", "industries", "excludedIndustries",
+      "locations", "employmentTypes", "skills", "certifications", "languages"
+    ]) {
+      if (Array.isArray(record[key]) && form.elements[key]) form.elements[key].value = record[key].join("\n");
     }
-    for (const checkbox of $$('input[name="workModes"]', form)) {
-      checkbox.checked = Array.isArray(record.workModes) && record.workModes.includes(checkbox.value);
+    for (const name of ["workModes", "notificationChannels"]) {
+      for (const checkbox of $$(`input[name="${name}"]`, form)) {
+        checkbox.checked = Array.isArray(record[name]) && record[name].includes(checkbox.value);
+      }
     }
-    if (record.sponsorshipRequired !== undefined) {
+    if (record.sponsorshipRequired !== undefined && form.elements.sponsorshipRequired) {
       form.elements.sponsorshipRequired.value = String(record.sponsorshipRequired);
     }
     const consent = record.consent || {};
@@ -252,6 +353,11 @@
     ]) {
       form.elements[key].checked = Boolean(consent[key]);
     }
+    const progress = record._progress?.currentStep;
+    const savedIndex = onboarding?.completed
+      ? onboardingSteps.length - 1
+      : onboardingSteps.findIndex((step) => step.key === progress);
+    setOnboardingStep(savedIndex >= 0 ? savedIndex : 0, record);
   }
 
   function populatePolicy(policy) {
@@ -272,6 +378,30 @@
       "controlledSubmissions"
     ]) {
       if (policy[key] !== undefined) form.elements[key].value = String(policy[key]);
+    }
+  }
+
+  async function loadFactProposal(resumeId) {
+    const panel = $("#fact-proposal-panel");
+    const form = $("#fact-proposal-form");
+    if (!panel || !form) return;
+    if (!resumeId) {
+      panel.hidden = true;
+      return;
+    }
+    form.elements.resumeId.value = resumeId;
+    try {
+      const { proposal } = await api(`/api/v1/resumes/${encodeURIComponent(resumeId)}/fact-proposal`);
+      panel.hidden = false;
+      form.elements.facts.value = (proposal?.facts || [])
+        .map((fact) => fact.statement)
+        .join("\n");
+      setResult(
+        "#fact-proposal-result",
+        proposal ? `Status: ${statusLabel(proposal.status)}. Approve facts below only after review.` : "No proposal has been saved for this resume yet."
+      );
+    } catch {
+      panel.hidden = true;
     }
   }
 
@@ -312,6 +442,8 @@
         vault.append(row);
       }
     }
+    const selectedResume = resumes.find((resume) => resume.isDefault) || resumes[0];
+    await loadFactProposal(selectedResume?.id);
     $("#truth-form").elements.facts.value = (truth.truthBank?.facts || [])
       .map((fact) => fact.statement)
       .join("\n");
@@ -439,11 +571,13 @@
         actions.className = "actions";
         actions.append(
           actionButton("Analyze fit", "job-insight", job.id),
-          actionButton("Prepare interview", "interview-prep", job.id)
+          actionButton("Prepare interview", "interview-prep", job.id),
+          actionButton("Not a fit", "feedback", job.id, "subtle")
         );
         return recordItem(
           job.title || "Opportunity",
           [
+            `Why: ${Array.isArray(job.reasons) && job.reasons.length ? job.reasons.slice(0, 3).join("; ") : "Ranked from your approved profile"}`,
             [job.company, job.location, job.source].filter(Boolean).join(" · "),
             `${Number(job.score || 0)}% match · ${statusLabel(job.status)}`
           ],
@@ -776,36 +910,36 @@
   $("#onboarding-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = event.currentTarget;
-    const data = new FormData(form);
-    const payload = {
-      fullName: data.get("fullName"),
-      phone: data.get("phone"),
-      location: data.get("location"),
-      timeZone: data.get("timeZone"),
-      linkedIn: data.get("linkedIn"),
-      targetTitles: splitLines(data.get("targetTitles")),
-      excludedTitles: splitLines(data.get("excludedTitles")),
-      locations: splitLines(data.get("locations")),
-      workModes: data.getAll("workModes"),
-      employmentTypes: splitLines(data.get("employmentTypes")),
-      compensationFloor: data.get("compensationFloor"),
-      workAuthorization: data.get("workAuthorization"),
-      sponsorshipRequired: data.get("sponsorshipRequired") === "true",
-      consent: {
-        truthConfirmed: data.has("truthConfirmed"),
-        recruiterDrafts: data.has("recruiterDrafts"),
-        recruiterSends: data.has("recruiterSends"),
-        assistedApplications: data.has("assistedApplications"),
-        controlledSubmissions: data.has("controlledSubmissions")
+    const action = event.submitter?.value || "next";
+    if (action === "back") {
+      setOnboardingStep(state.onboardingStep - 1);
+      return;
+    }
+    const record = collectOnboardingRecord(form);
+    if (action === "next") {
+      try {
+        await api("/api/v1/onboarding", {
+          method: "PUT",
+          body: JSON.stringify({
+            step: onboardingSteps[state.onboardingStep].key,
+            data: record,
+            final: false
+          })
+        });
+        setResult("#profile-result", "Progress saved.", "good");
+        setOnboardingStep(state.onboardingStep + 1, record);
+      } catch (error) {
+        setResult("#profile-result", error.message, "danger");
       }
-    };
+      return;
+    }
     try {
       await api("/api/v1/onboarding", {
         method: "PUT",
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ step: "review", data: record, final: true })
       });
-      setResult("#profile-result", "Profile and consent saved.", "good");
-      await loadDashboard();
+      setResult("#profile-result", "Setup complete. UnaScout can now rank opportunities against your preferences.", "good");
+      await loadWorkspace();
     } catch (error) {
       setResult("#profile-result", error.message, "danger");
     }
@@ -858,7 +992,7 @@
           ? "application/pdf"
           : "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
       );
-      await api("/api/v1/resumes", {
+      const uploaded = await api("/api/v1/resumes", {
         method: "POST",
         body: JSON.stringify({
           filename: file.name,
@@ -868,7 +1002,8 @@
         })
       });
       form.reset();
-      setResult("#resume-result", "Resume stored in the private vault.", "good");
+      setResult("#resume-result", "Resume stored in the private vault. Review proposed facts before using it for analysis.", "good");
+      await loadFactProposal(uploaded.resume?.id);
       await Promise.all([loadResumes(), loadDashboard()]);
     } catch (error) {
       setResult("#resume-result", error.message, "danger");
@@ -888,6 +1023,29 @@
       await Promise.all([loadResumes(), loadDashboard()]);
     } catch (error) {
       setResult("#resume-result", error.message, "danger");
+    }
+  });
+
+  $("#fact-proposal-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const facts = splitLines(new FormData(form).get("facts")).map((statement) => ({
+      category: "resume",
+      statement,
+      provenance: { source: "user_reviewed_resume_proposal" }
+    }));
+    if (!facts.length) {
+      setResult("#fact-proposal-result", "Add at least one proposed fact.", "danger");
+      return;
+    }
+    try {
+      await api(`/api/v1/resumes/${encodeURIComponent(form.elements.resumeId.value)}/fact-proposal`, {
+        method: "POST",
+        body: JSON.stringify({ facts })
+      });
+      setResult("#fact-proposal-result", "Saved as review required. Approve accurate facts below.", "good");
+    } catch (error) {
+      setResult("#fact-proposal-result", error.message, "danger");
     }
   });
 
@@ -988,6 +1146,34 @@
       } catch (error) {
         showNotice("#account-banner", error.message, "danger");
       }
+      return;
+    }
+    if (button.dataset.action === "feedback") {
+      const form = $("#feedback-form");
+      form.reset();
+      form.elements.jobMatchId.value = jobMatchId;
+      setResult("#feedback-result", "");
+      $("#feedback-dialog").showModal();
+    }
+  });
+
+  $("#feedback-form").addEventListener("submit", async (event) => {
+    if (event.submitter?.value === "cancel") return;
+    event.preventDefault();
+    const form = event.currentTarget;
+    try {
+      await api(`/api/v1/recommendations/${encodeURIComponent(form.elements.jobMatchId.value)}/feedback`, {
+        method: "PUT",
+        body: JSON.stringify({
+          reason: form.elements.reason.value,
+          note: form.elements.note.value
+        })
+      });
+      $("#feedback-dialog").close();
+      showNotice("#account-banner", "Feedback saved. Future recommendations will use this signal.", "good");
+      await Promise.all([loadDashboard(), loadAudit()]);
+    } catch (error) {
+      setResult("#feedback-result", error.message, "danger");
     }
   });
 

@@ -101,30 +101,89 @@
 
       <section class="view" data-view-panel="profile">
         <div class="page-heading"><div><p class="eyebrow">Candidate record</p><h1>Profile and policy</h1></div></div>
-        <form id="onboarding-form" class="section-form">
-          <div class="form-grid">
-            <label>Full name<input name="fullName" required></label>
-            <label>Phone<input name="phone" autocomplete="tel" required></label>
-            <label>Location<input name="location" required></label>
-            <label>Time zone<input name="timeZone" value="America/Toronto" required></label>
-            <label class="wide">LinkedIn URL<input name="linkedIn" type="url" required></label>
-            <label>Target titles<textarea name="targetTitles" required></textarea></label>
-            <label>Excluded titles<textarea name="excludedTitles"></textarea></label>
-            <label>Preferred locations<textarea name="locations" required></textarea></label>
-            <label>Employment types<textarea name="employmentTypes" required></textarea></label>
-            <fieldset><legend>Work modes</legend><label class="check"><input name="workModes" value="remote" type="checkbox">Remote</label><label class="check"><input name="workModes" value="hybrid" type="checkbox">Hybrid</label><label class="check"><input name="workModes" value="onsite" type="checkbox">Onsite</label></fieldset>
-            <label>Minimum compensation<input name="compensationFloor" required></label>
-            <label class="wide">Work authorization<input name="workAuthorization" required></label>
-            <label>Sponsorship<select name="sponsorshipRequired"><option value="false">Not required</option><option value="true">Required</option></select></label>
+        <form id="onboarding-form" class="section-form" data-wizard novalidate>
+          <div class="wizard-heading">
+            <div><p class="eyebrow">Personalized setup</p><h2 id="onboarding-step-title">Your goals</h2></div>
+            <span id="onboarding-step-count" class="status-chip neutral">Step 1 of 7</span>
           </div>
-          <fieldset class="consent-block"><legend>Consent</legend>
-            <label class="check"><input name="truthConfirmed" type="checkbox" required>My professional information is truthful.</label>
-            <label class="check"><input name="recruiterDrafts" type="checkbox">Prepare recruiter drafts.</label>
-            <label class="check"><input name="recruiterSends" type="checkbox">Send only approved recruiter replies.</label>
-            <label class="check"><input name="assistedApplications" type="checkbox">Prepare and assist with applications.</label>
-            <label class="check"><input name="controlledSubmissions" type="checkbox">Submit only when every answer and channel rule is covered.</label>
+          <div class="progress-track" aria-hidden="true"><span id="onboarding-progress"></span></div>
+          <p id="onboarding-step-help" class="field-help">Tell UnaScout what a good next role looks like.</p>
+
+          <fieldset data-onboarding-panel="goals">
+            <legend>About you and the roles you want</legend>
+            <div class="form-grid">
+              <label>Full name<input name="fullName" autocomplete="name"></label>
+              <label>Phone<input name="phone" autocomplete="tel"></label>
+              <label class="wide">LinkedIn URL<input name="linkedIn" type="url" autocomplete="url"></label>
+              <label>Target titles<textarea name="targetTitles" placeholder="Business Analyst&#10;IT Manager"></textarea></label>
+              <label>Adjacent titles<textarea name="adjacentTitles" placeholder="Business Systems Analyst"></textarea></label>
+              <label>Titles to exclude<textarea name="excludedTitles"></textarea></label>
+            </div>
           </fieldset>
-          <button class="button primary" type="submit">Save profile</button>
+
+          <fieldset data-onboarding-panel="preferences" hidden>
+            <legend>Where and how you want to work</legend>
+            <div class="form-grid">
+              <label>Current location<input name="location" autocomplete="address-level2"></label>
+              <label>Time zone<input name="timeZone" value="America/Toronto"></label>
+              <label>Preferred locations<textarea name="locations" placeholder="Toronto, ON&#10;Remote - Canada"></textarea></label>
+              <label>Employment types<textarea name="employmentTypes" placeholder="Permanent&#10;Contract"></textarea></label>
+              <fieldset><legend>Work modes</legend><label class="check"><input name="workModes" value="remote" type="checkbox">Remote</label><label class="check"><input name="workModes" value="hybrid" type="checkbox">Hybrid</label><label class="check"><input name="workModes" value="onsite" type="checkbox">Onsite</label></fieldset>
+              <label>Relocation<select name="relocation"><option value="">No preference</option><option value="not_open">Not open to relocation</option><option value="open">Open to relocation</option><option value="supported_only">Only with relocation support</option></select></label>
+              <label>Industries<textarea name="industries" placeholder="Retail, logistics, public sector"></textarea></label>
+              <label>Industries to exclude<textarea name="excludedIndustries"></textarea></label>
+              <label>Seniority<input name="seniority" placeholder="Manager / Senior / Director"></label>
+              <label>Search urgency<select name="urgency"><option value="">No preference</option><option value="exploring">Exploring</option><option value="active">Actively searching</option><option value="urgent">Urgent transition</option></select></label>
+              <label>Target volume<select name="desiredVolume"><option value="">No preference</option><option value="focused">1-3 strong matches weekly</option><option value="steady">4-10 matches weekly</option><option value="high_intent">More opportunities, more review</option></select></label>
+              <label>Minimum compensation<input name="compensationFloor" placeholder="100000"></label>
+              <label>Currency<select name="compensationCurrency"><option value="CAD">CAD</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option></select></label>
+              <label>Compensation basis<select name="compensationBasis"><option value="annual">Annual</option><option value="hourly">Hourly</option><option value="monthly">Monthly</option></select></label>
+            </div>
+          </fieldset>
+
+          <fieldset data-onboarding-panel="eligibility" hidden>
+            <legend>Eligibility and strengths</legend>
+            <div class="form-grid">
+              <label class="wide">Work authorization<input name="workAuthorization" placeholder="Countries where you can work and any conditions"></label>
+              <label>Sponsorship<select name="sponsorshipRequired"><option value="false">Not required</option><option value="true">Required</option></select></label>
+              <label>Core skills<textarea name="skills" placeholder="ERP, requirements, stakeholder delivery"></textarea></label>
+              <label>Certifications<textarea name="certifications"></textarea></label>
+              <label>Languages<textarea name="languages" placeholder="English"></textarea></label>
+            </div>
+          </fieldset>
+
+          <fieldset data-onboarding-panel="resume" hidden>
+            <legend>Resume and notifications</legend>
+            <div class="content-band inset-band"><strong>Keep the source of truth clear.</strong><p>Upload a resume from the Resumes view after this setup. UnaScout can propose facts for review, but only facts you approve can power matching or tailoring.</p></div>
+            <div class="form-grid">
+              <label>Resume strategy<select name="resumeStrategy"><option value="one_truthful_base_resume">One truthful base resume</option><option value="role_variants">Role-specific truthful variants</option><option value="review_each_package">Review every tailored package</option></select></label>
+              <fieldset><legend>Notifications</legend><label class="check"><input name="notificationChannels" value="email" type="checkbox">Email</label><label class="check"><input name="notificationChannels" value="in_app" type="checkbox">In app</label><label class="check"><input name="notificationChannels" value="none" type="checkbox">Only when I open UnaScout</label></fieldset>
+            </div>
+          </fieldset>
+
+          <fieldset data-onboarding-panel="truth" hidden>
+            <legend>Career truth</legend>
+            <div class="content-band inset-band"><strong>Accuracy is the product.</strong><p>After uploading your resume, review proposed facts and approve only what is accurate. This keeps recommendations and packages grounded in your experience.</p></div>
+            <label class="check"><input name="truthConfirmed" type="checkbox">I will review and approve the professional facts UnaScout uses.</label>
+          </fieldset>
+
+          <fieldset data-onboarding-panel="control" hidden>
+            <legend>Choose your level of control</legend>
+            <div class="form-grid">
+              <label class="check"><input name="recruiterDrafts" type="checkbox">Prepare recruiter drafts.</label>
+              <label class="check"><input name="recruiterSends" type="checkbox">Send only approved recruiter replies.</label>
+              <label class="check"><input name="assistedApplications" type="checkbox">Prepare and assist with applications.</label>
+              <label class="check"><input name="controlledSubmissions" type="checkbox">Submit only when every answer and channel rule is covered.</label>
+            </div>
+          </fieldset>
+
+          <fieldset data-onboarding-panel="review" hidden>
+            <legend>Review your setup</legend>
+            <div id="onboarding-review" class="content-band inset-band"></div>
+            <p class="field-help">You can change these preferences at any time. UnaScout will keep unapproved resume facts out of analysis.</p>
+          </fieldset>
+
+          <div class="wizard-actions"><button id="onboarding-back" class="button secondary" type="submit" name="wizardAction" value="back" hidden>Back</button><button id="onboarding-next" class="button primary" type="submit" name="wizardAction" value="next">Continue</button><button id="onboarding-complete" class="button primary" type="submit" name="wizardAction" value="complete" hidden>Complete setup</button></div>
           <p id="profile-result" class="form-result" aria-live="polite"></p>
         </form>
         <form id="policy-form" class="section-form compact-form">
@@ -157,6 +216,16 @@
         </form>
         <p id="resume-result" class="form-result" aria-live="polite"></p>
         <div id="resume-list" class="vault-list"></div>
+        <section id="fact-proposal-panel" class="content-band" hidden>
+          <h2>Review proposed facts</h2>
+          <p class="field-help">These statements remain unverified until you approve them below.</p>
+          <form id="fact-proposal-form" class="section-form compact-form">
+            <input name="resumeId" type="hidden">
+            <label>Proposed facts, one per line<textarea name="facts" class="tall"></textarea></label>
+            <button class="button secondary" type="submit">Save for review</button>
+            <p id="fact-proposal-result" class="form-result" aria-live="polite"></p>
+          </form>
+        </section>
         <form id="truth-form" class="section-form">
           <h2>Approved career facts</h2>
           <label>One verified fact per line<textarea name="facts" class="tall" required></textarea></label>
@@ -270,6 +339,19 @@
       <label>Complete job description<textarea name="jobDescription" class="tall" minlength="50" required></textarea></label>
       <div class="actions"><button class="button primary" value="analyze" type="submit">Analyze</button><button class="button secondary" value="cancel" formmethod="dialog">Cancel</button></div>
       <div id="job-insight-result" class="analysis-result" aria-live="polite"></div>
+    </form>
+  </dialog>
+
+  <dialog id="feedback-dialog">
+    <form id="feedback-form" class="section-form" method="dialog">
+      <h2>Improve this recommendation</h2>
+      <input name="jobMatchId" type="hidden">
+      <label>Why is this not a fit?<select name="reason">
+        <option value="company">Company</option><option value="location">Location</option><option value="salary">Salary</option><option value="title">Title</option><option value="seniority">Seniority</option><option value="industry">Industry</option><option value="skills">Skills</option><option value="work_arrangement">Work arrangement</option><option value="authorization">Work authorization</option><option value="already_applied">Already applied</option><option value="not_interested">Not interested</option><option value="other">Other</option>
+      </select></label>
+      <label>Optional note<textarea name="note" maxlength="500"></textarea></label>
+      <div class="actions"><button class="button primary" value="save" type="submit">Save feedback</button><button class="button secondary" value="cancel" formmethod="dialog">Cancel</button></div>
+      <p id="feedback-result" class="form-result" aria-live="polite"></p>
     </form>
   </dialog>
 

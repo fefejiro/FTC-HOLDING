@@ -158,3 +158,23 @@ This evidence claims a live backend and responsive customer proof for the exact
 deployed SHA stated above. It does not claim active customer billing, a genuine
 paid transaction, TestFlight availability, Play testing, store review, or public
 store availability.
+
+## Customer Intelligence Increment - 2026-09-03
+
+This is a repository increment on `agent/unascout-customer-intelligence`; it is
+not part of the deployed SHA above.
+
+- **Completed:** customer-intelligence onboarding wizard, resumable progress,
+  preference and eligibility capture, review-required resume fact proposals,
+  recommendation explanations and feedback, funnel instrumentation, export
+  inclusion, and forced-RLS migration `012_customer_intelligence.sql`.
+- **Locally verified:** focused tests, JavaScript syntax, and deterministic
+  customer smoke at `390x844` and `1440x1000`. Screenshots are retained under
+  `D:\FTC-HOLDING-worktrees\unascout-customer-intelligence\APPS\job-reply-agent\.local\qa-revenue-launch`.
+- **Deployed:** not deployed. The production SHA and hosted evidence in this
+  document remain unchanged.
+- **Externally verified:** none for this increment.
+- **Paused:** provider-neutral PDF/DOCX fact extraction is deferred until an
+  approved parser can preserve source provenance and customer review.
+- **Blocked:** no code blocker; live verification awaits migration/deployment
+  and a fully materialized test environment.

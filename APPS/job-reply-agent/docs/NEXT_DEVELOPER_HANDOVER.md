@@ -202,3 +202,26 @@ workflow.
 Update `ops/CONTINUOUS_AGENT_HANDOVER.md`, run checks proportional to the change,
 commit only scoped files, push the branch, and update the active draft PR. Record
 completed, deployed, verified, paused, and blocked states separately.
+
+## Customer Intelligence Increment - 2026-09-03
+
+- **Completed:** branch `agent/unascout-customer-intelligence` adds a resumable
+  seven-step customer onboarding flow, richer job-search preferences, explicit
+  eligibility and approval controls, review-required resume fact proposals,
+  explainable recommendation feedback, and new funnel events.
+- **Data boundary:** migration `012_customer_intelligence.sql` uses forced RLS
+  for resume fact proposals and recommendation feedback. Repository methods
+  verify tenant ownership before reading or mutating either resource, and
+  account export includes fact proposals.
+- **Local proof:** focused tests pass; customer smoke passes at both required
+  viewports. Local screenshots are in `.local/qa-revenue-launch` and are not
+  live-release evidence.
+- **Not deployed or externally verified:** this increment has not been
+  migrated, deployed, or run against the hosted domain. Existing production
+  evidence above is unchanged.
+- **Paused:** resume binary extraction/provider wiring remains intentionally
+  deferred. Users or a trusted provider can submit candidate facts, which stay
+  `review_required` until the customer approves them.
+- **Next step:** materialize the complete repository, run full tests/typecheck,
+  migrate a disposable tenant, deploy the exact branch commit, and capture live
+  auth, isolation, export, feedback, and deletion evidence.
