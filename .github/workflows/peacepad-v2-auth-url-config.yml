@@ -4,13 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: Read provider status or apply the native redirect contract
+        description: Read provider status or apply an approved Auth contract
         required: true
         default: auth-urls
         type: choice
         options:
           - auth-urls
           - provider-status
+          - native-apple
+          - social-providers
       project_ref:
         description: Approved PeacePad production Supabase project ref
         required: true
@@ -131,3 +133,168 @@ jobs:
               appleClientAudiencePresent: $appleClientIds,
               secretsPrinted: false
             }'
+
+  configure-native-apple:
+    if: inputs.operation == 'native-apple' && inputs.confirmation == 'CONFIGURE PEACEPAD NATIVE APPLE PROVIDER'
+    name: Configure and verify native Sign in with Apple
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: peacepad-v2-staging-ca
+    steps:
+      - name: Validate the approved native Apple contract
+        shell: bash
+        env:
+          PROJECT_REF: ${{ inputs.project_ref }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          test "$PROJECT_REF" = "rohvkyuxbnqzglaromms"
+          test "$CONFIRMATION" = "CONFIGURE PEACEPAD NATIVE APPLE PROVIDER"
+
+      - name: Configure native Apple and read back redacted status
+        shell: bash
+        env:
+          PROJECT_REF: ${{ inputs.project_ref }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          api="https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth"
+          before="$(mktemp)"
+          after="$(mktemp)"
+          trap 'rm -f "$before" "$after"' EXIT
+          auth_header="Authorization: Bearer $SUPABASE_ACCESS_TOKEN"
+
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+            --connect-timeout 20 --max-time 60 \
+            --header "$auth_header" --header 'accept: application/json' \
+            "$api" --output "$before"
+          jq -e '.external_email_enabled == true and (.disable_signup // false) == false' "$before" >/dev/null
+
+          payload="$(jq -cn '{
+            external_apple_enabled: true,
+            external_apple_client_id: "ca.peacepad.family",
+            security_manual_linking_enabled: true
+          }')"
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+            --connect-timeout 20 --max-time 60 --request PATCH \
+            --header "$auth_header" --header 'accept: application/json' \
+            --header 'content-type: application/json' \
+            --data "$payload" "$api" --output "$after"
+
+          jq -e '
+            .external_email_enabled == true and
+            (.disable_signup // false) == false and
+            .external_apple_enabled == true and
+            ((.external_apple_client_id // "") | split(",") | index("ca.peacepad.family")) and
+            .security_manual_linking_enabled == true
+          ' "$after" >/dev/null
+          jq -n '{
+            providerConfiguration: "native-apple",
+            emailEnabled: true,
+            appleEnabled: true,
+            appleNativeAudiencePresent: true,
+            manualLinkingEnabled: true,
+            signupSettingUnchanged: true,
+            secretsPrinted: false
+          }'
+
+  configure-social-providers:
+    if: inputs.operation == 'social-providers' && inputs.confirmation == 'CONFIGURE PEACEPAD SOCIAL PROVIDERS'
+    name: Configure and verify Google plus Apple providers
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: peacepad-v2-staging-ca
+    steps:
+      - name: Validate provider inputs before mutation
+        shell: bash
+        env:
+          PROJECT_REF: ${{ inputs.project_ref }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.PEACEPAD_GOOGLE_WEB_CLIENT_ID }}
+          GOOGLE_ADDITIONAL_CLIENT_IDS: ${{ secrets.PEACEPAD_GOOGLE_ADDITIONAL_CLIENT_IDS }}
+          GOOGLE_WEB_CLIENT_SECRET: ${{ secrets.PEACEPAD_GOOGLE_WEB_CLIENT_SECRET }}
+          APPLE_CLIENT_IDS: ${{ secrets.PEACEPAD_APPLE_CLIENT_IDS }}
+          APPLE_CLIENT_SECRET: ${{ secrets.PEACEPAD_APPLE_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          test "$PROJECT_REF" = "rohvkyuxbnqzglaromms"
+          test "$CONFIRMATION" = "CONFIGURE PEACEPAD SOCIAL PROVIDERS"
+          test -n "$GOOGLE_WEB_CLIENT_ID"
+          test -n "$GOOGLE_ADDITIONAL_CLIENT_IDS"
+          test -n "$GOOGLE_WEB_CLIENT_SECRET"
+          test -n "$APPLE_CLIENT_IDS"
+          test -n "$APPLE_CLIENT_SECRET"
+          [[ "$GOOGLE_WEB_CLIENT_ID" == *.apps.googleusercontent.com ]]
+          [[ "$APPLE_CLIENT_IDS" == *"ca.peacepad.family"* ]]
+          echo 'All required provider inputs are present and structurally valid; no values were printed.'
+
+      - name: Configure providers and read back redacted status
+        shell: bash
+        env:
+          PROJECT_REF: ${{ inputs.project_ref }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.PEACEPAD_GOOGLE_WEB_CLIENT_ID }}
+          GOOGLE_ADDITIONAL_CLIENT_IDS: ${{ secrets.PEACEPAD_GOOGLE_ADDITIONAL_CLIENT_IDS }}
+          GOOGLE_WEB_CLIENT_SECRET: ${{ secrets.PEACEPAD_GOOGLE_WEB_CLIENT_SECRET }}
+          APPLE_CLIENT_IDS: ${{ secrets.PEACEPAD_APPLE_CLIENT_IDS }}
+          APPLE_CLIENT_SECRET: ${{ secrets.PEACEPAD_APPLE_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          api="https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth"
+          before="$(mktemp)"
+          after="$(mktemp)"
+          payload="$(mktemp)"
+          trap 'rm -f "$before" "$after" "$payload"' EXIT
+          auth_header="Authorization: Bearer $SUPABASE_ACCESS_TOKEN"
+
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+            --connect-timeout 20 --max-time 60 \
+            --header "$auth_header" --header 'accept: application/json' \
+            "$api" --output "$before"
+          jq -e '.external_email_enabled == true and (.disable_signup // false) == false' "$before" >/dev/null
+
+          jq -cn \
+            --arg googleClient "$GOOGLE_WEB_CLIENT_ID" \
+            --arg googleAdditional "$GOOGLE_ADDITIONAL_CLIENT_IDS" \
+            --arg googleSecret "$GOOGLE_WEB_CLIENT_SECRET" \
+            --arg appleClients "$APPLE_CLIENT_IDS" \
+            --arg appleSecret "$APPLE_CLIENT_SECRET" \
+            '{
+              external_google_enabled: true,
+              external_google_client_id: $googleClient,
+              external_google_additional_client_ids: $googleAdditional,
+              external_google_secret: $googleSecret,
+              external_apple_enabled: true,
+              external_apple_client_id: $appleClients,
+              external_apple_secret: $appleSecret,
+              security_manual_linking_enabled: true
+            }' >"$payload"
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+            --connect-timeout 20 --max-time 60 --request PATCH \
+            --header "$auth_header" --header 'accept: application/json' \
+            --header 'content-type: application/json' \
+            --data-binary "@$payload" "$api" --output "$after"
+
+          jq -e \
+            --arg googleClient "$GOOGLE_WEB_CLIENT_ID" \
+            --arg appleNative "ca.peacepad.family" '
+              .external_email_enabled == true and
+              (.disable_signup // false) == false and
+              .external_google_enabled == true and
+              .external_google_client_id == $googleClient and
+              ((.external_google_additional_client_ids // "") | length > 0) and
+              .external_apple_enabled == true and
+              ((.external_apple_client_id // "") | split(",") | index($appleNative)) and
+              .security_manual_linking_enabled == true
+            ' "$after" >/dev/null
+          jq -n '{
+            providerConfiguration: "google-and-apple",
+            emailEnabled: true,
+            googleEnabled: true,
+            appleEnabled: true,
+            manualLinkingEnabled: true,
+            signupSettingUnchanged: true,
+            secretsPrinted: false
+          }'
