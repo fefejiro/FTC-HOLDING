@@ -371,3 +371,14 @@ The resume proposal endpoint deliberately treats extracted or entered facts as
 `review_required`. Proposed and rejected facts must not be consumed by package
 generation, job answers, or recruiter replies until a customer-approved fact
 path is connected and verified.
+
+### Repair state
+
+The 2026-09-03 repair expands the journey to nine stages and makes consent,
+proposal, feedback, and control-mode contracts explicit. It is implemented in
+source and locally smoke-tested, but is **not deployed** and has no external
+verification receipt. Migration 012 is the normalized proposal model for this
+branch; no deployed-migration receipt was found requiring a follow-up 013.
+PostgreSQL isolation, queue behavior, and hosted release proof remain paused
+until a controlled deployment. Full local suite/typecheck are blocked by
+incomplete dependency hydration in the isolated worktree.

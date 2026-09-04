@@ -1,11 +1,24 @@
+-- Customer intelligence is normalized: one reviewable fact per row. This
+-- branch has no deployment receipt for migration 012, so the earlier JSON
+-- proposal draft is replaced rather than carried as a second model.
 CREATE TABLE IF NOT EXISTS product_resume_fact_proposals (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES product_users(id) ON DELETE CASCADE,
   resume_id uuid NOT NULL REFERENCES product_resumes(id) ON DELETE CASCADE,
-  facts jsonb NOT NULL DEFAULT '[]'::jsonb,
-  status text NOT NULL DEFAULT 'review_required'
-    CHECK (status IN ('review_required', 'approved', 'rejected')),
-  source text NOT NULL DEFAULT 'resume_upload',
+  resume_document_id uuid REFERENCES resume_documents(id) ON DELETE SET NULL,
+  resume_version_id uuid REFERENCES resume_versions(id) ON DELETE SET NULL,
+  category text NOT NULL CHECK (length(trim(category)) BETWEEN 2 AND 80),
+  statement text NOT NULL CHECK (length(trim(statement)) BETWEEN 3 AND 1000),
+  original_statement text NOT NULL CHECK (length(trim(original_statement)) BETWEEN 3 AND 1000),
+  source_location text NOT NULL,
+  extraction_method text NOT NULL,
+  provenance_state text NOT NULL DEFAULT 'proposed'
+    CHECK (provenance_state IN ('proposed', 'customer_edited', 'customer_confirmed')),
+  status text NOT NULL DEFAULT 'proposed'
+    CHECK (status IN ('proposed', 'approved', 'rejected', 'superseded')),
+  supersedes_id uuid REFERENCES product_resume_fact_proposals(id) ON DELETE SET NULL,
+  reviewed_at timestamptz,
+  reviewed_by uuid REFERENCES product_users(id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );

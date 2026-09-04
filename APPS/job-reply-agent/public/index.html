@@ -104,7 +104,7 @@
         <form id="onboarding-form" class="section-form" data-wizard novalidate>
           <div class="wizard-heading">
             <div><p class="eyebrow">Personalized setup</p><h2 id="onboarding-step-title">Your goals</h2></div>
-            <span id="onboarding-step-count" class="status-chip neutral">Step 1 of 7</span>
+            <span id="onboarding-step-count" class="status-chip neutral">Step 1 of 9</span>
           </div>
           <div class="progress-track" aria-hidden="true"><span id="onboarding-progress"></span></div>
           <p id="onboarding-step-help" class="field-help">Tell UnaScout what a good next role looks like.</p>
@@ -121,31 +121,50 @@
             </div>
           </fieldset>
 
-          <fieldset data-onboarding-panel="preferences" hidden>
+          <fieldset data-onboarding-panel="location" hidden>
             <legend>Where and how you want to work</legend>
             <div class="form-grid">
               <label>Current location<input name="location" autocomplete="address-level2"></label>
               <label>Time zone<input name="timeZone" value="America/Toronto"></label>
               <label>Preferred locations<textarea name="locations" placeholder="Toronto, ON&#10;Remote - Canada"></textarea></label>
-              <label>Employment types<textarea name="employmentTypes" placeholder="Permanent&#10;Contract"></textarea></label>
               <fieldset><legend>Work modes</legend><label class="check"><input name="workModes" value="remote" type="checkbox">Remote</label><label class="check"><input name="workModes" value="hybrid" type="checkbox">Hybrid</label><label class="check"><input name="workModes" value="onsite" type="checkbox">Onsite</label></fieldset>
               <label>Relocation<select name="relocation"><option value="">No preference</option><option value="not_open">Not open to relocation</option><option value="open">Open to relocation</option><option value="supported_only">Only with relocation support</option></select></label>
-              <label>Industries<textarea name="industries" placeholder="Retail, logistics, public sector"></textarea></label>
-              <label>Industries to exclude<textarea name="excludedIndustries"></textarea></label>
-              <label>Seniority<input name="seniority" placeholder="Manager / Senior / Director"></label>
+            </div>
+          </fieldset>
+
+          <fieldset data-onboarding-panel="employment" hidden>
+            <legend>Employment preferences</legend>
+            <div class="form-grid">
+              <label>Employment types<textarea name="employmentTypes" placeholder="Permanent&#10;Contract"></textarea></label>
               <label>Search urgency<select name="urgency"><option value="">No preference</option><option value="exploring">Exploring</option><option value="active">Actively searching</option><option value="urgent">Urgent transition</option></select></label>
               <label>Target volume<select name="desiredVolume"><option value="">No preference</option><option value="focused">1-3 strong matches weekly</option><option value="steady">4-10 matches weekly</option><option value="high_intent">More opportunities, more review</option></select></label>
+            </div>
+          </fieldset>
+
+          <fieldset data-onboarding-panel="compensation" hidden>
+            <legend>Compensation</legend>
+            <div class="form-grid">
               <label>Minimum compensation<input name="compensationFloor" placeholder="100000"></label>
               <label>Currency<select name="compensationCurrency"><option value="CAD">CAD</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option></select></label>
               <label>Compensation basis<select name="compensationBasis"><option value="annual">Annual</option><option value="hourly">Hourly</option><option value="monthly">Monthly</option></select></label>
+              <label class="check"><input name="compensationPrivate" type="checkbox" checked>Keep compensation preferences private.</label>
             </div>
           </fieldset>
 
           <fieldset data-onboarding-panel="eligibility" hidden>
-            <legend>Eligibility and strengths</legend>
+            <legend>Work eligibility</legend>
             <div class="form-grid">
               <label class="wide">Work authorization<input name="workAuthorization" placeholder="Countries where you can work and any conditions"></label>
               <label>Sponsorship<select name="sponsorshipRequired"><option value="false">Not required</option><option value="true">Required</option></select></label>
+            </div>
+          </fieldset>
+
+          <fieldset data-onboarding-panel="strengths" hidden>
+            <legend>Strengths and industries</legend>
+            <div class="form-grid">
+              <label>Industries<textarea name="industries" placeholder="Retail, logistics, public sector"></textarea></label>
+              <label>Industries to exclude<textarea name="excludedIndustries"></textarea></label>
+              <label>Seniority<input name="seniority" placeholder="Manager / Senior / Director"></label>
               <label>Core skills<textarea name="skills" placeholder="ERP, requirements, stakeholder delivery"></textarea></label>
               <label>Certifications<textarea name="certifications"></textarea></label>
               <label>Languages<textarea name="languages" placeholder="English"></textarea></label>
@@ -153,34 +172,34 @@
           </fieldset>
 
           <fieldset data-onboarding-panel="resume" hidden>
-            <legend>Resume and notifications</legend>
-            <div class="content-band inset-band"><strong>Keep the source of truth clear.</strong><p>Upload a resume from the Resumes view after this setup. UnaScout can propose facts for review, but only facts you approve can power matching or tailoring.</p></div>
+            <legend>Resumes and notifications</legend>
+            <div class="content-band inset-band"><strong>Keep the source of truth clear.</strong><p>Upload one or more resumes here. UnaScout keeps the original and lets you choose a default before matching.</p></div>
             <div class="form-grid">
+              <label>Upload a resume<input name="onboardingResume" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></label>
+              <label class="check"><input name="onboardingResumeDefault" type="checkbox">Make this the default resume.</label>
               <label>Resume strategy<select name="resumeStrategy"><option value="one_truthful_base_resume">One truthful base resume</option><option value="role_variants">Role-specific truthful variants</option><option value="review_each_package">Review every tailored package</option></select></label>
               <fieldset><legend>Notifications</legend><label class="check"><input name="notificationChannels" value="email" type="checkbox">Email</label><label class="check"><input name="notificationChannels" value="in_app" type="checkbox">In app</label><label class="check"><input name="notificationChannels" value="none" type="checkbox">Only when I open UnaScout</label></fieldset>
             </div>
           </fieldset>
 
-          <fieldset data-onboarding-panel="truth" hidden>
-            <legend>Career truth</legend>
-            <div class="content-band inset-band"><strong>Accuracy is the product.</strong><p>After uploading your resume, review proposed facts and approve only what is accurate. This keeps recommendations and packages grounded in your experience.</p></div>
-            <label class="check"><input name="truthConfirmed" type="checkbox">I will review and approve the professional facts UnaScout uses.</label>
-          </fieldset>
-
           <fieldset data-onboarding-panel="control" hidden>
             <legend>Choose your level of control</legend>
             <div class="form-grid">
+              <fieldset><legend>Mode</legend><label class="check"><input name="controlMode" value="review" type="radio" checked>Review: approve every package.</label><label class="check"><input name="controlMode" value="assisted" type="radio">Assisted: prepare analysis and packages; sensitive and submission actions still require approval.</label></fieldset>
+              <label>Daily application limit<input name="dailyApplicationLimit" type="number" min="0" max="10" value="5"></label>
+              <label>Quiet hours start<input name="quietHoursStart" type="number" min="0" max="23" value="23"></label>
+              <label>Quiet hours end<input name="quietHoursEnd" type="number" min="0" max="23" value="7"></label>
               <label class="check"><input name="recruiterDrafts" type="checkbox">Prepare recruiter drafts.</label>
               <label class="check"><input name="recruiterSends" type="checkbox">Send only approved recruiter replies.</label>
-              <label class="check"><input name="assistedApplications" type="checkbox">Prepare and assist with applications.</label>
-              <label class="check"><input name="controlledSubmissions" type="checkbox">Submit only when every answer and channel rule is covered.</label>
+              <input name="assistedApplications" type="hidden" value="false"><input name="controlledSubmissions" type="hidden" value="false">
             </div>
           </fieldset>
 
           <fieldset data-onboarding-panel="review" hidden>
             <legend>Review your setup</legend>
             <div id="onboarding-review" class="content-band inset-band"></div>
-            <p class="field-help">You can change these preferences at any time. UnaScout will keep unapproved resume facts out of analysis.</p>
+            <label class="check"><input name="truthConfirmed" type="checkbox">I confirm my profile and will approve the professional facts UnaScout uses.</label>
+            <p class="field-help">Edit links return you to the relevant step. Unapproved resume facts stay out of analysis.</p>
           </fieldset>
 
           <div class="wizard-actions"><button id="onboarding-back" class="button secondary" type="submit" name="wizardAction" value="back" hidden>Back</button><button id="onboarding-next" class="button primary" type="submit" name="wizardAction" value="next">Continue</button><button id="onboarding-complete" class="button primary" type="submit" name="wizardAction" value="complete" hidden>Complete setup</button></div>
@@ -189,7 +208,7 @@
         <form id="policy-form" class="section-form compact-form">
           <h2>Automation policy</h2>
           <div class="form-grid">
-            <label>Mode<select name="mode"><option value="assist">Assist</option><option value="approval_required">Approval required</option><option value="controlled_autopilot">Controlled autopilot</option></select></label>
+            <label>Mode<select name="mode"><option value="approval_required">Review</option><option value="assist">Assisted</option></select></label>
             <label>Time zone<input name="timeZone" required></label>
             <label>Draft cap<input name="maxDraftsPerDay" type="number" min="0" max="50" required></label>
             <label>Recruiter send cap<input name="maxRecruiterSendsPerDay" type="number" min="0" max="10" required></label>
@@ -225,6 +244,7 @@
             <button class="button secondary" type="submit">Save for review</button>
             <p id="fact-proposal-result" class="form-result" aria-live="polite"></p>
           </form>
+          <div id="proposal-facts-list" class="vault-list" aria-live="polite"></div>
         </section>
         <form id="truth-form" class="section-form">
           <h2>Approved career facts</h2>

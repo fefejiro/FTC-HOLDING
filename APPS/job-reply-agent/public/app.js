@@ -14,10 +14,12 @@
 
   const onboardingSteps = [
     { key: "goals", title: "Your goals", help: "Tell UnaScout what a good next role looks like." },
-    { key: "preferences", title: "Work preferences", help: "Set the locations, work style, and compensation that fit your life." },
-    { key: "eligibility", title: "Eligibility and strengths", help: "Give recommendations enough context to stay relevant and truthful." },
-    { key: "resume", title: "Resume and notifications", help: "Choose how your resume and updates should be handled." },
-    { key: "truth", title: "Career truth", help: "Your approval is the line between a useful suggestion and a claim." },
+    { key: "location", title: "Location and work style", help: "Set the places and work arrangements that fit your life." },
+    { key: "employment", title: "Employment preferences", help: "Tell UnaScout how you want your search paced." },
+    { key: "compensation", title: "Compensation", help: "Set a private compensation floor and pay basis." },
+    { key: "eligibility", title: "Work eligibility", help: "Keep authorization and sponsorship requirements country-scoped." },
+    { key: "strengths", title: "Strengths", help: "Give recommendations enough context to stay relevant." },
+    { key: "resume", title: "Resumes and notifications", help: "Choose your source resume and how updates should arrive." },
     { key: "control", title: "Your control", help: "Choose what UnaScout may prepare and what always needs your approval." },
     { key: "review", title: "Review your setup", help: "Check the profile before UnaScout starts ranking opportunities." }
   ];
@@ -254,6 +256,7 @@
       compensationFloor: text(data.get("compensationFloor")),
       compensationCurrency: text(data.get("compensationCurrency"), "CAD"),
       compensationBasis: text(data.get("compensationBasis"), "annual"),
+      compensationPrivate: data.has("compensationPrivate"),
       workAuthorization: text(data.get("workAuthorization")),
       sponsorshipRequired: data.get("sponsorshipRequired") === "true",
       skills: list("skills"),
@@ -263,14 +266,58 @@
       desiredVolume: text(data.get("desiredVolume")),
       resumeStrategy: text(data.get("resumeStrategy"), "one_truthful_base_resume"),
       notificationChannels: data.getAll("notificationChannels"),
+      controlMode: data.get("controlMode") || "review",
+      quietHoursStart: Number(data.get("quietHoursStart") || 23),
+      quietHoursEnd: Number(data.get("quietHoursEnd") || 7),
+      dailyApplicationLimit: Number(data.get("dailyApplicationLimit") || 5),
       consent: {
         truthConfirmed: data.has("truthConfirmed"),
         recruiterDrafts: data.has("recruiterDrafts"),
         recruiterSends: data.has("recruiterSends"),
-        assistedApplications: data.has("assistedApplications"),
-        controlledSubmissions: data.has("controlledSubmissions")
+        assistedApplications: data.get("assistedApplications") === "true",
+        controlledSubmissions: data.get("controlledSubmissions") === "true"
       }
     };
+  }
+
+  const onboardingFieldMap = {
+    goals: ["fullName", "phone", "linkedIn", "targetTitles", "adjacentTitles", "excludedTitles"],
+    location: ["location", "timeZone", "locations", "workModes", "relocation"],
+    employment: ["employmentTypes", "urgency", "desiredVolume"],
+    compensation: ["compensationFloor", "compensationCurrency", "compensationBasis", "compensationPrivate"],
+    eligibility: ["workAuthorization", "sponsorshipRequired"],
+    strengths: ["industries", "excludedIndustries", "seniority", "skills", "certifications", "languages"],
+    resume: ["resumeStrategy", "notificationChannels"],
+    control: ["controlMode", "quietHoursStart", "quietHoursEnd", "dailyApplicationLimit", "consent"],
+    review: ["consent"]
+  };
+
+  function onboardingStepData(record, key) {
+    const data = {};
+    for (const field of onboardingFieldMap[key] || []) if (record[field] !== undefined) data[field] = record[field];
+    return data;
+  }
+
+  async function uploadOnboardingResume(form) {
+    const file = form.elements.onboardingResume?.files?.[0];
+    if (!file) return;
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(",")[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    await api("/api/v1/resumes", {
+      method: "POST",
+      body: JSON.stringify({
+        filename: file.name,
+        mimeType: file.type || (/\.pdf$/i.test(file.name) ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+        base64,
+        isDefault: form.elements.onboardingResumeDefault.checked
+      })
+    });
+    form.elements.onboardingResume.value = "";
+    form.elements.onboardingResumeDefault.checked = false;
   }
 
   function renderOnboardingReview(record) {
@@ -283,13 +330,15 @@
       ["Work modes", (record.workModes || []).join(", ")],
       ["Employment", (record.employmentTypes || []).join(", ")],
       ["Compensation", [record.compensationFloor, record.compensationCurrency, record.compensationBasis].filter(Boolean).join(" ")],
-      ["Control", record.consent?.controlledSubmissions ? "Controlled submissions enabled" : "Approval required"]
+      ["Control", record.controlMode === "assisted" ? "Assisted preparation" : "Review required"]
     ];
-    for (const [label, value] of rows) {
+    for (const [index, [label, value]] of rows.entries()) {
       const row = document.createElement("p");
       const strong = document.createElement("strong");
       strong.textContent = `${label}: `;
       row.append(strong, document.createTextNode(value || "Not set"));
+      const edit = actionButton("Edit", "onboarding-edit", onboardingSteps[index]?.key || "goals", "subtle");
+      row.append(document.createTextNode(" "), edit);
       review.append(row);
     }
   }
@@ -323,6 +372,9 @@
       "relocation",
       "compensationCurrency",
       "compensationBasis",
+      "quietHoursStart",
+      "quietHoursEnd",
+      "dailyApplicationLimit",
       "urgency",
       "desiredVolume",
       "resumeStrategy"
@@ -343,6 +395,12 @@
     if (record.sponsorshipRequired !== undefined && form.elements.sponsorshipRequired) {
       form.elements.sponsorshipRequired.value = String(record.sponsorshipRequired);
     }
+    if (record.compensationPrivate !== undefined && form.elements.compensationPrivate) {
+      form.elements.compensationPrivate.checked = Boolean(record.compensationPrivate);
+    }
+    for (const radio of $$('input[name="controlMode"]', form)) {
+      radio.checked = radio.value === (record.controlMode || "review");
+    }
     const consent = record.consent || {};
     for (const key of [
       "truthConfirmed",
@@ -354,9 +412,9 @@
       form.elements[key].checked = Boolean(consent[key]);
     }
     const progress = record._progress?.currentStep;
-    const savedIndex = onboarding?.completed
-      ? onboardingSteps.length - 1
-      : onboardingSteps.findIndex((step) => step.key === progress);
+    const completedSteps = new Set(record._progress?.completedSteps || []);
+    const nextIncomplete = onboardingSteps.findIndex((step) => !completedSteps.has(step.key));
+    const savedIndex = onboarding?.completed ? onboardingSteps.length - 1 : nextIncomplete >= 0 ? nextIncomplete : 0;
     setOnboardingStep(savedIndex >= 0 ? savedIndex : 0, record);
   }
 
@@ -393,9 +451,27 @@
     try {
       const { proposal } = await api(`/api/v1/resumes/${encodeURIComponent(resumeId)}/fact-proposal`);
       panel.hidden = false;
-      form.elements.facts.value = (proposal?.facts || [])
+      const facts = proposal?.facts || [];
+      form.elements.facts.value = facts
         .map((fact) => fact.statement)
         .join("\n");
+      const list = $("#proposal-facts-list");
+      if (list) {
+        list.replaceChildren();
+        for (const fact of facts) {
+          const item = document.createElement("div");
+          item.className = "vault-row";
+          const copy = document.createElement("span");
+          copy.textContent = `${fact.statement} (${statusLabel(fact.status)})`;
+          item.append(copy);
+          if (["proposed", "rejected"].includes(fact.status)) {
+            item.append(actionButton("Approve", "fact-transition", `${resumeId}:${fact.id}:approve`, "secondary"));
+            item.append(actionButton("Reject", "fact-transition", `${resumeId}:${fact.id}:reject`, "subtle"));
+            item.append(actionButton("Edit", "fact-edit", `${resumeId}:${fact.id}`, "subtle"));
+          }
+          list.append(item);
+        }
+      }
       setResult(
         "#fact-proposal-result",
         proposal ? `Status: ${statusLabel(proposal.status)}. Approve facts below only after review.` : "No proposal has been saved for this resume yet."
@@ -579,7 +655,7 @@
           [
             `Why: ${Array.isArray(job.reasons) && job.reasons.length ? job.reasons.slice(0, 3).join("; ") : "Ranked from your approved profile"}`,
             [job.company, job.location, job.source].filter(Boolean).join(" · "),
-            `${Number(job.score || 0)}% match · ${statusLabel(job.status)}`
+            `${Number(job.adjustedScore ?? job.score ?? 0)}% match · ${statusLabel(job.status)}${job.learningApplied ? " · adjusted from your feedback" : ""}`
           ],
           { url: job.jobUrl, actions }
         );
@@ -918,11 +994,12 @@
     const record = collectOnboardingRecord(form);
     if (action === "next") {
       try {
+        if (onboardingSteps[state.onboardingStep].key === "resume") await uploadOnboardingResume(form);
         await api("/api/v1/onboarding", {
           method: "PUT",
           body: JSON.stringify({
             step: onboardingSteps[state.onboardingStep].key,
-            data: record,
+            data: onboardingStepData(record, onboardingSteps[state.onboardingStep].key),
             final: false
           })
         });
@@ -936,13 +1013,20 @@
     try {
       await api("/api/v1/onboarding", {
         method: "PUT",
-        body: JSON.stringify({ step: "review", data: record, final: true })
+        body: JSON.stringify({ step: "review", data: onboardingStepData(record, "review"), final: true })
       });
       setResult("#profile-result", "Setup complete. UnaScout can now rank opportunities against your preferences.", "good");
       await loadWorkspace();
     } catch (error) {
       setResult("#profile-result", error.message, "danger");
     }
+  });
+
+  $("#onboarding-review")?.addEventListener("click", (event) => {
+    const button = event.target.closest('[data-action="onboarding-edit"]');
+    if (!button) return;
+    const index = onboardingSteps.findIndex((step) => step.key === button.dataset.value);
+    if (index >= 0) setOnboardingStep(index, collectOnboardingRecord($("#onboarding-form")));
   });
 
   $("#policy-form").addEventListener("submit", async (event) => {
@@ -1044,6 +1128,29 @@
         body: JSON.stringify({ facts })
       });
       setResult("#fact-proposal-result", "Saved as review required. Approve accurate facts below.", "good");
+    } catch (error) {
+      setResult("#fact-proposal-result", error.message, "danger");
+    }
+  });
+
+  $("#proposal-facts-list")?.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-action]");
+    if (!button) return;
+    const parts = button.dataset.value.split(":");
+    const resumeId = parts[0];
+    const factId = parts[1];
+    const action = button.dataset.action === "fact-edit" ? "edit" : parts[2];
+    let statement;
+    if (action === "edit") {
+      statement = prompt("Edit this fact while keeping the original extraction:", button.parentElement?.querySelector("span")?.textContent?.replace(/ \([^)]*\)$/, ""));
+      if (statement === null) return;
+    }
+    try {
+      await api(`/api/v1/resumes/${encodeURIComponent(resumeId)}/fact-proposal/${encodeURIComponent(factId)}`, {
+        method: "PATCH", body: JSON.stringify({ action, ...(statement ? { statement } : {}) })
+      });
+      await loadFactProposal(resumeId);
+      await Promise.all([loadResumes(), loadDashboard()]);
     } catch (error) {
       setResult("#fact-proposal-result", error.message, "danger");
     }
@@ -1170,7 +1277,7 @@
         })
       });
       $("#feedback-dialog").close();
-      showNotice("#account-banner", "Feedback saved. Future recommendations will use this signal.", "good");
+      showNotice("#account-banner", "Feedback saved. Matching for your workspace has been updated.", "good");
       await Promise.all([loadDashboard(), loadAudit()]);
     } catch (error) {
       setResult("#feedback-result", error.message, "danger");

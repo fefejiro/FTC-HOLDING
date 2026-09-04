@@ -227,3 +227,23 @@ completed, deployed, verified, paused, and blocked states separately.
 - **Next step:** materialize the complete repository, run full tests/typecheck,
   migrate a disposable tenant, deploy the exact branch commit, and capture live
   auth, isolation, export, feedback, and deletion evidence.
+
+## Customer Intelligence Repair - 2026-09-03
+
+- This section supersedes the earlier seven-step summary. **Implemented:**
+  nine-stage resumable onboarding with active-step-only saves,
+  resume upload/default selection, explicit consent confirmation, fail-closed
+  revocation, Review/Assisted controls, normalized fact proposal lifecycle,
+  server-owned provenance, and tenant-owned deterministic feedback learning.
+- **Local evidence:** focused repair/mobile/release tests (`18` passed), store
+  metadata checks, and customer smoke passed at `390x844` and `1440x1000`.
+  Screenshots are local-only under `.local/qa-revenue-launch`.
+- **Not deployed or externally verified:** do not claim hosted migration, live
+  isolation, connector proof, store readiness, or production readiness from
+  this branch.
+- **Paused:** disposable PostgreSQL two-tenant proof and hosted acceptance
+  await deployment of migration 012.
+- **Blocked:** full-suite/typecheck completion needs a complete dependency tree;
+  this isolated tree has unresolved `googleapis`, `date-fns`, and AWS SDK
+  transitive package manifests. Do not change package metadata to work around
+  it.

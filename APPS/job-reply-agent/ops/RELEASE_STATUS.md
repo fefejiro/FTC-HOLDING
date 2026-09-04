@@ -182,4 +182,24 @@ Pushed source commit: `c56c6f193`.
   deferred; proposals remain review-required until customer approval.
 - **Blocked:** no implementation blocker. Full-repository checks need the
   complete materialized worktree and shared `date-fns` dependency; live proof
-  needs a deployment with migration 012 applied.
+needs a deployment with migration 012 applied.
+
+## Customer Intelligence Repair - 2026-09-03
+
+- **Implemented:** nine-stage onboarding with active-step persistence,
+  resume/default selection, explicit consent confirmation, fail-closed
+  revocation, Review/Assisted policy controls, normalized fact proposal
+  lifecycle, server-owned provenance, and tenant-owned deterministic feedback
+  learning.
+- **Locally verified:** focused repair/mobile/release tests (`18` passed), store
+  metadata checks, and customer smoke at `390x844` and `1440x1000`. The smoke
+  caught and verified the review-renderer fix; screenshots remain under
+  `.local/qa-revenue-launch`.
+- **Deployed:** no. Existing production evidence is unchanged; no new release
+  SHA, migration receipt, or deployment identifier is claimed.
+- **Externally verified:** none for the repair.
+- **Paused:** disposable PostgreSQL two-tenant proof and hosted acceptance await
+  deployment of migration 012.
+- **Blocked:** full-repository Vitest/typecheck could not complete because the
+  isolated worktree dependency tree is incomplete (`googleapis`, `date-fns`,
+  and AWS SDK transitive manifests). Package metadata was not changed.

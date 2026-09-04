@@ -1,14 +1,28 @@
 export const CUSTOMER_ONBOARDING_STEPS = [
   "goals",
-  "preferences",
+  "location",
+  "employment",
+  "compensation",
   "eligibility",
+  "strengths",
   "resume",
-  "truth",
   "control",
   "review"
 ] as const;
 
 export type CustomerOnboardingStep = typeof CUSTOMER_ONBOARDING_STEPS[number];
+
+export const CUSTOMER_ONBOARDING_STEP_FIELDS: Readonly<Record<CustomerOnboardingStep, readonly string[]>> = {
+  goals: ["fullName", "phone", "linkedIn", "targetTitles", "adjacentTitles", "excludedTitles"],
+  location: ["location", "timeZone", "locations", "workModes", "relocation"],
+  employment: ["employmentTypes", "urgency", "desiredVolume"],
+  compensation: ["compensationFloor", "compensationCurrency", "compensationBasis", "compensationPrivate"],
+  eligibility: ["workAuthorization", "sponsorshipRequired"],
+  strengths: ["industries", "excludedIndustries", "seniority", "skills", "certifications", "languages"],
+  resume: ["resumeStrategy", "notificationChannels"],
+  control: ["controlMode", "quietHoursStart", "quietHoursEnd", "dailyApplicationLimit", "consent"],
+  review: ["consent"]
+};
 
 export const RECOMMENDATION_FEEDBACK_REASONS = [
   "company",
@@ -43,6 +57,8 @@ const stringFields = new Set([
   "resumeStrategy"
 ]);
 
+const numberFields = new Set(["quietHoursStart", "quietHoursEnd", "dailyApplicationLimit"]);
+
 const listFields = new Set([
   "targetTitles",
   "adjacentTitles",
@@ -58,7 +74,7 @@ const listFields = new Set([
   "notificationChannels"
 ]);
 
-const booleanFields = new Set(["sponsorshipRequired"]);
+const booleanFields = new Set(["sponsorshipRequired", "compensationPrivate"]);
 
 function cleanString(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
@@ -88,7 +104,9 @@ export function mergeCustomerOnboardingRecord(
   now = new Date().toISOString()
 ): Record<string, unknown> {
   const record: Record<string, unknown> = { ...existing };
+  const allowedFields = new Set(CUSTOMER_ONBOARDING_STEP_FIELDS[step]);
   for (const [key, value] of Object.entries(data)) {
+    if (!allowedFields.has(key)) continue;
     if (stringFields.has(key)) {
       const cleaned = cleanString(value);
       if (cleaned !== undefined) record[key] = cleaned;
@@ -97,10 +115,12 @@ export function mergeCustomerOnboardingRecord(
     } else if (booleanFields.has(key)) {
       const cleaned = cleanBoolean(value);
       if (cleaned !== undefined) record[key] = cleaned;
+    } else if (numberFields.has(key) && typeof value === "number" && Number.isInteger(value)) {
+      record[key] = value;
     }
   }
 
-  if (data.consent && typeof data.consent === "object" && !Array.isArray(data.consent)) {
+  if (allowedFields.has("consent") && data.consent && typeof data.consent === "object" && !Array.isArray(data.consent)) {
     const existingConsent = record.consent && typeof record.consent === "object" && !Array.isArray(record.consent)
       ? record.consent as Record<string, unknown>
       : {};
@@ -124,6 +144,32 @@ export function mergeCustomerOnboardingRecord(
     updatedAt: now
   };
   return record;
+}
+
+export function onboardingConsentChanged(
+  previous: Record<string, unknown> | null | undefined,
+  next: Record<string, unknown>
+): boolean {
+  const keys = ["truthConfirmed", "recruiterDrafts", "recruiterSends", "assistedApplications", "controlledSubmissions"];
+  const oldConsent = previous?.consent && typeof previous.consent === "object"
+    ? previous.consent as Record<string, unknown>
+    : {};
+  const newConsent = next.consent && typeof next.consent === "object"
+    ? next.consent as Record<string, unknown>
+    : {};
+  return keys.some((key) => Boolean(oldConsent[key]) !== Boolean(newConsent[key]));
+}
+
+export function onboardingRecordHasValidConsent(record: Record<string, unknown> | null | undefined): boolean {
+  if (!record) return false;
+  const consent = record.consent && typeof record.consent === "object"
+    ? record.consent as Record<string, unknown>
+    : {};
+  return consent.truthConfirmed === true;
+}
+
+export function automationModeForCustomer(value: unknown): "assist" | "approval_required" {
+  return value === "assisted" ? "assist" : "approval_required";
 }
 
 export function customerOnboardingProgress(record: Record<string, unknown> | null | undefined) {

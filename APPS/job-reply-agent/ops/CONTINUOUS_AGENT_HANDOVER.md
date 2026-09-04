@@ -285,3 +285,29 @@ Next developer: run the full materialized-worktree suite, apply migration 012
 in a disposable tenant, connect the approved parser to the proposal endpoint,
 then deploy and repeat live tenant-isolation and customer smoke evidence before
 calling this increment externally verified.
+
+## Customer Intelligence Repair - 2026-09-03
+
+This repair supersedes the seven-step description above. It is source-only on
+`agent/unascout-customer-intelligence`.
+
+- **Implemented:** nine onboarding stages with active-step-only saves,
+  resumable progress, resume upload/default selection, authorization,
+  compensation privacy, quiet hours, daily limits, and Review/Assisted
+  controls. Ordinary edits preserve consent; explicit final confirmation is
+  required for consent changes; revocation fails closed.
+- **Implemented:** normalized migration-012 Career Truth proposals with
+  server-owned resume/document/version provenance, proposed/approved/rejected/
+  superseded transitions, preserved originals, and approved-only generation
+  inputs. Recommendation feedback is deterministic and tenant-owned.
+- **Verified locally:** focused repair/mobile/release tests (`18` passed), store
+  metadata checks, and customer smoke at `390x844` and `1440x1000`. Redacted
+  screenshots are under `.local/qa-revenue-launch`.
+- **Deployed:** not deployed; no migration receipt, hosted SHA, or deployment
+  identifier is claimed.
+- **Externally verified:** none for this repair.
+- **Paused:** PostgreSQL two-tenant proof and hosted acceptance await a
+  controlled migration/deployment run.
+- **Blocked:** full-repository Vitest/typecheck verification is blocked by
+  incomplete local dependency hydration (`googleapis`, `date-fns`, and AWS SDK
+  transitive manifests). No dependency metadata was changed.

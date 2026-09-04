@@ -180,4 +180,26 @@ Pushed source commit: `c56c6f193`.
 - **Paused:** provider-neutral PDF/DOCX fact extraction is deferred until an
   approved parser can preserve source provenance and customer review.
 - **Blocked:** no code blocker; live verification awaits migration/deployment
-  and a fully materialized test environment.
+and a fully materialized test environment.
+
+## Customer Intelligence Repair - 2026-09-03
+
+This repair is source-only and is not part of the deployed release SHA above.
+
+- **Completed:** nine-stage resumable onboarding; explicit Review/Assisted
+  policy mapping; consent-preserving ordinary edits and fail-closed revocation;
+  normalized Career Truth proposal lifecycle with server-owned provenance;
+  tenant-owned deterministic recommendation learning; and approved-only
+  generation inputs.
+- **Locally tested:** focused customer-intelligence/mobile/release tests (`18`
+  passed), store metadata checks, and customer smoke passed at `390x844` and
+  `1440x1000` after a real review-renderer fix. Redacted screenshots are in
+  `D:\FTC-HOLDING-worktrees\unascout-customer-intelligence\APPS\job-reply-agent\.local\qa-revenue-launch`.
+- **Deployed:** not deployed; hosted SHA and provider evidence above are
+  unchanged.
+- **Externally verified:** none for this repair.
+- **Paused:** live tenant isolation, PostgreSQL/RLS proof, queue audit, and
+  hosted smoke require a deliberate migration/deployment run.
+- **Blocked:** full suite and TypeScript verification were attempted but the
+  isolated dependency tree lacks resolvable `googleapis`, `date-fns`, and AWS
+  SDK transitive manifests. No dependency metadata was changed.

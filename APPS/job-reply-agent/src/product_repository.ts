@@ -136,11 +136,23 @@ export async function getProductResumeFactProposal(
 ): Promise<unknown | null> {
   return withTenant(userId, async (client) => {
     const result = await client.query(
-      `SELECT id, resume_id AS "resumeId", facts, status, source,
-              created_at AS "createdAt", updated_at AS "updatedAt"
+      `SELECT resume_id AS "resumeId",
+              jsonb_agg(jsonb_build_object(
+                'id', id, 'category', category, 'statement', statement,
+                'originalStatement', original_statement,
+                'sourceLocation', source_location,
+                'extractionMethod', extraction_method,
+                'provenanceState', provenance_state, 'status', status,
+                'supersedesId', supersedes_id, 'reviewedAt', reviewed_at,
+                'createdAt', created_at, 'updatedAt', updated_at
+              ) ORDER BY created_at) AS facts,
+              CASE WHEN bool_and(status='approved') THEN 'approved'
+                   WHEN bool_and(status='rejected') THEN 'rejected'
+                   ELSE 'proposed' END AS status,
+              min(created_at) AS "createdAt", max(updated_at) AS "updatedAt"
          FROM product_resume_fact_proposals
         WHERE user_id=$1 AND resume_id=$2
-        ORDER BY updated_at DESC LIMIT 1`,
+        GROUP BY resume_id`,
       [userId, resumeId]
     );
     return result.rows[0] || null;
@@ -157,35 +169,165 @@ export async function saveProductResumeFactProposal(
     provenance?: Record<string, unknown>;
   }>
 ): Promise<unknown | null> {
-  const proposedFacts = facts.map((fact) => ({
-    id: crypto.randomUUID(),
-    category: fact.category,
-    statement: fact.statement,
-    verificationStatus: "review_required" as const,
-    provenance: {
-      source: "resume_fact_proposal",
-      ...(fact.provenance || {})
-    }
-  }));
   return withTenant(userId, async (client) => {
     const resume = await client.query(
-      "SELECT id FROM product_resumes WHERE user_id=$1 AND id=$2",
+      `SELECT id, filename, mime_type AS "mimeType", sha256,
+              COALESCE(storage_key, 'legacy://product-resumes/' || id::text) AS "storageKey"
+         FROM product_resumes WHERE user_id=$1 AND id=$2`,
       [userId, resumeId]
     );
     if (!resume.rows[0]) return null;
+    const sourceResume = resume.rows[0];
+    let document = await client.query(
+      `SELECT id FROM resume_documents WHERE user_id=$1 AND sha256=$2
+        ORDER BY created_at DESC LIMIT 1`,
+      [userId, sourceResume.sha256]
+    );
+    if (!document.rows[0]) {
+      document = await client.query(
+        `INSERT INTO resume_documents
+           (user_id, storage_key, original_filename, mime_type, sha256)
+         VALUES ($1,$2,$3,$4,$5) RETURNING id`,
+        [userId, sourceResume.storageKey, sourceResume.filename, sourceResume.mimeType, sourceResume.sha256]
+      );
+    }
+    let version = await client.query(
+      `SELECT id FROM resume_versions
+        WHERE user_id=$1 AND document_id=$2
+        ORDER BY version_number DESC LIMIT 1`,
+      [userId, document.rows[0].id]
+    );
+    if (!version.rows[0]) {
+      version = await client.query(
+        `INSERT INTO resume_versions
+           (user_id, document_id, version_number, kind, generation_metadata)
+         VALUES ($1,$2,1,'source',$3::jsonb) RETURNING id`,
+        [userId, document.rows[0].id, JSON.stringify({ source: "product_resumes", resumeId })]
+      );
+    }
+    for (const fact of facts) {
+      const statement = fact.statement.trim();
+      await client.query(
+        `INSERT INTO product_resume_fact_proposals
+           (user_id, resume_id, resume_document_id, resume_version_id,
+            category, statement, original_statement, source_location,
+            extraction_method, provenance_state, status, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$6,$7,'resume_upload_review','proposed','proposed',now())`,
+        [
+          userId, resumeId, document.rows[0].id, version.rows[0].id,
+          fact.category.trim(), statement, `resume:${sourceResume.filename}`
+        ]
+      );
+    }
     const result = await client.query(
-      `INSERT INTO product_resume_fact_proposals
-         (user_id, resume_id, facts, status, source, updated_at)
-       VALUES ($1,$2,$3::jsonb,'review_required','resume_upload',now())
-       RETURNING id, resume_id AS "resumeId", facts, status, source,
-                 created_at AS "createdAt", updated_at AS "updatedAt"`,
-      [userId, resumeId, JSON.stringify(proposedFacts)]
+      `SELECT resume_id AS "resumeId",
+              jsonb_agg(jsonb_build_object(
+                'id', id, 'category', category, 'statement', statement,
+                'originalStatement', original_statement,
+                'sourceLocation', source_location,
+                'extractionMethod', extraction_method,
+                'provenanceState', provenance_state, 'status', status,
+                'supersedesId', supersedes_id, 'reviewedAt', reviewed_at,
+                'createdAt', created_at, 'updatedAt', updated_at
+              ) ORDER BY created_at) AS facts,
+              'proposed' AS status, min(created_at) AS "createdAt",
+              max(updated_at) AS "updatedAt"
+         FROM product_resume_fact_proposals
+        WHERE user_id=$1 AND resume_id=$2 GROUP BY resume_id`,
+      [userId, resumeId]
     );
     await client.query(
       `INSERT INTO product_audit_logs
          (user_id, actor_user_id, action, target_type, target_id, metadata)
        VALUES ($1,$1,'career_truth.proposed','resume_fact_proposal',$2,$3::jsonb)`,
-      [userId, result.rows[0].id, JSON.stringify({ resumeId, factCount: proposedFacts.length })]
+      [userId, resumeId, JSON.stringify({ resumeId, factCount: facts.length, provenance: "server_owned" })]
+    );
+    return result.rows[0];
+  }, db);
+}
+
+export type ResumeFactProposalAction = "approve" | "reject" | "edit" | "supersede";
+
+export async function transitionProductResumeFactProposal(
+  db: pg.Pool, userId: string, resumeId: string, factId: string,
+  action: ResumeFactProposalAction, statement?: string
+): Promise<unknown | null> {
+  return withTenant(userId, async (client) => {
+    const current = await client.query(
+      `SELECT p.* FROM product_resume_fact_proposals p
+        JOIN product_resumes r ON r.id=p.resume_id AND r.user_id=p.user_id
+       WHERE p.user_id=$1 AND p.resume_id=$2 AND p.id=$3`,
+      [userId, resumeId, factId]
+    );
+    const row = current.rows[0];
+    if (!row) return null;
+    const edited = statement?.trim();
+    if ((action === "edit" || action === "supersede") && (!edited || edited.length < 3)) {
+      throw new Error("An edited fact must contain at least three characters.");
+    }
+    let result;
+    if (action === "supersede") {
+      await client.query(
+        `UPDATE product_resume_fact_proposals
+            SET status='superseded', reviewed_at=now(), reviewed_by=$1, updated_at=now()
+          WHERE user_id=$1 AND id=$2`, [userId, factId]
+      );
+      result = await client.query(
+        `INSERT INTO product_resume_fact_proposals
+           (user_id, resume_id, resume_document_id, resume_version_id, category,
+            statement, original_statement, source_location, extraction_method,
+            provenance_state, status, supersedes_id, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'customer_edit','customer_edited','proposed',$9,now())
+         RETURNING id, resume_id AS "resumeId", category, statement,
+                   original_statement AS "originalStatement", status,
+                   provenance_state AS "provenanceState", source_location AS "sourceLocation",
+                   extraction_method AS "extractionMethod", supersedes_id AS "supersedesId",
+                   created_at AS "createdAt", updated_at AS "updatedAt"`,
+        [userId, resumeId, row.resume_document_id, row.resume_version_id, row.category,
+          edited, row.original_statement, row.source_location, factId]
+      );
+    } else {
+      const nextStatus = action === "approve" ? "approved" : action === "reject" ? "rejected" : "proposed";
+      result = await client.query(
+        `UPDATE product_resume_fact_proposals
+            SET statement=COALESCE($4,statement),
+                provenance_state=CASE WHEN $4 IS NULL THEN provenance_state ELSE 'customer_edited' END,
+                status=$5,
+                reviewed_at=CASE WHEN $5 IN ('approved','rejected') THEN now() ELSE NULL END,
+                reviewed_by=CASE WHEN $5 IN ('approved','rejected') THEN $1 ELSE NULL END,
+                updated_at=now()
+          WHERE user_id=$1 AND resume_id=$2 AND id=$3
+          RETURNING id, resume_id AS "resumeId", category, statement,
+                    original_statement AS "originalStatement", status,
+                    provenance_state AS "provenanceState", source_location AS "sourceLocation",
+                    extraction_method AS "extractionMethod", supersedes_id AS "supersedesId",
+                    created_at AS "createdAt", updated_at AS "updatedAt"`,
+        [userId, resumeId, factId, edited || null, nextStatus]
+      );
+    }
+    const approved = await client.query(
+      `SELECT id, category, statement, resume_id AS "sourceResumeId",
+              jsonb_build_object('source','resume_upload','resumeId',resume_id,
+                'resumeVersionId',resume_version_id,'sourceLocation',source_location,
+                'extractionMethod',extraction_method,'approvedAt',reviewed_at) AS provenance
+         FROM product_resume_fact_proposals
+        WHERE user_id=$1 AND status='approved' ORDER BY created_at`, [userId]
+    );
+    await client.query(
+      `INSERT INTO product_career_truth_banks (user_id, facts, approved_at, updated_at)
+       VALUES ($1,$2::jsonb,CASE WHEN jsonb_array_length($2::jsonb)>0 THEN now() ELSE NULL END,now())
+       ON CONFLICT (user_id) DO UPDATE SET facts=excluded.facts,
+         approved_at=excluded.approved_at, updated_at=now()`,
+      [userId, JSON.stringify(approved.rows.map((fact) => ({
+        id: fact.id, category: fact.category, statement: fact.statement,
+        sourceResumeId: fact.sourceResumeId, verificationStatus: "approved", provenance: fact.provenance
+      })))]
+    );
+    await client.query(
+      `INSERT INTO product_audit_logs
+         (user_id, actor_user_id, action, target_type, target_id, metadata)
+       VALUES ($1,$1,$2,'resume_fact_proposal',$3,$4::jsonb)`,
+      [userId, `career_truth.${action}`, factId, JSON.stringify({ status: result.rows[0].status })]
     );
     return result.rows[0];
   }, db);
@@ -362,10 +504,11 @@ export async function saveCareerTruthBank(
   }>
 ): Promise<unknown> {
   const approvedFacts = facts.map((fact) => ({
-    ...fact,
     id: fact.id || crypto.randomUUID(),
+    category: fact.category.trim(),
+    statement: fact.statement.trim(),
     verificationStatus: "approved" as const,
-    provenance: fact.provenance || { source: "user_confirmed" }
+    provenance: { source: "customer_confirmed", method: "explicit_customer_approval" }
   }));
   return withTenant(userId, async (client) => {
     const result = await client.query(
@@ -586,7 +729,11 @@ export async function exportProductAccount(db: pg.Pool, userId: string): Promise
                            created_at AS "createdAt"
                       FROM product_resumes WHERE user_id=$1 ORDER BY created_at`, [userId]),
       client.query("SELECT facts, approved_at AS \"approvedAt\", updated_at AS \"updatedAt\" FROM product_career_truth_banks WHERE user_id=$1", [userId]),
-      client.query(`SELECT id, resume_id AS "resumeId", facts, status, source,
+      client.query(`SELECT id, resume_id AS "resumeId", resume_document_id AS "resumeDocumentId",
+                           resume_version_id AS "resumeVersionId", category, statement,
+                           original_statement AS "originalStatement", source_location AS "sourceLocation",
+                           extraction_method AS "extractionMethod", provenance_state AS "provenanceState",
+                           status, supersedes_id AS "supersedesId", reviewed_at AS "reviewedAt",
                            created_at AS "createdAt", updated_at AS "updatedAt"
                       FROM product_resume_fact_proposals WHERE user_id=$1 ORDER BY created_at`, [userId]),
       client.query("SELECT provider, provider_account AS \"providerAccount\", status, connected_at AS \"connectedAt\", updated_at AS \"updatedAt\" FROM product_connections WHERE user_id=$1 ORDER BY provider", [userId]),
@@ -594,6 +741,7 @@ export async function exportProductAccount(db: pg.Pool, userId: string): Promise
       client.query("SELECT id, job_match_id AS \"jobMatchId\", action, reason, payload, status, decided_at AS \"decidedAt\", created_at AS \"createdAt\" FROM product_approval_requests WHERE user_id=$1 ORDER BY created_at", [userId]),
       client.query("SELECT id, job_match_id AS \"jobMatchId\", resume_id AS \"resumeId\", status, final_url AS \"finalUrl\", evidence_reference AS \"evidenceReference\", answers, verified_at AS \"verifiedAt\", created_at AS \"createdAt\", updated_at AS \"updatedAt\" FROM product_applications WHERE user_id=$1 ORDER BY created_at", [userId]),
       client.query("SELECT action, target_type AS \"targetType\", target_id AS \"targetId\", metadata, created_at AS \"createdAt\" FROM product_audit_logs WHERE user_id=$1 ORDER BY created_at", [userId]),
+      client.query("SELECT id, job_match_id AS \"jobMatchId\", reason, note, created_at AS \"createdAt\", updated_at AS \"updatedAt\" FROM product_recommendation_feedback WHERE user_id=$1 ORDER BY created_at", [userId]),
       client.query("SELECT consent_version AS \"consentVersion\", consent_type AS \"consentType\", granted, granted_at AS \"grantedAt\", revoked_at AS \"revokedAt\" FROM product_consent_grants WHERE user_id=$1 ORDER BY created_at", [userId]),
       client.query("SELECT mode, recruiter_drafts AS \"recruiterDrafts\", recruiter_sends AS \"recruiterSends\", assisted_applications AS \"assistedApplications\", controlled_submissions AS \"controlledSubmissions\", max_drafts_per_day AS \"maxDraftsPerDay\", max_recruiter_sends_per_day AS \"maxRecruiterSendsPerDay\", max_applications_per_day AS \"maxApplicationsPerDay\", max_applications_per_board AS \"maxApplicationsPerBoard\", quiet_hours_start AS \"quietHoursStart\", quiet_hours_end AS \"quietHoursEnd\", time_zone AS \"timeZone\", policy_version AS \"policyVersion\", updated_at AS \"updatedAt\" FROM product_automation_policies WHERE user_id=$1", [userId]),
       client.query("SELECT source, status, capabilities, evidence_reference AS \"evidenceReference\", verified_at AS \"verifiedAt\", account_identifier AS \"accountIdentifier\", expires_at AS \"expiresAt\", blocking_reason AS \"blockingReason\", updated_at AS \"updatedAt\" FROM product_connector_capabilities WHERE user_id=$1 ORDER BY source", [userId]),
@@ -613,22 +761,23 @@ export async function exportProductAccount(db: pg.Pool, userId: string): Promise
       resumes: queries[2].rows,
       careerTruthBank: queries[3].rows[0] || null,
       resumeFactProposals: queries[4].rows,
+      recommendationFeedback: queries[10].rows,
       connections: queries[5].rows,
       jobMatches: queries[6].rows,
       approvalRequests: queries[7].rows,
       applications: queries[8].rows,
       auditLogs: queries[9].rows,
-      consentHistory: queries[10].rows,
-      automationPolicy: queries[11].rows[0] || null,
-      connectorCapabilities: queries[12].rows,
-      inboundAliases: queries[13].rows,
-      runnerDevices: queries[14].rows,
-      runnerProofs: queries[15].rows,
-      agentRuns: queries[16].rows,
-      applicationEvidence: queries[17].rows,
-      jobInsights: queries[18].rows,
-      interviewPrepSessions: queries[19].rows,
-      outcomeEvents: queries[20].rows
+      consentHistory: queries[11].rows,
+      automationPolicy: queries[12].rows[0] || null,
+      connectorCapabilities: queries[13].rows,
+      inboundAliases: queries[14].rows,
+      runnerDevices: queries[15].rows,
+      runnerProofs: queries[16].rows,
+      agentRuns: queries[17].rows,
+      applicationEvidence: queries[18].rows,
+      jobInsights: queries[19].rows,
+      interviewPrepSessions: queries[20].rows,
+      outcomeEvents: queries[21].rows
     };
   }, db);
 }
@@ -677,10 +826,27 @@ export async function productDashboard(db: pg.Pool, userId: string): Promise<{
   return withTenant(userId, async (client) => {
     const [recommendations, approvals, applications] = await Promise.all([
       client.query(
-        `SELECT id, source, title, company, location, job_url AS "jobUrl", score,
-                status, reasons, discovered_at AS "discoveredAt"
-           FROM product_job_matches
-          WHERE user_id=$1 AND status IN ('recommended','package_ready','needs_approval')
+        `SELECT j.id, j.source, j.title, j.company, j.location, j.job_url AS "jobUrl",
+                j.score, GREATEST(0, j.score - LEAST(30, COALESCE(learning.penalty,0))) AS "adjustedScore",
+                (COALESCE(learning.penalty,0) > 0) AS "learningApplied",
+                j.status, j.reasons, j.discovered_at AS "discoveredAt"
+           FROM product_job_matches j
+           LEFT JOIN LATERAL (
+             SELECT SUM(CASE f.reason
+               WHEN 'company' THEN 20 WHEN 'location' THEN 15 WHEN 'title' THEN 15
+               WHEN 'industry' THEN 10 WHEN 'skills' THEN 10 WHEN 'salary' THEN 10
+               WHEN 'seniority' THEN 10 WHEN 'work_arrangement' THEN 10
+               WHEN 'authorization' THEN 10 WHEN 'not_interested' THEN 12 ELSE 5 END) AS penalty
+               FROM product_recommendation_feedback f
+               JOIN product_job_matches prior ON prior.user_id=f.user_id AND prior.id=f.job_match_id
+              WHERE f.user_id=$1 AND (
+                (f.reason IN ('company','not_interested') AND lower(prior.company)=lower(j.company)) OR
+                (f.reason='location' AND lower(COALESCE(prior.location,''))=lower(COALESCE(j.location,''))) OR
+                (f.reason='title' AND lower(prior.title)=lower(j.title)) OR
+                (f.reason NOT IN ('company','location','title','already_applied') AND prior.company=j.company)
+              )
+           ) learning ON true
+          WHERE j.user_id=$1 AND j.status IN ('recommended','package_ready','needs_approval')
             AND NOT EXISTS (
               SELECT 1
                 FROM product_applications
@@ -691,7 +857,7 @@ export async function productDashboard(db: pg.Pool, userId: string): Promise<{
                    'submitted_verified', 'withdrawn'
                  )
             )
-          ORDER BY score DESC, discovered_at DESC LIMIT 50`,
+          ORDER BY "adjustedScore" DESC, j.discovered_at DESC LIMIT 50`,
         [userId]
       ),
       client.query(

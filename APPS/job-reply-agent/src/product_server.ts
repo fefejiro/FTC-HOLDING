@@ -60,6 +60,7 @@ import {
   saveCareerTruthBank,
   saveProductOnboarding,
   saveProductResumeFactProposal,
+  transitionProductResumeFactProposal,
   saveProductResume,
   setProductAccountStatus
 } from "./product_repository.js";
@@ -117,6 +118,9 @@ import type { ApplicationProof, ConnectorSource, ConnectorStatus } from "./produ
 import {
   CUSTOMER_ONBOARDING_STEPS,
   RECOMMENDATION_FEEDBACK_REASONS,
+  automationModeForCustomer,
+  onboardingConsentChanged,
+  onboardingRecordHasValidConsent,
   mergeCustomerOnboardingRecord
 } from "./product_customer_intelligence.js";
 import type {
@@ -190,6 +194,7 @@ const onboardingSchema = z.object({
   relocation: z.string().max(120).default(""),
   compensationCurrency: z.string().max(20).default("CAD"),
   compensationBasis: z.string().max(40).default("annual"),
+  compensationPrivate: z.boolean().default(true),
   skills: z.array(z.string().min(2).max(120)).max(60).default([]),
   certifications: z.array(z.string().max(120)).max(30).default([]),
   languages: z.array(z.string().max(80)).max(20).default([]),
@@ -197,6 +202,10 @@ const onboardingSchema = z.object({
   desiredVolume: z.string().max(80).default(""),
   resumeStrategy: z.string().max(120).default("one_truthful_base_resume"),
   notificationChannels: z.array(z.string().max(40)).max(10).default([]),
+  controlMode: z.enum(["review", "assisted"]).default("review"),
+  quietHoursStart: z.number().int().min(0).max(23).default(23),
+  quietHoursEnd: z.number().int().min(0).max(23).default(7),
+  dailyApplicationLimit: z.number().int().min(0).max(10).default(5),
   consent: z.object({
     truthConfirmed: z.literal(true),
     recruiterDrafts: z.boolean(),
@@ -225,12 +234,8 @@ const resumeUploadSchema = z.object({
 
 const careerTruthSchema = z.object({
   facts: z.array(z.object({
-    id: z.string().min(8).max(100).optional(),
     category: z.string().min(2).max(80),
-    statement: z.string().min(3).max(1000),
-    sourceResumeId: z.string().uuid().optional(),
-    verificationStatus: z.literal("approved").optional(),
-    provenance: z.record(z.string(), z.unknown()).optional()
+    statement: z.string().min(3).max(1000)
   })).min(1).max(300)
 });
 
@@ -240,6 +245,11 @@ const factProposalSchema = z.object({
     statement: z.string().min(3).max(1000),
     provenance: z.record(z.string(), z.unknown()).optional()
   })).min(1).max(300)
+});
+
+const factProposalTransitionSchema = z.object({
+  action: z.enum(["approve", "reject", "edit", "supersede"]),
+  statement: z.string().min(3).max(1000).optional()
 });
 
 const recommendationFeedbackSchema = z.object({
@@ -280,11 +290,11 @@ const mfaCodeSchema = z.object({
 });
 
 const automationPolicySchema = z.object({
-  mode: z.enum(["assist", "approval_required", "controlled_autopilot"]),
+  mode: z.enum(["assist", "approval_required"]),
   recruiterDrafts: z.boolean(),
   recruiterSends: z.boolean(),
   assistedApplications: z.boolean(),
-  controlledSubmissions: z.boolean(),
+  controlledSubmissions: z.literal(false).default(false),
   maxDraftsPerDay: z.number().int().min(0).max(50),
   maxRecruiterSendsPerDay: z.number().int().min(0).max(10),
   maxApplicationsPerDay: z.number().int().min(0).max(10),
@@ -1481,6 +1491,26 @@ export async function createProductServer(storage: ProductObjectStorage = create
           }
         });
       }
+      const resumeFactTransition = url.pathname.match(
+        /^\/api\/v1\/resumes\/([0-9a-f-]{36})\/fact-proposal\/([0-9a-f-]{36})$/i
+      );
+      if (req.method === "PATCH" && resumeFactTransition) {
+        if (user.status === "paused") return json(res, 423, { error: "Account is paused." });
+        const body = await readJson(req);
+        const input = factProposalTransitionSchema.parse(body);
+        return idempotentMutation(req, res, {
+          db, userId: user.id, requestPath: url.pathname, body,
+          action: async () => {
+            const fact = await transitionProductResumeFactProposal(
+              db, user.id, resumeFactTransition[1], resumeFactTransition[2],
+              input.action, input.statement
+            );
+            return fact
+              ? { status: 200, body: { fact } }
+              : { status: 404, body: { error: "Career fact proposal was not found." } };
+          }
+        });
+      }
       const proofDownload = url.pathname.match(/^\/api\/v1\/proofs\/([0-9a-f-]{36})\/download$/i);
       if (req.method === "GET" && proofDownload) {
         const file = await getRunnerProofObject(db, user.id, proofDownload[1]);
@@ -1790,22 +1820,41 @@ export async function createProductServer(storage: ProductObjectStorage = create
         const existing = patch.success ? await getProductOnboarding(db, user.id) : null;
         let record: z.infer<typeof onboardingSchema> | Record<string, unknown>;
         let completed = false;
+        let consentChanged = false;
+        let shouldSnapshotConsent = false;
         if (patch.success) {
           const merged = mergeCustomerOnboardingRecord(
             existing?.record || {},
             patch.data.step,
             patch.data.data
           );
+          if (!patch.data.final && patch.data.step === "resume") {
+            const resumes = await listProductResumes(db, user.id);
+            if (!resumes.some((resume: any) => resume.isDefault)) {
+              return json(res, 422, { error: "Upload and choose a default resume before continuing." });
+            }
+          }
           if (patch.data.final) {
             record = onboardingSchema.parse(merged);
             completed = true;
+            consentChanged = onboardingConsentChanged(existing?.record, record);
+            shouldSnapshotConsent = consentChanged || !existing?.completed;
           } else {
             record = merged;
-            completed = Boolean(existing?.completed);
+            consentChanged = onboardingConsentChanged(existing?.record, record);
+            if (consentChanged && onboardingRecordHasValidConsent(record)) {
+              return json(res, 422, { error: "Consent changes require final confirmation." });
+            }
+            completed = Boolean(existing?.completed)
+              && onboardingRecordHasValidConsent(record)
+              && !consentChanged;
+            shouldSnapshotConsent = consentChanged && !onboardingRecordHasValidConsent(record);
           }
         } else {
           record = onboardingSchema.parse(body);
-          completed = Boolean((record as z.infer<typeof onboardingSchema>).consent.truthConfirmed);
+          completed = true;
+          consentChanged = onboardingConsentChanged(existing?.record, record);
+          shouldSnapshotConsent = consentChanged || !existing?.completed;
         }
         return idempotentMutation(req, res, {
           db, userId: user.id, requestPath: url.pathname, body,
@@ -1817,30 +1866,34 @@ export async function createProductServer(storage: ProductObjectStorage = create
                 const onboarding = await saveProductOnboarding(db, user.id, {
                   record,
                   completed,
-                  consentVersion: completed ? CONSENT_VERSION : existing?.consentVersion || null,
-                  consentedAt: completed ? new Date().toISOString() : existing?.consentedAt || null
+                  consentVersion: completed
+                    ? CONSENT_VERSION
+                    : shouldSnapshotConsent ? null : existing?.consentVersion || null,
+                  consentedAt: completed
+                    ? (existing?.consentedAt || new Date().toISOString())
+                    : shouldSnapshotConsent ? null : existing?.consentedAt || null
                 });
-                if (completed) {
+                if (completed && (consentChanged || !existing?.completed)) {
                   const policy = await saveAutomationPolicy(db, user.id, {
-                    mode: "approval_required",
+                    mode: automationModeForCustomer((record as Record<string, unknown>).controlMode),
                     recruiterDrafts: Boolean(consent.recruiterDrafts),
                     recruiterSends: Boolean(consent.recruiterSends),
-                    assistedApplications: Boolean(consent.assistedApplications),
-                    controlledSubmissions: Boolean(consent.controlledSubmissions),
+                    assistedApplications: automationModeForCustomer((record as Record<string, unknown>).controlMode) === "assist",
+                    controlledSubmissions: false,
                     maxDraftsPerDay: 50,
                     maxRecruiterSendsPerDay: 10,
-                    maxApplicationsPerDay: 10,
+                    maxApplicationsPerDay: Number((record as Record<string, unknown>).dailyApplicationLimit || 5),
                     maxApplicationsPerBoard: 5,
-                    quietHoursStart: 23,
-                    quietHoursEnd: 7,
+                    quietHoursStart: Number((record as Record<string, unknown>).quietHoursStart ?? 23),
+                    quietHoursEnd: Number((record as Record<string, unknown>).quietHoursEnd ?? 7),
                     timeZone: String((record as Record<string, unknown>).timeZone || "UTC")
                   });
-                  await recordConsentSnapshot(db, user.id, {
+                  if (shouldSnapshotConsent) await recordConsentSnapshot(db, user.id, {
                     career_truth: Boolean(consent.truthConfirmed),
                     recruiter_drafts: Boolean(consent.recruiterDrafts),
                     recruiter_sends: Boolean(consent.recruiterSends),
-                    assisted_applications: Boolean(consent.assistedApplications),
-                    controlled_submissions: Boolean(consent.controlledSubmissions),
+                    assisted_applications: automationModeForCustomer((record as Record<string, unknown>).controlMode) === "assist",
+                    controlled_submissions: false,
                     google_data: false
                   }, policy as unknown as Record<string, unknown>);
                   await ensureConnectorCapabilities(db, user.id);
@@ -1851,6 +1904,15 @@ export async function createProductServer(storage: ProductObjectStorage = create
                     {},
                     "onboarding_completed"
                   );
+                } else if (shouldSnapshotConsent) {
+                  await recordConsentSnapshot(db, user.id, {
+                    career_truth: false,
+                    recruiter_drafts: false,
+                    recruiter_sends: false,
+                    assisted_applications: false,
+                    controlled_submissions: false,
+                    google_data: false
+                  }, {});
                 }
                 if (patch.success) {
                   await recordFunnelEvent(

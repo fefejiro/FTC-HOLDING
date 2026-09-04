@@ -180,6 +180,8 @@ try {
       fullPage: true
     });
     await page.goto(`${baseUrl}/app`, { waitUntil: "networkidle" });
+    const pageErrors = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
     if (liveBaseUrl) {
       await page.locator('#login-form input[name="email"]').fill(process.env.CUSTOMER_SMOKE_EMAIL);
       await page.locator('#login-form input[name="password"]').fill(process.env.CUSTOMER_SMOKE_PASSWORD || "");
@@ -188,7 +190,16 @@ try {
       const releaseResponse = await page.request.get(`${baseUrl}/api/v1/release`);
       if (!releaseResponse.ok()) throw new Error(`live release endpoint returned ${releaseResponse.status()}`);
     }
-    await page.locator('[data-view="profile"]').click();
+    await page.locator("#app-shell").waitFor({ state: "visible", timeout: 20_000 }).catch(async () => {
+      const authMessage = await page.locator("#auth-message").innerText().catch(() => "");
+      throw new Error(`${viewport.name}: application shell unavailable: ${authMessage || pageErrors.join("; ") || "session initialization failed"}`);
+    });
+    const profileNav = page.locator('[data-view="profile"]');
+    await profileNav.waitFor({ state: "visible", timeout: 20_000 }).catch(async () => {
+      const authMessage = await page.locator("#auth-message").innerText().catch(() => "");
+      throw new Error(`${viewport.name}: profile navigation unavailable: ${authMessage || pageErrors.join("; ") || "application shell did not finish loading"}`);
+    });
+    await profileNav.click();
     await page.locator("#onboarding-form").waitFor({ state: "visible" });
     if (!(await page.locator("#onboarding-step-title").innerText()).length) {
       throw new Error(`${viewport.name}: guided onboarding did not render`);
