@@ -257,6 +257,8 @@ states distinct.
 Branch: `agent/unascout-customer-intelligence`, based on `origin/main`
 `00839080c09d26677ca7d7db232c1b22331800fb`.
 
+Pushed source commit: `c56c6f193`.
+
 - **Completed in the repository:** guided seven-step onboarding for goals,
   preferences, eligibility, resume, Career Truth review, control, and final
   review; resumable progress; tenant-scoped resume fact proposals with
@@ -264,7 +266,9 @@ Branch: `agent/unascout-customer-intelligence`, based on `origin/main`
   rejection; funnel events; export coverage for fact proposals; and forced-RLS
   feedback/proposal tables in migration `012_customer_intelligence.sql`.
 - **Verified locally:** changed-file syntax checks, focused customer-intelligence
-  tests, and deterministic customer smoke at `390x844` and `1440x1000`.
+  tests, full Vitest (`32` passed files, `1` skipped; `234` passed tests,
+  `11` skipped), TypeScript, and deterministic customer smoke at `390x844` and
+  `1440x1000`.
   Redacted local artifacts are under this worktree's `.local/qa-revenue-launch`.
 - **Deployed:** no deployment was performed by this increment. The existing
   hosted image remains the separate production evidence recorded above.

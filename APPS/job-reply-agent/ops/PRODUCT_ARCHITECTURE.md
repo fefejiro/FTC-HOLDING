@@ -349,3 +349,25 @@ Before public onboarding:
 6. Complete iOS and Android device validation, signing, store assets, privacy
    declarations, internal testing, and store review for the implemented native
    source foundation.
+
+## Customer Intelligence Increment - 2026-09-03
+
+UnaScout remains the customer-facing command centre over the existing
+Opportunity Engine -> Application Engine -> Response Engine. This increment
+adds customer guidance and review boundaries without moving job-board sessions,
+Gmail credentials, or browser automation into the client.
+
+| Area | Status | Evidence boundary |
+|---|---|---|
+| Guided onboarding and saved progress | Implemented | Seven steps persist through the existing product API; final consent remains explicit. |
+| Resume fact review | Partial | Migration and review-required proposal contract are implemented; trusted PDF/DOCX extraction is the next increment. |
+| Recommendation explanation and feedback | Implemented | Customer-language reasons and tenant-owned rejection feedback are stored without changing verified facts. |
+| Review and Assisted control | Implemented | Existing approval policy is retained; Auto remains unavailable/controlled. |
+| Privacy-conscious funnel events | Implemented | New events store step/decision metadata only, not resume text or credentials. |
+| Live migration/deployment proof | Not deployed | Migration 012 and routes require hosted rollout and live tenant proof. |
+| Store submission | Out of scope | Native clients remain thin hosted-product clients; no store claim is made here. |
+
+The resume proposal endpoint deliberately treats extracted or entered facts as
+`review_required`. Proposed and rejected facts must not be consumed by package
+generation, job answers, or recruiter replies until a customer-approved fact
+path is connected and verified.

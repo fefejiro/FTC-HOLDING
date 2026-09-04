@@ -209,13 +209,15 @@ completed, deployed, verified, paused, and blocked states separately.
   seven-step customer onboarding flow, richer job-search preferences, explicit
   eligibility and approval controls, review-required resume fact proposals,
   explainable recommendation feedback, and new funnel events.
+- **Pushed source:** `c56c6f193`.
 - **Data boundary:** migration `012_customer_intelligence.sql` uses forced RLS
   for resume fact proposals and recommendation feedback. Repository methods
   verify tenant ownership before reading or mutating either resource, and
   account export includes fact proposals.
-- **Local proof:** focused tests pass; customer smoke passes at both required
-  viewports. Local screenshots are in `.local/qa-revenue-launch` and are not
-  live-release evidence.
+- **Local proof:** full Vitest passes with `32` files passed and `1` skipped;
+  `234` tests passed and `11` skipped. TypeScript, syntax checks, and customer
+  smoke also pass at both required viewports. Local screenshots are in
+  `.local/qa-revenue-launch` and are not live-release evidence.
 - **Not deployed or externally verified:** this increment has not been
   migrated, deployed, or run against the hosted domain. Existing production
   evidence above is unchanged.

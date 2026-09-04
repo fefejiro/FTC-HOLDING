@@ -164,13 +164,16 @@ physical-device proof, publisher records, signing, and store review.
 Branch: `agent/unascout-customer-intelligence` based on `origin/main`
 `00839080c09d26677ca7d7db232c1b22331800fb`.
 
+Pushed source commit: `c56c6f193`.
+
 - **Completed in source:** guided resumable onboarding, expanded customer
   preferences and eligibility, review-required resume fact proposals with
   provenance, explainable recommendation feedback/rejection, funnel events,
   export inclusion, and migration `012_customer_intelligence.sql` with forced
   RLS.
-- **Verified locally:** focused customer-intelligence tests, changed-file
-  syntax checks, and deterministic smoke at `390x844` and `1440x1000`.
+- **Verified locally:** full Vitest (`32` passed files, `1` skipped; `234`
+  passed tests, `11` skipped), TypeScript, changed-file syntax checks, and
+  deterministic smoke at `390x844` and `1440x1000`.
 - **Deployed:** no. No hosted release SHA, migration receipt, or deployment
   identifier is claimed for this increment.
 - **Externally verified:** none for the new onboarding, proposal, feedback, or

@@ -164,11 +164,14 @@ store availability.
 This is a repository increment on `agent/unascout-customer-intelligence`; it is
 not part of the deployed SHA above.
 
+Pushed source commit: `c56c6f193`.
+
 - **Completed:** customer-intelligence onboarding wizard, resumable progress,
   preference and eligibility capture, review-required resume fact proposals,
   recommendation explanations and feedback, funnel instrumentation, export
   inclusion, and forced-RLS migration `012_customer_intelligence.sql`.
-- **Locally verified:** focused tests, JavaScript syntax, and deterministic
+- **Locally verified:** full Vitest (`32` passed files, `1` skipped; `234`
+  passed tests, `11` skipped), TypeScript, JavaScript syntax, and deterministic
   customer smoke at `390x844` and `1440x1000`. Screenshots are retained under
   `D:\FTC-HOLDING-worktrees\unascout-customer-intelligence\APPS\job-reply-agent\.local\qa-revenue-launch`.
 - **Deployed:** not deployed. The production SHA and hosted evidence in this
