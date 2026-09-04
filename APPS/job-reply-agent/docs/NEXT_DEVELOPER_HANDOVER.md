@@ -331,6 +331,9 @@ The approved release code is `13e120d18e447eee306d4bb1bfe0b8395d07c135` on
   but it is not uploaded. Protected ASC API credentials, account-holder
   agreement action, and a review demo account are still required. The app is
   not publicly available on the App Store.
+- **Apple upload attempt:** run `33914372796` completed signing but failed at
+  the upload step before transfer because `JOBAGENT_ASC_KEY_ID` was missing;
+  `JOBAGENT_ASC_ISSUER_ID` and `JOBAGENT_ASC_PRIVATE_KEY_BASE64` were empty.
 - **Evidence:** public smoke screenshots and trace are in
   `D:\FTC-HOLDING-releases\unascout\store-completion-smoke-2026-09-04`.
 - **Still paused:** authenticated live customer smoke, physical devices,

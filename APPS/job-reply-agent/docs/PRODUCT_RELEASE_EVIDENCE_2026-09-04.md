@@ -148,6 +148,9 @@ pre-deployment baseline for auditability.
   rejected under Guideline 2.1(a) because review access was unavailable. The
   account-holder agreement, review demo account, and protected ASC API values
   remain required. No iOS public listing is claimed.
+- Upload-enabled workflow run `33914372796` confirmed the external gate: build
+  and signing passed, then the upload step failed before transfer with
+  `Missing JOBAGENT_ASC_KEY_ID`; issuer ID and private key inputs were empty.
 
 ### External customer proof
 

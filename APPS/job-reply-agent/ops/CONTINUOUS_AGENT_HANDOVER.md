@@ -408,6 +408,9 @@ The release candidate is now deployed from code commit
   `0CD5D245E2BD6B200E036880301FD98824A15E3887695D1681494214E623B5D2`.
   Upload is paused for missing protected ASC API credentials and the known
   App Store Connect review/account-holder gates.
+- **Upload attempt receipt:** workflow run `33914372796` rebuilt and signed,
+  then stopped before transfer with `Missing JOBAGENT_ASC_KEY_ID`; the issuer
+  ID and private key inputs were also empty.
 - **Externally verified:** public live Playwright smoke at `390x844` and
   `1440x1000` passed. Evidence is stored under
   `D:\FTC-HOLDING-releases\unascout\store-completion-smoke-2026-09-04`.
