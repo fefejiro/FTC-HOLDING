@@ -1,6 +1,6 @@
 # PeacePad Native V2 — 2.0.2 cloud-only release handover
 
-Updated: 2026-09-03
+Updated: 2026-09-04
 
 This is the resume ledger for the current PeacePad release. It is deliberately
 cloud-first: do not create a new local checkout, native build, dependency tree,
@@ -13,6 +13,8 @@ Play. Any unavoidable downloaded artifact belongs in `D:\PeacePadRelease\artifac
 - Checkout: `C:\ppn`
 - Branch: `peacepad-native-main`
 - App-tree release source: `be7a4ef8d224cfd075ed5d89907e55c4841a29c6`
+- Current reviewed app candidate: `253b9ebda859b6fe13f4c5a6899ceb272c783f66`
+- Current release-control head: `ea963fbd8dfa275b749ce663a3417c9ee8d66e6d`
 - App identity: `ca.peacepad.family`
 - Release: `2.0.2`; Android version code `51`; iOS build `12`
 
@@ -129,6 +131,44 @@ required before calling the login journey verified.
    when the public storefront confirms the new release.
 6. Keep testing and release work in cloud services. Never let a local build or
    cache consume C: for this project.
+
+## Auth provider transition captured 2026-09-04
+
+The reviewed authentication and coordination candidate was pushed at
+`253b9ebda859b6fe13f4c5a6899ceb272c783f66`. Its full gate passed 73 Jest
+suites with 512 tests passed and 1 skipped, plus typecheck, guardrails, secret
+scan, native audio/video checks, iOS preflight, YAML parsing, and
+`git diff --check`. The current public 2.0.2 binaries predate this candidate.
+
+The provider configuration workflow was hardened at
+`ea963fbd8dfa275b749ce663a3417c9ee8d66e6d`. It now has guarded operations for
+read-only status, native Apple configuration, and full Google plus Apple
+configuration. The full social-provider path fails before mutation unless all
+required protected secrets exist, preserves email/signup settings, reads the
+configuration back, and prints only redacted state.
+
+Native Sign in with Apple was configured for the verified audience
+`ca.peacepad.family`, and manual identity linking was enabled. Mutation run
+`33841876572 <https://github.com/fefejiro/FTC-HOLDING/actions/runs/33841876572>`
+succeeded. Independent read-only run
+`33841919144 <https://github.com/fefejiro/FTC-HOLDING/actions/runs/33841919144>`
+then reported:
+
+- email enabled;
+- Apple enabled with a client audience present;
+- manual linking enabled;
+- Google disabled with no client audience present;
+- no secrets printed.
+
+Google remains blocked because the protected environment contains no genuine
+PeacePad Google Web OAuth client secret or accepted additional client IDs. Do
+not use Firebase/service-account JSON, an API key, or the iOS client ID as that
+secret. Store `PEACEPAD_GOOGLE_WEB_CLIENT_ID`,
+`PEACEPAD_GOOGLE_ADDITIONAL_CLIENT_IDS`, and
+`PEACEPAD_GOOGLE_WEB_CLIENT_SECRET` in the existing protected environment,
+then use the guarded provider workflow. Do not dispatch new store builds until
+Google and Apple have both passed real physical-device sign-in with fictional
+accounts; no connected Android or iPhone was available during this transition.
 
 ## Scope guard
 
