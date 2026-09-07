@@ -13,7 +13,7 @@ export function LivingHeroSection() {
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <Button href="/start" variant="primary" size="lg">Start Your Project</Button>
-            <Button href="/product" variant="ghost" size="lg">Explore our products →</Button>
+            <Button href="/products" variant="ghost" size="lg">Explore our products →</Button>
           </div>
           <p className="mt-4 text-caption text-tx-muted">Strategy, design, engineering, launch, and ongoing product care.</p>
         </div>
