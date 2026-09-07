@@ -1,19 +1,29 @@
-﻿import { productPages, proofHighlights, solutionPages } from '@/lib/site-content';
+﻿import { proofHighlights, solutionPages } from '@/lib/site-content';
 
-const productLinks = Object.values(productPages);
+import { shippedProducts } from '@/lib/site-content';
+
+const portfolioLinks = shippedProducts.map((product) => ({
+  label: product.name,
+  href: `/products/${product.slug}`,
+  description: product.description,
+}));
 const solutionLinks = Object.values(solutionPages);
 
 export const NAV = {
   main: [
     {
-      label: 'Product',
+      label: 'Products',
       children: [
-        { label: 'Platform Overview', href: '/product', description: 'See the full Una Labs system' },
-        ...productLinks.map((page) => ({
-          label: page.navLabel,
-          href: `/product/${page.slug}`,
-          description: page.navDescription,
-        })),
+        { label: 'All products', href: '/products', description: 'Explore the Una Labs portfolio' },
+        ...portfolioLinks,
+      ],
+    },
+    {
+      label: 'Services',
+      children: [
+        { label: 'Product delivery platform', href: '/product', description: 'See how we shape, build, and deliver' },
+        { label: 'AI Learning', href: '/learn', description: 'Build an AI learning plan around your own goals and problems' },
+        { label: 'Start a project', href: '/start-project', description: 'Bring us a product idea or delivery need' },
       ],
     },
     {
@@ -150,8 +160,9 @@ export const FOOTER_LINKS = [
   {
     heading: 'Product',
     links: [
-      { label: 'Platform Overview', href: '/product' },
-      ...productLinks.map((page) => ({ label: page.navLabel, href: `/product/${page.slug}` })),
+      { label: 'All products', href: '/products' },
+      ...portfolioLinks.map((page) => ({ label: page.label, href: page.href })),
+      { label: 'Product delivery platform', href: '/product' },
     ],
   },
   {

@@ -18,9 +18,9 @@ export default function HomePage() {
   return (
     <>
       <LivingHeroSection />
+      <ShippedProductsSection />
       <FeatureCarousel />
       <TrySystemSection />
-      <ShippedProductsSection />
       <HowWeWorkSection />
       <FinalCTASection />
     </>

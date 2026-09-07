@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { ProductMark } from '@/components/brand/ProductMark';
 import { shippedProducts } from '@/lib/site-content';
 
 export function ShippedProductsSection() {
@@ -12,7 +13,7 @@ export function ShippedProductsSection() {
             <h2 className="mt-4 text-h2 text-tx-heading">Real products. Honest release states.</h2>
             <p className="mt-4 text-body-lg leading-relaxed text-tx-secondary">Browse the work, try what is open, and see where each product is heading.</p>
           </div>
-          <Button href="/product" variant="ghost" size="md">View the product index →</Button>
+          <Button href="/products" variant="ghost" size="md">View all products →</Button>
         </div>
         <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {shippedProducts.map((product) => {
@@ -20,7 +21,7 @@ export function ShippedProductsSection() {
             return (
               <article key={product.slug} className="group rounded-[24px] border border-border bg-bg-offwhite p-6 transition-shadow hover:shadow-lg">
                 <div className="flex items-start justify-between gap-4">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-teal-light text-2xl text-brand-teal" aria-hidden="true">{product.icon}</span>
+                  <ProductMark name={product.name} icon={product.icon} />
                   <span className="rounded-full bg-white px-3 py-1 text-caption font-semibold text-tx-secondary">{product.maturity}</span>
                 </div>
                 <h3 className="mt-5 text-h4 text-tx-heading">{product.name}</h3>
