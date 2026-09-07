@@ -21,6 +21,7 @@ export const NAV = {
     {
       label: 'Services',
       children: [
+        { label: 'All services', href: '/services', description: 'See the ways Una Labs can help' },
         { label: 'Product delivery platform', href: '/product', description: 'See how we shape, build, and deliver' },
         { label: 'AI Learning', href: '/learn', description: 'Build an AI learning plan around your own goals and problems' },
         { label: 'Start a project', href: '/start-project', description: 'Bring us a product idea or delivery need' },
@@ -172,7 +173,8 @@ export const FOOTER_LINKS = [
   {
     heading: 'Resources',
     links: [
-      { label: 'AI Coaching', href: '/learn' },
+      { label: 'Services', href: '/services' },
+      { label: 'AI Learning', href: '/learn' },
       { label: 'Pricing', href: '/pricing' },
       { label: 'How It Works', href: '/how-it-works' },
       { label: 'Demo', href: '/demo' },
