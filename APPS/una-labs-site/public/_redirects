@@ -1,9 +1,6 @@
 # Legacy ftc-site routes → una-labs-site equivalents
 /capabilities /how-it-works/ 301
 /capabilities/ /how-it-works/ 301
-/services /how-it-works/ 301
-/services/ /how-it-works/ 301
-/services/* /how-it-works/ 301
 /work /about/ 301
 /work/ /about/ 301
 /work-with-ftc /contact/ 301
