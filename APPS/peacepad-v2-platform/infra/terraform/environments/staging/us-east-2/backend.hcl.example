@@ -1,0 +1,5 @@
+bucket       = "replace-with-united-states-terraform-state-bucket"
+key          = "peacepad-v2/staging/us-east-2/terraform.tfstate"
+region       = "us-east-2"
+encrypt      = true
+use_lockfile = true

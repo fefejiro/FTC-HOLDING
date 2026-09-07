@@ -1,0 +1,126 @@
+name: UnaScout Android release
+
+on:
+  workflow_dispatch:
+    inputs:
+      upload_to_play:
+        description: Upload the signed AAB to Google Play after the app record and service account are ready
+        required: true
+        default: false
+        type: boolean
+      track:
+        description: Google Play track
+        required: true
+        default: production
+        type: choice
+        options:
+          - production
+          - internal
+          - alpha
+          - beta
+      release_status:
+        description: Google Play release status
+        required: true
+        default: draft
+        type: choice
+        options:
+          - draft
+          - completed
+          - inProgress
+          - halted
+      upload_store_listing:
+        description: Upload the approved UnaScout store listing and imagery
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  signed-aab:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: APPS/job-reply-agent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: APPS/job-reply-agent/package-lock.json
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - name: Install exact dependencies
+        run: npm ci --workspaces=false
+      - name: Validate customer and store release metadata
+        run: |
+          npm run store:metadata:check
+          npm run production:check
+      - name: Upload approved Google Play listing
+        if: ${{ inputs.upload_store_listing }}
+        env:
+          JOBAGENT_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.JOBAGENT_PLAY_SERVICE_ACCOUNT_JSON || secrets.PEACEPAD_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: node scripts/upload-google-play-listing.mjs
+      - name: Generate exact-release store screenshots
+        env:
+          STORE_SCREENSHOT_DIR: ${{ runner.temp }}/unascout-store-assets
+        run: |
+          npx playwright install --with-deps chromium
+          npm run store:screenshots
+      - name: Build and synchronize Android
+        run: |
+          npm run build
+          npm run mobile:sync:android
+      - name: Import JobAgent upload key
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.JOBAGENT_ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.JOBAGENT_ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.JOBAGENT_ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.JOBAGENT_ANDROID_KEY_PASSWORD }}
+        run: |
+          test -n "$KEYSTORE_BASE64" || { echo "Missing JOBAGENT_ANDROID_KEYSTORE_BASE64"; exit 1; }
+          test -n "$KEYSTORE_PASSWORD" || { echo "Missing JOBAGENT_ANDROID_KEYSTORE_PASSWORD"; exit 1; }
+          test -n "$KEY_ALIAS" || { echo "Missing JOBAGENT_ANDROID_KEY_ALIAS"; exit 1; }
+          test -n "$KEY_PASSWORD" || { echo "Missing JOBAGENT_ANDROID_KEY_PASSWORD"; exit 1; }
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/app/jobagent-upload.jks
+      - name: Build signed release bundle
+        env:
+          JOBAGENT_KEYSTORE_PATH: ${{ github.workspace }}/APPS/job-reply-agent/android/app/jobagent-upload.jks
+          JOBAGENT_KEYSTORE_PASSWORD: ${{ secrets.JOBAGENT_ANDROID_KEYSTORE_PASSWORD }}
+          JOBAGENT_KEY_ALIAS: ${{ secrets.JOBAGENT_ANDROID_KEY_ALIAS }}
+          JOBAGENT_KEY_PASSWORD: ${{ secrets.JOBAGENT_ANDROID_KEY_PASSWORD }}
+        run: |
+          chmod +x android/gradlew
+          ./android/gradlew :app:bundleRelease --no-daemon -p android
+      - name: Record bundle digest
+        run: |
+          sha256sum android/app/build/outputs/bundle/release/app-release.aab | tee android-aab-sha256.txt
+          keytool -printcert -jarfile android/app/build/outputs/bundle/release/app-release.aab | tee android-aab-signer.txt
+      - name: Upload bundle to Google Play
+        if: ${{ inputs.upload_to_play }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.JOBAGENT_PLAY_SERVICE_ACCOUNT_JSON || secrets.PEACEPAD_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: cloud.unalabs.jobagent
+          releaseFiles: APPS/job-reply-agent/android/app/build/outputs/bundle/release/app-release.aab
+          track: ${{ inputs.track }}
+          status: ${{ inputs.release_status }}
+          whatsNewDirectory: APPS/job-reply-agent/store/metadata/google/whatsnew
+      # Preserve the signed bundle and generated store assets even when the provider upload is rejected.
+      - if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: unascout-android-${{ github.sha }}
+          path: |
+            APPS/job-reply-agent/android/app/build/outputs/bundle/release/app-release.aab
+            APPS/job-reply-agent/android-aab-sha256.txt
+            APPS/job-reply-agent/android-aab-signer.txt
+            ${{ runner.temp }}/unascout-store-assets
+          retention-days: 14
+          if-no-files-found: error

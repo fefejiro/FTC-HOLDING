@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "deploymentApproved": false,
+  "canadianAccountId": null,
+  "unitedStatesAccountId": null,
+  "monthlyBudgetUsdPerAccount": null,
+  "alertEmail": null,
+  "owners": {
+    "platform": null,
+    "security": null,
+    "privacy": null,
+    "records": null,
+    "finance": null,
+    "onCall": null
+  },
+  "approvals": {
+    "accountTopology": false,
+    "costEnvelope": false,
+    "dataResidency": false,
+    "remoteState": false,
+    "incidentOwnership": false,
+    "objectLock": false
+  }
+}

@@ -1,5 +1,15 @@
 {
 	"servers": {
+		"ftc-workspace": {
+			"type": "stdio",
+			"command": "node",
+			"args": [
+				"${workspaceFolder}\\tools\\ftc-workspace-mcp-server\\dist\\index.js"
+			],
+			"env": {
+				"FTC_REPO_ROOT": "C:\\FTC HOLDING"
+			}
+		},
 		"com.supabase/mcp": {
 			"type": "stdio",
 			"command": "npx",

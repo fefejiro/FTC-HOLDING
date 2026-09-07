@@ -1,0 +1,7 @@
+.expo/
+dist/
+node_modules/
+*.log
+ios/
+android/
+.sim/

@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 2,
+  "cutoverApproved": false,
+  "source": {
+    "system": "legacy-peacepad-express-postgresql",
+    "identityProvider": "legacy-replit-auth",
+    "dataRegion": "unknown-until-reviewed"
+  },
+  "target": {
+    "system": "peacepad-native-v2-supabase",
+    "identityProvider": "supabase-auth",
+    "region": "unset"
+  },
+  "identityStrategy": "claim-after-supabase-auth",
+  "scopeReconciliation": {
+    "sourceEvidenceRequired": true,
+    "safelyScopedRows": "import-only-after-exact-source-inventory-reconciliation",
+    "unscopedRows": "retain-in-read-only-v1-quarantine-until-verified-user-claim",
+    "ambiguousRows": "block-cutover-and-require-human-review",
+    "silentDropAllowed": false,
+    "automaticReassignmentAllowed": false
+  },
+  "mappings": [
+    {
+      "source": "users",
+      "target": "identity",
+      "strategy": "verified-email-claim-after-supabase-auth",
+      "required": true
+    },
+    {
+      "source": "users consent fields",
+      "target": "consent_record",
+      "strategy": "reviewed-timestamped-ledger-or-reconsent",
+      "required": true
+    },
+    {
+      "source": "partnerships",
+      "target": "family_circle + participant_grant",
+      "strategy": "two-party-atomic-grant",
+      "required": true
+    },
+    {
+      "source": "conversations + conversation_members",
+      "target": "conversation",
+      "strategy": "explicit-partnership-scope-and-membership-preserving-import",
+      "required": true
+    },
+    {
+      "source": "messages",
+      "target": "message_event",
+      "strategy": "immutable-history-import",
+      "required": true
+    },
+    {
+      "source": "events",
+      "target": "calendar_layer + schedule_event",
+      "strategy": "explicit-partnership-scope-and-family-layer-first-import",
+      "required": true
+    },
+    {
+      "source": "notes + child updates",
+      "target": "legacy_record_archive",
+      "strategy": "immutable-read-only-family-record-archive",
+      "required": true
+    },
+    {
+      "source": "tasks",
+      "target": "legacy_task_archive",
+      "strategy": "immutable-read-only-family-archive",
+      "required": true
+    },
+    {
+      "source": "expenses + participants + settlements",
+      "target": "legacy_expense_archive",
+      "strategy": "immutable-read-only-reconciled-snapshot",
+      "required": true
+    },
+    {
+      "source": "supported message, receipt, and record attachments",
+      "target": "private storage + legacy_attachment_manifest",
+      "strategy": "opaque-source-locator-count-size-sha256-reconciliation",
+      "required": true
+    }
+  ],
+  "unmappedLegacyData": [
+    "children-profiles",
+    "call-recordings-and-transcripts",
+    "ai-profiles-and-interventions",
+    "push-subscriptions"
+  ],
+  "requiredEvidence": [
+    "provider-backup-or-pitr",
+    "read-only-source-inventory",
+    "disposable-full-migration-rehearsal",
+    "row-count-and-content-fingerprint-comparison",
+    "two-account-claim-and-rollback-journey",
+    "approved-retention-plan-for-unmapped-data",
+    "product-privacy-security-qa-release-signoff"
+  ],
+  "requiredImportControls": [
+    "supabase-auth-user-exists-for-every-verified-email-claim",
+    "explicit-partnership-scope-for-every-conversation-and-event",
+    "exact-safely-scoped-and-unscoped-count-reconciliation",
+    "unscoped-rows-retained-in-read-only-v1-quarantine-until-verified-user-claim",
+    "no-silent-drop-or-automatic-reassignment-of-unscoped-data",
+    "text-only-message-import-with-media-and-deleted-content-quarantined",
+    "timestamped-consent-ledger-or-user-reconsent",
+    "fresh-target-or-reviewed-reconciliation-plan",
+    "no-raw-password-or-password-hash-import-without-isolated-supabase-compatibility-proof",
+    "no-legacy-call-recording-or-transcript-import",
+    "attachment-count-byte-length-and-sha256-reconciliation-before-write-enable"
+  ],
+  "rollback": {
+    "legacyReadWriteRemainsAuthoritativeUntil": "post-cutover-acceptance",
+    "nativeV2ProductionWritesEnabled": false,
+    "rollbackOwner": null
+  }
+}

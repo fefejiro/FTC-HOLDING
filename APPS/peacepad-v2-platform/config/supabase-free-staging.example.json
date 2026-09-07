@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "deploymentApproved": false,
+  "fictionalDataOnly": true,
+  "productionApiWritesEnabled": false,
+  "regions": {
+    "ca": {
+      "projectRef": "rohvkyuxbnqzglaromms",
+      "supabaseRegion": "ca-central-1",
+      "apiBaseUrl": "https://rohvkyuxbnqzglaromms.supabase.co/functions/v1/peacepad-v2-api"
+    }
+  }
+}

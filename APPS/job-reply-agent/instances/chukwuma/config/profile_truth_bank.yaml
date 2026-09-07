@@ -1,0 +1,91 @@
+version: 1
+identity:
+  name: Chukwuma Mezie-Okoye
+  email: chukwumamezok@gmail.com
+  phone: "+234 802 784 4846"
+  location: Pickering, Ontario, Canada
+  links:
+    - linkedin.com/in/chukwuma-mezie-okoye
+tracks:
+  communications_marketing:
+    keywords: [corporate communications, internal communications, public relations, brand strategy, content marketing, growth marketing]
+    subtitle: Corporate Communications | Brand Strategy | Growth Marketing | Digital Media
+    core_strengths:
+      - Corporate communications and public relations
+      - Brand strategy, storytelling, and executive communications
+      - Content, digital, and growth marketing
+      - Crisis communications and social listening
+    summary_templates:
+      - "{title} professional bringing more than a decade of communications, brand, digital media, and stakeholder leadership experience."
+      - "Built and led measurable corporate communications, growth marketing, content, and brand transformation programmes."
+      - "Experienced advising leadership teams while coordinating agencies, clients, media, government, and delivery partners."
+  digital_product_transformation:
+    keywords: [digital transformation, product manager, digital project manager, product development, ecommerce, automation]
+    subtitle: Digital Transformation | Product Development | Project Delivery | Growth
+    core_strengths:
+      - Digital transformation and product development
+      - Project, stakeholder, and client management
+      - E-commerce and digital media monetisation
+      - AI and no-code workflow adoption
+    summary_templates:
+      - "{title} leader combining digital transformation, product development, project delivery, and growth experience."
+      - "Built technology-enabled services, digital products, e-commerce automation, and multi-stakeholder programmes."
+      - "Known for connecting strategy, customer needs, communications, and practical execution."
+  ai_emerging_technology:
+    keywords: [ai prompt engineer, ai automation, ai trainer, ai data specialist, no-code, n8n, knime]
+    subtitle: AI Adoption | No-Code Automation | Training | Emerging Technology
+    core_strengths:
+      - AI adoption and digital-skills programming
+      - No-code machine learning and workflow automation
+      - Training, facilitation, and ecosystem development
+      - Emerging technology advocacy
+    summary_templates:
+      - "{title} professional experienced in AI adoption, no-code workflows, digital-skills programming, and emerging-technology education."
+      - "Designs practical programmes that connect technology adoption with business, creator, and community outcomes."
+      - "Brings training, facilitation, product, communications, and ecosystem-development experience."
+experience_pool:
+  - text: Founded and leads Activ8 Hub, delivering digital-skills training, startup incubation, mentorship, AI adoption, Web3 literacy, and creator-economy programming.
+    tags: [leadership, digital_transformation, ai, training, ecosystem]
+    source: Chukwuma_Mezie_Okoye_Resume.pdf
+    employer: Activ8 Hub
+    confidence: 100
+    verified: true
+  - text: Secured participation in the UNDP Young Africa Innovates Programme in 2025 and develops grant proposals for development and innovation programmes.
+    tags: [partnerships, grants, innovation, leadership]
+    source: Chukwuma_Mezie_Okoye_Resume.pdf
+    employer: Activ8 Hub
+    confidence: 100
+    verified: true
+  - text: Built Bonitas Group across media, brand communications, technology-led digital transformation, B2C product development, and e-commerce automation.
+    tags: [marketing, digital_transformation, product, entrepreneurship]
+    source: Chukwuma_Mezie_Okoye_Resume.pdf
+    employer: Bonitas Group
+    confidence: 100
+    verified: true
+  - text: Scaled WokeNationTV to more than 50,000 followers, achieved AdSense monetisation within one year, and grew website traffic to 10,000 monthly visits.
+    tags: [growth_marketing, content, media, analytics]
+    source: Chukwuma_Mezie_Okoye_Resume.pdf
+    employer: Bonitas Group
+    confidence: 100
+    verified: true
+  - text: Built a digital marketing system associated with a 40 percent increase in sales leads, 15 percent lift in conversions, and sustained 25 percent increase in brand recognition.
+    tags: [growth_marketing, digital_marketing, conversion, strategy]
+    source: Chukwuma_Mezie_Okoye_Resume.pdf
+    employer: Bonitas Group
+    confidence: 100
+    verified: true
+  - text: Led corporate communications, public relations, digital strategy, crisis management, executive communications, and the 2019 group-wide rebrand for Nestoil and Obijackson Group.
+    tags: [corporate_communications, pr, brand, crisis, leadership]
+    source: Chukwuma_Mezie_Okoye_Resume.pdf
+    employer: Nestoil Group / Obijackson Group
+    confidence: 100
+    verified: true
+  - text: Managed client strategy and digital project delivery at Wild Fusion, contributing to increased new business, campaign effectiveness, leads, and client retention.
+    tags: [account_management, digital_project, client_service, marketing]
+    source: Chukwuma_Mezie_Okoye_Resume.pdf
+    employer: Wild Fusion
+    confidence: 100
+    verified: true
+portfolio:
+  - GoDigital productised AI-enabled digital communication services through Bonitas Technologies and Marketing.
+  - Activ8 Hub programmes support digital inclusion, youth entrepreneurship, and emerging-technology adoption.

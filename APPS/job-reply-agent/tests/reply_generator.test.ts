@@ -51,6 +51,16 @@ function countWords(s: string): number {
 }
 
 describe("generateReply", () => {
+  it("preserves the specific IT Business Analyst title from recruiter subjects", () => {
+    const parsed = parseRecruiterEmail(mkMessage({
+      subject: "CTH Opportunity _ IT Business Analyst _ Hybrid",
+      body: "Kubota Canada has an IT Business Analyst opportunity in Pickering, ON with WMS, supply chain, requirements, SQL, API validation, and UAT."
+    }));
+
+    expect(parsed.roleTitle).toBe("IT Business Analyst");
+    expect(parsed.cleanRoleTitle).toBe("IT Business Analyst");
+  });
+
   it("US recruiter email with HTML entities, disclaimer, EEO, and JD paste -> clean body with TN line", () => {
     const message = mkMessage({
       from: "John Smith <john@usrecruit.com>",

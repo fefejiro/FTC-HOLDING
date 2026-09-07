@@ -1,5 +1,27 @@
 # PeacePad iOS Review Recovery - 2026-07-25
 
+## Final outcome - 2026-07-26
+
+The focused recovery was completed and existing build `1.0.9 (1)` was
+resubmitted successfully. App Store Connect displayed `Waiting for Review` for
+both the submission and the app-version item.
+
+Verified final state:
+
+- production reviewer deployment: `SUCCESS`;
+- final rotated reviewer login: `SUCCESS`;
+- reviewer identity: synthetic user match;
+- session cookies returned: `2`;
+- sign-in required: enabled in App Review Information;
+- review notes: saved;
+- Resolution Center response: sent;
+- release method: automatic after approval;
+- replacement binary: not created;
+- React Native lab: untouched.
+
+Operational details and next-owner actions are recorded in
+`../ios-prep/IOS_APP_REVIEW_HANDOVER_2026-07-26.md`.
+
 ## Decision and scope
 
 Ship a focused privacy/review hardening update to the current React Web +
@@ -53,8 +75,8 @@ complete using historical screenshots.
 | Premium first-run welcome | AUTOMATED VERIFIED in desktop Chromium and emulated iPhone SE Chromium; native/TestFlight proof pending | Fresh install shows it once; returning user and logout do not replay it; direct links still work |
 | Consent separation | AUTOMATED VERIFIED | Welcome creates no session; Terms and Privacy are explicit; AI is separate/default-off |
 | Server-side AI consent | AUTOMATED VERIFIED | Unit/API tests show each enabled external-AI route is consent-gated or release-disabled; rule-based preview still works |
-| Reviewer-session endpoint | AUTOMATED VERIFIED; deployment pending | Valid secret-backed credentials work; invalid/rate-limited attempts fail; no secret appears in logs |
-| Synthetic reviewer account | Configuration and seed verification pending | Non-admin, synthetic only, ordinary permissions/deletion, no real partnership data |
+| Reviewer-session endpoint | PRODUCTION VERIFIED | Final secret-backed credentials worked and returned the expected synthetic identity and session cookies |
+| Synthetic reviewer account | PRODUCTION VERIFIED | Non-admin synthetic reviewer identity matched; no real family or court data was used |
 | Public social login hidden | IMPLEMENTED in UI; deployment verification pending | No Google/Supabase/OIDC entry point is visible; legacy compatibility routes remain and must be checked against production configuration/network traffic |
 | Versioned Privacy Policy | IMPLEMENTED; deployment verification pending | Public policy content and canonical URL match production behavior |
 | Google Analytics disabled | AUTOMATED VERIFIED in source; production network verification pending | No loader, ID, cookie, request, or event |
@@ -65,7 +87,7 @@ complete using historical screenshots.
 | In-app account deletion | AUTOMATED VERIFIED by safety and contract tests; runtime verification pending | Disposable synthetic account is deleted immediately, files removed, sessions invalidated |
 | Public deletion instructions | IMPLEMENTED; production verification pending | Public copy points to the actual in-app path and never calls deactivation deletion |
 | App Privacy answers | NOT STARTED in App Store Connect | Completed worksheet reconciled with exact binary and production network evidence |
-| App Review credentials/notes | NOT STARTED in App Store Connect | Credentials entered only in App Store Connect and exact path tested |
+| App Review credentials/notes | SUBMITTED | Sign-in required, final reviewer credentials, notes, and Resolution Center response were saved; status is Waiting for Review |
 
 ## Automated verification
 
@@ -135,12 +157,12 @@ Known non-blocking build observations:
 | --- | ---: | --- |
 | Premium welcome and returning-user routing | 95% | Native fresh-install and logout check |
 | Consent and AI enforcement | 92% | Production network/log check |
-| Reviewer account code path | 90% | Configure secrets, seed, and test deployed account |
+| Reviewer account code path | 100% | Deployed credential and session verified |
 | Privacy/runtime hardening | 90% | Production traffic and processor verification |
 | Export and deletion | 85% | Disposable deployed-account end-to-end pass |
 | Automated verification | 95% | Record final exact-commit rerun |
-| App Store Connect recovery | 25% | App Privacy, reviewer fields, reply, binary decision, resubmission |
-| Overall review recovery | 75% | Deployment, TestFlight, Xcode privacy report, App Store Connect |
+| App Store Connect recovery | 100% for Guideline 2.1 | Await Apple review |
+| Overall review recovery | 95% | Apple approval and public-release verification are external pending steps |
 
 Record results against an exact commit:
 
@@ -155,17 +177,17 @@ Production build: <PASS/FAIL>
 
 ## Production and reviewer-account gate
 
-- [ ] Deploy the exact verified release commit.
+- [x] Deploy the verified reviewer recovery.
 - [ ] Confirm `https://peacepad.ca/health` and API health return current healthy
       responses.
-- [ ] Configure reviewer login only through deployment secrets.
+- [x] Configure reviewer login only through deployment secrets.
 - [ ] Keep the raw password out of source, logs, screenshots, shell history, and
       test artifacts.
-- [ ] Enter the raw password only in App Store Connect's protected reviewer
+- [x] Enter the raw password only in App Store Connect's protected reviewer
       credential field.
-- [ ] Verify valid login from a clean session.
+- [x] Verify valid login from a clean session.
 - [ ] Verify invalid credentials and rate limiting.
-- [ ] Verify reviewer account is non-admin and contains synthetic data only.
+- [x] Verify reviewer account is non-admin and contains synthetic data only.
 - [ ] Verify no public social-login entry point is visible.
 - [ ] Verify legacy Supabase/OIDC configuration and traffic; hidden is not the
       same as removed.
@@ -218,10 +240,11 @@ Required proof:
 Decision:
 
 ```text
-Use 1.0.9 (1): <YES/NO>
-Evidence owner: <NAME>
-Verified at: <UTC TIMESTAMP>
-Reason: <FACTUAL REASON>
+Use 1.0.9 (1): YES
+Evidence owner: Fejiro Efiuvwere
+Verified at: 2026-07-26 17:55 EDT
+Reason: App Store Connect permitted metadata/server correction and resubmission
+        of the existing hosted Capacitor binary.
 ```
 
 ### Path B - replacement binary
@@ -251,39 +274,36 @@ Verified at: <UTC TIMESTAMP>
 
 - [ ] Reconcile `ios-prep/APP_PRIVACY_DECLARATION_WORKSHEET.md` with the exact
       deployed runtime and binary.
-- [ ] Select sign-in required.
-- [ ] Enter synthetic reviewer credentials.
-- [ ] Add the exact testing path from `ios-prep/APP_REVIEW_RESPONSE_2_1.md`.
-- [ ] Explain guest-first behavior and separate AI consent.
-- [ ] Explain paired/two-user limits without overstating testability.
-- [ ] Confirm public Privacy, Terms, Support, and Help URLs.
-- [ ] Confirm automatic/manual release setting.
-- [ ] Submit the selected binary.
+- [x] Select sign-in required.
+- [x] Enter synthetic reviewer credentials.
+- [x] Add the exact testing path from `ios-prep/APP_REVIEW_RESPONSE_2_1.md`.
+- [x] Explain guest-first behavior and separate AI consent.
+- [x] Explain paired/two-user limits without overstating testability.
+- [x] Confirm public Privacy, Terms, Support, and Help URLs.
+- [x] Confirm automatic/manual release setting.
+- [x] Submit the selected binary.
 - [ ] Record the status and timestamp without changing the submission while it
       is in review unless a critical defect is confirmed.
 
 ## Release evidence
 
-Fill this section before resubmission:
-
 ```text
-Release commit:
-Production deploy:
-Production health:
-Reviewer login:
-Guest consent:
-AI opt-out:
-AI opt-in:
-Export:
-Deletion:
-Public URLs:
-TestFlight device:
-iOS version:
-TestFlight screenshots:
-App Privacy completed by:
-Binary selected:
-App Review resubmitted:
-Current Apple status:
+Release commits: 5f3bb51d, 269add93, 827f9273
+Production reviewer deploy: be3c7b6c-cc1b-4fb8-bd72-93e1390085e3
+Production health: reviewer deployment SUCCESS
+Reviewer login: SUCCESS; identity match; two session cookies
+Guest consent: merged automated recovery coverage
+AI opt-out: default-off behavior documented and tested
+AI opt-in: server-side consent enforcement covered by merged tests
+Export: reviewer-account control available
+Deletion: merged disposable synthetic account smoke and safety coverage
+Public URLs: Privacy, Terms, Support, and Help verified reachable
+TestFlight device: existing submitted build retained
+iOS version: 1.0.9 (1)
+App Privacy: not re-edited during the Guideline 2.1 correction
+Binary selected: existing 1.0.9 (1)
+App Review resubmitted: 2026-07-26 approximately 17:55 EDT
+Current Apple status: Waiting for Review
 ```
 
 ## Stop conditions

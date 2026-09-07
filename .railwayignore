@@ -10,6 +10,9 @@ APPS/*/android
 APPS/*/attached_assets
 APPS/*/uploads
 *.png
+!APPS/job-reply-agent/public/icon-192.png
+!APPS/job-reply-agent/public/icon.png
+!APPS/job-reply-agent/public/product-preview.png
 *.jpg
 *.jpeg
 *.webm

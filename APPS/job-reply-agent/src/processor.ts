@@ -7,6 +7,7 @@ import {
   approveDraft,
   getApprovedPendingDrafts,
   hasMessage,
+  hasThread,
   insertDecision,
   insertMessage,
   markDraftSent,
@@ -16,10 +17,39 @@ import {
 import { evaluateRisk } from "./red_flags.js";
 import { generateReply } from "./reply_generator.js";
 import { selectResume } from "./resume_selector.js";
-import { tailorResumeForJD } from "./resume_tailor.js";
+import { selectTailoringTemplatePath, tailorResumeForJD } from "./resume_tailor.js";
 import type { ProfileConfig, RecruiterMessage, ResumeMapConfig, RulesConfig } from "./types.js";
 
 type GmailLabelStatus = "drafted" | "needs_review" | "sent" | "skipped" | "blocked" | "approved";
+
+function classifyAutomatedJobNotice(message: RecruiterMessage): string | null {
+  const from = (message.from || "").toLowerCase();
+  const subject = (message.subject || "").toLowerCase();
+  const body = (message.body || "").toLowerCase();
+  const haystack = `${from}\n${subject}\n${body}`;
+
+  if (
+    /\b(no-?reply|do-?not-?reply|donotreply|noreply|notifications?)@/.test(from) ||
+    from.includes("jobalerts-noreply@linkedin.com") ||
+    from.includes("jobs-noreply@linkedin.com") ||
+    from.includes("jobs-listings@linkedin.com") ||
+    from.includes("messages-noreply@linkedin.com") ||
+    from.includes("newsletters-noreply@linkedin.com") ||
+    from.includes("monster@notifications.monster.com") ||
+    from.includes("donotreply.jobalert.indeed.com")
+  ) {
+    return "Automated/no-reply job notice is not a recruiter thread";
+  }
+
+  if (
+    /\bjob alert\b|\brecommended jobs\b|\bjobs recommended\b|\bnew jobs\b|\bhiring market report\b|\bjob posting\(s\)\b|\bfunding opportunity\b|\bupdate your resume\b/.test(subject) ||
+    /\bcreated with the new ai-powered job search\b|\bmanage job alerts\b/.test(haystack)
+  ) {
+    return "Job alert or newsletter should be scouted, not replied to";
+  }
+
+  return null;
+}
 
 /**
  * Determine if auto-send is eligible based on score, time-of-day, and config guards.
@@ -103,7 +133,7 @@ export function processMockInbox(params: {
   let skipped = 0;
 
   for (const message of inbox) {
-    if (hasMessage(db, message.messageId)) {
+    if (hasMessage(db, message.messageId) || hasThread(db, message.threadId)) {
       continue;
     }
 
@@ -189,7 +219,7 @@ export async function processGmailInbox(params: {
   const selfEmail = (profile.contact?.email || "").toLowerCase().trim();
 
   for (const message of params.messages) {
-    if (hasMessage(db, message.messageId)) {
+    if (hasMessage(db, message.messageId) || hasThread(db, message.threadId)) {
       continue;
     }
 
@@ -205,6 +235,18 @@ export async function processGmailInbox(params: {
     insertMessage(db, message);
     insertDecision(db, message.messageId, "processed", "Message ingested from Gmail");
     processed += 1;
+
+    const automatedNoticeReason = classifyAutomatedJobNotice(message);
+    if (automatedNoticeReason) {
+      skipped += 1;
+      insertDecision(db, message.messageId, "skipped", automatedNoticeReason);
+      await params.onStatusChange?.(message.messageId, "skipped");
+      logger.info(
+        { messageId: message.messageId, from: message.from, subject: message.subject, reason: automatedNoticeReason },
+        "Skipped automated job notice."
+      );
+      continue;
+    }
 
     const parsed = parseRecruiterEmail(message);
     const score = scoreOpportunity(parsed, profile, resumeMap, message.body);
@@ -223,14 +265,30 @@ export async function processGmailInbox(params: {
       continue;
     }
 
-    // Apply score-band decision logic (instead of single min_match_score threshold)
+    if (score.score < rules.filters.min_match_score) {
+      skipped += 1;
+      insertDecision(
+        db,
+        message.messageId,
+        "skipped",
+        `Score ${score.score} below configured match threshold ${rules.filters.min_match_score}`
+      );
+      await params.onStatusChange?.(message.messageId, "skipped");
+      continue;
+    }
+
+    // Apply score-band decision logic after the configured fit threshold.
     const scoreBands = rules.filters.score_bands || { auto_send_min: 75, draft_min: 69, needs_review_min: 55 };
     let decisionStatus: GmailLabelStatus;
     let decisionReason: string;
 
-    if (score.score < scoreBands.needs_review_min) {
+    if (risk.needsReview || parsed.parserConfidence < 70) {
       decisionStatus = "needs_review";
-      decisionReason = `Score ${score.score} below needs_review threshold ${scoreBands.needs_review_min}; draft created for human review`;
+      const reviewReasons = [
+        ...risk.reasons,
+        ...(parsed.parserConfidence < 70 ? [`Parser confidence ${parsed.parserConfidence}%`] : [])
+      ];
+      decisionReason = `Manual review required: ${reviewReasons.join("; ")}`;
     } else if (score.score < scoreBands.draft_min) {
       decisionStatus = "needs_review";
       decisionReason = `Score ${score.score} in needs_review band (${scoreBands.needs_review_min}–${scoreBands.draft_min - 1})`;
@@ -255,12 +313,6 @@ export async function processGmailInbox(params: {
       }
     }
 
-    // Needs-review messages still get a draft. The review label carries low
-    // score/parser uncertainty, but the user should not lose a possible lead.
-    if (decisionStatus === "needs_review" && parsed.parserConfidence < 70) {
-      decisionReason = `${decisionReason}; parser confidence ${parsed.parserConfidence}%`;
-    }
-
     const resume = selectResume(parsed, message.body, resumeMap);
     const reply = generateReply({
       parsed,
@@ -271,10 +323,17 @@ export async function processGmailInbox(params: {
     const tailoring = rules.resume_tailoring;
     if (tailoring?.enabled) {
       try {
+        const templatePath = selectTailoringTemplatePath({
+          parsed,
+          jdText: message.body,
+          defaultTemplatePath: tailoring.template_path,
+          businessAnalysisTemplatePath: tailoring.business_analysis_template_path,
+          itManagementTemplatePath: tailoring.it_management_template_path
+        });
         const tailored = await tailorResumeForJD({
           parsed,
           jdText: message.body,
-          templatePath: tailoring.template_path,
+          templatePath,
           outputDir: tailoring.output_dir
         });
         attachPath = tailored.docxPath;
@@ -285,10 +344,15 @@ export async function processGmailInbox(params: {
           `Tailored resume generated: ${tailored.docxPath}`
         );
       } catch (error) {
+        needsReview += 1;
+        const reason = `Tailored resume generation failed: ${error instanceof Error ? error.message : String(error)}`;
+        insertDecision(db, message.messageId, "needs_review", reason);
+        await params.onStatusChange?.(message.messageId, "needs_review");
         logger.warn(
           { messageId: message.messageId, error: error instanceof Error ? error.message : String(error) },
-          "Tailoring failed; falling back to static resume."
+          "Tailoring failed; no Gmail draft was created."
         );
+        continue;
       }
     }
 

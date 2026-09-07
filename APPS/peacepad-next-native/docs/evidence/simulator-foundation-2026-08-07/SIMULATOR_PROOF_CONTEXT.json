@@ -1,0 +1,30 @@
+{
+  "appCommit": "d938c4c55d4beb5923e7a75a4223b12892f1d729",
+  "capturedAtUtc": "2026-08-07T00:54:00Z",
+  "device": "iPhone 17",
+  "deviceUdid": "E863DC46-D222-4422-9CF8-764DE9F8B788",
+  "iosVersion": "26.5",
+  "runtime": "Expo Go with localhost Metro",
+  "bundleBoundary": "ca.peacepad.nextnative.lab",
+  "dataClassification": "fictional-only",
+  "productionApiWritesEnabled": false,
+  "results": {
+    "welcome": "SIMULATOR VERIFIED",
+    "requiredConsent": "SIMULATOR VERIFIED",
+    "aiConsentDefaultOff": "SIMULATOR VERIFIED",
+    "guestSession": "BLOCKED - staging service not deployed",
+    "failClosedMessage": "PeacePad cannot reach the staging service right now."
+  },
+  "automation": {
+    "tool": "Maestro",
+    "welcomeAssertion": true,
+    "consentAssertion": true,
+    "termsSelection": true,
+    "privacySelection": true,
+    "guestComposeAssertion": false
+  },
+  "notes": [
+    "No AWS, production API, App Store Connect, TestFlight, or production data was contacted.",
+    "The client remained on consent and reported the unavailable staging service instead of creating a local or production session."
+  ]
+}

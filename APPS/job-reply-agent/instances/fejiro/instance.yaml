@@ -1,0 +1,17 @@
+id: fejiro
+candidate_name: Fejiro Efiuvwere
+expected_gmail_account: fejiro.efiuvwere@gmail.com
+onboarding_approved: true
+activation_enabled: true
+proactive_work_authorization: true
+enabled_channels:
+  - gmail
+  - linkedin
+paths:
+  config_dir: ../../config
+  database: ../../data/job_leads.sqlite
+  gmail_tokens: ../../data/gmail_tokens.json
+  resume_root: C:/FTC HOLDING/DOCS/Fejiro_Job_Reply_Agent_Resume_Bank/resumes
+  browser_profile: ../../.local/pw-profile-job-reply
+  logs: ../../logs
+  proof: ../../.local/application-proof

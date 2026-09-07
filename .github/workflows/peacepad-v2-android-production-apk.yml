@@ -1,0 +1,133 @@
+name: PeacePad V2 Android Production Device APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact reviewed peacepad-native-main SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: peacepad-v2-android-production-apk
+  cancel-in-progress: false
+
+jobs:
+  build-production-apk:
+    name: Build installable production APK for physical-device testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    environment: peacepad-v2-staging-ca
+    steps:
+      - name: Checkout exact reviewed source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 0
+
+      - name: Bind build to source and live production boundary
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test -z "$(git status --porcelain)"
+          health="$(curl --fail --location --retry 3 --connect-timeout 20 --max-time 60 https://rohvkyuxbnqzglaromms.supabase.co/functions/v1/peacepad-v2-api/health)"
+          node -e 'const h=JSON.parse(process.argv[1]); if(h.status!=="ok"||h.environment!=="production"||h.region!=="ca"||h.writesEnabled!==true) process.exit(1)' "$health"
+          git rev-parse "$EXPECTED_SHA:APPS/peacepad-next-native" > "$RUNNER_TEMP/peacepad-native-tree"
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: APPS/peacepad-next-native/package-lock.json
+
+      - name: Package only the reviewed Native V2 app
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          release_root="$RUNNER_TEMP/peacepad-next-native-production-apk"
+          mkdir -p "$release_root"
+          git archive "$EXPECTED_SHA:APPS/peacepad-next-native" | tar -x -C "$release_root"
+          git -C "$release_root" init -q
+          git -C "$release_root" config user.name 'PeacePad Release Control'
+          git -C "$release_root" config user.email 'release-control@users.noreply.github.com'
+          git -C "$release_root" add --all
+          git -C "$release_root" commit -qm "Package PeacePad production APK $EXPECTED_SHA"
+          test "$(git -C "$release_root" rev-parse HEAD^{tree})" = "$(cat "$RUNNER_TEMP/peacepad-native-tree")"
+          npm --prefix "$release_root" ci --ignore-scripts --no-audit --no-fund --workspaces=false
+
+      - name: Write ephemeral Android signing credentials
+        working-directory: ${{ runner.temp }}/peacepad-next-native-production-apk
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PEACEPAD_ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.PEACEPAD_ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PEACEPAD_ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PEACEPAD_ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_BASE64" && test -n "$KEYSTORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD"
+          umask 077
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/peacepad-upload.keystore"
+          node - <<'NODE'
+          const fs = require('fs');
+          fs.writeFileSync('credentials.json', JSON.stringify({android:{keystore:{
+            keystorePath: process.env.RUNNER_TEMP + '/peacepad-upload.keystore',
+            keystorePassword: process.env.KEYSTORE_PASSWORD,
+            keyAlias: process.env.KEY_ALIAS,
+            keyPassword: process.env.KEY_PASSWORD
+          }}}));
+          NODE
+
+      - name: Validate production UX contract and build signed APK on the GitHub runner
+        working-directory: ${{ runner.temp }}/peacepad-next-native-production-apk
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.source_sha }}
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EAS_NO_VCS: "1"
+          PEACEPAD_PRODUCTION_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_PEACEPAD_SUPABASE_URL }}
+          PEACEPAD_PRODUCTION_API_BASE_URL: ${{ vars.EXPO_PUBLIC_PEACEPAD_API_BASE_URL }}
+          PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          set -euo pipefail
+          trap 'rm -f credentials.json "$RUNNER_TEMP/peacepad-upload.keystore"' EXIT
+          release_command=$(cat <<'EOF'
+            set -eu
+            export EXPO_PUBLIC_PEACEPAD_ENV=production
+            export EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_URL="$PEACEPAD_PRODUCTION_SUPABASE_URL"
+            export EXPO_PUBLIC_PEACEPAD_PRODUCTION_API_BASE_URL="$PEACEPAD_PRODUCTION_API_BASE_URL"
+            export EXPO_PUBLIC_PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY="$PEACEPAD_PRODUCTION_SUPABASE_PUBLISHABLE_KEY"
+            export EXPO_PUBLIC_PEACEPAD_PRODUCTION_WRITES_ENABLED=true
+            export EXPO_PUBLIC_PEACEPAD_DIAGNOSTICS=false
+            export PEACEPAD_ANDROID_RELEASE_MODE=playstore-production
+            node scripts/check-lab-guardrails.cjs
+            node scripts/check-secrets.cjs
+            node -e 'const cfg=require("./app.config.js")({config:require("./app.json").expo}); if(cfg.android.package!=="ca.peacepad.family"||cfg.version!=="2.0.1"||cfg.android.versionCode!==50||cfg.extra.environment!=="production"||cfg.extra.productionApiWritesEnabled!==true||cfg.extra.googleSignInEnabled!==true) process.exit(1);'
+            npx --yes eas-cli@21.8.0 build --platform android --profile production-device-apk --local --non-interactive --output "$RUNNER_TEMP/PeacePad-2.0.1-50-production.apk"
+          EOF
+          )
+          npx --yes eas-cli@21.8.0 env:exec production "$release_command" --non-interactive
+          test -s "$RUNNER_TEMP/PeacePad-2.0.1-50-production.apk"
+          sha256sum "$RUNNER_TEMP/PeacePad-2.0.1-50-production.apk" > "$RUNNER_TEMP/PeacePad-2.0.1-50-production.apk.sha256"
+          node -e 'const fs=require("fs");fs.writeFileSync(process.env.RUNNER_TEMP+"/peacepad-v2-production-apk.manifest",`source_sha=${process.env.EXPECTED_SHA}\npackage=ca.peacepad.family\nversion=2.0.1\nversion_code=50\nruntime=production\nstore_submission_attempted=false\n`);'
+
+      - name: Upload non-secret APK build evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: peacepad-v2-production-apk-${{ inputs.source_sha }}
+          if-no-files-found: warn
+          retention-days: 7
+          path: |
+            ${{ runner.temp }}/PeacePad-2.0.1-50-production.apk
+            ${{ runner.temp }}/PeacePad-2.0.1-50-production.apk.sha256
+            ${{ runner.temp }}/peacepad-v2-production-apk.manifest

@@ -51,8 +51,12 @@ async function run() {
   assert(apiContentType.includes("application/json"), `[Ownership] ${apiOrigin}/api/health expected JSON, got ${apiContentType}`);
   const apiServer = (apiHealth.response.headers.get("server") || "").toLowerCase();
   assert(
-    apiServer.includes("railway"),
-    `[Ownership] ${apiOrigin} should be Railway-served API, got server=${apiServer || "(missing)"}`,
+    apiServer.includes("cloudflare"),
+    `[Ownership] ${apiOrigin} should be Cloudflare-served at the public edge, got server=${apiServer || "(missing)"}`,
+  );
+  assert(
+    Boolean(apiHealth.response.headers.get("x-railway-request-id")),
+    `[Ownership] ${apiOrigin} is missing the Railway origin request identifier.`,
   );
 
   const apiOnboarding = await fetchWithBody(`${apiOrigin}/onboarding`, {

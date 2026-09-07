@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "PeacePad",
+    "slug": "peacepad-next-native-lab",
+    "version": "0.0.1",
+    "icon": "./assets/icon-production.png",
+    "orientation": "portrait",
+    "scheme": "peacepadnextlab",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "ca.peacepad.nextnative.lab",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "PeacePad uses the microphone only when you choose a private audio or video call, voice note, or Coach voice conversation.",
+        "NSCameraUsageDescription": "PeacePad uses the camera only when you choose a private video call or take a photo for a message or record.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "ca.peacepad.nextnative.lab",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon-production.png",
+        "backgroundColor": "#7226B4"
+      }
+    },
+    "extra": {
+      "environment": "lab",
+      "diagnosticsEnabled": false,
+      "productionApiWritesEnabled": false,
+      "submittedBundleId": "ca.peacepad.family",
+      "eas": {
+        "projectId": "a4ecee72-ebae-483d-8553-035847ebb3d3"
+      }
+    },
+    "plugins": [
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "PeacePad uses the microphone only when you choose a private audio or video call, voice note, or Coach voice conversation.",
+          "recordAudioAndroid": true
+        }
+      ],
+      "expo-secure-store",
+      "expo-notifications",
+      "expo-dev-client",
+      "./plugins/withPeacePadAudioWebRTC"
+    ],
+    "owner": "official_fejiro"
+  }
+}

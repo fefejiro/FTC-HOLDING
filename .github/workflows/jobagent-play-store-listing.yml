@@ -1,0 +1,29 @@
+name: UnaScout Play Store listing
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish-listing:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: APPS/job-reply-agent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: APPS/job-reply-agent/package-lock.json
+      - name: Validate approved listing
+        run: |
+          npm ci --workspaces=false
+          npm run store:metadata:check
+      - name: Upload listing as changes held for explicit review
+        env:
+          JOBAGENT_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.JOBAGENT_PLAY_SERVICE_ACCOUNT_JSON || secrets.PEACEPAD_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: node scripts/upload-google-play-listing.mjs

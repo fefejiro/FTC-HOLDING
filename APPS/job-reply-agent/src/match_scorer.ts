@@ -48,16 +48,29 @@ export function scoreOpportunity(
     reasons.push(`Role family match: ${mapMatches[0].role_family}`);
   }
 
-  if (
-    parsed.location.toLowerCase().includes("remote") ||
-    parsed.location.toLowerCase().includes("toronto") ||
-    text.includes("remote") ||
-    text.includes("hybrid") ||
-    text.includes("toronto")
-  ) {
-    score += 10;
-    reasons.push("Preferred location pattern matched");
+  const geoScore = scoreGeographyPreference(parsed.location, text);
+  if (geoScore > 0) {
+    score += geoScore;
+    reasons.push("Preferred geography/work-mode matched");
   }
 
   return { score: Math.min(100, score), rationale: reasons.join(" | ") || "No strong matches" };
+}
+
+function scoreGeographyPreference(location: string, text: string): number {
+  const blob = `${location || ""} ${text || ""}`.toLowerCase();
+  let bonus = 0;
+
+  if (/\bremote\b|work from home|wfh/.test(blob)) bonus += 12;
+  else if (/\bhybrid\b/.test(blob)) bonus += 10;
+  else if (/\bonsite\b|\bon-site\b|\bon site\b/.test(blob)) bonus += 6;
+
+  if (/\b(canada|toronto|ontario|vancouver|montreal|calgary|ottawa|edmonton|winnipeg|halifax)\b/.test(blob)) {
+    bonus += 12;
+  }
+  if (/\b(united states|usa|u\.s\.a\.|u\.s\.)\b/.test(blob)) {
+    bonus += 12;
+  }
+
+  return Math.min(24, bonus);
 }

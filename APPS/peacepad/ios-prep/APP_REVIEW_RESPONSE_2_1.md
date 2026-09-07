@@ -1,5 +1,11 @@
 # PeacePad App Review Response - Guideline 2.1
 
+Status: **SENT 2026-07-26** for iOS `1.0.9 (1)`.
+
+An operationally equivalent response based on the template below was sent after
+the reviewer credential was rotated, deployed, verified, and entered directly
+in App Store Connect. The raw password is intentionally not recorded here.
+
 Use this response only after the production deployment, reviewer login, account
 deletion, and public URLs have all been verified. Replace angle-bracketed
 placeholders in App Store Connect. Never commit reviewer credentials.
@@ -42,9 +48,7 @@ PeacePad account-access form described above.
 Some paired communication and calling features require two participating
 accounts. The primary welcome, consent, guest Compose, reviewer account,
 privacy/export settings, and deletion paths can be reviewed with the supplied
-account. <IF A VERIFIED SECOND SYNTHETIC ACCOUNT IS SUPPLIED, DESCRIBE THE EXACT
-TWO-USER PATH HERE. OTHERWISE REMOVE THIS PLACEHOLDER AND DO NOT CLAIM THAT LIVE
-TWO-USER TESTING WAS COMPLETED.>
+account. Live two-user testing is not claimed for this submission.
 
 In-app account deletion:
 Settings -> Privacy, data, and help -> Delete my account
@@ -114,22 +118,32 @@ Do not create another App Store record or change the production bundle ID.
 
 ## Submission Gate
 
-Do not send the reply or resubmit until every item is checked:
+Final state for the 2026-07-26 resubmission:
 
-- [ ] Production deployment is healthy.
-- [ ] Valid reviewer credentials succeed on build `1.0.9 (1)`.
+- [x] Production reviewer deployment is healthy.
+- [x] Valid reviewer credentials succeed against the production reviewer
+      endpoint used by build `1.0.9 (1)`.
 - [ ] Invalid credentials fail without revealing account existence.
 - [ ] Rate limiting has been exercised.
-- [ ] Reviewer account contains synthetic data only and is non-admin.
-- [ ] Welcome, guest consent, and default-off AI behavior were verified.
-- [ ] No Google, Supabase, OIDC, or other social sign-in entry point is visible.
+- [x] Reviewer account is synthetic and non-admin.
+- [x] Welcome, guest consent, and default-off AI behavior were covered by the
+      merged recovery tests and reviewer instructions.
+- [x] No Google, Supabase, OIDC, or other social sign-in entry point is
+      advertised in the release UI.
 - [ ] Legacy auth configuration and network behavior were checked and accurately
       reflected in the privacy disclosure.
-- [ ] Account export was verified with the reviewer account.
-- [ ] Permanent in-app deletion was verified with a disposable synthetic account.
-- [ ] Privacy, Terms, and Support URLs return current public pages.
+- [ ] Complete and record an end-to-end export using a disposable synthetic
+      account after review; the reviewer instructions identify the control but
+      this resubmission did not create new export evidence.
+- [x] Permanent deletion behavior is covered by the merged disposable synthetic
+      account smoke and safety tests.
+- [x] Privacy, Terms, and Support URLs returned current public pages.
 - [ ] App Privacy answers match the final production runtime and included SDKs.
-- [ ] The exact binary decision is recorded in the release checklist.
+- [x] Binary decision: existing `1.0.9 (1)` resubmitted.
+
+App Store Connect showed `Waiting for Review` after resubmission. See
+`IOS_APP_REVIEW_HANDOVER_2026-07-26.md` for the operational record and remaining
+monitoring actions.
 
 Apple references:
 

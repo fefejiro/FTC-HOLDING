@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-08-07",
+  "environment": "fictional-staging",
+  "provider": "supabase-free",
+  "projectRef": "kgechdqdtryktfahyqez",
+  "projectName": "peacepad-v2-staging-us",
+  "region": "us-east-2",
+  "postgresVersion": "17.6",
+  "productionApiWritesEnabled": false,
+  "realFamilyDataUsed": false,
+  "checks": {
+    "projectHealthy": true,
+    "schemaApplied": true,
+    "regionBindingTablePresent": true,
+    "auditEventTablePresent": true,
+    "auditUpdateTriggerPresent": true,
+    "auditDeleteTriggerPresent": true,
+    "anonTablePrivileges": 0,
+    "authenticatedTablePrivileges": 0,
+    "fictionalTransactionalWriteRolledBack": true
+  },
+  "limitations": [
+    "No API adapter is deployed yet.",
+    "No managed restoration drill has run.",
+    "This is not production or residency certification evidence."
+  ]
+}

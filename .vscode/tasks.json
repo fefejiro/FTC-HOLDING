@@ -1,0 +1,34 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "FTC: Where am I?",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\.agents\\skills\\ftc-workspace-sanitation\\scripts\\ftc-workspace-status.ps1",
+        "-RepoRoot",
+        "${workspaceFolder}"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "FTC: Git status",
+      "type": "shell",
+      "command": "git",
+      "args": ["-C", "${workspaceFolder}", "status", "--short", "--branch"],
+      "problemMatcher": []
+    },
+    {
+      "label": "FTC: Fetch safely",
+      "type": "shell",
+      "command": "git",
+      "args": ["-C", "${workspaceFolder}", "fetch", "--prune", "origin"],
+      "problemMatcher": []
+    }
+  ]
+}

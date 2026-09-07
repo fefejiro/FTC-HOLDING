@@ -1,0 +1,79 @@
+name: UnaScout App Store metadata
+
+on:
+  workflow_dispatch:
+    inputs:
+      submit_for_review:
+        description: Attach build 2 and submit version 1.0 for App Review
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  metadata-and-review:
+    runs-on: macos-26
+    defaults:
+      run:
+        working-directory: APPS/job-reply-agent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: APPS/job-reply-agent/package-lock.json
+      - name: Validate release metadata
+        run: |
+          npm ci --workspaces=false
+          npm run store:metadata:check
+      - name: Prepare protected App Store review metadata
+        env:
+          REVIEW_EMAIL: ${{ secrets.JOBAGENT_APP_REVIEW_EMAIL }}
+          REVIEW_PASSWORD: ${{ secrets.JOBAGENT_APP_REVIEW_PASSWORD }}
+        run: |
+          test -n "$REVIEW_EMAIL" || { echo "Missing JOBAGENT_APP_REVIEW_EMAIL"; exit 1; }
+          test -n "$REVIEW_PASSWORD" || { echo "Missing JOBAGENT_APP_REVIEW_PASSWORD"; exit 1; }
+          mkdir -p "$RUNNER_TEMP/metadata/en-US/review_information"
+          cp -R store/metadata/apple/en-US/. "$RUNNER_TEMP/metadata/en-US/"
+          printf '%s' 'Fejiro' > "$RUNNER_TEMP/metadata/en-US/review_information/first_name.txt"
+          printf '%s' 'Efiuvwere' > "$RUNNER_TEMP/metadata/en-US/review_information/last_name.txt"
+          printf '%s' '4164732732' > "$RUNNER_TEMP/metadata/en-US/review_information/phone_number.txt"
+          printf '%s' 'fejiro.efiuvwere@gmail.com' > "$RUNNER_TEMP/metadata/en-US/review_information/email_address.txt"
+          printf '%s' "$REVIEW_EMAIL" > "$RUNNER_TEMP/metadata/en-US/review_information/demo_user.txt"
+          printf '%s' "$REVIEW_PASSWORD" > "$RUNNER_TEMP/metadata/en-US/review_information/demo_password.txt"
+          cat > "$RUNNER_TEMP/metadata/en-US/review_information/notes.txt" <<'NOTES'
+          UnaScout provides explainable job matching, truthful resume tailoring, interview preparation, approvals, and application tracking. The supplied review account contains synthetic demonstration data. Gmail and job-board connections are optional and are not required to review the core app. No purchase is required in the iOS app.
+          NOTES
+      - name: Prepare App Store Connect API key
+        env:
+          ASC_KEY_ID: ${{ secrets.JOBAGENT_ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.JOBAGENT_ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY_BASE64: ${{ secrets.JOBAGENT_ASC_PRIVATE_KEY_BASE64 }}
+        run: |
+          test -n "$ASC_KEY_ID" || { echo "Missing JOBAGENT_ASC_KEY_ID"; exit 1; }
+          test -n "$ASC_ISSUER_ID" || { echo "Missing JOBAGENT_ASC_ISSUER_ID"; exit 1; }
+          test -n "$ASC_PRIVATE_KEY_BASE64" || { echo "Missing JOBAGENT_ASC_PRIVATE_KEY_BASE64"; exit 1; }
+          printf '%s' "$ASC_PRIVATE_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+          jq -n --arg key_id "$ASC_KEY_ID" --arg issuer_id "$ASC_ISSUER_ID" --rawfile key "$RUNNER_TEMP/AuthKey.p8" \
+            '{key_id:$key_id,issuer_id:$issuer_id,key:$key,in_house:false}' > "$RUNNER_TEMP/app-store-api-key.json"
+      - name: Upload metadata, screenshots, and attach processed build
+        env:
+          SUBMIT_FOR_REVIEW: ${{ inputs.submit_for_review }}
+        run: |
+          fastlane deliver \
+            --api_key_path "$RUNNER_TEMP/app-store-api-key.json" \
+            --app_identifier cloud.unalabs.jobagent \
+            --app_version 1.0 \
+            --build_number 2 \
+            --metadata_path "$RUNNER_TEMP/metadata" \
+            --screenshots_path store/assets/apple/screenshots \
+            --skip_binary_upload true \
+            --skip_metadata false \
+            --skip_screenshots false \
+            --submit_for_review "$SUBMIT_FOR_REVIEW" \
+            --automatic_release true \
+            --run_precheck_before_submit false \
+            --force true

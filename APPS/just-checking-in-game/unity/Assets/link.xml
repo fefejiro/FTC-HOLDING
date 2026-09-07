@@ -1,0 +1,9 @@
+<linker>
+  <!-- Runtime-created visual components are not referenced by a serialized scene. -->
+  <assembly fullname="Jci.Runtime">
+    <type fullname="Jci.Presentation.JciScreenMotion" preserve="all" />
+    <type fullname="Jci.Presentation.JciGlassPulse" preserve="all" />
+    <type fullname="Jci.Presentation.JciCardMotion" preserve="all" />
+    <type fullname="Jci.Presentation.JciButtonMotion" preserve="all" />
+  </assembly>
+</linker>

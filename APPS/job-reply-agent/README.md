@@ -1,6 +1,33 @@
-# Job Reply Agent
+# Una Labs JobAgent
 
-A local recruiter-response operations service designed for controlled automation:
+## Product Status
+
+JobAgent is being built as an Una Labs multi-user product. Fejiro and Chukwuma
+are tenant pilots used to prove isolation, onboarding, consent, resume
+generation, recruiter replies, job applications, and evidence-backed status.
+Candidate-specific files are test/pilot data, not the product architecture.
+
+The current interface is a responsive local web application. It is not yet a
+hosted multi-user SaaS, an iOS application, or an Android application. The
+target architecture is:
+
+1. Responsive cloud web application and installable PWA.
+2. Tenant-safe API and background-worker platform shared by every client.
+3. iOS and Android clients after the API, identity, consent, and approval
+   workflows are stable.
+
+Phone clients will control onboarding, recommendations, approvals, status,
+messages, and account settings. Gmail processing, resume generation, job
+discovery, browser assistance, scheduling, and proof reconciliation remain
+server-side. See `ops/PRODUCT_ARCHITECTURE.md`.
+
+> Multi-instance safety: operational commands now require
+> `--instance=<id>` (for example, `--instance=fejiro`). See
+> `ops/MULTI_INSTANCE_PILOT.md`. The `chukwuma` pilot is scaffolded but remains
+> inactive until onboarding, consent, resumes, Gmail identity, and browser
+> identity are verified.
+
+A recruiter-response and job-application service designed for controlled automation:
 
 - `draft_only` for safe onboarding
 - `approval_required` as the target steady-state operating mode
@@ -23,7 +50,11 @@ This initial implementation includes:
 - `npm run db:reset`
 - `npm run seed -- --date=YYYY-MM-DD`
 - `npm run gmail:auth:url`
+- `npm run gmail:auth:local`
 - `npm run gmail:auth:save -- --code=YOUR_CODE`
+- `npm run gmail:status`
+- `npm run gmail:reconcile-sent`
+- `npm run auth:doctor`
 - `npm run process:mock`
 - `npm run process:gmail`
 - `npm run approve:all`
@@ -55,13 +86,20 @@ Or run steps 2 to 4 together:
 2. Set OAuth values in `.env`:
    - `GMAIL_CLIENT_ID`
    - `GMAIL_CLIENT_SECRET`
-   - `GMAIL_REDIRECT_URI` (must match Google console)
+   - `GMAIL_REDIRECT_URI=http://127.0.0.1:3007` (desktop loopback redirect; must match the OAuth client flow)
    - `GMAIL_ACCOUNT_EMAIL`
-3. Generate consent URL:
-   - `npm run gmail:auth:url`
-4. Open URL, authorize, copy `code` from callback URL, then save tokens:
+   - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URI` are accepted aliases.
+3. Start the local callback server in another terminal:
+   - `npm run serve`
+4. Generate the local consent URL:
+   - `npm run gmail:auth:local`
+5. Open URL and authorize. The callback page should save tokens automatically. If you copy the code manually, save it with:
    - `npm run gmail:auth:save -- --code=PASTE_CODE`
-5. Keep `GMAIL_AUTH_MODE=oauth` and `DAILY_REPORT_ENABLE_SEND=true`.
+6. Verify:
+   - `npm run gmail:status`
+7. Run the full auth preflight:
+   - `npm run auth:doctor`
+8. Keep `GMAIL_AUTH_MODE=oauth` and `DAILY_REPORT_ENABLE_SEND=true`.
 
 ## SMTP Fallback (Optional)
 
@@ -83,6 +121,23 @@ Use only when you explicitly want SMTP mode.
 Or one command:
 
 `npm run run:gmail-cycle`
+
+The Gmail cycle reconciles drafts that were reviewed and sent manually. It
+records the sent message id and timestamp, updates the thread status, excludes
+completed messages from future scans, and only considers recruiter mail inside
+the configured recent-mail window.
+
+## Dice Browser Auth
+
+Dice browser automation uses a persistent Chrome profile exposed through CDP. Start it with:
+
+`npm run browser:attach-chrome`
+
+Complete Dice login once in the visible Chrome window, then verify:
+
+`npm run hunt:dice-preflight`
+
+The expected healthy result is `Dice preflight passed: authenticated browser session detected.` If preflight says the signed-in session was not detected, do not run submit automation yet.
 
 ## Desktop + Mobile Control Surface
 
@@ -123,9 +178,23 @@ This registers `JobReplyAgent-Periodic` to execute:
 
 `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/daily-run.ps1`
 
+This scheduled/default run is background-safe: it does not check, focus, or control Chrome. It only writes status, queue, and trust-report output.
+
+Only run the laptop browser/proof cycle when you are ready for the agent to use browser automation:
+
+`npm run schedule:run-browser`
+
 For a report-only daily task (optional), use:
 
 `powershell -ExecutionPolicy Bypass -File scripts/register-daily-report-task.ps1 -RunTime 19:00`
+
+For job discovery, the scheduled/background runner is intentionally non-intrusive. It refreshes queues, prepares packages, and writes trust reports without focusing or navigating your visible Chrome window:
+
+`npm run schedule:discovery:run-now`
+
+Only run visible browser scraping when you are ready for Chrome to be controlled:
+
+`npm run schedule:discovery:run-visible`
 
 ## GitHub Actions Automation
 

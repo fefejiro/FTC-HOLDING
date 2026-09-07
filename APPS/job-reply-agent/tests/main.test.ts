@@ -9,6 +9,11 @@ describe("CLI argument parsing", () => {
     expect(parsed.fileArg).toBe("./data/manual_job.txt");
   });
 
+  it("parses the required instance selector", () => {
+    const parsed = parseCommandArgs(["node", "main.js", "instance:status", "--instance=chukwuma"]);
+    expect(parsed.instanceArg).toBe("chukwuma");
+  });
+
   it("keeps existing --file=value form working", () => {
     const parsed = parseCommandArgs(["node", "main.js", "hunt:ingest", "--file=./data/manual_job.txt"]);
 

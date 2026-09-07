@@ -1,0 +1,119 @@
+name: PeacePad V2 Local iOS TestFlight Candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Exact reviewed Native V2 Git ref to build
+        required: true
+        type: string
+      source_sha:
+        description: Exact full SHA expected after checkout
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: peacepad-v2-ios-local-testflight
+  cancel-in-progress: false
+
+jobs:
+  build-signed-candidate:
+    name: Build signed internal candidate without EAS cloud quota
+    runs-on: macos-26-intel
+    timeout-minutes: 75
+
+    steps:
+      - name: Checkout reviewed source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+
+      - name: Bind build to the supplied source SHA
+        env:
+          EXPECTED_SHA: ${{ inputs.source_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual_sha="$(git rev-parse HEAD)"
+          test "$actual_sha" = "$EXPECTED_SHA"
+          git diff --check "$EXPECTED_SHA"
+          test -z "$(git status --porcelain)"
+          git rev-parse "$EXPECTED_SHA:APPS/peacepad-next-native" > "$RUNNER_TEMP/peacepad-native-tree"
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: APPS/peacepad-next-native/package-lock.json
+
+      - name: Record current Xcode toolchain
+        shell: bash
+        run: |
+          xcodebuild -version | tee "$RUNNER_TEMP/peacepad-v2-xcode-version.txt"
+
+      - name: Build only the exact Native V2 tree
+        env:
+          EXPECTED_SHA: ${{ inputs.source_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_root="$RUNNER_TEMP/peacepad-next-native-release"
+          rm -rf "$release_root"
+          mkdir -p "$release_root"
+          git archive "$EXPECTED_SHA:APPS/peacepad-next-native" | tar -x -C "$release_root"
+          git -C "$release_root" init -q
+          git -C "$release_root" config user.name 'PeacePad Release Control'
+          git -C "$release_root" config user.email 'release-control@users.noreply.github.com'
+          git -C "$release_root" add --all
+          git -C "$release_root" commit -qm "Package PeacePad Native V2 source $EXPECTED_SHA"
+          test "$(git -C "$release_root" rev-parse HEAD^{tree})" = "$(cat "$RUNNER_TEMP/peacepad-native-tree")"
+          npm --prefix "$release_root" ci --ignore-scripts --no-audit --no-fund --workspaces=false
+
+      - name: Verify release contract and build IPA locally on macOS
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EAS_NO_VCS: "1"
+          EXPO_PUBLIC_PEACEPAD_ENV: staging
+          PEACEPAD_IOS_RELEASE_MODE: testflight-internal
+          FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: "30"
+          FASTLANE_XCODEBUILD_SETTINGS_RETRIES: "6"
+        working-directory: ${{ runner.temp }}/peacepad-next-native-release
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_command=$(cat <<'EOF'
+            set -eu
+            export EXPO_PUBLIC_PEACEPAD_ENV=staging
+            export PEACEPAD_IOS_RELEASE_MODE=testflight-internal
+            node scripts/check-ios-testflight-readiness.cjs --injected
+            EAS_SKIP_AUTO_FINGERPRINT=1 npx --yes eas-cli@21.8.0 build \
+              --platform ios \
+              --profile testflight-internal \
+              --local \
+              --non-interactive \
+              --freeze-credentials \
+              --output "$RUNNER_TEMP/peacepad-v2-testflight-candidate.ipa"
+          EOF
+          )
+          npx --yes eas-cli@21.8.0 env:exec production "$release_command" --non-interactive
+          shasum -a 256 "$RUNNER_TEMP/peacepad-v2-testflight-candidate.ipa" > "$RUNNER_TEMP/peacepad-v2-testflight-candidate.sha256"
+          printf 'source_sha=%s\nsource_tree=%s\nprofile=testflight-internal\nsubmission_attempted=false\n' \
+            "${{ inputs.source_sha }}" "$(cat "$RUNNER_TEMP/peacepad-native-tree")" > "$RUNNER_TEMP/peacepad-v2-testflight-candidate.manifest"
+
+      - name: Upload signed IPA evidence without submission
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: peacepad-v2-ios-local-testflight-${{ inputs.source_sha }}
+          if-no-files-found: warn
+          retention-days: 7
+          path: |
+            ${{ runner.temp }}/peacepad-v2-testflight-candidate.ipa
+            ${{ runner.temp }}/peacepad-v2-testflight-candidate.sha256
+            ${{ runner.temp }}/peacepad-v2-testflight-candidate.manifest
+            ${{ runner.temp }}/peacepad-v2-xcode-version.txt

@@ -157,6 +157,9 @@ jobs:
       - name: Install workspace dependencies
         run: npm ci
 
+      - name: Build shared workspace packages required by Playwright
+        run: npm --prefix "$FTC_SITE_DIR" run build:deps
+
       - name: Install Playwright Chromium
         working-directory: ${{ env.FTC_SITE_DIR }}
         run: npx playwright install --with-deps chromium
@@ -223,6 +226,10 @@ jobs:
       - name: Install workspace dependencies
         if: steps.credentialed.outputs.run == 'true'
         run: npm ci
+
+      - name: Build shared workspace packages required by Playwright
+        if: steps.credentialed.outputs.run == 'true'
+        run: npm --prefix "$FTC_SITE_DIR" run build:deps
 
       - name: Install Playwright Chromium
         if: steps.credentialed.outputs.run == 'true'
@@ -295,6 +302,9 @@ jobs:
 
       - name: Install workspace dependencies
         run: npm ci
+
+      - name: Build shared workspace packages required by Playwright
+        run: npm --prefix "$FTC_SITE_DIR" run build:deps
 
       - name: Install Playwright Chromium
         working-directory: ${{ env.FTC_SITE_DIR }}

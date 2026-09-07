@@ -1,8 +1,10 @@
 # FTC Master Orchestration
 Last updated: 2026-05-21
 
-Single source of truth for cross-project status, priority, burn, and next actions.
-Paste the relevant section into any AI tool to seed context instantly.
+> Historical strategy snapshot. It is not the current operational source of truth. For current evidence-based portfolio state, use [`DOCS/FTC_PROJECT_LEDGER.md`](DOCS/FTC_PROJECT_LEDGER.md). Cost, revenue, model, and deployment claims below require fresh owner verification before reuse.
+
+Historical cross-project strategy, priority, burn, and next-action snapshot.
+Use it for context only and reconcile every operational claim with the current evidence ledger.
 
 ---
 

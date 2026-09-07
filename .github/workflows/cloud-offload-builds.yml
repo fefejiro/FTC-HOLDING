@@ -3,155 +3,142 @@ name: Cloud Offload Builds
 on:
   workflow_dispatch:
     inputs:
-      run_dispatch_typecheck:
-        description: Run Dispatch TypeScript check
+      workload:
+        description: Selected non-production workload
+        required: true
+        default: repo-preflight
+        type: choice
+        options:
+          - repo-preflight
+          - peacepad-native
+          - saywetin
+          - dispatch
+          - ftc-site
+          - jobagent
+      run_tests:
+        description: Run the selected unit or static test gate when available
         required: true
         default: true
         type: boolean
-      run_dispatch_e2e:
-        description: Run Dispatch road alerts Playwright smoke (slower)
-        required: true
-        default: false
-        type: boolean
-      run_saywetin_typecheck:
-        description: Run SayWetin TypeScript check
+      upload_reports:
+        description: Upload non-secret reports only (retained for 3 days)
         required: true
         default: true
         type: boolean
-      run_saywetin_tests:
-        description: Run SayWetin unit tests
-        required: true
-        default: true
-        type: boolean
-      upload_artifacts:
-        description: Upload build/test artifacts for download
-        required: true
-        default: true
-        type: boolean
-      run_ftc_site_build:
-        description: Include ftc-site build in this run
-        required: true
-        default: false
-        type: boolean
-  pull_request:
-    branches: [main]
-    paths:
-      - package.json
-      - package-lock.json
-      - PACKAGES/**
-      - APPS/dispatch/**
-      - APPS/saywetin/**
-      - APPS/ftc-site/**
+
+# Manual-only by design. This replaces the old blanket pull-request offload
+# lane disabled during the bleed-stop. It never deploys, submits to stores,
+# contacts production, or reads release secrets.
+permissions:
+  contents: read
 
 concurrency:
-  group: cloud-offload-${{ github.ref }}
+  group: cloud-offload-${{ github.ref }}-${{ inputs.workload }}
   cancel-in-progress: true
 
 jobs:
-  build-suite:
-    if: false  # DISABLED 2026-04-30 — bleed-stop. Re-enable when cloud offload pipeline is needed.
+  offload:
+    name: ${{ inputs.workload }} preflight
     runs-on: ubuntu-latest
-    timeout-minutes: 75
-
+    timeout-minutes: 45
+    env:
+      CI: true
+      NPM_CONFIG_FUND: false
+      NPM_CONFIG_AUDIT: false
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Dispatch build
-        run: npm --workspace=@ftc/dispatch run build
-
-      - name: Dispatch typecheck
-        if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.run_dispatch_typecheck) }}
-        run: npm --workspace=@ftc/dispatch run check
-
-      - name: SayWetin typecheck
-        if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.run_saywetin_typecheck) }}
-        run: npm --workspace=@ftc/saywetin run check
-
-      - name: SayWetin unit tests
-        if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.run_saywetin_tests) }}
-        run: npm --workspace=@ftc/saywetin run test
-
-      - name: SayWetin web verify
-        run: npm --workspace=@ftc/saywetin run verify:frontend-build
-
-      - name: FTC site build
-        if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.run_ftc_site_build) }}
-        run: npm --workspace=@ftc/ftc-site run build
-
-      - name: Install Playwright browsers
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_dispatch_e2e }}
-        run: npx playwright install --with-deps chromium
-
-      - name: Dispatch road alerts smoke
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_dispatch_e2e }}
-        id: dispatch_e2e
+      # actions/checkout invokes `git submodule foreach` during credential
+      # cleanup. This repository contains a historical gitlink without a
+      # matching .gitmodules URL, so use a public, detached SHA checkout
+      # instead. Cloud lanes do not use submodules.
+      - name: Checkout exact requested source without submodules
         shell: bash
         run: |
-          set +e
-          npm --workspace=@ftc/dispatch run test:e2e:road-alerts
-          status=$?
-          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
-          exit 0
+          set -euo pipefail
+          git init .
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --depth=1 origin "${GITHUB_SHA}"
+          git checkout --detach FETCH_HEAD
 
-      - name: Upload Dispatch Playwright artifacts
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_dispatch_e2e && always() }}
-        uses: actions/upload-artifact@v4
+      - name: Setup Node 22 with npm cache
+        uses: actions/setup-node@v4
         with:
-          name: dispatch-playwright-results
-          path: |
-            APPS/dispatch/test-results
-            APPS/dispatch/playwright-report
-          if-no-files-found: ignore
-          retention-days: 3
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            APPS/dispatch/package-lock.json
+            APPS/saywetin/package-lock.json
+            APPS/job-reply-agent/package-lock.json
+            APPS/peacepad-next-native/package-lock.json
 
-      - name: Fail if Dispatch smoke failed
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_dispatch_e2e && steps.dispatch_e2e.outputs.exit_code != '0' }}
+      - name: Record exact source and runtime
         run: |
-          echo "Dispatch road alerts smoke failed. See uploaded artifacts."
-          exit 1
+          mkdir -p cloud-offload-report
+          {
+            echo "source_sha=$(git rev-parse HEAD)"
+            echo "source_ref=${GITHUB_REF}"
+            echo "workload=${{ inputs.workload }}"
+            echo "node=$(node --version)"
+            echo "npm=$(npm --version)"
+            echo "started_utc=$(date --utc +%Y-%m-%dT%H:%M:%SZ)"
+          } > cloud-offload-report/manifest.txt
 
-      - name: Upload Dispatch dist
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_artifacts }}
+      - name: Run guarded selected workload
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ inputs.workload }}" in
+            repo-preflight)
+              npm ci --ignore-scripts
+              npm run doctor
+              npm run audit:secrets
+              ;;
+            peacepad-native)
+              npm --prefix APPS/peacepad-next-native ci --ignore-scripts
+              npm --prefix APPS/peacepad-next-native run guardrails
+              npm --prefix APPS/peacepad-next-native run secret-scan
+              npm --prefix APPS/peacepad-next-native run typecheck
+              if [ "${{ inputs.run_tests }}" = "true" ]; then
+                npm --prefix APPS/peacepad-next-native run test
+              fi
+              ;;
+            saywetin)
+              npm --prefix APPS/saywetin ci --ignore-scripts
+              npm --prefix APPS/saywetin run check
+              if [ "${{ inputs.run_tests }}" = "true" ]; then
+                npm --prefix APPS/saywetin run test
+              fi
+              npm --prefix APPS/saywetin run verify:frontend-build
+              ;;
+            dispatch)
+              npm --prefix APPS/dispatch ci --ignore-scripts
+              npm --prefix APPS/dispatch run check
+              npm --prefix APPS/dispatch run build
+              ;;
+            ftc-site)
+              npm ci --ignore-scripts
+              npm --workspace=@ftc/ftc-site run build
+              ;;
+            jobagent)
+              npm --prefix APPS/job-reply-agent ci --ignore-scripts
+              npm --prefix APPS/job-reply-agent run lint
+              if [ "${{ inputs.run_tests }}" = "true" ]; then
+                npm --prefix APPS/job-reply-agent run test
+              fi
+              npm --prefix APPS/job-reply-agent run build
+              ;;
+            *)
+              echo "Unsupported workload" >&2
+              exit 64
+              ;;
+          esac
+          date --utc +%Y-%m-%dT%H:%M:%SZ > cloud-offload-report/completed_utc.txt
+
+      - name: Upload non-secret report
+        if: ${{ always() && inputs.upload_reports && hashFiles('cloud-offload-report/**') != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: dispatch-dist
-          path: APPS/dispatch/dist
-          if-no-files-found: error
-          retention-days: 3
-
-      - name: Upload SayWetin web output
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_artifacts }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: saywetin-web-dist
-          path: APPS/saywetin/dist/public
-          if-no-files-found: error
-          retention-days: 3
-
-      - name: Upload SayWetin server output
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_artifacts }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: saywetin-server-dist
-          path: APPS/saywetin/dist
-          if-no-files-found: error
-          retention-days: 3
-
-      - name: Upload FTC site output
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_artifacts && inputs.run_ftc_site_build }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ftc-site-next-build
-          path: APPS/ftc-site/.next
+          name: cloud-offload-${{ inputs.workload }}-${{ github.run_id }}
+          path: cloud-offload-report
           if-no-files-found: error
           retention-days: 3

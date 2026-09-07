@@ -1,0 +1,126 @@
+name: PeacePad V2 Android Play Promote Internal
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Exact reviewed source that produced the public release
+        required: true
+        type: string
+      source_sha:
+        description: Exact full source SHA expected after checkout
+        required: true
+        type: string
+      version_code:
+        description: Existing Play release version code to promote
+        required: true
+        type: string
+      release_authorization:
+        description: Enter I_CONFIRM_PRODUCTION_RELEASE_PROMOTION
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: peacepad-v2-android-play-promote-internal
+  cancel-in-progress: false
+
+jobs:
+  promote-production-release:
+    name: Promote existing production release to Internal Testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Require explicit promotion authorization
+        env:
+          AUTHORIZATION: ${{ inputs.release_authorization }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$AUTHORIZATION" = "I_CONFIRM_PRODUCTION_RELEASE_PROMOTION"
+
+      - name: Checkout reviewed source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+
+      - name: Bind promotion to the supplied source
+        env:
+          EXPECTED_SHA: ${{ inputs.source_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          git diff --check "$EXPECTED_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Promote the existing Play release
+        env:
+          PLAY_SERVICE_ACCOUNT: ${{ secrets.PEACEPAD_PLAY_SERVICE_ACCOUNT_JSON }}
+          VERSION_CODE: ${{ inputs.version_code }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$VERSION_CODE" = "44"
+          test -n "$PLAY_SERVICE_ACCOUNT"
+          node -e 'JSON.parse(process.env.PLAY_SERVICE_ACCOUNT);'
+          npm install --no-save --no-package-lock --prefix "$RUNNER_TEMP/play-promote" googleapis@144.0.0
+          PLAY_SERVICE_ACCOUNT="$PLAY_SERVICE_ACCOUNT" VERSION_CODE="$VERSION_CODE" NODE_PATH="$RUNNER_TEMP/play-promote/node_modules" node <<'NODE'
+          const {google} = require('googleapis');
+          const credentials = JSON.parse(process.env.PLAY_SERVICE_ACCOUNT);
+          const auth = new google.auth.GoogleAuth({credentials, scopes: ['https://www.googleapis.com/auth/androidpublisher']});
+          const publisher = google.androidpublisher({version: 'v3', auth});
+          const packageName = 'ca.peacepad.family';
+          (async () => {
+            const edit = await publisher.edits.insert({packageName, requestBody: {}});
+            const editId = edit.data.id;
+            await publisher.edits.tracks.update({
+              packageName,
+              editId,
+              track: 'internal',
+              requestBody: {
+                track: 'internal',
+                releases: [{
+                  name: 'PeacePad 2.0.1 production',
+                  versionCodes: [String(process.env.VERSION_CODE)],
+                  status: 'completed'
+                }]
+              }
+            });
+            await publisher.edits.commit({packageName, editId});
+            console.log(JSON.stringify({packageName, track: 'internal', versionCode: process.env.VERSION_CODE, status: 'completed'}));
+          })().catch((error) => {
+            console.error(error.response?.data || error.message);
+            process.exit(1);
+          });
+          NODE
+
+      - name: Write non-secret promotion evidence
+        if: always()
+        env:
+          EXPECTED_SHA: ${{ inputs.source_sha }}
+          VERSION_CODE: ${{ inputs.version_code }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/peacepad-v2-android-play-promotion.manifest" <<EOF
+          source_sha=$EXPECTED_SHA
+          package=ca.peacepad.family
+          version=2.0.1
+          version_code=$VERSION_CODE
+          source_track=production
+          destination_track=internal
+          promotion_outcome=completed
+          EOF
+
+      - name: Upload promotion evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: peacepad-v2-android-play-promotion-${{ inputs.source_sha }}
+          retention-days: 7
+          path: ${{ runner.temp }}/peacepad-v2-android-play-promotion.manifest

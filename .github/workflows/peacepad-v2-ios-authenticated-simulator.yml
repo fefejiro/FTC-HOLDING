@@ -1,0 +1,718 @@
+name: PeacePad Native V2 Authenticated iOS Simulator Journey
+
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: Protected fictional regional staging environment
+        required: true
+        type: choice
+        options:
+          - ca
+          - us
+      verification_scope:
+        description: Run the cheaper account-A mutation control before the full cross-account journey
+        required: true
+        default: mutation-control
+        type: choice
+        options:
+          - mutation-control
+          - full-cross-account
+          - invitation-message-check-cross-account
+      target_sha:
+        description: Exact reviewed feature-branch head to verify
+        required: true
+        type: string
+      build_source_sha:
+        description: Exact feature commit used for the regional EAS Simulator build
+        required: true
+        type: string
+      build_profile:
+        description: Exact reviewed EAS Simulator profile used for the artifact
+        required: true
+        default: staging-simulator-dual
+        type: choice
+        options:
+          - staging-simulator-dual
+          - staging-simulator-ca
+          - staging-simulator-us
+      eas_build_id:
+        description: Exact finished regional staging EAS iOS Simulator build ID
+        required: true
+        type: string
+      artifact_url:
+        description: Exact time-limited public EAS artifact URL
+        required: true
+        type: string
+      artifact_sha256:
+        description: Expected SHA-256 of the Simulator archive
+        required: true
+        type: string
+      confirmation:
+        description: Type RUN AUTHENTICATED FICTIONAL SIMULATOR
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: peacepad-v2-ios-authenticated-simulator-${{ inputs.region }}
+  cancel-in-progress: false
+
+jobs:
+  authenticated-simulator:
+    name: Verify ${{ inputs.region }} ${{ inputs.verification_scope }} fictional coordination
+    runs-on: macos-15
+    timeout-minutes: 45
+    environment: peacepad-v2-staging-${{ inputs.region }}
+
+    steps:
+      - name: Checkout trusted main control
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          path: control
+
+      - name: Checkout exact reviewed feature commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_sha }}
+          fetch-depth: 0
+          path: target
+
+      - name: Bind exact source, artifact, and regional contract
+        id: contract
+        shell: bash
+        env:
+          BUILD_PROFILE: ${{ inputs.build_profile }}
+          BUILD_SOURCE_SHA: ${{ inputs.build_source_sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          REGION: ${{ inputs.region }}
+          SELECTED_REF: ${{ github.ref_name }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+          VERIFICATION_SCOPE: ${{ inputs.verification_scope }}
+        run: |
+          set -euo pipefail
+
+          test "$SELECTED_REF" = "main"
+          test "$CONFIRMATION" = "RUN AUTHENTICATED FICTIONAL SIMULATOR"
+          case "$VERIFICATION_SCOPE" in mutation-control|full-cross-account|invitation-message-check-cross-account) ;; *) exit 1 ;; esac
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$BUILD_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git -C target rev-parse HEAD)" = "$TARGET_SHA"
+          git -C target fetch --no-tags --depth=1 origin refs/heads/feat/peacepad-v2-supabase-free-staging
+          test "$(git -C target rev-parse FETCH_HEAD)" = "$TARGET_SHA"
+          git -C target cat-file -e "$BUILD_SOURCE_SHA^{commit}"
+          git -C target diff --quiet "$BUILD_SOURCE_SHA" "$TARGET_SHA" -- \
+            APPS/peacepad-next-native \
+            ':(exclude)APPS/peacepad-next-native/docs/**'
+
+          case "$REGION" in
+            ca)
+              EXPECTED_REGION_LABEL="Canada staging"
+              EXPECTED_PROJECT_REF="rohvkyuxbnqzglaromms"
+              ;;
+            us)
+              EXPECTED_REGION_LABEL="United States staging"
+              EXPECTED_PROJECT_REF="spmpndalcvwmygznihec"
+              ;;
+            *) echo "Unsupported staging region." >&2; exit 1 ;;
+          esac
+
+          case "$BUILD_PROFILE" in
+            staging-simulator-dual)
+              EXPECTED_PROFILE="staging-simulator-dual"
+              EXPECTED_EAS_ENVIRONMENT="production"
+              REQUIRES_REGION_SELECTION="true"
+              ;;
+            staging-simulator-ca)
+              test "$REGION" = "ca"
+              EXPECTED_PROFILE="staging-simulator-ca"
+              EXPECTED_EAS_ENVIRONMENT="preview"
+              REQUIRES_REGION_SELECTION="false"
+              ;;
+            staging-simulator-us)
+              test "$REGION" = "us"
+              EXPECTED_PROFILE="staging-simulator-us"
+              EXPECTED_EAS_ENVIRONMENT="development"
+              REQUIRES_REGION_SELECTION="false"
+              ;;
+            *) echo "Unsupported Simulator build profile." >&2; exit 1 ;;
+          esac
+
+          REGION="$REGION" EXPECTED_PROFILE="$EXPECTED_PROFILE" EXPECTED_EAS_ENVIRONMENT="$EXPECTED_EAS_ENVIRONMENT" \
+          node <<'NODE'
+          const fs = require("node:fs");
+          const eas = JSON.parse(fs.readFileSync("target/APPS/peacepad-next-native/eas.json", "utf8"));
+          const profile = eas.build?.[process.env.EXPECTED_PROFILE];
+          if (profile?.distribution !== "internal" || profile?.environment !== process.env.EXPECTED_EAS_ENVIRONMENT || profile?.ios?.simulator !== true) {
+            throw new Error(`Invalid ${process.env.REGION} staging Simulator build profile.`);
+          }
+          if (eas.submit?.[process.env.EXPECTED_PROFILE]) {
+            throw new Error("The selected Simulator profile must not define a matching EAS submit profile.");
+          }
+          NODE
+
+          node target/APPS/peacepad-next-native/scripts/check-lab-guardrails.cjs
+          node target/APPS/peacepad-next-native/scripts/check-secrets.cjs
+
+          {
+            echo "expected_region_label=$EXPECTED_REGION_LABEL"
+            echo "expected_profile=$EXPECTED_PROFILE"
+            echo "expected_project_ref=$EXPECTED_PROJECT_REF"
+            echo "requires_region_selection=$REQUIRES_REGION_SELECTION"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Install Maestro before provisioning credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          "$HOME/.maestro/bin/maestro" --version
+
+      - name: Obtain temporary masked Auth-admin capability
+        shell: bash
+        env:
+          PROJECT_REF: ${{ steps.contract.outputs.expected_project_ref }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          [[ "$SUPABASE_PUBLISHABLE_KEY" == sb_publishable_* ]]
+          echo "::add-mask::$SUPABASE_PUBLISHABLE_KEY"
+
+          key_file="$RUNNER_TEMP/peacepad-supabase-api-keys.json"
+          trap 'rm -f "$key_file"' EXIT
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 90 \
+            --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PROJECT_REF/api-keys" \
+            --output "$key_file"
+          chmod 600 "$key_file"
+          service_role_key="$(jq -er '[.[] | select(.name == "service_role") | (.api_key // .key)] | if length == 1 then .[0] else error("service role key unavailable") end' "$key_file")"
+          [[ "$service_role_key" == *.*.* ]]
+          echo "::add-mask::$service_role_key"
+          printf '%s' "$service_role_key" > "$RUNNER_TEMP/peacepad-service-role-key"
+          chmod 600 "$RUNNER_TEMP/peacepad-service-role-key"
+
+      - name: Provision two temporary fictional accounts and family access
+        id: fixture
+        shell: bash
+        env:
+          PEACEPAD_FIXTURE_ACTION: provision
+          PEACEPAD_FIXTURE_EVIDENCE_PATH: ${{ runner.temp }}/peacepad-authenticated-simulator-evidence/provision.json
+          PEACEPAD_FIXTURE_PATH: ${{ runner.temp }}/peacepad-authenticated-simulator-fixture.json
+          PEACEPAD_PROJECT_REF: ${{ steps.contract.outputs.expected_project_ref }}
+          PEACEPAD_REGION: ${{ inputs.region }}
+          PEACEPAD_FIXTURE_VERIFICATION_SCOPE: ${{ inputs.verification_scope }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/peacepad-authenticated-simulator-evidence"
+          trap 'rm -f "$RUNNER_TEMP/peacepad-service-role-key"' EXIT
+          export SUPABASE_SERVICE_ROLE_KEY="$(cat "$RUNNER_TEMP/peacepad-service-role-key")"
+          node control/.github/scripts/peacepad-v2-simulator-fixtures.mjs
+          fixture="$RUNNER_TEMP/peacepad-authenticated-simulator-fixture.json"
+          test "$(jq -r '.classification' "$fixture")" = "fictional-only"
+          test "$(jq -r '.accounts | length' "$fixture")" -eq 2
+          test "$(jq -r '.accounts[0].email | endswith("@example.test")' "$fixture")" = "true"
+          test "$(jq -r '.accounts[1].email | endswith("@example.test")' "$fixture")" = "true"
+          if test "${{ inputs.verification_scope }}" = "invitation-message-check-cross-account"; then
+            test "$(jq -r '.nativeInvitationAcceptance' "$fixture")" = "true"
+            jq -er '.invitationCode | test("^[A-Z0-9]{6}$")' "$fixture" >/dev/null
+          fi
+          for value in "$(jq -r '.password' "$fixture")" "$(jq -r '.accounts[0].email' "$fixture")" "$(jq -r '.accounts[1].email' "$fixture")" "$(jq -r '.invitationCode // empty' "$fixture")"; do
+            test -z "$value" || echo "::add-mask::$value"
+          done
+
+      - name: Verify and download exact regional EAS artifact
+        id: artifact
+        shell: bash
+        env:
+          ARTIFACT_URL: ${{ inputs.artifact_url }}
+          EAS_BUILD_ID: ${{ inputs.eas_build_id }}
+          EXPECTED_SHA256: ${{ inputs.artifact_sha256 }}
+        run: |
+          set -euo pipefail
+          [[ "$EAS_BUILD_ID" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]]
+          case "$ARTIFACT_URL" in https://expo.dev/artifacts/eas/*.tar.gz) ;; *) exit 1 ;; esac
+          [[ "$EXPECTED_SHA256" =~ ^[0-9a-fA-F]{64}$ ]]
+
+          archive="$RUNNER_TEMP/peacepad-authenticated-eas-simulator.tar.gz"
+          extract="$RUNNER_TEMP/peacepad-authenticated-eas-simulator"
+          mkdir -p "$extract"
+          curl --fail --location --retry 3 --silent --show-error "$ARTIFACT_URL" --output "$archive"
+          actual_sha256="$(shasum -a 256 "$archive" | awk '{print $1}')"
+          test "$actual_sha256" = "$(printf '%s' "$EXPECTED_SHA256" | tr '[:upper:]' '[:lower:]')"
+          tar -xzf "$archive" -C "$extract"
+          app_path="$(find "$extract" -maxdepth 2 -type d -name '*.app' -print -quit)"
+          test -d "$app_path"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app_path/Info.plist")" = "ca.peacepad.nextnative.lab"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :ITSAppUsesNonExemptEncryption' "$app_path/Info.plist")" = "false"
+          {
+            echo "app_path=$app_path"
+            echo "actual_sha256=$actual_sha256"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Boot required isolated iOS Simulators and install PeacePad
+        id: simulators
+        shell: bash
+        env:
+          APP_PATH: ${{ steps.artifact.outputs.app_path }}
+          REGION: ${{ inputs.region }}
+          VERIFICATION_SCOPE: ${{ inputs.verification_scope }}
+        run: |
+          set -euo pipefail
+          runtime_id="$(xcrun simctl list runtimes --json | jq -er '[.runtimes[] | select(.platform == "iOS" and .isAvailable == true)] | last | .identifier')"
+          device_type_id="$(xcrun simctl list devicetypes --json | jq -er '[.devicetypes[] | select(.name | startswith("iPhone"))] | first | .identifier')"
+          device_a="$(xcrun simctl create "PeacePad V2 $REGION Fictional A" "$device_type_id" "$runtime_id")"
+          devices=("$device_a")
+          device_b=""
+          if test "$VERIFICATION_SCOPE" != "mutation-control"; then
+            device_b="$(xcrun simctl create "PeacePad V2 $REGION Fictional B" "$device_type_id" "$runtime_id")"
+            devices+=("$device_b")
+          fi
+          printf '%s\n' "${devices[@]}" > "$RUNNER_TEMP/peacepad-authenticated-simulator-udids"
+          {
+            echo "device_a=$device_a"
+            echo "device_b=$device_b"
+            echo "runtime_id=$runtime_id"
+          } >> "$GITHUB_OUTPUT"
+          for device in "${devices[@]}"; do
+            xcrun simctl boot "$device"
+          done
+          for device in "${devices[@]}"; do
+            xcrun simctl bootstatus "$device" -b
+            xcrun simctl install "$device" "$APP_PATH"
+            xcrun simctl get_app_container "$device" ca.peacepad.nextnative.lab app
+          done
+
+      - name: Verify authenticated messaging and calendar coordination
+        shell: bash
+        env:
+          DEVICE_A: ${{ steps.simulators.outputs.device_a }}
+          DEVICE_B: ${{ steps.simulators.outputs.device_b }}
+          EXPECTED_REGION_LABEL: ${{ steps.contract.outputs.expected_region_label }}
+          REQUIRES_REGION_SELECTION: ${{ steps.contract.outputs.requires_region_selection }}
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: "240000"
+          REGION: ${{ inputs.region }}
+          VERIFICATION_SCOPE: ${{ inputs.verification_scope }}
+        run: |
+          set -euo pipefail
+          fixture="$RUNNER_TEMP/peacepad-authenticated-simulator-fixture.json"
+          evidence="$RUNNER_TEMP/peacepad-authenticated-simulator-evidence"
+          password="$(jq -r '.password' "$fixture")"
+          email_a="$(jq -r '.accounts[0].email' "$fixture")"
+          email_b="$(jq -r '.accounts[1].email' "$fixture")"
+          message_text="$(jq -r '.messageText' "$fixture")"
+          event_title="$(jq -r '.eventTitle' "$fixture")"
+          invitation_code="$(jq -r '.invitationCode' "$fixture")"
+
+          create_auth_flow() {
+            local path="$1" email="$2"
+            cat > "$path" <<YAML
+          appId: ca.peacepad.nextnative.lab
+          ---
+          - launchApp:
+              clearState: true
+          YAML
+            if test "$REQUIRES_REGION_SELECTION" = "true"; then
+              cat >> "$path" <<YAML
+          - extendedWaitUntil:
+              visible: "Choose your data region"
+              timeout: 60000
+          - assertVisible: "Canada staging"
+          - assertVisible: "United States staging"
+          - tapOn: "$EXPECTED_REGION_LABEL"
+          - tapOn: "Continue to $EXPECTED_REGION_LABEL"
+          YAML
+            fi
+            cat >> "$path" <<YAML
+          - extendedWaitUntil:
+              visible: "Sign in to staging"
+              timeout: 60000
+          - assertVisible: "$EXPECTED_REGION_LABEL"
+          - tapOn: "Staging password"
+          - inputText: "$password"
+          - tapOn: "Staging email"
+          - inputText: "$email"
+          - tapOn: "Sign in"
+          - tapOn:
+              text: "Not Now"
+              optional: true
+          YAML
+          }
+
+          append_home_assertions() {
+            local path="$1"
+            cat >> "$path" <<YAML
+          - extendedWaitUntil:
+              visible: "Home"
+              timeout: 90000
+          - assertVisible: "Today"
+          - assertVisible: "Messages"
+          - assertVisible: "Calendar"
+          - assertVisible: "Records"
+          - assertVisible: "Audio call"
+          - assertVisible: "More"
+          YAML
+          }
+
+          create_sign_in_flow() {
+            create_auth_flow "$1" "$2"
+            append_home_assertions "$1"
+          }
+
+          run_initial_invitation_flow() {
+            local flow="$1"
+            local log="$RUNNER_TEMP/peacepad-maestro-invitation-startup.log"
+            local attempt
+            for attempt in 1 2; do
+              if "$HOME/.maestro/bin/maestro" --device "$DEVICE_B" test "$flow" >"$log" 2>&1; then
+                cat "$log"
+                return 0
+              fi
+              cat "$log"
+              if test "$attempt" -eq 1 && grep -q "iOS driver not ready in time" "$log"; then
+                echo "Maestro iOS driver was not ready; retrying the untouched invitation flow once."
+                sleep 10
+                continue
+              fi
+              return 1
+            done
+          }
+
+          flow_b_invitation="$RUNNER_TEMP/peacepad-authenticated-b-invitation.yaml"
+          if test "$VERIFICATION_SCOPE" = "invitation-message-check-cross-account"; then
+            [[ "$invitation_code" =~ ^[A-Z0-9]{6}$ ]]
+            create_auth_flow "$flow_b_invitation" "$email_b"
+            cat >> "$flow_b_invitation" <<YAML
+          - extendedWaitUntil:
+              visible: "Create or join a family"
+              timeout: 90000
+          - swipe:
+              start: 50%, 80%
+              end: 50%, 20%
+              duration: 600
+          - tapOn: "Invitation code"
+          - inputText: "$invitation_code"
+          # The invitation field has no keyboard-dismiss callback. Submit its
+          # iOS return key so the keyboard closes without triggering review or
+          # acceptance; the following steps remain the explicit user actions.
+          - pressKey: enter
+          - extendedWaitUntil:
+              visible: "Review invitation"
+              timeout: 30000
+          - tapOn: "Review invitation"
+          - extendedWaitUntil:
+              visible: "Accept invitation"
+              timeout: 60000
+          - tapOn: "Accept invitation"
+          YAML
+            append_home_assertions "$flow_b_invitation"
+            run_initial_invitation_flow "$flow_b_invitation"
+            xcrun simctl io "$DEVICE_B" screenshot "$evidence/00-${REGION}-invitation-b.png"
+            touch "$RUNNER_TEMP/peacepad-authenticated-invitation-verified"
+          fi
+
+          flow_a_message="$RUNNER_TEMP/peacepad-authenticated-a-message.yaml"
+          flow_a_calendar="$RUNNER_TEMP/peacepad-authenticated-a-calendar.yaml"
+          flow_b="$RUNNER_TEMP/peacepad-authenticated-b.yaml"
+          create_sign_in_flow "$flow_a_message" "$email_a"
+          cat >> "$flow_a_message" <<YAML
+          - tapOn: "Messages"
+          - assertVisible: "Write to your co-parent. PeacePad never sends without your confirmation."
+          - swipe:
+              start: 50%, 80%
+              end: 50%, 20%
+              duration: 600
+          YAML
+          if test "$VERIFICATION_SCOPE" = "invitation-message-check-cross-account"; then
+            cat >> "$flow_a_message" <<YAML
+          - extendedWaitUntil:
+              visible: "Turn on"
+              timeout: 60000
+          - tapOn: "Turn on"
+          - extendedWaitUntil:
+              visible: "Message Check on"
+              timeout: 60000
+          - swipe:
+              start: 50%, 80%
+              end: 50%, 20%
+              duration: 600
+          YAML
+          fi
+          cat >> "$flow_a_message" <<YAML
+          - tapOn:
+              point: 50%, 80%
+          - inputText: "$message_text"
+          - tapOn:
+              point: 5%, 10%
+          - swipe:
+              start: 50%, 80%
+              end: 50%, 30%
+              duration: 400
+          # iOS may defer the system password-save sheet until focus leaves the
+          # composer. It is not a PeacePad dialog and must be dismissed before
+          # asserting the explicit Send message action.
+          - tapOn:
+              text: "Not Now"
+              optional: true
+          - extendedWaitUntil:
+              visible: "Send message"
+              timeout: 30000
+          - tapOn: "Send message"
+          - extendedWaitUntil:
+              visible: "$message_text"
+              timeout: 60000
+          YAML
+
+          cat > "$flow_a_calendar" <<YAML
+          appId: ca.peacepad.nextnative.lab
+          ---
+          - tapOn:
+              text: "Not Now"
+              optional: true
+          - tapOn: "Calendar"
+          - swipe:
+              start: 50%, 80%
+              end: 50%, 20%
+              duration: 600
+          - tapOn:
+              point: 50%, 64%
+          - inputText: "$event_title"
+          - tapOn:
+              point: 5%, 10%
+          - swipe:
+              start: 50%, 80%
+              end: 50%, 30%
+              duration: 400
+          - extendedWaitUntil:
+              visible: "Save event"
+              timeout: 30000
+          - tapOn: "Save event"
+          - extendedWaitUntil:
+              visible: "$event_title"
+              timeout: 60000
+          YAML
+
+          if test "$VERIFICATION_SCOPE" != "mutation-control"; then
+            create_sign_in_flow "$flow_b" "$email_b"
+            cat >> "$flow_b" <<YAML
+          - tapOn:
+              text: "Not Now"
+              optional: true
+          - tapOn: "Messages"
+          - swipe:
+              start: 50%, 80%
+              end: 50%, 20%
+              duration: 600
+          - extendedWaitUntil:
+              visible: "$message_text"
+              timeout: 60000
+          - tapOn: "Calendar"
+          - swipe:
+              start: 50%, 80%
+              end: 50%, 20%
+              duration: 600
+          - extendedWaitUntil:
+              visible: "$event_title"
+              timeout: 60000
+          YAML
+          fi
+          "$HOME/.maestro/bin/maestro" --device "$DEVICE_A" test "$flow_a_message"
+          xcrun simctl io "$DEVICE_A" screenshot "$evidence/01-${REGION}-message-a.png"
+          touch "$RUNNER_TEMP/peacepad-authenticated-message-mutation-verified"
+          if test "$VERIFICATION_SCOPE" = "invitation-message-check-cross-account"; then
+            touch "$RUNNER_TEMP/peacepad-authenticated-message-check-verified"
+          fi
+
+          "$HOME/.maestro/bin/maestro" --device "$DEVICE_A" test "$flow_a_calendar"
+          xcrun simctl io "$DEVICE_A" screenshot "$evidence/02-${REGION}-calendar-a.png"
+          touch "$RUNNER_TEMP/peacepad-authenticated-calendar-mutation-verified"
+          if test "$VERIFICATION_SCOPE" != "mutation-control"; then
+            "$HOME/.maestro/bin/maestro" --device "$DEVICE_B" test "$flow_b"
+            xcrun simctl io "$DEVICE_B" screenshot "$evidence/03-${REGION}-coordination-b.png"
+            test -f "$evidence/03-${REGION}-coordination-b.png"
+            touch "$RUNNER_TEMP/peacepad-authenticated-journey-verified"
+          fi
+          rm -f "$flow_a_message" "$flow_a_calendar" "$flow_b" "$flow_b_invitation"
+          test -f "$evidence/01-${REGION}-message-a.png"
+          test -f "$evidence/02-${REGION}-calendar-a.png"
+
+      - name: Capture final fictional Simulator states
+        if: always() && steps.simulators.outcome == 'success'
+        shell: bash
+        env:
+          DEVICE_A: ${{ steps.simulators.outputs.device_a }}
+          DEVICE_B: ${{ steps.simulators.outputs.device_b }}
+          REGION: ${{ inputs.region }}
+        run: |
+          set -euo pipefail
+          evidence="$RUNNER_TEMP/peacepad-authenticated-simulator-evidence"
+          mkdir -p "$evidence"
+          xcrun simctl io "$DEVICE_A" screenshot "$evidence/03-${REGION}-final-state-a.png" || true
+          if test -n "$DEVICE_B"; then
+            xcrun simctl io "$DEVICE_B" screenshot "$evidence/04-${REGION}-final-state-b.png" || true
+          fi
+
+      - name: Remove temporary application identities and Auth users
+        id: cleanup
+        if: always()
+        shell: bash
+        env:
+          PEACEPAD_FIXTURE_ACTION: cleanup
+          PEACEPAD_FIXTURE_EVIDENCE_PATH: ${{ runner.temp }}/peacepad-authenticated-simulator-evidence/cleanup.json
+          PEACEPAD_FIXTURE_PATH: ${{ runner.temp }}/peacepad-authenticated-simulator-fixture.json
+          PEACEPAD_PROJECT_REF: ${{ steps.contract.outputs.expected_project_ref }}
+          PEACEPAD_REGION: ${{ inputs.region }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_PEACEPAD_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          set -euo pipefail
+          key_file="$RUNNER_TEMP/peacepad-cleanup-api-keys.json"
+          trap 'rm -f "$key_file" "$RUNNER_TEMP/peacepad-service-role-key"' EXIT
+          fixture="$RUNNER_TEMP/peacepad-authenticated-simulator-fixture.json"
+          evidence="$RUNNER_TEMP/peacepad-authenticated-simulator-evidence/cleanup.json"
+          mkdir -p "$(dirname "$evidence")"
+          if test -f "$fixture"; then
+            curl --fail --silent --show-error --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 90 \
+              --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              "https://api.supabase.com/v1/projects/${{ steps.contract.outputs.expected_project_ref }}/api-keys" \
+              --output "$key_file"
+            chmod 600 "$key_file"
+            export SUPABASE_SERVICE_ROLE_KEY="$(jq -er '[.[] | select(.name == "service_role") | (.api_key // .key)] | if length == 1 then .[0] else error("service role key unavailable") end' "$key_file")"
+            [[ "$SUPABASE_SERVICE_ROLE_KEY" == *.*.* ]]
+            echo "::add-mask::$SUPABASE_SERVICE_ROLE_KEY"
+            node control/.github/scripts/peacepad-v2-simulator-fixtures.mjs
+          else
+            jq -n '{
+              result: "FICTIONAL_SIMULATOR_FIXTURE_NOT_PRESENT",
+              cleanupVerified: false,
+              productionContacted: false
+            }' > "$evidence"
+          fi
+
+      - name: Destroy both isolated Simulators
+        id: simulator_cleanup
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          file="$RUNNER_TEMP/peacepad-authenticated-simulator-udids"
+          if test -f "$file"; then
+            while IFS= read -r device; do
+              test -n "$device" || continue
+              xcrun simctl shutdown "$device" || true
+              xcrun simctl delete "$device"
+            done < "$file"
+          fi
+          touch "$RUNNER_TEMP/peacepad-authenticated-simulators-destroyed"
+
+      - name: Finalize non-secret journey evidence
+        if: always()
+        shell: bash
+        env:
+          BUILD_PROFILE: ${{ inputs.build_profile }}
+          EAS_BUILD_ID: ${{ inputs.eas_build_id }}
+          PROJECT_REF: ${{ steps.contract.outputs.expected_project_ref }}
+          REGION: ${{ inputs.region }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+          VERIFICATION_SCOPE: ${{ inputs.verification_scope }}
+        run: |
+          set -euo pipefail
+          evidence="$RUNNER_TEMP/peacepad-authenticated-simulator-evidence"
+          mkdir -p "$evidence"
+          journey_verified=false
+          invitation_verified=false
+          message_mutation_verified=false
+          message_check_verified=false
+          calendar_mutation_verified=false
+          mutation_control_verified=false
+          simulators_destroyed=false
+          cleanup_verified=false
+          test -f "$RUNNER_TEMP/peacepad-authenticated-journey-verified" && journey_verified=true
+          test -f "$RUNNER_TEMP/peacepad-authenticated-invitation-verified" && invitation_verified=true
+          test -f "$RUNNER_TEMP/peacepad-authenticated-message-mutation-verified" && message_mutation_verified=true
+          test -f "$RUNNER_TEMP/peacepad-authenticated-message-check-verified" && message_check_verified=true
+          test -f "$RUNNER_TEMP/peacepad-authenticated-calendar-mutation-verified" && calendar_mutation_verified=true
+          if $message_mutation_verified && $calendar_mutation_verified; then
+            mutation_control_verified=true
+          fi
+          test -f "$RUNNER_TEMP/peacepad-authenticated-simulators-destroyed" && simulators_destroyed=true
+          if test -f "$evidence/cleanup.json"; then
+            test "$(jq -r '.result' "$evidence/cleanup.json")" = "FICTIONAL_SIMULATOR_FIXTURE_CLEANUP_VERIFIED" && cleanup_verified=true
+          fi
+          result="AUTHENTICATED_FICTIONAL_SIMULATOR_JOURNEY_NOT_VERIFIED"
+          if test "$VERIFICATION_SCOPE" = "mutation-control" && $mutation_control_verified && $simulators_destroyed && $cleanup_verified; then
+            result="AUTHENTICATED_FICTIONAL_SIMULATOR_MUTATION_CONTROL_VERIFIED"
+          elif test "$VERIFICATION_SCOPE" = "full-cross-account" && $journey_verified && $simulators_destroyed && $cleanup_verified; then
+            result="AUTHENTICATED_FICTIONAL_SIMULATOR_JOURNEY_VERIFIED"
+          elif test "$VERIFICATION_SCOPE" = "invitation-message-check-cross-account" && $journey_verified && $invitation_verified && $message_check_verified && $simulators_destroyed && $cleanup_verified; then
+            result="AUTHENTICATED_FICTIONAL_SIMULATOR_INVITATION_MESSAGE_CHECK_JOURNEY_VERIFIED"
+          fi
+          jq -n \
+            --arg result "$result" \
+            --arg controlSha "$GITHUB_SHA" \
+            --arg targetSha "$TARGET_SHA" \
+            --arg region "$REGION" \
+            --arg projectRef "$PROJECT_REF" \
+            --arg easBuildId "$EAS_BUILD_ID" \
+            --arg artifactSha256 "${{ steps.artifact.outputs.actual_sha256 }}" \
+            --arg buildProfile "$BUILD_PROFILE" \
+            --arg verificationScope "$VERIFICATION_SCOPE" \
+            --argjson journeyVerified "$journey_verified" \
+            --argjson invitationVerified "$invitation_verified" \
+            --argjson messageMutationVerified "$message_mutation_verified" \
+            --argjson messageCheckVerified "$message_check_verified" \
+            --argjson calendarMutationVerified "$calendar_mutation_verified" \
+            --argjson mutationControlVerified "$mutation_control_verified" \
+            --argjson cleanupVerified "$cleanup_verified" \
+            --argjson simulatorsDestroyed "$simulators_destroyed" \
+            '{
+              result: $result,
+              controlSha: $controlSha,
+              targetSha: $targetSha,
+              region: $region,
+              expectedProjectRef: $projectRef,
+              easBuildId: $easBuildId,
+              artifactSha256: $artifactSha256,
+              buildProfile: $buildProfile,
+              oneArtifactRegionSelection: ($buildProfile == "staging-simulator-dual"),
+              verificationScope: $verificationScope,
+              classification: "fictional-only",
+              fixtureDomain: "example.test",
+              authenticatedNativeSessions: (if $journeyVerified then 2 elif $messageMutationVerified or $calendarMutationVerified then 1 else 0 end),
+              backendFamilyAndConversationPrepared: ($journeyVerified or $messageMutationVerified or $calendarMutationVerified),
+              nativeInvitationAcceptanceVerified: $invitationVerified,
+              nativeMessageMutationVerified: ($journeyVerified or $messageMutationVerified),
+              nativeMessageCheckOptInVerified: $messageCheckVerified,
+              nativeCalendarMutationVerified: ($journeyVerified or $calendarMutationVerified),
+              crossAccountVisibilityVerified: $journeyVerified,
+              applicationAndAuthCleanupVerified: $cleanupVerified,
+              simulatorsDestroyed: $simulatorsDestroyed,
+              credentialRetained: false,
+              privateContentCaptured: false,
+              productionContacted: false,
+              physicalDeviceProof: false,
+              testFlightProof: false,
+              productionProof: false
+            }' > "$evidence/manifest.json"
+          if test "$VERIFICATION_SCOPE" = "mutation-control"; then
+            test "$result" = "AUTHENTICATED_FICTIONAL_SIMULATOR_MUTATION_CONTROL_VERIFIED"
+          elif test "$VERIFICATION_SCOPE" = "invitation-message-check-cross-account"; then
+            test "$result" = "AUTHENTICATED_FICTIONAL_SIMULATOR_INVITATION_MESSAGE_CHECK_JOURNEY_VERIFIED"
+          else
+            test "$result" = "AUTHENTICATED_FICTIONAL_SIMULATOR_JOURNEY_VERIFIED"
+          fi
+
+      - name: Upload non-secret authenticated Simulator evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: peacepad-v2-authenticated-simulator-${{ inputs.region }}-${{ inputs.eas_build_id }}
+          if-no-files-found: error
+          retention-days: 14
+          path: ${{ runner.temp }}/peacepad-authenticated-simulator-evidence

@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+.env*
+data
+instances
+logs
+reports
+proof
+resumes
+.local*

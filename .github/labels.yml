@@ -8,6 +8,22 @@
   color: "1D76DB"
   description: "Small, low-risk, agent-safe job. Auto-grazed nightly."
 
+- name: maintenance:security
+  color: "B60205"
+  description: "Scheduled security maintenance lane."
+
+- name: maintenance:language
+  color: "0E8A16"
+  description: "Scheduled language and accessibility maintenance lane."
+
+- name: maintenance:documentation
+  color: "0075CA"
+  description: "Scheduled documentation reality lane."
+
+- name: maintenance:general
+  color: "6F42C1"
+  description: "Scheduled general repository maintenance lane."
+
 - name: bug
   color: "D73A4A"
   description: "Something broken in prod or dev."
