@@ -4,7 +4,7 @@ import { shippedProducts } from '@/lib/site-content';
 
 const portfolioLinks = shippedProducts.map((product) => ({
   label: product.name,
-  href: `/products/${product.slug}`,
+  href: product.caseStudyUrl ?? `/products#${product.slug}`,
   description: product.description,
 }));
 const solutionLinks = Object.values(solutionPages);

@@ -32,7 +32,7 @@ export default function ProductsPage() {
             {shippedProducts.map((product) => {
               const platforms = [product.web, product.ios, product.android].filter(Boolean);
               return (
-                <article key={product.slug} className="flex min-h-[340px] flex-col rounded-[28px] border border-border bg-bg-offwhite p-6 transition-shadow hover:shadow-lg sm:p-7">
+                <article id={product.slug} key={product.slug} className="scroll-mt-24 flex min-h-[340px] flex-col rounded-[28px] border border-border bg-bg-offwhite p-6 transition-shadow hover:shadow-lg sm:p-7">
                   <div className="flex items-start justify-between gap-4">
                     <ProductMark name={product.name} icon={product.icon} size="lg" />
                     <Badge variant={product.maturity === 'Live' || product.maturity === 'Available' ? 'teal' : 'muted'}>{product.maturity}</Badge>
