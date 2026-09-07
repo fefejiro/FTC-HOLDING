@@ -64,8 +64,8 @@ The Una Labs post-payment intake is now wired to ATEAM. When a client completes 
 
 ### Already Set (No action needed)
 ```
-MAILJET_API_KEY=b42826c9a2cb400e51a1c9c0a6f3c4f0
-MAILJET_SECRET_KEY=bcc4463b71eb27a559ec35182bb8bc01
+MAILJET_API_KEY=<redacted>
+MAILJET_SECRET_KEY=<redacted>
 SUPABASE_URL=https://aaaextkrfoqomzmjjkxe.supabase.co
 ```
 
