@@ -1,9 +1,4 @@
 import Stripe from 'stripe';
-import {
-  forwardJobAgentStripeEvent,
-  handleJobAgentRoute,
-  normalizeJobAgentStripeEvent,
-} from './jobagent';
 
 export interface Env {
   STRIPE_SECRET_KEY: string;
@@ -33,32 +28,10 @@ export interface Env {
   AUTOCOLLECT_MAX_SEND_PER_RUN?: string;
   GITHUB_TOKEN?: string;
   COACHING_SESSION_PRICE_CAD?: string;
-  COACHING_RATE_LIMIT_WINDOW_MS?: string;
-  COACHING_RATE_LIMIT_MAX?: string;
-  JOBAGENT_API_ORIGIN?: string;
-  JOBAGENT_APP_ORIGIN?: string;
-  JOBAGENT_BILLING_SHARED_SECRET?: string;
-  JOBAGENT_SPRINT_WEEKLY_LOOKUP_KEY?: string;
-  JOBAGENT_MONTHLY_LOOKUP_KEY?: string;
-  JOBAGENT_ANNUAL_LOOKUP_KEY?: string;
-  JOBAGENT_SPRINT_WEEKLY_CAD_CENTS?: string;
-  JOBAGENT_MONTHLY_CAD_CENTS?: string;
-  JOBAGENT_ANNUAL_CAD_CENTS?: string;
-  JOBAGENT_FOUNDING_PROMOTION_CODE?: string;
-  JOBAGENT_EMAIL_FROM?: string;
-  SPARK_ENABLED?: string;
-  SPARK_PREVIEW_TURNS?: string;
-  SPARK_MAX_TURNS?: string;
-  SPARK_MAX_TOKENS_PER_TURN?: string;
-  SPARK_RATE_LIMIT_WINDOW_MS?: string;
-  SPARK_RATE_LIMIT_MAX?: string;
-  SPARK_PASS_PRICE_CAD?: string;
-  STRIPE_PRICE_SPARK_PASS?: string;
 }
 
 // ── Spark in-memory rate limit store (per worker instance) ─────────────
 const sparkIpRateLimitStore = new Map<string, number[]>();
-const coachingIpRateLimitStore = new Map<string, number[]>();
 const COACHING_SESSION_PRICE_CAD = 149;
 
 function shouldDeliverBridgeWebhook(env: Env): boolean {
@@ -69,7 +42,6 @@ function shouldDeliverBridgeWebhook(env: Env): boolean {
 const ALLOWED_ORIGINS = [
   'https://unalabs.cloud',
   'https://www.unalabs.cloud',
-  'https://jobagent.unalabs.cloud',
   'http://localhost:3000',
   'http://localhost:3001',
 ];
@@ -573,7 +545,7 @@ function isActivationTier(value: string): value is (typeof ACTIVATION_TIERS)[num
   return (ACTIVATION_TIERS as readonly string[]).includes(value);
 }
 
-function normalizeCheckoutType(value: unknown): 'subscription' | 'activation' {
+function normalizeCheckoutType(value: string): 'subscription' | 'activation' {
   return value === 'activation' ? 'activation' : 'subscription';
 }
 
@@ -3505,16 +3477,6 @@ async function handleStripeWebhook(req: Request, env: Env, origin: string | null
   logEvent('stripe_webhook_received', { type: event.type, id: event.id });
 
   try {
-    const jobAgentEvent = await normalizeJobAgentStripeEvent(stripe, event);
-    if (jobAgentEvent) {
-      await forwardJobAgentStripeEvent(env, jobAgentEvent);
-      logEvent('jobagent_stripe_event_delivered', {
-        stripeEventId: event.id,
-        type: event.type,
-        userId: jobAgentEvent.userId,
-      });
-      return json({ received: true, service: 'jobagent' }, 200, origin);
-    }
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
       if (session.payment_status === 'paid' || session.status === 'complete') {
@@ -4995,16 +4957,6 @@ function getSparkPassPriceCad(env: Env): number {
   return Number.isFinite(n) && n > 0 ? n : 5;
 }
 
-function getCoachingRateLimitWindowMs(env: Env): number {
-  const n = parseInt(env.COACHING_RATE_LIMIT_WINDOW_MS ?? '60000', 10);
-  return Number.isFinite(n) && n >= 1000 ? n : 60000;
-}
-
-function getCoachingRateLimitMax(env: Env): number {
-  const n = parseInt(env.COACHING_RATE_LIMIT_MAX ?? '5', 10);
-  return Number.isFinite(n) && n >= 1 ? n : 5;
-}
-
 function getSparkClientIp(req: Request): string {
   const header =
     req.headers.get('cf-connecting-ip') ||
@@ -5022,15 +4974,6 @@ function checkSparkIpRateLimit(ip: string, windowMs: number, maxRequests: number
   const kept = existing.filter((ts) => now - ts < windowMs);
   kept.push(now);
   sparkIpRateLimitStore.set(ip, kept);
-  return kept.length > maxRequests;
-}
-
-function checkCoachingIpRateLimit(ip: string, windowMs: number, maxRequests: number): boolean {
-  const now = Date.now();
-  const existing = coachingIpRateLimitStore.get(ip) ?? [];
-  const kept = existing.filter((ts) => now - ts < windowMs);
-  kept.push(now);
-  coachingIpRateLimitStore.set(ip, kept);
   return kept.length > maxRequests;
 }
 
@@ -5298,20 +5241,10 @@ async function handleSparkVerifyPass(req: Request, env: Env, origin: string | nu
   }, 200, origin);
 }
 
-function handleCoachingConfig(env: Env, origin: string | null): Response {
-  return json({ price_cad: getCoachingSessionPriceCad(env) }, 200, origin);
-}
-
 // POST /api/coaching/create-session
 // A coaching booking is intentionally a one-time Checkout Session. The preferred
 // times are metadata for human scheduling; no customer data is written to logs.
 async function handleCoachingCreateSession(req: Request, env: Env, origin: string | null): Promise<Response> {
-  const ip = getSparkClientIp(req);
-  if (checkCoachingIpRateLimit(ip, getCoachingRateLimitWindowMs(env), getCoachingRateLimitMax(env))) {
-    logEvent('coaching_create_session_rate_limited', {});
-    return json({ error: 'Too many requests. Please wait before trying again.' }, 429, origin);
-  }
-
   let body: Record<string, unknown>;
   try {
     body = await req.json();
@@ -5372,7 +5305,14 @@ async function handleCoachingCreateSession(req: Request, env: Env, origin: strin
       locale: 'en',
     });
     return json({ url: session.url }, 200, origin);
-  } catch {
+  } catch (error) {
+    const stripeError = error as { type?: string; code?: string; statusCode?: number; requestId?: string };
+    logEvent('coaching_checkout_create_error', {
+      error_type: stripeError.type ?? 'unknown',
+      error_code: stripeError.code ?? 'unknown',
+      status_code: stripeError.statusCode ?? 0,
+      request_id: stripeError.requestId ?? 'none',
+    });
     return json({ error: 'Could not start secure checkout. Please try again.' }, 502, origin);
   }
 }
@@ -5419,30 +5359,14 @@ async function sendCoachingBookingEmails(env: Env, session: Stripe.Checkout.Sess
   const credentials = btoa(`${cleanSecret(env.MAILJET_API_KEY)}:${cleanSecret(env.MAILJET_SECRET_KEY)}`);
   const customerHtml = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px"><h1 style="font-size:22px;color:#0B0E11">Your AI coaching booking is paid.</h1><p>Hi ${safe.name},</p><p>Thank you. We have your preferred times and will confirm your 60-minute session within one business day.</p><p style="color:#6B7280">You can reply to this email if your availability changes.</p><p>Una Labs</p></div>`;
   const adminHtml = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px"><h1 style="font-size:20px;color:#0B0E11">New paid AI coaching booking</h1><p><strong>Customer:</strong> ${safe.name} (${safe.email})</p><p><strong>Time zone:</strong> ${safe.timezone}</p><p><strong>Preferred times:</strong><br>${safe.availability}</p><p><strong>What they want help with:</strong><br>${safe.focus}</p><p><strong>Paid:</strong> CAD $${amountCad}</p></div>`;
-  let response: Response;
-  try {
-    response = await fetch('https://api.mailjet.com/v3.1/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Basic ${credentials}` },
-      body: JSON.stringify({ Messages: [
-        { From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' }, To: [{ Email: email, Name: name }], Subject: 'Your Una Labs AI coaching booking', HTMLPart: customerHtml, TextPart: `Hi ${name},\n\nYour AI coaching booking is paid. We will confirm your 60-minute session within one business day.\n\nUna Labs` },
-        { From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' }, To: [{ Email: ADMIN_EMAIL, Name: 'Mike' }], Subject: '[Action needed] New paid AI coaching booking', HTMLPart: adminHtml, TextPart: `New paid AI coaching booking\nCustomer: ${name} (${email})\nTime zone: ${timezone}\nPreferred times: ${availability}\nFocus: ${focus || 'Not supplied'}\nPaid: CAD $${amountCad}` },
-      ] }),
-    });
-  } catch (error) {
-    logEvent('coaching_booking_email_failed', {
-      error: error instanceof Error ? error.message : 'Mailjet request failed.',
-    });
-    return;
-  }
-  if (!response.ok) {
-    logEvent('coaching_booking_email_failed', {
-      status: response.status,
-      statusText: response.statusText,
-    });
-    return;
-  }
-  logEvent('coaching_booking_email_sent', { status: response.status });
+  await fetch('https://api.mailjet.com/v3.1/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Basic ${credentials}` },
+    body: JSON.stringify({ Messages: [
+      { From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' }, To: [{ Email: email, Name: name }], Subject: 'Your Una Labs AI coaching booking', HTMLPart: customerHtml, TextPart: `Hi ${name},\n\nYour AI coaching booking is paid. We will confirm your 60-minute session within one business day.\n\nUna Labs` },
+      { From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' }, To: [{ Email: ADMIN_EMAIL, Name: 'Mike' }], Subject: '[Action needed] New paid AI coaching booking', HTMLPart: adminHtml, TextPart: `New paid AI coaching booking\nCustomer: ${name} (${email})\nTime zone: ${timezone}\nPreferred times: ${availability}\nFocus: ${focus || 'Not supplied'}\nPaid: CAD $${amountCad}` },
+    ] }),
+  });
 }
 
 async function handleAdminAutoCollectSendInvite(req: Request, env: Env, origin: string | null): Promise<Response> {
@@ -5580,25 +5504,8 @@ export default {
       return new Response(null, { status: 204, headers: corsHeaders(origin) });
     }
 
-    if (url.pathname.startsWith('/api/jobagent/')) {
-      try {
-        return await handleJobAgentRoute(req, env, getStripe(env), origin)
-          || json({ error: 'Not found.' }, 404, origin);
-      } catch (error) {
-        logEvent('jobagent_route_failed', {
-          path: url.pathname,
-          errorClass: error instanceof Error ? error.name : 'UnknownError',
-        });
-        return json({ error: 'JobAgent billing service is unavailable.' }, 503, origin);
-      }
-    }
-
     if (req.method === 'GET' && url.pathname === '/api/checkout-success') {
       return handleCheckoutSuccess(req, env);
-    }
-
-    if (req.method === 'GET' && url.pathname === '/api/status') {
-      return json(await getPublicStatusSummary(req, env), 200, origin);
     }
 
     // ── Spark AI chat routes ──────────────────────────────────────────────
@@ -5610,9 +5517,6 @@ export default {
     }
     if (req.method === 'GET' && url.pathname === '/api/spark/verify-pass') {
       return handleSparkVerifyPass(req, env, origin);
-    }
-    if (req.method === 'GET' && url.pathname === '/api/coaching/config') {
-      return handleCoachingConfig(env, origin);
     }
     if (req.method === 'GET' && url.pathname === '/api/coaching/verify-session') {
       return handleCoachingVerifySession(req, env, origin);
@@ -5692,7 +5596,6 @@ export default {
           docs: {
             admin_status_summary: '/api/admin/status-summary',
             checkout_success: '/api/checkout-success',
-            jobagent_checkout: '/api/jobagent/checkout',
           },
         },
         200,
