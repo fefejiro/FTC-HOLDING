@@ -10,6 +10,7 @@ export const CLIENT_SITES: ClientSiteConfig[] = [
   {
     slug: 'garden',
     clientName: 'Garden Cleaners',
+    logoUrl: '/brand/garden-cleaners-mark.svg',
     primaryColor: 'brand-teal',
     description: 'Professional residential cleaning services powered by Una Labs.',
   },

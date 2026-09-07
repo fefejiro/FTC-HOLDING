@@ -27,10 +27,12 @@ export interface Env {
   AUTOCOLLECT_DAILY_EMAIL_CAP?: string;
   AUTOCOLLECT_MAX_SEND_PER_RUN?: string;
   GITHUB_TOKEN?: string;
+  COACHING_SESSION_PRICE_CAD?: string;
 }
 
 // ── Spark in-memory rate limit store (per worker instance) ─────────────
 const sparkIpRateLimitStore = new Map<string, number[]>();
+const COACHING_SESSION_PRICE_CAD = 149;
 
 function shouldDeliverBridgeWebhook(env: Env): boolean {
   const mode = (env.UNALABS_PROJECT_PIPELINE_MODE ?? 'worker_only').trim().toLowerCase();
@@ -39,6 +41,7 @@ function shouldDeliverBridgeWebhook(env: Env): boolean {
 
 const ALLOWED_ORIGINS = [
   'https://unalabs.cloud',
+  'https://www.unalabs.cloud',
   'http://localhost:3000',
   'http://localhost:3001',
 ];
@@ -59,6 +62,11 @@ function json(data: unknown, status = 200, origin: string | null = null): Respon
   });
 }
 
+function getCoachingSessionPriceCad(env: Env): number {
+  const configured = Number(env.COACHING_SESSION_PRICE_CAD);
+  return Number.isFinite(configured) && configured >= 1 ? configured : COACHING_SESSION_PRICE_CAD;
+}
+
 function redirect(location: string): Response {
   return new Response(null, {
     status: 302,
@@ -68,6 +76,12 @@ function redirect(location: string): Response {
 
 function sanitize(value: unknown, maxLen = 500): string {
   return String(value ?? '').trim().slice(0, maxLen);
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>'"]/g, (character) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;',
+  }[character] ?? character));
 }
 
 function sanitizeIntake(value: unknown): Record<string, string> {
@@ -3466,7 +3480,11 @@ async function handleStripeWebhook(req: Request, env: Env, origin: string | null
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
       if (session.payment_status === 'paid' || session.status === 'complete') {
-        await runActivation(env, stripe, session.id, {});
+        if (session.metadata?.checkout_type === 'coaching_session') {
+          await sendCoachingBookingEmails(env, session);
+        } else {
+          await runActivation(env, stripe, session.id, {});
+        }
       }
     } else if (event.type === 'invoice.payment_succeeded') {
       const stripeInvoice = event.data.object as Stripe.Invoice;
@@ -5223,6 +5241,127 @@ async function handleSparkVerifyPass(req: Request, env: Env, origin: string | nu
   }, 200, origin);
 }
 
+// POST /api/coaching/create-session
+// A coaching booking is intentionally a one-time Checkout Session. The preferred
+// times are metadata for human scheduling; no customer data is written to logs.
+async function handleCoachingCreateSession(req: Request, env: Env, origin: string | null): Promise<Response> {
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: 'Invalid request body.' }, 400, origin);
+  }
+
+  const name = sanitize(body.name, 120);
+  const email = sanitize(body.email, 200).toLowerCase();
+  const timezone = sanitize(body.timezone, 80);
+  const availability = sanitize(body.availability, 500);
+  const focus = sanitize(body.focus, 500);
+
+  if (!name || !email.includes('@') || !timezone || !availability) {
+    return json({ error: 'Name, email, time zone, and preferred times are required.' }, 400, origin);
+  }
+
+  let stripe: Stripe;
+  try {
+    stripe = getStripe(env);
+  } catch {
+    return json({ error: 'Payment service is unavailable. Please try again later.' }, 503, origin);
+  }
+
+  const siteUrl = getSiteUrl(env);
+  const amountCad = getCoachingSessionPriceCad(env);
+  const metadata = {
+    checkout_type: 'coaching_session',
+    service_type: 'ai_coaching_60_minutes',
+    customer_name: name,
+    customer_email: email,
+    timezone,
+    availability,
+    focus,
+    amount_cad: String(amountCad),
+  };
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      customer_email: email,
+      line_items: [{
+        price_data: {
+          currency: 'cad',
+          unit_amount: Math.round(amountCad * 100),
+          product_data: {
+            name: 'Una Labs AI Coaching Session',
+            description: 'One-to-one practical AI coaching, 60 minutes.',
+          },
+        },
+        quantity: 1,
+      }],
+      success_url: `${siteUrl}/learn/confirmed?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${siteUrl}/learn`,
+      metadata,
+      payment_intent_data: { metadata },
+      billing_address_collection: 'required',
+      locale: 'en',
+    });
+    return json({ url: session.url }, 200, origin);
+  } catch {
+    return json({ error: 'Could not start secure checkout. Please try again.' }, 502, origin);
+  }
+}
+
+// GET /api/coaching/verify-session
+async function handleCoachingVerifySession(req: Request, env: Env, origin: string | null): Promise<Response> {
+  const sessionId = sanitize(new URL(req.url).searchParams.get('session_id'), 200);
+  if (!sessionId) return json({ error: 'session_id is required.' }, 400, origin);
+
+  let stripe: Stripe;
+  try {
+    stripe = getStripe(env);
+  } catch {
+    return json({ error: 'Payment service is unavailable. Please try again later.' }, 503, origin);
+  }
+
+  try {
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const isCoaching = session.metadata?.checkout_type === 'coaching_session';
+    const paid = session.payment_status === 'paid' || session.status === 'complete';
+    if (!isCoaching || !paid) return json({ ok: false, error: 'Payment has not completed.' }, 402, origin);
+    return json({ ok: true, amount_cad: Number(session.metadata?.amount_cad) || getCoachingSessionPriceCad(env) }, 200, origin);
+  } catch {
+    return json({ error: 'We could not confirm that session.' }, 404, origin);
+  }
+}
+
+async function sendCoachingBookingEmails(env: Env, session: Stripe.Checkout.Session): Promise<void> {
+  if (!env.MAILJET_API_KEY || !env.MAILJET_SECRET_KEY) return;
+  if (session.metadata?.checkout_type !== 'coaching_session') return;
+
+  const name = sanitize(session.metadata.customer_name, 120);
+  const email = sanitize(session.customer_email ?? session.metadata.customer_email, 200).toLowerCase();
+  const timezone = sanitize(session.metadata.timezone, 80);
+  const availability = sanitize(session.metadata.availability, 500);
+  const focus = sanitize(session.metadata.focus, 500);
+  if (!name || !email.includes('@') || !timezone || !availability) return;
+
+  const safe = {
+    name: escapeHtml(name), email: escapeHtml(email), timezone: escapeHtml(timezone),
+    availability: escapeHtml(availability), focus: escapeHtml(focus || 'Not supplied'),
+  };
+  const amountCad = Number(session.metadata.amount_cad) || getCoachingSessionPriceCad(env);
+  const credentials = btoa(`${cleanSecret(env.MAILJET_API_KEY)}:${cleanSecret(env.MAILJET_SECRET_KEY)}`);
+  const customerHtml = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px"><h1 style="font-size:22px;color:#0B0E11">Your AI coaching booking is paid.</h1><p>Hi ${safe.name},</p><p>Thank you. We have your preferred times and will confirm your 60-minute session within one business day.</p><p style="color:#6B7280">You can reply to this email if your availability changes.</p><p>Una Labs</p></div>`;
+  const adminHtml = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px"><h1 style="font-size:20px;color:#0B0E11">New paid AI coaching booking</h1><p><strong>Customer:</strong> ${safe.name} (${safe.email})</p><p><strong>Time zone:</strong> ${safe.timezone}</p><p><strong>Preferred times:</strong><br>${safe.availability}</p><p><strong>What they want help with:</strong><br>${safe.focus}</p><p><strong>Paid:</strong> CAD $${amountCad}</p></div>`;
+  await fetch('https://api.mailjet.com/v3.1/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Basic ${credentials}` },
+    body: JSON.stringify({ Messages: [
+      { From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' }, To: [{ Email: email, Name: name }], Subject: 'Your Una Labs AI coaching booking', HTMLPart: customerHtml, TextPart: `Hi ${name},\n\nYour AI coaching booking is paid. We will confirm your 60-minute session within one business day.\n\nUna Labs` },
+      { From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' }, To: [{ Email: ADMIN_EMAIL, Name: 'Mike' }], Subject: '[Action needed] New paid AI coaching booking', HTMLPart: adminHtml, TextPart: `New paid AI coaching booking\nCustomer: ${name} (${email})\nTime zone: ${timezone}\nPreferred times: ${availability}\nFocus: ${focus || 'Not supplied'}\nPaid: CAD $${amountCad}` },
+    ] }),
+  });
+}
+
 async function handleAdminAutoCollectSendInvite(req: Request, env: Env, origin: string | null): Promise<Response> {
   const auth = await verifyAdmin(req, env);
   if (!auth.ok) return json({ error: auth.error }, auth.error === 'Forbidden.' ? 403 : 401, origin);
@@ -5372,6 +5511,9 @@ export default {
     if (req.method === 'GET' && url.pathname === '/api/spark/verify-pass') {
       return handleSparkVerifyPass(req, env, origin);
     }
+    if (req.method === 'GET' && url.pathname === '/api/coaching/verify-session') {
+      return handleCoachingVerifySession(req, env, origin);
+    }
 
     if (req.method === 'GET' && url.pathname === '/api/invoices') {
       return handleGetInvoices(req, env, origin);
@@ -5459,6 +5601,8 @@ export default {
     }
 
     switch (url.pathname) {
+      case '/api/coaching/create-session':
+        return handleCoachingCreateSession(req, env, origin);
       case '/api/stripe-webhook':
         return handleStripeWebhook(req, env, origin);
       case '/api/create-checkout-session':

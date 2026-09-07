@@ -78,17 +78,23 @@ function assertCrypto(): Crypto {
   return crypto;
 }
 
+function asArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
+}
+
 async function deriveKey(passphrase: string, salt: Uint8Array): Promise<CryptoKey> {
   const webCrypto = assertCrypto();
   const passBytes = new TextEncoder().encode(passphrase);
-  const keyMaterial = await webCrypto.subtle.importKey('raw', passBytes, 'PBKDF2', false, ['deriveKey']);
+  const keyMaterial = await webCrypto.subtle.importKey('raw', asArrayBuffer(passBytes), 'PBKDF2', false, ['deriveKey']);
 
   return webCrypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
       hash: 'SHA-256',
       iterations: 150000,
-      salt,
+      salt: asArrayBuffer(salt),
     },
     keyMaterial,
     {
@@ -113,9 +119,9 @@ export async function createProposalShareToken(snapshot: ProposalShareSnapshot, 
   const key = await deriveKey(normalized, salt);
 
   const encrypted = await webCrypto.subtle.encrypt(
-    { name: 'AES-GCM', iv },
+    { name: 'AES-GCM', iv: asArrayBuffer(iv) },
     key,
-    payload,
+    asArrayBuffer(payload),
   );
 
   const envelope: TokenEnvelope = {
@@ -153,9 +159,9 @@ export async function readProposalShareToken(token: string, passphrase: string):
     const key = await deriveKey(normalized, salt);
 
     const plainBuffer = await assertCrypto().subtle.decrypt(
-      { name: 'AES-GCM', iv },
+      { name: 'AES-GCM', iv: asArrayBuffer(iv) },
       key,
-      cipher,
+      asArrayBuffer(cipher),
     );
 
     const decoded = new TextDecoder().decode(new Uint8Array(plainBuffer));

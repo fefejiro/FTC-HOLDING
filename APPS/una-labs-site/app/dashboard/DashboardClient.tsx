@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useMemo, useState } from 'react';
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { getAteamEndpoint, isProjectAdminEmail, normalizeProjectStatus } from '@/lib/projects';
@@ -788,7 +789,7 @@ export function DashboardClient() {
         ]);
 
         const client = createBrowserClient();
-        const authSubscription = client.auth.onAuthStateChange(async (event, authSession) => {
+        const authSubscription = client.auth.onAuthStateChange(async (event: AuthChangeEvent, authSession: Session | null) => {
           if (cancelled) return;
 
           if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && authSession?.user) {

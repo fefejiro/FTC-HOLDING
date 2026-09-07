@@ -9,9 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@ftc/auth": "*",
-    "@ftc/supabase": "*",
-    "@supabase/supabase-js": "^2.30.0",
+    "@ftc/auth": "file:../../PACKAGES/auth",
+    "@ftc/supabase": "file:../../PACKAGES/supabase",
+    "@supabase/supabase-js": "2.104.1",
     "next": "^15.5.15",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

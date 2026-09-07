@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import type { EmailOtpType } from '@supabase/supabase-js';
 
 function normalizeRedirectPath(value: string | null): string {
   if (!value) return '/dashboard';
@@ -41,7 +42,7 @@ function AuthCallbackClient() {
         } else if (tokenHash) {
           const { error: verifyError } = await client.auth.verifyOtp({
             token_hash: tokenHash,
-            type: typeParam as Parameters<typeof client.auth.verifyOtp>[0]['type'],
+            type: typeParam as EmailOtpType,
           });
           if (verifyError) throw verifyError;
         } else {
