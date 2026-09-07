@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
+import { UnaLabsLogo } from '@/components/brand/UnaLabsLogo';
 import { NAV } from '@/lib/constants';
 
 interface NavChild {
@@ -68,13 +69,7 @@ export function Header() {
         ref={navRef}
         className="max-w-content mx-auto px-6 flex items-center justify-between h-16"
       >
-        {/* Logo */}
-        <Link
-          href="/"
-          className="font-display font-bold text-tx-heading text-h4 hover:text-brand-teal transition-colors"
-        >
-          Una Labs
-        </Link>
+        <UnaLabsLogo />
 
         {/* Desktop nav */}
         <nav className="hidden lg:flex items-center gap-1" aria-label="Main navigation">
