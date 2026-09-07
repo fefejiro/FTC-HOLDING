@@ -37,3 +37,30 @@ describe("public status", () => {
     expect(payload.autocollect).toBeNull();
   });
 });
+
+describe("coaching public endpoints", () => {
+  it("serves the configured coaching price", async () => {
+    const response = await worker.fetch(
+      new Request("https://una-stripe-api.example/api/coaching/config"),
+      { ...environment(), COACHING_SESSION_PRICE_CAD: "175" }
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ price_cad: 175 });
+  });
+
+  it("rate limits coaching checkout requests before parsing the body", async () => {
+    const env = { ...environment(), COACHING_RATE_LIMIT_MAX: "1" };
+    const request = () => new Request("https://una-stripe-api.example/api/coaching/create-session", {
+      method: "POST",
+      headers: { "cf-connecting-ip": "coaching-test-ip" },
+      body: "{",
+    });
+
+    const first = await worker.fetch(request(), env);
+    const second = await worker.fetch(request(), env);
+
+    expect(first.status).toBe(400);
+    expect(second.status).toBe(429);
+  });
+});

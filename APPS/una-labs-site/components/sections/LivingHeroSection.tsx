@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { CoachingPrice } from '@/components/CoachingPrice';
 
 export function LivingHeroSection() {
   return (
@@ -15,7 +16,7 @@ export function LivingHeroSection() {
             <Button href="/learn" variant="primary" size="lg">Book a coaching session</Button>
             <Button href="/start" variant="ghost" size="lg">Bring us a product idea →</Button>
           </div>
-          <p className="mt-4 text-caption text-tx-muted">60 minutes · CAD $149 · beginner-friendly · secure checkout</p>
+          <p className="mt-4 text-caption text-tx-muted">60 minutes · <CoachingPrice /> · beginner-friendly · secure checkout</p>
         </div>
 
         <aside className="relative overflow-hidden rounded-[32px] border border-[#d8ebe8] bg-brand-teal-light p-7 sm:p-10" aria-label="One-to-one AI coaching details">
@@ -29,7 +30,7 @@ export function LivingHeroSection() {
             <dl className="mt-9 grid gap-4 border-t border-brand-teal/20 pt-6 sm:grid-cols-3">
               <div><dt className="text-caption font-semibold uppercase tracking-wider text-tx-muted">Format</dt><dd className="mt-1 text-body-sm font-semibold text-tx-heading">1:1 online</dd></div>
               <div><dt className="text-caption font-semibold uppercase tracking-wider text-tx-muted">Length</dt><dd className="mt-1 text-body-sm font-semibold text-tx-heading">60 minutes</dd></div>
-              <div><dt className="text-caption font-semibold uppercase tracking-wider text-tx-muted">Investment</dt><dd className="mt-1 text-body-sm font-semibold text-tx-heading">CAD $149</dd></div>
+              <div><dt className="text-caption font-semibold uppercase tracking-wider text-tx-muted">Investment</dt><dd className="mt-1 text-body-sm font-semibold text-tx-heading"><CoachingPrice /></dd></div>
             </dl>
           </div>
         </aside>

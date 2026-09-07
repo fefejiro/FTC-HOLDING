@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { getStripeApiUrl } from '@/lib/stripe-config';
+import { CoachingPrice } from '@/components/CoachingPrice';
 
 type FormState = {
   name: string;
@@ -60,7 +61,7 @@ export function CoachingBookingForm() {
       </label>
       {status === 'error' && <p role="alert" className="mt-5 rounded-lg bg-red-50 px-4 py-3 text-body-sm text-red-700">{error}</p>}
       <button type="submit" disabled={status === 'loading'} className="mt-7 inline-flex w-full items-center justify-center rounded-lg bg-brand-orange px-6 py-4 text-body font-semibold text-white shadow-orange transition-colors hover:bg-brand-orange-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60">
-        {status === 'loading' ? 'Opening secure checkout…' : 'Continue to secure checkout — CAD $149'}
+        {status === 'loading' ? 'Opening secure checkout…' : <CoachingPrice prefix="Continue to secure checkout — " />}
       </button>
       <p className="mt-4 text-center text-caption text-tx-muted">Payment is handled by Stripe. We will confirm the exact session time within one business day.</p>
     </form>

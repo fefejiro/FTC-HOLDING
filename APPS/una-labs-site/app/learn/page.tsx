@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { CoachingBookingForm } from '@/components/CoachingBookingForm';
+import { CoachingPrice } from '@/components/CoachingPrice';
 
 export const metadata: Metadata = {
   title: 'One-to-one AI coaching',
@@ -17,7 +18,7 @@ export default function LearnPage() {
           <dl className="mt-10 space-y-5 border-y border-border py-7">
             <div><dt className="text-caption font-semibold uppercase tracking-wider text-tx-muted">In the session</dt><dd className="mt-1 text-body text-tx-heading">Bring a goal, a stuck point, or a messy workflow. We will make it more useful together.</dd></div>
             <div><dt className="text-caption font-semibold uppercase tracking-wider text-tx-muted">What you leave with</dt><dd className="mt-1 text-body text-tx-heading">A working next step, clear notes, and confidence to continue on your own.</dd></div>
-            <div><dt className="text-caption font-semibold uppercase tracking-wider text-tx-muted">Investment</dt><dd className="mt-1 text-body font-semibold text-tx-heading">CAD $149 for 60 minutes, paid securely through Stripe.</dd></div>
+            <div><dt className="text-caption font-semibold uppercase tracking-wider text-tx-muted">Investment</dt><dd className="mt-1 text-body font-semibold text-tx-heading"><CoachingPrice suffix=" for 60 minutes, paid securely through Stripe." /></dd></div>
           </dl>
         </div>
         <CoachingBookingForm />
