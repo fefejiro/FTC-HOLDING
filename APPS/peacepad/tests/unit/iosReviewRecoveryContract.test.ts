@@ -2,7 +2,9 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 function readSource(relativePath: string): string {
-  return readFileSync(new URL(relativePath, import.meta.url), "utf8");
+  // Keep source-contract assertions stable on Windows checkouts that materialize
+  // tracked text with CRLF line endings.
+  return readFileSync(new URL(relativePath, import.meta.url), "utf8").replace(/\r\n/g, "\n");
 }
 
 function sliceBetween(source: string, start: string, end: string): string {

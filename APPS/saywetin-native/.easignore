@@ -1,5 +1,0 @@
-# Exclude local deploy artifacts and generated symlink-heavy outputs from EAS upload
-.tmp-ftc-deploy/
-**/.vercel/
-.agents/
-.claude/

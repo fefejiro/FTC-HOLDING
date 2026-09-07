@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "kind": "google-docs-trusted-read-context",
+  "target": {
+    "documentId": "1p284KUzAFaqqK2UnbohaxWhxYEk8X8bXqJOrj4ipZog",
+    "title": "July 16 Lawyer Handoff Summary",
+    "revisionId": "ANLCKQkBh6_zaKn1CMDMmhJ_k2ATAWy9ermgoPnsLBK3MVILs1sg8-2KXtrunZEWH-lJmOkOG6YUnRKgs6lBsEvzu2GXzPBA25a3TfatNHw",
+    "documentUrl": "https://docs.google.com/document/d/1p284KUzAFaqqK2UnbohaxWhxYEk8X8bXqJOrj4ipZog",
+    "selectedTabId": "t.0"
+  },
+  "dropdownMetadata": {
+    "status": "unavailable",
+    "resolvedTool": null,
+    "authoritative": false,
+    "count": 0
+  },
+  "derivedControlInventory": {
+    "hasProtectedControls": false,
+    "authoritativeDropdownCount": 0,
+    "opaqueControlCount": 0,
+    "nativeElementCounts": {},
+    "tabsScanned": [
+      "t.0"
+    ],
+    "controls": [],
+    "nativeElements": []
+  },
+  "editGuidance": {
+    "advisoryOnly": true,
+    "requiresTargetedPreservation": false,
+    "recommendedBehavior": "No protected controls were detected in the scanned scope.",
+    "warnings": []
+  }
+}

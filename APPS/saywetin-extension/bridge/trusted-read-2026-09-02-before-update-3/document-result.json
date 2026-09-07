@@ -1,0 +1,2868 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Action completed."
+    }
+  ],
+  "structuredContent": {
+    "documentId": "1p284KUzAFaqqK2UnbohaxWhxYEk8X8bXqJOrj4ipZog",
+    "title": "July 16 Lawyer Handoff Summary",
+    "revisionId": "ANLCKQkBh6_zaKn1CMDMmhJ_k2ATAWy9ermgoPnsLBK3MVILs1sg8-2KXtrunZEWH-lJmOkOG6YUnRKgs6lBsEvzu2GXzPBA25a3TfatNHw",
+    "suggestionsViewMode": "SUGGESTIONS_INLINE",
+    "url": null,
+    "body": null,
+    "tabs": [
+      {
+        "tabId": "t.0",
+        "title": "Tab 1",
+        "parentTabId": null,
+        "index": 0,
+        "nestingLevel": null,
+        "iconEmoji": null,
+        "body": {
+          "content": [
+            {
+              "endIndex": 1,
+              "sectionBreak": {
+                "sectionStyle": {
+                  "columnSeparatorStyle": "NONE",
+                  "contentDirection": "LEFT_TO_RIGHT",
+                  "sectionType": "CONTINUOUS"
+                }
+              }
+            },
+            {
+              "startIndex": 1,
+              "endIndex": 32,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1,
+                    "endIndex": 32,
+                    "textRun": {
+                      "content": "July 16 Lawyer Handoff Summary\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 32,
+              "endIndex": 76,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 32,
+                    "endIndex": 76,
+                    "textRun": {
+                      "content": "FC-26-00000905-0000 - Kowlessur v. Efiuwere\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 76,
+              "endIndex": 99,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 76,
+                    "endIndex": 99,
+                    "textRun": {
+                      "content": "Prepared: July 8, 2026\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 99,
+              "endIndex": 100,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 99,
+                    "endIndex": 100,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 100,
+              "endIndex": 108,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 100,
+                    "endIndex": 108,
+                    "textRun": {
+                      "content": "Purpose\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 108,
+              "endIndex": 336,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 108,
+                    "endIndex": 336,
+                    "textRun": {
+                      "content": "This is a lawyer handoff summary for the July 16, 2026 review. It is not a final affidavit or legal argument. Counsel should decide what to file, what evidence to attach, and what service method is safe under the current order.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 336,
+              "endIndex": 337,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 336,
+                    "endIndex": 337,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 337,
+              "endIndex": 351,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 337,
+                    "endIndex": 351,
+                    "textRun": {
+                      "content": "Case snapshot\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 351,
+              "endIndex": 422,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 351,
+                    "endIndex": 422,
+                    "textRun": {
+                      "content": "Court: Ontario Superior Court of Justice, Family Court, Durham/Oshawa.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 422,
+              "endIndex": 473,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 422,
+                    "endIndex": 473,
+                    "textRun": {
+                      "content": "Review date: July 16, 2026 at 10:00 a.m. via Zoom.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 473,
+              "endIndex": 562,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 473,
+                    "endIndex": 562,
+                    "textRun": {
+                      "content": "Current order: amended Form 25G restraining order and temporary parenting-related order.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 562,
+              "endIndex": 758,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 562,
+                    "endIndex": 758,
+                    "textRun": {
+                      "content": "Working understanding: no direct or indirect contact with Applicant or children, no attendance at restricted locations, and parenting time currently limited through a supervised access structure.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 758,
+              "endIndex": 759,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 758,
+                    "endIndex": 759,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 759,
+              "endIndex": 779,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 759,
+                    "endIndex": 779,
+                    "textRun": {
+                      "content": "Respondent position\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 779,
+              "endIndex": 903,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 779,
+                    "endIndex": 903,
+                    "textRun": {
+                      "content": "- Respondent states he has complied since being served on July 3, 2026 and since receiving the court email on July 6, 2026.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 903,
+              "endIndex": 958,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 903,
+                    "endIndex": 958,
+                    "textRun": {
+                      "content": "- Respondent denies the physical violence allegations.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 958,
+              "endIndex": 1031,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 958,
+                    "endIndex": 1031,
+                    "textRun": {
+                      "content": "- Respondent states that he was physically assaulted first by Applicant.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 1031,
+              "endIndex": 1154,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1031,
+                    "endIndex": 1154,
+                    "textRun": {
+                      "content": "- Respondent is asking for temporary parenting time in a safe supervised structure, not for safety concerns to be ignored.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 1154,
+              "endIndex": 1307,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1154,
+                    "endIndex": 1307,
+                    "textRun": {
+                      "content": "- Respondent is willing to use a Supervised Access Centre or court-approved supervised virtual parenting time if in-person supervised access is delayed.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 1307,
+              "endIndex": 1308,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1307,
+                    "endIndex": 1308,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 1308,
+              "endIndex": 1564,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1308,
+                    "endIndex": 1564,
+                    "textRun": {
+                      "content": "- Respondent reports July 12, 2026 was Kevwe's birthday and that he missed the birthday because of the restraining order; he reports no direct contact, indirect contact, third-party message, social media posting/contact, or restricted-location attendance.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 1564,
+              "endIndex": 1601,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1564,
+                    "endIndex": 1601,
+                    "textRun": {
+                      "content": "Compliance posture to preserve daily\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 1601,
+              "endIndex": 1637,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1601,
+                    "endIndex": 1637,
+                    "textRun": {
+                      "content": "- No direct contact with Applicant.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 1637,
+              "endIndex": 1672,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1637,
+                    "endIndex": 1672,
+                    "textRun": {
+                      "content": "- No direct contact with children.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 1672,
+              "endIndex": 1721,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1672,
+                    "endIndex": 1721,
+                    "textRun": {
+                      "content": "- No indirect contact through friends or family.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 1721,
+              "endIndex": 1765,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1721,
+                    "endIndex": 1765,
+                    "textRun": {
+                      "content": "- No social media posting about the matter.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 1765,
+              "endIndex": 1828,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1765,
+                    "endIndex": 1828,
+                    "textRun": {
+                      "content": "- No attendance at residence, school, or restricted locations.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 1828,
+              "endIndex": 1887,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1828,
+                    "endIndex": 1887,
+                    "textRun": {
+                      "content": "- Only procedural communication with the court or counsel.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 1887,
+              "endIndex": 1888,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1887,
+                    "endIndex": 1888,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 1888,
+              "endIndex": 1923,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1888,
+                    "endIndex": 1923,
+                    "textRun": {
+                      "content": "Evidence package already organized\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 1923,
+              "endIndex": 1989,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1923,
+                    "endIndex": 1989,
+                    "textRun": {
+                      "content": "1. Amended Form 25G restraining order and court email attachment.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 1989,
+              "endIndex": 2077,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1989,
+                    "endIndex": 2077,
+                    "textRun": {
+                      "content": "2. Service record note for July 3, 2026 in-person service and July 6, 2026 court email.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 2077,
+              "endIndex": 2168,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 2077,
+                    "endIndex": 2168,
+                    "textRun": {
+                      "content": "3. Compliance record folder; daily entries still need to be maintained from July 3 onward.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 2168,
+              "endIndex": 2268,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 2168,
+                    "endIndex": 2268,
+                    "textRun": {
+                      "content": "4. EI current claim proof showing EI regular benefits; user reports approximately $1,123 bi-weekly.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 2268,
+              "endIndex": 2347,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 2268,
+                    "endIndex": 2347,
+                    "textRun": {
+                      "content": "5. Caregiver education narrative from the forwarded \"Care giver\" Gmail bundle.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 2347,
+              "endIndex": 2409,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 2347,
+                    "endIndex": 2409,
+                    "textRun": {
+                      "content": "6. Family birthday/caregiver photos and background narrative.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 2409,
+              "endIndex": 2496,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 2409,
+                    "endIndex": 2496,
+                    "textRun": {
+                      "content": "7. Financial disclosure folder with EI, tax, NOA, corporate, payroll, and T4 material.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 2496,
+              "endIndex": 2594,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 2496,
+                    "endIndex": 2594,
+                    "textRun": {
+                      "content": "8. Legal/police file reporting letter dated June 30, 2025 from Karapancev Law, for lawyer review.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 2594,
+              "endIndex": 2695,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 2594,
+                    "endIndex": 2695,
+                    "textRun": {
+                      "content": "9. Forwarded CAS case-closure email from Pauline Moriah dated September 10, 2025, for lawyer review.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 2695,
+              "endIndex": 2796,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 2695,
+                    "endIndex": 2796,
+                    "textRun": {
+                      "content": "10. Forwarded couples counselling intake inquiry dated July 31, 2025, for lawyer review if relevant.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 2796,
+              "endIndex": 2797,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 2796,
+                    "endIndex": 2797,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 2797,
+              "endIndex": 2816,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 2797,
+                    "endIndex": 2816,
+                    "textRun": {
+                      "content": "Financial snapshot\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 2816,
+              "endIndex": 2881,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 2816,
+                    "endIndex": 2881,
+                    "textRun": {
+                      "content": "Current income: EI; user reports approximately $1,123 bi-weekly.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 2881,
+              "endIndex": 3105,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 2881,
+                    "endIndex": 3105,
+                    "textRun": {
+                      "content": "EI proof: Canada.ca EI claim document shows EI regular benefits, benefit rate shown as $695, federal tax shown as $77, claim start December 7, 2025, claim end December 5, 2026, and 30 weeks paid out of 41 weeks entitlement.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 3105,
+              "endIndex": 3313,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 3105,
+                    "endIndex": 3313,
+                    "textRun": {
+                      "content": "Strategy note: current EI proof is likely the most urgent financial document for July 16. Recent personal tax and NOAs are next. Corporate records should be lawyer-review backup unless counsel asks for them.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 3313,
+              "endIndex": 3314,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 3313,
+                    "endIndex": 3314,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 3314,
+              "endIndex": 3339,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 3314,
+                    "endIndex": 3339,
+                    "textRun": {
+                      "content": "Financial-support update\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 3339,
+              "endIndex": 3643,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 3339,
+                    "endIndex": 3643,
+                    "textRun": {
+                      "content": "Respondent has applied for additional financial supports on July 9, 2026, including Emergency Assistance, OESP, the Energy Affordability Program, and Durham Housing Stability Program support for rental/utility arrears. Keep confirmation pages, emails, and any follow-up requests in 07 Financial Records.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 3643,
+              "endIndex": 3644,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 3643,
+                    "endIndex": 3644,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 3644,
+              "endIndex": 3673,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 3644,
+                    "endIndex": 3673,
+                    "textRun": {
+                      "content": "Police/legal outcome wording\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 3673,
+              "endIndex": 3705,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 3673,
+                    "endIndex": 3705,
+                    "textRun": {
+                      "content": "Court-safe wording to consider:\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 3705,
+              "endIndex": 4052,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 3705,
+                    "endIndex": 4052,
+                    "textRun": {
+                      "content": "Following police involvement in June 2025, I retained counsel. My counsel provided a reporting letter dated June 30, 2025 confirming that, following discussions with police, police would not be charging me with respect to the allegations. I rely on this only to show the outcome of that police involvement, not as a finding of fact by this Court.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 4052,
+              "endIndex": 4053,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 4052,
+                    "endIndex": 4053,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 4053,
+              "endIndex": 4168,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 4053,
+                    "endIndex": 4168,
+                    "textRun": {
+                      "content": "Do not say this proves innocence. Do not overstate the legal meaning. Let counsel decide whether to attach it now.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 4168,
+              "endIndex": 4169,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 4168,
+                    "endIndex": 4169,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 4169,
+              "endIndex": 4203,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 4169,
+                    "endIndex": 4203,
+                    "textRun": {
+                      "content": "Legal Aid / lawyer contact update\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 4203,
+              "endIndex": 4968,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 4203,
+                    "endIndex": 4968,
+                    "textRun": {
+                      "content": "Respondent reports that he spoke with Antoinette, identified as his lawyer / Legal Aid lawyer contact. Phone: 905-579-1251; leave a message if there is no answer. July 9 update: Antoinette called back. Respondent reports that he and Antoinette reviewed the accusations and are generally aligned on the response posture. They planned to circle back on Monday, July 13, 2026. July 13 update: Respondent reports he has not yet heard back from Antoinette as of July 13, 2026. Options previously discussed for counsel's review include asking for supervised parenting time through a trusted friend/family member, or, if counsel determines appropriate, a broader shared-parenting/shared-custody arrangement. Final wording and filing strategy remain for counsel to decide.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 4968,
+              "endIndex": 4969,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 4968,
+                    "endIndex": 4969,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 4969,
+              "endIndex": 4993,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 4969,
+                    "endIndex": 4993,
+                    "textRun": {
+                      "content": "Urgent lawyer questions\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 4993,
+              "endIndex": 5089,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 4993,
+                    "endIndex": 5089,
+                    "textRun": {
+                      "content": "1. Should the response for July 16 be Form 14A only, or Form 14A plus Form 14 Notice of Motion?\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 5089,
+              "endIndex": 5188,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 5089,
+                    "endIndex": 5188,
+                    "textRun": {
+                      "content": "2. If temporary supervised parenting time is requested, is Form 14A enough for the July 16 review?\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 5188,
+              "endIndex": 5253,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 5188,
+                    "endIndex": 5253,
+                    "textRun": {
+                      "content": "3. What is the safest service method given the no-contact order?\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 5253,
+              "endIndex": 5343,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 5253,
+                    "endIndex": 5343,
+                    "textRun": {
+                      "content": "4. Should the request be supervised in-person access, supervised virtual access, or both?\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 5343,
+              "endIndex": 5415,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 5343,
+                    "endIndex": 5415,
+                    "textRun": {
+                      "content": "5. Should the June 30, 2025 no-charge reporting letter be included now?\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 5415,
+              "endIndex": 5480,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 5415,
+                    "endIndex": 5480,
+                    "textRun": {
+                      "content": "6. How much financial disclosure should be included for July 16?\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 5480,
+              "endIndex": 5553,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 5480,
+                    "endIndex": 5553,
+                    "textRun": {
+                      "content": "7. Should corporate records be disclosed now or held for counsel review?\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 5553,
+              "endIndex": 5609,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 5553,
+                    "endIndex": 5609,
+                    "textRun": {
+                      "content": "8. Is a Form 14C Confirmation required from Respondent?\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 5609,
+              "endIndex": 5719,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 5609,
+                    "endIndex": 5719,
+                    "textRun": {
+                      "content": "9. Should the CAS case-closure email and couples-counselling inquiry be referenced now or held as background?\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 5719,
+              "endIndex": 5720,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 5719,
+                    "endIndex": 5720,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 5720,
+              "endIndex": 5770,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 5720,
+                    "endIndex": 5770,
+                    "textRun": {
+                      "content": "Temporary parenting request for counsel to refine\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 5770,
+              "endIndex": 6150,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 5770,
+                    "endIndex": 6150,
+                    "textRun": {
+                      "content": "I request temporary supervised parenting time with the children through a Supervised Access Centre, or another court-approved supervised method, pending further order. If in-person supervised access cannot begin immediately because of intake or waitlists, I request that the court consider temporary supervised virtual parenting time arranged through an approved neutral process.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 6150,
+              "endIndex": 6151,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 6150,
+                    "endIndex": 6151,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 6151,
+              "endIndex": 6178,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 6151,
+                    "endIndex": 6178,
+                    "textRun": {
+                      "content": "Manual action still needed\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 6178,
+              "endIndex": 6534,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 6178,
+                    "endIndex": 6534,
+                    "textRun": {
+                      "content": "Completed update: File Reporting Letter 06.30.2025.pdf has been uploaded to 08 Medical Police CAS Records as 2025-06-30 - legal file closing letter - no charges.pdf and copied to 09 Allegation Response Evidence. It remains lawyer-review material and should be used only as police outcome/no-charge evidence, not as a finding of fact or proof of innocence.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 6534,
+              "endIndex": 6535,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 6534,
+                    "endIndex": 6535,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 6535,
+              "endIndex": 6546,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 6535,
+                    "endIndex": 6546,
+                    "textRun": {
+                      "content": "North star\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 6546,
+              "endIndex": 6664,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 6546,
+                    "endIndex": 6664,
+                    "textRun": {
+                      "content": "Comply. Stay calm. Ask for safe temporary parenting time. Do not overstate evidence. Let counsel decide what to file.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 6664,
+              "endIndex": 6665,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 6664,
+                    "endIndex": 6665,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 6665,
+              "endIndex": 6730,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 6665,
+                    "endIndex": 6730,
+                    "textRun": {
+                      "content": "July 8 context addendum - amended order and service verification\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 6730,
+              "endIndex": 7001,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 6730,
+                    "endIndex": 7001,
+                    "textRun": {
+                      "content": "New context says the updated amended order may correct Respondent age/date-of-birth information and may identify who served Respondent or how service was recorded. Counsel should compare the updated amended order against the prior order before relying on either version.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 7001,
+              "endIndex": 7002,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 7001,
+                    "endIndex": 7002,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 7002,
+              "endIndex": 7481,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 7002,
+                    "endIndex": 7481,
+                    "textRun": {
+                      "content": "Service details now require exact-source verification before filing: the corrected service location is Unit 605, 1525 Kingston Road, Pickering. The name called by the server is still uncertain: earlier notes say Fejiro, while the newer narrative recalls something like Fegu or Fitzgerald. The safest court wording is that the person asked whether Respondent was the intended recipient, did not clearly identify himself by name, showed ID briefly, and the envelope appeared open.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 7481,
+              "endIndex": 7482,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 7481,
+                    "endIndex": 7482,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 7482,
+              "endIndex": 7483,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 7482,
+                    "endIndex": 7483,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 7483,
+              "endIndex": 7505,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 7483,
+                    "endIndex": 7505,
+                    "textRun": {
+                      "content": "Add lawyer questions:\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 7505,
+              "endIndex": 7625,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 7505,
+                    "endIndex": 7625,
+                    "textRun": {
+                      "content": "10. Does the updated amended order correct any age/date-of-birth or service-information issue that should be mentioned?\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 7625,
+              "endIndex": 7801,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 7625,
+                    "endIndex": 7801,
+                    "textRun": {
+                      "content": "11. Should the affidavit use Unit 605 as the corrected service location now, and keep the remaining service concerns as background unless source documents support more detail?\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 7801,
+              "endIndex": 8113,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 7801,
+                    "endIndex": 8113,
+                    "textRun": {
+                      "content": "12. For the July 13 / next available follow-up, should the July 16 position be framed as supervised parenting time through a trusted friend/family member, a Supervised Access Centre / supervised virtual option, or a broader shared-parenting/shared-custody arrangement if counsel thinks the evidence supports it?\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 8113,
+              "endIndex": 8258,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 8113,
+                    "endIndex": 8258,
+                    "textRun": {
+                      "content": "13. If no callback is received on July 13, should Respondent leave a concise message or send a short procedural email before the July 16 review?\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 8258,
+              "endIndex": 8531,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 8258,
+                    "endIndex": 8531,
+                    "textRun": {
+                      "content": "14. Potential supervisor contacts provided July 13 for counsel review: Ubong Iteun, +1 289-200-0631; Tosin, +1 289-893-1771. Counsel should confirm relationship to children, availability, transportation plan, and suitability before naming either person in court materials.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 8531,
+              "endIndex": 8859,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 8531,
+                    "endIndex": 8859,
+                    "textRun": {
+                      "content": "15. July 14 update: Respondent will meet with Jeffery, Antoinette's colleague, on July 15, 2026 to finalize the Form 14A response. Respondent's detailed answers to draft questions are in: 2026-07-14 - Jeffery meeting prep - Form 14A answers - https://docs.google.com/document/d/1q5xffrV9AM2PUR-bfwYJn_0He9mlAZXS4MFZZhSoBTs/edit\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 8859,
+              "endIndex": 8860,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 8859,
+                    "endIndex": 8860,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 8860,
+              "endIndex": 8924,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 8860,
+                    "endIndex": 8924,
+                    "textRun": {
+                      "content": "July 21 update - endorsement received / post-hearing next steps\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 8924,
+              "endIndex": 9028,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 8924,
+                    "endIndex": 9028,
+                    "textRun": {
+                      "content": "Source: Antoinette Lewis email dated July 21, 2026 at 9:48 a.m., with endorsement and consent attached.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 9028,
+              "endIndex": 9069,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 9028,
+                    "endIndex": 9069,
+                    "textRun": {
+                      "content": "CLT / Legal Aid file reference: 2643002.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 9069,
+              "endIndex": 9261,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 9069,
+                    "endIndex": 9261,
+                    "textRun": {
+                      "content": "Drive evidence added: 2026-07-16 - Endorsement and consent order - FC-26-00000905-0000.pdf in 01 Orders; 2026-07-22 - Boarding pass YKF to YEG - Fejiro Efiuvwere.pdf in 05 Parenting Evidence.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 9261,
+              "endIndex": 9262,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 9261,
+                    "endIndex": 9262,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 9262,
+              "endIndex": 9312,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 9262,
+                    "endIndex": 9312,
+                    "textRun": {
+                      "content": "Key court outcome from July 16, 2026 endorsement:\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 9312,
+              "endIndex": 9352,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 9312,
+                    "endIndex": 9352,
+                    "textRun": {
+                      "content": "- The restraining order was terminated.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 9352,
+              "endIndex": 9460,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 9352,
+                    "endIndex": 9460,
+                    "textRun": {
+                      "content": "- Temporary, without prejudice: Applicant has primary care / primary residence and majority parenting time.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 9460,
+              "endIndex": 9578,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 9460,
+                    "endIndex": 9578,
+                    "textRun": {
+                      "content": "- Joint decision-making responsibility for major decisions, with Applicant having final say if there is no consensus.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 9578,
+              "endIndex": 9807,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 9578,
+                    "endIndex": 9807,
+                    "textRun": {
+                      "content": "- Respondent has supervised parenting time every other weekend from Saturday 10:00 a.m. to Sunday 6:00 p.m., commencing August 1, 2026, subject to third-party supervisor availability or as otherwise reasonably agreed in writing.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 9807,
+              "endIndex": 10144,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 9807,
+                    "endIndex": 10144,
+                    "textRun": {
+                      "content": "- Important paragraph 3 amendment: visits can occur at Respondent's home or the third-party supervisor's home, with 24 hours' notice to Applicant of the primary location. If no supervisor is available, visits are daytime only on alternate Saturdays and Sundays from 10:00 a.m. to 6:00 p.m. in public places such as parks or play places.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 10144,
+              "endIndex": 10279,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 10144,
+                    "endIndex": 10279,
+                    "textRun": {
+                      "content": "- Named possible supervisors: Yemi Akindipe, Amira Goodridge, Obi Azutalan, or any other mutually agreed person in writing in advance.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 10279,
+              "endIndex": 10439,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 10279,
+                    "endIndex": 10439,
+                    "textRun": {
+                      "content": "- Virtual parenting time starts July 22, 2026, every Wednesday from 5:00 p.m. to 5:30 p.m. by FaceTime. Applicant must facilitate device access and connection.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 10439,
+              "endIndex": 10698,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 10439,
+                    "endIndex": 10698,
+                    "textRun": {
+                      "content": "- Parties must not communicate directly or indirectly except through counsel, a parenting app such as My Family Wizard or AppClose for parenting/major decision issues, or a mutually agreed third party in writing, with the parenting app as the primary method.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 10698,
+              "endIndex": 10829,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 10698,
+                    "endIndex": 10829,
+                    "textRun": {
+                      "content": "- Neither party shall speak negatively about the other in the children's presence or discuss court/adult issues with the children.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 10829,
+              "endIndex": 10907,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 10829,
+                    "endIndex": 10907,
+                    "textRun": {
+                      "content": "- Urgency resolved; regular case management schedule resumes. Costs reserved.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 10907,
+              "endIndex": 10908,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 10907,
+                    "endIndex": 10908,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 10908,
+              "endIndex": 10935,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 10908,
+                    "endIndex": 10935,
+                    "textRun": {
+                      "content": "Immediate procedural risk:\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 10935,
+              "endIndex": 11425,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 10935,
+                    "endIndex": 11425,
+                    "textRun": {
+                      "content": "Antoinette flagged that Respondent still has only 30 days from service of the Form 8 application to file a full response. Required forms: Form 10 Answer, Form 35.1, and Form 13 Financial Statement. If service was July 3, 2026, calendar counting points to early August 2026; because the 30th day appears to fall on Sunday, August 2, 2026, counsel should confirm the exact adjusted filing deadline and whether any local court closure / Civic Holiday affects it. Do not wait for the last day.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 11425,
+              "endIndex": 11426,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 11425,
+                    "endIndex": 11426,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 11426,
+              "endIndex": 11470,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 11426,
+                    "endIndex": 11470,
+                    "textRun": {
+                      "content": "Questions for Antoinette / retained lawyer:\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 11470,
+              "endIndex": 11558,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 11470,
+                    "endIndex": 11558,
+                    "textRun": {
+                      "content": "1. Please confirm the exact deadline to serve and file Form 10, Form 35.1, and Form 13.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 11558,
+              "endIndex": 11716,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 11558,
+                    "endIndex": 11716,
+                    "textRun": {
+                      "content": "2. Please confirm whether the wording in paragraph 6(c) of the consent/order has any typo or incomplete phrase that should be clarified before relying on it.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 11716,
+              "endIndex": 11887,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 11716,
+                    "endIndex": 11887,
+                    "textRun": {
+                      "content": "3. Please confirm which parenting app should be used and whether an invitation/message can be sent through that app without breaching the no-contact communication limits.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 11887,
+              "endIndex": 12052,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 11887,
+                    "endIndex": 12052,
+                    "textRun": {
+                      "content": "4. Please confirm the first proposed August 1 supervised visit logistics: supervisor, location, pickup/drop-off, food, emergency contact, and 24-hour notice method.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 12052,
+              "endIndex": 12164,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 12052,
+                    "endIndex": 12164,
+                    "textRun": {
+                      "content": "5. Please confirm how the July 22 FaceTime call should be initiated if direct communication remains restricted.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 12164,
+              "endIndex": 12165,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 12164,
+                    "endIndex": 12165,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 12165,
+              "endIndex": 12166,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 12165,
+                    "endIndex": 12166,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 12166,
+              "endIndex": 12167,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 12166,
+                    "endIndex": 12167,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            }
+          ]
+        },
+        "headers": null,
+        "footers": null,
+        "footnotes": null,
+        "documentStyle": {
+          "background": {
+            "color": {}
+          },
+          "pageNumberStart": 1,
+          "marginTop": {
+            "magnitude": 72,
+            "unit": "PT"
+          },
+          "marginBottom": {
+            "magnitude": 72,
+            "unit": "PT"
+          },
+          "marginRight": {
+            "magnitude": 72,
+            "unit": "PT"
+          },
+          "marginLeft": {
+            "magnitude": 72,
+            "unit": "PT"
+          },
+          "pageSize": {
+            "height": {
+              "magnitude": 792,
+              "unit": "PT"
+            },
+            "width": {
+              "magnitude": 612,
+              "unit": "PT"
+            }
+          },
+          "marginHeader": {
+            "magnitude": 36,
+            "unit": "PT"
+          },
+          "marginFooter": {
+            "magnitude": 36,
+            "unit": "PT"
+          },
+          "useCustomHeaderFooterMargins": true,
+          "documentFormat": {
+            "documentMode": "PAGES"
+          }
+        },
+        "suggestedDocumentStyleChanges": null,
+        "namedStyles": {
+          "styles": [
+            {
+              "namedStyleType": "NORMAL_TEXT",
+              "textStyle": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "strikethrough": false,
+                "smallCaps": false,
+                "backgroundColor": {},
+                "foregroundColor": {
+                  "color": {
+                    "rgbColor": {}
+                  }
+                },
+                "fontSize": {
+                  "magnitude": 11,
+                  "unit": "PT"
+                },
+                "weightedFontFamily": {
+                  "fontFamily": "Arial",
+                  "weight": 400
+                },
+                "baselineOffset": "NONE"
+              },
+              "paragraphStyle": {
+                "namedStyleType": "NORMAL_TEXT",
+                "alignment": "START",
+                "lineSpacing": 115,
+                "direction": "LEFT_TO_RIGHT",
+                "spacingMode": "COLLAPSE_LISTS",
+                "spaceAbove": {
+                  "unit": "PT"
+                },
+                "spaceBelow": {
+                  "unit": "PT"
+                },
+                "borderBetween": {
+                  "color": {},
+                  "width": {
+                    "unit": "PT"
+                  },
+                  "padding": {
+                    "unit": "PT"
+                  },
+                  "dashStyle": "SOLID"
+                },
+                "borderTop": {
+                  "color": {},
+                  "width": {
+                    "unit": "PT"
+                  },
+                  "padding": {
+                    "unit": "PT"
+                  },
+                  "dashStyle": "SOLID"
+                },
+                "borderBottom": {
+                  "color": {},
+                  "width": {
+                    "unit": "PT"
+                  },
+                  "padding": {
+                    "unit": "PT"
+                  },
+                  "dashStyle": "SOLID"
+                },
+                "borderLeft": {
+                  "color": {},
+                  "width": {
+                    "unit": "PT"
+                  },
+                  "padding": {
+                    "unit": "PT"
+                  },
+                  "dashStyle": "SOLID"
+                },
+                "borderRight": {
+                  "color": {},
+                  "width": {
+                    "unit": "PT"
+                  },
+                  "padding": {
+                    "unit": "PT"
+                  },
+                  "dashStyle": "SOLID"
+                },
+                "indentFirstLine": {
+                  "unit": "PT"
+                },
+                "indentStart": {
+                  "unit": "PT"
+                },
+                "indentEnd": {
+                  "unit": "PT"
+                },
+                "keepLinesTogether": false,
+                "keepWithNext": false,
+                "avoidWidowAndOrphan": true,
+                "shading": {
+                  "backgroundColor": {}
+                },
+                "pageBreakBefore": false
+              }
+            },
+            {
+              "namedStyleType": "HEADING_1",
+              "textStyle": {
+                "fontSize": {
+                  "magnitude": 20,
+                  "unit": "PT"
+                }
+              },
+              "paragraphStyle": {
+                "namedStyleType": "NORMAL_TEXT",
+                "direction": "LEFT_TO_RIGHT",
+                "spaceAbove": {
+                  "magnitude": 20,
+                  "unit": "PT"
+                },
+                "spaceBelow": {
+                  "magnitude": 6,
+                  "unit": "PT"
+                },
+                "keepLinesTogether": true,
+                "keepWithNext": true,
+                "pageBreakBefore": false
+              }
+            },
+            {
+              "namedStyleType": "HEADING_2",
+              "textStyle": {
+                "bold": false,
+                "fontSize": {
+                  "magnitude": 16,
+                  "unit": "PT"
+                }
+              },
+              "paragraphStyle": {
+                "namedStyleType": "NORMAL_TEXT",
+                "direction": "LEFT_TO_RIGHT",
+                "spaceAbove": {
+                  "magnitude": 18,
+                  "unit": "PT"
+                },
+                "spaceBelow": {
+                  "magnitude": 6,
+                  "unit": "PT"
+                },
+                "keepLinesTogether": true,
+                "keepWithNext": true,
+                "pageBreakBefore": false
+              }
+            },
+            {
+              "namedStyleType": "HEADING_3",
+              "textStyle": {
+                "bold": false,
+                "foregroundColor": {
+                  "color": {
+                    "rgbColor": {
+                      "red": 0.2627451,
+                      "green": 0.2627451,
+                      "blue": 0.2627451
+                    }
+                  }
+                },
+                "fontSize": {
+                  "magnitude": 14,
+                  "unit": "PT"
+                }
+              },
+              "paragraphStyle": {
+                "namedStyleType": "NORMAL_TEXT",
+                "direction": "LEFT_TO_RIGHT",
+                "spaceAbove": {
+                  "magnitude": 16,
+                  "unit": "PT"
+                },
+                "spaceBelow": {
+                  "magnitude": 4,
+                  "unit": "PT"
+                },
+                "keepLinesTogether": true,
+                "keepWithNext": true,
+                "pageBreakBefore": false
+              }
+            },
+            {
+              "namedStyleType": "HEADING_4",
+              "textStyle": {
+                "foregroundColor": {
+                  "color": {
+                    "rgbColor": {
+                      "red": 0.4,
+                      "green": 0.4,
+                      "blue": 0.4
+                    }
+                  }
+                },
+                "fontSize": {
+                  "magnitude": 12,
+                  "unit": "PT"
+                }
+              },
+              "paragraphStyle": {
+                "namedStyleType": "NORMAL_TEXT",
+                "direction": "LEFT_TO_RIGHT",
+                "spaceAbove": {
+                  "magnitude": 14,
+                  "unit": "PT"
+                },
+                "spaceBelow": {
+                  "magnitude": 4,
+                  "unit": "PT"
+                },
+                "keepLinesTogether": true,
+                "keepWithNext": true,
+                "pageBreakBefore": false
+              }
+            },
+            {
+              "namedStyleType": "HEADING_5",
+              "textStyle": {
+                "foregroundColor": {
+                  "color": {
+                    "rgbColor": {
+                      "red": 0.4,
+                      "green": 0.4,
+                      "blue": 0.4
+                    }
+                  }
+                },
+                "fontSize": {
+                  "magnitude": 11,
+                  "unit": "PT"
+                }
+              },
+              "paragraphStyle": {
+                "namedStyleType": "NORMAL_TEXT",
+                "direction": "LEFT_TO_RIGHT",
+                "spaceAbove": {
+                  "magnitude": 12,
+                  "unit": "PT"
+                },
+                "spaceBelow": {
+                  "magnitude": 4,
+                  "unit": "PT"
+                },
+                "keepLinesTogether": true,
+                "keepWithNext": true,
+                "pageBreakBefore": false
+              }
+            },
+            {
+              "namedStyleType": "HEADING_6",
+              "textStyle": {
+                "italic": true,
+                "foregroundColor": {
+                  "color": {
+                    "rgbColor": {
+                      "red": 0.4,
+                      "green": 0.4,
+                      "blue": 0.4
+                    }
+                  }
+                },
+                "fontSize": {
+                  "magnitude": 11,
+                  "unit": "PT"
+                }
+              },
+              "paragraphStyle": {
+                "namedStyleType": "NORMAL_TEXT",
+                "direction": "LEFT_TO_RIGHT",
+                "spaceAbove": {
+                  "magnitude": 12,
+                  "unit": "PT"
+                },
+                "spaceBelow": {
+                  "magnitude": 4,
+                  "unit": "PT"
+                },
+                "keepLinesTogether": true,
+                "keepWithNext": true,
+                "pageBreakBefore": false
+              }
+            },
+            {
+              "namedStyleType": "TITLE",
+              "textStyle": {
+                "fontSize": {
+                  "magnitude": 26,
+                  "unit": "PT"
+                }
+              },
+              "paragraphStyle": {
+                "namedStyleType": "NORMAL_TEXT",
+                "direction": "LEFT_TO_RIGHT",
+                "spaceAbove": {
+                  "unit": "PT"
+                },
+                "spaceBelow": {
+                  "magnitude": 3,
+                  "unit": "PT"
+                },
+                "keepLinesTogether": true,
+                "keepWithNext": true,
+                "pageBreakBefore": false
+              }
+            },
+            {
+              "namedStyleType": "SUBTITLE",
+              "textStyle": {
+                "italic": false,
+                "foregroundColor": {
+                  "color": {
+                    "rgbColor": {
+                      "red": 0.4,
+                      "green": 0.4,
+                      "blue": 0.4
+                    }
+                  }
+                },
+                "fontSize": {
+                  "magnitude": 15,
+                  "unit": "PT"
+                },
+                "weightedFontFamily": {
+                  "fontFamily": "Arial",
+                  "weight": 400
+                }
+              },
+              "paragraphStyle": {
+                "namedStyleType": "NORMAL_TEXT",
+                "direction": "LEFT_TO_RIGHT",
+                "spaceAbove": {
+                  "unit": "PT"
+                },
+                "spaceBelow": {
+                  "magnitude": 16,
+                  "unit": "PT"
+                },
+                "keepLinesTogether": true,
+                "keepWithNext": true,
+                "pageBreakBefore": false
+              }
+            }
+          ]
+        },
+        "suggestedNamedStylesChanges": null,
+        "lists": null,
+        "namedRanges": null,
+        "inlineObjects": null,
+        "positionedObjects": null,
+        "documentId": "1p284KUzAFaqqK2UnbohaxWhxYEk8X8bXqJOrj4ipZog",
+        "document_url": "https://docs.google.com/document/d/1p284KUzAFaqqK2UnbohaxWhxYEk8X8bXqJOrj4ipZog"
+      }
+    ],
+    "document_url": "https://docs.google.com/document/d/1p284KUzAFaqqK2UnbohaxWhxYEk8X8bXqJOrj4ipZog"
+  },
+  "isError": false
+}

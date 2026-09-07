@@ -156,6 +156,12 @@ export default function PrivacyPolicy() {
               events to PostHog. Operational security logs and limited service diagnostics may
               still be created when needed to run, protect, and troubleshoot PeacePad.
             </p>
+            <p>
+              On web releases where anonymous product analytics are offered, they remain off until
+              you opt in from Settings. PeacePad records feature and workflow events without
+              message text, drafts, contact details, precise location, or session recordings. You
+              can withdraw consent from Settings at any time.
+            </p>
           </PolicySection>
 
           <PolicySection title="6. Location and device permissions">

@@ -1,5 +1,6 @@
 import { useCallback, lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Switch, Route, useLocation } from "wouter";
+import { Capacitor } from "@capacitor/core";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { HelmetProvider } from "react-helmet-async";
@@ -49,6 +50,7 @@ import PrepChatPage from "@/pages/prep-chat";
 import ComposePage from "@/pages/compose";
 import SingleSlideWelcome from "@/components/SingleSlideWelcome";
 import { readStoredConsent } from "@/lib/consentState";
+import PublicHubApp from "@/public-hub/PublicHubApp";
 
 // Lazy load heavy/infrequently used pages for better performance
 const SchedulingPage = lazy(() => import("@/pages/scheduling"));
@@ -290,7 +292,7 @@ function Router() {
   );
 }
 
-export default function App() {
+function LegacyApp() {
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
@@ -489,6 +491,52 @@ export default function App() {
     </HelmetProvider>
   </VersionGuard>
   );
+}
+
+const PUBLIC_HUB_PATHS = new Set([
+  "/download",
+  "/features",
+  "/how-it-works",
+  "/start-here",
+  "/safety",
+  "/browse-safely",
+  "/parents",
+  "/professionals",
+  "/trust",
+  "/support",
+  "/about",
+  "/privacy",
+  "/terms",
+  "/open",
+]);
+
+/**
+ * The browser root now serves the public PeacePad hub. Native Capacitor builds
+ * still load the root domain but must remain on the authenticated legacy app
+ * shell, so this boundary is decided synchronously before any app providers
+ * or auth bootstrap work starts. Existing account, callback, invite, and app
+ * routes on the browser root also stay on the legacy app.
+ */
+function shouldRenderPublicHub() {
+  if (typeof window === "undefined" || Capacitor.isNativePlatform()) {
+    return false;
+  }
+
+  const hostname = window.location.hostname.toLowerCase();
+  if (hostname !== "peacepad.ca" && hostname !== "www.peacepad.ca") {
+    return false;
+  }
+
+  const pathname = window.location.pathname || "/";
+  return pathname === "/" || pathname.startsWith("/journal") || PUBLIC_HUB_PATHS.has(pathname);
+}
+
+export default function App() {
+  if (shouldRenderPublicHub()) {
+    return <PublicHubApp />;
+  }
+
+  return <LegacyApp />;
 }
 
 function WebRTCContextWrapper({ children }: { children: React.ReactNode }) {

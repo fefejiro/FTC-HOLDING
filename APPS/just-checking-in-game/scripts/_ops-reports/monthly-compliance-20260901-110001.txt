@@ -1,0 +1,16 @@
+﻿Just Checking In Monthly Compliance Review
+Timestamp: 2026-09-01 11:00:01
+WorkspaceRoot: C:\FTC HOLDING\APPS\just-checking-in-game
+
+Checklist
+- Verify App Review and Beta Review status in App Store Connect
+- Verify automatic release configuration
+- Verify privacy disclosure remains accurate
+- Verify regional availability (including EU)
+- Verify Digital Services Act account setup status
+- Verify store metadata links and support URL
+
+Handover status: MISSING
+Release prompt status: MISSING
+
+Action: Run the release prompt in your active coding agent and record the delta in CODEX-HANDOVER.md.

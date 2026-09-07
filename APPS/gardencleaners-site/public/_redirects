@@ -1,4 +1,0 @@
-# Garden Cleaners — clean URLs only
-# Anything not in this site falls through to the 404 page.
-/garden-cleaners /                 301
-/garden-cleaners/* /:splat         301

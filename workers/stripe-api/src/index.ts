@@ -3739,6 +3739,178 @@ async function handleSubscribe(req: Request, env: Env, origin: string | null): P
   return json({ ok: true, already_subscribed: alreadySubscribed }, 200, origin);
 }
 
+async function handleSubscribeV2(req: Request, env: Env, origin: string | null): Promise<Response> {
+  if (!env.MAILJET_API_KEY || !env.MAILJET_SECRET_KEY) {
+    return json({ error: 'Email service not configured.' }, 500, origin);
+  }
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: 'Invalid request body.' }, 400, origin);
+  }
+
+  const email = sanitize(body.email, 320).toLowerCase();
+  if (!email || !email.includes('@')) {
+    return json({ error: 'A valid email is required.' }, 400, origin);
+  }
+
+  const credentials = btoa(`${cleanSecret(env.MAILJET_API_KEY)}:${cleanSecret(env.MAILJET_SECRET_KEY)}`);
+  const contactResponse = await fetch('https://api.mailjet.com/v3/REST/contact', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Basic ${credentials}`,
+    },
+    body: JSON.stringify({ Email: email, IsExcludedFromCampaigns: true }),
+  });
+  const alreadySubscribed = contactResponse.status === 400;
+  if (!contactResponse.ok && !alreadySubscribed) {
+    logEvent('newsletter_subscriber_add_failed', { status: contactResponse.status });
+    return json({ error: 'Could not save subscription.' }, 502, origin);
+  }
+
+  if (env.SUPABASE_URL && env.SUPABASE_ANON_KEY) {
+    try {
+      await fetch(`${cleanSecret(env.SUPABASE_URL)}/rest/v1/subscribers?on_conflict=email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': cleanSecret(env.SUPABASE_ANON_KEY),
+          'Authorization': `Bearer ${cleanSecret(env.SUPABASE_ANON_KEY)}`,
+          'Prefer': 'resolution=ignore-duplicates,return=minimal',
+        },
+        body: JSON.stringify({ email }),
+      });
+    } catch (error) {
+      logEvent('newsletter_subscriber_persistence_failed', {
+        error: error instanceof Error ? error.message : 'Unknown persistence error',
+      });
+    }
+  }
+
+  let welcomeEmailSent = true;
+  if (!alreadySubscribed) {
+    const workerOrigin = new URL(req.url).origin;
+    const confirmationToken = await createSubscriberToken(env, email, 'confirm');
+    const unsubscribeToken = await createSubscriberToken(env, email, 'unsubscribe');
+    const confirmationUrl = `${workerOrigin}/api/subscribe/confirm?email=${encodeURIComponent(email)}&token=${encodeURIComponent(confirmationToken)}`;
+    const unsubscribeUrl = `${workerOrigin}/api/subscribe/unsubscribe?email=${encodeURIComponent(email)}&token=${encodeURIComponent(unsubscribeToken)}`;
+    const welcomeDelivery = await sendMailjetMessages(env, {
+      Messages: [{
+        From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' },
+        To: [{ Email: email }],
+        Subject: 'Confirm your Una Labs Field Notes subscription',
+        HTMLPart: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+  <div style="background:#0B555A;border-radius:8px;padding:16px 20px;margin-bottom:24px"><p style="color:white;font-weight:700;font-size:16px;margin:0">Una Labs · FTC studio</p></div>
+  <p style="font-size:15px;color:#0B0E11;margin-bottom:16px">One quick click and you are in.</p>
+  <p style="font-size:14px;color:#374151;margin-bottom:24px">Confirm your email to receive useful notes about AI, technology, product work, and what we are learning while turning messy problems into something people can use.</p>
+  <a href="${confirmationUrl}" style="display:inline-block;background:#F97316;color:white;font-weight:700;font-size:14px;padding:12px 24px;border-radius:8px;text-decoration:none">Confirm subscription</a>
+  <p style="font-size:12px;color:#6B7280;margin-top:24px">If you did not request this, you can ignore this email.</p>
+  <p style="font-size:12px;color:#9CA3AF;margin-top:24px;border-top:1px solid #E5E7EB;padding-top:16px">Una Labs · <a href="${unsubscribeUrl}" style="color:#0B555A">Unsubscribe</a></p>
+</div>`,
+        TextPart: `Confirm your Una Labs Field Notes subscription: ${confirmationUrl}\n\nWe will send useful notes about AI, technology, product work, and what we are learning while turning messy problems into something people can use.\n\nIf you did not request this, you can ignore this email.\nUnsubscribe: ${unsubscribeUrl}`,
+      }],
+    });
+    welcomeEmailSent = welcomeDelivery.ok;
+    if (!welcomeDelivery.ok) {
+      logEvent('newsletter_welcome_delivery_failed', { status: welcomeDelivery.status, error: welcomeDelivery.error });
+    }
+
+    const adminDelivery = await sendMailjetMessages(env, {
+      Messages: [{
+        From: { Email: 'noreply@unalabs.cloud', Name: 'Una Labs' },
+        To: [{ Email: ADMIN_EMAIL, Name: 'Mike' }],
+        Subject: 'New Una Labs Field Notes signup request',
+        TextPart: `A new person requested Una Labs Field Notes. They still need to confirm their email.\n\nEmail: ${email}\n\nView the subscriber list at https://unalabs.cloud/admin`,
+      }],
+    });
+    if (!adminDelivery.ok) {
+      logEvent('newsletter_admin_alert_failed', { status: adminDelivery.status, error: adminDelivery.error });
+    }
+  }
+
+  logEvent('newsletter_subscriber_added', { already_subscribed: alreadySubscribed, welcome_email_sent: welcomeEmailSent });
+  return json({ ok: true, already_subscribed: alreadySubscribed, confirmation_required: !alreadySubscribed, welcome_email_sent: welcomeEmailSent }, 200, origin);
+}
+
+function base64UrlEncode(bytes: Uint8Array): string {
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+async function createSubscriberToken(env: Env, email: string, action: string): Promise<string> {
+  const secret = cleanSecret(env.MAILJET_SECRET_KEY ?? '');
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${action}:${email}`));
+  return base64UrlEncode(new Uint8Array(signature));
+}
+
+async function verifySubscriberToken(env: Env, email: string, action: string, token: string): Promise<boolean> {
+  const expected = await createSubscriberToken(env, email, action);
+  if (expected.length !== token.length) return false;
+  let mismatch = 0;
+  for (let index = 0; index < expected.length; index += 1) mismatch |= expected.charCodeAt(index) ^ token.charCodeAt(index);
+  return mismatch === 0;
+}
+
+async function setMailjetCampaignExclusion(env: Env, email: string, excluded: boolean): Promise<boolean> {
+  if (!env.MAILJET_API_KEY || !env.MAILJET_SECRET_KEY) return false;
+  const credentials = btoa(`${cleanSecret(env.MAILJET_API_KEY)}:${cleanSecret(env.MAILJET_SECRET_KEY)}`);
+  try {
+    const response = await fetch(`https://api.mailjet.com/v3/REST/contact/${encodeURIComponent(email)}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${credentials}`,
+      },
+      body: JSON.stringify({ IsExcludedFromCampaigns: excluded }),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+function subscriberActionPage(title: string, message: string, status = 200): Response {
+  return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} | Una Labs</title></head><body style="margin:0;background:#f7f5f0;color:#0b0e11;font-family:Arial,sans-serif"><main style="max-width:560px;margin:12vh auto;padding:32px;background:#fff;border:1px solid #e3e0d9;border-radius:16px"><p style="color:#0b555a;font-weight:700;letter-spacing:.08em;text-transform:uppercase">Una Labs · FTC studio</p><h1>${title}</h1><p style="line-height:1.6">${message}</p><a href="https://unalabs.cloud" style="display:inline-block;margin-top:12px;background:#0b555a;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none">Return to Una Labs</a></main></body></html>`, {
+    status,
+    headers: { 'Content-Type': 'text/html; charset=UTF-8' },
+  });
+}
+
+async function handleSubscribeAction(req: Request, env: Env, action: 'confirm' | 'unsubscribe'): Promise<Response> {
+  if (!env.MAILJET_API_KEY || !env.MAILJET_SECRET_KEY) {
+    return subscriberActionPage('Subscription unavailable', 'The email service is not configured right now. Please try again later.', 503);
+  }
+
+  const url = new URL(req.url);
+  const email = sanitize(url.searchParams.get('email'), 320).toLowerCase();
+  const token = sanitize(url.searchParams.get('token'), 200);
+  if (!email || !email.includes('@') || !token || !(await verifySubscriberToken(env, email, action, token))) {
+    return subscriberActionPage('Link expired', 'This subscription link is invalid or has expired. Please start again from the Una Labs website.', 400);
+  }
+
+  const updated = await setMailjetCampaignExclusion(env, email, action === 'unsubscribe');
+  if (!updated) {
+    logEvent('newsletter_subscription_action_failed', { action });
+    return subscriberActionPage('Please try again', 'We could not update your subscription just now. Please try this link again shortly.', 502);
+  }
+
+  logEvent('newsletter_subscription_action_completed', { action });
+  return action === 'confirm'
+    ? subscriberActionPage('Subscription confirmed', 'You are now subscribed to Una Labs Field Notes. We will send useful notes when there is something worth your time.')
+    : subscriberActionPage('You are unsubscribed', 'You will no longer receive Una Labs Field Notes.');
+}
+
 async function handleIntakeConfirm(req: Request, env: Env, origin: string | null): Promise<Response> {
   if (!env.MAILJET_API_KEY || !env.MAILJET_SECRET_KEY) return json({ ok: true }, 200, origin);
 
@@ -3749,7 +3921,7 @@ async function handleIntakeConfirm(req: Request, env: Env, origin: string | null
   const name = sanitize(body.name) || email.split('@')[0];
   const plan = sanitize(body.plan || body.tier) || 'professional';
   const billing = sanitize(body.billing) || 'monthly';
-  const checkoutType = normalizeCheckoutType(body.checkout_type);
+  const checkoutType = normalizeCheckoutType(String(body.checkout_type ?? ''));
   const amountCad = Number(body.amount_cad);
 
   if (checkoutType === 'activation') {
@@ -5439,6 +5611,14 @@ export default {
       return handleAdminConnectDashboard(req, env, origin);
     }
 
+    if (req.method === 'GET' && url.pathname === '/api/subscribe/confirm') {
+      return handleSubscribeAction(req, env, 'confirm');
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/subscribe/unsubscribe') {
+      return handleSubscribeAction(req, env, 'unsubscribe');
+    }
+
     if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '')) {
       return json(
         {
@@ -5472,7 +5652,7 @@ export default {
       case '/api/invoices/generate':
         return handleGenerateInvoice(req, env, origin);
       case '/api/subscribe':
-        return handleSubscribe(req, env, origin);
+        return handleSubscribeV2(req, env, origin);
       case '/api/leads':
         return handlePublicSubmitLead(req, env, origin);
       case '/api/milestone-action':

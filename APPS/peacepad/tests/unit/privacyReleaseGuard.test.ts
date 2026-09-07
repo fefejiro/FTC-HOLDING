@@ -31,8 +31,12 @@ describe("iOS privacy release guard", () => {
 
     expect(html).not.toMatch(/googletagmanager|google-analytics|G-TNTMYM1B8N/i);
     expect(server).not.toMatch(/googletagmanager|google-analytics/i);
-    expect(analytics).toContain("ANALYTICS_COLLECTION_ENABLED = false");
-    expect(analytics).not.toMatch(/posthog\.com|\/capture\/|\.capture\(|\.identify\(/i);
+    expect(analytics).toContain('VITE_ENABLE_PRODUCT_ANALYTICS === "true"');
+    expect(analytics).toContain('VITE_ENABLE_NATIVE_PRODUCT_ANALYTICS === "true"');
+    expect(analytics).toContain("hasAnalyticsConsent()");
+    expect(analytics).toContain("person_profiles: \"never\"");
+    expect(analytics).toContain("disable_session_recording: true");
+    expect(analytics).not.toMatch(/\.identify\(/i);
   });
 
   it("keeps IP geolocation disabled and message notification bodies private", () => {

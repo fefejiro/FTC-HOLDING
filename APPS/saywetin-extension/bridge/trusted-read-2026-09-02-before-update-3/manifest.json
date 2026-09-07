@@ -1,0 +1,57 @@
+{
+  "bridgeVersion": "3.6",
+  "kind": "google-docs-trusted-read",
+  "status": "complete",
+  "outputDir": "/work/bridge/trusted-read-2026-09-02-before-update-3",
+  "target": {
+    "documentId": "1p284KUzAFaqqK2UnbohaxWhxYEk8X8bXqJOrj4ipZog",
+    "title": "July 16 Lawyer Handoff Summary",
+    "revisionId": "ANLCKQkBh6_zaKn1CMDMmhJ_k2ATAWy9ermgoPnsLBK3MVILs1sg8-2KXtrunZEWH-lJmOkOG6YUnRKgs6lBsEvzu2GXzPBA25a3TfatNHw",
+    "documentUrl": "https://docs.google.com/document/d/1p284KUzAFaqqK2UnbohaxWhxYEk8X8bXqJOrj4ipZog",
+    "selectedTabId": "t.0"
+  },
+  "dropdownMetadata": {
+    "status": "unavailable",
+    "resolvedTool": null,
+    "authoritative": false,
+    "count": 0
+  },
+  "controlAwareness": {
+    "hasProtectedControls": false,
+    "authoritativeDropdownCount": 0,
+    "opaqueControlCount": 0,
+    "affectedParagraphCount": 0,
+    "nativeElementCounts": {},
+    "preservationRequired": false,
+    "recommendedBehavior": "No protected controls were detected in the scanned scope."
+  },
+  "warnings": [],
+  "files": {
+    "document_result": {
+      "path": "/work/bridge/trusted-read-2026-09-02-before-update-3/document-result.json",
+      "bytes": 96825,
+      "sha256": "8f5b17cb6a4f89e09aab54014ceafaaf43bd411a134507524da8022a4800fdad"
+    },
+    "control_inventory": {
+      "path": "/work/bridge/trusted-read-2026-09-02-before-update-3/control-inventory.json",
+      "bytes": 1036,
+      "sha256": "8292fb6ab0f6b08a05e1a15b390df15bc8d5947758fe4df96bb6089142812170"
+    },
+    "document_outline": {
+      "path": "/work/bridge/trusted-read-2026-09-02-before-update-3/document-outline.json",
+      "bytes": 60565,
+      "sha256": "074b2a097ea6f69ce34348e9e5b50857c8db80dbe58f7a226b8b21f899246e70"
+    },
+    "document_text": {
+      "path": "/work/bridge/trusted-read-2026-09-02-before-update-3/document-text.md",
+      "bytes": 17510,
+      "sha256": "c1f52a385d16ba745b1de4566b56be4f8319cd9d09f4f21f95057bf764300f30"
+    },
+    "receipt": {
+      "path": "/work/bridge/trusted-read-2026-09-02-before-update-3/receipt.json",
+      "bytes": 967,
+      "sha256": "8bb5196f107974e167b6242f2ec3e01fe7ec7a44938e2c9d23aab381f99e1243"
+    }
+  },
+  "error": null
+}

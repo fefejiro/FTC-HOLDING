@@ -14,7 +14,12 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { SEOHead } from "@/components/SEOHead";
 import { JoinPartnershipDialog } from "@/components/JoinPartnershipDialog";
-import { trackEvent } from "@/lib/analytics";
+import {
+  ANALYTICS_COLLECTION_ENABLED,
+  hasAnalyticsConsent,
+  setAnalyticsConsent,
+  trackEvent,
+} from "@/lib/analytics";
 
 function isDemoPartnerName(value: string | null): boolean {
   return Boolean(value && /demo co-parent/i.test(value));
@@ -32,6 +37,7 @@ export default function SettingsPage() {
   const [inviteCopied, setInviteCopied] = useState(false);
   const [inviteExpanded, setInviteExpanded] = useState(false);
   const [isSavingAiConsent, setIsSavingAiConsent] = useState(false);
+  const [analyticsConsent, setAnalyticsConsentState] = useState(hasAnalyticsConsent);
 
   const { data: partnerships = [] } = useQuery<any[]>({
     queryKey: ["/api/partnerships"],
@@ -141,6 +147,40 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+
+          {ANALYTICS_COLLECTION_ENABLED && (
+            <Card className="border-border/60">
+              <CardHeader>
+                <CardTitle className="text-lg">Help improve PeacePad</CardTitle>
+                <CardDescription>
+                  Choose whether to share anonymous product-use events. Message text, drafts,
+                  contact details, precise location, and session recordings are never included.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-start justify-between gap-4 rounded-2xl border border-border/70 p-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="product-analytics-consent" className="text-sm font-medium">
+                      Share anonymous product analytics
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Off by default. Change this choice at any time without affecting PeacePad.
+                    </p>
+                  </div>
+                  <Switch
+                    id="product-analytics-consent"
+                    checked={analyticsConsent}
+                    onCheckedChange={(checked) => {
+                      setAnalyticsConsent(checked);
+                      setAnalyticsConsentState(checked);
+                    }}
+                    aria-label="Share anonymous product analytics"
+                    data-testid="switch-product-analytics-consent"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="border-border/60">
             <CardHeader>
@@ -583,6 +623,40 @@ export default function SettingsPage() {
               </p>
             </CardContent>
           </Card>
+
+          {ANALYTICS_COLLECTION_ENABLED && (
+            <Card className="border-border/60">
+              <CardHeader>
+                <CardTitle className="text-lg">Help improve PeacePad</CardTitle>
+                <CardDescription>
+                  Choose whether to share anonymous product-use events. Message text, drafts,
+                  contact details, precise location, and session recordings are never included.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-start justify-between gap-4 rounded-2xl border border-border/70 p-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="product-analytics-consent" className="text-sm font-medium">
+                      Share anonymous product analytics
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Off by default. Change this choice at any time without affecting PeacePad.
+                    </p>
+                  </div>
+                  <Switch
+                    id="product-analytics-consent"
+                    checked={analyticsConsent}
+                    onCheckedChange={(checked) => {
+                      setAnalyticsConsent(checked);
+                      setAnalyticsConsentState(checked);
+                    }}
+                    aria-label="Share anonymous product analytics"
+                    data-testid="switch-product-analytics-consent"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="border-border/60">
             <CardHeader>

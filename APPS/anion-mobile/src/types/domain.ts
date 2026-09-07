@@ -1,1 +1,0 @@
-export type { BookingRecord, TutorProfile } from '@ftc/anion-types';

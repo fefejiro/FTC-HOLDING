@@ -9,6 +9,10 @@ export type SupabaseClient = BaseClient<Database> & {
 
 type GlobalWithSupabaseClient = typeof globalThis & {
   __ftcSupabaseBrowserClient?: SupabaseClient;
+  __FTC_SUPABASE_ENV__?: {
+    url?: string;
+    key?: string;
+  };
 };
 
 type PublicSupabaseEnv = {
@@ -29,12 +33,14 @@ function getImportMetaEnv(): Record<string, string | undefined> {
 }
 
 export function getPublicSupabaseEnv(): PublicSupabaseEnv {
+  const runtime = globalThis as GlobalWithSupabaseClient;
   const processEnv = getProcessEnv();
   const importMetaEnv = getImportMetaEnv();
   const nextPublicSupabaseUrl = processEnv.NEXT_PUBLIC_SUPABASE_URL;
   const nextPublicSupabaseAnonKey = processEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   const url =
+    runtime.__FTC_SUPABASE_ENV__?.url ||
     importMetaEnv.VITE_SUPABASE_URL ||
     processEnv.VITE_SUPABASE_URL ||
     importMetaEnv.NEXT_PUBLIC_SUPABASE_URL ||
@@ -42,6 +48,7 @@ export function getPublicSupabaseEnv(): PublicSupabaseEnv {
     nextPublicSupabaseUrl;
 
   const key =
+    runtime.__FTC_SUPABASE_ENV__?.key ||
     importMetaEnv.VITE_SUPABASE_ANON_KEY ||
     processEnv.VITE_SUPABASE_ANON_KEY ||
     importMetaEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
