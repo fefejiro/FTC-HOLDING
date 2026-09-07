@@ -35,14 +35,17 @@ export async function ensurePublicAuthRuntimeConfig(): Promise<void> {
     return runtime.__FTC_PUBLIC_SUPABASE_CONFIG_PROMISE__;
   }
 
-  const request = fetch(getStripeApiUrl('/api/public/auth-config'), {
-    method: 'GET',
-    headers: { Accept: 'application/json' },
-  })
-    .then(async (response) => {
-      if (!response.ok) throw new Error('Public authentication configuration is unavailable.');
-      const config: unknown = await response.json();
-      if (!isValidPublicAuthConfig(config)) throw new Error('Public authentication configuration is invalid.');
+  const fetchConfig = async (endpoint: string): Promise<PublicAuthConfig> => {
+    const response = await fetch(endpoint, { method: 'GET', headers: { Accept: 'application/json' } });
+    if (!response.ok) throw new Error('Public authentication configuration is unavailable.');
+    const config: unknown = await response.json();
+    if (!isValidPublicAuthConfig(config)) throw new Error('Public authentication configuration is invalid.');
+    return config;
+  };
+
+  const request = fetchConfig('/api/public-auth-config')
+    .catch(() => fetchConfig(getStripeApiUrl('/api/public/auth-config')))
+    .then((config) => {
       runtime.__FTC_PUBLIC_SUPABASE_ENV__ = { url: config.url, key: config.key };
     })
     .catch((error) => {
