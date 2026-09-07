@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { ensurePublicAuthRuntimeConfig } from '@/lib/public-auth-runtime';
+import { ensurePublicAuthRuntimeConfig, ensurePublicAuthServiceAvailable } from '@/lib/public-auth-runtime';
 
 function normalizeRedirectPath(value: string | null): string {
   if (!value) return '/dashboard';
@@ -50,6 +50,7 @@ export function LoginClient() {
 
     try {
       await ensurePublicAuthRuntimeConfig();
+      await ensurePublicAuthServiceAvailable();
       const { signInWithGoogle } = await import('@ftc/auth');
       const callbackRedirect = `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`;
       const { data, error: authError } = await signInWithGoogle(callbackRedirect);

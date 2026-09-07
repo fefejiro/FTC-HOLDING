@@ -56,3 +56,26 @@ export async function ensurePublicAuthRuntimeConfig(): Promise<void> {
   runtime.__FTC_PUBLIC_SUPABASE_CONFIG_PROMISE__ = request;
   return request;
 }
+
+/**
+ * Checks that the configured public Auth endpoint is reachable before a visitor
+ * leaves Una Labs for an OAuth provider. This prevents a dead configuration from
+ * producing an opaque browser navigation failure.
+ */
+export async function ensurePublicAuthServiceAvailable(): Promise<void> {
+  await ensurePublicAuthRuntimeConfig();
+  if (typeof window === 'undefined') return;
+
+  const config = (window as AuthRuntimeWindow).__FTC_PUBLIC_SUPABASE_ENV__;
+  if (!isValidPublicAuthConfig(config)) {
+    throw new Error('Public authentication configuration is unavailable.');
+  }
+
+  const response = await fetch(`${config.url}/auth/v1/settings`, {
+    method: 'GET',
+    headers: { apikey: config.key },
+  });
+  if (!response.ok) {
+    throw new Error('Public authentication service is unavailable.');
+  }
+}
