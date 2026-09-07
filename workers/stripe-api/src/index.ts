@@ -62,6 +62,24 @@ function json(data: unknown, status = 200, origin: string | null = null): Respon
   });
 }
 
+// This intentionally exposes only the Supabase browser URL and anon key. It never
+// returns service credentials or any Stripe/Mailjet configuration.
+function handlePublicAuthConfig(env: Env, origin: string | null): Response {
+  const url = cleanSecret(env.SUPABASE_URL ?? '');
+  const key = cleanSecret(env.SUPABASE_ANON_KEY ?? '');
+  if (!url || !key) {
+    return json({ error: 'Authentication service is temporarily unavailable.' }, 503, origin);
+  }
+
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:') throw new Error('Public auth URL must use HTTPS.');
+    return json({ url: parsed.origin, key }, 200, origin);
+  } catch {
+    return json({ error: 'Authentication service is temporarily unavailable.' }, 503, origin);
+  }
+}
+
 function getCoachingSessionPriceCad(env: Env): number {
   const configured = Number(env.COACHING_SESSION_PRICE_CAD);
   return Number.isFinite(configured) && configured >= 1 ? configured : COACHING_SESSION_PRICE_CAD;
@@ -3481,7 +3499,7 @@ async function handleStripeWebhook(req: Request, env: Env, origin: string | null
       const session = event.data.object as Stripe.Checkout.Session;
       if (session.payment_status === 'paid' || session.status === 'complete') {
         if (session.metadata?.checkout_type === 'coaching_session') {
-          await sendCoachingBookingEmails(env, session);
+          await sendCoachingBookingEmails(env, stripe, session);
         } else {
           await runActivation(env, stripe, session.id, {});
         }
@@ -5301,6 +5319,14 @@ async function handleCoachingCreateSession(req: Request, env: Env, origin: strin
       cancel_url: `${siteUrl}/learn`,
       metadata,
       payment_intent_data: { metadata },
+      invoice_creation: {
+        enabled: true,
+        invoice_data: {
+          description: 'Una Labs practical AI learning session',
+          footer: 'Thank you for learning with Una Labs.',
+          metadata,
+        },
+      },
       billing_address_collection: 'required',
       locale: 'en',
     });
@@ -5340,7 +5366,7 @@ async function handleCoachingVerifySession(req: Request, env: Env, origin: strin
   }
 }
 
-async function sendCoachingBookingEmails(env: Env, session: Stripe.Checkout.Session): Promise<void> {
+async function sendCoachingBookingEmails(env: Env, stripe: Stripe, session: Stripe.Checkout.Session): Promise<void> {
   if (!env.MAILJET_API_KEY || !env.MAILJET_SECRET_KEY) return;
   if (session.metadata?.checkout_type !== 'coaching_session') return;
 
@@ -5356,14 +5382,30 @@ async function sendCoachingBookingEmails(env: Env, session: Stripe.Checkout.Sess
     availability: escapeHtml(availability), focus: escapeHtml(focus || 'Not supplied'),
   };
   const amountCad = Number(session.metadata.amount_cad) || getCoachingSessionPriceCad(env);
+  const invoiceId = typeof session.invoice === 'string' ? session.invoice : session.invoice?.id;
+  let invoiceUrl = '';
+  if (invoiceId) {
+    try {
+      const invoice = await stripe.invoices.retrieve(invoiceId);
+      invoiceUrl = invoice.hosted_invoice_url ?? invoice.invoice_pdf ?? '';
+    } catch (error) {
+      logEvent('coaching_invoice_retrieve_error', {
+        error_type: error instanceof Error ? error.name : 'unknown',
+      });
+    }
+  }
+  const invoiceHtml = invoiceUrl
+    ? `<p><a href="${escapeHtml(invoiceUrl)}">View your Una Labs invoice</a></p>`
+    : '';
+  const invoiceText = invoiceUrl ? `\nView your Una Labs invoice: ${invoiceUrl}\n` : '';
   const credentials = btoa(`${cleanSecret(env.MAILJET_API_KEY)}:${cleanSecret(env.MAILJET_SECRET_KEY)}`);
-  const customerHtml = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px"><h1 style="font-size:22px;color:#0B0E11">Your AI coaching booking is paid.</h1><p>Hi ${safe.name},</p><p>Thank you. We have your preferred times and will confirm your 60-minute session within one business day.</p><p style="color:#6B7280">You can reply to this email if your availability changes.</p><p>Una Labs</p></div>`;
+  const customerHtml = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px"><h1 style="font-size:22px;color:#0B0E11">Your AI coaching booking is paid.</h1><p>Hi ${safe.name},</p><p>Thank you. We have your preferred times and will confirm your 60-minute session within one business day.</p>${invoiceHtml}<p style="color:#6B7280">You can reply to this email if your availability changes.</p><p>Una Labs</p></div>`;
   const adminHtml = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px"><h1 style="font-size:20px;color:#0B0E11">New paid AI coaching booking</h1><p><strong>Customer:</strong> ${safe.name} (${safe.email})</p><p><strong>Time zone:</strong> ${safe.timezone}</p><p><strong>Preferred times:</strong><br>${safe.availability}</p><p><strong>What they want help with:</strong><br>${safe.focus}</p><p><strong>Paid:</strong> CAD $${amountCad}</p></div>`;
   await fetch('https://api.mailjet.com/v3.1/send', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Basic ${credentials}` },
     body: JSON.stringify({ Messages: [
-      { From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' }, To: [{ Email: email, Name: name }], Subject: 'Your Una Labs AI coaching booking', HTMLPart: customerHtml, TextPart: `Hi ${name},\n\nYour AI coaching booking is paid. We will confirm your 60-minute session within one business day.\n\nUna Labs` },
+      { From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' }, To: [{ Email: email, Name: name }], Subject: 'Your Una Labs AI coaching booking', HTMLPart: customerHtml, TextPart: `Hi ${name},\n\nYour AI coaching booking is paid. We will confirm your 60-minute session within one business day.${invoiceText}\nUna Labs` },
       { From: { Email: 'hello@unalabs.cloud', Name: 'Una Labs' }, To: [{ Email: ADMIN_EMAIL, Name: 'Mike' }], Subject: '[Action needed] New paid AI coaching booking', HTMLPart: adminHtml, TextPart: `New paid AI coaching booking\nCustomer: ${name} (${email})\nTime zone: ${timezone}\nPreferred times: ${availability}\nFocus: ${focus || 'Not supplied'}\nPaid: CAD $${amountCad}` },
     ] }),
   });
@@ -5506,6 +5548,10 @@ export default {
 
     if (req.method === 'GET' && url.pathname === '/api/checkout-success') {
       return handleCheckoutSuccess(req, env);
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/public/auth-config') {
+      return handlePublicAuthConfig(env, origin);
     }
 
     // ── Spark AI chat routes ──────────────────────────────────────────────

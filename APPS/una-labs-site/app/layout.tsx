@@ -5,6 +5,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { AssistantDrawer } from '@/components/AssistantDrawer';
 import { ChatWidget } from '@/components/ChatWidget';
+import { PublicAuthRuntimeConfig } from '@/components/auth/PublicAuthRuntimeConfig';
 import './globals.css';
 
 const inter = Inter({
@@ -106,6 +107,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
+        <PublicAuthRuntimeConfig />
         <Header />
         <main>{children}</main>
         <Footer />

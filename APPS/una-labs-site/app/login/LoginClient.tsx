@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { ensurePublicAuthRuntimeConfig } from '@/lib/public-auth-runtime';
 
 function normalizeRedirectPath(value: string | null): string {
   if (!value) return '/dashboard';
@@ -25,6 +26,7 @@ export function LoginClient() {
 
     async function checkSession() {
       try {
+        await ensurePublicAuthRuntimeConfig();
         const { getSession } = await import('@ftc/auth');
         const session = await getSession();
         if (!cancelled && session?.user) {
@@ -47,6 +49,7 @@ export function LoginClient() {
     setError('');
 
     try {
+      await ensurePublicAuthRuntimeConfig();
       const { signInWithGoogle } = await import('@ftc/auth');
       const callbackRedirect = `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`;
       const { data, error: authError } = await signInWithGoogle(callbackRedirect);
@@ -60,9 +63,8 @@ export function LoginClient() {
       }
 
       setStatus('Redirecting to Google sign-in...');
-    } catch (err) {
-      const rawMessage = err instanceof Error ? err.message : 'Unable to start Google sign-in.';
-      setError(rawMessage);
+    } catch {
+      setError('We could not start Google sign-in. Please try again in a moment.');
       setLoading(false);
     }
   }
