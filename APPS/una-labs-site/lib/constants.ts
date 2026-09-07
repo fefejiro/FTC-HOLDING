@@ -27,7 +27,7 @@ export const NAV = {
     {
       label: 'Resources',
       children: [
-        { label: 'AI Coaching', href: '/learn', description: 'One-to-one practical AI coaching for beginners' },
+        { label: 'AI Learning', href: '/learn', description: 'Build an AI learning plan around your own goals and problems' },
         { label: 'Blog', href: '/blog', description: 'Field notes from shipped products and live delivery systems' },
         { label: 'Help Center', href: '/help', description: 'Orientation for the intake, pricing, and support path' },
         { label: 'Live Status', href: '/status', description: 'Ignition parity and SDLC signal in one live board' },

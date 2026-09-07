@@ -34,7 +34,7 @@ export function LivingHeroSection() {
             <div className="mt-8 rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
               <p className="text-caption font-semibold uppercase tracking-[0.14em] text-brand-teal">Also at Una Labs</p>
               <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
-                <p className="max-w-[250px] text-body-sm leading-relaxed text-white/75">Practical one-to-one AI coaching for people who want to learn by doing.</p>
+                <p className="max-w-[250px] text-body-sm leading-relaxed text-white/75">Practical one-to-one AI learning shaped around the work, ideas, and problems that matter to you.</p>
                 <Button href="/learn" variant="ghost" size="sm" className="!text-white hover:!text-brand-teal">View learning →</Button>
               </div>
             </div>
