@@ -43,6 +43,27 @@ Load `dist/` as an unpacked extension in Chrome (`chrome://extensions` → Devel
 
 Append `?mock=1` to the extension popup URL to test UI without a real API call.
 
+## Copilot CLI
+
+The repository exposes the `saywetin-production-verifier` custom agent. From
+PowerShell, pass the complete command on one line; a trailing `\` is not a
+PowerShell line continuation and is interpreted as an extra argument.
+
+```powershell
+copilot --agent=saywetin-production-verifier --prompt "Verify the SayWetin extension's production API routing. Read-only. Report endpoint evidence, config evidence, and gaps."
+```
+
+For an interactive session, use `/agent` to select the verifier. To inspect
+available repository skills and MCP servers without starting a session:
+
+```powershell
+copilot plugins list --kind skill --kind mcp --json
+```
+
+The verifier is read-only and must not be given credentials. Use the
+`saywetin-three-surface-ship` skill only for an explicitly requested release
+across the backend, web, and mobile surfaces.
+
 ## Backend
 
 - Primary API: `https://api.saywetin.app`
