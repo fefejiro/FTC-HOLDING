@@ -62,7 +62,7 @@ DOCS/          — active operational and deployment docs
 DOCS/archive/  — completed-project execution logs (reference only)
 workers/       — Cloudflare Worker projects
 scripts/       — repo-level utility scripts
-career/        — job-hunt automation scripts (personal tooling)
+job-hunt/      — job-hunt automation scripts (personal tooling)
 ```
 
 Root files that matter:
@@ -144,6 +144,5 @@ npm --prefix APPS/peacepad run verify:deployment-ownership
 - Owner: Manchi (Mike Fejiro) — approve all changes, all merges
 - Support domain: `support@unalabs.cloud`
 - Backend infra: Railway dashboard → `splendid-spirit` project
-
 
 
