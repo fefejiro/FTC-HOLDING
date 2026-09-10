@@ -13,7 +13,7 @@ This index organizes the highest-signal documentation currently in the repo with
 - [Domain and Ownership Map](DOMAIN_AND_OWNERSHIP_MAP.md)
 - [Unalabs Rollout Plan](ROLLOUT_PLAN_UNALABS.md)
 - [Repo Ownership and Tracking](REPO_OWNERSHIP_AND_TRACKING.md)
-- [Repo Handover Audit 2026-03-07](REPO_HANDOVER_AUDIT_2026-03-07.md)
+- [Repo Handover Audit 2026-03-07](archive/REPO_HANDOVER_AUDIT_2026-03-07.md)
 
 ## Operations And Runbooks
 

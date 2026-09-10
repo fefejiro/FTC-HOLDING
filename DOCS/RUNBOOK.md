@@ -87,4 +87,4 @@ When handing over, include:
 4. Link to latest audit handover
 
 Primary audit reference:
-- [REPO_HANDOVER_AUDIT_2026-03-07.md](REPO_HANDOVER_AUDIT_2026-03-07.md)
+- [REPO_HANDOVER_AUDIT_2026-03-07.md](archive/REPO_HANDOVER_AUDIT_2026-03-07.md)
