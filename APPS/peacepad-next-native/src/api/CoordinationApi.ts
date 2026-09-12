@@ -823,7 +823,9 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
   }
 
   listScheduleEvents(familyCircleId: EntityId) {
-    return this.request<readonly ScheduleEvent[]>(`/api/v2/schedule-events?familyCircleId=${encodeURIComponent(familyCircleId)}`);
+    // A unique read key prevents Android's native HTTP stack or an intermediary
+    // from replaying another parent's pre-write calendar response.
+    return this.request<readonly ScheduleEvent[]>(`/api/v2/schedule-events?familyCircleId=${encodeURIComponent(familyCircleId)}&read=${Date.now()}`);
   }
 
   createScheduleEvent(input: CreateScheduleEventInput, context: WriteContext) {

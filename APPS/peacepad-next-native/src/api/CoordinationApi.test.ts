@@ -259,7 +259,6 @@ describe("HttpPeacePadCoordinationApi", () => {
       "https://staging-api.peacepad.test/api/v2/invitations",
       "https://staging-api.peacepad.test/api/v2/invitations/invitation-1/accept",
       "https://staging-api.peacepad.test/api/v2/calendar-layers?familyCircleId=family-current",
-      "https://staging-api.peacepad.test/api/v2/schedule-events?familyCircleId=family-current",
       "https://staging-api.peacepad.test/api/v2/conversations?familyCircleId=family-current",
       "https://staging-api.peacepad.test/api/v2/conversations/conversation-1/messages",
       "https://staging-api.peacepad.test/api/v2/conversations/conversation-1/messages/message-1/events",
@@ -270,6 +269,7 @@ describe("HttpPeacePadCoordinationApi", () => {
       "https://staging-api.peacepad.test/api/v2/attachment-upload-intents"
     ]));
     const calendarRead = fetcher.mock.calls.find(([url]) => String(url).includes("/api/v2/schedule-events?"));
+    expect(calendarRead?.[0]).toMatch(/^https:\/\/staging-api\.peacepad\.test\/api\/v2\/schedule-events\?familyCircleId=family-current&read=\d+$/);
     expect(calendarRead?.[1]?.headers).toMatchObject({
       "Cache-Control": "no-cache, no-store",
       Pragma: "no-cache"
