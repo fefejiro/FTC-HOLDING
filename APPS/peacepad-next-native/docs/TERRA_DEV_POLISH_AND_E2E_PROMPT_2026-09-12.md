@@ -31,9 +31,11 @@ Upgrade the in product icon system so it feels deliberate, warm, recognizable, a
 
 Add focused component and screenshot coverage for icon semantics, accessibility labels, dark appearance, large text, and the absence of customer facing placeholder or internal terminology.
 
-## Existing functional blocker that must remain first
+## Existing functional blocker and verified code 56 result
 
-Do not let visual polish hide functional defects. Android build 2.0.3 code 55 from source `984b8ab9211e2cbddb56f6e2b9d8615c12bb71bf` proved that the recipient receives both the private `Demo pickup` and shared `RRC53 shared pick` events in Day view. Month view displayed only the first same day event and silently clipped the second. Production database checks also showed that both active family members have calendar permission, receive all 8 layers, and receive the shared event from the schedule event RPC. Preserve the synchronization behaviour and verify the repaired Month view shows a visible additional event count without exposing private event details. Never log tokens, account identifiers, invitation codes, message content, record content, or exact private data.
+Do not let visual polish hide functional defects. Android build 2.0.3 code 55 from source `984b8ab9211e2cbddb56f6e2b9d8615c12bb71bf` proved that the recipient receives both the private `Demo pickup` and shared `RRC53 shared pick` events in Day view. Month view displayed only the first same day event and silently clipped the second. Production database checks also showed that both active family members have calendar permission, receive all 8 layers, and receive the shared event from the schedule event RPC.
+
+This specific Month view defect is fixed and verified in Android code 56. On recipient `emulator 5554`, September 12 now shows the first event plus `+1 more`, and the accessibility tree announces `September 12, 2 events`. Preserve the synchronization behaviour and keep the regression coverage. Never expose private event details in the additional count. Never log tokens, account identifiers, invitation codes, message content, record content, or exact private data.
 
 Acceptance for the blocker:
 
@@ -45,7 +47,7 @@ Acceptance for the blocker:
 
 ## Full two parent value and reliability retest
 
-After focused automated tests pass, build one identifiable install only candidate through the existing protected GitHub and EAS workflow. Install it over the two existing disposable Android accounts without clearing data. Capture redacted Logcat, UI XML, screenshots, exact source SHA, artifact hash, signer certificate hash, package, version, code, device and API level.
+After focused automated tests pass, build one identifiable install only candidate through the existing protected GitHub and EAS workflow. Check GitHub runner availability first. If the runner is unavailable, use the documented direct EAS fallback once for the exact reviewed source. Do not start both paths for the same source. Install the candidate over the two existing disposable Android accounts without clearing data. Capture redacted Logcat, UI XML, screenshots, exact source SHA, artifact hash, signer certificate hash, package, version, code, device and API level.
 
 Test the real journey in this order:
 
