@@ -7,15 +7,22 @@ const copy = {
 } as const;
 
 const privateAttachmentCopy = {
-  en: { attachmentPrivacy: "Only you can open files in this Case Binder.", uploading: "Uploading privately...", chooseAttachment: "Choose a file", uploadComplete: "Upload complete", openAttachment: "Open attachment", attachmentSize: "{size} bytes", attachmentTypeError: "Choose a PDF, text file, JPEG, or PNG.", attachmentOpenError: "PeacePad could not open this attachment." },
+  en: { attachmentPrivacy: "Only you can open files in this Case Binder.", uploading: "Uploading privately...", chooseAttachment: "Choose a file", uploadComplete: "Upload complete", openAttachment: "Open attachment", attachmentSize: "{size} bytes", attachmentTypeError: "Choose a PDF, text file, JPEG, or PNG.", attachmentOpenError: "PeacePad could not open this attachment.", attachmentUploadError: "We couldn't finish adding this file.", selectedFile: "Selected file: {name}", chooseAnother: "Choose another", archiveBody: "Archiving hides this Case Binder from your active records.", confirmArchive: "Archive Case Binder" },
   fr: { attachmentPrivacy: "Vous seul pouvez ouvrir les fichiers de ce classeur.", uploading: "Téléversement privé...", chooseAttachment: "Choisir un fichier", uploadComplete: "Téléversement terminé", openAttachment: "Ouvrir la pièce jointe", attachmentSize: "{size} octets", attachmentTypeError: "Choisissez un PDF, un fichier texte, un JPEG ou un PNG.", attachmentOpenError: "PeacePad n’a pas pu ouvrir cette pièce jointe." },
   es: { attachmentPrivacy: "Solo tú puedes abrir los archivos de este archivador.", uploading: "Subiendo de forma privada...", chooseAttachment: "Elegir un archivo", uploadComplete: "Carga completada", openAttachment: "Abrir archivo adjunto", attachmentSize: "{size} bytes", attachmentTypeError: "Elige un PDF, un archivo de texto, un JPEG o un PNG.", attachmentOpenError: "PeacePad no pudo abrir este archivo adjunto." }
 } as const;
 
-export type WorkflowKey = keyof typeof copy.en | keyof typeof privateAttachmentCopy.en;
+const attachmentRecoveryCopy = {
+  en: { attachmentUploadError: "We couldn't finish adding this file.", selectedFile: "Selected file: {name}", chooseAnother: "Choose another", archiveBody: "Archiving hides this Case Binder from your active records.", confirmArchive: "Archive Case Binder" },
+  fr: { attachmentUploadError: "Nous n'avons pas pu ajouter ce fichier.", selectedFile: "Fichier selectionne : {name}", chooseAnother: "Choisir un autre", archiveBody: "L'archivage masque ce classeur de vos dossiers actifs.", confirmArchive: "Archiver le classeur" },
+  es: { attachmentUploadError: "No pudimos anadir este archivo.", selectedFile: "Archivo seleccionado: {name}", chooseAnother: "Elegir otro", archiveBody: "Archivar oculta este archivador de tus registros activos.", confirmArchive: "Archivar archivador" }
+} as const;
+
+export type WorkflowKey = keyof typeof copy.en | keyof typeof privateAttachmentCopy.en | keyof typeof attachmentRecoveryCopy.en;
 export function workflowText(locale: SupportedLocale, key: WorkflowKey, values?: Readonly<Record<string, string>>): string {
-  const value = key in privateAttachmentCopy[locale]
-    ? privateAttachmentCopy[locale][key as keyof typeof privateAttachmentCopy.en]
-    : copy[locale][key as keyof typeof copy.en];
-  return values ? value.replace(/\{(\w+)\}/g, (token, name: string) => values[name] ?? token) : value;
+  const recovery = attachmentRecoveryCopy[locale] as Readonly<Record<string, string>>;
+  const attachment = privateAttachmentCopy[locale] as Readonly<Record<string, string>>;
+  const localized = copy[locale] as Readonly<Record<string, string>>;
+  const value = recovery[key] ?? attachment[key] ?? localized[key] ?? copy.en[key as keyof typeof copy.en];
+  return values ? value.replace(/\{(\w+)\}/g, (token: string, name: string) => values[name] ?? token) : value;
 }

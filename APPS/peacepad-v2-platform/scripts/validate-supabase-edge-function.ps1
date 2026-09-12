@@ -21,6 +21,9 @@ $atomicInvitationMigrationPath = Join-Path $platformRoot 'supabase/migrations/20
 $idempotencyReceiptMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090012_v2_idempotency_receipts.sql'
 $privateRecordsMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608090013_v2_private_case_binders.sql'
 $privateAttachmentsMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608140001_v2_private_record_attachments.sql'
+$privateAttachmentContractMigrationPath = Join-Path $platformRoot 'supabase/migrations/202609040001_v2_private_attachment_status_contract.sql'
+$sharedCalendarBootstrapMigrationPath = Join-Path $platformRoot 'supabase/migrations/202609120001_v2_shared_calendar_bootstrap.sql'
+$ringingCallSubscriptionMigrationPath = Join-Path $platformRoot 'supabase/migrations/202609120002_v2_ringing_call_subscription.sql'
 $devicePushMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608140003_v2_device_push_registrations.sql'
 $devicePushProofPath = Join-Path $platformRoot 'scripts/verify-device-push-registrations.sql'
 $familyExitMigrationPath = Join-Path $platformRoot 'supabase/migrations/202608140004_v2_family_exit.sql'
@@ -43,7 +46,7 @@ $authCleanupRunnerPath = Join-Path $platformRoot 'scripts/run-auth-cleanup.ps1'
 $deployRunnerPath = Join-Path $platformRoot 'scripts/deploy-supabase-free-staging.ps1'
 $configPath = Join-Path $platformRoot 'supabase/config.toml'
 
-foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $parentingTasksMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $idempotencyReceiptMigrationPath, $privateRecordsMigrationPath, $privateAttachmentsMigrationPath, $devicePushMigrationPath, $devicePushProofPath, $familyExitMigrationPath, $familyExitProofPath, $profileUpdateMigrationPath, $profileUpdateProofPath, $privateTimelineMigrationPath, $audioCallMigrationPath, $audioCallProofPath, $audioCallSignalingMigrationPath, $audioCallSignalingProofPath, $audioCallSignalValidatorPath, $audioCallSignalTestPath, $audioCallTurnMigrationPath, $audioCallTurnProofPath, $audioCallTurnIssuerPath, $audioCallTurnTestPath, $expenseSettlementResolutionMigrationPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
+foreach ($path in @($functionPath, $migrationPath, $authorizationMigrationPath, $transactionMigrationPath, $invitationMigrationPath, $accountDeletionMigrationPath, $messagingMigrationPath, $calendarMigrationPath, $parentingTasksMigrationPath, $messageCheckMigrationPath, $sessionMembershipMigrationPath, $sessionIdentityVersionMigrationPath, $authCleanupMigrationPath, $deletionMinimizationMigrationPath, $atomicInvitationMigrationPath, $idempotencyReceiptMigrationPath, $privateRecordsMigrationPath, $privateAttachmentsMigrationPath, $privateAttachmentContractMigrationPath, $sharedCalendarBootstrapMigrationPath, $ringingCallSubscriptionMigrationPath, $devicePushMigrationPath, $devicePushProofPath, $familyExitMigrationPath, $familyExitProofPath, $profileUpdateMigrationPath, $profileUpdateProofPath, $privateTimelineMigrationPath, $audioCallMigrationPath, $audioCallProofPath, $audioCallSignalingMigrationPath, $audioCallSignalingProofPath, $audioCallSignalValidatorPath, $audioCallSignalTestPath, $audioCallTurnMigrationPath, $audioCallTurnProofPath, $audioCallTurnIssuerPath, $audioCallTurnTestPath, $expenseSettlementResolutionMigrationPath, $authCleanupRunnerPath, $deployRunnerPath, $configPath)) {
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
     throw "Required Supabase staging file is missing: $path"
   }
@@ -67,6 +70,9 @@ $atomicInvitationMigration = Get-Content -LiteralPath $atomicInvitationMigration
 $idempotencyReceiptMigration = Get-Content -LiteralPath $idempotencyReceiptMigrationPath -Raw
 $privateRecordsMigration = Get-Content -LiteralPath $privateRecordsMigrationPath -Raw
 $privateAttachmentsMigration = Get-Content -LiteralPath $privateAttachmentsMigrationPath -Raw
+$privateAttachmentContractMigration = Get-Content -LiteralPath $privateAttachmentContractMigrationPath -Raw
+$sharedCalendarBootstrapMigration = Get-Content -LiteralPath $sharedCalendarBootstrapMigrationPath -Raw
+$ringingCallSubscriptionMigration = Get-Content -LiteralPath $ringingCallSubscriptionMigrationPath -Raw
 $devicePushMigration = Get-Content -LiteralPath $devicePushMigrationPath -Raw
 $devicePushProof = Get-Content -LiteralPath $devicePushProofPath -Raw
 $familyExitMigration = Get-Content -LiteralPath $familyExitMigrationPath -Raw
@@ -94,8 +100,8 @@ $migrationPrefixes = @($migrationNames | ForEach-Object { ($_ -split '_', 2)[0] 
 if (($migrationPrefixes | Sort-Object -Unique).Count -ne $migrationPrefixes.Count) {
   throw 'Supabase migration ordering contains a duplicate timestamp prefix.'
 }
-if ($migrationNames[-1] -ne '202608300009_v2_expense_settlement_resolution_notes.sql') {
-  throw 'Expense settlement resolution-note migration must remain the latest ordered migration.'
+if ($migrationNames[-1] -ne '202609120002_v2_ringing_call_subscription.sql') {
+  throw 'Ringing call-subscription migration must remain the latest ordered migration.'
 }
 
 $requiredFunctionPatterns = @(
@@ -537,6 +543,18 @@ foreach ($pattern in @(
     throw "Calendar migration is missing required boundary: $pattern"
   }
 }
+foreach ($pattern in @(
+  'create unique index if not exists calendar_layer_shared_default_unique_idx',
+  'create or replace function peacepad_v2\.ensure_shared_default_calendars',
+  "jsonb_build_object\('scope', 'family'\)",
+  "'Events & Activities', 'events-activities'",
+  'create trigger conversation_shared_default_calendars',
+  "status = 'active'"
+)) {
+  if ($sharedCalendarBootstrapMigration -notmatch $pattern) {
+    throw "Shared calendar bootstrap migration is missing required boundary: $pattern"
+  }
+}
 foreach ($table in @('case_binder', 'attachment_upload_intent')) {
   if ($privateRecordsMigration -notmatch "create table if not exists peacepad_v2\.$table") {
     throw "Private Records migration is missing table: $table"
@@ -814,6 +832,18 @@ if ($audioCallSignalingMigration -match '(?im)^\s*(payload|sdp|candidate|ice)\s+
   throw 'Private call-signaling persistence must not contain SDP, ICE, or payload columns.'
 }
 foreach ($pattern in @(
+  'create or replace function peacepad_v2\.can_subscribe_audio_call_topic',
+  "call_row\.status in \('ringing', 'active'\)",
+  'p_identity_id in \(call_row\.caller_identity_id, call_row\.callee_identity_id\)',
+  'grant_row\.revoked_at is null',
+  'p_identity_id = any\(conversation_row\.participant_identity_ids\)',
+  'revoke all on function peacepad_v2\.can_subscribe_audio_call_topic'
+)) {
+  if ($ringingCallSubscriptionMigration -notmatch $pattern) {
+    throw "Ringing call-subscription migration is missing required boundary: $pattern"
+  }
+}
+foreach ($pattern in @(
   'SIGNAL_RATE_LIMITED',
   'CALL_STATE_INVALID',
   'CONCURRENCY_CONFLICT',
@@ -907,6 +937,16 @@ foreach ($pattern in @(
 )) {
   if ($expenseSettlementResolutionMigration -notmatch $pattern) {
     throw "Expense settlement resolution-note migration is missing required boundary: $pattern"
+  }
+}
+foreach ($pattern in @(
+  'create or replace function peacepad_v2\.private_attachment_json',
+  "when 'active' then 'available'",
+  "when 'archived' then 'archived'",
+  'revoke all on function peacepad_v2\.private_attachment_json'
+)) {
+  if ($privateAttachmentContractMigration -notmatch $pattern) {
+    throw "Private attachment status contract is missing required boundary: $pattern"
   }
 }
 foreach ($pattern in @(

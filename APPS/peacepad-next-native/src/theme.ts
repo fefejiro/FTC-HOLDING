@@ -1,4 +1,4 @@
-import { DynamicColorIOS, Platform, type ColorValue } from "react-native";
+import { Appearance, DynamicColorIOS, Platform, type ColorValue } from "react-native";
 
 export const lightColors = {
   background: "#FFF8F2",
@@ -59,8 +59,9 @@ export const darkColors: Palette = {
 type ColorToken = keyof typeof lightColors;
 
 function adaptiveColor(token: ColorToken): ColorValue {
-  if (Platform.OS !== "ios") return lightColors[token];
-  return DynamicColorIOS({ dark: darkColors[token], light: lightColors[token] });
+  if (Platform.OS === "ios") return DynamicColorIOS({ dark: darkColors[token], light: lightColors[token] });
+  if (Platform.OS === "android" && Appearance.getColorScheme() === "dark") return darkColors[token];
+  return lightColors[token];
 }
 
 export const colors: Record<ColorToken, ColorValue> = Object.fromEntries(

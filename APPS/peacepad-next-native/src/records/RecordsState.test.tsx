@@ -61,7 +61,7 @@ function attachmentIntent(): AttachmentUploadIntent {
   };
 }
 
-function privateAttachment(): PrivateAttachment {
+function privateAttachment(overrides: Partial<PrivateAttachment> = {}): PrivateAttachment {
   const intent = attachmentIntent();
   return {
     id: intent.id,
@@ -75,7 +75,8 @@ function privateAttachment(): PrivateAttachment {
     mediaType: intent.mediaType,
     byteLength: intent.byteLength,
     status: "available",
-    provenance: intent.provenance
+    provenance: intent.provenance,
+    ...overrides
   };
 }
 
@@ -165,5 +166,18 @@ describe("RecordsState", () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.binders).toHaveLength(0);
     expect(result.current.error).toMatch(/verify the Case Binder/);
+  });
+
+  it("accepts the archived API status but keeps archived files out of the active list", async () => {
+    const api = {
+      listCaseBinders: jest.fn(async () => [binder()]),
+      listPrivateAttachments: jest.fn(async () => [privateAttachment({ status: "archived" }), privateAttachment()]),
+      listPrivateTimeline: jest.fn(async () => [])
+    } as unknown as PeacePadCoordinationApi;
+    const wrapper = ({ children }: { children: React.ReactNode }) => <RecordsStateProvider api={api} runtime={runtime}>{children}</RecordsStateProvider>;
+    const { result } = renderHook(() => useRecordsState(), { wrapper });
+    await waitFor(() => expect(result.current.attachments).toHaveLength(1));
+    expect(result.current.attachments[0]?.status).toBe("available");
+    expect(result.current.error).toBeUndefined();
   });
 });

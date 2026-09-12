@@ -2,6 +2,118 @@
 
 Updated: 2026-09-04
 
+## Active 2.0.3 delivery checkpoint — 2026-09-11
+
+### Source-fix checkpoint — 2026-09-12
+
+The installed Android code-52 recording APK predates the newest fixes and is
+not evidence for them. Shared-event delivery failed because connected spaces
+were still bootstrapped with private calendar layers and the event form chose
+the first layer without showing its scope. Native source now provisions family
+layers for connected runtimes, defaults Home event creation to the shared
+Events & Activities layer, and labels layer choices Shared or Private. A new
+database migration creates/backfills separate shared defaults for active
+two-parent conversations while preserving all existing private layers/events.
+
+Private-call signaling failed because the caller subscribes before acceptance
+while the Realtime authorization function allowed only active calls. A second
+migration keeps topic, participant, family, region, grant, and version checks
+but authorizes both ringing and active handshake states. These migrations pass
+the local Supabase boundary validator but are not live until deployed through
+the protected backend workflow.
+
+The complete Native suite passes (73 suites; 517 passed, 1 skipped), as do
+Native TypeScript, guardrails, secret scan, legacy support tests/typecheck,
+Supabase boundary validation, and diff checks. Existing Jest open-handle and
+VirtualizedList warnings remain test-harness observations. Cut one monotonic
+source-bearing candidate only after backend deployment/preflight; do not call
+the existing code-52 APK repaired or recording-ready for these paths.
+
+The current objective is one continuous delivery path: exercise the canonical
+app as a solo parent, connect a second isolated co-parent, assess complete
+private/shared workflows for functional correctness and real parent value,
+fix evidence-backed defects, cut one traceable Android/iOS release candidate,
+and promote that exact candidate through the existing protected CI/CD path
+only after the device and owner-approval gates pass. Do not create repetitive
+builds for test setup or provider-only changes.
+
+The current Android recording candidate is `ca.peacepad.family` 2.0.3 (version
+code 52), EAS build `6bafd937-4ac1-464f-9006-1873f4ae3294`, packaging source
+`6bb939ce31a55e1039a6cfcf6afd42b27ed969e7`. The retained APK is
+`D:\PeacePadRelease\artifacts\20260911-recording-rc\PeacePad-2.0.3-52-darkfix-recording.apk`
+with SHA-256
+`A92874E65CA1C6F1DFB00A1EE78AA529F00B3A907ABCD39BF11ABFF0BF127168`.
+Pulled `base.apk` files from both API-37 emulators matched that hash exactly.
+
+Android Google sign-in is currently blocked after account selection by native
+OAuth developer configuration. The exact APK signer SHA-1 and SHA-256 are now
+registered on Firebase Android app `ca.peacepad.family`, and this change made
+the Google account picker available on both emulators. Firebase nevertheless
+still returns only OAuth client type 3 (web) for this package and no Android
+OAuth client type 1 associated with the package/certificate pair. Repair that
+existing project's Android OAuth registration, then retest this same APK;
+do not rebuild solely for this provider-side correction. Production EAS has
+the web client, iOS client, and iOS URL-scheme variables, with the visible
+project number aligned to `peacepad-46799`; values remain redacted.
+
+iOS authentication currently has static configuration/test coverage only.
+It must not be called working until Google and Apple sign-in are exercised on
+a physical iPhone/TestFlight candidate. Android emulator proof is likewise
+not physical-device or store-release proof.
+
+The PeacePad owner browser account visibly confirmed project access and both
+registered RC fingerprints. Google Cloud then required owner-password
+re-verification before OAuth client administration. The handoff page was
+retained for the owner; credentials must not be retrieved, recorded, or
+automated. Focused Google-native and iOS release-configuration tests passed
+(2 suites, 14 tests), and TypeScript typecheck passed. Jest needed
+`--forceExit`, which remains a test-harness cleanup observation.
+
+### Two-parent native evidence update — 2026-09-11
+
+The existing EAS-signed Android recording APK could open the Google account
+picker but failed after selection because the existing `PeacePad Android Play`
+OAuth client is intentionally bound to the Play signing SHA-1. A second Android
+OAuth client, `PeacePad Android EAS RC`, was created in the same existing Google
+Auth Platform project for `ca.peacepad.family` and the exact EAS APK SHA-1.
+The original Play client was retained. Firebase configuration now presents
+Android client type 1 and web client type 3; both isolated Android accounts
+completed Google selection without the prior native configuration error. This
+was provider-only remediation: no source change, app build, upload, or store
+mutation occurred.
+
+Initial two-parent evidence from the same APK is mixed: both parents enter a
+distinguishable shared space and report Connected; sender-to-recipient message
+delivery succeeds after recipient restart/reselect; a Home-created shared
+`Demo pickup` is not visible to the recipient even after restart/reselect;
+and an audio call reaches accepted state but fails with private call signaling
+unavailable. Typed Conch Coach returns a child-centred private response. A
+later clean tap displayed Android's microphone permission prompt, correcting
+the earlier missed-prompt observation; permission acceptance, listening,
+stop/transcription, retry, and two-parent Conch remain unverified.
+The recipient is returned to space selection after restart, so selected-space
+persistence is not proven. These are release-gate defects/unverified paths,
+not reasons to create another build until bounded root causes are fixed.
+
+The nearby-support recording path also failed despite one emulator having
+foreground location permission and a valid recent fused/GPS fix. The app only
+attempted a fresh balanced fix, entered Android's location-settings checker,
+and discarded the usable cached location. The source candidate now checks
+Location Services, bounds the fresh request, falls back to a recent accurate
+cached fix, and provides an actionable manual-entry error. A second contract
+defect was also found: the upstream support-discovery schema rejected the
+native `radiusKm` field, hard-coded an 80 km Ontario 211 search, and discarded
+provider coordinates/distance. The contract now accepts and forwards the
+selected radius, computes distance from provider coordinates, returns it, and
+filters known out-of-range local results. National/directory resources remain
+clearly identified as distance-free. Conch's
+rounded-square artwork is now circularly clipped and enlarged in its round
+voice focal points. Focused Support/Parent Core/Coach tests pass (3 suites,
+6 tests); support-discovery unit tests pass (1 suite, 3 tests); both Native and
+legacy TypeScript checks pass. Installed-device proof and confirmation that
+the production discovery provider is configured require the next
+source-bearing candidate and provider audit.
+
 This is the resume ledger for the current PeacePad release. It is deliberately
 cloud-first: do not create a new local checkout, native build, dependency tree,
 or cache. Use `C:\ppn` only for narrow source-control work and execute release
@@ -225,3 +337,25 @@ Before any public App Store submission or Google Play production promotion:
 4. Obtain separate exact authorization phrases for App Store prepare, App
    Store submit, and Play production upload. An uploaded or accepted artifact
    is not public-store proof.
+
+## Private attachment contract hardening — 2026-09-04
+
+The mobile review found a contract mismatch that caused the iPhone Case Binder
+flow to reject valid private attachments: the database stores `active`, while
+the native response validator expects the external status `available`. The
+canonical boundary is now enforced by migration
+`APPS/peacepad-v2-platform/supabase/migrations/202609040001_v2_private_attachment_status_contract.sql`:
+`active` maps to `available`, and `archived` remains `archived`. Authorization,
+owner/family/binder checks, size validation, expiry checks, and storage
+existence checks remain fail-closed.
+
+The native flow now preserves selected-file metadata for safe retry, uses
+user-safe upload/open errors, filters archived files from the active list, and
+moves archive management out of the primary Case Binder action stack. The
+working-tree candidate passed typecheck, the full Jest suite (73 suites, 513
+passed, 1 skipped), guardrails, secret scan, Edge validator, iOS preflight,
+audio configuration checks, and iOS/Android Expo bundle exports. These exports
+are JavaScript bundle validation only; no signed binary, EAS build, store
+upload, or public-release claim is made from them. The migration still needs
+to be applied through the approved cloud deployment path before a real device
+retest.

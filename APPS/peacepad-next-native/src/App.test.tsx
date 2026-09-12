@@ -69,15 +69,22 @@ describe("PeacePad coordination shell", () => {
     expect(screen.getByRole("header", { name: "Ready for today?" })).toBeOnTheScreen();
     expect(screen.getByText("Small steps. Kind words. Big impact—for your kids.")).toBeOnTheScreen();
     expect(screen.getByText("Upcoming events")).toBeOnTheScreen();
-    for (const phrase of ["Premium because", "Gate 1", "Lab-only", "prototype", "mock", "synthetic"]) {
+    for (const phrase of ["Premium because", "Gate 1", "Lab-only", "prototype", "mock", "synthetic", "Native V2"]) {
       expect(screen.queryByText(new RegExp(phrase, "i"))).not.toBeOnTheScreen();
     }
+  });
+
+  it("opens the one-off event form directly from Home", async () => {
+    renderApp();
+    fireEvent.press(screen.getByRole("button", { name: "Add an event" }));
+    expect(await screen.findByRole("header", { name: "Add event" })).toBeOnTheScreen();
+    expect(screen.getByLabelText("Event title")).toBeOnTheScreen();
   });
 
   it("shows calls and Conch before connection with an honest invite path", () => {
     renderApp();
     fireEvent.press(screen.getByRole("button", { name: "Invite a co-parent to unlock calls and Conch" }));
-    expect(screen.getByText("Family connection")).toBeOnTheScreen();
+    expect(screen.getByText("Co-parent coordination")).toBeOnTheScreen();
   });
 
   it("keeps PeaceBot Coach reachable before a co-parent connects", () => {
@@ -100,7 +107,7 @@ describe("PeacePad coordination shell", () => {
     ["Messages", "Your conversation starts here"],
     ["Calendar", currentCalendarMonth],
     ["Records", "Create a Case Binder"],
-    ["More", "Family connection"]
+    ["More", "Co-parent coordination"]
   ] as const)("opens %s from primary navigation", (label, expected) => {
     renderApp();
     fireEvent.press(screen.getByLabelText(label));
@@ -177,7 +184,7 @@ describe("PeacePad coordination shell", () => {
   it.each([
     ["Tasks", "Keep small parenting commitments clear and in one place."],
     ["Add a record", "Create a Case Binder"],
-    ["Invite co-parent", "Family connection"]
+    ["Invite co-parent", "Co-parent coordination"]
   ] as const)("routes the %s Home action", (action, expected) => {
     renderApp();
     fireEvent.press(screen.getByRole("button", { name: action }));

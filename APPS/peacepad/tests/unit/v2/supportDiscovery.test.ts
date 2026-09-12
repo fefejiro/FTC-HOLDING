@@ -61,4 +61,29 @@ describe("v2 support discovery module", () => {
 
     expect(result.ranked_resources[0]?.title).toContain("Legal");
   });
+
+  it("passes the selected radius through and excludes known out-of-range local resources", async () => {
+    let receivedRadius: number | undefined;
+    const result = await runSupportDiscovery(
+      {
+        query: "counselling",
+        location: { latitude: 43.6532, longitude: -79.3832, city: "Toronto" },
+        radiusKm: 10,
+      },
+      {
+        fetchDatabaseResources: async () => [],
+        fetchOntarioResources: async (input) => {
+          receivedRadius = input.radiusKm;
+          return [
+            { title: "Nearby support", type: "counselling", location: "Toronto, ON", url: "https://example.org/near", source: "ontario211", distanceKm: 3.2 },
+            { title: "Far support", type: "counselling", location: "Hamilton, ON", url: "https://example.org/far", source: "ontario211", distanceKm: 58 },
+          ];
+        },
+      },
+    );
+
+    expect(receivedRadius).toBe(10);
+    expect(result.ranked_resources).toEqual(expect.arrayContaining([expect.objectContaining({ title: "Nearby support", distanceKm: 3.2 })]));
+    expect(result.ranked_resources).not.toEqual(expect.arrayContaining([expect.objectContaining({ title: "Far support" })]));
+  });
 });

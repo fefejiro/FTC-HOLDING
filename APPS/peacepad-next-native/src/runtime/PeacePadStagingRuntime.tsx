@@ -31,6 +31,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 // The API keeps its historical family record for authorization and data compatibility.
 // New customers should not have to label their relationship or household to use PeacePad.
 const DEFAULT_PARENTING_SPACE_NAME = "PeacePad parenting space";
+const SESSION_BOOT_TIMEOUT_MS = 15_000;
 const soloWorkspaceStorageKey = (identityId: string, familyCircleId: string) => `peacepad_v2_solo:${identityId}:${familyCircleId}`;
 const soloOnboardingStorageKey = (identityId: string) => `peacepad_v2_solo_onboarding:${identityId}`;
 const soloDraftStorageKey = (identityId: string, familyCircleId?: string) => `peacepad_v2_solo_draft:${identityId}:${familyCircleId ?? "private"}`;
@@ -61,6 +62,8 @@ type Membership = Readonly<{
   familyName: string;
   role: string;
   permissions: readonly string[];
+  /** Derived locally from the authorized conversation list for selection UI. */
+  connectionStatus?: "private" | "shared";
   version: number;
 }>;
 
@@ -434,11 +437,24 @@ export function PeacePadStagingRuntime({
 
   useEffect(() => {
     const currentGeneration = ++generation.current;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const publishRuntimeState = (state: RuntimeState) => {
+      if (timeout) clearTimeout(timeout);
+      setRuntimeState(state);
+    };
     if (auth.status !== "ready" || !auth.session || auth.authIntent === "password-recovery") {
       setRuntimeState({ status: "loading" });
       return;
     }
     if (!pendingActivation) setRuntimeState({ status: "loading" });
+    timeout = setTimeout(() => {
+      if (currentGeneration !== generation.current) return;
+      // Keep this diagnostic deliberately free of account, session, family,
+      // or transport details. The retry stays within the existing session.
+      console.warn("PeacePad session bootstrap timed out");
+      generation.current += 1;
+      setRuntimeState({ status: "error", message: "PeacePad couldn't finish opening your space. Your information is still safe on this device." });
+    }, SESSION_BOOT_TIMEOUT_MS);
     void auth.getAccessToken().then(async (token) => {
       if (!token) throw new Error(supabase.environment === "production" ? "Your PeacePad session expired. Sign in again." : "The staging session expired.");
       const api = createStagingCoordinationClient(environment, auth.getAccessToken, fetcher);
@@ -465,14 +481,26 @@ export function PeacePadStagingRuntime({
         if (pendingActivation) throw new Error("The accepted family access is not present in the refreshed session.");
         const soloChoice = await SecureStore.getItemAsync(soloOnboardingStorageKey(verified.actor.identityId)).catch(() => null);
         if (currentGeneration !== generation.current) return;
-        setRuntimeState(soloChoice === "enabled"
+        publishRuntimeState(soloChoice === "enabled"
           ? { status: "solo", api, verified }
           : { status: "membership-empty", api, verified });
         return;
       }
       const requestedFamilyId = pendingActivation?.familyCircleId ?? selectedFamilyCircleId;
       if (!requestedFamilyId && memberships.length > 1) {
-        setRuntimeState({ status: "membership-selection", api, memberships, verified });
+        // A family label alone is not enough when a parent has a private
+        // space and a newly accepted shared space with the same default name.
+        // Use only authorized, per-family conversation metadata to describe
+        // the selection; no other member's personal details are exposed.
+        const selectionMemberships = await Promise.all(memberships.map(async (membership) => {
+          const conversations = await api.listConversations(membership.familyCircleId);
+          return {
+            ...membership,
+            connectionStatus: conversations.some((item) => item.status === "active") ? "shared" as const : "private" as const
+          };
+        }));
+        if (currentGeneration !== generation.current) return;
+        publishRuntimeState({ status: "membership-selection", api, memberships: selectionMemberships, verified });
         return;
       }
       const membership = requestedFamilyId
@@ -490,12 +518,12 @@ export function PeacePadStagingRuntime({
       if (!conversation) {
         const soloChoice = await SecureStore.getItemAsync(soloWorkspaceStorageKey(verified.actor.identityId, membership.familyCircleId)).catch(() => null);
         if (currentGeneration !== generation.current) return;
-        setRuntimeState(soloChoice === "enabled"
+        publishRuntimeState(soloChoice === "enabled"
           ? { status: "solo", api, membership, verified }
           : { status: "conversation-empty", api, membership, verified });
         return;
       }
-      setRuntimeState({
+      publishRuntimeState({
         status: "ready",
         api,
         verified,
@@ -521,6 +549,7 @@ export function PeacePadStagingRuntime({
       }
     }).catch((error) => {
       if (currentGeneration !== generation.current) return;
+      if (timeout) clearTimeout(timeout);
       if (pendingActivation && activationInFlight.current) {
         const activation = activationInFlight.current;
         activationInFlight.current = undefined;
@@ -528,8 +557,9 @@ export function PeacePadStagingRuntime({
         activation.reject(error instanceof Error ? error : new Error("PeacePad could not verify the accepted family access."));
         return;
       }
-      setRuntimeState({ status: "error", message: error instanceof Error ? error.message : "PeacePad staging is unavailable." });
+      setRuntimeState({ status: "error", message: "PeacePad couldn't finish opening your space. Try again when you're ready." });
     });
+    return () => { if (timeout) clearTimeout(timeout); };
   }, [auth.authIntent, auth.getAccessToken, auth.session, auth.status, environment, fetcher, pendingActivation, reloadVersion, selectedFamilyCircleId, supabase]);
 
   if (auth.status === "loading") return <GateMessage busy title={t("runtime.restoringSession")} body={t("runtime.checkingDevice")} />;
@@ -556,7 +586,7 @@ export function PeacePadStagingRuntime({
     ? <PrivateCoordinationWorkspace api={runtimeState.api} deleteAccount={() => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region)} deleting={deleteBusy} deleteError={deleteError} membership={runtimeState.membership} onInvitationAccepted={() => setReloadVersion((value) => value + 1)} onSignOut={signOutSafely} verified={runtimeState.verified}>{children}</PrivateCoordinationWorkspace>
     : <SoloWorkspace accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} draftStorageKey={soloDraftStorageKey(runtimeState.verified.actor.identityId, runtimeState.membership.familyCircleId)} familyName={runtimeState.membership.familyName} onConnect={() => void leaveSoloWorkspace(runtimeState.api, runtimeState.membership, runtimeState.verified)} onSignOut={signOutSafely} />;
   if (runtimeState.status === "solo") return <SoloWorkspace accountDeletion={{ deleteAccount: () => deleteVerifiedAccount(runtimeState.api, runtimeState.verified.actor, runtimeState.verified.region), deleting: deleteBusy, error: deleteError }} api={runtimeState.api} draftStorageKey={soloDraftStorageKey(runtimeState.verified.actor.identityId)} onConnect={() => void leaveSoloWorkspace(runtimeState.api, runtimeState.membership, runtimeState.verified)} onSignOut={signOutSafely} />;
-  if (runtimeState.status === "error") return <GateMessage title={t("runtime.unavailable")} body={runtimeState.message} />;
+  if (runtimeState.status === "error") return <GateMessage title={t("runtime.unavailable")} body={runtimeState.message} onRetry={() => setReloadVersion((value) => value + 1)} />;
   const accountActions = {
     signOut: signOutSafely,
     deleting: deleteBusy,
@@ -765,7 +795,7 @@ function FamilySelection({ accountDeletion, memberships, onSelect, onSignOut }: 
       {memberships.map((membership) => (
         <LabButton
           key={membership.familyCircleId}
-          label={t("runtime.familyOption", { family: membership.familyName, role: membership.role })}
+          label={`${membership.familyName} — ${membership.connectionStatus === "shared" ? "Shared with another parent" : "Private space"}`}
           onPress={() => onSelect(membership.familyCircleId)}
           variant="secondary"
         />
@@ -1017,9 +1047,9 @@ function Brand() {
   return <View style={styles.brand}><Image accessibilityLabel={t("runtime.logo")} source={require("../../assets/icon-production.png")} style={styles.logo} /><Text style={styles.brandName}>PeacePad</Text></View>;
 }
 
-function GateMessage({ busy = false, body, onSignOut, title }: { busy?: boolean; body: string; onSignOut?: () => Promise<void>; title: string }) {
+function GateMessage({ busy = false, body, onRetry, onSignOut, title }: { busy?: boolean; body: string; onRetry?: () => void; onSignOut?: () => Promise<void>; title: string }) {
   const { t } = useOptionalLocalization();
-  return <View style={styles.page}><Brand />{busy ? <ActivityIndicator color={colors.brand} /> : null}<AccessibleHeading style={styles.title}>{title}</AccessibleHeading><Text accessibilityLiveRegion={busy ? "polite" : "none"} style={styles.body}>{body}</Text>{onSignOut ? <LabButton label={t("account.signOut")} onPress={() => void onSignOut()} variant="secondary" /> : null}</View>;
+  return <View style={styles.page}><Brand />{busy ? <ActivityIndicator color={colors.brand} /> : null}<AccessibleHeading style={styles.title}>{title}</AccessibleHeading><Text accessibilityLiveRegion={busy ? "polite" : "none"} style={styles.body}>{body}</Text>{onRetry ? <LabButton label="Try again" onPress={onRetry} /> : null}{onSignOut ? <LabButton label={t("account.signOut")} onPress={() => void onSignOut()} variant="secondary" /> : null}</View>;
 }
 
 const styles = StyleSheet.create({

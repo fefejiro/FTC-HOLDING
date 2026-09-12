@@ -305,7 +305,10 @@ export type PrivateAttachment = VersionedEntity &
     originalFileName: string;
     mediaType: AttachmentMediaType;
     byteLength: number;
-    status: "available";
+    // The service maps its internal `active` lifecycle to `available` at the
+    // API boundary. Archived records remain visible to the contract but are
+    // not downloadable or shown in the active Binder list.
+    status: "available" | "archived";
   }>;
 
 export type PrivateAttachmentDownload = Readonly<{

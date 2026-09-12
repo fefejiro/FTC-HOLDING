@@ -35,6 +35,7 @@ export function ParentingTasksScreen() {
   const [remindMe, setRemindMe] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const [saved, setSaved] = useState<string>();
 
   const openTasks = useMemo(() => tasks.filter((task) => task.status === "open"), [tasks]);
   const completedTasks = useMemo(() => tasks.filter((task) => task.status === "completed"), [tasks]);
@@ -42,16 +43,19 @@ export function ParentingTasksScreen() {
   const add = async () => {
     const normalizedTitle = title.trim();
     if (!normalizedTitle) {
+      setSaved(undefined);
       setError(t.required);
       return;
     }
     const normalizedDueAt = dueAt.trim() ? dueDateToIso(dueAt) : undefined;
     if (dueAt.trim() && !normalizedDueAt) {
+      setSaved(undefined);
       setError(t.invalidDate);
       return;
     }
     setBusy(true);
     setError(undefined);
+    setSaved(undefined);
     try {
       const task = await addTask({ title: normalizedTitle, dueAt: normalizedDueAt, shared: connected && shared });
       if (remindMe && task?.dueAt) {
@@ -63,6 +67,7 @@ export function ParentingTasksScreen() {
       setDueAt("");
       setShared(false);
       setRemindMe(false);
+      setSaved(t.saved);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "PeacePad could not save that task.");
     } finally {
@@ -103,9 +108,9 @@ export function ParentingTasksScreen() {
 
       <View style={styles.card}>
         <Text style={styles.label}>{t.taskLabel}</Text>
-        <TextInput accessibilityLabel={t.taskLabel} maxLength={160} onChangeText={(value) => { setTitle(value); setError(undefined); }} placeholder={t.taskPlaceholder} placeholderTextColor={colors.muted} style={styles.input} value={title} />
+        <TextInput accessibilityLabel={t.taskLabel} maxLength={160} onChangeText={(value) => { setTitle(value); setError(undefined); setSaved(undefined); }} placeholder={t.taskPlaceholder} placeholderTextColor={colors.muted} style={styles.input} value={title} />
         <Text style={styles.label}>{t.dueDateLabel}</Text>
-        <TextInput accessibilityHint={t.dueDateHint} accessibilityLabel={t.dueDateLabel} autoCapitalize="none" keyboardType="numbers-and-punctuation" onChangeText={(value) => { setDueAt(value); setError(undefined); }} placeholder="YYYY-MM-DD" placeholderTextColor={colors.muted} style={styles.input} value={dueAt} />
+        <TextInput accessibilityHint={t.dueDateHint} accessibilityLabel={t.dueDateLabel} autoCapitalize="none" keyboardType="numbers-and-punctuation" onChangeText={(value) => { setDueAt(value); setError(undefined); setSaved(undefined); }} placeholder="YYYY-MM-DD" placeholderTextColor={colors.muted} style={styles.input} value={dueAt} />
         {connected ? <Pressable accessibilityLabel={t.sharedLabel} accessibilityRole="checkbox" accessibilityState={{ checked: shared }} onPress={() => setShared((current) => !current)} style={({ pressed }) => [styles.shareRow, pressed ? styles.pressed : null]}>
           <View style={[styles.checkbox, shared ? styles.checkboxChecked : null]}><Text style={styles.checkboxText}>{shared ? "✓" : ""}</Text></View>
           <View style={styles.shareCopy}><Text style={styles.actionTitle}>{t.sharedLabel}</Text><Text style={styles.caption}>{t.sharedBody}</Text></View>
@@ -115,7 +120,8 @@ export function ParentingTasksScreen() {
           <View style={styles.shareCopy}><Text style={styles.actionTitle}>Remind me at 9 AM</Text><Text style={styles.caption}>This is a private reminder on this device. It does not alert the other parent.</Text></View>
         </Pressable> : null}
         {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
-        <LabButton disabled={busy} label={t.add} onPress={() => void add()} />
+        {saved ? <Text accessibilityLiveRegion="polite" style={styles.saved}>{saved}</Text> : null}
+        <LabButton disabled={busy} label={busy ? t.saving : t.add} onPress={() => void add()} />
       </View>
 
       <TaskGroup emptyLabel={t.noneOpen} heading={t.open} tasks={openTasks} t={t} busy={busy} actorIdentityId={actorIdentityId} onDelete={remove} onToggle={updateCompletion} />
@@ -166,6 +172,7 @@ const styles = StyleSheet.create({
   checkboxText: { color: colors.onBrand, fontSize: 16, fontWeight: "800" },
   shareCopy: { flex: 1, gap: 2 },
   error: { ...typography.body, color: colors.dangerText },
+  saved: { ...typography.body, color: colors.successText, fontWeight: "800" },
   group: { gap: spacing.sm },
   heading: { ...typography.heading, color: colors.text },
   taskCard: { backgroundColor: "#DDF6F0", borderColor: "#76CCBE", borderRadius: 22, borderWidth: 1, gap: spacing.md, padding: spacing.lg },

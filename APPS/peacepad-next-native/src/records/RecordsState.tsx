@@ -104,7 +104,7 @@ function assertPrivateAttachment(value: PrivateAttachment, runtime: Coordination
     || value.ownerIdentityId !== runtime.actorIdentityId
     || value.target.kind !== "private-binder"
     || value.target.binderId !== binderId
-    || value.status !== "available"
+    || !["available", "archived"].includes(value.status)
     || !value.id
     || !Number.isSafeInteger(value.byteLength)
     || value.byteLength < 1
@@ -211,10 +211,12 @@ export function RecordsStateProvider({ api, children, runtime }: RecordsProvider
     if (!api || !runtime || !binder || binder.status !== "active" || typeof api.listPrivateAttachments !== "function") return;
     void api.listPrivateAttachments(binder.id).then((listed) => {
       if (attachmentGeneration.current !== currentGeneration) return;
-      setAttachments(listed.map((candidate) => assertPrivateAttachment(candidate, runtime, binder.id)));
+      setAttachments(listed
+        .map((candidate) => assertPrivateAttachment(candidate, runtime, binder.id))
+        .filter((candidate) => candidate.status === "available"));
     }).catch((caught) => {
       if (attachmentGeneration.current !== currentGeneration) return;
-      setError(caught instanceof Error ? caught.message : "PeacePad could not load private attachments.");
+      setError("We couldn't finish loading your Case Binder files.");
     });
     return () => { attachmentGeneration.current += 1; };
   }, [api, binder?.id, binder?.status, runtime?.actorIdentityId, runtime?.familyCircleId, runtime?.region, runtime?.sessionId]);
@@ -351,6 +353,7 @@ export function RecordsStateProvider({ api, children, runtime }: RecordsProvider
       if (input.bytes.byteLength !== input.byteLength) throw new Error("PeacePad could not verify the selected file size.");
       setBusy(true);
       setError(undefined);
+      setAttachmentIntent(undefined);
       try {
         const request: CreateAttachmentUploadIntentInput = {
           familyCircleId: runtime.familyCircleId,
@@ -363,17 +366,16 @@ export function RecordsStateProvider({ api, children, runtime }: RecordsProvider
           request,
           writeContext(runtime, "attachment-intent-prepare")
         ), runtime, binder.id);
+        setAttachmentIntent(prepared);
         await api.uploadPrivateAttachment(prepared, input.bytes);
         const completed = assertPrivateAttachment(await api.completePrivateAttachment(
           prepared.id,
           writeContext(runtime, "attachment-upload-complete", prepared.version)
         ), runtime, binder.id);
-        setAttachmentIntent(prepared);
         setAttachments((current) => [completed, ...current.filter((candidate) => candidate.id !== completed.id)]);
         return completed;
       } catch (caught) {
-        const message = caught instanceof Error ? caught.message : "PeacePad could not upload the private attachment.";
-        setError(message);
+        setError("We couldn't finish adding this file.");
         throw caught;
       } finally {
         setBusy(false);
@@ -383,6 +385,7 @@ export function RecordsStateProvider({ api, children, runtime }: RecordsProvider
       if (!api || !runtime) throw new Error("Private attachment download is available after sign-in.");
       const result = await api.getPrivateAttachmentDownload(attachmentId);
       const verified = assertPrivateAttachment(result.attachment, runtime, binder?.id ?? "");
+      if (verified.status !== "available") throw new Error("This file is no longer available.");
       if (!result.downloadUrl.startsWith("https://") || Number.isNaN(Date.parse(result.expiresAt)) || Date.parse(result.expiresAt) <= Date.now()) {
         throw new Error("PeacePad could not verify the private download link.");
       }

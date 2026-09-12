@@ -45,4 +45,23 @@ describe("fresh family calendar bootstrap", () => {
       })
     );
   });
+
+  it("creates shared defaults for a verified two-parent space", async () => {
+    const createCalendarLayer = jest.fn(async (input) => ({
+      ...input,
+      id: `shared-${input.kind}`,
+      version: 1,
+      schemaVersion: "2.0"
+    } as CalendarLayer));
+
+    await provisionDefaultCalendarLayers(
+      { createCalendarLayer } as Pick<PeacePadCoordinationApi, "createCalendarLayer">,
+      { ...runtime, conversationId: "10000000-0000-4000-8000-000000000005" }
+    );
+
+    expect(createCalendarLayer).toHaveBeenCalledWith(
+      expect.objectContaining({ visibility: { scope: "family" } }),
+      expect.anything()
+    );
+  });
 });

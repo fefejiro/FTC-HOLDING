@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { useOptionalLocalization } from "../localization/LocalizationProvider";
 import type { MessagePreviewResponse } from "../api/contracts";
 import {
@@ -57,6 +57,7 @@ const DEFAULT_CALENDAR_LAYER_INPUTS = [
   { name: "Events & Activities", kind: "events-activities", icon: "activity", colorToken: "violet" },
   { name: "Calls", kind: "calls", icon: "phone", colorToken: "blue" }
 ] as const;
+const HYDRATION_TIMEOUT_MS = 15_000;
 
 export async function provisionDefaultCalendarLayers(
   api: Pick<PeacePadCoordinationApi, "createCalendarLayer">,
@@ -66,7 +67,7 @@ export async function provisionDefaultCalendarLayers(
     familyCircleId: runtime.familyCircleId,
     ownerIdentityId: runtime.actorIdentityId,
     ...layer,
-    visibility: { scope: "private" as const }
+    visibility: hasConnectedConversation(runtime) ? { scope: "family" as const } : { scope: "private" as const }
   }, writeContext(runtime))));
 }
 
@@ -353,6 +354,8 @@ export function CoordinationStateProvider({
   const [invitationBusy, setInvitationBusy] = useState(false);
   const [calendarView, setCalendarView] = useState<CalendarView>(initialCalendarView);
   const [coordinationHydrated, setCoordinationHydrated] = useState(demoMode);
+  const [hydrationError, setHydrationError] = useState<string>();
+  const [hydrationAttempt, setHydrationAttempt] = useState(0);
   const [layers, setLayers] = useState<readonly CalendarLayer[]>(demoMode ? defaultCalendarLayers : []);
   const [visibleLayerIds, setVisibleLayerIds] = useState<readonly string[]>(demoMode ? defaultCalendarLayers.map((layer) => layer.id) : []);
   const [events, setEvents] = useState<readonly ScheduleEvent[]>([]);
@@ -411,7 +414,9 @@ export function CoordinationStateProvider({
   useEffect(() => {
     const generation = ++hydrationGeneration.current;
     let cancelled = false;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
     setCoordinationHydrated(false);
+    setHydrationError(undefined);
     setLayers(demoMode ? defaultCalendarLayers : []);
     setVisibleLayerIds(demoMode ? defaultCalendarLayers.map((layer) => layer.id) : []);
     setEvents([]);
@@ -475,6 +480,13 @@ export function CoordinationStateProvider({
     const parentingScheduleExceptionsRequest = typeof (resolvedApi as Partial<PeacePadCoordinationApi>).listParentingScheduleExceptions === "function"
       ? resolvedApi.listParentingScheduleExceptions(activeRuntime.familyCircleId)
       : Promise.resolve([] as readonly ParentingScheduleException[]);
+    timeout = setTimeout(() => {
+      if (cancelled || hydrationGeneration.current !== generation) return;
+      // Do not expose service details or account data. The customer receives a
+      // recoverable state instead of an endless root-level spinner.
+      setHydrationError("PeacePad couldn't finish loading your space. Your information is still safe on this device.");
+      setMessageCheckHydrated(false);
+    }, HYDRATION_TIMEOUT_MS);
     void retry.then(() => Promise.all([
       resolvedApi.listCalendarLayers(activeRuntime.familyCircleId),
       resolvedApi.listScheduleEvents(activeRuntime.familyCircleId),
@@ -502,18 +514,25 @@ export function CoordinationStateProvider({
         setMessageCheckPreference(preference);
         setMessageCheckEnabledState(preference?.enabled ?? false);
         setMessageCheckHydrated(true);
+        if (timeout) clearTimeout(timeout);
         setCoordinationHydrated(true);
       })
       .catch((error) => {
         if (cancelled || hydrationGeneration.current !== generation) return;
+        if (timeout) clearTimeout(timeout);
+        // Keep lower-level errors out of the root screen; they can contain
+        // transport detail that is neither useful nor safe to display.
+        console.warn("PeacePad coordination hydration failed");
         setMessageError(error instanceof Error ? error.message : "PeacePad coordination is unavailable.");
+        setHydrationError("PeacePad couldn't finish loading your space. Try again when you're ready.");
         setMessageCheckHydrated(false);
         setCoordinationHydrated(false);
       });
     return () => {
       cancelled = true;
+      if (timeout) clearTimeout(timeout);
     };
-  }, [activeRuntime?.conversationId, activeRuntime?.familyCircleId, activeRuntime?.actorIdentityId, activeRuntime?.region, activeRuntime?.sessionId, connectivity, demoMode, outbox, resolvedApi]);
+  }, [activeRuntime?.conversationId, activeRuntime?.familyCircleId, activeRuntime?.actorIdentityId, activeRuntime?.region, activeRuntime?.sessionId, connectivity, demoMode, hydrationAttempt, outbox, resolvedApi]);
 
   useEffect(() => {
     if (demoMode || !hasConnectedConversation(activeRuntime) || !coordinationHydrated || !networkAvailable) return;
@@ -1174,6 +1193,15 @@ export function CoordinationStateProvider({
   ]);
 
   if (!demoMode && !coordinationHydrated) {
+    if (hydrationError) {
+      return <View style={hydrationStyles.page}>
+        <Text accessibilityRole="header" style={hydrationStyles.title}>We couldn't open your PeacePad space</Text>
+        <Text accessibilityRole="alert" style={hydrationStyles.body}>{hydrationError}</Text>
+        <Pressable accessibilityLabel="Try loading PeacePad again" accessibilityRole="button" onPress={() => setHydrationAttempt((current) => current + 1)} style={hydrationStyles.retry}>
+          <Text style={hydrationStyles.retryText}>Try again</Text>
+        </Pressable>
+      </View>;
+    }
     return <View style={hydrationStyles.page}><ActivityIndicator color={colors.brand} /><Text accessibilityRole="header" style={hydrationStyles.title}>{t("runtime.loadingFamily")}</Text><Text style={hydrationStyles.body}>{messageError ?? t("runtime.restoringFamily")}</Text></View>;
   }
   return <CoordinationStateContext.Provider value={value}>{children}</CoordinationStateContext.Provider>;
@@ -1188,5 +1216,7 @@ export function useCoordinationState(): CoordinationStateValue {
 const hydrationStyles = StyleSheet.create({
   page: { backgroundColor: colors.background, flex: 1, justifyContent: "center", padding: spacing.xl },
   title: { color: colors.text, fontSize: 24, fontWeight: "800", marginTop: spacing.md },
-  body: { color: colors.muted, fontSize: 16, lineHeight: 24, marginTop: spacing.sm }
+  body: { color: colors.muted, fontSize: 16, lineHeight: 24, marginTop: spacing.sm },
+  retry: { alignItems: "center", alignSelf: "flex-start", backgroundColor: colors.coral, borderRadius: 18, marginTop: spacing.lg, minHeight: 48, justifyContent: "center", paddingHorizontal: spacing.lg },
+  retryText: { color: colors.onBrand, fontSize: 16, fontWeight: "800" }
 });

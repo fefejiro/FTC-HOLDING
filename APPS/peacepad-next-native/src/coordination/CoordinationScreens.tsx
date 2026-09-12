@@ -194,12 +194,12 @@ function CalendarViewPanel({
   );
 }
 
-export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
+export function CoordinationHomeScreen({ onOpenEvent, setScreen }: { onOpenEvent: () => void; setScreen: Navigate }) {
   const { locale } = useOptionalLocalization();
   const h = (key: Parameters<typeof homeText>[1]) => homeText(locale, key);
   const task = taskCopy(locale);
-  const { events, invitationGrant } = useCoordinationState();
-  const hasCoParent = Boolean(invitationGrant);
+  const { events, hasVerifiedCoParent } = useCoordinationState();
+  const hasCoParent = hasVerifiedCoParent;
   const accountActions = useOptionalStagingAccountActions();
   const firstName = accountActions?.displayName?.trim().split(/\s+/)[0];
   const nextEvent = [...events].sort((left, right) => left.startsAt.localeCompare(right.startsAt))[0];
@@ -216,11 +216,10 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
         <View style={styles.heroSun} />
         <View style={styles.heroBubble} />
         <View style={styles.brandHeroCopy}>
-          <View accessibilityLabel="PeacePad Native V2" style={styles.brandLockup}>
+          <View accessibilityLabel="PeacePad" style={styles.brandLockup}>
             <Image accessibilityLabel={h("logo")} source={require("../../assets/icon-production.png")} style={styles.logo} />
             <View>
               <Text style={styles.brandName}>PeacePad</Text>
-              <Text style={styles.brandVersion}>Native V2</Text>
             </View>
           </View>
           <Text style={styles.heroEyebrow}>YOUR FAMILY, YOUR PACE</Text>
@@ -255,7 +254,7 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
 
       <View style={styles.todayLine}>
         <Text accessibilityRole="header" style={styles.heading}>{h("today")}</Text>
-        <Text style={styles.connectionStatus}>{h(invitationGrant ? "connected" : "notConnected")}</Text>
+        <Text style={styles.connectionStatus}>{h(hasCoParent ? "connected" : "notConnected")}</Text>
       </View>
 
       {nextEvent ? (
@@ -269,7 +268,7 @@ export function CoordinationHomeScreen({ setScreen }: { setScreen: Navigate }) {
           </View>
         </View>
       ) : (
-        <Pressable accessibilityLabel={h("event")} accessibilityRole="button" onPress={() => setScreen("calendar")} style={({ pressed }) => [styles.planCard, styles.planCardEmpty, pressed ? styles.pressed : null]}>
+        <Pressable accessibilityLabel={h("event")} accessibilityRole="button" onPress={onOpenEvent} style={({ pressed }) => [styles.planCard, styles.planCardEmpty, pressed ? styles.pressed : null]}>
           <View style={[styles.planAccent, styles.planAccentSun]} />
           <View style={styles.planCopy}>
             <Text style={styles.planEyebrow}>{h("upcoming")}</Text>
@@ -538,7 +537,7 @@ export function InvitationScreen({ initialCode }: { initialCode?: string }) {
   );
 }
 
-export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: string }) {
+export function CalendarScreen({ initialEventTitle, openEvent = false }: { initialEventTitle?: string; openEvent?: boolean }) {
   const largeText = usesLargeTextLayout(useWindowDimensions().fontScale);
   const { locale } = useOptionalLocalization();
   const w = (key: Parameters<typeof workflowText>[1], values?: Readonly<Record<string, string>>) => workflowText(locale, key, values);
@@ -599,11 +598,15 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
     : addUtcDays(current, amount * (calendarView === "week" ? 7 : 1)));
 
   useEffect(() => {
-    if (initialEventTitle?.trim()) {
-      setEventTitle(initialEventTitle);
+    if (initialEventTitle?.trim() || openEvent) {
+      if (initialEventTitle?.trim()) setEventTitle(initialEventTitle);
+      const sharedEventsLayer = connected
+        ? layers.find((layer) => layer.kind === "events-activities" && layer.visibility.scope === "family")
+        : undefined;
+      if (sharedEventsLayer) setSelectedLayerId(sharedEventsLayer.id);
       setShowEventSheet(true);
     }
-  }, [initialEventTitle]);
+  }, [connected, initialEventTitle, layers, openEvent]);
 
   return (
     <View style={styles.stack}>
@@ -791,7 +794,7 @@ export function CalendarScreen({ initialEventTitle }: { initialEventTitle?: stri
               onPress={() => setSelectedLayerId(layer.id)}
               style={[styles.chip, selectedLayerId === layer.id ? styles.chipActive : null]}
             >
-              <Text style={[styles.chipText, selectedLayerId === layer.id ? styles.chipTextActive : null]}>{layer.name}</Text>
+              <Text style={[styles.chipText, selectedLayerId === layer.id ? styles.chipTextActive : null]}>{layer.name} · {layer.visibility.scope === "family" ? "Shared" : "Private"}</Text>
             </Pressable>
           ))}
         </View>
@@ -1061,6 +1064,13 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
   const [binderName, setBinderName] = useState("");
   const [childLabel, setChildLabel] = useState("");
   const [error, setError] = useState<string>();
+  const [pendingAttachment, setPendingAttachment] = useState<Readonly<{
+    originalFileName: string;
+    mediaType: AttachmentMediaType;
+    byteLength: number;
+    bytes: ArrayBuffer;
+  }>>();
+  const [confirmArchive, setConfirmArchive] = useState(false);
 
   const saveBinder = async () => {
     if (binderName.trim().length < 3) { setError(w("binderNameError")); return; }
@@ -1085,15 +1095,32 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
       }
       const file = new File(selected.uri);
       const bytes = await file.arrayBuffer();
-      await uploadAttachment({ originalFileName: selected.name, mediaType, byteLength: bytes.byteLength, bytes });
-    } catch (caught) { setError(caught instanceof Error ? caught.message : w("attachmentDetailsError")); }
+      const pending = { originalFileName: selected.name, mediaType, byteLength: bytes.byteLength, bytes } as const;
+      setPendingAttachment(pending);
+      await uploadAttachment(pending);
+      setPendingAttachment(undefined);
+    } catch (caught) {
+      setError(caught instanceof Error && caught.message === w("attachmentTypeError")
+        ? caught.message
+        : w("attachmentUploadError"));
+    }
+  };
+  const retryAttachment = async () => {
+    if (!pendingAttachment) return;
+    setError(undefined);
+    try {
+      await uploadAttachment(pendingAttachment);
+      setPendingAttachment(undefined);
+    } catch {
+      setError(w("attachmentUploadError"));
+    }
   };
   const openAttachment = async (attachmentId: string) => {
     setError(undefined);
     try {
       const download = await getAttachmentDownload(attachmentId);
       await Linking.openURL(download.downloadUrl);
-    } catch (caught) { setError(caught instanceof Error ? caught.message : w("attachmentOpenError")); }
+    } catch { setError(w("attachmentOpenError")); }
   };
   const linkSource = async (kind: "message-event" | "schedule-event", sourceId: string) => {
     setError(undefined);
@@ -1147,8 +1174,15 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
         <Text style={styles.fieldLabel}>{w("attachment")}</Text>
         <Text style={styles.caption}>{w("attachmentPrivacy")}</Text>
         <LabButton disabled={busy} label={busy ? w("uploading") : w("chooseAttachment")} onPress={() => void chooseAndUpload()} />
-        {attachmentIntent ? <View accessibilityLabel={w("prepared")} style={styles.successCard}>
-          <Text style={styles.heading}>{w("uploadComplete")}</Text>
+        {pendingAttachment ? <View accessibilityLabel={w("selectedFile", { name: pendingAttachment.originalFileName })} style={styles.successCard}>
+          <Text style={styles.heading}>{w("selectedFile", { name: pendingAttachment.originalFileName })}</Text>
+          <View style={styles.rowWrap}>
+            <LabButton disabled={busy} label={busy ? w("uploading") : w("tryAgain")} onPress={() => void retryAttachment()} />
+            <LabButton disabled={busy} label={w("chooseAnother")} onPress={() => void chooseAndUpload()} variant="secondary" />
+          </View>
+        </View> : null}
+        {attachmentIntent && !pendingAttachment ? <View accessibilityLabel={w("prepared")} style={styles.successCard}>
+          <Text style={styles.heading}>{attachments.some((candidate) => candidate.id === attachmentIntent.id) ? w("uploadComplete") : w("prepared")}</Text>
           <Text style={styles.body}>{attachmentIntent.originalFileName}</Text>
         </View> : null}
         {attachments.map((attachment) => <View key={attachment.id} style={styles.successCard}>
@@ -1156,7 +1190,6 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
           <Text style={styles.caption}>{w("attachmentSize", { size: String(attachment.byteLength) })}</Text>
           <LabButton disabled={busy} label={w("openAttachment")} onPress={() => void openAttachment(attachment.id)} variant="secondary" />
         </View>)}
-        <LabButton disabled={busy} label={w("archive")} onPress={() => void archiveBinder().catch(() => undefined)} variant="secondary" />
       </View> : null}
       {error || recordsError ? <Text accessibilityRole="alert" style={styles.error}>{error ?? recordsError}</Text> : null}
       {recordsError && !loading ? <LabButton label={w("tryAgain")} onPress={() => void reload()} variant="secondary" /> : null}
@@ -1164,6 +1197,14 @@ export function RecordsHomeScreen({ setScreen }: { setScreen: Navigate }) {
         <Text style={styles.actionTitle}>{w("returnHome")}</Text>
         <Text style={styles.caption}>{w("anotherTask")}</Text>
       </Pressable>
+      {binder ? <View style={styles.card}>
+        <Text style={styles.heading}>{w("archive")}</Text>
+        <Text style={styles.caption}>{w("archiveBody")}</Text>
+        {confirmArchive ? <View style={styles.rowWrap}>
+          <LabButton disabled={busy} label={w("confirmArchive")} onPress={() => void archiveBinder().then(() => setConfirmArchive(false)).catch(() => undefined)} />
+          <LabButton disabled={busy} label={w("cancel")} onPress={() => setConfirmArchive(false)} variant="secondary" />
+        </View> : <LabButton disabled={busy} label={w("archive")} onPress={() => setConfirmArchive(true)} variant="secondary" />}
+      </View> : null}
     </View>
   );
 }

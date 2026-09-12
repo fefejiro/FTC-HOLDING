@@ -1,7 +1,7 @@
 import React, { Component, useCallback, useEffect, useMemo, useRef, type ErrorInfo, type ReactNode } from "react";
 import { NavigationContainer, useNavigation, type LinkingOptions } from "@react-navigation/native";
 import { createNativeStackNavigator, type NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StatusBar, StyleSheet, Text, useColorScheme, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { TaskNavigation, type PrimaryTaskScreen } from "./components/TaskNavigation";
 import {
@@ -34,7 +34,8 @@ import { CoachScreen } from "./coach/CoachScreen";
 import { SupportFinderScreen } from "./support/SupportFinderScreen";
 
 export type AppScreen = "foundation" | CoordinationScreen;
-type RootStackParamList = Record<AppScreen, { activityTitle?: string; code?: string; mediaType?: CallMediaType } | undefined>;
+type ScreenParams = { activityTitle?: string; code?: string; mediaType?: CallMediaType; openEvent?: boolean };
+type RootStackParamList = Record<AppScreen, ScreenParams | undefined>;
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export const peacePadLinking: LinkingOptions<RootStackParamList> = {
@@ -50,14 +51,15 @@ export function resolveStartScreen(value?: string): AppScreen {
 }
 
 export function PeacePadCoordinationApp({ startScreen, wrapLocalization = true, wrapRecordsProvider = true, wrapAudioCallProvider = true, wrapParentCoreProvider = true }: { startScreen?: string; wrapLocalization?: boolean; wrapRecordsProvider?: boolean; wrapAudioCallProvider?: boolean; wrapParentCoreProvider?: boolean }) {
+  const colorScheme = useColorScheme();
   const content = (
     <NavigationContainer linking={startScreen ? undefined : peacePadLinking}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar backgroundColor={colors.background as string} barStyle={colorScheme === "dark" ? "light-content" : "dark-content"} />
       <NotificationNavigationBridge />
       <Stack.Navigator initialRouteName={resolveStartScreen(startScreen ?? process.env?.EXPO_PUBLIC_PEACEPAD_LAB_START_SCREEN)} screenOptions={{ headerShown: false }}>
         {(["foundation", "home", "coach", "messages", "calendar", "activities", "tasks", "invite", "records", "calls", "family", "support", "conch", "more"] as const).map((name) => (
           <Stack.Screen key={name} name={name}>
-            {({ route }) => <CoordinationRoute activeScreen={name} activityTitle={route.params?.activityTitle} invitationCode={route.params?.code} mediaType={route.params?.mediaType} />}
+            {({ route }) => <CoordinationRoute activeScreen={name} activityTitle={route.params?.activityTitle} invitationCode={route.params?.code} mediaType={route.params?.mediaType} openEvent={route.params?.openEvent} />}
           </Stack.Screen>
         ))}
       </Stack.Navigator>
@@ -148,7 +150,7 @@ function SelectedPeacePadStagingApp({ staging }: { staging: PeacePadSupabaseConf
   );
 }
 
-function CoordinationRoute({ activeScreen, activityTitle, invitationCode, mediaType }: { activeScreen: AppScreen; activityTitle?: string; invitationCode?: string; mediaType?: CallMediaType }) {
+function CoordinationRoute({ activeScreen, activityTitle, invitationCode, mediaType, openEvent }: { activeScreen: AppScreen; activityTitle?: string; invitationCode?: string; mediaType?: CallMediaType; openEvent?: boolean }) {
   const { connected, hasVerifiedCoParent } = useCoordinationState();
   // A verified coordination runtime already represents an accepted participant.
   // invitationGrant is only the transient result of accepting an invitation in
@@ -178,10 +180,10 @@ function CoordinationRoute({ activeScreen, activityTitle, invitationCode, mediaT
       <View style={styles.shell}>
         {connectedMessages ? <View style={styles.chatRoute}><MessagesScreen onOpenCalls={(requestedMediaType) => navigation.navigate("calls", { mediaType: requestedMediaType })} /></View> : <ScrollView ref={scrollRef} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" onContentSizeChange={settleScrollReset}>
           {activeScreen === "foundation" ? <FoundationScreen onOpenLab={() => setScreen("home")} onPhaseChange={resetScroll} /> : null}
-          {activeScreen === "home" ? <CoordinationHomeScreen setScreen={setScreen} /> : null}
+          {activeScreen === "home" ? <CoordinationHomeScreen onOpenEvent={() => navigation.navigate("calendar", { openEvent: true })} setScreen={setScreen} /> : null}
           {activeScreen === "coach" ? <CoachScreen onOpenMessages={connected ? () => setScreen("messages") : undefined} /> : null}
           {activeScreen === "messages" ? <ConnectionRequiredScreen setScreen={setScreen} /> : null}
-          {activeScreen === "calendar" ? <CalendarScreen initialEventTitle={activityTitle} /> : null}
+          {activeScreen === "calendar" ? <CalendarScreen initialEventTitle={activityTitle} openEvent={openEvent} /> : null}
           {activeScreen === "activities" ? <ActivitySuggestionsScreen onPlanActivity={(title) => navigation.navigate("calendar", { activityTitle: title })} /> : null}
           {activeScreen === "tasks" ? <ParentingTasksScreen /> : null}
           {activeScreen === "invite" ? <InvitationScreen initialCode={invitationCode} /> : null}

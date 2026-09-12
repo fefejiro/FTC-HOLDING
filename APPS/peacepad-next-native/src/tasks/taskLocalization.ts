@@ -10,6 +10,8 @@ type TaskCopy = Readonly<{
   sharedLabel: string;
   sharedBody: string;
   add: string;
+  saving: string;
+  saved: string;
   open: string;
   completed: string;
   noneOpen: string;
@@ -35,6 +37,8 @@ const copy: Record<SupportedLocale, TaskCopy> = {
     sharedLabel: "Share with the other parent",
     sharedBody: "Only share this task when you choose to.",
     add: "Add task",
+    saving: "Saving task...",
+    saved: "Task saved.",
     open: "Open",
     completed: "Completed",
     noneOpen: "No open tasks yet.",
@@ -58,6 +62,8 @@ const copy: Record<SupportedLocale, TaskCopy> = {
     sharedLabel: "Partager avec l'autre parent",
     sharedBody: "Partagez cette tâche seulement lorsque vous le choisissez.",
     add: "Ajouter la tâche",
+    saving: "Enregistrement de la tâche...",
+    saved: "Tâche enregistrée.",
     open: "À faire",
     completed: "Terminées",
     noneOpen: "Aucune tâche à faire.",
@@ -81,6 +87,8 @@ const copy: Record<SupportedLocale, TaskCopy> = {
     sharedLabel: "Compartir con el otro progenitor",
     sharedBody: "Comparte esta tarea solo cuando lo decidas.",
     add: "Añadir tarea",
+    saving: "Guardando tarea...",
+    saved: "Tarea guardada.",
     open: "Pendientes",
     completed: "Completadas",
     noneOpen: "Aún no hay tareas pendientes.",

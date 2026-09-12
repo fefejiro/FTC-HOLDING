@@ -294,11 +294,12 @@ describe("PeacePadStagingRuntime gates", () => {
       </PeacePadStagingRuntime>
     );
     await waitFor(() => expect(screen.getByText("Choose a parenting space")).toBeTruthy());
-    expect(listConversations).not.toHaveBeenCalled();
-    fireEvent.press(screen.getByRole("button", { name: "Second Fictional Family - parent" }));
+    await waitFor(() => expect(listConversations).toHaveBeenCalledWith(familyB));
+    expect(screen.getByRole("button", { name: "Fictional Family — Private space" })).toBeTruthy();
+    fireEvent.press(screen.getByRole("button", { name: "Second Fictional Family — Shared with another parent" }));
     await waitFor(() => expect(listConversations).toHaveBeenCalledWith(familyB));
     expect(await screen.findByTestId("selected-family-ready")).toBeTruthy();
-    expect(listConversations).not.toHaveBeenCalledWith(FAMILY);
+    expect(listConversations).toHaveBeenCalledWith(FAMILY);
   });
 
   it("prefills a staging deep-link code but still requires explicit review", async () => {
@@ -890,11 +891,11 @@ describe("PeacePadStagingRuntime gates", () => {
   it("fails closed when the token or verified session is unavailable", async () => {
     (useSupabaseSession as jest.Mock).mockReturnValue(authValue({ getAccessToken: jest.fn(async () => undefined) }));
     const view = render(<PeacePadStagingRuntime environment={environment} fetcher={sessionResponse()} supabase={supabase}>ready</PeacePadStagingRuntime>);
-    await waitFor(() => expect(screen.getByText("The staging session expired.")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("PeacePad couldn't finish opening your space. Try again when you're ready.")).toBeTruthy());
 
     (useSupabaseSession as jest.Mock).mockReturnValue(authValue());
     view.rerender(<PeacePadStagingRuntime environment={environment} fetcher={sessionResponse({}, false)} supabase={supabase}>ready</PeacePadStagingRuntime>);
-    await waitFor(() => expect(screen.getByText("PeacePad could not restore this regional staging session.")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("PeacePad couldn't finish opening your space. Try again when you're ready.")).toBeTruthy());
   });
 
   it("bootstraps an unbound production identity and retries session hydration", async () => {

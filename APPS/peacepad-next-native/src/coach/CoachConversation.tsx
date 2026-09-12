@@ -107,7 +107,7 @@ export function CoachConversation({ initiallyOpen = false, onTranscribe, onConve
 
   return <View accessibilityLabel="PeaceBot Coach" style={[styles.card, open ? styles.voiceStage : null]}>
     <View style={styles.heroRow}>
-      <Image accessibilityLabel="PeacePad conch" source={require("../foundation/peacepad-conch.png")} style={styles.coachMark} />
+      <View style={styles.coachMarkClip}><Image accessibilityLabel="PeacePad Conch logo" resizeMode="cover" source={require("../foundation/peacepad-conch.png")} style={styles.coachMark} /></View>
       <View style={styles.heroCopy}>
         <Text accessibilityRole="header" style={styles.heading}>{open ? "Conch Coach" : "Talk it through with PeaceBot"}</Text>
         <Text style={styles.body}>{open ? "A private, voice-first conversation. Listen, speak, or type. Nothing is shared until you choose it." : "Speak or type privately. Nothing is shared until you choose it."}</Text>
@@ -116,7 +116,7 @@ export function CoachConversation({ initiallyOpen = false, onTranscribe, onConve
     {!open ? <LabButton label="Open Conch Coach" onPress={() => setOpen(true)} variant="secondary" /> : <View style={styles.stack}>
       <View style={styles.voiceFocus}>
         <View style={[styles.conchOrb, recorderState.isRecording ? styles.conchOrbListening : turnBusy ? styles.conchOrbThinking : null]}>
-          <Image accessibilityLabel="Conch Coach voice" source={require("../foundation/peacepad-conch.png")} style={styles.conchImage} />
+          <View style={styles.conchImageClip}><Image accessibilityLabel="Conch Coach voice" resizeMode="cover" source={require("../foundation/peacepad-conch.png")} style={styles.conchImage} /></View>
         </View>
         <Text accessibilityLiveRegion="polite" style={styles.voiceStatus}>{recorderState.isRecording ? `Listening... ${Math.ceil(recorderState.durationMillis / 1000)}s` : turnBusy ? "Thinking with you..." : "Tap the conch and speak"}</Text>
         <Text style={styles.caption}>Audio is used only for this private Coach turn. PeacePad does not keep a call recording or hidden transcript.</Text>
@@ -163,13 +163,15 @@ const styles = StyleSheet.create({
   voiceStage: { backgroundColor: "#F7F2FF", borderColor: "#D4B7F3", borderRadius: 32, paddingVertical: spacing.xl },
   heroRow: { alignItems: "flex-start", flexDirection: "row", gap: spacing.md },
   heroCopy: { flex: 1, gap: spacing.xs },
-  coachMark: { borderRadius: 18, height: 48, width: 48 },
+  coachMarkClip: { borderRadius: 24, height: 48, overflow: "hidden", width: 48 },
+  coachMark: { height: 48, transform: [{ scale: 1.18 }], width: 48 },
   stack: { gap: spacing.md },
   voiceFocus: { alignItems: "center", gap: spacing.md, paddingVertical: spacing.md },
   conchOrb: { alignItems: "center", backgroundColor: "#6F2CDA", borderColor: "#B98BF0", borderRadius: 100, borderWidth: 8, height: 184, justifyContent: "center", shadowColor: colors.brand, shadowOffset: { height: 8, width: 0 }, shadowOpacity: 0.28, shadowRadius: 18, width: 184 },
   conchOrbListening: { backgroundColor: colors.coral, borderColor: "#FFD0C9" },
   conchOrbThinking: { backgroundColor: colors.aqua, borderColor: "#C2F4EC" },
-  conchImage: { height: 112, width: 112 },
+  conchImageClip: { borderRadius: 56, height: 112, overflow: "hidden", width: 112 },
+  conchImage: { height: 112, transform: [{ scale: 1.18 }], width: 112 },
   voiceStatus: { ...typography.subheading, color: colors.text, textAlign: "center" },
   voiceButton: { alignItems: "center", backgroundColor: colors.text, borderRadius: 999, justifyContent: "center", minHeight: 64, minWidth: 140, paddingHorizontal: spacing.xl },
   voiceButtonActive: { backgroundColor: colors.coral },

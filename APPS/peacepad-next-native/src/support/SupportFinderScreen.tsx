@@ -10,6 +10,20 @@ import { colors, spacing, typography } from "../theme";
 type Need = Readonly<{ kind?: SupportResourceKind; label: string; icon: PeacePadIconName }>;
 type Coordinates = Readonly<{ latitude: number; longitude: number }>;
 
+const LOCATION_TIMEOUT_MS = 8_000;
+
+async function readUsableLocation() {
+  const fresh = Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+  try {
+    return await Promise.race([
+      fresh,
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("location-timeout")), LOCATION_TIMEOUT_MS)),
+    ]);
+  } catch {
+    return Location.getLastKnownPositionAsync({ maxAge: 15 * 60 * 1000, requiredAccuracy: 5_000 });
+  }
+}
+
 const needs: readonly Need[] = [
   { kind: "counselling", label: "Someone to talk to", icon: "chatbubble-ellipses-outline" },
   { kind: "crisis", label: "Abuse & safety", icon: "shield-checkmark-outline" },
@@ -44,7 +58,15 @@ export function SupportFinderScreen() {
         setLocationError("Location was not allowed. You can enter a city or postal code instead.");
         return;
       }
-      const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      if (!(await Location.hasServicesEnabledAsync())) {
+        setLocationError("Location Services are off. Turn them on in device settings, then try again, or enter a city or postal code.");
+        return;
+      }
+      const current = await readUsableLocation();
+      if (!current) {
+        setLocationError("PeacePad could not get a location fix. Move near a window and try again, or enter a city or postal code.");
+        return;
+      }
       const nextCoordinates = { latitude: current.coords.latitude, longitude: current.coords.longitude };
       setCoordinates(nextCoordinates);
       const addresses = await Location.reverseGeocodeAsync(nextCoordinates).catch(() => []);
@@ -52,7 +74,7 @@ export function SupportFinderScreen() {
       const label = [address?.city ?? address?.subregion, address?.region ?? address?.postalCode].filter(Boolean).join(", ");
       setPlace(label || "Near my current location");
     } catch {
-      setLocationError("PeacePad could not read your location. Enter a city or postal code instead.");
+      setLocationError("PeacePad could not read your location. Check device Location Services and try again, or enter a city or postal code.");
     } finally {
       setLocating(false);
     }

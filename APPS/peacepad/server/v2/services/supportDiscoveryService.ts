@@ -12,13 +12,14 @@ interface CandidateResource {
   phone?: string;
   description?: string;
   isCrisis?: boolean;
+  distanceKm?: number;
   source: "static" | "database" | "ontario211";
 }
 
 export interface SupportDiscoveryDependencies {
   fetchDatabaseResources?: (category?: string) => Promise<CandidateResource[]>;
   fetchOntarioResources?: (
-    params: SupportDiscoveryRequest["location"] & { query?: string; category?: string; limit?: number },
+    params: SupportDiscoveryRequest["location"] & { query?: string; category?: string; limit?: number; radiusKm?: number },
   ) => Promise<CandidateResource[]>;
 }
 
@@ -137,7 +138,7 @@ async function defaultFetchDatabaseResources(category?: string): Promise<Candida
 }
 
 async function defaultFetchOntarioResources(
-  params: SupportDiscoveryRequest["location"] & { query?: string; category?: string; limit?: number },
+  params: SupportDiscoveryRequest["location"] & { query?: string; category?: string; limit?: number; radiusKm?: number },
 ): Promise<CandidateResource[]> {
   const { ontario211Service } = await import("../../services/ontario211");
   if (!ontario211Service.isConfigured()) {
@@ -151,7 +152,7 @@ async function defaultFetchOntarioResources(
   const apiResults = await ontario211Service.searchResources({
     latitude: params.latitude,
     longitude: params.longitude,
-    radius: 80,
+    radius: params.radiusKm ?? 80,
     keywords: params.query || params.category || "family support",
     limit: params.limit || 10,
   });
@@ -164,6 +165,12 @@ async function defaultFetchOntarioResources(
     phone: resource.phone || undefined,
     description: resource.description || "",
     isCrisis: /crisis|hotline|emergency/i.test(resource.description || ""),
+    distanceKm: calculateDistanceKm(
+      params?.latitude,
+      params?.longitude,
+      Number(resource.latitude),
+      Number(resource.longitude),
+    ),
     source: "ontario211",
   }));
 }
@@ -179,8 +186,19 @@ function toResponseResource(resource: CandidateResource, crisisMode: boolean) {
     location: resource.location,
     url: resource.url,
     phone: resource.phone,
+    distanceKm: resource.distanceKm,
     disclaimer,
   };
+}
+
+function calculateDistanceKm(fromLat?: number, fromLon?: number, toLat?: number, toLon?: number) {
+  if (![fromLat, fromLon, toLat, toLon].every((value) => Number.isFinite(value))) return undefined;
+  const radians = (degrees: number) => degrees * Math.PI / 180;
+  const latDelta = radians(toLat! - fromLat!);
+  const lonDelta = radians(toLon! - fromLon!);
+  const a = Math.sin(latDelta / 2) ** 2
+    + Math.cos(radians(fromLat!)) * Math.cos(radians(toLat!)) * Math.sin(lonDelta / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 export async function runSupportDiscovery(
@@ -199,10 +217,14 @@ export async function runSupportDiscovery(
       query: input.query,
       category: input.category,
       limit,
+      radiusKm: input.radiusKm,
     }),
   ]);
 
-  const combined = dedupeResources([...STATIC_CRISIS_RESOURCES, ...dbResources, ...ontarioResources]);
+  const nearbyOntarioResources = input.radiusKm === undefined
+    ? ontarioResources
+    : ontarioResources.filter((resource) => resource.distanceKm === undefined || resource.distanceKm <= input.radiusKm!);
+  const combined = dedupeResources([...STATIC_CRISIS_RESOURCES, ...dbResources, ...nearbyOntarioResources]);
   const scored = combined
     .map((resource) => ({
       resource,

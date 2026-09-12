@@ -8,6 +8,7 @@ export const supportDiscoveryRequestSchema = z
     conflict_level: conflictLevelSchema.optional(),
     safety_flags: z.array(safetyFlagSchema).optional(),
     limit: z.number().int().min(1).max(20).optional(),
+    radiusKm: z.number().positive().max(100).optional(),
     context: z
       .object({
         user_id: z.string().min(1).max(120).optional(),
@@ -36,6 +37,7 @@ export const rankedResourceSchema = z
     location: z.string().min(1),
     url: z.string().url(),
     phone: z.string().min(1).optional(),
+    distanceKm: z.number().nonnegative().optional(),
     disclaimer: z.string().min(1),
   })
   .strict();

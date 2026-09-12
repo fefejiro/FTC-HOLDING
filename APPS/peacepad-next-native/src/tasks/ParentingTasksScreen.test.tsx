@@ -28,6 +28,7 @@ describe("ParentingTasksScreen", () => {
     fireEvent.press(screen.getByRole("checkbox", { name: "Share with the other parent" }));
     fireEvent.press(screen.getByRole("button", { name: "Add task" }));
     expect(await screen.findByText("Pack the school bag")).toBeOnTheScreen();
+    expect(screen.getByText("Task saved.")).toBeOnTheScreen();
     expect(screen.getByText("Shared · Due 2026-08-27")).toBeOnTheScreen();
     fireEvent.press(screen.getByRole("button", { name: "Mark complete" }));
     expect(await screen.findByRole("button", { name: "Reopen task" })).toBeOnTheScreen();

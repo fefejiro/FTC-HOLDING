@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import { LabButton } from "../components/LabButton";
@@ -249,6 +249,11 @@ function ConchPanel() {
   };
   return <View style={styles.panel}>
     <SectionHeading color={colors.aqua} icon="people-circle-outline" subtitle="One voice at a time, with explicit consent and no covert recording or transcript." title="Conch conversation" />
+    <View accessibilityLabel="PeacePad Conch voice space" style={styles.conchHero}>
+      <View style={styles.conchHalo}><View style={styles.conchOrb}><View style={styles.conchLogoClip}><Image accessibilityLabel="PeacePad Conch logo" resizeMode="cover" source={require("../foundation/peacepad-conch.png")} style={styles.conchLogo} /></View></View></View>
+      <Text style={styles.cardTitle}>A calm turn-taking space</Text>
+      <Text style={styles.body}>The child stays at the centre. This is for practical coordination, not relationship counselling.</Text>
+    </View>
     {!session ? <View style={[styles.formCard, styles.aquaCard]}><Text style={styles.cardTitle}>Start a structured conversation</Text><Text style={styles.body}>Choose audio or video. The other parent can accept or decline; neither media nor a transcript is stored.</Text><View style={styles.inlineActions}><LabButton disabled={state.busy || media.busy || !state.otherParentIdentityId} label="Audio Conch" onPress={() => void startConch("audio").catch(() => undefined)} variant="secondary" /><LabButton disabled={state.busy || media.busy || !state.otherParentIdentityId} label="Video Conch" onPress={() => void startConch("video").catch(() => undefined)} /></View></View> : <View style={styles.conchCard}><Text style={styles.eyebrow}>{session.status.toUpperCase()}</Text><Text style={styles.balance}>{session.currentSpeakerIdentityId === state.actorIdentityId ? "Your turn" : session.status === "active" ? "Listen with care" : session.createdByIdentityId === state.actorIdentityId ? "Waiting for the other parent" : "Invitation ready"}</Text><Text style={styles.body}>{session.turnDurationSeconds} seconds per turn · {session.mediaType} · no recording</Text>{session.status === "invited" && session.createdByIdentityId !== state.actorIdentityId ? <View style={styles.inlineActions}><LabButton disabled={state.busy || media.busy} label="Accept and begin" onPress={() => void acceptConch().catch(() => undefined)} /><LabButton disabled={state.busy || media.busy} label="Decline invitation" onPress={() => void declineConch().catch(() => undefined)} variant="secondary" /></View> : null}{session.status === "invited" && session.createdByIdentityId === state.actorIdentityId ? <LabButton disabled={state.busy || media.busy} label="Cancel invitation" onPress={() => void endConch().catch(() => undefined)} variant="secondary" /> : null}{session.status === "active" && session.currentSpeakerIdentityId === state.actorIdentityId ? <LabButton disabled={state.busy} label="Pass the Conch" onPress={() => void state.passConch().catch(() => undefined)} /> : null}{media.call?.type === "video" && media.call.status === "active" ? <VideoStage cameraEnabled={media.cameraEnabled} localStreamUrl={media.localStreamUrl} remoteStreamUrl={media.remoteStreamUrl} /> : null}{media.call?.status === "active" ? <View style={styles.inlineActions}><LabButton disabled={media.busy || media.mediaState === "unavailable"} label={media.muted ? "Unmute" : "Mute"} onPress={media.toggleMute} variant="secondary" />{media.call.type === "video" ? <LabButton disabled={media.busy || media.mediaState === "unavailable"} label={media.cameraEnabled ? "Camera off" : "Camera on"} onPress={media.toggleCamera} variant="secondary" /> : null}</View> : null}{session.status === "active" ? <LabButton disabled={state.busy || media.busy} label="End safely" onPress={() => void endConch().catch(() => undefined)} variant="secondary" /> : null}</View>}
     {session?.status === "active" ? <View style={styles.formCard}>
       <Text accessibilityLiveRegion="polite" style={styles.balance}>{Math.floor(state.turnSecondsRemaining / 60).toString().padStart(2, "0")}:{(state.turnSecondsRemaining % 60).toString().padStart(2, "0")}</Text>
@@ -302,9 +307,9 @@ const styles = StyleSheet.create({
   body: { ...typography.body, color: colors.muted },
   caption: { ...typography.caption, color: colors.muted },
   eyebrow: { ...typography.caption, color: colors.brand, fontWeight: "900", letterSpacing: 1.2 },
-  formCard: { backgroundColor: "#FFFDF8", borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
-  aquaCard: { backgroundColor: "#E9F9F4", borderColor: "#B8E8D9" },
-  sunCard: { backgroundColor: "#FFF7E0", borderColor: "#F0C940" },
+  formCard: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 24, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
+  aquaCard: { backgroundColor: colors.successSurface, borderColor: colors.successBorder },
+  sunCard: { backgroundColor: colors.warningSurface, borderColor: colors.warningBorder },
   supportCard: { backgroundColor: colors.brandSoft },
   listCard: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 22, borderWidth: 1, gap: spacing.sm, padding: spacing.lg },
   balanceCard: { borderRadius: 26, gap: spacing.xs, padding: spacing.lg },
@@ -329,8 +334,13 @@ const styles = StyleSheet.create({
   reminderCheck: { color: colors.onBrand, fontSize: 16, fontWeight: "800" },
   reminderCopy: { flex: 1, gap: 2 },
   urgent: { ...typography.caption, color: colors.dangerText, fontWeight: "900" },
-  conchCard: { backgroundColor: "#DDF6F0", borderColor: "#76CCBE", borderRadius: 28, borderWidth: 1, gap: spacing.md, padding: spacing.xl },
-  summaryCard: { backgroundColor: "#FFFDF8", borderColor: colors.warningBorder, borderRadius: 20, borderWidth: 1, gap: spacing.md, padding: spacing.md },
+  conchHero: { alignItems: "center", backgroundColor: colors.subtleSurface, borderColor: colors.border, borderRadius: 28, borderWidth: 1, gap: spacing.sm, padding: spacing.xl },
+  conchHalo: { alignItems: "center", backgroundColor: colors.brandSoft, borderColor: colors.aqua, borderRadius: 74, borderWidth: 2, height: 148, justifyContent: "center", width: 148 },
+  conchOrb: { alignItems: "center", backgroundColor: colors.brand, borderColor: colors.onBrand, borderRadius: 54, borderWidth: 2, height: 108, justifyContent: "center", shadowColor: colors.shadow, shadowOffset: { height: 8, width: 0 }, shadowOpacity: 0.3, shadowRadius: 16, width: 108 },
+  conchLogoClip: { borderRadius: 42, height: 84, overflow: "hidden", width: 84 },
+  conchLogo: { height: 84, transform: [{ scale: 1.18 }], width: 84 },
+  conchCard: { backgroundColor: colors.successSurface, borderColor: colors.successBorder, borderRadius: 28, borderWidth: 1, gap: spacing.md, padding: spacing.xl },
+  summaryCard: { backgroundColor: colors.surface, borderColor: colors.warningBorder, borderRadius: 20, borderWidth: 1, gap: spacing.md, padding: spacing.md },
   historyCard: { backgroundColor: colors.cream, borderRadius: 20, gap: spacing.sm, padding: spacing.md },
   historyRow: { borderBottomColor: colors.border, borderBottomWidth: 1, gap: spacing.xs, paddingBottom: spacing.sm },
   privacyNote: { alignItems: "center", backgroundColor: colors.cream, borderRadius: 20, flexDirection: "row", gap: spacing.md, padding: spacing.md },

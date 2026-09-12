@@ -8,7 +8,9 @@ import { ParentCoreStateProvider } from "../parentCore/ParentCoreState";
 jest.mock("expo-location", () => ({
   Accuracy: { Balanced: 3 },
   requestForegroundPermissionsAsync: jest.fn(async () => ({ status: "granted" })),
+  hasServicesEnabledAsync: jest.fn(async () => true),
   getCurrentPositionAsync: jest.fn(async () => ({ coords: { latitude: 43.8975, longitude: -78.9429 } })),
+  getLastKnownPositionAsync: jest.fn(async () => null),
   reverseGeocodeAsync: jest.fn(async () => [{ city: "Durham", region: "Ontario" }]),
 }));
 
@@ -43,5 +45,22 @@ describe("SupportFinderScreen", () => {
     fireEvent.press(screen.getByRole("radio", { name: "Counselling" }));
     fireEvent.changeText(screen.getByLabelText("City or postal code"), "Whitby");
     expect(screen.getByRole("button", { name: "Find official help near me" })).toBeEnabled();
+  });
+
+  it("uses a recent cached fix when Android cannot produce a fresh fix", async () => {
+    const Location = jest.requireMock("expo-location") as {
+      getCurrentPositionAsync: jest.Mock;
+      getLastKnownPositionAsync: jest.Mock;
+    };
+    Location.getCurrentPositionAsync.mockRejectedValueOnce(new Error("settings-check-failed"));
+    Location.getLastKnownPositionAsync.mockResolvedValueOnce({ coords: { latitude: 43.6532, longitude: -79.3832 } });
+
+    renderSupport();
+    await screen.findByRole("header", { name: "What kind of help do you need?" });
+    fireEvent.press(screen.getByRole("radio", { name: "Legal help" }));
+    fireEvent.press(screen.getByRole("button", { name: "Use my current location" }));
+
+    await waitFor(() => expect(screen.getByDisplayValue("Durham, Ontario")).toBeOnTheScreen());
+    expect(Location.getLastKnownPositionAsync).toHaveBeenCalledWith({ maxAge: 900000, requiredAccuracy: 5000 });
   });
 });

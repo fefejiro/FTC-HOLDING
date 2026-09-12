@@ -134,6 +134,20 @@ describe("persisted Message Check runtime", () => {
     expect(screen.getByRole("button", { name: "toggle" })).toBeEnabled();
   });
 
+  it("replaces a failed root hydration with a safe retry path", async () => {
+    const listCalendarLayers = jest.fn()
+      .mockRejectedValueOnce(new Error("transport detail must not reach the parent"))
+      .mockResolvedValueOnce([]);
+    const api = apiWithMessageCheck({ listCalendarLayers });
+    renderProbe(api, runtime());
+
+    await waitFor(() => expect(screen.getByRole("header", { name: "We couldn't open your PeacePad space" })).toBeTruthy());
+    expect(screen.queryByText("transport detail must not reach the parent")).toBeNull();
+    fireEvent.press(screen.getByRole("button", { name: "Try loading PeacePad again" }));
+    await waitFor(() => expect(screen.getByTestId("hydrated")).toHaveTextContent("true"));
+    expect(listCalendarLayers).toHaveBeenCalledTimes(2);
+  });
+
   it("rehydrates on conversation change and ignores the stale result", async () => {
     const pendingA = deferred<MessageCheckPreference>();
     const pendingB = deferred<MessageCheckPreference>();
