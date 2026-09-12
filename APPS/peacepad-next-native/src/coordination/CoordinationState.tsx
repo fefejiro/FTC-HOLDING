@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { useOptionalLocalization } from "../localization/LocalizationProvider";
 import type { MessagePreviewResponse } from "../api/contracts";
@@ -142,6 +142,7 @@ type CoordinationStateValue = {
   acceptInvitation: () => Promise<void>;
   declineInvitation: () => Promise<void>;
   setCalendarView: (view: CalendarView) => void;
+  refreshCalendar: () => Promise<void>;
   toggleLayerFilter: (layerId: string) => void;
   setLayerShared: (layerId: string, shared: boolean) => Promise<void>;
   saveParentingSchedulePlan: (input: Readonly<{
@@ -390,6 +391,24 @@ export function CoordinationStateProvider({
   const queuedActionLocks = useRef(new Set<string>());
   const scheduledRetryScopeLocks = useRef(new Set<string>());
   const networkAvailableRef = useRef(true);
+  const calendarRefreshGeneration = useRef(0);
+
+  const refreshCalendar = useCallback(async () => {
+    if (demoMode || !activeRuntime) return;
+    const refreshGeneration = ++calendarRefreshGeneration.current;
+    const [nextLayers, nextEvents] = await Promise.all([
+      resolvedApi.listCalendarLayers(activeRuntime.familyCircleId),
+      resolvedApi.listScheduleEvents(activeRuntime.familyCircleId)
+    ]);
+    if (refreshGeneration !== calendarRefreshGeneration.current) return;
+    setLayers(nextLayers);
+    setVisibleLayerIds((current) => {
+      const available = new Set(nextLayers.map((layer) => layer.id));
+      const retained = current.filter((layerId) => available.has(layerId));
+      return retained.length > 0 ? retained : nextLayers.map((layer) => layer.id);
+    });
+    setEvents(nextEvents);
+  }, [activeRuntime?.familyCircleId, demoMode, resolvedApi]);
 
   useEffect(() => {
     if (demoMode || !activeRuntime) return;
@@ -725,6 +744,7 @@ export function CoordinationStateProvider({
       }
     },
     setCalendarView,
+    refreshCalendar,
     toggleLayerFilter: (layerId) => setVisibleLayerIds((current) =>
       current.includes(layerId) ? current.filter((id) => id !== layerId) : [...current, layerId]
     ),
@@ -1151,6 +1171,7 @@ export function CoordinationStateProvider({
     }
   }), [
     activeRuntime,
+    refreshCalendar,
     calendarView,
     coordinationHydrated,
     correctingMessageId,

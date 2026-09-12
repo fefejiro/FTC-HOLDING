@@ -349,6 +349,25 @@ describe("secure invitation flow", () => {
 describe("layered calendar", () => {
   const connectedRuntime = verifiedRuntime;
 
+  it("reloads shared events when a parent opens Calendar", async () => {
+    const synthetic = new SyntheticCoordinationApi();
+    const listCalendarLayers = jest.fn(synthetic.listCalendarLayers.bind(synthetic));
+    const listScheduleEvents = jest.fn(synthetic.listScheduleEvents.bind(synthetic));
+    const api = new Proxy({ listCalendarLayers, listScheduleEvents } as unknown as PeacePadCoordinationApi, {
+      get(target, property) {
+        const value = (target as unknown as Record<PropertyKey, unknown>)[property];
+        if (value !== undefined) return value;
+        const syntheticValue = (synthetic as unknown as Record<PropertyKey, unknown>)[property];
+        return typeof syntheticValue === "function" ? syntheticValue.bind(synthetic) : syntheticValue;
+      }
+    });
+
+    renderApp("calendar", undefined, api, connectedRuntime);
+    await waitFor(() => expect(listScheduleEvents).toHaveBeenCalledTimes(2));
+    expect(listCalendarLayers).toHaveBeenCalledTimes(2);
+    expect(listScheduleEvents).toHaveBeenLastCalledWith(connectedRuntime.familyCircleId);
+  });
+
   it("lets a connected parent submit a schedule-change request with an awaiting-response state", async () => {
     const synthetic = new SyntheticCoordinationApi();
     const api = new Proxy({} as unknown as PeacePadCoordinationApi, {

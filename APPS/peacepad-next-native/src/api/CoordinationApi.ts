@@ -1216,6 +1216,10 @@ export class HttpPeacePadCoordinationApi implements PeacePadCoordinationApi {
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
+          ...(init.method === undefined || init.method === "GET" ? {
+            "Cache-Control": "no-cache, no-store",
+            Pragma: "no-cache"
+          } : {}),
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
           ...(functionRegion ? { "X-Region": functionRegion } : {}),
           ...init.headers

@@ -557,7 +557,8 @@ export function CalendarScreen({ initialEventTitle, openEvent = false }: { initi
     actorIdentityId,
     parentingScheduleExceptions,
     createParentingScheduleException,
-    resolveParentingScheduleException
+    resolveParentingScheduleException,
+    refreshCalendar
   } = useCoordinationState();
   const [eventTitle, setEventTitle] = useState("");
   const [selectedLayerId, setSelectedLayerId] = useState(layers[0]?.id ?? "");
@@ -587,6 +588,13 @@ export function CalendarScreen({ initialEventTitle, openEvent = false }: { initi
   const [showPlanningTools, setShowPlanningTools] = useState(false);
   const [showCalendarManager, setShowCalendarManager] = useState(false);
   const [showEventSheet, setShowEventSheet] = useState(false);
+
+  useEffect(() => {
+    void refreshCalendar().catch(() => {
+      // Keep the last verified calendar visible. The normal provider recovery
+      // path remains available if the complete coordination load fails.
+    });
+  }, [refreshCalendar]);
 
   const visibleEvents = events.filter((event) => visibleLayerIds.includes(event.calendarLayerId));
   const custodyOverrides: readonly CustodyOverride[] = parentingScheduleExceptions

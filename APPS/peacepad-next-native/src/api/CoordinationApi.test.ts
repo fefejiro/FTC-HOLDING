@@ -269,6 +269,11 @@ describe("HttpPeacePadCoordinationApi", () => {
       "https://staging-api.peacepad.test/api/v2/message-previews",
       "https://staging-api.peacepad.test/api/v2/attachment-upload-intents"
     ]));
+    const calendarRead = fetcher.mock.calls.find(([url]) => String(url).includes("/api/v2/schedule-events?"));
+    expect(calendarRead?.[1]?.headers).toMatchObject({
+      "Cache-Control": "no-cache, no-store",
+      Pragma: "no-cache"
+    });
   });
 
   it("normalizes invitation codes without putting them in the URL", async () => {
