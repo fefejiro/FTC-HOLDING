@@ -1,4 +1,4 @@
-import { calendarText, formatCalendarDate, formatCalendarDay } from "./calendarLocalization";
+import { calendarAdditionalEventText, calendarEventCountText, calendarText, formatCalendarDate, formatCalendarDay } from "./calendarLocalization";
 
 describe("calendar localization", () => {
   it("translates the calendar navigation foundation", () => {
@@ -17,5 +17,12 @@ describe("calendar localization", () => {
 
   it("fails safely for invalid dates", () => {
     expect(formatCalendarDate("en", "not-a-date", { dateStyle: "medium" })).toBe("");
+  });
+
+  it("describes crowded calendar days without hiding the event count", () => {
+    expect(calendarEventCountText("en", 2)).toBe("2 events");
+    expect(calendarAdditionalEventText("en", 1)).toBe("1 more");
+    expect(calendarEventCountText("fr", 1)).toBe("1 événement");
+    expect(calendarAdditionalEventText("es", 2)).toBe("2 más");
   });
 });

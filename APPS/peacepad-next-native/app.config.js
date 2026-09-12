@@ -8,8 +8,8 @@ const TESTFLIGHT_BUILD_NUMBER = "14";
 const APPSTORE_PRODUCTION_BUILD_NUMBER = "14";
 // Internal candidates use fictional staging. A separately rebuilt production
 // artifact must remain monotonic across every Play track.
-const PLAYSTORE_VERSION_CODE = 55;
-const PLAYSTORE_PRODUCTION_VERSION_CODE = 55;
+const PLAYSTORE_VERSION_CODE = 56;
+const PLAYSTORE_PRODUCTION_VERSION_CODE = 56;
 const PRODUCTION_BUNDLE_ID = "ca.peacepad.family";
 const APP_STORE_ID = "6793350735";
 const GOOGLE_SIGN_IN_PLUGIN = "@react-native-google-signin/google-signin";

@@ -507,6 +507,22 @@ describe("layered calendar", () => {
     fireEvent.press(screen.getByRole("button", { name: "Save event" }));
     expect((await screen.findAllByText("Parenting time request")).length).toBeGreaterThanOrEqual(1);
   });
+
+  it("shows an additional event count when a month day contains multiple events", async () => {
+    renderApp("calendar");
+
+    fireEvent.press(screen.getByRole("button", { name: "Add event" }));
+    fireEvent.changeText(screen.getByLabelText("Event title"), "First same day event");
+    fireEvent.press(screen.getByRole("button", { name: "Save event" }));
+    expect((await screen.findAllByText("First same day event")).length).toBeGreaterThanOrEqual(1);
+
+    fireEvent.press(screen.getByRole("button", { name: "Add event" }));
+    fireEvent.changeText(screen.getByLabelText("Event title"), "Second same day event");
+    fireEvent.press(screen.getByRole("button", { name: "Save event" }));
+
+    expect(await screen.findByText("+1 more")).toBeOnTheScreen();
+    expect(screen.getByLabelText(/2 events/)).toBeOnTheScreen();
+  });
 });
 
 describe("per-chat Message Check", () => {

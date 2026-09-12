@@ -19,6 +19,18 @@ export function calendarText(locale: SupportedLocale, key: CalendarMessageKey): 
   return calendarMessages[locale][key];
 }
 
+export function calendarEventCountText(locale: SupportedLocale, count: number): string {
+  if (locale === "fr") return `${count} ${count === 1 ? "événement" : "événements"}`;
+  if (locale === "es") return `${count} ${count === 1 ? "evento" : "eventos"}`;
+  return `${count} ${count === 1 ? "event" : "events"}`;
+}
+
+export function calendarAdditionalEventText(locale: SupportedLocale, count: number): string {
+  if (locale === "fr") return `${count} de plus`;
+  if (locale === "es") return `${count} más`;
+  return `${count} more`;
+}
+
 export type CalendarStatus = "planned" | "requested" | "accepted" | "declined" | "cancelled";
 
 export function calendarStatusText(locale: SupportedLocale, status: CalendarStatus): string {

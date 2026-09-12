@@ -105,7 +105,7 @@ jobs:
             export PEACEPAD_ANDROID_RELEASE_MODE=playstore-production
             node scripts/check-lab-guardrails.cjs
             node scripts/check-secrets.cjs
-            node -e 'const cfg=require("./app.config.js")({config:require("./app.json").expo}); if(cfg.android.package!=="ca.peacepad.family"||cfg.version!=="2.0.3"||cfg.android.versionCode!==55||cfg.extra.productionApiWritesEnabled!==true||cfg.extra.googleSignInEnabled!==true) process.exit(1);'
+            node -e 'const cfg=require("./app.config.js")({config:require("./app.json").expo}); if(cfg.android.package!=="ca.peacepad.family"||cfg.version!=="2.0.3"||cfg.android.versionCode!==56||cfg.extra.productionApiWritesEnabled!==true||cfg.extra.googleSignInEnabled!==true) process.exit(1);'
             npx --yes eas-cli@21.8.0 build --platform android --profile playstore-production --non-interactive --wait --json > "$RUNNER_TEMP/peacepad-v2-android-production-build.json"
           EOF
           )

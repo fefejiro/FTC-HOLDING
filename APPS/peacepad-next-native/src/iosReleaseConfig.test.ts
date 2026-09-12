@@ -134,7 +134,7 @@ describe("PeacePad iOS release variant", () => {
           "android.permission.WRITE_EXTERNAL_STORAGE"
         ],
         package: "ca.peacepad.family",
-        versionCode: 55
+        versionCode: 56
       },
       plugins: expect.not.arrayContaining([
         ["@react-native-google-signin/google-signin", { iosUrlScheme: "com.googleusercontent.apps.123456789-ios" }]
@@ -180,7 +180,7 @@ describe("PeacePad iOS release variant", () => {
       scheme: "peacepad",
       android: {
         package: "ca.peacepad.family",
-        versionCode: 55
+        versionCode: 56
       },
       extra: {
         environment: "production",

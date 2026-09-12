@@ -8,7 +8,7 @@ import { ScreenHeader } from "../components/ScreenHeader";
 import { LabButton } from "../components/LabButton";
 import { AccessibleHeading } from "../components/AccessibleHeading";
 import { languageNames, supportedLocales, useLocalization, useOptionalLocalization } from "../localization/LocalizationProvider";
-import { calendarNavigationText, calendarStatusText, calendarText, formatCalendarDate, formatCalendarDay } from "../localization/calendarLocalization";
+import { calendarAdditionalEventText, calendarEventCountText, calendarNavigationText, calendarStatusText, calendarText, formatCalendarDate, formatCalendarDay } from "../localization/calendarLocalization";
 import { formatLocalizedDate } from "../localization/localizedDate";
 import { messageText } from "../localization/messageLocalization";
 import { workflowText } from "../localization/workflowLocalization";
@@ -132,12 +132,13 @@ function CalendarViewPanel({
             const dayEvents = date ? events.filter((event) => eventOccursOnDay(event, date)) : [];
             const custodyParent = date ? custodyParentForDate(date, custodySchedule, custodyOverrides) : null;
             return (
-              <View accessibilityLabel={date ? `${formatCalendarDate(locale, date, { month: "long", day: "numeric" })}${custodyParent ? `, ${custodyScheduleText(locale, custodyParent === "you" ? "yourTime" : "otherTime")}` : ""}` : undefined} key={cell.key} style={[styles.monthCell, custodyParent === "you" ? styles.yourTimeCell : custodyParent === "other" ? styles.otherTimeCell : null]}>
+              <View accessibilityLabel={date ? `${formatCalendarDate(locale, date, { month: "long", day: "numeric" })}${custodyParent ? `, ${custodyScheduleText(locale, custodyParent === "you" ? "yourTime" : "otherTime")}` : ""}${dayEvents.length ? `, ${calendarEventCountText(locale, dayEvents.length)}` : ""}` : undefined} key={cell.key} style={[styles.monthCell, custodyParent === "you" ? styles.yourTimeCell : custodyParent === "other" ? styles.otherTimeCell : null]}>
                 {cell.day ? <Text style={styles.dayNumber}>{cell.day}</Text> : null}
                 {custodyParent ? <Text numberOfLines={1} style={styles.custodyCellLabel}>{custodyParent === "you" ? "You" : "Other"}</Text> : null}
                 {dayEvents.slice(0, 1).map((event) => (
                   <Text key={event.id} numberOfLines={1} style={styles.monthEvent}>{event.title}</Text>
                 ))}
+                {dayEvents.length > 1 ? <Text numberOfLines={1} style={styles.monthMoreEvents}>+{calendarAdditionalEventText(locale, dayEvents.length - 1)}</Text> : null}
               </View>
             );
           })}
@@ -1498,6 +1499,7 @@ const styles = StyleSheet.create({
   dayNumber: { ...typography.caption, color: colors.text, fontWeight: "800" },
   custodyCellLabel: { color: colors.brand, fontSize: 8, fontWeight: "800", overflow: "hidden" },
   monthEvent: { backgroundColor: colors.brandSoft, borderRadius: 6, color: colors.brand, fontSize: 9, fontWeight: "700", overflow: "hidden", paddingHorizontal: 3, paddingVertical: 2 },
+  monthMoreEvents: { color: colors.brand, fontSize: 8, fontWeight: "800", overflow: "hidden", paddingHorizontal: 3 },
   scheduleList: { gap: spacing.sm },
   scheduleRow: { borderTopColor: colors.border, borderTopWidth: 1, flexDirection: "row", gap: spacing.md, paddingTop: spacing.sm },
   scheduleDate: { ...typography.caption, color: colors.text, fontWeight: "800", width: 48 },
