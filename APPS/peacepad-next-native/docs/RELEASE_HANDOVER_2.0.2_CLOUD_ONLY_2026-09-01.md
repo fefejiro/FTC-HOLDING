@@ -359,3 +359,41 @@ are JavaScript bundle validation only; no signed binary, EAS build, store
 upload, or public-release claim is made from them. The migration still needs
 to be applied through the approved cloud deployment path before a real device
 retest.
+
+## Budget first CI and build policy, 2026-09-12
+
+PeacePad is currently operated by a solo funded company. Release work must use
+provider minutes and build capacity deliberately. A new developer must not
+dispatch GitHub Actions merely to discover whether the account can run jobs.
+
+Use this order for every candidate:
+
+1. Prove the canonical checkout, reviewed source SHA, clean scoped diff, package
+   identity, and intended version code locally.
+2. Run type checking, focused tests, the full supported test suite, release
+   guardrails, secret scanning, and diff hygiene locally before requesting a
+   signed build.
+3. Query GitHub billing or account health and inspect the latest workflow state
+   before dispatch. If the account is locked or hosted runners are unavailable,
+   do not retry the same workflow.
+4. For an install only Android test artifact, use one exact source package and
+   one direct EAS build when GitHub cannot provide a runner. Keep the source SHA,
+   EAS build ID, version, version code, hash, signing certificate, and
+   `store_submission_attempted=false` in the evidence folder.
+5. Reserve protected GitHub release workflows for validation that benefits from
+   CI isolation, team review, backend deployment, or store delivery. Never use a
+   store workflow for ordinary emulator iteration.
+6. Reuse a matching completed artifact when neither source nor native build
+   configuration changed. Provider configuration checks alone do not justify a
+   replacement binary.
+7. Never start both GitHub and direct EAS builds for the same source. Confirm the
+   first path failed before using the fallback.
+
+On 2026-09-12, Android install only workflow run `34715191135`, pinned to source
+`ccac18d2c637e6edef0e7f97313637b7e46df1a1`, failed before checkout and before
+executing any step. GitHub reported: `The job was not started because your
+account is locked due to a billing issue.` No EAS build, artifact, upload, or
+store action was created by that workflow. The approved fallback is one direct
+EAS `production-device-apk` build from an isolated archive of the same source.
+This incident is a CI availability and cost control finding, not a PeacePad
+application defect.
