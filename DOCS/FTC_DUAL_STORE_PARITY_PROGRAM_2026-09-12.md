@@ -155,10 +155,15 @@ The reuse-first implementation pass made local, non-billing changes only:
   The Mac/CI lane must perform the real Android regression/build check before
   any Play upload.
 - **Dispatch CI:** a manually gated `.github/workflows/dispatch-ios-release.yml`
-  now reuses the existing `macos-26` lane. It supports read-only preflight,
-  archive-only and upload-only-to-an-existing-record modes; it cannot create an
-  App Store record or submit an App Review request. It has been syntax-checked
-  but not dispatched.
+  now reuses the existing `macos-26` lane. It supports read-only record
+  inventory, preflight, archive-only and upload-only-to-an-existing-record
+  modes; it cannot create an App Store record or submit an App Review request.
+  The workflow is merged on `main` in PR [#362](https://github.com/fefejiro/FTC-HOLDING/pull/362).
+- **SayWetin CI:** a manually gated `.github/workflows/saywetin-ios-release.yml`
+  now reuses the existing EAS project and `EXPO_TOKEN`. It supports read-only
+  record inventory, preflight, an explicitly authorized EAS build and an
+  existing-record upload; it cannot create an App Store record or submit an
+  App Review request. It is also merged through PR [#362](https://github.com/fefejiro/FTC-HOLDING/pull/362).
 - **UnaScout:** the canonical release handoff records an uploaded iOS build in
   App Store Connect with state **Waiting for Review**, while independently
   resolving public evidence currently proves Android only. This remains
@@ -171,6 +176,14 @@ The reuse-first implementation pass made local, non-billing changes only:
   payment method, plan, credential, store record or submission changed during
   this pass. Cloud builds and store operations remain owner-console gates until
   existing capacity and the exact target record are confirmed.
+- **GitHub execution audit:** read-only inventory dispatches for Dispatch
+  (run [34733647511](https://github.com/fefejiro/FTC-HOLDING/actions/runs/34733647511))
+  and SayWetin
+  (run [34733648642](https://github.com/fefejiro/FTC-HOLDING/actions/runs/34733648642))
+  were accepted on `main` but terminated before any job step. GitHub reported
+  that the account is locked because of a billing issue. No Apple API lookup,
+  build, upload, submission or store mutation ran. Do not upgrade or pay to
+  clear this condition without explicit owner approval.
 - **GitHub credential inventory:** a names-only repository secret audit found
   existing FTC Apple certificate/team/API-key paths used by the JCI and
   UnaScout lanes. No secret values were read. The Dispatch workflow reuses
@@ -188,6 +201,7 @@ portfolio plan and the per-app handoffs:
 - `APPS/saywetin-native/ops/IOS_APP_STORE_HANDOFF.md`
 - `APPS/dispatch/DOCS/IOS_APP_STORE_HANDOFF.md`
 - `.github/workflows/dispatch-ios-release.yml`
+- `.github/workflows/saywetin-ios-release.yml`
 
 ## 5. Existing pipelines to reuse
 
