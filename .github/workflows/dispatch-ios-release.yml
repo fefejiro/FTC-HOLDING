@@ -4,11 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Read-only preflight, archive only, or upload to the existing App Store record
+        description: Read-only record inventory/preflight, archive only, or upload to the existing App Store record
         required: true
         default: preflight
         type: choice
         options:
+          - inventory
           - preflight
           - archive
           - upload
@@ -35,7 +36,63 @@ env:
   BUNDLE_ID: ca.emergencyprompt.roadside
 
 jobs:
+  inventory:
+    name: Inventory existing Dispatch App Store record
+    if: ${{ inputs.mode == 'inventory' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BUNDLE_ID: ca.emergencyprompt.roadside
+      ASC_KEY_ID: ${{ secrets.JOBAGENT_ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.JOBAGENT_ASC_ISSUER_ID }}
+      ASC_PRIVATE_KEY_BASE64: ${{ secrets.JOBAGENT_ASC_PRIVATE_KEY_BASE64 }}
+    steps:
+      - name: Checkout exact release ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Query App Store Connect by existing bundle ID (read-only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${ASC_KEY_ID:-}" || { echo "Missing existing JOBAGENT_ASC_KEY_ID"; exit 1; }
+          test -n "${ASC_ISSUER_ID:-}" || { echo "Missing existing JOBAGENT_ASC_ISSUER_ID"; exit 1; }
+          test -n "${ASC_PRIVATE_KEY_BASE64:-}" || { echo "Missing existing JOBAGENT_ASC_PRIVATE_KEY_BASE64"; exit 1; }
+          node --input-type=module <<'NODE'
+          import crypto from 'node:crypto';
+
+          const b64url = (value) => Buffer.from(value).toString('base64url');
+          const now = Math.floor(Date.now() / 1000);
+          const header = b64url(JSON.stringify({ alg: 'ES256', kid: process.env.ASC_KEY_ID, typ: 'JWT' }));
+          const payload = b64url(JSON.stringify({
+            iss: process.env.ASC_ISSUER_ID,
+            iat: now,
+            exp: now + 900,
+            aud: 'appstoreconnect-v1',
+          }));
+          const unsigned = `${header}.${payload}`;
+          const key = Buffer.from(process.env.ASC_PRIVATE_KEY_BASE64, 'base64').toString('utf8');
+          const signature = crypto.sign('sha256', Buffer.from(unsigned), { key, dsaEncoding: 'ieee-p1363' });
+          const token = `${unsigned}.${signature.toString('base64url')}`;
+          const url = new URL('https://api.appstoreconnect.apple.com/v1/apps');
+          url.searchParams.set('filter[bundleId]', process.env.BUNDLE_ID);
+          const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+          const body = await response.json();
+          if (!response.ok) throw new Error(`App Store Connect lookup failed with HTTP ${response.status}`);
+          const matches = (body.data ?? []).map((app) => ({
+            id: app.id,
+            bundleId: app.attributes?.bundleId,
+            name: app.attributes?.name,
+            sku: app.attributes?.sku,
+          }));
+          console.log(JSON.stringify({ bundleId: process.env.BUNDLE_ID, matches }, null, 2));
+          if (matches.length > 1) throw new Error('More than one App Store record matched the bundle ID');
+          NODE
+          echo 'Read-only inventory complete; no app record was created or changed.'
+
   release:
+    if: ${{ inputs.mode != 'inventory' }}
     name: Dispatch iOS ${{ inputs.mode }}
     runs-on: macos-26
     timeout-minutes: 120
@@ -54,7 +111,7 @@ jobs:
           CONFIRM_EXISTING_RECORD: ${{ inputs.confirm_existing_record }}
         run: |
           set -euo pipefail
-          if [[ "$MODE" != "preflight" ]]; then
+          if [[ "$MODE" == "archive" || "$MODE" == "upload" ]]; then
             [[ "$EXISTING_APP_STORE_ID" =~ ^[0-9]+$ ]] || {
               echo "Archive/upload requires the exact existing numeric App Store Connect ID."
               exit 1
@@ -79,7 +136,7 @@ jobs:
           }
 
       - name: Verify exact existing App Store Connect record
-        if: ${{ inputs.mode != 'preflight' }}
+        if: ${{ inputs.mode == 'archive' || inputs.mode == 'upload' }}
         env:
           EXISTING_APP_STORE_ID: ${{ inputs.existing_app_store_id }}
           ASC_KEY_ID: ${{ secrets.JOBAGENT_ASC_KEY_ID }}
