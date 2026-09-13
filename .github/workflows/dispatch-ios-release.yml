@@ -91,7 +91,9 @@ jobs:
           test -n "$ASC_ISSUER_ID" || { echo "Missing existing JOBAGENT_ASC_ISSUER_ID"; exit 1; }
           test -n "$ASC_PRIVATE_KEY_BASE64" || { echo "Missing existing JOBAGENT_ASC_PRIVATE_KEY_BASE64"; exit 1; }
           private_key_path="$RUNNER_TEMP/dispatch-asc-key.p8"
+          trap 'rm -f "$private_key_path"' EXIT
           printf '%s' "$ASC_PRIVATE_KEY_BASE64" | base64 -D > "$private_key_path"
+          chmod 600 "$private_key_path"
           token="$(node - "$private_key_path" "$ASC_KEY_ID" "$ASC_ISSUER_ID" <<'NODE'
           const fs = require('fs');
           const crypto = require('crypto');
@@ -108,9 +110,10 @@ jobs:
           process.stdout.write(`${unsigned}.${signature.toString('base64url')}`);
           NODE
           )"
-          response="$(curl --fail --silent --show-error --retry 2 --connect-timeout 20 --max-time 60 \
+          response="$(curl --fail --silent --show-error --retry 2 --connect-timeout 20 --max-time 60 --get \
             -H "Authorization: Bearer $token" \
-            "https://api.appstoreconnect.apple.com/v1/apps?filter[bundleId]=$BUNDLE_ID")"
+            --data-urlencode "filter[bundleId]=$BUNDLE_ID" \
+            "https://api.appstoreconnect.apple.com/v1/apps")"
           printf '%s' "$response" | jq -e \
             --arg expected_id "$EXISTING_APP_STORE_ID" \
             --arg expected_bundle "$BUNDLE_ID" \
