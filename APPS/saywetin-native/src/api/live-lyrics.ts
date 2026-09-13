@@ -1,5 +1,5 @@
 import type { SyncedLyricLine } from '../state/ritual-state';
-import Constants from 'expo-constants';
+import { getApiBaseUrl } from './config';
 
 type SyncedLyricsResponse = {
   lines: Array<{
@@ -33,9 +33,7 @@ type ExplainResponse = {
   alternates?: Array<{ title: string; body: string; confidence: number }>;
 };
 
-const apiBaseUrl =
-  process.env.EXPO_PUBLIC_API_BASE_URL?.trim() ||
-  String(Constants.expoConfig?.extra?.EXPO_PUBLIC_API_BASE_URL || '').trim();
+const apiBaseUrl = getApiBaseUrl();
 
 function hasApiBaseUrl() {
   return Boolean(apiBaseUrl);

@@ -619,7 +619,7 @@ async function fetchOntario511Incidents(): Promise<NormalizedIncident[]> {
   const all = Array.isArray(raw) ? raw : Array.isArray(raw.events) ? raw.events : [];
 
   const result = all
-    .map((event) => {
+    .map((event): NormalizedIncident | null => {
       const lat = toNumber(event.Latitude);
       const lng = toNumber(event.Longitude);
       if (lat === null || lng === null || !inOntario(lat, lng)) return null;
@@ -689,7 +689,7 @@ async function fetchOttawaTrafficIncidents(): Promise<NormalizedIncident[]> {
   const all = Array.isArray(raw.events) ? raw.events : [];
 
   const result = all
-    .map((event) => {
+    .map((event): NormalizedIncident | null => {
       const coords = parseOttawaCoordinates(event.geodata);
       if (!coords || !inOntario(coords.lat, coords.lng)) return null;
 
@@ -817,7 +817,7 @@ async function fetchTomTomIncidents(regionKey: DispatchRegionKey): Promise<Norma
   const all = Array.isArray(raw.incidents) ? raw.incidents : [];
 
   const result = all
-    .map((incident) => {
+    .map((incident): NormalizedIncident | null => {
       const cat = incident.properties?.iconCategory ?? 0;
       const eventType = TOMTOM_CATEGORY_TO_EVENT[cat];
       if (!eventType) return null;
@@ -965,7 +965,7 @@ async function fetchWazeIncidents(regionKey: DispatchRegionKey): Promise<WazeFet
 
     return {
       incidents: alerts
-        .map((alert) => {
+        .map((alert): NormalizedIncident | null => {
           const type = String(alert.type || '').toUpperCase();
           const subtype = String(alert.subtype || '').toUpperCase();
 

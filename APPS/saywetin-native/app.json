@@ -1,8 +1,26 @@
 {
   "expo": {
     "name": "SayWetin",
-    "slug": "saywetin",
+    "slug": "saywetin-native",
     "version": "1.3.6",
+    "icon": "./assets/icon.png",
+    "ios": {
+      "bundleIdentifier": "com.saywetin.app",
+      "buildNumber": "1"
+    },
+    "plugins": [
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow SayWetin to use your microphone to identify songs."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "90cce2fa-dffb-4bd3-9899-ef92da34777f"
+      }
+    },
     "android": {
       "package": "com.saywetin.app",
       "versionCode": 42

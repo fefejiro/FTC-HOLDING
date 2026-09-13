@@ -1202,6 +1202,7 @@ function IncidentMapPanel({
 
 function IncidentCard({
   incident,
+  regionKey,
   selected,
   onNavigate,
   onSelect,
@@ -1210,6 +1211,7 @@ function IncidentCard({
   proximityLabel,
 }: {
   incident: IncidentWithMeta;
+  regionKey: DispatchRegionKey;
   selected?: boolean;
   onNavigate?: (incident: Incident) => void;
   onSelect?: (incident: IncidentWithMeta) => void;
@@ -1218,7 +1220,7 @@ function IncidentCard({
   proximityLabel: string;
 }) {
   void proximityLabel;
-  const mapsUrl = incidentMapsUrl(incident);
+  const mapsUrl = incidentMapsUrl(incident, regionKey);
   const label = incidentLabel(incident);
   const isHigh = incidentIsHighPriority(incident);
   const occurredAt = incidentOccurredAt(incident);
@@ -1300,6 +1302,7 @@ function IncidentCard({
 
 function IncidentDetailCard({
   incident,
+  regionKey,
   onBack,
   onNavigate,
   onResolve,
@@ -1308,6 +1311,7 @@ function IncidentDetailCard({
   proximityLabel,
 }: {
   incident: IncidentWithMeta;
+  regionKey: DispatchRegionKey;
   onBack: () => void;
   onNavigate?: (incident: Incident) => void;
   onResolve?: (incident: Incident, status: SignalWorkflowStatus) => void;
@@ -1316,7 +1320,7 @@ function IncidentDetailCard({
   proximityLabel: string;
 }) {
   void proximityLabel;
-  const mapsUrl = incidentMapsUrl(incident);
+  const mapsUrl = incidentMapsUrl(incident, regionKey);
   const severity = incident.severity ? String(incident.severity).replace(/_/g, ' ') : 'Not specified';
   const occurredAt = incidentOccurredAt(incident);
   const freshness = incidentFreshnessMeta(occurredAt);
@@ -2248,9 +2252,9 @@ function OperatorView({ session, onSignOut }: { session: OperatorSession; onSign
             {roadAlertsState === 'success'
               ? sortedIncidentFeed.map((incident) => (
                   <Fragment key={incident.id}>
-                    <IncidentCard incident={incident} proximityLabel={proximityPoint.label} selected={selectedIncident?.id === incident.id} onSelect={(value) => setSelectedIncidentId(value.id)} onNavigate={handleIncidentNavigate} currentOperatorId={session.id} isWorkflowUpdating={isWorkflowUpdating} />
+                    <IncidentCard incident={incident} regionKey={regionKey} proximityLabel={proximityPoint.label} selected={selectedIncident?.id === incident.id} onSelect={(value) => setSelectedIncidentId(value.id)} onNavigate={handleIncidentNavigate} currentOperatorId={session.id} isWorkflowUpdating={isWorkflowUpdating} />
                     {selectedIncident?.id === incident.id ? (
-                      <IncidentDetailCard incident={incident} proximityLabel={proximityPoint.label} onBack={() => setSelectedIncidentId(null)} onNavigate={handleIncidentNavigate} onResolve={handleIncidentResolution} currentOperatorId={session.id} isWorkflowUpdating={isWorkflowUpdating} />
+                      <IncidentDetailCard incident={incident} regionKey={regionKey} proximityLabel={proximityPoint.label} onBack={() => setSelectedIncidentId(null)} onNavigate={handleIncidentNavigate} onResolve={handleIncidentResolution} currentOperatorId={session.id} isWorkflowUpdating={isWorkflowUpdating} />
                     ) : null}
                   </Fragment>
                 ))
