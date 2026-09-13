@@ -3,6 +3,7 @@
 **Date:** 2026-09-12
 **Portfolio control:** `DOCS/FTC_DUAL_STORE_PARITY_PROGRAM_2026-09-12.md`
 **Current status:** `source_ready`; no iOS build, upload, TestFlight release or public App Store listing is claimed.
+**Canonical implementation:** `5877c8773`
 
 ## Reuse contract
 

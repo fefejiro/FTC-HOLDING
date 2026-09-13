@@ -160,6 +160,10 @@ The reuse-first implementation pass made local, non-billing changes only:
   payment method, plan, credential, store record or submission changed during
   this pass. Cloud builds and store operations remain owner-console gates until
   existing capacity and the exact target record are confirmed.
+- **Canonical implementation:** the source-ready SayWetin/Dispatch changes are
+  committed on the canonical branch as `5877c8773`. The shared checkout still
+  contains unrelated owner changes; that commit is limited to the mobile parity
+  scope.
 
 The current implementation evidence is intentionally split between the
 portfolio plan and the per-app handoffs:
