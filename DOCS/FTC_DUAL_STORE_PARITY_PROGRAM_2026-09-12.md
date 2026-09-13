@@ -102,7 +102,7 @@ page means the existing account is missing, and must not complete enrollment.
 | Product | Existing platform evidence | Existing identity to preserve | iOS/Android action | Initial status |
 | --- | --- | --- | --- | --- |
 | SayWetin | Expo/React Native Android app, EAS and Play workflow; live web/API | Android package `com.saywetin.app`; API `https://api.saywetin.app`; existing EAS project | Add iOS configuration to the same Expo project and use the existing product name. Create an App Store record only if an exact existing SayWetin record cannot be found. | Android public listing confirmed; iOS not public |
-| Dispatch | Capacitor Android shell; live web/API | Capacitor/app identity `ca.emergencyprompt.roadside`; production host `https://dispatch.unalabs.cloud`; private admin host remains private | Add the iOS Capacitor platform using the same product identity, then use the existing Apple team. An iOS app record is required only because no public iOS listing was found. | Web and Android lane present; public store state needs direct verification; iOS missing |
+| Dispatch | Capacitor Android shell; live web/API | Capacitor/app identity `ca.emergencyprompt.roadside`; production host `https://dispatch.unalabs.cloud`; private admin host remains private | Add the iOS Capacitor platform using the same product identity, then use the existing Apple team. An iOS app record is required only if the exact Apple record is absent and the owner approves the one missing record. | Google Play public listing confirmed; iOS missing |
 | PeacePad | Existing Android and iOS native projects, App Store/Play metadata and iOS release workflows | Bundle/package `ca.peacepad.family`; existing public App Store record and Play listing | Reuse the existing production app record and iOS pipeline. Do not create a second “nextnative” store app; lab identifiers are test identities only. | Both public listings confirmed |
 | Just Checking In | Existing Unity Android/iOS pipeline, Apple record and Play record | Apple App ID `6799443182`; Android package `com.ftcholding.justcheckingin` | Finish the existing records and workflows. Do not create another JCI app record. | Public App Store listing confirmed; Play record/draft is not public |
 | UnaScout | Existing iOS release track and separate Android/reviewer history | Android package `cloud.unalabs.jobagent`; existing iOS record is documented in the canonical release worktree | Reconcile the existing iOS record and Android record. Do not confuse UnaScout evidence with Just Checking In evidence. | Public Google Play listing confirmed; iOS submission is documented as Waiting for Review; no public iOS listing found in the current search |
@@ -120,13 +120,14 @@ Confirmed public listings under **Fejiro Technology Consultancy Inc**:
 - [PeacePad on Google Play](https://play.google.com/store/apps/details?id=ca.peacepad.family)
 - [Just Checking In Game on the App Store](https://apps.apple.com/ca/app/just-checking-in-game/id6799443182)
 - [SayWetin on Google Play](https://play.google.com/store/apps/details?hl=en_US&id=com.saywetin.app)
+- [Dispatch Emergency Prompt on Google Play](https://play.google.com/store/apps/details?id=ca.emergencyprompt.roadside)
 - [UnaScout on Google Play](https://play.google.com/store/apps/details?id=cloud.unalabs.jobagent)
 
 No public App Store result was found for SayWetin, Dispatch or UnaScout in the
-current exact-name search. No public Dispatch listing was confirmed by the
-current exact-package search. These are verification gaps, not permission to
-create duplicate records. Check the existing consoles and account region
-before creating anything.
+current exact-name search. The exact Dispatch Android package now resolves to a
+public Google Play listing under the existing Fejiro developer account. These
+are platform gaps, not permission to create duplicate records. Check the
+existing consoles and account region before creating anything.
 
 ### Implementation and provider audit update - 2026-09-12
 
@@ -148,6 +149,12 @@ The reuse-first implementation pass made local, non-billing changes only:
   and iOS Capacitor sync passed in the isolated worktree. The expected Windows
   warnings are that CocoaPods and `xcodebuild` are unavailable; archive,
   signing and device smoke must use the existing Mac/Xcode lane.
+- **Dispatch public Android evidence:** the exact package
+  `ca.emergencyprompt.roadside` resolves to the public [Dispatch Emergency
+  Prompt Google Play listing](https://play.google.com/store/apps/details?id=ca.emergencyprompt.roadside).
+  This closes the earlier Android verification gap; Dispatch remains iOS
+  `not_public` until an Apple listing is independently reachable and
+  installable.
 - **Dispatch Android readiness:** `compileSdkVersion` and `targetSdkVersion`
   are now 36. A local debug Gradle build was attempted with the installed API
   36 SDK, but the machine's shared Gradle state stalled and the isolated
