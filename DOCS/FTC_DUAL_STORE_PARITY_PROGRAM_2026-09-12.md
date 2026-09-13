@@ -165,6 +165,12 @@ The reuse-first implementation pass made local, non-billing changes only:
   payment method, plan, credential, store record or submission changed during
   this pass. Cloud builds and store operations remain owner-console gates until
   existing capacity and the exact target record are confirmed.
+- **GitHub credential inventory:** a names-only repository secret audit found
+  existing FTC Apple certificate/team/API-key paths used by the JCI and
+  UnaScout lanes. No secret values were read. The Dispatch workflow reuses
+  those existing team-level paths and requires only an exact
+  `DISPATCH_IOS_PROVISIONING_PROFILE_BASE64` value for the bundle-specific
+  profile; it does not require a new Apple account, API key or CI provider.
 - **Canonical implementation:** the source-ready SayWetin/Dispatch changes are
   committed on the canonical branch as `5877c8773`. The shared checkout still
   contains unrelated owner changes; that commit is limited to the mobile parity

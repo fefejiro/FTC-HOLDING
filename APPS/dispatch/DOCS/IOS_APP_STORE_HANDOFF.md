@@ -89,9 +89,13 @@ certificates, provisioning profiles or passwords in this repository.
 
 The repository now contains `.github/workflows/dispatch-ios-release.yml`, which
 mirrors the existing JCI/UnaScout `macos-26` release pattern. It is manually
-gated with `preflight`, `archive` and `upload` modes. The upload mode accepts
-only an owner-supplied existing App Store ID and has no record-creation or App
-Review-submission step. A new CI provider is not required.
+gated with `preflight`, `archive` and `upload` modes. It reuses the existing
+FTC team-level Apple certificate, team ID, keychain and App Store Connect API
+key path already present for the other iOS lanes. Only a Dispatch-specific
+provisioning profile is required because profiles are bundle-specific. The
+upload mode accepts only an owner-supplied existing App Store ID and has no
+record-creation or App Review-submission step. A new CI provider is not
+required.
 
 ## Completion proof
 
