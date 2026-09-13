@@ -148,6 +148,11 @@ The reuse-first implementation pass made local, non-billing changes only:
   and iOS Capacitor sync passed in the isolated worktree. The expected Windows
   warnings are that CocoaPods and `xcodebuild` are unavailable; archive,
   signing and device smoke must use the existing Mac/Xcode lane.
+- **Dispatch CI:** a manually gated `.github/workflows/dispatch-ios-release.yml`
+  now reuses the existing `macos-26` lane. It supports read-only preflight,
+  archive-only and upload-only-to-an-existing-record modes; it cannot create an
+  App Store record or submit an App Review request. It has been syntax-checked
+  but not dispatched.
 - **UnaScout:** the canonical release handoff records an uploaded iOS build in
   App Store Connect with state **Waiting for Review**, while independently
   resolving public evidence currently proves Android only. This remains
@@ -170,6 +175,7 @@ portfolio plan and the per-app handoffs:
 
 - `APPS/saywetin-native/ops/IOS_APP_STORE_HANDOFF.md`
 - `APPS/dispatch/DOCS/IOS_APP_STORE_HANDOFF.md`
+- `.github/workflows/dispatch-ios-release.yml`
 
 ## 5. Existing pipelines to reuse
 
@@ -450,6 +456,9 @@ REUSE PLAN
   `https://dispatch.unalabs.cloud`, Railway, Supabase, Cloudflare and Playwright.
   Add `@capacitor/ios` and the iOS project; use the existing Mac/Xcode lane. Do
   not expose the private admin host. Do not copy the tracked Android keystore.
+- Dispatch CI: use the manually gated `dispatch-ios-release.yml` workflow on
+  the existing `macos-26` runner. Keep preflight/archive/upload as separate
+  explicit modes and never add automatic public submission.
 - PeacePad: reuse `ca.peacepad.family`, its existing App Store/Play records,
   iOS project, metadata and TestFlight workflow. Never turn a lab/test bundle
   ID into a second public app.

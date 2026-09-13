@@ -87,11 +87,11 @@ identity, run a real-device smoke test and archive the Release configuration.
 The archive/export must use the existing protected signing store; do not put
 certificates, provisioning profiles or passwords in this repository.
 
-The protected Mac workflow can mirror the existing JCI/PeacePad `macos-26`
-release pattern when the owner has confirmed the Dispatch App Store record and
-product-specific signing values. A new CI provider is not required. Keep any
-future upload job manually gated so a workflow dispatch cannot accidentally
-submit or create a store record.
+The repository now contains `.github/workflows/dispatch-ios-release.yml`, which
+mirrors the existing JCI/UnaScout `macos-26` release pattern. It is manually
+gated with `preflight`, `archive` and `upload` modes. The upload mode accepts
+only an owner-supplied existing App Store ID and has no record-creation or App
+Review-submission step. A new CI provider is not required.
 
 ## Completion proof
 
