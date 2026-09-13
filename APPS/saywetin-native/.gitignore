@@ -34,6 +34,7 @@ yarn-error.*
 .env
 .env*.local
 secrets/
+credentials.json
 android/local.properties
 android/keystore-base64.txt
 android/app/debug.keystore

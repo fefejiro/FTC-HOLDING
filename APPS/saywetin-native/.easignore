@@ -3,3 +3,7 @@
 **/.vercel/
 .agents/
 .claude/
+
+# Credential artifacts must never enter an EAS upload
+credentials.json
+**/credentials.json
