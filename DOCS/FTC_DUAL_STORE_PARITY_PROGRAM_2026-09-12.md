@@ -148,6 +148,12 @@ The reuse-first implementation pass made local, non-billing changes only:
   and iOS Capacitor sync passed in the isolated worktree. The expected Windows
   warnings are that CocoaPods and `xcodebuild` are unavailable; archive,
   signing and device smoke must use the existing Mac/Xcode lane.
+- **Dispatch Android readiness:** `compileSdkVersion` and `targetSdkVersion`
+  are now 36. A local debug Gradle build was attempted with the installed API
+  36 SDK, but the machine's shared Gradle state stalled and the isolated
+  offline cache lacked Android/AGP artifacts; no APK was produced or claimed.
+  The Mac/CI lane must perform the real Android regression/build check before
+  any Play upload.
 - **Dispatch CI:** a manually gated `.github/workflows/dispatch-ios-release.yml`
   now reuses the existing `macos-26` lane. It supports read-only preflight,
   archive-only and upload-only-to-an-existing-record modes; it cannot create an
@@ -292,9 +298,10 @@ higher:
 
 <https://developer.android.com/google/play/requirements/target-sdk>
 
-The current Dispatch and PeacePad Capacitor variables target API 35, so they
-need a controlled API 36 upgrade before their next Play update. JCI’s current
-release evidence already targets API 36; verify rather than rebuild blindly.
+Dispatch now targets API 36. PeacePad's current Capacitor variables remain at
+API 35 and need a controlled API 36 upgrade before its next Play update. JCI's
+current release evidence already targets API 36; verify rather than rebuild
+blindly.
 
 Google also says Play package names must be registered by 30 September 2026.
 Verify all existing FTC packages and developer identity in the existing Play
@@ -478,7 +485,8 @@ CURRENT PLATFORM GATES
 - Google Play new apps/updates must target Android API 36+.
 - Register/verify all existing Play package names before 2026-09-30.
 - Check Dispatch and PeacePad API/compile SDK values before their next Android
-  upload.
+  upload; Dispatch source is now API 36, while PeacePad still needs the
+  controlled upgrade.
 - Treat Apple guideline 4.2 as a product-value gate for any Capacitor shell;
   do not submit a featureless website wrapper.
 

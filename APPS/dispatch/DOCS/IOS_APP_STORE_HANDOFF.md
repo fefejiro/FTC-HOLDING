@@ -65,9 +65,8 @@ consoles:
    notes are truthful. Dispatch must demonstrate useful roadside assistance
    utility beyond a repackaged website under Apple guideline 4.2.
 5. The Android package/Play record is verified before any Android upload. The
-   current source targets API 35, so an Android update requires a controlled
-   API 36 change and regression pass; do not upload the current candidate
-   blindly.
+   source now targets API 36; complete the local/CI regression pass and do not
+   upload until the exact existing Play record and release artifact are proven.
 
 ## Existing Mac/Xcode lane
 
