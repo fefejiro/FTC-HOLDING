@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-12
 **Portfolio control:** `DOCS/FTC_DUAL_STORE_PARITY_PROGRAM_2026-09-12.md`
-**Current status:** `source_ready` for the iOS project; no iOS archive, upload, TestFlight release or public App Store listing is claimed.
+**Current status:** `source_ready` for the iOS project; Android public listing confirmed; no iOS archive, upload, TestFlight release or public App Store listing is claimed.
 **Canonical implementation:** `5877c8773`
 
 ## Reuse contract
@@ -12,6 +12,7 @@
 | Product name | `Dispatch` |
 | Android application ID | `ca.emergencyprompt.roadside` |
 | iOS bundle ID | `ca.emergencyprompt.roadside` |
+| Google Play listing | https://play.google.com/store/apps/details?id=ca.emergencyprompt.roadside |
 | Public host | `https://dispatch.unalabs.cloud` |
 | Private admin host | `https://dispatch-admin.unalabs.cloud` |
 | Backend/data | Existing Railway, Supabase and Cloudflare path |
@@ -49,6 +50,13 @@ Windows correctly reported that CocoaPods and `xcodebuild` are unavailable;
 that is the handoff boundary to the existing Mac/Xcode runner, not a new
 provider requirement.
 
+## Public Android evidence
+
+The exact existing package `ca.emergencyprompt.roadside` resolves to the public
+[Dispatch Emergency Prompt Google Play listing](https://play.google.com/store/apps/details?id=ca.emergencyprompt.roadside)
+under the FTC developer account. This confirms the Android store half without
+creating a new package or Play record. The iOS half remains unlisted.
+
 ## Owner-console and review gates
 
 Before any archive or store operation, confirm in the existing Apple/Google
@@ -64,9 +72,9 @@ consoles:
 4. Privacy URL, support URL, age rating, content rights, screenshots and review
    notes are truthful. Dispatch must demonstrate useful roadside assistance
    utility beyond a repackaged website under Apple guideline 4.2.
-5. The Android package/Play record is verified before any Android upload. The
-   source now targets API 36; complete the local/CI regression pass and do not
-   upload until the exact existing Play record and release artifact are proven.
+5. The existing Android package/Play listing is confirmed above. The source
+   now targets API 36; complete the local/CI regression pass before any future
+   Android upload and keep updates on this exact Play record.
 
 ## Existing Mac/Xcode lane
 
