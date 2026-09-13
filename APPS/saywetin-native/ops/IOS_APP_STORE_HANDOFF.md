@@ -2,8 +2,8 @@
 
 **Date:** 2026-09-12
 **Portfolio control:** `DOCS/FTC_DUAL_STORE_PARITY_PROGRAM_2026-09-12.md`
-**Current status:** `source_ready`; no iOS build, upload, TestFlight release or public App Store listing is claimed.
-**Canonical implementation:** `5877c8773`
+**Current status:** `source_ready / build_blocked_on_existing_ios_credentials`; no iOS build, upload, TestFlight release or public App Store listing is claimed.
+**Verified source baseline:** remote `main` `cf3b0a9be` (source/config work in PR [#362](https://github.com/fefejiro/FTC-HOLDING/pull/362), export declaration in [#365](https://github.com/fefejiro/FTC-HOLDING/pull/365), credential safety in [#366](https://github.com/fefejiro/FTC-HOLDING/pull/366)).
 
 ## Reuse contract
 
@@ -28,10 +28,15 @@ fall into `eas init`.
 - Added the existing `expo-audio` microphone permission through Expo config.
 - Added a `production-ios` profile using remote iOS credentials and the Xcode
   26 EAS image. The existing Android `production` profile remains unchanged.
+- Declared `ITSAppUsesNonExemptEncryption: false` in the existing app config;
+  no new encryption service or product capability was added.
 - Routed native listen, lyrics and slang requests through the existing
   canonical API resolver.
 - Confirmed the resolved iOS config retains the existing product, API and
   Android package identity.
+- Removed the tracked `credentials.json` artifact and added `.gitignore` and
+  `.easignore` rules so credential artifacts cannot enter Git or an EAS upload.
+  No credential value was read or copied.
 
 ## Read-only evidence
 
@@ -41,13 +46,19 @@ The following checks were run from the isolated release worktree:
 eas whoami                         existing FTC Expo account authenticated
 eas project:info --non-interactive @official_fejiro/saywetin-native resolved
 eas config --platform ios ...      production-ios resolved successfully
+eas account:usage official_fejiro   Free; 12/30 total builds; iOS 0/15; overage $0
 eas build:list --platform ios      [] (no iOS build exists yet)
 ```
 
-No `eas init`, cloud build, submit, credential mutation, app-record mutation,
-plan change or payment action was run. The EAS account's current billing plan
-and remaining build allowance were not exposed by the local CLI, so they remain
-an owner-console check before consuming a cloud build.
+The existing free capacity was verified before one controlled non-interactive
+build attempt. EAS used the existing remote iOS credential path and stopped
+before creating a build with this provider gate: the distribution certificate
+is not validated for non-interactive builds; credentials are not set up. A
+post-check still returned iOS `0/15`, overage `0`/`$0`, and an empty iOS build
+list. No `eas init`, submit, app-record mutation, plan change or payment action
+was run. Do not run interactive credential setup automatically: the owner must
+validate or import the already-approved product-specific Apple credentials into
+the existing EAS project, without creating a parallel account or product record.
 
 The read-only App Store inventory mode is merged in PR [#362](https://github.com/fefejiro/FTC-HOLDING/pull/362).
 Its first dispatch (run [34733648642](https://github.com/fefejiro/FTC-HOLDING/actions/runs/34733648642))
@@ -67,8 +78,11 @@ The account holder must confirm all of the following in the existing consoles:
    paid overage. If not, stop and use the existing Mac lane or wait for quota.
 4. Privacy URL, support URL, age rating, content rights, screenshots and review
    notes are truthful and ready for the exact SayWetin record.
-5. The existing Apple signing credentials are available to the approved EAS
-   project. Do not create or copy credentials between products.
+5. The existing Apple signing credentials for `com.saywetin.app` are available
+   and validated for non-interactive builds in the approved EAS project. Use
+   the existing approved certificate/profile path; do not create or copy
+   credentials between products. If the existing credentials are unavailable,
+   stop and ask the owner to choose an approved replacement path.
 
 ## Candidate build sequence
 

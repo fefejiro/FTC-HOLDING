@@ -171,11 +171,25 @@ The reuse-first implementation pass made local, non-billing changes only:
 - **Just Checking In:** the existing App Store listing is public; the existing
   Play record remains a draft/not-public according to the release handoff. It
   must be completed in that record, not recreated.
-- **Provider/cost boundary:** the available browser session did not expose
-  active Apple/Play dashboards or EAS billing/quota data. No app, account,
-  payment method, plan, credential, store record or submission changed during
-  this pass. Cloud builds and store operations remain owner-console gates until
-  existing capacity and the exact target record are confirmed.
+- **Provider/cost boundary:** the browser session did not expose active
+  Apple/Play dashboards, but the existing `official_fejiro` EAS account was
+  verified read-only through the CLI: **Free** plan, 12/30 total builds,
+  0/15 iOS builds, zero overage and estimated billing total `$0` for the
+  current period. The iOS build list remains empty. No app, account, payment
+  method, plan, store record or submission changed during this pass.
+- **SayWetin controlled build hold:** after the EAS capacity check, one
+  non-interactive iOS build attempt was made from a clean, credential-free
+  source based on `origin/main` `cf3b0a9be`. EAS reached the existing remote
+  iOS credential path, then stopped before creating a build because the
+  distribution certificate is not validated for non-interactive builds and
+  credentials are not set up. Post-checks still show 0/15 iOS builds,
+  zero overage and `eas build:list --platform ios` as `[]`. Do not retry until
+  the existing product-specific Apple credentials are validated or imported
+  into the existing EAS project by the owner.
+- **SayWetin credential safety:** PR [#366](https://github.com/fefejiro/FTC-HOLDING/pull/366)
+  removed the tracked `APPS/saywetin-native/credentials.json` artifact and
+  added EAS/Git ignore rules for credential artifacts. No credential value was
+  read or copied. This guard must remain in place for every future build.
 - **GitHub execution audit:** read-only inventory dispatches for Dispatch
   (run [34733647511](https://github.com/fefejiro/FTC-HOLDING/actions/runs/34733647511))
   and SayWetin
