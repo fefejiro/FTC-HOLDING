@@ -49,6 +49,11 @@ plan change or payment action was run. The EAS account's current billing plan
 and remaining build allowance were not exposed by the local CLI, so they remain
 an owner-console check before consuming a cloud build.
 
+The read-only App Store inventory mode is merged in PR [#362](https://github.com/fefejiro/FTC-HOLDING/pull/362).
+Its first dispatch (run [34733648642](https://github.com/fefejiro/FTC-HOLDING/actions/runs/34733648642))
+was rejected before any job step because GitHub reported the account locked for
+a billing issue. No Apple lookup or EAS operation ran.
+
 ## Owner-console gate before a build
 
 The account holder must confirm all of the following in the existing consoles:

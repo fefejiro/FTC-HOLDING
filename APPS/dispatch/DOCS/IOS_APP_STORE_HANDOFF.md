@@ -88,13 +88,15 @@ certificates, provisioning profiles or passwords in this repository.
 
 The repository now contains `.github/workflows/dispatch-ios-release.yml`, which
 mirrors the existing JCI/UnaScout `macos-26` release pattern. It is manually
-gated with `preflight`, `archive` and `upload` modes. It reuses the existing
+gated with `inventory`, `preflight`, `archive` and `upload` modes. It reuses the existing
 FTC team-level Apple certificate, team ID, keychain and App Store Connect API
 key path already present for the other iOS lanes. Only a Dispatch-specific
 provisioning profile is required because profiles are bundle-specific. The
 upload mode accepts only an owner-supplied existing App Store ID and has no
 record-creation or App Review-submission step. A new CI provider is not
-required.
+required. The read-only inventory dispatch (run [34733647511](https://github.com/fefejiro/FTC-HOLDING/actions/runs/34733647511))
+was rejected before any job step because GitHub reported the account locked for
+a billing issue; no Apple lookup or store operation ran.
 
 ## Completion proof
 
