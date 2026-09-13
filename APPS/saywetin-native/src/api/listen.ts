@@ -1,6 +1,7 @@
+import { getApiBaseUrl } from './config';
 import type { MatchSource, RitualTrack, ResolvedSpotifyLink, ResolvedYoutubeLink } from '../state/ritual-state';
 
-const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+const apiBaseUrl = getApiBaseUrl();
 const railWayFallbackBaseUrl = 'https://saywetin-api-production.up.railway.app';
 
 type ListenResponse = {

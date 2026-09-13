@@ -1,0 +1,350 @@
+name: Dispatch iOS release
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Read-only record inventory/preflight, archive only, or upload to the existing App Store record
+        required: true
+        default: preflight
+        type: choice
+        options:
+          - inventory
+          - preflight
+          - archive
+          - upload
+      existing_app_store_id:
+        description: Existing numeric Dispatch App Store Connect ID; use NOT_CONFIRMED for preflight
+        required: true
+        default: NOT_CONFIRMED
+        type: string
+      confirm_existing_record:
+        description: Type I_CONFIRM_EXISTING_DISPATCH_RECORD for archive or upload
+        required: true
+        default: NOT_APPROVED
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dispatch-ios-release
+  cancel-in-progress: false
+
+env:
+  APP_PATH: APPS/dispatch
+  BUNDLE_ID: ca.emergencyprompt.roadside
+
+jobs:
+  inventory:
+    name: Inventory existing Dispatch App Store record
+    if: ${{ inputs.mode == 'inventory' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BUNDLE_ID: ca.emergencyprompt.roadside
+      ASC_KEY_ID: ${{ secrets.JOBAGENT_ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.JOBAGENT_ASC_ISSUER_ID }}
+      ASC_PRIVATE_KEY_BASE64: ${{ secrets.JOBAGENT_ASC_PRIVATE_KEY_BASE64 }}
+    steps:
+      - name: Checkout exact release ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Query App Store Connect by existing bundle ID (read-only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${ASC_KEY_ID:-}" || { echo "Missing existing JOBAGENT_ASC_KEY_ID"; exit 1; }
+          test -n "${ASC_ISSUER_ID:-}" || { echo "Missing existing JOBAGENT_ASC_ISSUER_ID"; exit 1; }
+          test -n "${ASC_PRIVATE_KEY_BASE64:-}" || { echo "Missing existing JOBAGENT_ASC_PRIVATE_KEY_BASE64"; exit 1; }
+          node --input-type=module <<'NODE'
+          import crypto from 'node:crypto';
+
+          const b64url = (value) => Buffer.from(value).toString('base64url');
+          const now = Math.floor(Date.now() / 1000);
+          const header = b64url(JSON.stringify({ alg: 'ES256', kid: process.env.ASC_KEY_ID, typ: 'JWT' }));
+          const payload = b64url(JSON.stringify({
+            iss: process.env.ASC_ISSUER_ID,
+            iat: now,
+            exp: now + 900,
+            aud: 'appstoreconnect-v1',
+          }));
+          const unsigned = `${header}.${payload}`;
+          const key = Buffer.from(process.env.ASC_PRIVATE_KEY_BASE64, 'base64').toString('utf8');
+          const signature = crypto.sign('sha256', Buffer.from(unsigned), { key, dsaEncoding: 'ieee-p1363' });
+          const token = `${unsigned}.${signature.toString('base64url')}`;
+          const url = new URL('https://api.appstoreconnect.apple.com/v1/apps');
+          url.searchParams.set('filter[bundleId]', process.env.BUNDLE_ID);
+          const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+          const body = await response.json();
+          if (!response.ok) throw new Error(`App Store Connect lookup failed with HTTP ${response.status}`);
+          const matches = (body.data ?? []).map((app) => ({
+            id: app.id,
+            bundleId: app.attributes?.bundleId,
+            name: app.attributes?.name,
+            sku: app.attributes?.sku,
+          }));
+          console.log(JSON.stringify({ bundleId: process.env.BUNDLE_ID, matches }, null, 2));
+          if (matches.length > 1) throw new Error('More than one App Store record matched the bundle ID');
+          NODE
+          echo 'Read-only inventory complete; no app record was created or changed.'
+
+  release:
+    if: ${{ inputs.mode != 'inventory' }}
+    name: Dispatch iOS ${{ inputs.mode }}
+    runs-on: macos-26
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: bash
+        working-directory: APPS/dispatch
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@v4
+
+      - name: Verify existing-record gate
+        env:
+          MODE: ${{ inputs.mode }}
+          EXISTING_APP_STORE_ID: ${{ inputs.existing_app_store_id }}
+          CONFIRM_EXISTING_RECORD: ${{ inputs.confirm_existing_record }}
+        run: |
+          set -euo pipefail
+          if [[ "$MODE" == "archive" || "$MODE" == "upload" ]]; then
+            [[ "$EXISTING_APP_STORE_ID" =~ ^[0-9]+$ ]] || {
+              echo "Archive/upload requires the exact existing numeric App Store Connect ID."
+              exit 1
+            }
+            test "$CONFIRM_EXISTING_RECORD" = "I_CONFIRM_EXISTING_DISPATCH_RECORD" || {
+              echo "The existing-record confirmation was not supplied."
+              exit 1
+            }
+          fi
+          echo "mode=$MODE"
+          echo "existing_app_store_id=$EXISTING_APP_STORE_ID"
+          echo "No app record creation or review submission is available in this workflow."
+
+      - name: Verify existing Apple toolchain
+        run: |
+          set -euo pipefail
+          xcodebuild -version | tee ios-xcode-version.txt
+          XCODE_MAJOR="$(xcodebuild -version | awk '/Xcode/{split($2,v,"."); print v[1]}')"
+          test "$XCODE_MAJOR" -ge 26 || {
+            echo "Xcode 26 or later is required."
+            exit 1
+          }
+
+      - name: Verify exact existing App Store Connect record
+        if: ${{ inputs.mode == 'archive' || inputs.mode == 'upload' }}
+        env:
+          EXISTING_APP_STORE_ID: ${{ inputs.existing_app_store_id }}
+          ASC_KEY_ID: ${{ secrets.JOBAGENT_ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.JOBAGENT_ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY_BASE64: ${{ secrets.JOBAGENT_ASC_PRIVATE_KEY_BASE64 }}
+        run: |
+          set -euo pipefail
+          test -n "$ASC_KEY_ID" || { echo "Missing existing JOBAGENT_ASC_KEY_ID"; exit 1; }
+          test -n "$ASC_ISSUER_ID" || { echo "Missing existing JOBAGENT_ASC_ISSUER_ID"; exit 1; }
+          test -n "$ASC_PRIVATE_KEY_BASE64" || { echo "Missing existing JOBAGENT_ASC_PRIVATE_KEY_BASE64"; exit 1; }
+          private_key_path="$RUNNER_TEMP/dispatch-asc-key.p8"
+          trap 'rm -f "$private_key_path"' EXIT
+          printf '%s' "$ASC_PRIVATE_KEY_BASE64" | base64 -D > "$private_key_path"
+          chmod 600 "$private_key_path"
+          token="$(node - "$private_key_path" "$ASC_KEY_ID" "$ASC_ISSUER_ID" <<'NODE'
+          const fs = require('fs');
+          const crypto = require('crypto');
+          const [, , keyPath, keyId, issuerId] = process.argv;
+          const encode = value => Buffer.from(JSON.stringify(value)).toString('base64url');
+          const now = Math.floor(Date.now() / 1000);
+          const header = encode({ alg: 'ES256', kid: keyId, typ: 'JWT' });
+          const payload = encode({ iss: issuerId, iat: now, exp: now + 1200, aud: 'appstoreconnect-v1' });
+          const unsigned = `${header}.${payload}`;
+          const signature = crypto.createSign('sha256')
+            .update(unsigned)
+            .end()
+            .sign({ key: fs.readFileSync(keyPath), dsaEncoding: 'ieee-p1363' });
+          process.stdout.write(`${unsigned}.${signature.toString('base64url')}`);
+          NODE
+          )"
+          response="$(curl --fail --silent --show-error --retry 2 --connect-timeout 20 --max-time 60 --get \
+            -H "Authorization: Bearer $token" \
+            --data-urlencode "filter[bundleId]=$BUNDLE_ID" \
+            "https://api.appstoreconnect.apple.com/v1/apps")"
+          printf '%s' "$response" | jq -e \
+            --arg expected_id "$EXISTING_APP_STORE_ID" \
+            --arg expected_bundle "$BUNDLE_ID" \
+            '(.data | length) == 1
+             and .data[0].id == $expected_id
+             and .data[0].attributes.bundleId == $expected_bundle' >/dev/null || {
+            echo "The supplied App Store ID does not resolve to the exact Dispatch bundle. No archive or upload will run."
+            exit 1
+          }
+          printf 'app_store_id=%s\nbundle_id=%s\n' "$EXISTING_APP_STORE_ID" "$BUNDLE_ID" > ios-app-record.txt
+
+      - name: Use the existing Node lane
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: APPS/dispatch/package-lock.json
+
+      - name: Install, check and synchronize the existing Dispatch app
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --workspaces=false
+          npm run check
+          npm run cap:sync:ios:prod
+
+      - name: Stop after read-only preflight
+        if: ${{ inputs.mode == 'preflight' }}
+        run: |
+          echo "Dispatch iOS preflight passed. No signing, archive, upload, or store mutation was attempted."
+
+      - name: Require Dispatch-specific signing material
+        if: ${{ inputs.mode != 'preflight' }}
+        env:
+          # Reuse the existing FTC team-level Apple signing path already used
+          # by the JCI/UnaScout lanes. Only the provisioning profile is
+          # bundle-specific and must belong to Dispatch.
+          CERTIFICATE: ${{ secrets.JOBAGENT_IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          PROFILE: ${{ secrets.DISPATCH_IOS_PROVISIONING_PROFILE_BASE64 }}
+          APPLE_TEAM_ID: ${{ secrets.JOBAGENT_APPLE_TEAM_ID }}
+          CERTIFICATE_PASSWORD: ${{ secrets.JOBAGENT_IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.JOBAGENT_IOS_KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$CERTIFICATE" || { echo "Missing existing JOBAGENT_IOS_DISTRIBUTION_CERTIFICATE_BASE64"; exit 1; }
+          test -n "$PROFILE" || { echo "Missing DISPATCH_IOS_PROVISIONING_PROFILE_BASE64"; exit 1; }
+          test -n "$APPLE_TEAM_ID" || { echo "Missing existing JOBAGENT_APPLE_TEAM_ID"; exit 1; }
+          test -n "$CERTIFICATE_PASSWORD" || { echo "Missing existing JOBAGENT_IOS_DISTRIBUTION_CERTIFICATE_PASSWORD"; exit 1; }
+          test -n "$KEYCHAIN_PASSWORD" || { echo "Missing existing JOBAGENT_IOS_KEYCHAIN_PASSWORD"; exit 1; }
+
+      - name: Import protected signing identity
+        if: ${{ inputs.mode != 'preflight' }}
+        env:
+          CERTIFICATE: ${{ secrets.JOBAGENT_IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.JOBAGENT_IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          PROFILE: ${{ secrets.DISPATCH_IOS_PROVISIONING_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.JOBAGENT_IOS_KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          security create-keychain -p "$KEYCHAIN_PASSWORD" dispatch-build.keychain
+          security set-keychain-settings -lut 21600 dispatch-build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" dispatch-build.keychain
+          printf '%s' "$CERTIFICATE" | base64 -D > "$RUNNER_TEMP/dispatch.p12"
+          security import "$RUNNER_TEMP/dispatch.p12" -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k dispatch-build.keychain
+          security list-keychain -d user -s dispatch-build.keychain
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" dispatch-build.keychain
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          printf '%s' "$PROFILE" | base64 -D > "$HOME/Library/MobileDevice/Provisioning Profiles/dispatch.mobileprovision"
+          security cms -D -i "$HOME/Library/MobileDevice/Provisioning Profiles/dispatch.mobileprovision" > "$RUNNER_TEMP/dispatch-profile.plist"
+          /usr/libexec/PlistBuddy -c 'Print :Name' "$RUNNER_TEMP/dispatch-profile.plist" > "$RUNNER_TEMP/dispatch-profile-name.txt"
+          PROFILE_APP_ID="$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$RUNNER_TEMP/dispatch-profile.plist")"
+          case "$PROFILE_APP_ID" in
+            *.$BUNDLE_ID) ;;
+            *) echo "Provisioning profile is not for $BUNDLE_ID"; exit 1 ;;
+          esac
+          printf 'bundle_id=%s\n' "$BUNDLE_ID" > ios-signing-identity.txt
+
+      - name: Archive Dispatch
+        if: ${{ inputs.mode != 'preflight' }}
+        env:
+          APPLE_TEAM_ID: ${{ secrets.JOBAGENT_APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          PROFILE_NAME="$(cat "$RUNNER_TEMP/dispatch-profile-name.txt")"
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath "$RUNNER_TEMP/Dispatch.xcarchive" \
+            archive \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
+            PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID"
+
+      - name: Export signed IPA
+        if: ${{ inputs.mode != 'preflight' }}
+        env:
+          APPLE_TEAM_ID: ${{ secrets.JOBAGENT_APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          PROFILE_NAME="$(cat "$RUNNER_TEMP/dispatch-profile-name.txt")"
+          cat > "$RUNNER_TEMP/DispatchExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>teamID</key><string>${APPLE_TEAM_ID}</string>
+            <key>provisioningProfiles</key><dict><key>${BUNDLE_ID}</key><string>${PROFILE_NAME}</string></dict>
+            <key>uploadSymbols</key><true/>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/Dispatch.xcarchive" \
+            -exportPath "$RUNNER_TEMP/Dispatch-export" \
+            -exportOptionsPlist "$RUNNER_TEMP/DispatchExportOptions.plist"
+          IPA_PATH="$(find "$RUNNER_TEMP/Dispatch-export" -maxdepth 1 -name '*.ipa' -print -quit)"
+          test -n "$IPA_PATH" || { echo "No IPA was exported."; exit 1; }
+          echo "$IPA_PATH" > "$RUNNER_TEMP/dispatch-ipa-path.txt"
+          shasum -a 256 "$IPA_PATH" | tee ios-ipa-sha256.txt
+
+      - name: Upload IPA to the existing App Store record
+        if: ${{ inputs.mode == 'upload' }}
+        env:
+          # Reuse the existing App Store Connect API key path. The owner must
+          # still confirm that this key can access the exact Dispatch record.
+          ASC_KEY_ID: ${{ secrets.JOBAGENT_ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.JOBAGENT_ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY_BASE64: ${{ secrets.JOBAGENT_ASC_PRIVATE_KEY_BASE64 }}
+        run: |
+          set -euo pipefail
+          test -n "$ASC_KEY_ID" || { echo "Missing existing JOBAGENT_ASC_KEY_ID"; exit 1; }
+          test -n "$ASC_ISSUER_ID" || { echo "Missing existing JOBAGENT_ASC_ISSUER_ID"; exit 1; }
+          test -n "$ASC_PRIVATE_KEY_BASE64" || { echo "Missing existing JOBAGENT_ASC_PRIVATE_KEY_BASE64"; exit 1; }
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          printf '%s' "$ASC_PRIVATE_KEY_BASE64" | base64 -D > "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          IPA_PATH="$(cat "$RUNNER_TEMP/dispatch-ipa-path.txt")"
+          xcrun altool --upload-app --type ios --file "$IPA_PATH" --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+
+      - name: Write non-secret release evidence
+        if: always()
+        env:
+          MODE: ${{ inputs.mode }}
+          EXISTING_APP_STORE_ID: ${{ inputs.existing_app_store_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/dispatch-ios-evidence"
+          MODE_UPPER="$(printf '%s' "$MODE" | tr '[:lower:]' '[:upper:]')"
+          cat > "$RUNNER_TEMP/dispatch-ios-evidence/manifest.txt" <<EOF
+          result=DISPATCH_IOS_${MODE_UPPER}_ATTEMPTED
+          app_store_id=$EXISTING_APP_STORE_ID
+          bundle_id=$BUNDLE_ID
+          source_sha=$GITHUB_SHA
+          upload_to_app_store=$([[ "$MODE" == "upload" ]] && echo true || echo false)
+          app_review_submission=false
+          app_record_creation=false
+          EOF
+          if [ -f ios-ipa-sha256.txt ]; then cp ios-ipa-sha256.txt "$RUNNER_TEMP/dispatch-ios-evidence/"; fi
+          if [ -f ios-xcode-version.txt ]; then cp ios-xcode-version.txt "$RUNNER_TEMP/dispatch-ios-evidence/"; fi
+          if [ -f ios-app-record.txt ]; then cp ios-app-record.txt "$RUNNER_TEMP/dispatch-ios-evidence/"; fi
+
+      - name: Upload non-secret release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dispatch-ios-release-evidence-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/dispatch-ios-evidence
+            ${{ runner.temp }}/Dispatch.xcarchive
+            ${{ runner.temp }}/Dispatch-export/*.ipa
+            APPS/dispatch/ios-ipa-sha256.txt
+            APPS/dispatch/ios-xcode-version.txt
+            APPS/dispatch/ios-app-record.txt
+            APPS/dispatch/ios-signing-identity.txt
+          if-no-files-found: warn
+          retention-days: 14

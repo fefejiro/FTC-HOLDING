@@ -101,7 +101,35 @@ Dispatch is configured so Capacitor production builds point to:
 That means:
 
 - web/content fixes can be deployed server-side and reflected in the app webview
-- native/plugin/icon/manifest changes still require a new Play Store build
+- native/plugin/icon/manifest changes still require a new store build
+
+### iOS platform lane
+
+The iOS Capacitor platform now lives in `ios/` and uses the existing Dispatch
+identity `ca.emergencyprompt.roadside`. It points at the same production host as
+Android; it does not create a second API or backend.
+
+The controlled release sequence and owner approval gates are documented in
+[`DOCS/IOS_APP_STORE_HANDOFF.md`](DOCS/IOS_APP_STORE_HANDOFF.md).
+
+On the existing Mac/Xcode runner:
+
+```bash
+cd "APPS/dispatch"
+npm ci --ignore-scripts
+npm run cap:sync:ios:prod
+npm run cap:open:ios
+```
+
+Use the generated Xcode workspace for device smoke and archive/TestFlight
+builds. Keep Apple signing inside the existing FTC Apple team. Do not create a
+new Apple Developer account, duplicate App Store record, or new Dispatch API
+for this lane.
+
+The iOS shell must provide meaningful Dispatch utility beyond a repackaged
+website. Verify the driver request flow, operator access boundary, error/offline
+states, safe-area layout and the private admin-host separation before any App
+Store submission.
 
 ### One-command Android AAB build
 

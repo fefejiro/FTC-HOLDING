@@ -1,4 +1,6 @@
-const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+import { getApiBaseUrl } from './config';
+
+const apiBaseUrl = getApiBaseUrl();
 
 export type SlangExplanation = {
   phrase: string;
