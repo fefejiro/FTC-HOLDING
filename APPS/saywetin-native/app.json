@@ -6,7 +6,10 @@
     "icon": "./assets/icon.png",
     "ios": {
       "bundleIdentifier": "com.saywetin.app",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "plugins": [
       [
